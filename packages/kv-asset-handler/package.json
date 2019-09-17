@@ -30,8 +30,6 @@
     "mime": "^2.4.4"
   },
   "devDependencies": {
-    "prettier": "^1.18.2",
-    "webpack": "^4.40.2",
-    "webpack-cli": "^3.3.9"
+    "prettier": "^1.18.2"
   }
 }
