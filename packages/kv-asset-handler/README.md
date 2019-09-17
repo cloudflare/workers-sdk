@@ -2,7 +2,9 @@
 
 ## Installation
 
-Clone this repository and run `npm link`. 
+Clone this repository and run `npm link` from inside the repo directory. Then `cd` into the directory from which you would like to import, and run `npm link @cloudflare/kv-asset-handlers`. Any changes you make to this package can be re-linked by running `npm link` from this directory. 
+
+For more info on `npm link` please read [here](https://docs.npmjs.com/cli/link).
 
 ## Usage
 
