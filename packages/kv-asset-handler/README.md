@@ -23,7 +23,6 @@ This package could be used in conjunction with other workers that implement `con
 ```js
   const subworkers = [new AssetWorker()];
 
-  console.log(request.url)
   let url = new URL(request.url);
   if (url.pathname === "/") {
     request = new Request(`${url}/index.html`)
@@ -36,4 +35,19 @@ This package could be used in conjunction with other workers that implement `con
     }
   }
   return new Response("not found", { status: 404, statusText: "not found" });
+```
+
+You could also implement this differently in conjunctin with other worker logic
+
+```js
+  if (request.url.contains("api")) {
+    return new Response("api response")
+  }
+  let assetWorker = new AssetWorker();
+  if (await assetWorker.condition(request) {
+    let response = await assetWorker.handler(request)
+    // do something with htmlRewriter
+    return response
+  }
+  return new Response("not found", { status: 404 })
 ```
