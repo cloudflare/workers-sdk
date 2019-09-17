@@ -1,0 +1,37 @@
+{
+  "name": "@cloudflare/kv-asset-handlers",
+  "version": "0.0.1",
+  "description": "Routes requests to KV assets",
+  "main": "./src/index.js",
+  "scripts": {
+    "build": "webpack",
+    "format": "prettier --write '**/*.js'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudflare/workers-site-npm-pkg.git"
+  },
+  "keywords": [
+    "kv",
+    "cloudflare",
+    "cloudflare",
+    "workers",
+    "wrangler",
+    "assets"
+  ],
+  "author": "Avery Harnish",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cloudflare/workers-site-npm-pkg/issues"
+  },
+  "homepage": "https://github.com/cloudflare/workers-site-npm-pkg#readme",
+  "dependencies": {
+    "mime": "^2.4.4"
+  },
+  "devDependencies": {
+    "prettier": "^1.18.2",
+    "webpack": "^4.40.2",
+    "webpack-cli": "^3.3.9"
+  }
+}
