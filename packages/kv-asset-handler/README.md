@@ -18,7 +18,7 @@ import { AssetWorker } from "@cloudflare/kv-asset-handlers";
 
 ### Example
 
-This package could be used in conjunction with other workers that implement `condition` and `handler`, but this simple example is a simple asset server. It checks for the existence of a value in KV, and returns it if it's there, and returns a 404 if it is not. It also serves index.html from `/`.
+This package could be used in conjunction with other workers that implement `condition` and `handler`, but this example is an asset server. It checks for the existence of a value in KV, and returns it if it's there, and returns a 404 if it is not. It also serves index.html from `/`.
 
 ```js
   const subworkers = [new AssetWorker()];
