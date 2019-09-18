@@ -25,6 +25,10 @@ const getAssetFromKV = async(request) => {
       pathname,
       "arrayBuffer"
     );
+    if (body === null) {
+      // TODO: should we include something about wrangler here
+      throw `could not find ${pathname} in KV`
+    }
 
     response = new Response(body);
     response.headers.set("Content-Type", mimeType);
