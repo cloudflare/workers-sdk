@@ -23,11 +23,6 @@ This example checks for the existence of a value in KV, and returns it if it's t
 ```js
 import { getAssetFromKV } from "@cloudflare/kv-asset-handlers";
 
-addEventListener("fetch", event => {
-  event.respondWith(handleRequest(event.request));
-});
-
-async function handleRequest(request) {
   let url = new URL(request.url);
   if (url.pathname === "/") {
     request = new Request(`${url}/index.html`)
@@ -38,6 +33,21 @@ async function handleRequest(request) {
     return new Response(`"${url.pathname}" not found`, { status: 404, statusText: "not found" })
   }
 }
+```
+
+You could also implement this differently in conjunctin with other worker logic
+
+```js
+  if (request.url.contains("api")) {
+    return new Response("api response")
+  }
+  let assetWorker = new AssetWorker();
+  if (await assetWorker.condition(request) {
+    let response = await assetWorker.handler(request)
+    // do something with htmlRewriter
+    return response
+  }
+  return new Response("not found", { status: 404 })
 ```
 
 You could also implement this differently in conjunctin with other worker logic
