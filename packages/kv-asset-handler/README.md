@@ -49,18 +49,3 @@ You could also implement this differently in conjunctin with other worker logic
   }
   return new Response("not found", { status: 404 })
 ```
-
-You could also implement this differently in conjunctin with other worker logic
-
-```js
-  if (request.url.contains("api")) {
-    return new Response("api response")
-  }
-  let assetWorker = new AssetWorker();
-  if (await assetWorker.condition(request) {
-    let response = await assetWorker.handler(request)
-    // do something with htmlRewriter
-    return response
-  }
-  return new Response("not found", { status: 404 })
-```
