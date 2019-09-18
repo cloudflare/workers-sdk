@@ -1,8 +1,8 @@
 import mime from 'mime/lite'
 
-const defaultKeyModifer = path => {
-  if (pathname.endsWith('/')) {
-    path += '/index.html'
+const getAssetFromKV = async request => {
+  if (request.method !== 'GET') {
+    throw `this is not a GET request: ${request.method}`
   }
   return path.slice(1)
 }
@@ -15,7 +15,7 @@ const getAssetFromKV = async (path, keyModifer = defaultKeyModifer) => {
   // TODO: throw if path is not in manifest
 
   const cache = caches.default
-  const pathname = keyModifer
+  const pathname = new URL(request.url).pathname.slice(1)
 
   // TODO: match cache on manifest
   // Object.assign(request, new Request(manifest[request.url]))
