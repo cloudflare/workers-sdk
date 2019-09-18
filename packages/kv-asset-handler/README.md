@@ -23,6 +23,11 @@ This example checks for the existence of a value in KV, and returns it if it's t
 ```js
 import { getAssetFromKV } from "@cloudflare/kv-asset-handlers";
 
+addEventListener("fetch", event => {
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
   let url = new URL(request.url);
   if (url.pathname === "/") {
     request = new Request(`${url}/index.html`)
