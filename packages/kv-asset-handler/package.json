@@ -1,5 +1,5 @@
 {
-  "name": "@cloudflare/kv-asset-handlers",
+  "name": "@cloudflare/kv-asset-handler",
   "version": "0.0.1",
   "description": "Routes requests to KV assets",
   "main": "./src/index.js",
