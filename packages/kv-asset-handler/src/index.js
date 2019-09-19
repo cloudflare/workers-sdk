@@ -1,47 +1,49 @@
 import mime from 'mime/lite'
 
-const defaultKeyModifer = pathname => {
+const defaultKeyModifier = pathname => {
   if (pathname === '/') {
     pathname = '/index.html'
   }
   return pathname
 }
 
-const getAssetFromKV = async (event, keyModifer = defaultKeyModifer) => {
+const getAssetFromKV = async (event, keyModifier = defaultKeyModifier) => {
   const request = event.request
   if (request.method !== 'GET') {
     throw new Error(`this is not a GET request: ${request.method}`)
   }
 
-  if (typeof __STATIC_CONTENT === undefined) {
+  if (typeof __STATIC_CONTENT === "undefined") {
     throw new Error('there is no __STATIC_CONTENT namespace bound to the script')
   }
 
   const cache = caches.default
 
-  const key = keyModifer(request.url)
-
   const parsedUrl = new URL(request.url)
-  const pathname = defaultKeyModifier(parsedUrl.pathname)
+  const pathname = keyModifier(parsedUrl.pathname)
 
   // remove prepended /
-  key = pathname.slice(1)
+  let key = pathname.slice(1)
 
   // don't cache if there's no hash
   let shouldCache = false
 
   // check manifest for map from file path to hash
   if (typeof __STATIC_CONTENT_MANIFEST !== 'undefined') {
-    let k = __STATIC_CONTENT_MANIFEST[key]
+    let k = JSON.parse(__STATIC_CONTENT_MANIFEST)[key]
     if (typeof k !== 'undefined') {
       key = k
       shouldCache = true
     }
   }
 
-  let response = await cache.match(key)
+  const cacheKey = `${parsedUrl.origin}/${key}`
+
+  let response = await cache.match(cacheKey)
   if (response) {
-    response.headers.set('CF-Cache-Status', true)
+    let headers = new Headers(response.headers)
+    headers.set('CF-Cache-Status', true)
+    response = new Response(response.body, {headers})
   } else {
     const mimeType = mime.getType(pathname)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
@@ -53,7 +55,7 @@ const getAssetFromKV = async (event, keyModifer = defaultKeyModifer) => {
     response.headers.set('CF-Cache-Status', false)
 
     if (shouldCache === true) {
-      event.waitUntil(cache.put(key, response.clone()))
+      event.waitUntil(cache.put(cacheKey, response.clone()))
     }
   }
   return response
