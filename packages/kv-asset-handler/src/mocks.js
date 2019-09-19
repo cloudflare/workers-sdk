@@ -6,7 +6,7 @@ export const mockKV = () => {
     'https://blah.com/index.html': 'index.html',
   }
   return {
-    get: path => store[path],
+    get: path => store[path] || null,
   }
 }
 export const mockCaches = () => {
