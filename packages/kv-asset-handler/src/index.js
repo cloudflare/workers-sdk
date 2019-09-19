@@ -7,7 +7,7 @@ const defaultKeyModifer = pathname => {
   return pathname
 }
 
-const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
+const getAssetFromKV = async (event, keyModifer = defaultKeyModifer) => {
   const request = event.request
   if (request.method !== 'GET') {
     throw new Error(`this is not a GET request: ${request.method}`)
@@ -18,9 +18,6 @@ const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
   }
 
   const cache = caches.default
-
-  // TODO: throw if path manifest is undefined
-  // TODO: throw if path is not in manifest
 
   const key = keyModifer(request.url)
 
@@ -36,7 +33,6 @@ const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
   // check manifest for map from file path to hash
   if (typeof __STATIC_CONTENT_MANIFEST !== 'undefined') {
     let k = __STATIC_CONTENT_MANIFEST[key]
-    console.log('value from manifest', k)
     if (typeof k !== 'undefined') {
       key = k
       shouldCache = true
@@ -48,11 +44,9 @@ const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
     response.headers.set('CF-Cache-Status', true)
   } else {
     const mimeType = mime.getType(pathname)
-    console.log('get from kv', key)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
-      // TODO: should we include something about wrangler here
-      throw new Error(`could not find ${key} in KV`)
+      throw new Error(`could not find ${key} in __STATIC_CONTENT`)
     }
     response = new Response(body)
     response.headers.set('Content-Type', mimeType)
