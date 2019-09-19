@@ -13,6 +13,7 @@ test('getAssetFromKV return correct val from KV', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV gets index.html by default for / requests', async t => {
   mockGlobal()
   const req = new Request('https://blah.com/')
@@ -24,6 +25,7 @@ test('getAssetFromKV gets index.html by default for / requests', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const req = new Request('https://blah.com/docs/')
@@ -41,6 +43,7 @@ test('getAssetFromKV custom key modifier', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV with no trailing slash on root', async t => {
   mockGlobal()
   const req = new Request('https://blah.com')
@@ -51,6 +54,7 @@ test('getAssetFromKV with no trailing slash on root', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV no result throws an error', async t => {
   mockGlobal()
   const req = new Request('https://blah.com/random')

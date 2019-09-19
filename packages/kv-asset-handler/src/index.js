@@ -1,37 +1,58 @@
 import mime from 'mime/lite'
 
-const defaultKeyModifer = url => {
-  let parsedURL = new URL(url)
-  let pathname = parsedURL.pathname
-  if (pathname.endsWith('/')) {
-    parsedURL += 'index.html'
-  }
-  return parsedURL.toString()
-}
-const getAssetFromKV = async (req, keyModifer = defaultKeyModifer) => {
-  if (req.method !== 'GET')
+// const defaultKeyModifer = url => {
+//   let parsedURL = new URL(url)
+//   let pathname = parsedURL.pathname
+//   if (pathname.endsWith('/')) {
+//     parsedURL += 'index.html'
+//   }
+//   return parsedURL.toString()
+// }
+// const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
+const getAssetFromKV = async (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') {
     throw new Error(`this is not a GET request: ${request.method}`)
-  const url = req.url
+  }
+
   if (typeof __STATIC_CONTENT === undefined) {
-    // TODO: should we say the binding is __STATIC_CONTENT or that they need change wrangler.toml
     throw new Error(
       'there is no __STATIC_CONTENT namespace bound to the script',
     )
   }
-  // TODO: throw if path manifest is undefined
-  // TODO: throw if path is not in manifest
-  const key = keyModifer(url)
+
   const cache = caches.default
 
-  // TODO: match cache on manifest
-  // Object.assign(request, new Request(manifest[request.url]))
+  // TODO: throw if path manifest is undefined
+  // TODO: throw if path is not in manifest
+  // const key = keyModifer(request.url)
+
+  const parsedUrl = new URL(request.url)
+  const pathname = parsedUrl.pathname
+
+  // key defaults to file path
+  let key = pathname.slice(1)
+  console.log("key", key)
+
+  // don't cache if there's no hash
+  let shouldCache = false
+
+  // check manifest for map from file path to hash
+  if (typeof __STATIC_CONTENT_MANIFEST !== "undefined") {
+    let k = __STATIC_CONTENT_MANIFEST[key]
+    console.log("value from manifest", k)
+    if (typeof k !== "undefined") {
+      key = k
+      shouldCache = true
+    }
+  } 
 
   let response = await cache.match(key)
-
-  if (!response) {
-    const parsedURL = new URL(url)
-    const pathname = parsedURL.pathname
+  if (response) {
+    response.headers.set('CF-Cache-Status', true)
+  } else {
     const mimeType = mime.getType(pathname)
+    console.log("get from kv", key)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
       // TODO: should we include something about wrangler here
@@ -39,15 +60,11 @@ const getAssetFromKV = async (req, keyModifer = defaultKeyModifer) => {
     }
     response = new Response(body)
     response.headers.set('Content-Type', mimeType)
+    response.headers.set('CF-Cache-Status', false)
 
-    // TODO: cache asset
-    // event.waitUntil(cache.put(request, response.clone()));
-
-    // TODO: add browser caching
-    // if (cachePaths.some(cachePath => minimatch(path, cachePath))) {
-    // 	response.headers.set("Cache-Control", "max-age=31536000, immutable");
-    // 	event.waitUntil(cache.put(req, res));
-    // }
+    if (shouldCache === true) {
+      event.waitUntil(cache.put(key, response.clone()));
+    }
   }
   return response
 }

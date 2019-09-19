@@ -30,11 +30,11 @@
   "dependencies": {
     "mime": "^2.4.4"
   },
-    "ava": {
-      "require": [
-        "esm"
-      ]
-    },
+  "ava": {
+    "require": [
+      "esm"
+    ]
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^1.0.1",
     "ava": "^1.4.1",
