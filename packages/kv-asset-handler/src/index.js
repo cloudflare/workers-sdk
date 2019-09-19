@@ -13,7 +13,7 @@ const getAssetFromKV = async (event, keyModifier = defaultKeyModifier) => {
     throw new Error(`this is not a GET request: ${request.method}`)
   }
 
-  if (typeof __STATIC_CONTENT === "undefined") {
+  if (typeof __STATIC_CONTENT === 'undefined') {
     throw new Error('there is no __STATIC_CONTENT namespace bound to the script')
   }
 
@@ -43,7 +43,7 @@ const getAssetFromKV = async (event, keyModifier = defaultKeyModifier) => {
   if (response) {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', true)
-    response = new Response(response.body, {headers})
+    response = new Response(response.body, { headers })
   } else {
     const mimeType = mime.getType(pathname)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
