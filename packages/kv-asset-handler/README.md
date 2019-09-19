@@ -8,7 +8,7 @@ For more info on `npm link` please read [here](https://docs.npmjs.com/cli/link).
 
 ## Usage
 
-Currently this exports a single function `getAssertFromKV` that maps `Request` objects to KV Assets, and throws an `Error` if it cannot.
+Currently this exports a single function `getAssetFromKV` that maps `Request` objects to KV Assets, and throws an `Error` if it cannot.
 
 ```js
 import { getAssetFromKV } from '@cloudflare/kv-asset-handlers'
@@ -16,7 +16,7 @@ import { getAssetFromKV } from '@cloudflare/kv-asset-handlers'
 
 `getAssetFromKV` is a function that takes a `Request` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `Error`.
 
-Note this package was designed to work with Worker Sites. If you are not using Sites make sure to call the bucket you are serving assets from `__STATIC_ASSETS__`
+Note this package was designed to work with Worker Sites. If you are not using Sites make sure to call the bucket you are serving assets from `__STATIC_CONTENT`
 
 ### Example
 
