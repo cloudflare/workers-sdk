@@ -27,7 +27,7 @@ const getAssetFromKV = async (request, keyModifer = defaultKeyModifer) => {
   const parsedUrl = new URL(request.url)
   const pathname = defaultKeyModifier(parsedUrl.pathname)
 
-  // key defaults to file path
+  // remove prepended /
   key = pathname.slice(1)
 
   // don't cache if there's no hash
