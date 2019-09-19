@@ -16,6 +16,8 @@ import { getAssetFromKV } from '@cloudflare/kv-asset-handlers'
 
 `getAssetFromKV` is a function that takes a `Request` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `Error`.
 
+Note this package was designed to work with Worker Sites. If you are not using Sites make sure to call the bucket you are serving assets from `__STATIC_ASSETS__`
+
 ### Example
 
 This example checks for the existence of a value in KV, and returns it if it's there, and returns a 404 if it is not. It also serves index.html from `/`.
@@ -28,13 +30,19 @@ addEventListener('fetch', event => {
 })
 
 async function handleRequest(request) {
-  try {
-    return await getAssetFromKV(request.url)
-  } catch (e) {
-    return new Response(`"${url}" not found`, {
-      status: 404,
-      statusText: 'not found',
-    })
-  }
+  if (request.url.includes('/docs')) {
+    try {
+      return await getAssetFromKV(request, url => {
+        //custom key mapping optional
+        if (url.endsWith('/')) url += 'index.html'
+        return url.replace('/docs', '')
+      })
+    } catch (e) {
+      return new Response(`"${customKeyModifier(request.url)}" not found`, {
+        status: 404,
+        statusText: 'not found',
+      })
+    }
+  } else return fetch(request)
 }
 ```
