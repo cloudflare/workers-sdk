@@ -3,9 +3,7 @@ import { getAssetFromKV } from '../src/index'
 import { mockGlobal } from '../src/mocks'
 
 const getEvent = request => {
-  const waitUntil = callback => {
-    console.log('putting to cache')
-  }
+  const waitUntil = callback => {}
   return {
     request,
     waitUntil,
