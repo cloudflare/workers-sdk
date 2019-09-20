@@ -24,9 +24,9 @@
   "author": "Avery Harnish",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/cloudflare/workers-site-npm-pkg/issues"
+    "url": "https://github.com/cloudflare/kv-asset-handler/issues"
   },
-  "homepage": "https://github.com/cloudflare/workers-site-npm-pkg#readme",
+  "homepage": "https://github.com/cloudflare/kv-asset-handler#readme",
   "dependencies": {
     "mime": "^2.4.4"
   },
