@@ -47,10 +47,22 @@ test('getAssetFromKV custom key modifier', async t => {
     return pathname.replace('/docs', '')
   }
 
-  const res = await getAssetFromKV(event, customKeyModifier)
+  const res = await getAssetFromKV(event, { keyModifier: customKeyModifier })
 
   if (res) {
     t.is(await res.text(), 'index.html')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+test('getAssetFromKV when setting browser caching', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/'))
+
+  const res = await getAssetFromKV(event, { cacheControl: { browserTTL: 22 } })
+
+  if (res) {
+    t.is(res.headers.get('cache-control'), 'max-age=22')
   } else {
     t.fail('Response was undefined')
   }
