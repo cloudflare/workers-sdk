@@ -12,12 +12,14 @@ const getEvent = request => {
   }
 }
 
-test('getAssetFromKV return correct val from KV', async t => {
+test('getAssetFromKV return correct val from KV and default caching', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/key1.txt'))
   const res = await getAssetFromKV(event)
 
   if (res) {
+    t.is(res.headers.get('cache-control'), 'max-age=0')
+    t.is(res.headers.get('Cf-Cache-Status'), 'MISS')
     t.is(await res.text(), 'val1')
   } else {
     t.fail('Response was undefined')
@@ -63,6 +65,46 @@ test('getAssetFromKV when setting browser caching', async t => {
 
   if (res) {
     t.is(res.headers.get('cache-control'), 'max-age=22')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+test('getAssetFromKV when setting custom cache setting ', async t => {
+  mockGlobal()
+  const event1 = getEvent(new Request('https://blah.com/'))
+  const event2 = getEvent(new Request('https://blah.com/key1.png?blah=34'))
+  const cacheOnlyPngs = req => {
+    if (new URL(req.url).pathname.endsWith('.png'))
+      return {
+        browserTTL: 720,
+        edgeTTL: 720,
+      }
+    else
+      return {
+        bypassCache: true,
+      }
+  }
+
+  const res1 = await getAssetFromKV(event1, { cacheControl: cacheOnlyPngs })
+  const res2 = await getAssetFromKV(event2, { cacheControl: cacheOnlyPngs })
+
+  if (res1 && res2) {
+    t.is(res1.headers.get('cache-control'), 'max-age=0')
+    t.is(res2.headers.get('cache-control'), 'max-age=720')
+    t.is(res2.headers.get('Cf-Cache-Status'), 'MISS')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/'))
+
+  const res = await getAssetFromKV(event, { cacheControl: { bypassCache: true } })
+
+  if (res) {
+    t.is(res.headers.get('cache-control'), 'max-age=0')
+    t.is(res.headers.get('Cf-Cache-Status'), null)
   } else {
     t.fail('Response was undefined')
   }
