@@ -1,8 +1,8 @@
 import mime from 'mime/lite'
 
 const defaultKeyModifier = pathname => {
-  if (pathname === '/') {
-    pathname = '/index.html'
+  if (pathname.endsWith('/')) {
+    pathname = pathname.concat('index.html')
   }
   return pathname
 }
