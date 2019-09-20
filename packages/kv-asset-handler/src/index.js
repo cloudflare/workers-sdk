@@ -8,7 +8,7 @@ const defaultKeyModifier = pathname => {
 }
 const defaultCacheControl = {
   browserTTL: 0,
-  edgeTTL: 720,
+  edgeTTL: 100 * 60 * 60 * 24, // 100 days
   bypassCache: null,
 }
 
