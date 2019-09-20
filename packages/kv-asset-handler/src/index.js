@@ -15,18 +15,17 @@ const defaultCacheControl = {
 const getAssetFromKV = async (event, options) => {
   options = Object.assign(
     {
-      KV_NAMESPACE: __STATIC_CONTENT,
+      __STATIC_CONTENT: __STATIC_CONTENT_DEFAULT,
       keyModifier: defaultKeyModifier,
       cacheControl: defaultCacheControl,
     },
     options,
   )
-  __STATIC_CONTENT = options.KV_NAMESPACE || __STATIC_CONTENT
   const request = event.request
+  const __STATIC_CONTENT = options.__STATIC_CONTENT
   if (request.method !== 'GET') {
     throw new Error(`this is not a GET request: ${request.method}`)
   }
-
   if (typeof __STATIC_CONTENT === 'undefined') {
     throw new Error(`there is no ${__STATIC_CONTENT} namespace bound to the script`)
   }
@@ -61,16 +60,15 @@ const getAssetFromKV = async (event, options) => {
       case 'object':
         return options.cacheControl
       default:
-        //just returns default cache settings
         return defaultCacheControl
     }
   })()
-  shouldCache = evalCacheOpts.bypassCache !== null ? evalCacheOpts.bypassCache : shouldCache
+  options.cacheControl = Object.assign({}, defaultCacheControl, evalCacheOpts)
+  //if bypassCache set to default then base CF caching on shouldCache(if hash exist)
+  shouldCache = options.cacheControl.bypassCache !== null ? !evalCacheOpts.bypassCache : shouldCache
 
   let response = await cache.match(cacheKey)
-
   if (response) {
-    // let headers = new Headers(response.headers)
     response.headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
@@ -86,11 +84,11 @@ const getAssetFromKV = async (event, options) => {
 
     if (shouldCache === true) {
       response.headers.set('CF-Cache-Status', 'MISS')
-      response.headers.set('cache-control', 'max-age=' + evalCacheOpts.edgeTTL)
+      response.headers.set('cache-control', 'max-age=' + options.cacheControl.edgeTTL)
       event.waitUntil(cache.put(cacheKey, response.clone()))
     }
   }
-  response.headers.set('cache-control', 'max-age=' + evalCacheOpts.browserTTL)
+  response.headers.set('cache-control', 'max-age=' + options.cacheControl.browserTTL)
   return response
 }
 
