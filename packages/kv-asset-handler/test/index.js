@@ -55,6 +55,7 @@ test('getAssetFromKV custom key modifier', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV when setting browser caching', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/'))
@@ -67,6 +68,7 @@ test('getAssetFromKV when setting browser caching', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV when setting custom cache setting ', async t => {
   mockGlobal()
   const event1 = getEvent(new Request('https://blah.com/'))
@@ -94,6 +96,7 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
     t.fail('Response was undefined')
   }
 })
+
 test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/'))
