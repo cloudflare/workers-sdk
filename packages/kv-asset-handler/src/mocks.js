@@ -26,9 +26,7 @@ export const mockCaches = () => {
   return {
     default: {
       match: () => null,
-      put: a => {
-        console.log('putting', a)
-      },
+      put: a => {},
     },
   }
 }
@@ -36,6 +34,6 @@ export const mockCaches = () => {
 export function mockGlobal() {
   Object.assign(global, makeServiceWorkerEnv())
   Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
-  Object.assign(global, { __STATIC_CONTENT_DEFAULT: mockKV() })
+  Object.assign(global, { __STATIC_CONTENT: mockKV() })
   Object.assign(global, { caches: mockCaches() })
 }

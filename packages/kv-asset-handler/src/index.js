@@ -9,25 +9,29 @@ const defaultKeyModifier = pathname => {
 const defaultCacheControl = {
   browserTTL: 0,
   edgeTTL: 100 * 60 * 60 * 24, // 100 days
-  bypassCache: null,
+  bypassCache: false,
 }
 
 const getAssetFromKV = async (event, options) => {
   options = Object.assign(
     {
-      __STATIC_CONTENT: __STATIC_CONTENT_DEFAULT,
+      ASSET_NAMESPACE: __STATIC_CONTENT,
+      ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
       keyModifier: defaultKeyModifier,
       cacheControl: defaultCacheControl,
     },
     options,
   )
+
   const request = event.request
-  const __STATIC_CONTENT = options.__STATIC_CONTENT
+  const ASSET_NAMESPACE = options.ASSET_NAMESPACE
+  const ASSET_MANIFEST = options.ASSET_MANIFEST
+
   if (request.method !== 'GET') {
     throw new Error(`this is not a GET request: ${request.method}`)
   }
-  if (typeof __STATIC_CONTENT === 'undefined') {
-    throw new Error(`there is no ${__STATIC_CONTENT} namespace bound to the script`)
+  if (typeof ASSET_NAMESPACE === 'undefined') {
+    throw new Error(`there is no ${ASSET_NAMESPACE} namespace bound to the script`)
   }
   const parsedUrl = new URL(request.url)
   const pathname = options.keyModifier(parsedUrl.pathname)
@@ -37,22 +41,23 @@ const getAssetFromKV = async (event, options) => {
 
   const cache = caches.default
 
-  // If cache controls not set, don't cache if there's no hash
-  let shouldCache = false
+  let shouldEdgeCache = false
 
   // check manifest for map from file path to hash
-  if (typeof __STATIC_CONTENT_MANIFEST !== 'undefined') {
-    let hashKey = JSON.parse(__STATIC_CONTENT_MANIFEST)[key]
+  if (typeof ASSET_MANIFEST !== 'undefined') {
+    let hashKey = JSON.parse(ASSET_MANIFEST)[key]
     if (typeof hashKey !== 'undefined') {
       key = hashKey
-      shouldCache = true
+      // cache on edge if content is hashed
+      shouldEdgeCache = true
     }
   }
 
-  const cacheKey = `${parsedUrl.origin}/${key}` // we normally cache with query param and do NOT ignore query
+  // this excludes search params from cache key
+  const cacheKey = `${parsedUrl.origin}/${key}`
 
-  // set cache options by either evaluating the handler passed in
-  // or whatever settings were passed in
+  // options.cacheControl can be a function that takes a request or an object
+  // the result should be formed like the defaultCacheControl object
   const evalCacheOpts = (() => {
     switch (typeof options.cacheControl) {
       case 'function':
@@ -63,32 +68,38 @@ const getAssetFromKV = async (event, options) => {
         return defaultCacheControl
     }
   })()
+
   options.cacheControl = Object.assign({}, defaultCacheControl, evalCacheOpts)
-  //if bypassCache set to default then base CF caching on shouldCache(if hash exist)
-  shouldCache = options.cacheControl.bypassCache !== null ? !evalCacheOpts.bypassCache : shouldCache
+
+  // override shouldEdgeCache if options say to bypassCache
+  if (options.cacheControl.bypassCache) {
+    shouldEdgeCache = !options.cacheControl.bypassCache
+  }
 
   let response = await cache.match(cacheKey)
   if (response) {
-    response.headers.set('CF-Cache-Status', 'HIT')
+    let headers = new Headers(response.headers)
+    headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
     const mimeType = mime.getType(pathname)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
-      throw new Error(`could not find ${key} in ${__STATIC_CONTENT}`)
+      throw new Error(`could not find ${key} in your content namespace`)
     }
     response = new Response(body)
     response.headers.set('Content-Type', mimeType)
 
     // TODO: could implement CF-Cache-Status REVALIDATE if path w/o hash existed in manifest
 
-    if (shouldCache === true) {
+    if (shouldEdgeCache === true) {
       response.headers.set('CF-Cache-Status', 'MISS')
-      response.headers.set('cache-control', 'max-age=' + options.cacheControl.edgeTTL)
+      response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
       event.waitUntil(cache.put(cacheKey, response.clone()))
     }
   }
-  response.headers.set('cache-control', 'max-age=' + options.cacheControl.browserTTL)
+
+  response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
   return response
 }
 
