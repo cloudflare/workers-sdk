@@ -8,7 +8,7 @@ const defaultKeyModifier = pathname => {
   // E.g. If path is /about, get /about/index.html
   // This logic ensures that weird paths with ".", like /about.me/,
   // also produce /about.me/index.html (expected).
-  if (pathname.lastIndexOf("/") > pathname.lastIndexOf(".")) {
+  else if (!pathname.endsWith('/') && !mime.getType(pathname)) {
     pathname = pathname.concat('/index.html')
   }
   return pathname
