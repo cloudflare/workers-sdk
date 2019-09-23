@@ -110,4 +110,4 @@ const getAssetFromKV = async (event, options) => {
   return response
 }
 
-export { getAssetFromKV }
+export { getAssetFromKV, defaultKeyModifier }

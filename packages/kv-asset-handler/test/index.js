@@ -1,5 +1,5 @@
 import test from 'ava'
-import { getAssetFromKV } from '../src/index'
+import { getAssetFromKV, defaultKeyModifier } from '../src/index'
 import { mockGlobal } from '../src/mocks'
 
 const getEvent = request => {
@@ -8,6 +8,12 @@ const getEvent = request => {
     request,
     waitUntil,
   }
+}
+
+test('defaultKeyModifier() correctly changes /about/ -> /about/index.html'), async t => {
+  let path = '/about';
+  let key = defaultKeyModifier(path);
+  t.is(key, "/about/index.html");
 }
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
