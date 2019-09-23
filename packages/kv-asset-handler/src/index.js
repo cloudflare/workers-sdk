@@ -4,6 +4,9 @@ const defaultKeyModifier = pathname => {
   if (pathname.endsWith('/')) {
     pathname = pathname.concat('index.html')
   }
+  if (pathname.lastIndexOf("/") > pathname.lastIndexOf(".")) {
+    pathname = pathname.concat('/index.html')
+  }
   return pathname
 }
 const defaultCacheControl = {
