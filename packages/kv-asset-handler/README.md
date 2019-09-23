@@ -31,15 +31,15 @@ import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
-
+const customKeyModifier = url => {
+  //custom key mapping optional
+  if (url.endsWith('/')) url += 'index.html'
+  return url.replace('/docs', '').replace(/^\/+/, '')
+}
 async function handleRequest(request) {
   if (request.url.includes('/docs')) {
     try {
-      return await getAssetFromKV(request, url => {
-        //custom key mapping optional
-        if (url.endsWith('/')) url += 'index.html'
-        return url.replace('/docs', '')
-      })
+      return await getAssetFromKV(request, customKeyModifier)
     } catch (e) {
       return new Response(`"${customKeyModifier(request.url)}" not found`, {
         status: 404,

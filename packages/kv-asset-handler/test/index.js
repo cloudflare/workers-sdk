@@ -10,22 +10,22 @@ const getEvent = request => {
   }
 }
 
-test('defaultKeyModifier() correctly changes /about -> /about/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about -> about/index.html', async t => {
   let path = '/about'
   let key = defaultKeyModifier(path)
-  t.is(key, "/about/index.html")
+  t.is(key, 'about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about/ -> /about/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about/ -> about/index.html', async t => {
   let path = '/about/'
   let key = defaultKeyModifier(path)
-  t.is(key, "/about/index.html")
+  t.is(key, 'about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about.me/ -> about.me/index.html', async t => {
   let path = '/about.me/'
   let key = defaultKeyModifier(path)
-  t.is(key, "/about.me/index.html")
+  t.is(key, 'about.me/index.html')
 })
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
@@ -62,7 +62,7 @@ test('getAssetFromKV custom key modifier', async t => {
     if (pathname === '/') {
       pathname += 'index.html'
     }
-    return pathname.replace('/docs', '')
+    return pathname.replace('/docs', '').replace(/^\/+/, '')
   }
 
   const res = await getAssetFromKV(event, { keyModifier: customKeyModifier })
