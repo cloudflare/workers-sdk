@@ -7,6 +7,7 @@ export const mockKV = () => {
     'key1.txt-123-I-AM-A-HASH-BROWN': 'val1',
     'key1.png-123-I-AM-A-HASH-BROWN': 'val1',
     'index.html-123-I-AM-A-HASH-BROWN': 'index.html',
+    'sub/blah.png-123-I-AM-A-HASH-BROWN': 'picturedis',
   }
   return {
     get: path => store[path] || null,
@@ -18,6 +19,7 @@ export const mockManifest = () => {
     'key1.txt': `key1.txt-${HASH}`,
     'key1.png': `key1.png-${HASH}`,
     'index.html': `index.html-${HASH}`,
+    'sub/blah.png': `sub/blah.png-${HASH}`,
   })
 }
 

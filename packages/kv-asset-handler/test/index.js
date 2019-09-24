@@ -54,12 +54,12 @@ test('getAssetFromKV gets index.html by default for / requests', async t => {
   }
 })
 
-test('getAssetFromKV custom key modifier', async t => {
+test.only('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
-  const event = getEvent(new Request('https://blah.com/docs/index.html'))
+  const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
   const customKeyModifier = pathname => {
-    if (pathname === '/') {
+    if (pathname.endsWith('/')) {
       pathname += 'index.html'
     }
     return pathname.replace('/docs', '').replace(/^\/+/, '')
@@ -68,7 +68,7 @@ test('getAssetFromKV custom key modifier', async t => {
   const res = await getAssetFromKV(event, { keyModifier: customKeyModifier })
 
   if (res) {
-    t.is(await res.text(), 'index.html')
+    t.is(await res.text(), 'picturedis')
   } else {
     t.fail('Response was undefined')
   }
@@ -135,6 +135,17 @@ test('getAssetFromKV with no trailing slash on root', async t => {
   const res = await getAssetFromKV(event)
   if (res) {
     t.is(await res.text(), 'index.html')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
+test('getAssetFromKV with no trailing slash on a subdirect', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/sub/blah.png'))
+  const res = await getAssetFromKV(event)
+  if (res) {
+    t.is(await res.text(), 'picturedis')
   } else {
     t.fail('Response was undefined')
   }
