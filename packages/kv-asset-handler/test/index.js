@@ -37,6 +37,7 @@ test('getAssetFromKV return correct val from KV and default caching', async t =>
     t.is(res.headers.get('cache-control'), 'max-age=0')
     t.is(res.headers.get('Cf-Cache-Status'), 'MISS')
     t.is(await res.text(), 'val1')
+    t.true(res.headers.get('content-type').includes('text'))
   } else {
     t.fail('Response was undefined')
   }
@@ -49,12 +50,13 @@ test('getAssetFromKV gets index.html by default for / requests', async t => {
 
   if (res) {
     t.is(await res.text(), 'index.html')
+    t.true(res.headers.get('content-type').includes('html'))
   } else {
     t.fail('Response was undefined')
   }
 })
 
-test.only('getAssetFromKV custom key modifier', async t => {
+test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
@@ -108,6 +110,7 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
 
   if (res1 && res2) {
     t.is(res1.headers.get('cache-control'), 'max-age=0')
+    t.true(res2.headers.get('content-type').includes('png'))
     t.is(res2.headers.get('cache-control'), 'max-age=720')
     t.is(res2.headers.get('Cf-Cache-Status'), 'MISS')
   } else {
