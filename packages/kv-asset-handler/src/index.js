@@ -49,19 +49,18 @@ const getAssetFromKV = async (event, options) => {
   const cache = caches.default
 
   let shouldEdgeCache = false
-
+  let hashKey = key
   // check manifest for map from file path to hash
   if (typeof ASSET_MANIFEST !== 'undefined') {
-    let hashKey = JSON.parse(ASSET_MANIFEST)[key]
+    hashKey = JSON.parse(ASSET_MANIFEST)[key]
     if (typeof hashKey !== 'undefined') {
-      key = hashKey
       // cache on edge if content is hashed
       shouldEdgeCache = true
     }
   }
 
   // this excludes search params from cache key
-  const cacheKey = `${parsedUrl.origin}/${key}`
+  const cacheKey = `${parsedUrl.origin}/${hashKey}`
 
   // options.cacheControl can be a function that takes a request or an object
   // the result should be formed like the defaultCacheControl object
@@ -91,7 +90,7 @@ const getAssetFromKV = async (event, options) => {
     headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
-    const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
+    const body = await __STATIC_CONTENT.get(hashKey, 'arrayBuffer')
     if (body === null) {
       throw new Error(`could not find ${key} in your content namespace`)
     }

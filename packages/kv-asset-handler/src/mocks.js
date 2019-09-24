@@ -1,13 +1,13 @@
 const makeServiceWorkerEnv = require('service-worker-mock')
 
-const HASH = '123-I-AM-A-HASH-BROWN'
+const HASH = '123HASHBROWN'
 
 export const mockKV = () => {
   const store = {
-    'key1.txt-123-I-AM-A-HASH-BROWN': 'val1',
-    'key1.png-123-I-AM-A-HASH-BROWN': 'val1',
-    'index.html-123-I-AM-A-HASH-BROWN': 'index.html',
-    'sub/blah.png-123-I-AM-A-HASH-BROWN': 'picturedis',
+    'key1.123HASHBROWN.txt': 'val1',
+    'key1.123HASHBROWN.png': 'val1',
+    'index.123HASHBROWN.html': 'index.html',
+    'sub/blah.123HASHBROWN.png': 'picturedis',
   }
   return {
     get: path => store[path] || null,
@@ -16,15 +16,15 @@ export const mockKV = () => {
 
 export const mockManifest = () => {
   return JSON.stringify({
-    'key1.txt': `key1.txt-${HASH}`,
-    'key1.png': `key1.png-${HASH}`,
-    'index.html': `index.html-${HASH}`,
-    'sub/blah.png': `sub/blah.png-${HASH}`,
+    'key1.txt': `key1.${HASH}.txt`,
+    'key1.png': `key1.${HASH}.png`,
+    'index.html': `index.${HASH}.html`,
+    'sub/blah.png': `sub/blah.${HASH}.png`,
   })
 }
 
 export const mockCaches = () => {
-  const store = { 'https://blah.com/key1.txt-123-I-AM-A-HASH-BROWN': 'val1' }
+  const store = { 'https://blah.com/key1.123HASHBROWN.txt': 'val1' }
   return {
     default: {
       match: () => null,
