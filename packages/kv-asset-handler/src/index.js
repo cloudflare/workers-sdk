@@ -88,7 +88,7 @@ const getAssetFromKV = async (event, options) => {
     headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
-    const mimeType = mime.getType(key)
+    const mimeType = mime.getType(pathname)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
       throw new Error(`could not find ${key} in your content namespace`)
