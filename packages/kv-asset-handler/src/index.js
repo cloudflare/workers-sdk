@@ -43,6 +43,7 @@ const getAssetFromKV = async (event, options) => {
     throw new Error(`there is no ${ASSET_NAMESPACE} namespace bound to the script`)
   }
   const parsedUrl = new URL(request.url)
+  const pathname = options.keyModifier(parsedUrl.pathname)
   let key = options.keyModifier(parsedUrl.pathname)
 
   const cache = caches.default
@@ -83,18 +84,18 @@ const getAssetFromKV = async (event, options) => {
   }
 
   let response = await cache.match(cacheKey)
+  const mimeType = mime.getType(pathname)
+
   if (response) {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
-    const mimeType = mime.getType(pathname)
     const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
       throw new Error(`could not find ${key} in your content namespace`)
     }
     response = new Response(body)
-    response.headers.set('Content-Type', mimeType)
 
     // TODO: could implement CF-Cache-Status REVALIDATE if path w/o hash existed in manifest
 
@@ -104,7 +105,7 @@ const getAssetFromKV = async (event, options) => {
       event.waitUntil(cache.put(cacheKey, response.clone()))
     }
   }
-
+  response.headers.set('Content-Type', mimeType)
   response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
   return response
 }
