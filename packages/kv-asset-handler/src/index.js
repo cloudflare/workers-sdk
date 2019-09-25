@@ -5,7 +5,7 @@ import mime from 'mime'
  * that will be looked up from the local bucket.
  * e.g. for a path '/' returns 'index.html' to
  *  serve the content of bucket/index.html
- * @param {object} the incoming request
+ * @param {Request} the incoming request
  */
 const defaultRequestModifier = request => {
   const parsedUrl = new URL(request.url)
