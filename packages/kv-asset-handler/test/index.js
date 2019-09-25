@@ -153,7 +153,7 @@ test('getAssetFromKV caches on two sequential requests', async t => {
   const event = getEvent(new Request('https://blah.com/cache.html'))
 
   const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720, browserTTL: 720 } })
-  await sleep(100)
+  await sleep(1)
   const res2 = await getAssetFromKV(event)
 
   if (res1 && res2) {
