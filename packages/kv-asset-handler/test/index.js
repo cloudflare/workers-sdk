@@ -15,27 +15,21 @@ test('defaultRequestModifier() correctly changes /about -> /about/index.html', a
   let path = '/about'
   let request = new Request(`https://foo.com${path}`)
   let newRequest = defaultRequestModifier(request)
-  let keyURL = new URL(newRequest.url)
-  let key = keyURL.pathname
-  t.is(key, '/about/index.html')
+  t.is(newRequest.url, request.url + '/index.html')
 })
 
 test('defaultRequestModifier() correctly changes /about/ -> /about/index.html', async t => {
   let path = '/about/'
   let request = new Request(`https://foo.com${path}`)
   let newRequest = defaultRequestModifier(request)
-  let keyURL = new URL(newRequest.url)
-  let key = keyURL.pathname
-  t.is(key, '/about/index.html')
+  t.is(newRequest.url, request.url + 'index.html')
 })
 
 test('defaultRequestModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
   let path = '/about.me/'
   let request = new Request(`https://foo.com${path}`)
   let newRequest = defaultRequestModifier(request)
-  let keyURL = new URL(newRequest.url)
-  let key = keyURL.pathname
-  t.is(key, '/about.me/index.html')
+  t.is(newRequest.url, request.url + 'index.html')
 })
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
