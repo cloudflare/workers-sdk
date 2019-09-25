@@ -1,4 +1,4 @@
-import mime from 'mime/lite'
+import mime from 'mime'
 
 const defaultKeyModifier = pathname => {
   // E.g. If path is /about/, get key /about/index.html
@@ -82,8 +82,12 @@ const getAssetFromKV = async (event, options) => {
     shouldEdgeCache = false
   }
 
-  let response = await cache.match(cacheKey)
-  const mimeType = mime.getType(pathname)
+  const mimeType = mime.getType(pathname) || "text/plain"
+
+  let response = null
+  if (shouldEdgeCache) {
+    response = await cache.match(cacheKey)
+  }
 
   if (response) {
     let headers = new Headers(response.headers)
