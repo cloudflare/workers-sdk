@@ -155,7 +155,7 @@ test('getAssetFromKV with no trailing slash on root', async t => {
   }
 })
 
-test('getAssetFromKV with no trailing slash on a subdirect', async t => {
+test('getAssetFromKV with no trailing slash on a subdirectory', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/sub/blah.png'))
   const res = await getAssetFromKV(event)
