@@ -5,9 +5,13 @@ import mime from 'mime'
  * that will be looked up from the local bucket.
  * e.g. for a path '/' returns 'index.html' to
  *  serve the content of bucket/index.html
- * @param {string} pathname the path of the incoming request
+ * @param {object} the incoming request
  */
-const defaultKeyModifier = pathname => {
+const defaultKeyModifier = request => {
+  const parsedUrl = new URL(request.url)
+  // determine the file path to search for from the pathname of the incoming request
+  let pathname = parsedUrl.pathname
+
   if (pathname.endsWith('/')) {
     // If path looks like a directory
     // e.g. If path is /about/ -> /about/index.html
@@ -17,9 +21,11 @@ const defaultKeyModifier = pathname => {
     //  e.g. /about.me ->  /about.me/index.html
     pathname = pathname.concat('/index.html')
   }
-  // remove prepended /
-  return pathname.replace(/^\/+/, '')
+
+  parsedUrl.pathname = pathname
+  return new Request(parsedUrl, request)
 }
+
 const defaultCacheControl = {
   browserTTL: 0,
   edgeTTL: 100 * 60 * 60 * 24, // 100 days
@@ -68,9 +74,13 @@ const getAssetFromKV = async (event, options) => {
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new Error(`there is no ${ASSET_NAMESPACE} namespace bound to the script`)
   }
-  const parsedUrl = new URL(request.url)
-  // determine the file path to search for from the pathname of the incoming request
-  let key = options.keyModifier(parsedUrl.pathname)
+  // determine the file path to search for based on the incoming request
+  const kvRequest = options.keyModifier(request)
+  const parsedUrl = new URL(kvRequest.url)
+
+  const pathname = parsedUrl.pathname
+
+  let key = pathname.replace(/^\/+/, '')
 
   const cache = caches.default
   const mimeType = mime.getType(key) || 'text/plain'

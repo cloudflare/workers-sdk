@@ -10,26 +10,35 @@ const getEvent = request => {
   }
 }
 
-test('defaultKeyModifier() correctly changes /about -> about/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about -> /about/index.html', async t => {
+  mockGlobal()
   let path = '/about'
-  let key = defaultKeyModifier(path)
-  t.is(key, 'about/index.html')
+  let request = new Request(`https://foo.com${path}`)
+  let newRequest = defaultKeyModifier(request)
+  let keyURL = new URL(newRequest.url)
+  let key = keyURL.pathname
+  t.is(key, '/about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about/ -> about/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about/ -> /about/index.html', async t => {
   let path = '/about/'
-  let key = defaultKeyModifier(path)
-  t.is(key, 'about/index.html')
+  let request = new Request(`https://foo.com${path}`)
+  let newRequest = defaultKeyModifier(request)
+  let keyURL = new URL(newRequest.url)
+  let key = keyURL.pathname
+  t.is(key, '/about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about.me/ -> about.me/index.html', async t => {
+test('defaultKeyModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
   let path = '/about.me/'
-  let key = defaultKeyModifier(path)
-  t.is(key, 'about.me/index.html')
+  let request = new Request(`https://foo.com${path}`)
+  let newRequest = defaultKeyModifier(request)
+  let keyURL = new URL(newRequest.url)
+  let key = keyURL.pathname
+  t.is(key, '/about.me/index.html')
 })
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
-  mockGlobal()
   const event = getEvent(new Request('https://blah.com/key1.txt'))
   const res = await getAssetFromKV(event)
 
@@ -72,11 +81,18 @@ test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
-  const customKeyModifier = pathname => {
+  const customKeyModifier = request => {
+    const parsedUrl = new URL(request.url)
+    // determine the file path to search for from the pathname of the incoming request
+    let pathname = parsedUrl.pathname
+
     if (pathname.endsWith('/')) {
       pathname += 'index.html'
     }
-    return pathname.replace('/docs', '').replace(/^\/+/, '')
+
+    let url = new URL(request.url)
+    url.pathname = pathname.replace('/docs', '').replace(/^\/+/, '')
+    return new Request(url, request)
   }
 
   const res = await getAssetFromKV(event, { keyModifier: customKeyModifier })
