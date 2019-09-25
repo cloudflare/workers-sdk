@@ -82,16 +82,10 @@ test('getAssetFromKV custom key modifier', async t => {
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
   const customRequestModifier = request => {
-    const parsedUrl = new URL(request.url)
-    // determine the file path to search for from the pathname of the incoming request
-    let pathname = parsedUrl.pathname
+    let defaultModifiedRequest = defaultRequestModifier(request)
 
-    if (pathname.endsWith('/')) {
-      pathname += 'index.html'
-    }
-
-    let url = new URL(request.url)
-    url.pathname = pathname.replace('/docs', '').replace(/^\/+/, '')
+    let url = new URL(defaultModifiedRequest.url)
+    url.pathname = url.pathname.replace('/docs', '').replace(/^\/+/, '')
     return new Request(url, request)
   }
 
