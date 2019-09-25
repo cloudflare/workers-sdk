@@ -1,6 +1,9 @@
 name: Run npm tests
 
-on: [push]
+on:
+  pull-request:
+    paths:
+    - '*'
 
 jobs:
   build:
