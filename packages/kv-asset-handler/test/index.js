@@ -1,14 +1,6 @@
 import test from 'ava'
 import { getAssetFromKV, defaultKeyModifier } from '../src/index'
-import { mockGlobal } from '../src/mocks'
-
-const getEvent = request => {
-  const waitUntil = callback => {}
-  return {
-    request,
-    waitUntil,
-  }
-}
+import { mockGlobal, getEvent } from '../src/mocks'
 
 test('defaultKeyModifier() correctly changes /about -> /about/index.html', async t => {
   mockGlobal()
@@ -44,7 +36,7 @@ test('getAssetFromKV return correct val from KV and default caching', async t =>
 
   if (res) {
     t.is(res.headers.get('cache-control'), null)
-    t.is(res.headers.get('Cf-Cache-Status'), 'MISS')
+    t.is(res.headers.get('cf-cache-status'), 'MISS')
     t.is(await res.text(), 'val1')
     t.true(res.headers.get('content-type').includes('text'))
   } else {
@@ -140,7 +132,26 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
     t.is(res1.headers.get('cache-control'), null)
     t.true(res2.headers.get('content-type').includes('png'))
     t.is(res2.headers.get('cache-control'), 'max-age=720')
-    t.is(res2.headers.get('Cf-Cache-Status'), 'MISS')
+    t.is(res2.headers.get('cf-cache-status'), 'MISS')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+test('getAssetFromKV caches on two sequential requests', async t => {
+  mockGlobal()
+  const sleep = milliseconds => {
+    return new Promise(resolve => setTimeout(resolve, milliseconds))
+  }
+  const event = getEvent(new Request('https://blah.com/cache.html'))
+
+  const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720, browserTTL: 720 } })
+  await sleep(100)
+  const res2 = await getAssetFromKV(event)
+
+  if (res1 && res2) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res1.headers.get('cache-control'), 'max-age=720')
+    t.is(res2.headers.get('cf-cache-status'), 'HIT')
   } else {
     t.fail('Response was undefined')
   }
@@ -154,7 +165,7 @@ test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async 
 
   if (res) {
     t.is(res.headers.get('cache-control'), null)
-    t.is(res.headers.get('Cf-Cache-Status'), null)
+    t.is(res.headers.get('cf-cache-status'), null)
   } else {
     t.fail('Response was undefined')
   }
