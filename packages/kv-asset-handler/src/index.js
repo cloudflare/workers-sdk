@@ -82,7 +82,7 @@ const getAssetFromKV = async (event, options) => {
     shouldEdgeCache = false
   }
 
-  const mimeType = mime.getType(pathname) || "text/plain"
+  const mimeType = mime.getType(key) || "text/plain"
 
   let response = null
   if (shouldEdgeCache) {
