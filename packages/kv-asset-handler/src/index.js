@@ -70,23 +70,22 @@ const getAssetFromKV = async (event, options) => {
   }
   const parsedUrl = new URL(request.url)
   // determine the file path to search for from the pathname of the incoming request
-  const pathname = options.keyModifier(parsedUrl.pathname)
   let key = options.keyModifier(parsedUrl.pathname)
 
   const cache = caches.default
+  const mimeType = mime.getType(key) || 'text/plain'
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash
-  let hashKey = key
   // check manifest for map from file path to hash
   if (typeof ASSET_MANIFEST !== 'undefined') {
-    hashKey = JSON.parse(ASSET_MANIFEST)[key]
-    if (typeof hashKey !== 'undefined') {
+    if (JSON.parse(ASSET_MANIFEST)[key]) {
+      key = JSON.parse(ASSET_MANIFEST)[key]
       shouldEdgeCache = true // cache on edge if content is hashed
     }
   }
 
   // this excludes search params from cache key
-  const cacheKey = `${parsedUrl.origin}/${hashKey}`
+  const cacheKey = `${parsedUrl.origin}/${key}`
 
   // if argument passed in for cacheControl is a function than
   // evaluate that function. otherwise return the Object passed in
@@ -109,8 +108,6 @@ const getAssetFromKV = async (event, options) => {
     shouldEdgeCache = false
   }
 
-  const mimeType = mime.getType(key) || 'text/plain'
-
   let response = null
   if (shouldEdgeCache) {
     response = await cache.match(cacheKey)
@@ -121,7 +118,7 @@ const getAssetFromKV = async (event, options) => {
     headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
-    const body = await __STATIC_CONTENT.get(hashKey, 'arrayBuffer')
+    const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
     if (body === null) {
       throw new Error(`could not find ${key} in your content namespace`)
     }
@@ -129,7 +126,7 @@ const getAssetFromKV = async (event, options) => {
 
     // TODO: could implement CF-Cache-Status REVALIDATE if path w/o hash existed in manifest
 
-    if (shouldEdgeCache === true) {
+    if (shouldEdgeCache) {
       response.headers.set('CF-Cache-Status', 'MISS')
       // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)

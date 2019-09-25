@@ -7,6 +7,7 @@ export const mockKV = () => {
     'key1.123HASHBROWN.txt': 'val1',
     'key1.123HASHBROWN.png': 'val1',
     'index.123HASHBROWN.html': 'index.html',
+    'nohash.txt': 'no hash but still got some result',
     'sub/blah.123HASHBROWN.png': 'picturedis',
   }
   return {

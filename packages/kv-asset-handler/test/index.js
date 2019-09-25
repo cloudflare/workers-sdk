@@ -42,6 +42,18 @@ test('getAssetFromKV return correct val from KV and default caching', async t =>
     t.fail('Response was undefined')
   }
 })
+test('getAssetFromKV if not in asset manifest still returns nohash.txt', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/nohash.txt'))
+  const res = await getAssetFromKV(event)
+
+  if (res) {
+    t.is(await res.text(), 'no hash but still got some result')
+    t.true(res.headers.get('content-type').includes('text'))
+  } else {
+    t.fail('Response was undefined')
+  }
+})
 
 test('getAssetFromKV gets index.html by default for / requests', async t => {
   mockGlobal()
