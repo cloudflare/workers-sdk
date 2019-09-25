@@ -79,7 +79,7 @@ const getAssetFromKV = async (event, options) => {
 
   // override shouldEdgeCache if options say to bypassCache
   if (options.cacheControl.bypassCache) {
-    shouldEdgeCache = !options.cacheControl.bypassCache
+    shouldEdgeCache = false
   }
 
   let response = await cache.match(cacheKey)
