@@ -1,30 +1,38 @@
 import test from 'ava'
-import { getAssetFromKV, defaultKeyModifier } from '../src/index'
-import { mockGlobal, getEvent } from '../src/mocks'
+import { getAssetFromKV, defaultRequestModifier } from '../src/index'
+import { mockGlobal } from '../src/mocks'
 
-test('defaultKeyModifier() correctly changes /about -> /about/index.html', async t => {
+const getEvent = request => {
+  const waitUntil = callback => {}
+  return {
+    request,
+    waitUntil,
+  }
+}
+
+test('defaultRequestModifier() correctly changes /about -> /about/index.html', async t => {
   mockGlobal()
   let path = '/about'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultKeyModifier(request)
+  let newRequest = defaultRequestModifier(request)
   let keyURL = new URL(newRequest.url)
   let key = keyURL.pathname
   t.is(key, '/about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about/ -> /about/index.html', async t => {
+test('defaultRequestModifier() correctly changes /about/ -> /about/index.html', async t => {
   let path = '/about/'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultKeyModifier(request)
+  let newRequest = defaultRequestModifier(request)
   let keyURL = new URL(newRequest.url)
   let key = keyURL.pathname
   t.is(key, '/about/index.html')
 })
 
-test('defaultKeyModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
+test('defaultRequestModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
   let path = '/about.me/'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultKeyModifier(request)
+  let newRequest = defaultRequestModifier(request)
   let keyURL = new URL(newRequest.url)
   let key = keyURL.pathname
   t.is(key, '/about.me/index.html')
@@ -73,7 +81,7 @@ test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
-  const customKeyModifier = request => {
+  const customRequestModifier = request => {
     const parsedUrl = new URL(request.url)
     // determine the file path to search for from the pathname of the incoming request
     let pathname = parsedUrl.pathname
@@ -87,7 +95,7 @@ test('getAssetFromKV custom key modifier', async t => {
     return new Request(url, request)
   }
 
-  const res = await getAssetFromKV(event, { keyModifier: customKeyModifier })
+  const res = await getAssetFromKV(event, { requestModifier: customRequestModifier })
 
   if (res) {
     t.is(await res.text(), 'picturedis')
