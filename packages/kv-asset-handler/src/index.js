@@ -117,7 +117,8 @@ const getAssetFromKV = async (event, options) => {
   }
 
   if (response) {
-    response.headers.set('CF-Cache-Status', 'HIT')
+    let headers = new Headers(response.headers)
+    headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
     const body = await __STATIC_CONTENT.get(hashKey, 'arrayBuffer')
