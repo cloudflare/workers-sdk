@@ -104,11 +104,14 @@ const getAssetFromKV = async (event, options) => {
 
     if (shouldEdgeCache === true) {
       response.headers.set('CF-Cache-Status', 'MISS')
+      // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
       event.waitUntil(cache.put(cacheKey, response.clone()))
+      response.headers.delete('Cache-Control')
     }
   }
   response.headers.set('Content-Type', mimeType)
+  if (options.cacheControl.browserTTL)
   response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
   return response
 }
