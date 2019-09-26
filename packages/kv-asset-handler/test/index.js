@@ -1,26 +1,26 @@
 import test from 'ava'
 import { mockGlobal, getEvent } from '../src/mocks'
-import { getAssetFromKV, defaultRequestKeyModifier } from '../src/index'
+import { getAssetFromKV, mapRequestToAsset } from '../src/index'
 
-test('defaultRequestKeyModifier() correctly changes /about -> /about/index.html', async t => {
+test('mapRequestToAsset() correctly changes /about -> /about/index.html', async t => {
   mockGlobal()
   let path = '/about'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultRequestKeyModifier(request)
+  let newRequest = mapRequestToAsset(request)
   t.is(newRequest.url, request.url + '/index.html')
 })
 
-test('defaultRequestKeyModifier() correctly changes /about/ -> /about/index.html', async t => {
+test('mapRequestToAsset() correctly changes /about/ -> /about/index.html', async t => {
   let path = '/about/'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultRequestKeyModifier(request)
+  let newRequest = mapRequestToAsset(request)
   t.is(newRequest.url, request.url + 'index.html')
 })
 
-test('defaultRequestKeyModifier() correctly changes /about.me/ -> /about.me/index.html', async t => {
+test('mapRequestToAsset() correctly changes /about.me/ -> /about.me/index.html', async t => {
   let path = '/about.me/'
   let request = new Request(`https://foo.com${path}`)
-  let newRequest = defaultRequestKeyModifier(request)
+  let newRequest = mapRequestToAsset(request)
   t.is(newRequest.url, request.url + 'index.html')
 })
 
@@ -67,15 +67,15 @@ test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
-  const customRequestKeyModifier = request => {
-    let defaultModifiedRequest = defaultRequestKeyModifier(request)
+  const customRequestMapper = request => {
+    let defaultModifiedRequest = mapRequestToAsset(request)
 
     let url = new URL(defaultModifiedRequest.url)
     url.pathname = url.pathname.replace('/docs', '')
     return new Request(url, request)
   }
 
-  const res = await getAssetFromKV(event, { requestKeyModifier: customRequestKeyModifier })
+  const res = await getAssetFromKV(event, { mapRequestToAsset: customRequestMapper })
 
   if (res) {
     t.is(await res.text(), 'picturedis')
