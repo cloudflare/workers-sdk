@@ -58,8 +58,10 @@ const getAssetFromKV = async (event, options) => {
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
   const ASSET_MANIFEST = options.ASSET_MANIFEST
 
-  if (request.method !== 'GET') {
-    throw new Error(`this is not a GET request: ${request.method}`)
+  const SUPPORTED_METHODS = ["GET", "HEAD"]
+
+  if (!SUPPORTED_METHODS.includes(request.method)) {
+    throw new Error(`${request.method} is not a valid request method`)
   }
 
   if (typeof ASSET_NAMESPACE === 'undefined') {
