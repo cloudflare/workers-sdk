@@ -38,6 +38,7 @@ const defaultCacheControl = {
  * @param {event} event the fetch event of the triggered request
  * @param {{mapRequestToAsset: (string: Request) => Request, cacheControl: {bypassCache:boolean, edgeTTL: number, browserTTL:number}, ASSET_NAMESPACE: any, ASSET_MANIFEST:any}} [options] configurable options
  * @param {CacheControl} [options.cacheControl] determine how to cache on Cloudflare and the browser
+ * @param {typeof(options.mapRequestToAsset)} [options.mapRequestToAsset]  maps the path of incoming request to the request pathKey to look up
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
