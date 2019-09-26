@@ -1,18 +1,18 @@
 import mime from 'mime'
 
 /**
- * maps the path of incoming request to the filepath (key)
-  * determine the file path to search for from the pathname of the incoming request
- * e.g.  for a path '/' returns '/index.html'
- *  serve the content of bucket/index.html
- * @param {Request} the incoming request
+ * maps the path of incoming request to the request pathKey to look up
+ * in bucket and in cache
+ * e.g.  for a path '/' returns '/index.html' which serves
+ * the content of bucket/index.html
+ * @param {Request} request incoming request
  */
-const defaultRequestModifier = request => {
+const defaultRequestKeyModifier = request => {
   const parsedUrl = new URL(request.url)
   let pathname = parsedUrl.pathname
 
   if (pathname.endsWith('/')) {
-    // If path looks like a directory
+    // If path looks like a directory append index.html
     // e.g. If path is /about/ -> /about/index.html
     pathname = pathname.concat('index.html')
   } else if (!mime.getType(pathname)) {
@@ -30,23 +30,13 @@ const defaultCacheControl = {
   edgeTTL: 100 * 60 * 60 * 24, // 100 days
   bypassCache: false, // do not bypass Cloudflare's cache
 }
-/**
- * Cache control Type
- * To cache based on the request this can also be a function that takes in a
- * request and returns this type
- * @typedef {Object} CacheControl
- * @property {boolean} bypassCache
- * @property {number} edgeTTL
- * @property {number} browserTTL
- */
 
 /**
  * takes the path of the incoming request, gathers the approriate cotent from KV, and returns
  * the response
  *
  * @param {event} event the fetch event of the triggered request
- * @param {Objects} [options] configurable options
- * @param {(string: Request) => Request} [options.requestModifier] maps incoming request to a request for filepath (key) that will be looked up from the local bucket.
+ * @param {{requestKeyModifier: (string: Request) => Request, cacheControl: {bypassCache:boolean, edgeTTL: number, browserTTL:number}, ASSET_NAMESPACE: any, ASSET_MANIFEST:any}} [options] configurable options
  * @param {CacheControl} [options.cacheControl] determine how to cache on Cloudflare and the browser
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
@@ -57,7 +47,7 @@ const getAssetFromKV = async (event, options) => {
     {
       ASSET_NAMESPACE: __STATIC_CONTENT,
       ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
-      requestModifier: defaultRequestModifier,
+      requestKeyModifier: defaultRequestKeyModifier,
       cacheControl: defaultCacheControl,
     },
     options,
@@ -74,32 +64,32 @@ const getAssetFromKV = async (event, options) => {
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new Error(`there is no ${ASSET_NAMESPACE} namespace bound to the script`)
   }
-  
-  // determine the file path to search for based on the incoming request
-  const kvRequest = options.requestModifier(request)
-  const parsedUrl = new URL(kvRequest.url)
+
+  // determine the requestKey based on the actual file served for the incoming request
+  const requestKey = options.requestKeyModifier(request)
+  const parsedUrl = new URL(requestKey.url)
 
   const pathname = parsedUrl.pathname
 
-  // remove prepended /
-  let key = pathname.replace(/^\/+/, '')
+  // pathKey is the file path to look up in the manifest
+  let pathKey = pathname.replace(/^\/+/, '') // remove prepended /
 
   const cache = caches.default
-  const mimeType = mime.getType(key) || 'text/plain'
+  const mimeType = mime.getType(pathKey) || 'text/plain'
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash
   // check manifest for map from file path to hash
   if (typeof ASSET_MANIFEST !== 'undefined') {
-    if (JSON.parse(ASSET_MANIFEST)[key]) {
-      key = JSON.parse(ASSET_MANIFEST)[key]
-      shouldEdgeCache = true // cache on edge if content is hashed
+    if (JSON.parse(ASSET_MANIFEST)[pathKey]) {
+      pathKey = JSON.parse(ASSET_MANIFEST)[pathKey]
+      shouldEdgeCache = true // cache on edge if pathKey is a unqiue hash
     }
   }
 
-  // this excludes search params from cache key
-  const cacheKey = `${parsedUrl.origin}/${key}`
+  // TODO cacheKey should be a request and this excludes search params from cache
+  const cacheKey = `${parsedUrl.origin}/${pathKey}`
 
-  // if argument passed in for cacheControl is a function than
+  // if argument passed in for cacheControl is a function then
   // evaluate that function. otherwise return the Object passed in
   // or default Object
   const evalCacheOpts = (() => {
@@ -130,9 +120,9 @@ const getAssetFromKV = async (event, options) => {
     headers.set('CF-Cache-Status', 'HIT')
     response = new Response(response.body, { headers })
   } else {
-    const body = await __STATIC_CONTENT.get(key, 'arrayBuffer')
+    const body = await __STATIC_CONTENT.get(pathKey, 'arrayBuffer')
     if (body === null) {
-      throw new Error(`could not find ${key} in your content namespace`)
+      throw new Error(`could not find ${pathKey} in your content namespace`)
     }
     response = new Response(body)
 
@@ -155,4 +145,4 @@ const getAssetFromKV = async (event, options) => {
   return response
 }
 
-export { getAssetFromKV, defaultRequestModifier }
+export { getAssetFromKV, defaultRequestKeyModifier }
