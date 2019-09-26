@@ -7,7 +7,7 @@ import mime from 'mime'
  * the content of bucket/index.html
  * @param {Request} request incoming request
  */
-const defaultRequestKeyModifier = request => {
+const mapRequestToAsset = request => {
   const parsedUrl = new URL(request.url)
   let pathname = parsedUrl.pathname
 
@@ -36,7 +36,7 @@ const defaultCacheControl = {
  * the response
  *
  * @param {event} event the fetch event of the triggered request
- * @param {{requestKeyModifier: (string: Request) => Request, cacheControl: {bypassCache:boolean, edgeTTL: number, browserTTL:number}, ASSET_NAMESPACE: any, ASSET_MANIFEST:any}} [options] configurable options
+ * @param {{mapRequestToAsset: (string: Request) => Request, cacheControl: {bypassCache:boolean, edgeTTL: number, browserTTL:number}, ASSET_NAMESPACE: any, ASSET_MANIFEST:any}} [options] configurable options
  * @param {CacheControl} [options.cacheControl] determine how to cache on Cloudflare and the browser
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
@@ -47,7 +47,7 @@ const getAssetFromKV = async (event, options) => {
     {
       ASSET_NAMESPACE: __STATIC_CONTENT,
       ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
-      requestKeyModifier: defaultRequestKeyModifier,
+      mapRequestToAsset: mapRequestToAsset,
       cacheControl: defaultCacheControl,
     },
     options,
@@ -66,7 +66,7 @@ const getAssetFromKV = async (event, options) => {
   }
 
   // determine the requestKey based on the actual file served for the incoming request
-  const requestKey = options.requestKeyModifier(request)
+  const requestKey = options.mapRequestToAsset(request)
   const parsedUrl = new URL(requestKey.url)
 
   const pathname = parsedUrl.pathname
@@ -145,4 +145,4 @@ const getAssetFromKV = async (event, options) => {
   return response
 }
 
-export { getAssetFromKV, defaultRequestKeyModifier }
+export { getAssetFromKV, mapRequestToAsset }
