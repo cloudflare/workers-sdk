@@ -1,14 +1,6 @@
 import test from 'ava'
-import { getAssetFromKV, defaultRequestModifier } from '../src/index'
-import { mockGlobal } from '../src/mocks'
-
-const getEvent = request => {
-  const waitUntil = callback => {}
-  return {
-    request,
-    waitUntil,
-  }
-}
+import { getAssetFromKV, defaultKeyModifier } from '../src/index'
+import { mockGlobal, getEvent } from '../src/mocks'
 
 test('defaultRequestModifier() correctly changes /about -> /about/index.html', async t => {
   mockGlobal()
