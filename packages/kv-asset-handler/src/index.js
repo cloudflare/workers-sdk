@@ -2,14 +2,13 @@ import mime from 'mime'
 
 /**
  * maps the path of incoming request to the filepath (key)
- * that will be looked up from the local bucket.
- * e.g. for a path '/' returns 'index.html' to
+  * determine the file path to search for from the pathname of the incoming request
+ * e.g.  for a path '/' returns '/index.html'
  *  serve the content of bucket/index.html
  * @param {Request} the incoming request
  */
 const defaultRequestModifier = request => {
   const parsedUrl = new URL(request.url)
-  // determine the file path to search for from the pathname of the incoming request
   let pathname = parsedUrl.pathname
 
   if (pathname.endsWith('/')) {
@@ -47,7 +46,7 @@ const defaultCacheControl = {
  *
  * @param {event} event the fetch event of the triggered request
  * @param {Objects} [options] configurable options
- * @param {(string: string) => string} [options.requestModifier] maps incoming request to the filepath (key) that will be looked up from the local bucket.
+ * @param {(string: Request) => Request} [options.requestModifier] maps incoming request to a request for filepath (key) that will be looked up from the local bucket.
  * @param {CacheControl} [options.cacheControl] determine how to cache on Cloudflare and the browser
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
@@ -82,6 +81,7 @@ const getAssetFromKV = async (event, options) => {
 
   const pathname = parsedUrl.pathname
 
+  // remove prepended /
   let key = pathname.replace(/^\/+/, '')
 
   const cache = caches.default

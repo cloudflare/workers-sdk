@@ -71,7 +71,7 @@ test('getAssetFromKV custom key modifier', async t => {
     let defaultModifiedRequest = defaultRequestModifier(request)
 
     let url = new URL(defaultModifiedRequest.url)
-    url.pathname = url.pathname.replace('/docs', '').replace(/^\/+/, '')
+    url.pathname = url.pathname.replace('/docs', '')
     return new Request(url, request)
   }
 
