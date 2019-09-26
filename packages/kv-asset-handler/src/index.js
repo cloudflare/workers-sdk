@@ -82,7 +82,7 @@ const getAssetFromKV = async (event, options) => {
   if (typeof ASSET_MANIFEST !== 'undefined') {
     if (JSON.parse(ASSET_MANIFEST)[pathKey]) {
       pathKey = JSON.parse(ASSET_MANIFEST)[pathKey]
-      shouldEdgeCache = true // cache on edge if pathKey is a unqiue hash
+      shouldEdgeCache = true // cache on edge if pathKey is a unique hash
     }
   }
 
