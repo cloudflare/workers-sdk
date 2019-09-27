@@ -26,7 +26,7 @@ const mapRequestToAsset = request => {
 }
 
 const defaultCacheControl = {
-  browserTTL: 0,
+  browserTTL: null,
   edgeTTL: 100 * 60 * 60 * 24, // 100 days
   bypassCache: false, // do not bypass Cloudflare's cache
 }
@@ -121,6 +121,11 @@ const getAssetFromKV = async (event, options) => {
   if (response) {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', 'HIT')
+    if(options.browserTTL === null ){
+      headers.delete('cache-control')
+    }else{
+      headers.set('cache-control', `max-age=${options.browserTTL}`)
+    }
     response = new Response(response.body, { headers })
   } else {
     const body = await __STATIC_CONTENT.get(pathKey, 'arrayBuffer')
