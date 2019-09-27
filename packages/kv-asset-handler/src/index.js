@@ -121,7 +121,7 @@ const getAssetFromKV = async (event, options) => {
   if (response) {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', 'HIT')
-    if(options.browserTTL === null ){
+    if (options.cacheControl.browserTTL !== 0 && !options.cacheControl.browserTTL){
       headers.delete('cache-control')
     }else{
       headers.set('cache-control', `max-age=${options.browserTTL}`)
@@ -147,7 +147,7 @@ const getAssetFromKV = async (event, options) => {
     }
   }
   response.headers.set('Content-Type', mimeType)
-  if (options.cacheControl.browserTTL !== null) {
+  if (options.cacheControl.browserTTL === 0 || !options.cacheControl.browserTTL) {
     response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
   }
   return response
