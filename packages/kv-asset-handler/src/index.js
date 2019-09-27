@@ -27,7 +27,7 @@ const mapRequestToAsset = request => {
 
 const defaultCacheControl = {
   browserTTL: null,
-  edgeTTL: 100 * 60 * 60 * 24, // 100 days
+  edgeTTL: 2 * 60 * 60 * 24, // 2 days
   bypassCache: false, // do not bypass Cloudflare's cache
 }
 
@@ -147,7 +147,7 @@ const getAssetFromKV = async (event, options) => {
     }
   }
   response.headers.set('Content-Type', mimeType)
-  if (options.cacheControl.browserTTL) {
+  if (options.cacheControl.browserTTL !== null) {
     response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
   }
   return response
