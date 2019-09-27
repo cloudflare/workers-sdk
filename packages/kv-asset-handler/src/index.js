@@ -58,7 +58,7 @@ const getAssetFromKV = async (event, options) => {
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
   const ASSET_MANIFEST = options.ASSET_MANIFEST
 
-  const SUPPORTED_METHODS = ["GET", "HEAD"]
+  const SUPPORTED_METHODS = ['GET', 'HEAD']
 
   if (!SUPPORTED_METHODS.includes(request.method)) {
     throw new Error(`${request.method} is not a valid request method`)
@@ -112,6 +112,8 @@ const getAssetFromKV = async (event, options) => {
   if (options.cacheControl.bypassCache) {
     shouldEdgeCache = false
   }
+  const shouldSetBrowserCache =
+    options.cacheControl.browserTTL === 0 || options.cacheControl.browserTTL
 
   let response = null
   if (shouldEdgeCache) {
@@ -121,10 +123,12 @@ const getAssetFromKV = async (event, options) => {
   if (response) {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', 'HIT')
-    if (options.cacheControl.browserTTL !== 0 && !options.cacheControl.browserTTL){
+    if (shouldSetBrowserCache) {
+      // don't assume we want same cache behavior on client
+      // so remove the header from the response we'll return
+      headers.set('cache-control', `max-age=${options.cacheControl.browserTTL}`)
+    } else {
       headers.delete('cache-control')
-    }else{
-      headers.set('cache-control', `max-age=${options.browserTTL}`)
     }
     response = new Response(response.body, { headers })
   } else {
@@ -141,14 +145,13 @@ const getAssetFromKV = async (event, options) => {
       // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
       event.waitUntil(cache.put(cacheKey, response.clone()))
-      // don't assume we want same cache behavior on client
-      // so remove the header from the response we'll return
-      response.headers.delete('Cache-Control')
     }
   }
   response.headers.set('Content-Type', mimeType)
-  if (options.cacheControl.browserTTL === 0 || !options.cacheControl.browserTTL) {
+  if (shouldSetBrowserCache) {
     response.headers.set('Cache-Control', `max-age=${options.cacheControl.browserTTL}`)
+  } else {
+    response.headers.delete('Cache-Control')
   }
   return response
 }
