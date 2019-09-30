@@ -3,8 +3,8 @@ const makeServiceWorkerEnv = require('service-worker-mock')
 const HASH = '123HASHBROWN'
 
 export const getEvent = request => {
-  const waitUntil = callback => {
-    callback
+  const waitUntil = async callback => {
+    await callback
   }
   return {
     request,
@@ -43,7 +43,9 @@ export const mockCaches = () => {
         return cacheStore[key] || null
       },
       put: (key, val) => {
-        return (cacheStore[key] = val)
+        let headers = new Headers(val.headers)
+        let resp = new Response(val.body, { headers })
+        return (cacheStore[key] = resp)
       },
     },
   }

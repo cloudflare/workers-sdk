@@ -144,6 +144,26 @@ test('getAssetFromKV caches on two sequential requests', async t => {
     t.fail('Response was undefined')
   }
 })
+test('getAssetFromKV does not store max-age on two sequential requests', async t => {
+  mockGlobal()
+  const sleep = milliseconds => {
+    return new Promise(resolve => setTimeout(resolve, milliseconds))
+  }
+  const event = getEvent(new Request('https://blah.com/cache.html'))
+
+  const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })
+  await sleep(100)
+  const res2 = await getAssetFromKV(event)
+
+  if (res1 && res2) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res1.headers.get('cache-control'), null)
+    t.is(res2.headers.get('cf-cache-status'), 'HIT')
+    t.is(res2.headers.get('cache-control'), null)
+  } else {
+    t.fail('Response was undefined')
+  }
+})
 
 test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async t => {
   mockGlobal()
