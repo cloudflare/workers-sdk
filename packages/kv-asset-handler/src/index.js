@@ -112,6 +112,7 @@ const getAssetFromKV = async (event, options) => {
   if (options.cacheControl.bypassCache) {
     shouldEdgeCache = false
   }
+  // only set max-age if explictly passed in a number as an arg
   const shouldSetBrowserCache = typeof options.cacheControl.browserTTL === 'number'
 
   let response = null
@@ -123,10 +124,10 @@ const getAssetFromKV = async (event, options) => {
     let headers = new Headers(response.headers)
     headers.set('CF-Cache-Status', 'HIT')
     if (shouldSetBrowserCache) {
-      // don't assume we want same cache behavior on client
-      // so remove the header from the response we'll return
       headers.set('cache-control', `max-age=${options.cacheControl.browserTTL}`)
     } else {
+      // don't assume we want same cache behavior of edge TTL on client
+      // so remove the header from the response we'll return
       headers.delete('cache-control')
     }
     response = new Response(response.body, { headers })
