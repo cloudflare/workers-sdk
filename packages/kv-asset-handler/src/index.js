@@ -112,8 +112,7 @@ const getAssetFromKV = async (event, options) => {
   if (options.cacheControl.bypassCache) {
     shouldEdgeCache = false
   }
-  const shouldSetBrowserCache =
-    options.cacheControl.browserTTL === 0 || options.cacheControl.browserTTL
+  const shouldSetBrowserCache = typeof options.cacheControl.browserTTL === 'number'
 
   let response = null
   if (shouldEdgeCache) {
