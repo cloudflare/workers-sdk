@@ -56,11 +56,11 @@ async function handleRequest(request) {
 
 ### `serveSinglePageApp`
 
-`serveSinglePageApp` is a custom handler for mapping all "html" requests to the root index.html. For use with Single Page Applications that include in-app routing, such as React Router, VueJS, etc.
+`serveSinglePageApp` is a custom handler for mapping requests to a single root: `index.html`. The most common use case is single-page applications - frameworks with in-app routing - such as React Router, VueJS, etc.
 
 #### Example
 
-This example checks the incoming request to see if it evaluates to an html asset, and if so returns the root index.html, otherwise returns the requested asset (e.g. image, css file, js, etc).
+Check the incoming request to see if it evaluates to an html asset, and if so returns the root index.html; otherwise returns the requested asset (e.g. image, css file, js, etc).
 
 ```js
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
