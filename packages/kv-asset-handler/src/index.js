@@ -25,6 +25,27 @@ const mapRequestToAsset = request => {
   return new Request(parsedUrl, request)
 }
 
+/**
+ * maps the path of incoming request to /index.html if it evaluates to
+ * any html file.
+ * @param {Request} request incoming request
+ */
+function serveSinglePageApp(request) {
+  // First apply the default handler, which already has logic to detect
+  // paths that should map to HTML files.
+  request = mapRequestToAsset(request)
+
+  // Now we can detect if the default handler decided to map to
+  // index.html in some specific directory.
+  if (request.url.endsWith('.html')) {
+    return new Request(`${new URL(request.url).origin}/index.html`, request)
+  } else {
+    // The default handler decided this is not an HTML page. It's probably
+    // an image, CSS, or JS file. Leave it as-is.
+    return request
+  }
+}
+
 const defaultCacheControl = {
   browserTTL: null,
   edgeTTL: 2 * 60 * 60 * 24, // 2 days
@@ -156,4 +177,4 @@ const getAssetFromKV = async (event, options) => {
   return response
 }
 
-export { getAssetFromKV, mapRequestToAsset }
+export { getAssetFromKV, mapRequestToAsset, serveSinglePageApp }
