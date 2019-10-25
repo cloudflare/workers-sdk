@@ -35,9 +35,10 @@ function serveSinglePageApp(request) {
   // paths that should map to HTML files.
   request = mapRequestToAsset(request)
 
-  // Now we can detect if the default handler decided to map to
-  // index.html in some specific directory.
+  // Detect if the default handler decided to map to
+  // a HTML file in some specific directory.
   if (request.url.endsWith('.html')) {
+    // If expected HTML file was missing, just return the root index.html
     return new Request(`${new URL(request.url).origin}/index.html`, request)
   } else {
     // The default handler decided this is not an HTML page. It's probably
