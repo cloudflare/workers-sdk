@@ -11,7 +11,9 @@ npm i @cloudflare/kv-asset-handler
 
 ## Usage
 
-Currently this exports a single function `getAssetFromKV` that maps `FetchEvent` objects to KV Assets, and throws an `Error` if it cannot.
+### `getAssetFromKV`
+
+`getAssetFromKV` that maps `FetchEvent` objects to KV Assets, and throws an `Error` if it cannot.
 
 ```js
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
@@ -37,10 +39,11 @@ const customKeyModifier = url => {
   if (url.endsWith('/')) url += 'index.html'
   return url.replace('/docs', '').replace(/^\/+/, '')
 }
+
 async function handleEvent(event) {
   if (event.request.url.includes('/docs')) {
     try {
-      return await getAssetFromKV(event, customKeyModifier)
+      return await getAssetFromKV(event, { mapRequestToAsset: customKeyModifier })
     } catch (e) {
       return new Response(`"${customKeyModifier(event.request.url)}" not found`, {
         status: 404,
@@ -48,6 +51,34 @@ async function handleEvent(event) {
       })
     }
   } else return fetch(event.request)
+}
+```
+
+### `serveSinglePageApp`
+
+`serveSinglePageApp` is a custom handler for mapping requests to a single root: `index.html`. The most common use case is single-page applications - frameworks with in-app routing - such as React Router, VueJS, etc.
+
+#### Example
+
+Check the incoming request to see if it evaluates to an html asset, and if so returns the root index.html; otherwise returns the requested asset (e.g. image, css file, js, etc).
+
+```js
+import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
+
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleEvent(event) {
+    try {
+      return await getAssetFromKV(event.request, { mapRequestToAsset: serveSinglePageApp })
+    } catch (e) {
+      return new Response(`"${serveSinglePageApp(request.url)}" not found`, {
+        status: 404,
+        statusText: 'not found',
+      })
+    }
+  } else return fetch(request)
 }
 ```
 
