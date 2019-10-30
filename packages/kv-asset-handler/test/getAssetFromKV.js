@@ -2,29 +2,8 @@ import test from 'ava'
 import { mockGlobal, getEvent } from '../src/mocks'
 import { getAssetFromKV, mapRequestToAsset } from '../src/index'
 
-test('mapRequestToAsset() correctly changes /about -> /about/index.html', async t => {
-  mockGlobal()
-  let path = '/about'
-  let request = new Request(`https://foo.com${path}`)
-  let newRequest = mapRequestToAsset(request)
-  t.is(newRequest.url, request.url + '/index.html')
-})
-
-test('mapRequestToAsset() correctly changes /about/ -> /about/index.html', async t => {
-  let path = '/about/'
-  let request = new Request(`https://foo.com${path}`)
-  let newRequest = mapRequestToAsset(request)
-  t.is(newRequest.url, request.url + 'index.html')
-})
-
-test('mapRequestToAsset() correctly changes /about.me/ -> /about.me/index.html', async t => {
-  let path = '/about.me/'
-  let request = new Request(`https://foo.com${path}`)
-  let newRequest = mapRequestToAsset(request)
-  t.is(newRequest.url, request.url + 'index.html')
-})
-
 test('getAssetFromKV return correct val from KV and default caching', async t => {
+  mockGlobal()
   const event = getEvent(new Request('https://blah.com/key1.txt'))
   const res = await getAssetFromKV(event)
 
@@ -206,3 +185,4 @@ test('getAssetFromKV no result throws an error', async t => {
   const event = getEvent(new Request('https://blah.com/random'))
   await t.throwsAsync(getAssetFromKV(event))
 })
+
