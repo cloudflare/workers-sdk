@@ -11,17 +11,12 @@ npm i @cloudflare/kv-asset-handler
 
 ## Usage
 
+This package was designed to work with [Worker Sites](https://workers.cloudflare.com/sites).
+
 ### `getAssetFromKV`
-
-`getAssetFromKV` that maps `FetchEvent` objects to KV Assets, and throws an `Error` if it cannot.
-
-```js
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
-```
 
 `getAssetFromKV` is a function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `Error`.
 
-Note this package was designed to work with Worker Sites. If you are not using Sites make sure to call the bucket you are serving assets from `__STATIC_CONTENT`
 
 #### Example
 
@@ -54,34 +49,117 @@ async function handleEvent(event) {
 }
 ```
 
-### `serveSinglePageApp`
+### Optional Arguments
 
-`serveSinglePageApp` is a custom handler for mapping requests to a single root: `index.html`. The most common use case is single-page applications - frameworks with in-app routing - such as React Router, VueJS, etc.
+You can customize the behavior of `getAssetFromKV` by passing the following properties as an object into the second argument 
+
+```
+getAssetFromKV(event, { mapRequestToAsset: ... })
+```
+
+#### `mapRequestToAsset`
+
+type: function(Request) => Request
+
+Maps the incoming request to the value that will be looked up in Cloudflare's KV
+
+By default, mapRequestToAsset is set to the exported function [`mapRequestToAsset`](#maprequesttoasset-1).  This works for most static site generators, but you can customize this behavior by passing your own function as `mapRequestToAsset`. The function should take a `Request` object as its only argument, and return a new `Request` object with an updated path to be looked up in the asset manifest/KV.
+
+For SPA mapping pass in the [`serveSinglePageApp`](#servesinglepageapp) function
 
 #### Example
 
-Check the incoming request to see if it evaluates to an html asset, and if so returns the root index.html; otherwise returns the requested asset (e.g. image, css file, js, etc).
+Strip `/docs` from any incoming request before looking up an asset in Cloudflare's KV.
 
 ```js
-import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
+import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
+...
+const customKeyModifier = request => {
+  let url = request.url
+  //custom key mapping optional
+  url.replace('/docs', '').replace(/^\/+/, '')
+  return mapRequestToAsset(new Request(url, request))
+}
+let asset = await getAssetFromKV(event, { mapRequestToAsset: customKeyModifier })
+```
 
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
+#### `cacheControl`
 
-async function handleEvent(event) {
-    try {
-      return await getAssetFromKV(event.request, { mapRequestToAsset: serveSinglePageApp })
-    } catch (e) {
-      return new Response(`"${serveSinglePageApp(request.url)}" not found`, {
-        status: 404,
-        statusText: 'not found',
-      })
-    }
-  } else return fetch(request)
+type: object
+
+`cacheControl` allows you to configure options for both the Cloudflare Cache accessed by your Worker, and the browser cache headers sent along with your Workers' responses. The default values are as follows:
+
+```javascript
+let cacheControl = {
+  browserTTL: null, // do not set cache control ttl on responses
+  edgeTTL: 2 * 60 * 60 * 24, // 2 days
+  bypassCache: false, // do not bypass Cloudflare's cache
 }
 ```
 
-### `mapRequestToAsset`
+##### `browserTTL`
 
-`mapRequestToAsset` encapsulates the basic logic for converting a url path to a filename. This is the default for the option of the same name passed to `getAssetFromKV`. Good to use as a baseline for custom mappers.
+type: number | null
+nullable: true
+
+Sets the `Cache-Control: max-age` header on the response returned from the Worker. By default set to `null`. which will not add the header at all.
+
+##### `edgeTTL`
+
+type: number
+nullable: false
+
+Sets the `Cache-Control: max-age` header on the response used as the edge cache key. By default set to 2 days (`2 * 60 * 60 * 24`).
+
+##### `bypassCache`
+
+type: boolean
+
+Determines whether to cache requests on Cloudflare's edge cache. By default set to `false` (recommended for production builds). Useful for development when you need to eliminate the cache's effect on testing.
+
+
+#### `ASSET_NAMESPACE`
+
+type: KV Namespace Binding
+
+The binding name to the KV Namespace populated with key/value entries of files for the Worker to serve. By default, Workers Sites uses a [binding to a Workers KV Namespace](https://developers.cloudflare.com/workers/reference/storage/api/#namespaces) named `__STATIC_CONTENT`. 
+
+It is further assumed that this namespace consists of static assets such as html, css, javascript, or image files, keyed off of a relative path that roughly matches the assumed url pathname of the incoming request.
+
+```
+return getAssetFromKV(event, { ASSET_NAMESPACE: MY_NAMESPACE })
+```
+ 
+#### `ASSET_MANIFEST` (optional)
+
+type: text blob (JSON formatted)
+
+The mapping of requested file path to the key stored on Cloudflare.
+
+Workers Sites with Wrangler bundles up a text blob that maps request paths to content-hashed keys that are generated by Wrangler as a cache-busting measure. If this option/binding is not present, the function will fallback to using the raw pathname to look up your asset in KV. If, for whatever reason, you have rolled your own implementation of this, you can include your own by passing a stringified JSON object where the keys are expected paths, and the values are the expected keys in your KV namespace.
+
+```
+let assetManifest = { "index.html": "index.special.html" }
+return getAssetFromKV(event, { ASSET_MANIFEST: JSON.stringify(assetManifest) })
+```
+
+## Other functions
+
+#### `mapRequestToAsset`
+
+type: function(Request) => Request
+
+The default function for mapping incoming requests to keys in Cloudflare's KV.
+
+Takes any path that ends in `/` or evaluates to an html file and appends `index.html` or `/index.html` for lookup in your Workers KV namespace.
+
+### `serveSinglePageApp`
+type: function(Request) => Request
+
+A custom handler for mapping requests to a single root: `index.html`. The most common use case is single-page applications - frameworks with in-app routing - such as React Router, VueJS, etc. It takes zero arguments.
+
+```js
+import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
+...
+let asset = await getAssetFromKV(event.request, { mapRequestToAsset: serveSinglePageApp })
+```
