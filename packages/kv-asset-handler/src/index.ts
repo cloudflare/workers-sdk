@@ -1,13 +1,16 @@
-import mime from 'mime'
+import * as mime from 'mime'
+// import { KVNamespace } from '@cloudflare/workers-types'
 
+// const makeServiceWorkerEnv = require('service-worker-mock')
+let __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: any, caches: any
 /**
- * maps the path of incoming request to the request pathKey to look up
+ * maps the path of incoming request sto the request pathKey to look up
  * in bucket and in cache
  * e.g.  for a path '/' returns '/index.html' which serves
  * the content of bucket/index.html
  * @param {Request} request incoming request
  */
-const mapRequestToAsset = request => {
+const mapRequestToAsset = (request: Request) => {
   const parsedUrl = new URL(request.url)
   let pathname = parsedUrl.pathname
 
@@ -22,7 +25,7 @@ const mapRequestToAsset = request => {
   }
 
   parsedUrl.pathname = pathname
-  return new Request(parsedUrl, request)
+  return new Request(parsedUrl.toString(), request)
 }
 
 /**
@@ -30,7 +33,7 @@ const mapRequestToAsset = request => {
  * any html file.
  * @param {Request} request incoming request
  */
-function serveSinglePageApp(request) {
+function serveSinglePageApp(request: Request): Request {
   // First apply the default handler, which already has logic to detect
   // paths that should map to HTML files.
   request = mapRequestToAsset(request)

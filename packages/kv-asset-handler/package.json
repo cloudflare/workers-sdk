@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/cloudflare/kv-asset-handler#readme",
   "dependencies": {
+    "@types/mime": "^2.0.1",
     "mime": "^2.4.4"
   },
   "ava": {
@@ -38,7 +39,9 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^1.0.1",
     "ava": "^1.4.1",
+    "prettier": "^1.18.2",
     "service-worker-mock": "^2.0.3",
-    "prettier": "^1.18.2"
+    "ts-loader": "^6.2.1",
+    "typescript": "^3.7.2"
   }
 }
