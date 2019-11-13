@@ -1,8 +1,8 @@
 import * as mime from 'mime'
-// import { KVNamespace } from '@cloudflare/workers-types'
 
-// const makeServiceWorkerEnv = require('service-worker-mock')
-let __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: any, caches: any
+declare global {
+  var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: any, caches2: any
+}
 /**
  * maps the path of incoming request sto the request pathKey to look up
  * in bucket and in cache
@@ -102,7 +102,7 @@ const getAssetFromKV = async (event, options) => {
   // pathKey is the file path to look up in the manifest
   let pathKey = pathname.replace(/^\/+/, '') // remove prepended /
 
-  const cache = caches.default
+  const cache = caches2.default
   const mimeType = mime.getType(pathKey) || 'text/plain'
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash

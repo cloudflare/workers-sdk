@@ -1,6 +1,6 @@
 import test from 'ava'
 import { mockGlobal, getEvent } from '../src/mocks'
-import { getAssetFromKV, mapRequestToAsset } from '../src/index'
+import { getAssetFromKV, mapRequestToAsset } from '../dist/index'
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
   mockGlobal()
@@ -185,4 +185,3 @@ test('getAssetFromKV no result throws an error', async t => {
   const event = getEvent(new Request('https://blah.com/random'))
   await t.throwsAsync(getAssetFromKV(event))
 })
-

@@ -4,6 +4,8 @@ const HASH = '123HASHBROWN'
 
 export const getEvent = request => {
   const waitUntil = async callback => {
+    // export const getEvent = (request: Request) => {
+    //   const waitUntil = async (callback: any) => {
     await callback
   }
   return {
@@ -55,5 +57,5 @@ export function mockGlobal() {
   Object.assign(global, makeServiceWorkerEnv())
   Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
   Object.assign(global, { __STATIC_CONTENT: mockKV() })
-  Object.assign(global, { caches: mockCaches() })
+  Object.assign(global, { caches2: mockCaches() })
 }

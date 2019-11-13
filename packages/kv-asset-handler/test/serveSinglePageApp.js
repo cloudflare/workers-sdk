@@ -1,6 +1,6 @@
 import test from 'ava'
-import { mockGlobal, getEvent } from '../src/mocks'
-import { serveSinglePageApp } from '../src/index'
+import { mockGlobal } from '../src/mocks'
+import { serveSinglePageApp } from '../dist/index'
 
 function testRequest(path) {
   mockGlobal()
@@ -40,4 +40,3 @@ test('serveSinglePageApp returns requested asset when request path has non-html 
 
   t.deepEqual(expected_request, actual_request)
 })
-
