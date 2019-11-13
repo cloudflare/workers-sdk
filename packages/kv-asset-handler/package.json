@@ -4,10 +4,10 @@
   "description": "Routes requests to KV assets",
   "main": "./src/index.js",
   "scripts": {
-    "build": "webpack",
+    "build": "tsc",
     "format": "prettier --write '**/*.js'",
     "test": "ava test/*.js --verbose",
-    "test:watch": "npm run test -w"
+    "test-watch": "npm run test -w"
   },
   "repository": {
     "type": "git",

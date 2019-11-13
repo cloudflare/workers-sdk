@@ -1,10 +1,12 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
+    "outDir": "./dist",
     "noImplicitAny": false,
     "target": "es5",
     "jsx": "react",
     "sourceMap": true,
     "allowJs": true
-  }
+  },
+  "include": ["./src/*.ts", "./src/*.tsx", "./src/**/*.ts", "./src/**/*.tsx"],
+  "exclude": ["node_modules/", "dist/"]
 }
