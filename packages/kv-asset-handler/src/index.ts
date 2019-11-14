@@ -1,10 +1,11 @@
 import * as mime from 'mime'
+import { Options, CacheControl } from './types'
 
 declare global {
-  var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: any, caches2: any
+  var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: any
 }
 /**
- * maps the path of incoming request sto the request pathKey to look up
+ * maps the path of incoming request to the request pathKey to look up
  * in bucket and in cache
  * e.g.  for a path '/' returns '/index.html' which serves
  * the content of bucket/index.html
@@ -50,7 +51,7 @@ function serveSinglePageApp(request: Request): Request {
   }
 }
 
-const defaultCacheControl = {
+const defaultCacheControl: CacheControl = {
   browserTTL: null,
   edgeTTL: 2 * 60 * 60 * 24, // 2 days
   bypassCache: false, // do not bypass Cloudflare's cache
@@ -67,7 +68,7 @@ const defaultCacheControl = {
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
-const getAssetFromKV = async (event, options) => {
+const getAssetFromKV = async (event: any, options: Options) => {
   // Assign any missing options passed in to the default
   options = Object.assign(
     {
@@ -102,7 +103,8 @@ const getAssetFromKV = async (event, options) => {
   // pathKey is the file path to look up in the manifest
   let pathKey = pathname.replace(/^\/+/, '') // remove prepended /
 
-  const cache = caches2.default
+  // @ts-ignore
+  const cache = caches.default
   const mimeType = mime.getType(pathKey) || 'text/plain'
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash

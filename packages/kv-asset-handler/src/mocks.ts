@@ -2,10 +2,8 @@ const makeServiceWorkerEnv = require('service-worker-mock')
 
 const HASH = '123HASHBROWN'
 
-export const getEvent = request => {
-  const waitUntil = async callback => {
-    // export const getEvent = (request: Request) => {
-    //   const waitUntil = async (callback: any) => {
+export const getEvent = (request: Request) => {
+  const waitUntil = async (callback: any) => {
     await callback
   }
   return {
@@ -15,7 +13,7 @@ export const getEvent = request => {
 }
 
 export const mockKV = () => {
-  const store = {
+  const store: any = {
     'key1.123HASHBROWN.txt': 'val1',
     'key1.123HASHBROWN.png': 'val1',
     'index.123HASHBROWN.html': 'index.html',
@@ -24,7 +22,7 @@ export const mockKV = () => {
     'sub/blah.123HASHBROWN.png': 'picturedis',
   }
   return {
-    get: path => store[path] || null,
+    get: (path: string) => store[path] || null,
   }
 }
 
@@ -37,14 +35,14 @@ export const mockManifest = () => {
     'sub/blah.png': `sub/blah.${HASH}.png`,
   })
 }
-let cacheStore = {}
+let cacheStore: any = {}
 export const mockCaches = () => {
   return {
     default: {
-      match: key => {
+      match: (key: string) => {
         return cacheStore[key] || null
       },
-      put: (key, val) => {
+      put: (key: string, val: Response) => {
         let headers = new Headers(val.headers)
         let resp = new Response(val.body, { headers })
         return (cacheStore[key] = resp)
@@ -57,5 +55,5 @@ export function mockGlobal() {
   Object.assign(global, makeServiceWorkerEnv())
   Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
   Object.assign(global, { __STATIC_CONTENT: mockKV() })
-  Object.assign(global, { caches2: mockCaches() })
+  Object.assign(global, { caches: mockCaches() })
 }
