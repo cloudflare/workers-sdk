@@ -1,5 +1,5 @@
 import test from 'ava'
-import { mockGlobal } from '../src/mocks'
+import { mockGlobal } from '../dist/mocks'
 import { serveSinglePageApp } from '../dist/index'
 
 function testRequest(path) {

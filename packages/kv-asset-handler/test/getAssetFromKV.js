@@ -1,5 +1,5 @@
 import test from 'ava'
-import { mockGlobal, getEvent } from '../src/mocks'
+import { mockGlobal, getEvent } from '../dist/mocks'
 import { getAssetFromKV, mapRequestToAsset } from '../dist/index'
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {

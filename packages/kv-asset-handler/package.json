@@ -6,8 +6,7 @@
   "scripts": {
     "build": "tsc",
     "format": "prettier --write '**/*.js'",
-    "test": "ava test/*.js --verbose",
-    "test-watch": "npm run test -w"
+    "test": "ava test/*.js --verbose"
   },
   "repository": {
     "type": "git",
@@ -39,7 +38,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^1.0.1",
     "ava": "^1.4.1",
-    "prettier": "^1.18.2",
     "service-worker-mock": "^2.0.3",
     "ts-loader": "^6.2.1",
     "typescript": "^3.7.2"
