@@ -68,7 +68,7 @@ const defaultCacheControl: CacheControl = {
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
-const getAssetFromKV = async (event: any, options: Options) => {
+const getAssetFromKV = async (event: any, options?: Partial<Options>) => {
   // Assign any missing options passed in to the default
   options = Object.assign(
     {

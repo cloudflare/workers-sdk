@@ -1,6 +1,6 @@
 import test from 'ava'
-import { mockGlobal } from '../dist/mocks'
-import { mapRequestToAsset } from '../dist/index'
+import { mockGlobal } from '../mocks'
+import { mapRequestToAsset } from '../index'
 
 test('mapRequestToAsset() correctly changes /about -> /about/index.html', async t => {
   mockGlobal()

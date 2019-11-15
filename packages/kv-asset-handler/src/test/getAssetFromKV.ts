@@ -1,6 +1,6 @@
 import test from 'ava'
-import { mockGlobal, getEvent } from '../dist/mocks'
-import { getAssetFromKV, mapRequestToAsset } from '../dist/index'
+import { mockGlobal, getEvent } from '../mocks'
+import { getAssetFromKV, mapRequestToAsset } from '../index'
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
   mockGlobal()
@@ -46,12 +46,12 @@ test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
-  const customRequestMapper = request => {
+  const customRequestMapper = (request: Request) => {
     let defaultModifiedRequest = mapRequestToAsset(request)
 
     let url = new URL(defaultModifiedRequest.url)
     url.pathname = url.pathname.replace('/docs', '')
-    return new Request(url, request)
+    return new Request(url.toString(), request)
   }
 
   const res = await getAssetFromKV(event, { mapRequestToAsset: customRequestMapper })
@@ -80,7 +80,7 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
   mockGlobal()
   const event1 = getEvent(new Request('https://blah.com/'))
   const event2 = getEvent(new Request('https://blah.com/key1.png?blah=34'))
-  const cacheOnlyPngs = req => {
+  const cacheOnlyPngs = (req: Request) => {
     if (new URL(req.url).pathname.endsWith('.png'))
       return {
         browserTTL: 720,
@@ -106,7 +106,7 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
 })
 test('getAssetFromKV caches on two sequential requests', async t => {
   mockGlobal()
-  const sleep = milliseconds => {
+  const sleep = (milliseconds: number) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
   }
   const event = getEvent(new Request('https://blah.com/cache.html'))
@@ -125,7 +125,7 @@ test('getAssetFromKV caches on two sequential requests', async t => {
 })
 test('getAssetFromKV does not store max-age on two sequential requests', async t => {
   mockGlobal()
-  const sleep = milliseconds => {
+  const sleep = (milliseconds: number) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
   }
   const event = getEvent(new Request('https://blah.com/cache.html'))

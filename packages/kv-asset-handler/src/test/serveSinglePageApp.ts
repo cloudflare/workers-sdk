@@ -1,12 +1,12 @@
 import test from 'ava'
-import { mockGlobal } from '../dist/mocks'
-import { serveSinglePageApp } from '../dist/index'
+import { mockGlobal } from '../mocks'
+import { serveSinglePageApp } from '../index'
 
-function testRequest(path) {
+function testRequest(path: string) {
   mockGlobal()
   let url = new URL('https://example.com')
   url.pathname = path
-  let request = new Request(url)
+  let request = new Request(url.toString())
 
   return request
 }

@@ -8,7 +8,7 @@
     "build": "tsc -d",
     "build:watch": "npm run build -w",
     "format": "prettier --write '**/*.js'",
-    "test": "ava test/*.js --verbose"
+    "test": "ava dist/test/*.js --verbose"
   },
   "repository": {
     "type": "git",
@@ -16,7 +16,6 @@
   },
   "keywords": [
     "kv",
-    "cloudflare",
     "cloudflare",
     "workers",
     "wrangler",
