@@ -3,7 +3,6 @@
     "outDir": "./dist",
     "noImplicitAny": true,
     "target": "es5",
-    "sourceMap": true,
     "allowJs": true
   },
   "include": ["./src/*.ts", "./src/**/*.ts"],
