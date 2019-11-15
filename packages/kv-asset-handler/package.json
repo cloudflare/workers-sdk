@@ -6,7 +6,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -d",
-    "build:watch": "npm run build -w",
+    "build:watch": "yarn build -w",
     "format": "prettier --write '**/*.js'",
     "test": "ava dist/test/*.js --verbose"
   },
