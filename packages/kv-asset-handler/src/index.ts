@@ -61,14 +61,14 @@ const defaultCacheControl: CacheControl = {
  * takes the path of the incoming request, gathers the approriate cotent from KV, and returns
  * the response
  *
- * @param {event} event the fetch event of the triggered request
+ * @param {FetchEvent} event the fetch event of the triggered request
  * @param {{mapRequestToAsset: (string: Request) => Request, cacheControl: {bypassCache:boolean, edgeTTL: number, browserTTL:number}, ASSET_NAMESPACE: any, ASSET_MANIFEST:any}} [options] configurable options
  * @param {CacheControl} [options.cacheControl] determine how to cache on Cloudflare and the browser
  * @param {typeof(options.mapRequestToAsset)} [options.mapRequestToAsset]  maps the path of incoming request to the request pathKey to look up
  * @param {any} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
-const getAssetFromKV = async (event: any, options?: Partial<Options>) => {
+const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>) => {
   // Assign any missing options passed in to the default
   options = Object.assign(
     {
@@ -136,7 +136,7 @@ const getAssetFromKV = async (event: any, options?: Partial<Options>) => {
   options.cacheControl = Object.assign({}, defaultCacheControl, evalCacheOpts)
 
   // override shouldEdgeCache if options say to bypassCache
-  if (options.cacheControl.bypassCache) {
+  if (options.cacheControl.bypassCache || options.cacheControl.edgeTTL === null) {
     shouldEdgeCache = false
   }
   // only set max-age if explictly passed in a number as an arg
