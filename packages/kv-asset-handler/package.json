@@ -2,9 +2,11 @@
   "name": "@cloudflare/kv-asset-handler",
   "version": "0.0.7",
   "description": "Routes requests to KV assets",
-  "main": "./src/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -d",
+    "build:watch": "yarn build -w",
     "format": "prettier --write '**/*.js'",
     "test": "ava test/*.js --verbose"
   },
