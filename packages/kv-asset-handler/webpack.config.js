@@ -8,8 +8,8 @@ module.exports = {
   devtool: 'source-map',
 
   resolve: {
-    // Add '.ts' and '.tsx' as resolvable extensions.
-    extensions: ['.webpack.js', '.web.js', '.ts', '.tsx', '.js'],
+    // Add '.ts' as resolvable extensions.
+    extensions: ['.webpack.js', '.web.js', '.ts', '.js'],
   },
 
   module: {
