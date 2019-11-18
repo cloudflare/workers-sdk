@@ -102,14 +102,14 @@ let cacheControl = {
 type: number | null
 nullable: true
 
-Sets the `Cache-Control: max-age` header on the response returned from the Worker. By default set to `null`. which will not add the header at all.
+Sets the `Cache-Control: max-age` header on the response returned from the Worker. By default set to `null` which will not add the header at all.
 
 ##### `edgeTTL`
 
-type: number
-nullable: false
+type: number | null
+nullable: true
 
-Sets the `Cache-Control: max-age` header on the response used as the edge cache key. By default set to 2 days (`2 * 60 * 60 * 24`).
+Sets the `Cache-Control: max-age` header on the response used as the edge cache key. By default set to 2 days (`2 * 60 * 60 * 24`). When null will not cache on the edge at all. 
 
 ##### `bypassCache`
 

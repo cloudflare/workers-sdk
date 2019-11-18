@@ -106,9 +106,6 @@ test('getAssetFromKV when setting custom cache setting ', async t => {
 })
 test('getAssetFromKV caches on two sequential requests', async t => {
   mockGlobal()
-  const sleep = (milliseconds: number) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
-  }
   const event = getEvent(new Request('https://blah.com/cache.html'))
 
   const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720, browserTTL: 720 } })
