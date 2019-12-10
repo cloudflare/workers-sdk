@@ -1,6 +1,7 @@
 import test from 'ava'
 import { mockGlobal, getEvent, sleep } from '../mocks'
 import { getAssetFromKV, mapRequestToAsset } from '../index'
+import { KVError } from '../types'
 
 test('getAssetFromKV return correct val from KV and default caching', async t => {
   mockGlobal()
@@ -178,7 +179,8 @@ test('getAssetFromKV with no trailing slash on a subdirectory', async t => {
 test('getAssetFromKV no result throws an error', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/random'))
-  await t.throwsAsync(getAssetFromKV(event))
+  const error: KVError = await t.throwsAsync(getAssetFromKV(event))
+  t.is(error.code, 404)
 })
 test('getAssetFromKV TTls set to null should not cache on browser or edge', async t => {
   mockGlobal()
