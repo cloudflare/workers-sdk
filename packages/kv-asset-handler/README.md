@@ -15,7 +15,7 @@ This package was designed to work with [Worker Sites](https://workers.cloudflare
 
 ### `getAssetFromKV`
 
-`getAssetFromKV` is a function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `Error`.
+`getAssetFromKV` is a function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `KVError`.
 
 
 #### Example
@@ -40,10 +40,19 @@ async function handleEvent(event) {
     try {
       return await getAssetFromKV(event, { mapRequestToAsset: customKeyModifier })
     } catch (e) {
-      return new Response(`"${customKeyModifier(event.request.url)}" not found`, {
-        status: 404,
-        statusText: 'not found',
-      })
+      if (resp instanceof KVError) {
+        switch (e.code) {
+          case 404:
+            return notFoundResponse
+            break
+          case 405:
+            return methodNotAllowedResponse
+            break
+          default:
+            return new Response(resp.message, { status: resp.code })
+        }
+      }
+      return new Response(`Finding "${customKeyModifier(event.request.url)}" threw an error`)
     }
   } else return fetch(event.request)
 }
