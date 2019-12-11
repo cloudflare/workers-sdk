@@ -44,15 +44,13 @@ async function handleEvent(event) {
         switch (e.code) {
           case 404:
             return notFoundResponse
-            break
           case 405:
             return methodNotAllowedResponse
-            break
           default:
             return new Response(resp.message, { status: resp.code })
         }
       }
-      return new Response(`Finding "${customKeyModifier(event.request.url)}" threw an error`)
+      return new Response("An unexpected error occurred", {status: 500})
     }
   } else return fetch(event.request)
 }
