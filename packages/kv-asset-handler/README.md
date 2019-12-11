@@ -15,7 +15,7 @@ This package was designed to work with [Worker Sites](https://workers.cloudflare
 
 ### `getAssetFromKV`
 
-`getAssetFromKV` is a function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw an `KVError`.
+`getAssetFromKV` is a function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw a `KVError`.
 
 
 #### Example
