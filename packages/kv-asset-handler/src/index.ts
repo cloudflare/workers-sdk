@@ -115,7 +115,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       shouldEdgeCache = true // cache on edge if pathKey is a unique hash
     }
   }
-
+  // TODO this excludes search params from cache, investigate ideal behavior
   let cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request)
 
   // if argument passed in for cacheControl is a function then

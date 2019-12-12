@@ -39,13 +39,15 @@ let cacheStore: any = {}
 export const mockCaches = () => {
   return {
     default: {
-      match: (key: string) => {
-        return cacheStore[key] || null
+      match: (key: Request) => {
+        const url = key.url
+        return cacheStore[url] || null
       },
-      put: (key: string, val: Response) => {
+      put: (key: Request, val: Response) => {
         let headers = new Headers(val.headers)
         let resp = new Response(val.body, { headers })
-        return (cacheStore[key] = resp)
+        const url = key.url
+        return (cacheStore[url] = resp)
       },
     },
   }
