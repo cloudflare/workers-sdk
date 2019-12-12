@@ -116,17 +116,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     }
   }
 
-  // TODO - write test to see if any adverse consequences result from always
-  // wrapping the cacheKey in a new Request object
-  // Side note: stripping the headers may have other adverse consequences - for example
-  // if browser sends if-modified-since, CF will not return a 304 if headers
-  // are omitted
-  let cacheKey = null
-  if (mimeType.includes('video')) {
-    cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request)
-  } else {
-    cacheKey = `${parsedUrl.origin}/${pathKey}`
-  }
+  let cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request)
 
   // if argument passed in for cacheControl is a function then
   // evaluate that function. otherwise return the Object passed in
