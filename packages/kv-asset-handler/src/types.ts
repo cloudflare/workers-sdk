@@ -10,7 +10,7 @@ export type Options = {
   mapRequestToAsset: (req: Request) => Request
 }
 
-export class KVError extends Error {
+class KVError extends Error {
   constructor(message?: string, code: number = 500) {
     super(message)
     // see: typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html
@@ -19,4 +19,19 @@ export class KVError extends Error {
     this.code = code
   }
   code: number
+}
+export class MethodNotAllowedError extends KVError {
+  constructor(message: string = `Not a valid request method`, code: number = 405) {
+    super(message, code)
+  }
+}
+export class NotFoundError extends KVError {
+  constructor(message: string = `Not Found`, code: number = 404) {
+    super(message, code)
+  }
+}
+export class InternalError extends KVError {
+  constructor(message: string = `Internal Error in KV Asset Handler`, code: number = 500) {
+    super(message, code)
+  }
 }
