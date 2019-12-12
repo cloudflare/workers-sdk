@@ -77,7 +77,7 @@ test('getAssetFromKV when setting browser caching', async t => {
   }
 })
 
-test('getAssetFromKV when setting custom cache setting ', async t => {
+test('getAssetFromKV when setting custom cache setting', async t => {
   mockGlobal()
   const event1 = getEvent(new Request('https://blah.com/'))
   const event2 = getEvent(new Request('https://blah.com/key1.png?blah=34'))
