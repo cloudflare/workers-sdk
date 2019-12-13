@@ -11,16 +11,15 @@ export const getEvent = (request: Request): any => {
     waitUntil,
   }
 }
-
-export const mockKV = () => {
-  const store: any = {
-    'key1.123HASHBROWN.txt': 'val1',
-    'key1.123HASHBROWN.png': 'val1',
-    'index.123HASHBROWN.html': 'index.html',
-    'cache.123HASHBROWN.html': 'cache me if you can',
-    'nohash.txt': 'no hash but still got some result',
-    'sub/blah.123HASHBROWN.png': 'picturedis',
-  }
+const store: any = {
+  'key1.123HASHBROWN.txt': 'val1',
+  'key1.123HASHBROWN.png': 'val1',
+  'index.123HASHBROWN.html': 'index.html',
+  'cache.123HASHBROWN.html': 'cache me if you can',
+  'nohash.txt': 'no hash but still got some result',
+  'sub/blah.123HASHBROWN.png': 'picturedis',
+}
+export const mockKV = (store: any) => {
   return {
     get: (path: string) => store[path] || null,
   }
@@ -56,7 +55,7 @@ export const mockCaches = () => {
 export function mockGlobal() {
   Object.assign(global, makeServiceWorkerEnv())
   Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
-  Object.assign(global, { __STATIC_CONTENT: mockKV() })
+  Object.assign(global, { __STATIC_CONTENT: mockKV(store) })
   Object.assign(global, { caches: mockCaches() })
 }
 export const sleep = (milliseconds: number) => {
