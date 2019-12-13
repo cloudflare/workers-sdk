@@ -41,13 +41,13 @@ async function handleEvent(event) {
       return await getAssetFromKV(event, { mapRequestToAsset: customKeyModifier })
     } catch (e) {
       if (resp instanceof KVError) {
-        switch (e.code) {
+        switch (e.status) {
           case 404:
             return notFoundResponse
           case 405:
             return methodNotAllowedResponse
           default:
-            return new Response(resp.message, { status: resp.code })
+            return new Response(resp.message, { status: resp.status })
         }
       }
       return new Response("An unexpected error occurred", {status: 500})
