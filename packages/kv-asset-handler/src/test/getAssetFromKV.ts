@@ -180,7 +180,7 @@ test('getAssetFromKV no result throws an error', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/random'))
   const error: KVError = await t.throwsAsync(getAssetFromKV(event))
-  t.is(error.code, 404)
+  t.is(error.status, 404)
 })
 test('getAssetFromKV TTls set to null should not cache on browser or edge', async t => {
   mockGlobal()
