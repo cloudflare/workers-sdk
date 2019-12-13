@@ -56,14 +56,10 @@ async function handleEvent(event) {
       if (resp instanceof KVError) {
         switch (e.status) {
           case 404:
-            return notFoundResponse
-          case 405:
-            return methodNotAllowedResponse
-          default:
-            return new Response(resp.message, { status: resp.status })
+            // ...
         }
       }
-      return new Response("An unexpected error occurred", {status: 500})
+      return new Response("An unexpected error occurred", { status: 500 })
     }
   } else return fetch(event.request)
 }
