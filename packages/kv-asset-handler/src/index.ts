@@ -91,7 +91,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   }
 
   if (typeof ASSET_NAMESPACE === 'undefined') {
-    throw new InternalError(`there is no KV namespace bound to the script.`)
+    throw new InternalError(`there is no ASSET_NAMESPACE namespace bound to the script`)
   }
 
   // determine the requestKey based on the actual file served for the incoming request
@@ -158,7 +158,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     }
     response = new Response(response.body, { headers })
   } else {
-    const body = await __STATIC_CONTENT.get(pathKey, 'arrayBuffer')
+    const body = await ASSET_NAMESPACE.get(pathKey, 'arrayBuffer')
     if (body === null) {
       throw new NotFoundError(`could not find ${pathKey} in your content namespace`)
     }
