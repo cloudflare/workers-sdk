@@ -229,7 +229,7 @@ test('getAssetFromKV when custom namespace without the asset should fail', async
 test('getAssetFromKV when namespace not bound fails', async t => {
   mockGlobal()
   var MY_CUSTOM_NAMESPACE = undefined
-  Object.assign(global, { MY_CUSTOM_NAMESPACE: undefined })
+  Object.assign(global, { MY_CUSTOM_NAMESPACE })
 
   const event = getEvent(new Request('https://blah.com/'))
   const error: KVError = await t.throwsAsync(
