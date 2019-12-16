@@ -10,7 +10,7 @@ export type Options = {
   mapRequestToAsset: (req: Request) => Request
 }
 
-class KVError extends Error {
+export class KVError extends Error {
   constructor(message?: string, status: number = 500) {
     super(message)
     // see: typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html
