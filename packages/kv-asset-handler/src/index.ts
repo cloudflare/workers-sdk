@@ -83,21 +83,22 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
   const ASSET_MANIFEST = options.ASSET_MANIFEST
-
-  const SUPPORTED_METHODS = ['GET', 'HEAD']
-
-  if (!SUPPORTED_METHODS.includes(request.method)) {
-    throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
-  }
+    ? JSON.parse(options.ASSET_MANIFEST)
+    : options.ASSET_MANIFEST
 
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new InternalError(`there is no KV namespace bound to the script`)
   }
 
-  // determine the requestKey based on the actual file served for the incoming request
-  const requestKey = options.mapRequestToAsset(request)
-  const parsedUrl = new URL(requestKey.url)
+  const SUPPORTED_METHODS = ['GET', 'HEAD']
+  if (!SUPPORTED_METHODS.includes(request.method)) {
+    throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
+  }
 
+  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // original request's pathname (e.g. foo/filename)
+  //set to the raw file if exists, else the approriate HTML file
+  const requestKey = ASSET_MANIFEST[rawPathKey] ? request : options.mapRequestToAsset(request)
+  const parsedUrl = new URL(requestKey.url)
   const pathname = parsedUrl.pathname
 
   // pathKey is the file path to look up in the manifest
@@ -110,11 +111,12 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash
   // check manifest for map from file path to hash
   if (typeof ASSET_MANIFEST !== 'undefined') {
-    if (JSON.parse(ASSET_MANIFEST)[pathKey]) {
-      pathKey = JSON.parse(ASSET_MANIFEST)[pathKey]
-      shouldEdgeCache = true // cache on edge if pathKey is a unique hash
+    if (ASSET_MANIFEST[pathKey]) {
+      pathKey = ASSET_MANIFEST[pathKey]
+      shouldEdgeCache = true // cache on edge if pathKey contains a unique hash
     }
   }
+
   // TODO this excludes search params from cache, investigate ideal behavior
   let cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request)
 
