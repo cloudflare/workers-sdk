@@ -5,8 +5,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "prepack": "npm run build",
     "build": "tsc -d",
     "format": "prettier --write '**/*.js'",
+    "pretest": "npm run build",
     "test": "ava dist/test/*.js --verbose"
   },
   "repository": {
