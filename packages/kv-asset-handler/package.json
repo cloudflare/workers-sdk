@@ -2,8 +2,8 @@
   "name": "@cloudflare/kv-asset-handler",
   "version": "0.0.8",
   "description": "Routes requests to KV assets",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "prepack": "npm run build",
     "build": "tsc -d",
