@@ -52,6 +52,17 @@ test('getAssetFromKV if no asset manifest /client -> client fails', async t => {
   t.is(error.status, 404)
 })
 
+test('getAssetFromKV if sub/ -> sub/index.html served', async t => {
+  mockGlobal()
+  const event = getEvent(new Request(`https://foo.com/sub`))
+  const res = await getAssetFromKV(event)
+  if (res) {
+    t.is(await res.text(), 'picturedis')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test('getAssetFromKV gets index.html by default for / requests', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/'))
