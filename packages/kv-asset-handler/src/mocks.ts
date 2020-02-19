@@ -18,6 +18,7 @@ const store: any = {
   'cache.123HASHBROWN.html': 'cache me if you can',
   'nohash.txt': 'no hash but still got some result',
   'sub/blah.123HASHBROWN.png': 'picturedis',
+  'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
 }
@@ -34,6 +35,7 @@ export const mockManifest = () => {
     'cache.html': `cache.${HASH}.html`,
     'index.html': `index.${HASH}.html`,
     'sub/blah.png': `sub/blah.${HASH}.png`,
+    'sub/index.html': `sub/index.${HASH}.html`,
     'client': `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
   })
