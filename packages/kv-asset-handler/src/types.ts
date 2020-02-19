@@ -6,7 +6,7 @@ export type CacheControl = {
 export type Options = {
   cacheControl: ((req: Request) => Partial<CacheControl>) | Partial<CacheControl>
   ASSET_NAMESPACE: any
-  ASSET_MANIFEST: any
+  ASSET_MANIFEST: Object | string
   mapRequestToAsset: (req: Request) => Request
 }
 

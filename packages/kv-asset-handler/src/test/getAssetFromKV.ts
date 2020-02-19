@@ -45,6 +45,13 @@ test('getAssetFromKV if not in asset manifest still returns nohash.txt', async t
   }
 })
 
+test('getAssetFromKV if no asset manifest /client -> client fails', async t => {
+  mockGlobal()
+  const event = getEvent(new Request(`https://foo.com/client`))
+  const error: KVError = await t.throwsAsync(getAssetFromKV(event, { ASSET_MANIFEST: {} }))
+  t.is(error.status, 404)
+})
+
 test('getAssetFromKV gets index.html by default for / requests', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/'))
