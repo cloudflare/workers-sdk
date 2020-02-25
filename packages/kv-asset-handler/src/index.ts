@@ -39,11 +39,13 @@ function serveSinglePageApp(request: Request): Request {
   // paths that should map to HTML files.
   request = mapRequestToAsset(request)
 
+  const parsedUrl = new URL(request.url)
+
   // Detect if the default handler decided to map to
   // a HTML file in some specific directory.
-  if (request.url.endsWith('.html')) {
+  if (parsedUrl.pathname.endsWith('.html')) {
     // If expected HTML file was missing, just return the root index.html
-    return new Request(`${new URL(request.url).origin}/index.html`, request)
+    return new Request(`${parsedUrl.origin}/index.html`, request)
   } else {
     // The default handler decided this is not an HTML page. It's probably
     // an image, CSS, or JS file. Leave it as-is.
