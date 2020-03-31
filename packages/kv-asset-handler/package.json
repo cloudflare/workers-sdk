@@ -1,6 +1,6 @@
 {
   "name": "@cloudflare/kv-asset-handler",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Routes requests to KV assets",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,8 +22,8 @@
     "wrangler",
     "assets"
   ],
-  "author": "Avery Harnish",
-  "license": "MIT",
+  "author": "wrangler@cloudflare.com",
+  "license": "MIT OR Apache-2.0",
   "bugs": {
     "url": "https://github.com/cloudflare/kv-asset-handler/issues"
   },
