@@ -189,5 +189,5 @@ A custom handler for mapping requests to a single root: `index.html`. The most c
 ```js
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
 ...
-let asset = await getAssetFromKV(event.request, { mapRequestToAsset: serveSinglePageApp })
+let asset = await getAssetFromKV(event, { mapRequestToAsset: serveSinglePageApp })
 ```
