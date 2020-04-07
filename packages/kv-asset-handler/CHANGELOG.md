@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.0.10
+
+- ### Features
+
+  - **Allow extensionless files to be served - [victoriabernard92], [cloudflare/wrangler/issues/980], [pull/73]**
+
+  Prior to this PR, `getAssetFromKv` assumed extensionless requests (e.g. `/some-path`) would be set up to be served as the corresponding HTML file in storage (e.g. `some-path.html`).
+  This fix checks the `ASSET_MANIFEST` for the extensionless file name _before_ appending the HTML extension. If the extensionless file exists (e.g. `some-path` exists as a key in the ASSET_MANIFEST) then we serve that file first. If the extensionless file does not exist, then the behavior does not change (e.g. it still looks for `some-path.html`).
+
+- ### Fixes
+
+  - **Fix URL parsing in serveSinglePageApp - [signalnerve],[sgiacosa], [issue/72], [pull/82]**
+
+  This fixes an issue in `serveSinglePageApp` where the request.url is used as a string to retrieve static content. For example,
+  if a query parameter was set, the URL lookup would break. This fix uses a parsed URL instead of the string and adjusts the README.
+
+## 0.0.9
+
+- ### Fixes
+  
+  - **Building and publishing to npm - [victoriabernard92], [pull/78], [pull/79]**
+   
+    Publishing to npm started to break after we implemented in TypeScript because the `prepack` step 
+    was not set to build the JS files correctly
+
 ## 0.0.8
 
 - ### Features
