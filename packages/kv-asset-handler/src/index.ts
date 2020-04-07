@@ -97,7 +97,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
   }
 
-  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // original request's pathname (e.g. foo/filename)
+  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s 
   //set to the raw file if exists, else the approriate HTML file
   const requestKey = ASSET_MANIFEST[rawPathKey] ? request : options.mapRequestToAsset(request)
   const parsedUrl = new URL(requestKey.url)
@@ -115,7 +115,8 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   if (typeof ASSET_MANIFEST !== 'undefined') {
     if (ASSET_MANIFEST[pathKey]) {
       pathKey = ASSET_MANIFEST[pathKey]
-      shouldEdgeCache = true // cache on edge if pathKey contains a unique hash
+      // if path key is in asset manifest, we can assume it contains a content hash and can be cached
+      shouldEdgeCache = true
     }
   }
 
