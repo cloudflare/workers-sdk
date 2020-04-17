@@ -22,8 +22,7 @@
   
   - **Building and publishing to npm - [victoriabernard92], [pull/78], [pull/79]**
    
-    Publishing to npm started to break after we implemented in TypeScript because the `prepack` step 
-    was not set to build the JS files correctly
+    Added a `prepack` step that builds JavaScript files from the TypeScript source. This fixes previously broken `npm` publishes.
 
 ## 0.0.8
 
