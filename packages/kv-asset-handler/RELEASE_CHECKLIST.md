@@ -15,7 +15,7 @@ This is a list of the things that need to happen during a release.
    `https://github.com/issues?q=repo%3Acloudflare%2Fkv-asset-handler+merged%3A%3E%3DYYYY-MM-DD`
 1. Go through the closed PRs in the milestone.
 1. Add this release to the `CHANGELOG.md`. Use the structure of previous
-   entries. If you use VS Code, you can use [this snippet](https://gist.github.com/EverlastingBugstopper/04d1adb99506388ff9d7abd8d0a82bc3) to insert new changelog sections. If it is a release candidate, no official changelog is needed, but testing instructions will be added later in the process.
+   entries. If you use VS Code, you can use [this snippet](https://gist.github.com/victoriabernard92/296c39721a3f4b171cb55c9ab9a65ec2) to insert new changelog sections. If it is a release candidate, no official changelog is needed, but testing instructions will be added later in the process.
 
 ### Start a release PR
 
