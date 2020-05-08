@@ -97,7 +97,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
   }
 
-  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s 
+  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s
   //set to the raw file if exists, else the approriate HTML file
   const requestKey = ASSET_MANIFEST[rawPathKey] ? request : options.mapRequestToAsset(request)
   const parsedUrl = new URL(requestKey.url)
@@ -161,6 +161,31 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       // so remove the header from the response we'll return
       headers.delete('cache-control')
     }
+
+    // Several preconditions must be met for a 304 Not Modified:
+    // - mime type cannot be HTML. there several reasons for this
+    // but the most glaring is that CF uses chunked transfer encoding
+    // when inserting html via cache api. Thus the body is streamed
+    // before the full file contents are known
+    // - client sends if-none-match
+    // - resource has etag
+    // - test if-none-match against etag
+    let shouldRevalidate = [
+      mimeType.indexOf('html') !== -1, // prevents falsy values
+      request.headers.has('if-none-match'),
+      response.headers.has('etag'),
+      request.headers.get('if-none-match') === response.headers.get('etag'),
+    ].every((val) => val === true)
+
+    if (shouldRevalidate) {
+      headers.set('CF-Cache-Status', 'REVALIDATED')
+      return new Response(null, {
+        status: 304,
+        headers,
+        statusText: 'Not Modified',
+      })
+    }
+
     response = new Response(response.body, { headers })
   } else {
     const body = await ASSET_NAMESPACE.get(pathKey, 'arrayBuffer')
@@ -169,10 +194,12 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     }
     response = new Response(body)
 
-    // TODO: could implement CF-Cache-Status REVALIDATE if path w/o hash existed in manifest
-
     if (shouldEdgeCache) {
       response.headers.set('CF-Cache-Status', 'MISS')
+      // set etag before cache insertion
+      if (!response.headers.has('etag')) {
+        response.headers.set('etag', `${pathKey}`)
+      }
       // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
       event.waitUntil(cache.put(cacheKey, response.clone()))
