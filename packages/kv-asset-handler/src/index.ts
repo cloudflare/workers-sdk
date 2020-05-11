@@ -171,7 +171,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     // - resource has etag
     // - test if-none-match against etag
     let shouldRevalidate = [
-      mimeType.indexOf('html') !== -1, // prevents falsy values
+      mimeType.indexOf('html') === -1,
       request.headers.has('if-none-match'),
       response.headers.has('etag'),
       request.headers.get('if-none-match') === response.headers.get('etag'),
@@ -179,14 +179,14 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
     if (shouldRevalidate) {
       headers.set('CF-Cache-Status', 'REVALIDATED')
-      return new Response(null, {
+      response = new Response(null, {
         status: 304,
         headers,
         statusText: 'Not Modified',
       })
+    } else {
+      response = new Response(response.body, { headers })
     }
-
-    response = new Response(response.body, { headers })
   } else {
     const body = await ASSET_NAMESPACE.get(pathKey, 'arrayBuffer')
     if (body === null) {
@@ -196,8 +196,8 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
     if (shouldEdgeCache) {
       response.headers.set('CF-Cache-Status', 'MISS')
-      // set etag before cache insertion
-      if (!response.headers.has('etag')) {
+      // set etag before cache insertion. dont set on html content
+      if (!response.headers.has('etag') && mimeType.indexOf('html') === -1) {
         response.headers.set('etag', `${pathKey}`)
       }
       // determine Cloudflare cache behavior

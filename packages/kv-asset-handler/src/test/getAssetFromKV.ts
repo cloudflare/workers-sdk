@@ -1,5 +1,5 @@
 import test from 'ava'
-import { mockGlobal, getEvent, sleep, mockKV } from '../mocks'
+import { mockGlobal, getEvent, sleep, mockKV, mockManifest } from '../mocks'
 import { getAssetFromKV, mapRequestToAsset } from '../index'
 import { KVError } from '../types'
 
@@ -269,4 +269,44 @@ test('getAssetFromKV when namespace not bound fails', async t => {
     getAssetFromKV(event, { ASSET_NAMESPACE: MY_CUSTOM_NAMESPACE }),
   )
   t.is(error.status, 500)
+})
+
+test('getAssetFromKV when mimetype is html is not revalidated', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com', {
+    headers: {
+      'if-none-match': 'blah'
+    }
+  }))
+  const res = await getAssetFromKV(event)
+  if (res) {
+    t.true(res.headers.get('content-type').includes('html'))
+    t.true(res.headers.has('etag') !== true)
+    t.true(res.status !== 304)
+  } else {
+    t.fail(`Response was undefined`)
+  }
+})
+
+test('getAssetFromKV when if-none-match === etag, and etag === pathKey in manifest should revalidate', async t => {
+  mockGlobal()
+  const resourceName = 'key1.png'
+  const resourceVersion = JSON.parse(mockManifest())[resourceName]
+  const request = new Request('https://blah.com/key1.png', {
+    headers: {
+      'if-none-match': resourceVersion
+    }
+  })
+  const event = getEvent(request)
+  const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })
+  const res2 = await getAssetFromKV(event)
+
+  if (res1 && res2) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res2.headers.get('etag'), request.headers.get('if-none-match'))
+    t.is(res2.headers.get('cf-cache-status'), 'REVALIDATED')
+    t.is(res2.status, 304)
+  } else {
+    t.fail('Response was undefined')
+  }
 })
