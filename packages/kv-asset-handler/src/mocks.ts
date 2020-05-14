@@ -40,19 +40,29 @@ export const mockManifest = () => {
     'client/index.html': `client.${HASH}`,
   })
 }
-let cacheStore: any = {}
+let cacheStore: any = new Map()
 export const mockCaches = () => {
   return {
     default: {
-      match: (key: Request) => {
-        const url = key.url
-        return cacheStore[url] || null
+      match: (key: any) => {
+        let cacheKey = {
+          url: key.url,
+          headers: {
+            'etag': `${key.headers.has('if-none-match') ? key.headers.get('if-none-match')  : null}`
+          }
+        }
+        return cacheStore.get(JSON.stringify(cacheKey))
       },
-      put: (key: Request, val: Response) => {
+      put: (key: any, val: Response) => {
         let headers = new Headers(val.headers)
         let resp = new Response(val.body, { headers })
-        const url = key.url
-        return (cacheStore[url] = resp)
+        let cacheKey = {
+          url: key.url,
+          headers: {
+            'etag': `${headers.has('etag') ? headers.get('etag') : null}`
+          }
+        }
+        return cacheStore.set(JSON.stringify(cacheKey), resp)
       },
     },
   }

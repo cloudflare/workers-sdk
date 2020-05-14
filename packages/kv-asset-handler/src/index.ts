@@ -162,6 +162,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       headers.delete('cache-control')
     }
 
+    let shouldRevalidate = false
     // Several preconditions must be met for a 304 Not Modified:
     // - mime type cannot be HTML. there several reasons for this
     // but the most glaring is that CF uses chunked transfer encoding
@@ -170,7 +171,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     // - client sends if-none-match
     // - resource has etag
     // - test if-none-match against etag
-    let shouldRevalidate = [
+    shouldRevalidate = [
       mimeType.indexOf('html') === -1,
       request.headers.has('if-none-match'),
       response.headers.has('etag'),
@@ -213,5 +214,5 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   }
   return response
 }
-
+// extra comments
 export { getAssetFromKV, mapRequestToAsset, serveSinglePageApp }
