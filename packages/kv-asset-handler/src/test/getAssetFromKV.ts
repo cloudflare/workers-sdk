@@ -288,11 +288,10 @@ test('getAssetFromKV when mimetype is html is not revalidated', async t => {
   }
 })
 
-test('getAssetFromKV when if-none-match === etag, and etag === pathKey in manifest should revalidate', async t => {
+test('getAssetFromKV when if-none-match === etag and etag === pathKey in manifest, should revalidate', async t => {
   mockGlobal()
-  const resourceName = 'key1.png'
-  const resourceVersion = JSON.parse(mockManifest())[resourceName]
-  const request = new Request('https://blah.com/key1.png', {
+  const resourceVersion = JSON.parse(mockManifest())['key1.png']
+  const request = new Request(`https://blah.com/key1.png`, {
     headers: {
       'if-none-match': resourceVersion
     }
@@ -306,6 +305,37 @@ test('getAssetFromKV when if-none-match === etag, and etag === pathKey in manife
     t.is(res2.headers.get('etag'), request.headers.get('if-none-match'))
     t.is(res2.headers.get('cf-cache-status'), 'REVALIDATED')
     t.is(res2.status, 304)
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
+test('getAssetFromKV when etag and if-none-match are present but if-none-match !== etag, should bypass cache', async t => {
+  mockGlobal()
+  const resourceVersion = JSON.parse(mockManifest())['key1.png']
+  const req1 = new Request(`https://blah.com/key1.png`, {
+    headers: {
+      'if-none-match': resourceVersion
+    }
+  })
+  const req2 = new Request(`https://blah.com/key1.png`, {
+    headers: {
+      'if-none-match': resourceVersion + "another-version"
+    }
+  })
+  const event = getEvent(req1)
+  const event2 = getEvent(req2)
+  const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })
+  const res2 = await getAssetFromKV(event)
+  const res3 = await getAssetFromKV(event2)
+  if (res1 && res2 && res3) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res2.headers.get('etag'), req1.headers.get('if-none-match'))
+    t.is(res2.headers.get('cf-cache-status'), 'REVALIDATED')
+    t.true(res3.headers.has('etag'))
+    t.true(req2.headers.has('if-none-match'))
+    t.not(res3.headers.get('etag'), req2.headers.get('if-none-match'))
+    t.is(res3.headers.get('cf-cache-status'), 'MISS')
   } else {
     t.fail('Response was undefined')
   }
