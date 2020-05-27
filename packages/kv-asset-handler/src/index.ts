@@ -153,7 +153,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   if (response) {
     let headers = new Headers(response.headers)
-    headers.set('CF-Cache-Status', 'HIT')
     if (shouldSetBrowserCache) {
       headers.set('cache-control', `max-age=${options.cacheControl.browserTTL}`)
     } else {
@@ -163,29 +162,38 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     }
 
     let shouldRevalidate = false
-    // Several preconditions must be met for a 304 Not Modified:
-    // - mime type cannot be HTML. there several reasons for this
-    // but the most glaring is that CF uses chunked transfer encoding
-    // when inserting html via cache api. Thus the body is streamed
-    // before the full file contents are known
+    // Four preconditions must be met for a 304 Not Modified:
+    // - the request cannot be a range request
     // - client sends if-none-match
     // - resource has etag
-    // - test if-none-match against etag
+    // - test if-none-match against the pathKey so that we test against KV, rather than against
+    // CF cache, which may modify the etag with a weak validator (e.g. W/"...")
     shouldRevalidate = [
-      mimeType.indexOf('html') === -1,
+      request.headers.has('range') !== true,
       request.headers.has('if-none-match'),
       response.headers.has('etag'),
-      request.headers.get('if-none-match') === response.headers.get('etag'),
+      request.headers.get('if-none-match') === `${pathKey}`,
     ].every((val) => val === true)
 
     if (shouldRevalidate) {
-      headers.set('CF-Cache-Status', 'REVALIDATED')
+      // TypeError permitted to satisfy mocks per /issues/96
+      try {
+        // Proactively remove body per /pull/94#discussion_r425455176
+        response.body.cancel()
+      } catch (e) {
+        if (e instanceof TypeError && e.message === 'response.body.cancel is not a function') {
+          console.log('Environment doesnt support readable streams')
+        }
+      }
+
+      headers.set('cf-cache-status', 'REVALIDATED')
       response = new Response(null, {
         status: 304,
         headers,
         statusText: 'Not Modified',
       })
     } else {
+      headers.set('CF-Cache-Status', 'HIT')
       response = new Response(response.body, { headers })
     }
   } else {
@@ -196,14 +204,16 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     response = new Response(body)
 
     if (shouldEdgeCache) {
-      response.headers.set('CF-Cache-Status', 'MISS')
-      // set etag before cache insertion. dont set on html content
-      if (!response.headers.has('etag') && mimeType.indexOf('html') === -1) {
+      response.headers.set('Accept-Ranges', 'bytes')
+      response.headers.set('Content-Length', body.length)
+      // set etag before cache insertion
+      if (!response.headers.has('etag')) {
         response.headers.set('etag', `${pathKey}`)
       }
       // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
       event.waitUntil(cache.put(cacheKey, response.clone()))
+      response.headers.set('CF-Cache-Status', 'MISS')
     }
   }
   response.headers.set('Content-Type', mimeType)
@@ -214,5 +224,5 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   }
   return response
 }
-// extra comments
+
 export { getAssetFromKV, mapRequestToAsset, serveSinglePageApp }
