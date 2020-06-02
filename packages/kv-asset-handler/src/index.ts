@@ -108,7 +108,10 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   // @ts-ignore
   const cache = caches.default
-  const mimeType = mime.getType(pathKey) || 'text/plain'
+  let mimeType = mime.getType(pathKey) || 'text/plain'
+  if (mimeType.startsWith('text')) {
+      mimeType += '; charset=utf8'
+  }
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash
   // check manifest for map from file path to hash
