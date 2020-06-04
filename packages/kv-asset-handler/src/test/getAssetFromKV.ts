@@ -76,6 +76,18 @@ test('getAssetFromKV gets index.html by default for / requests', async t => {
   }
 })
 
+test('getAssetFromKV non ASCII path support', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/测试.html'))
+  const res = await getAssetFromKV(event)
+
+  if (res) {
+    t.is(await res.text(), 'My filename is non-ascii')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
