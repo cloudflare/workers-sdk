@@ -97,11 +97,11 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
   }
 
-  const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s
+  const rawPathKey = decodeURIComponent(new URL(request.url).pathname.replace(/^\/+/, '')) // strip any preceding /'s
   //set to the raw file if exists, else the approriate HTML file
   const requestKey = ASSET_MANIFEST[rawPathKey] ? request : options.mapRequestToAsset(request)
   const parsedUrl = new URL(requestKey.url)
-  const pathname = parsedUrl.pathname
+  const pathname = decodeURIComponent(parsedUrl.pathname) // decode percentage encoded path
 
   // pathKey is the file path to look up in the manifest
   let pathKey = pathname.replace(/^\/+/, '') // remove prepended /
