@@ -88,6 +88,45 @@ test('getAssetFromKV non ASCII path support', async t => {
   }
 })
 
+test('getAssetFromKV supports browser percent encoded URLs', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://example.com/%not-really-percent-encoded.html'))
+  const res = await getAssetFromKV(event)
+
+  if (res) {
+    t.is(await res.text(), 'browser percent encoded')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
+test('getAssetFromKV supports user percent encoded URLs', async t => {
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/%2F.html'))
+  const res = await getAssetFromKV(event)
+
+  if (res) {
+    t.is(await res.text(), 'user percent encoded')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
+test('getAssetFromKV only decode URL when necessary', async t => {
+  mockGlobal()
+  const event1 = getEvent(new Request('https://blah.com/%E4%BD%A0%E5%A5%BD.html'))
+  const event2 = getEvent(new Request('https://blah.com/你好.html'))
+  const res1 = await getAssetFromKV(event1)
+  const res2 = await getAssetFromKV(event2)
+
+  if (res1 && res2) {
+    t.is(await res1.text(), 'Im important')
+    t.is(await res2.text(), 'Im important')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
