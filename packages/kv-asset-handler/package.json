@@ -29,19 +29,13 @@
   },
   "homepage": "https://github.com/cloudflare/kv-asset-handler#readme",
   "dependencies": {
-    "@types/mime": "^2.0.1",
-    "mime": "^2.4.4"
-  },
-  "ava": {
-    "require": [
-      "esm"
-    ]
+    "@cloudflare/workers-types": "^2.0.0",
+    "@types/mime": "^2.0.2",
+    "mime": "^2.4.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^1.0.1",
-    "ava": "^1.4.1",
-    "service-worker-mock": "^2.0.3",
-    "ts-loader": "^6.2.1",
-    "typescript": "^3.7.2"
+    "ava": "^3.8.2",
+    "service-worker-mock": "^2.0.5",
+    "typescript": "^3.9.5"
   }
 }
