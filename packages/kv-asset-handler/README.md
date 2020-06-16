@@ -51,7 +51,7 @@ Known errors to be thrown are:
 - InternalError
   
 ```js
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
+import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler'
 
 addEventListener('fetch', event => {
   event.respondWith(handleEvent(event))
