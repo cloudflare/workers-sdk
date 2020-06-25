@@ -185,17 +185,15 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       request.headers.has('if-none-match'),
       response.headers.has('etag'),
       request.headers.get('if-none-match') === `${pathKey}`,
-    ].every((val) => val === true)
+    ].every(Boolean)
 
     if (shouldRevalidate) {
       // TypeError permitted to satisfy mocks per /issues/96
-      try {
-        // Proactively remove body per /pull/94#discussion_r425455176
-        response.body.cancel()
-      } catch (e) {
-        if (e instanceof TypeError && e.message === 'response.body.cancel is not a function') {
-          console.log('Environment doesnt support readable streams')
-        }
+      const cancelResponse = response.body.cancel;
+      if (typeof cancelResponse === 'function') {
+        cancelResponse();
+      } else {
+        console.log('Environment doesnt support readable streams')
       }
 
       headers.set('cf-cache-status', 'REVALIDATED')
