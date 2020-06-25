@@ -165,13 +165,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   if (response) {
     let headers = new Headers(response.headers)
-    if (shouldSetBrowserCache) {
-      headers.set('cache-control', `max-age=${options.cacheControl.browserTTL}`)
-    } else {
-      // don't assume we want same cache behavior of edge TTL on client
-      // so remove the header from the response we'll return
-      headers.delete('cache-control')
-    }
 
     let shouldRevalidate = false
     // Four preconditions must be met for a 304 Not Modified:
