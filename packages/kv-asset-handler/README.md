@@ -102,7 +102,7 @@ import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
 const customKeyModifier = request => {
   let url = request.url
   //custom key mapping optional
-  url.replace('/docs', '').replace(/^\/+/, '')
+  url = url.replace('/docs', '').replace(/^\/+/, '')
   return mapRequestToAsset(new Request(url, request))
 }
 let asset = await getAssetFromKV(event, { mapRequestToAsset: customKeyModifier })
