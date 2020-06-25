@@ -16,6 +16,7 @@
 - [Helper functions](#helper-functions)
   * [`mapRequestToAsset`](#-maprequesttoasset--1)
   * [`serveSinglePageApp`](#-servesinglepageapp-)
+- [Cache revalidation and etags](#cache-revalidation-and-etags)
 
 ## Installation
 
@@ -49,7 +50,7 @@ Known errors to be thrown are:
 - MethodNotAllowedError
 - NotFoundError
 - InternalError
-  
+
 ```js
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler'
 
@@ -76,7 +77,7 @@ async function handleEvent(event) {
 
 ### Optional Arguments
 
-You can customize the behavior of `getAssetFromKV` by passing the following properties as an object into the second argument 
+You can customize the behavior of `getAssetFromKV` by passing the following properties as an object into the second argument.
 
 ```
 getAssetFromKV(event, { mapRequestToAsset: ... })
@@ -134,7 +135,7 @@ Sets the `Cache-Control: max-age` header on the response returned from the Worke
 type: number | null
 nullable: true
 
-Sets the `Cache-Control: max-age` header on the response used as the edge cache key. By default set to 2 days (`2 * 60 * 60 * 24`). When null will not cache on the edge at all. 
+Sets the `Cache-Control: max-age` header on the response used as the edge cache key. By default set to 2 days (`2 * 60 * 60 * 24`). When null will not cache on the edge at all.
 
 ##### `bypassCache`
 
@@ -147,14 +148,14 @@ Determines whether to cache requests on Cloudflare's edge cache. By default set 
 
 type: KV Namespace Binding
 
-The binding name to the KV Namespace populated with key/value entries of files for the Worker to serve. By default, Workers Sites uses a [binding to a Workers KV Namespace](https://developers.cloudflare.com/workers/reference/storage/api/#namespaces) named `__STATIC_CONTENT`. 
+The binding name to the KV Namespace populated with key/value entries of files for the Worker to serve. By default, Workers Sites uses a [binding to a Workers KV Namespace](https://developers.cloudflare.com/workers/reference/storage/api/#namespaces) named `__STATIC_CONTENT`.
 
 It is further assumed that this namespace consists of static assets such as html, css, javascript, or image files, keyed off of a relative path that roughly matches the assumed url pathname of the incoming request.
 
 ```
 return getAssetFromKV(event, { ASSET_NAMESPACE: MY_NAMESPACE })
 ```
- 
+
 #### `ASSET_MANIFEST` (optional)
 
 type: text blob (JSON formatted)
@@ -189,3 +190,25 @@ import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler
 ...
 let asset = await getAssetFromKV(event, { mapRequestToAsset: serveSinglePageApp })
 ```
+
+# Cache revalidation and etags
+
+All responses served from cache (including those with `cf-cache-status: MISS`) include an `etag` response header that identifies the version of the resource. The `etag` value is identical to the path key used in the `ASSET_MANIFEST`. It is updated each time an asset changes and looks like this: `etag: <filename>.<hash of file contents>.<extension>` (ex. `etag: index.54321.html`).
+
+Resources served with an `etag` allow browsers to use the `if-none-match` request header to make conditional requests for that resource in the future. This has two major benefits:
+* When a request's `if-none-match` value matches the `etag` of the resource in Cloudflare cache, Cloudflare will send a `304 Not Modified` response without a body, saving bandwidth.
+* Changes to a file on the server are immediately reflected in the browser - even when the cache control directive `max-age` is unexpired.
+
+#### Disable the `etag`
+
+To turn `etags` **off**, you must bypass cache:
+```js
+/* Turn etags off */
+let cacheControl = {
+  bypassCache: true
+}
+```
+
+#### Syntax and comparison context
+
+`kv-asset-handler` sets and evaluates etags as [strong validators](https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests#Strong_validation). To preserve `etag` integrity, the format of the value deviates from the [RFC2616 recommendation to enclose the `etag` with quotation marks](https://tools.ietf.org/html/rfc2616#section-3.11). This is intentional. Cloudflare cache applies the `W/` prefix to all `etags` that use quoted-strings -- a process that converts the `etag` to a "weak validator" when served to a client.
