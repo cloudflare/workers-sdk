@@ -402,3 +402,5 @@ test('getAssetFromKV if-none-match not sent but resource in cache, should return
     t.fail('Response was undefined')
   }
 })
+
+test.todo('getAssetFromKV when body not empty, should invoke .cancel()')
