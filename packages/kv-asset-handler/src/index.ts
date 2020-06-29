@@ -180,11 +180,12 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       request.headers.get('if-none-match') === `${pathKey}`,
     ].every(Boolean)
 
+
     if (shouldRevalidate) {
-      // TypeError permitted to satisfy mocks per /issues/96
-      const cancelResponse = response.body.cancel;
-      if (typeof cancelResponse === 'function') {
-        cancelResponse();
+      // fixes issue #118
+      if (response.body && 'cancel' in Object.getPrototypeOf(response.body)) {
+        response.body.cancel();
+        console.log('Body exists and environment supports readable streams. Body cancelled')
       } else {
         console.log('Environment doesnt support readable streams')
       }
