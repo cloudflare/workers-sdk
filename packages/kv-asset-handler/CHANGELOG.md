@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.0.11
+
+- ### Features
+
+  - **Support cache revalidation using ETags and If-None-Match - [shagamemnon], [issue/62] [pull/94] [pull/113]**
+
+    Previously, cacheable resources were not looked up from the browser cache because `getAssetFromKV` would never return a `304 Not Modified` response.
+
+    Now, `getAssetFromKV` sets an `ETag` header on all cachable assets before putting them in the Cache API, and therefore will return a `304` response when appropriate.
+
+    [shagamemnon]: https://github.com/shagamemnon
+    [pull/94]: https://github.com/cloudflare/kv-asset-handler/pull/94
+    [pull/113]: https://github.com/cloudflare/kv-asset-handler/issues/113
+    [issue/62]: https://github.com/cloudflare/kv-asset-handler/issues/62
+
+  - **Export TypeScript types - [ispivey], [issue/43] [pull/106]**
+
+    [ispivey]: https://github.com/ispivey
+    [pull/106]: https://github.com/cloudflare/kv-asset-handler/pull/106
+    [issue/43]: https://github.com/cloudflare/kv-asset-handler/issues/43
+
+- ### Fixes
+
+  - **Support non-ASCII characters in paths - [SukkaW], [issue/99] [pull/105]**
+
+    Fixes an issue where non-ASCII paths were not URI-decoded before being looked up, causing non-ASCII paths to 404.
+
+    [SukkaW]: https://github.com/SukkaW
+    [pull/105]: https://github.com/cloudflare/kv-asset-handler/pull/105
+    [issue/99]: https://github.com/cloudflare/kv-asset-handler/issues/99
+
+  - **Support `charset=utf8` in MIME type - [theromis], [issue/92] [pull/97]**
+
+    Fixes an issue where `Content-Type: text/*` was never appended with `; charset=utf8`, meaning clients would not render non-ASCII characters properly.
+
+    [theromis]: https://github.com/theromis
+    [pull/97]: https://github.com/cloudflare/kv-asset-handler/pull/97
+    [issue/92]: https://github.com/cloudflare/kv-asset-handler/issues/92
+
+  - **Fix bugs in README examples - [kentonv] [bradyjoslin], [issue/93] [pull/102] [issue/88] [pull/116]**
+
+    [kentonv]: https://github.com/kentonv
+    [bradyjoslin]: https://github.com/bradyjoslin
+    [pull/102]: https://github.com/cloudflare/kv-asset-handler/pull/102
+    [pull/116]: https://github.com/cloudflare/kv-asset-handler/pull/116
+    [issue/93]: https://github.com/cloudflare/kv-asset-handler/issues/93
+    [issue/88]: https://github.com/cloudflare/kv-asset-handler/issues/88
+
+- ### Maintenance
+
+  - **Make `@cloudflare/workers-types` a dependency and update deps - [ispivey], [pull/107]**
+
+    [ispivey]: https://github.com/ispivey
+    [pull/107]: https://github.com/cloudflare/kv-asset-handler/pull/107
+
+  - **Add Code of Conduct - [EverlastingBugstopper], [pull/101]**
+
+    [EverlastingBugstopper]: https://github.com/EverlastingBugstopper
+    [pull/101]: https://github.com/cloudflare/kv-asset-handler/pull/101
+
 ## 0.0.10
 
 - ### Features
