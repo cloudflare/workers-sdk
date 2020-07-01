@@ -78,6 +78,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
       mapRequestToAsset: mapRequestToAsset,
       cacheControl: defaultCacheControl,
+      defaultMimeType: 'text/plain',
     },
     options,
   )
@@ -117,7 +118,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   // @ts-ignore
   const cache = caches.default
-  let mimeType = mime.getType(pathKey) || 'text/plain'
+  let mimeType = mime.getType(pathKey) || options.defaultMimeType
   if (mimeType.startsWith('text')) {
       mimeType += '; charset=utf8'
   }
