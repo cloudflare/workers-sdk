@@ -120,7 +120,7 @@
     videos from not including the range headers.
 
     [victoriabernard92]: https://github.com/victoriabernard92
-    [shagamemnon]: https://github.com/shagamemnon 
+    [shagamemnon]: https://github.com/shagamemnon
     [issue/60]: https://github.com/cloudflare/kv-asset-handler/issues/60
     [issue/63]: https://github.com/cloudflare/kv-asset-handler/issues/63
     [pull/47]: https://github.com/cloudflare/kv-asset-handler/pull/52
@@ -133,7 +133,6 @@
     [victoriabernard92]: https://github.com/victoriabernard92
     [issue/67]: https://github.com/cloudflare/kv-asset-handler/issues/67
     [pull/68]: https://github.com/cloudflare/kv-asset-handler/pull/68
-
 
 ## 0.0.7
 
