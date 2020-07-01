@@ -140,7 +140,7 @@
 
   - **Add handler for SPAs - [ashleymichal], [issue/46] [pull/47]**
 
-    Some browser applications employ client-side routers that handle navigation in the browser rather than on the server. These applications will work as expected until a non-root URL is requested from the server. This PR adds a special handler, `serveSinglePageApp`, that maps all html requests to the root index.html. This is similar to setting a static asset route pattern in an Express.js app.
+    Some browser applications employ client-side routers that handle navigation in the browser rather than on the server. These applications will work as expected until a non-root URL is requested from the server. This PR adds a special handler, `serveSinglePageApp`, that maps all HTML requests to the root index.html. This is similar to setting a static asset route pattern in an Express.js app.
 
     [ashleymichal]: https://github.com/ashleymichal
     [issue/46]: https://github.com/cloudflare/kv-asset-handler/issues/46

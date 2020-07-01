@@ -31,7 +31,7 @@ const mapRequestToAsset = (request: Request) => {
 
 /**
  * maps the path of incoming request to /index.html if it evaluates to
- * any html file.
+ * any HTML file.
  * @param {Request} request incoming request
  */
 function serveSinglePageApp(request: Request): Request {
