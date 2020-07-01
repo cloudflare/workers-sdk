@@ -169,6 +169,14 @@ let assetManifest = { "index.html": "index.special.html" }
 return getAssetFromKV(event, { ASSET_MANIFEST: JSON.stringify(assetManifest) })
 ```
 
+#### `defaultMimeType` (optional)
+
+type: string
+
+This is the mime type that will be used for files with unrecognized or missing extensions. The default value is `'text/plain'`.
+
+If you are serving a static site and would like to use extensionless HTML files instead of index.html files, set this to `'text/html'`.
+
 # Helper functions
 
 ## `mapRequestToAsset`
