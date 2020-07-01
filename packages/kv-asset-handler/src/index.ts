@@ -156,7 +156,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   if (options.cacheControl.bypassCache || options.cacheControl.edgeTTL === null) {
     shouldEdgeCache = false
   }
-  // only set max-age if explictly passed in a number as an arg
+  // only set max-age if explicitly passed in a number as an arg
   const shouldSetBrowserCache = typeof options.cacheControl.browserTTL === 'number'
 
   let response = null

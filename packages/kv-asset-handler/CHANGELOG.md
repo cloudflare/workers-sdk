@@ -8,7 +8,7 @@
 
     Previously, cacheable resources were not looked up from the browser cache because `getAssetFromKV` would never return a `304 Not Modified` response.
 
-    Now, `getAssetFromKV` sets an `ETag` header on all cachable assets before putting them in the Cache API, and therefore will return a `304` response when appropriate.
+    Now, `getAssetFromKV` sets an `ETag` header on all cacheable assets before putting them in the Cache API, and therefore will return a `304` response when appropriate.
 
     [shagamemnon]: https://github.com/shagamemnon
     [pull/94]: https://github.com/cloudflare/kv-asset-handler/pull/94
