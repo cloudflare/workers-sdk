@@ -60,7 +60,7 @@ const defaultCacheControl: CacheControl = {
 }
 
 /**
- * takes the path of the incoming request, gathers the approriate cotent from KV, and returns
+ * takes the path of the incoming request, gathers the appropriate content from KV, and returns
  * the response
  *
  * @param {FetchEvent} event the fetch event of the triggered request
