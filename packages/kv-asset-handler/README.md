@@ -1,4 +1,5 @@
 # @cloudflare/kv-asset-handler
+
   * [Installation](#installation)
   * [Usage](#usage)
   * [`getAssetFromKV`](#-getassetfromkv-)
@@ -37,7 +38,6 @@ getAssetFromKV(FetchEvent) => Promise<Response>
 
 `getAssetFromKV` is an async function that takes a `FetchEvent` object and returns a `Response` object if the request matches an asset in KV, otherwise it will throw a `KVError`.
 
-
 #### Example
 
 This example checks for the existence of a value in KV, and returns it if it's there, and returns a 404 if it is not. It also serves index.html from `/`.
@@ -47,6 +47,7 @@ This example checks for the existence of a value in KV, and returns it if it's t
 `getAssetFromKV` returns a `Promise<Response>` with `Response` being the body of the asset requested.
 
 Known errors to be thrown are:
+
 - MethodNotAllowedError
 - NotFoundError
 - InternalError
@@ -143,7 +144,6 @@ type: boolean
 
 Determines whether to cache requests on Cloudflare's edge cache. By default set to `false` (recommended for production builds). Useful for development when you need to eliminate the cache's effect on testing.
 
-
 #### `ASSET_NAMESPACE`
 
 type: KV Namespace Binding
@@ -204,12 +204,14 @@ let asset = await getAssetFromKV(event, { mapRequestToAsset: serveSinglePageApp 
 All responses served from cache (including those with `cf-cache-status: MISS`) include an `etag` response header that identifies the version of the resource. The `etag` value is identical to the path key used in the `ASSET_MANIFEST`. It is updated each time an asset changes and looks like this: `etag: <filename>.<hash of file contents>.<extension>` (ex. `etag: index.54321.html`).
 
 Resources served with an `etag` allow browsers to use the `if-none-match` request header to make conditional requests for that resource in the future. This has two major benefits:
+
 * When a request's `if-none-match` value matches the `etag` of the resource in Cloudflare cache, Cloudflare will send a `304 Not Modified` response without a body, saving bandwidth.
 * Changes to a file on the server are immediately reflected in the browser - even when the cache control directive `max-age` is unexpired.
 
 #### Disable the `etag`
 
 To turn `etags` **off**, you must bypass cache:
+
 ```js
 /* Turn etags off */
 let cacheControl = {
