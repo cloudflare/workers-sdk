@@ -66,24 +66,24 @@
 
   - **Allow extensionless files to be served - [victoriabernard92], [cloudflare/wrangler/issues/980], [pull/73]**
 
-  Prior to this PR, `getAssetFromKv` assumed extensionless requests (e.g. `/some-path`) would be set up to be served as the corresponding HTML file in storage (e.g. `some-path.html`).
-  This fix checks the `ASSET_MANIFEST` for the extensionless file name _before_ appending the HTML extension. If the extensionless file exists (e.g. `some-path` exists as a key in the ASSET_MANIFEST) then we serve that file first. If the extensionless file does not exist, then the behavior does not change (e.g. it still looks for `some-path.html`).
+    Prior to this PR, `getAssetFromKv` assumed extensionless requests (e.g. `/some-path`) would be set up to be served as the corresponding HTML file in storage (e.g. `some-path.html`).
+    This fix checks the `ASSET_MANIFEST` for the extensionless file name _before_ appending the HTML extension. If the extensionless file exists (e.g. `some-path` exists as a key in the ASSET_MANIFEST) then we serve that file first. If the extensionless file does not exist, then the behavior does not change (e.g. it still looks for `some-path.html`).
 
-  [victoriabernard92]: https://github.com/victoriabernard92
-  [cloudflare/wrangler/issues/980]: https://github.com/cloudflare/wrangler/issues/980
-  [pull/73]: https://github.com/cloudflare/kv-asset-handler/pull/73
+    [victoriabernard92]: https://github.com/victoriabernard92
+    [cloudflare/wrangler/issues/980]: https://github.com/cloudflare/wrangler/issues/980
+    [pull/73]: https://github.com/cloudflare/kv-asset-handler/pull/73
 
 - ### Fixes
 
   - **Fix URL parsing in serveSinglePageApp - [signalnerve],[sgiacosa], [issue/72], [pull/82]**
 
-  This fixes an issue in `serveSinglePageApp` where the request.url is used as a string to retrieve static content. For example,
-  if a query parameter was set, the URL lookup would break. This fix uses a parsed URL instead of the string and adjusts the README.
+    This fixes an issue in `serveSinglePageApp` where the request.url is used as a string to retrieve static content. For example,
+    if a query parameter was set, the URL lookup would break. This fix uses a parsed URL instead of the string and adjusts the README.
 
-  [signalnerve]: https://github.com/signalnerve
-  [sgiacosa]: https://github.com/sgiacosa
-  [issue/72]: https://github.com/cloudflare/kv-asset-handler/issue/72
-  [pull/82]: https://github.com/cloudflare/kv-asset-handler/pull/82
+    [signalnerve]: https://github.com/signalnerve
+    [sgiacosa]: https://github.com/sgiacosa
+    [issue/72]: https://github.com/cloudflare/kv-asset-handler/issue/72
+    [pull/82]: https://github.com/cloudflare/kv-asset-handler/pull/82
 
 ## 0.0.9
 
@@ -91,11 +91,11 @@
 
   - **Building and publishing to npm - [victoriabernard92], [pull/78], [pull/79]**
 
-  Added a `prepack` step that builds JavaScript files from the TypeScript source. This fixes previously broken `npm` publishes.
+    Added a `prepack` step that builds JavaScript files from the TypeScript source. This fixes previously broken `npm` publishes.
 
-  [victoriabernard92]: https://github.com/victoriabernard92
-  [issue/78]: https://github.com/cloudflare/kv-asset-handler/issue/78
-  [pull/79]: https://github.com/cloudflare/kv-asset-handler/pull/79
+    [victoriabernard92]: https://github.com/victoriabernard92
+    [issue/78]: https://github.com/cloudflare/kv-asset-handler/issue/78
+    [pull/79]: https://github.com/cloudflare/kv-asset-handler/pull/79
 
 ## 0.0.8
 
@@ -103,7 +103,7 @@
 
   - **Support a variety of errors thrown from `getAssetFromKV` - [victoriabernard92], [issue/59] [pull/64]**
 
-   Previously, `getAssetFromKv` would throw the same error type if anything went wrong. Now it will throw different error types so that clients can catch and differentiate them.
+    Previously, `getAssetFromKv` would throw the same error type if anything went wrong. Now it will throw different error types so that clients can catch and differentiate them.
     For example, a 404 `NotFoundError` error implies nothing went wrong, the asset just didn't exist while
     a 500 `InternalError` means an expected variable was undefined.
 
@@ -116,7 +116,7 @@
 
   - **Range Issue with Safari and videos - [victoriabernard92], [issue/60] [pull/66]**
 
- Previously, if you wanted to serve a video from Workers KV using `kv-asset-handler`, it would be broken on Safari due to its requirement that all videos support the [`Content-Range` header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range). Cloudflare already has a feature that will handle these headers automatically, we just needed to take advantage of it by passing in a `Request` object to the [Cache API](https://developers.cloudflare.com/workers/reference/apis/cache/) rather than a URL string.
+    Previously, if you wanted to serve a video from Workers KV using `kv-asset-handler`, it would be broken on Safari due to its requirement that all videos support the [`Content-Range` header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range). Cloudflare already has a feature that will handle these headers automatically, we just needed to take advantage of it by passing in a `Request` object to the [Cache API](https://developers.cloudflare.com/workers/reference/apis/cache/) rather than a URL string.
     videos from not including the range headers.
 
     [victoriabernard92]: https://github.com/victoriabernard92
