@@ -56,7 +56,7 @@ Mistakes happen. Most of these release steps are recoverable if you mess up. The
 Tags and releases can be removed in GitHub. First, [remove the remote tag](https://stackoverflow.com/questions/5480258/how-to-delete-a-remote-tag):
 
 ```console
-$ git push --delete origin tagname
+git push --delete origin tagname
 ```
 
 This will turn the release into a `draft` and you can delete it from the edit page.
@@ -64,5 +64,5 @@ This will turn the release into a `draft` and you can delete it from the edit pa
 Make sure you also delete the local tag:
 
 ```console
-$ git tag --delete vX.X.X
+git tag --delete vX.X.X
 ```
