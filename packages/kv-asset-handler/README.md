@@ -150,7 +150,7 @@ type: KV Namespace Binding
 
 The binding name to the KV Namespace populated with key/value entries of files for the Worker to serve. By default, Workers Sites uses a [binding to a Workers KV Namespace](https://developers.cloudflare.com/workers/reference/storage/api/#namespaces) named `__STATIC_CONTENT`.
 
-It is further assumed that this namespace consists of static assets such as HTML, CSS, JavaScript, or image files, keyed off of a relative path that roughly matches the assumed url pathname of the incoming request.
+It is further assumed that this namespace consists of static assets such as HTML, CSS, JavaScript, or image files, keyed off of a relative path that roughly matches the assumed URL pathname of the incoming request.
 
 ```
 return getAssetFromKV(event, { ASSET_NAMESPACE: MY_NAMESPACE })
