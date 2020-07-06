@@ -65,30 +65,26 @@ export const mockCaches = () => {
           headers: {}
         }
         if (key.headers.has('if-none-match')) {
-          cacheKey.headers = {
-            'etag': key.headers.get('if-none-match')
-          }
-          return cacheStore.get(JSON.stringify(cacheKey))
+          let makeStrongEtag = key.headers.get('if-none-match').replace('W/', '')
+          Reflect.set(cacheKey.headers, 'etag', makeStrongEtag)
         }
-        // if client doesn't send if-none-match, we need to iterate through these keys
-        // and just test the URL
-        const activeCacheKeys: Array<string> = Array.from(cacheStore.keys())
-        for (const cacheStoreKey of activeCacheKeys) {
-          if (JSON.parse(cacheStoreKey).url === key.url) {
-            return cacheStore.get(cacheStoreKey)
-          }
-        }
+        return cacheStore.get(JSON.stringify(cacheKey))
       },
       async put (key: any, val: Response) {
         let headers = new Headers(val.headers)
-        let resp = new Response(val.body, { headers })
+        let url = new URL(key.url)
+        let resWithBody = new Response(val.body, { headers, status: 200 })
+        let resNoBody = new Response(null, { headers, status: 304 })
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
-            'etag': val.headers.get('etag')
+            'etag': `"${url.pathname.replace('/', '')}"`
           }
         }
-        return cacheStore.set(JSON.stringify(cacheKey), resp)
+        cacheStore.set(JSON.stringify(cacheKey), resNoBody)
+        cacheKey.headers = {}
+        cacheStore.set(JSON.stringify(cacheKey), resWithBody)
+        return
       },
     },
   }
@@ -103,3 +99,4 @@ export function mockGlobal() {
 export const sleep = (milliseconds: number) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
+
