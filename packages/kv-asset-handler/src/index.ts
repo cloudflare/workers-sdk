@@ -181,7 +181,11 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   options.cacheControl = Object.assign({}, defaultCacheControl, evalCacheOpts)
 
   // override shouldEdgeCache if options say to bypassCache
-  if (options.cacheControl.bypassCache || options.cacheControl.edgeTTL === null) {
+  if (
+    options.cacheControl.bypassCache ||
+    options.cacheControl.edgeTTL === null ||
+    request.method == 'HEAD'
+  ) {
     shouldEdgeCache = false
   }
   // only set max-age if explicitly passed in a number as an arg
