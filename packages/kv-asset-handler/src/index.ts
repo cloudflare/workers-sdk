@@ -107,7 +107,14 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     pathIsEncoded = true;
     requestKey = request
   } else {
-    requestKey = options.mapRequestToAsset(request)
+    const mapedRequest = mapRequestToAsset(request)
+    const mapedRawPathKey = new URL(mapedRequest.url).pathname.replace(/^\/+/, '')
+    if (ASSET_MANIFEST[decodeURIComponent(mapedRawPathKey)]) {
+      pathIsEncoded = true;
+      requestKey = mapedRequest
+    } else {
+      requestKey = options.mapRequestToAsset(request)
+    }
   }
 
   const parsedUrl = new URL(requestKey.url)
