@@ -127,6 +127,21 @@ test('getAssetFromKV only decode URL when necessary', async t => {
   }
 })
 
+test('getAssetFromKV Support for user decode url path', async t => {
+  mockGlobal()
+  const event1 = getEvent(new Request('https://blah.com/%E4%BD%A0%E5%A5%BD/'))
+  const event2 = getEvent(new Request('https://blah.com/你好/'))
+  const res1 = await getAssetFromKV(event1)
+  const res2 = await getAssetFromKV(event2)
+
+  if (res1 && res2) {
+    t.is(await res1.text(), 'My path is non-ascii')
+    t.is(await res2.text(), 'My path is non-ascii')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test('getAssetFromKV custom key modifier', async t => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
