@@ -3,10 +3,13 @@ export type CacheControl = {
   edgeTTL: number
   bypassCache: boolean
 }
+
+export type AssetManifestType = Record<string, string>;
+
 export type Options = {
   cacheControl: ((req: Request) => Partial<CacheControl>) | Partial<CacheControl>
   ASSET_NAMESPACE: any
-  ASSET_MANIFEST: Object | string
+  ASSET_MANIFEST: AssetManifestType | string
   mapRequestToAsset: (req: Request) => Request,
   defaultMimeType: string
 }
