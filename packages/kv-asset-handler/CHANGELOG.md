@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.0.12
+
+- ### Features
+
+  - **Add defaultMimeType option to getAssetFromKV - [mgrahamjo], [pull/121]**
+
+    Some static website owners prefer not to create all of their web routes as directories containing index.html files. Instead, they prefer to create pages as extensionless HTML files. Providing a defaultMimeType option will allow users to set the Content-Type header for extensionless files to text/html, which will enable this use case.
+
+    [mgrahamjo]: https://github.com/mgrahamjo
+    [pull/121]: https://github.com/cloudflare/kv-asset-handler/pull/121
+
+  - **Add defaultMimeType to types - [shagamemnon], [pull/132]**
+
+    Adds the newly added defaultMimeType to the exported types for this package.
+
+    [pull/132]: https://github.com/cloudflare/kv-asset-handler/pull/132
+
+- ### Fixes
+
+  - **Fix text/* charset - [EatonZ], [pull/130]**
+
+    Adds a missing `-` to the `utf-8` charset value in response mime types.
+
+    [EatonZ]: https://github.com/EatonZ
+    [pull/130]: https://github.com/cloudflare/kv-asset-handler/pull/130
+
+  - **Cache handling for HEAD requests - [klittlepage], [pull/141]**
+
+    This PR skips caching for incoming HEAD requests, as they should not be able to be edge cached.
+
+    [klittlepage]: https://github.com/klittlepage
+    [pull/141]: https://github.com/cloudflare/kv-asset-handler/pull/141
+
+- ### Maintenance
+
+  - **Markdown linting/typos - [jbampton], [pull/123], [pull/125], [pull/126], [pull/127], [pull/128], [pull/129], [pull/131], [pull/134]**
+
+    These PRs contain various typo fixes and linting of existing Markdown files in our documentation and CHANGELOG.
+
+    [jbampton]: https://github.com/jbampton
+    [pull/123]: https://github.com/cloudflare/kv-asset-handler/pull/123
+    [pull/125]: https://github.com/cloudflare/kv-asset-handler/pull/125
+    [pull/126]: https://github.com/cloudflare/kv-asset-handler/pull/126
+    [pull/127]: https://github.com/cloudflare/kv-asset-handler/pull/127
+    [pull/128]: https://github.com/cloudflare/kv-asset-handler/pull/128
+    [pull/129]: https://github.com/cloudflare/kv-asset-handler/pull/129
+    [pull/131]: https://github.com/cloudflare/kv-asset-handler/pull/131
+    [pull/134]: https://github.com/cloudflare/kv-asset-handler/pull/134
+
 ## 0.0.11
 
 - ### Features
