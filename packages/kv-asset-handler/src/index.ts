@@ -1,5 +1,5 @@
 import * as mime from 'mime'
-import { Options, CacheControl, MethodNotAllowedError, NotFoundError, InternalError, AssetManifestType } from './types'
+import { Options, CacheControl, MethodNotAllowedError, NotFoundError, InternalError } from './types'
 
 declare global {
   var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: string
@@ -59,19 +59,6 @@ const defaultCacheControl: CacheControl = {
   bypassCache: false, // do not bypass Cloudflare's cache
 }
 
-
-const parseStringAsObject = <T>(maybestring: string | T): T => 
-  typeof maybestring === 'string' ? JSON.parse(maybestring) as T : maybestring
-
-
-const getAssetFromKVDefaultOptions: Partial<Options> = {
-  ASSET_NAMESPACE: __STATIC_CONTENT,
-  ASSET_MANIFEST: parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST),
-  mapRequestToAsset: mapRequestToAsset,
-  cacheControl: defaultCacheControl,
-  defaultMimeType: 'text/plain',
-}
-
 /**
  * takes the path of the incoming request, gathers the appropriate content from KV, and returns
  * the response
@@ -86,13 +73,22 @@ const getAssetFromKVDefaultOptions: Partial<Options> = {
 const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Promise<Response> => {
   // Assign any missing options passed in to the default
   options = Object.assign(
-    getAssetFromKVDefaultOptions,
+    {
+      ASSET_NAMESPACE: __STATIC_CONTENT,
+      ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
+      mapRequestToAsset: mapRequestToAsset,
+      cacheControl: defaultCacheControl,
+      defaultMimeType: 'text/plain',
+    },
     options,
   )
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
-  const ASSET_MANIFEST = parseStringAsObject<AssetManifestType>(options.ASSET_MANIFEST)
+  const ASSET_MANIFEST = typeof (options.ASSET_MANIFEST) === 'string'
+    ? JSON.parse(options.ASSET_MANIFEST)
+    : options.ASSET_MANIFEST
+
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new InternalError(`there is no KV namespace bound to the script`)
   }
