@@ -72,11 +72,11 @@ const defaultCacheControl: CacheControl = {
  * */
 const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Promise<Response> => {
   // Assign any missing options passed in to the default
+  // options.mapRequestToAsset is handled manually later
   options = Object.assign(
     {
       ASSET_NAMESPACE: __STATIC_CONTENT,
       ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
-      mapRequestToAsset: mapRequestToAsset,
       cacheControl: defaultCacheControl,
       defaultMimeType: 'text/plain',
     },
@@ -101,20 +101,18 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s
   let pathIsEncoded = false
   let requestKey
-  if (ASSET_MANIFEST[rawPathKey]) {
+  // if options.mapRequestToAsset is explicitly passed in, always use it and assume user has own intentions
+  // otherwise handle request as normal, with default mapRequestToAsset below
+  if (options.mapRequestToAsset) {
+    requestKey = options.mapRequestToAsset(request)
+  } else if (ASSET_MANIFEST[rawPathKey]) {
     requestKey = request
   } else if (ASSET_MANIFEST[decodeURIComponent(rawPathKey)]) {
     pathIsEncoded = true;
     requestKey = request
   } else {
-    const mapedRequest = mapRequestToAsset(request)
-    const mapedRawPathKey = new URL(mapedRequest.url).pathname.replace(/^\/+/, '')
-    if (ASSET_MANIFEST[decodeURIComponent(mapedRawPathKey)]) {
-      pathIsEncoded = true;
-      requestKey = mapedRequest
-    } else {
-      requestKey = options.mapRequestToAsset(request)
-    }
+    // use default mapRequestToAsset
+    requestKey = mapRequestToAsset(request)
   }
 
   const parsedUrl = new URL(requestKey.url)
