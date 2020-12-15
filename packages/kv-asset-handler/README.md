@@ -191,6 +191,12 @@ This is the mime type that will be used for files with unrecognized or missing e
 
 If you are serving a static site and would like to use extensionless HTML files instead of index.html files, set this to `'text/html'`.
 
+#### `defaultDocument` (optional)
+
+type: string
+
+This is the default document that will be concatenated for requests ends in `'/'` or without a valid mime type like `'/about'` or `'/about.me'`. The default value is `'index.html'`.
+
 # Helper functions
 
 ## `mapRequestToAsset`

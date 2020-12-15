@@ -4,6 +4,28 @@ import { Options, CacheControl, MethodNotAllowedError, NotFoundError, InternalEr
 declare global {
   var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: string
 }
+
+const defaultCacheControl: CacheControl = {
+  browserTTL: null,
+  edgeTTL: 2 * 60 * 60 * 24, // 2 days
+  bypassCache: false, // do not bypass Cloudflare's cache
+}
+
+function assignOptions(options?: Partial<Options>): Options {
+  // Assign any missing options passed in to the default
+  // options.mapRequestToAsset is handled manually later
+  return Object.assign(
+    {
+      ASSET_NAMESPACE: __STATIC_CONTENT,
+      ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
+      cacheControl: defaultCacheControl,
+      defaultMimeType: 'text/plain',
+      defaultDocument: 'index.html',
+    },
+    options,
+  )
+}
+
 /**
  * maps the path of incoming request to the request pathKey to look up
  * in bucket and in cache
@@ -11,18 +33,20 @@ declare global {
  * the content of bucket/index.html
  * @param {Request} request incoming request
  */
-const mapRequestToAsset = (request: Request) => {
+const mapRequestToAsset = (request: Request, options?: Partial<Options>) => {
+  options = assignOptions(options);
+
   const parsedUrl = new URL(request.url)
   let pathname = parsedUrl.pathname
 
   if (pathname.endsWith('/')) {
-    // If path looks like a directory append index.html
+    // If path looks like a directory append options.defaultDocument
     // e.g. If path is /about/ -> /about/index.html
-    pathname = pathname.concat('index.html')
+    pathname = pathname.concat(options.defaultDocument)
   } else if (!mime.getType(pathname)) {
     // If path doesn't look like valid content
     //  e.g. /about.me ->  /about.me/index.html
-    pathname = pathname.concat('/index.html')
+    pathname = pathname.concat('/' + options.defaultDocument)
   }
 
   parsedUrl.pathname = pathname
@@ -34,7 +58,9 @@ const mapRequestToAsset = (request: Request) => {
  * any HTML file.
  * @param {Request} request incoming request
  */
-function serveSinglePageApp(request: Request): Request {
+function serveSinglePageApp(request: Request, options?: Partial<Options>): Request {
+  options = assignOptions(options);
+
   // First apply the default handler, which already has logic to detect
   // paths that should map to HTML files.
   request = mapRequestToAsset(request)
@@ -44,19 +70,13 @@ function serveSinglePageApp(request: Request): Request {
   // Detect if the default handler decided to map to
   // a HTML file in some specific directory.
   if (parsedUrl.pathname.endsWith('.html')) {
-    // If expected HTML file was missing, just return the root index.html
-    return new Request(`${parsedUrl.origin}/index.html`, request)
+    // If expected HTML file was missing, just return the root index.html (or options.defaultDocument)
+    return new Request(`${parsedUrl.origin}/${options.defaultDocument}`, request)
   } else {
     // The default handler decided this is not an HTML page. It's probably
     // an image, CSS, or JS file. Leave it as-is.
     return request
   }
-}
-
-const defaultCacheControl: CacheControl = {
-  browserTTL: null,
-  edgeTTL: 2 * 60 * 60 * 24, // 2 days
-  bypassCache: false, // do not bypass Cloudflare's cache
 }
 
 /**
@@ -71,17 +91,7 @@ const defaultCacheControl: CacheControl = {
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
 const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Promise<Response> => {
-  // Assign any missing options passed in to the default
-  // options.mapRequestToAsset is handled manually later
-  options = Object.assign(
-    {
-      ASSET_NAMESPACE: __STATIC_CONTENT,
-      ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
-      cacheControl: defaultCacheControl,
-      defaultMimeType: 'text/plain',
-    },
-    options,
-  )
+  options = assignOptions(options);
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
