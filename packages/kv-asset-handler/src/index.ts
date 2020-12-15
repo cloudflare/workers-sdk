@@ -63,7 +63,7 @@ function serveSinglePageApp(request: Request, options?: Partial<Options>): Reque
 
   // First apply the default handler, which already has logic to detect
   // paths that should map to HTML files.
-  request = mapRequestToAsset(request)
+  request = mapRequestToAsset(request, options)
 
   const parsedUrl = new URL(request.url)
 
@@ -91,7 +91,7 @@ function serveSinglePageApp(request: Request, options?: Partial<Options>): Reque
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
 const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Promise<Response> => {
-  options = assignOptions(options);
+  options = assignOptions(options)
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
@@ -123,7 +123,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       requestKey = mappedRequest
     } else {
       // use default mapRequestToAsset
-      requestKey = mapRequestToAsset(request)
+      requestKey = mapRequestToAsset(request, options)
     }
   }
 
