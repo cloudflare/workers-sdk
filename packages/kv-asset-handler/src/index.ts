@@ -211,8 +211,24 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       }
       response = new Response(null, response)
     } else {
-      response = new Response(response.body, response)
-      response.headers.set('cf-cache-status', 'HIT')
+      headers.set('CF-Cache-Status', 'HIT')
+      // fixes #165
+      let opts = {
+        headers,
+        status: 0,
+        statusText: ''
+      }
+      if (response.status) {
+        opts.status = response.status
+        opts.statusText = response.statusText
+      } else if (headers.has('Content-Range')) {
+        opts.status = 206
+        opts.statusText = 'Partial Content'
+      } else {
+        opts.status = 200
+        opts.statusText = 'OK'
+      }
+      response = new Response(response.body, opts)
     }
 
   } else {

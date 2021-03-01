@@ -439,4 +439,19 @@ test('getAssetFromKV if-none-match not sent but resource in cache, should return
   }
 })
 
+test('getAssetFromKV if range request submitted and resource in cache, request fulfilled', async t => {
+  const resourceKey = 'cache.html'
+  const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`))
+  const event2 = getEvent(new Request(`https://blah.com/${resourceKey}`, { headers: { 'range': 'bytes=0-10'}}))
+  const res1 = await getAssetFromKV(event1, { cacheControl: { edgeTTL: 720 } })
+  await res1
+  await sleep(2)
+  const res2 = await getAssetFromKV(event2)
+  if (res2.headers.has('content-range')) {
+    t.is(res2.status, 206)
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test.todo('getAssetFromKV when body not empty, should invoke .cancel()')
