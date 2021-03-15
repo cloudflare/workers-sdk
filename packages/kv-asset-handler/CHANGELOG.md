@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1
+
+- ### Fixes
+
+  - **kv-asset-handler can translate 206 responses to 200 - [harrishancock], [pull/166]**
+
+   Fixes [wrangler#1746](https://github.com/cloudflare/wrangler/issues/1746)
+
+   [harrishancock](https://github.com/harrishancock)
+   [pull/166](https://github.com/cloudflare/kv-asset-handler/pull/166)
+
 ## 0.0.12
 
 - ### Features
