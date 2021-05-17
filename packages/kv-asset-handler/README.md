@@ -1,5 +1,15 @@
 # @cloudflare/kv-asset-handler
 
+`kv-asset-handler` is an open-source library for managing the retrieval of static assets from [Workers KV](https://developers.cloudflare.com/workers/runtime-apis/kv) inside of a [Cloudflare Workers](https://workers.dev) function. `kv-asset-handler` is designed for use with [Workers Sites](https://developers.cloudflare.com/workers/platform/sites), a feature included in [Wrangler](https://github.com/cloudflare/wrangler), our command-line tool for deploying Workers projects.
+
+`kv-asset-handler` runs as part of a Cloudflare Workers function, so it allows you to customize _how_ and _when_ your static assets are loaded, as well as customize how those assets behave before they're sent to the client.
+
+Most users and sites will not need these customizations, and just want to serve their statically built applications. For that simple use-case, you can check out [Cloudflare Pages](https://pages.cloudflare.com), our batteries-included approach to deploying static sites on Cloudflare's edge network. Workers Sites was designed as a precursor to Cloudflare Pages, so check out Pages if you just want to deploy your static site without any special customizations!
+
+For users who _do_ want to customize their assets, and want to build complex experiences on top of their static assets, `kv-asset-handler` (and the default [Workers Sites template](https://github.com/cloudflare/worker-sites-template), which is provided for use with Wrangler + Workers Sites) allows you to customize caching behavior, headers, and anything else about how your Workers function loads the static assets for your site stored in Workers KV.
+
+The Cloudflare Workers Discord server is an active place where Workers users get help, share feedback, and collaborate on making our platform better. The `#workers-sites` channel in particular is a great place to chat about `kv-asset-handler`, and building cool experiences for your users using these tools! If you have questions, want to share what you're working on, or give feedback, [join us in Discord and say hello](https://discord.gg/cloudflaredev)!
+
   * [Installation](#installation)
   * [Usage](#usage)
   * [`getAssetFromKV`](#-getassetfromkv-)
