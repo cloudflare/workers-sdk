@@ -1,5 +1,9 @@
 # @cloudflare/kv-asset-handler
 
+[![npm](https://img.shields.io/npm/v/@cloudflare/kv-asset-handler.svg)](https://www.npmjs.com/package/@cloudflare/kv-asset-handler) &nbsp;
+[![Run npm tests](https://github.com/cloudflare/kv-asset-handler/actions/workflows/test.yml/badge.svg)](https://github.com/cloudflare/kv-asset-handler/actions/workflows/test.yml) &nbsp;
+[![Lint Markdown](https://github.com/cloudflare/kv-asset-handler/actions/workflows/lint.yml/badge.svg)](https://github.com/cloudflare/kv-asset-handler/actions/workflows/lint.yml) &nbsp;
+
 `kv-asset-handler` is an open-source library for managing the retrieval of static assets from [Workers KV](https://developers.cloudflare.com/workers/runtime-apis/kv) inside of a [Cloudflare Workers](https://workers.dev) function. `kv-asset-handler` is designed for use with [Workers Sites](https://developers.cloudflare.com/workers/platform/sites), a feature included in [Wrangler](https://github.com/cloudflare/wrangler), our command-line tool for deploying Workers projects.
 
 `kv-asset-handler` runs as part of a Cloudflare Workers function, so it allows you to customize _how_ and _when_ your static assets are loaded, as well as customize how those assets behave before they're sent to the client.
