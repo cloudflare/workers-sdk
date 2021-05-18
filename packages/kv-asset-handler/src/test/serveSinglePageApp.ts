@@ -11,7 +11,7 @@ function testRequest(path: string) {
   return request
 }
 
-test('serveSinglePageApp returns root asset path when request path ends in .html', async t => {
+test('serveSinglePageApp returns root asset path when request path ends in .html', async (t) => {
   let path = '/foo/thing.html'
   let request = testRequest(path)
 
@@ -21,7 +21,7 @@ test('serveSinglePageApp returns root asset path when request path ends in .html
   t.deepEqual(expected_request, actual_request)
 })
 
-test('serveSinglePageApp returns root asset path when request path does not have extension', async t => {
+test('serveSinglePageApp returns root asset path when request path does not have extension', async (t) => {
   let path = '/foo/thing'
   let request = testRequest(path)
 
@@ -31,7 +31,7 @@ test('serveSinglePageApp returns root asset path when request path does not have
   t.deepEqual(expected_request, actual_request)
 })
 
-test('serveSinglePageApp returns requested asset when request path has non-html extension', async t => {
+test('serveSinglePageApp returns requested asset when request path has non-html extension', async (t) => {
   let path = '/foo/thing.js'
   let request = testRequest(path)
 

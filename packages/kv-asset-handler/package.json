@@ -7,13 +7,13 @@
   "scripts": {
     "prepack": "npm run build",
     "build": "tsc -d",
-    "format": "prettier --write '**/*.js'",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
     "pretest": "npm run build",
     "test": "ava dist/test/*.js --verbose"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloudflare/workers-site-npm-pkg.git"
+    "url": "git+https://github.com/cloudflare/kv-asset-handler.git"
   },
   "keywords": [
     "kv",
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "ava": "^3.9.0",
+    "prettier": "^2.3.0",
     "service-worker-mock": "^2.0.5",
     "typescript": "^3.9.5"
   }

@@ -14,24 +14,25 @@ For users who _do_ want to customize their assets, and want to build complex exp
 
 The Cloudflare Workers Discord server is an active place where Workers users get help, share feedback, and collaborate on making our platform better. The `#workers-sites` channel in particular is a great place to chat about `kv-asset-handler`, and building cool experiences for your users using these tools! If you have questions, want to share what you're working on, or give feedback, [join us in Discord and say hello](https://discord.gg/cloudflaredev)!
 
-  * [Installation](#installation)
-  * [Usage](#usage)
-  * [`getAssetFromKV`](#-getassetfromkv-)
-      - [Example](#example)
-    + [Return](#return)
-    + [Optional Arguments](#optional-arguments)
-      - [`mapRequestToAsset`](#-maprequesttoasset-)
-      - [Example](#example-1)
-      - [`cacheControl`](#-cachecontrol-)
-        * [`browserTTL`](#-browserttl-)
-        * [`edgeTTL`](#-edgettl-)
-        * [`bypassCache`](#-bypasscache-)
-      - [`ASSET_NAMESPACE`](#-asset-namespace-)
-      - [`ASSET_MANIFEST` (optional)](#-asset-manifest---optional-)
-- [Helper functions](#helper-functions)
-  * [`mapRequestToAsset`](#-maprequesttoasset--1)
-  * [`serveSinglePageApp`](#-servesinglepageapp-)
-- [Cache revalidation and etags](#cache-revalidation-and-etags)
+- [Installation](#installation)
+- [Usage](#usage)
+- [`getAssetFromKV`](#-getassetfromkv)
+  - [Example](#example)
+  * [Return](#return)
+  * [Optional Arguments](#optional-arguments)
+    - [`mapRequestToAsset`](#-maprequesttoasset)
+    - [Example](#example-1)
+    - [`cacheControl`](#-cachecontrol)
+      - [`browserTTL`](#-browserttl)
+      - [`edgeTTL`](#-edgettl)
+      - [`bypassCache`](#-bypasscache)
+    - [`ASSET_NAMESPACE`](#-asset-namespace)
+    - [`ASSET_MANIFEST` (optional)](#-asset-manifest---optional)
+
+* [Helper functions](#helper-functions)
+  - [`mapRequestToAsset`](#-maprequesttoasset-1)
+  - [`serveSinglePageApp`](#-servesinglepageapp)
+* [Cache revalidation and etags](#cache-revalidation-and-etags)
 
 ## Installation
 
@@ -69,7 +70,7 @@ Known errors to be thrown are:
 ```js
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler'
 
-addEventListener('fetch', event => {
+addEventListener('fetch', (event) => {
   event.respondWith(handleEvent(event))
 })
 
@@ -83,7 +84,7 @@ async function handleEvent(event) {
       } else if (e instanceof MethodNotAllowedError) {
         // ...
       } else {
-        return new Response("An unexpected error occurred", { status: 500 })
+        return new Response('An unexpected error occurred', { status: 500 })
       }
     }
   } else return fetch(event.request)
@@ -104,7 +105,7 @@ mapRequestToAsset(Request) => Request
 
 Maps the incoming request to the value that will be looked up in Cloudflare's KV
 
-By default, mapRequestToAsset is set to the exported function [`mapRequestToAsset`](#maprequesttoasset-1).  This works for most static site generators, but you can customize this behavior by passing your own function as `mapRequestToAsset`. The function should take a `Request` object as its only argument, and return a new `Request` object with an updated path to be looked up in the asset manifest/KV.
+By default, mapRequestToAsset is set to the exported function [`mapRequestToAsset`](#maprequesttoasset-1). This works for most static site generators, but you can customize this behavior by passing your own function as `mapRequestToAsset`. The function should take a `Request` object as its only argument, and return a new `Request` object with an updated path to be looked up in the asset manifest/KV.
 
 For SPA mapping pass in the [`serveSinglePageApp`](#servesinglepageapp) function
 
@@ -219,8 +220,8 @@ All responses served from cache (including those with `cf-cache-status: MISS`) i
 
 Resources served with an `etag` allow browsers to use the `if-none-match` request header to make conditional requests for that resource in the future. This has two major benefits:
 
-* When a request's `if-none-match` value matches the `etag` of the resource in Cloudflare cache, Cloudflare will send a `304 Not Modified` response without a body, saving bandwidth.
-* Changes to a file on the server are immediately reflected in the browser - even when the cache control directive `max-age` is unexpired.
+- When a request's `if-none-match` value matches the `etag` of the resource in Cloudflare cache, Cloudflare will send a `304 Not Modified` response without a body, saving bandwidth.
+- Changes to a file on the server are immediately reflected in the browser - even when the cache control directive `max-age` is unexpired.
 
 #### Disable the `etag`
 
@@ -229,7 +230,7 @@ To turn `etags` **off**, you must bypass cache:
 ```js
 /* Turn etags off */
 let cacheControl = {
-  bypassCache: true
+  bypassCache: true,
 }
 ```
 
