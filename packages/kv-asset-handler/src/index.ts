@@ -113,7 +113,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       requestKey = mappedRequest
     } else {
       // use default mapRequestToAsset
-      requestKey = options.mapRequestToAsset(request)
+      requestKey = mapRequestToAsset(request)
     }
   }
 
