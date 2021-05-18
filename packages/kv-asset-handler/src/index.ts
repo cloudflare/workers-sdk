@@ -122,11 +122,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     throw new MethodNotAllowedError(`${requestKey.method} is not a valid request method`)
   }
 
-  const SUPPORTED_METHODS = ['GET', 'HEAD']
-  if (!SUPPORTED_METHODS.includes(requestKey.method)) {
-    throw new MethodNotAllowedError(`${requestKey.method} is not a valid request method`)
-  }
-
   const parsedUrl = new URL(requestKey.url)
   const pathname = pathIsEncoded ? decodeURIComponent(parsedUrl.pathname) : parsedUrl.pathname // decode percentage encoded path only when necessary
 
