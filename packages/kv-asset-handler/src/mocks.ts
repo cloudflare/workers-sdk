@@ -47,29 +47,29 @@ export const mockManifest = () => {
     'index.html': `index.${HASH}.html`,
     'sub/blah.png': `sub/blah.${HASH}.png`,
     'sub/index.html': `sub/index.${HASH}.html`,
-    'client': `client.${HASH}`,
+    client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
-    '你好/index.html': `你好/index.${HASH}.html`
+    '你好/index.html': `你好/index.${HASH}.html`,
   })
 }
 
 let cacheStore: any = new Map()
 interface CacheKey {
-  url:object;
-  headers:object
+  url: object
+  headers: object
 }
 export const mockCaches = () => {
   return {
     default: {
-      async match (key: any) {
+      async match(key: any) {
         let cacheKey: CacheKey = {
           url: key.url,
-          headers: {}
+          headers: {},
         }
         let response
         if (key.headers.has('if-none-match')) {
           cacheKey.headers = {
-            'etag': key.headers.get('if-none-match')
+            etag: key.headers.get('if-none-match'),
           }
           response = cacheStore.get(JSON.stringify(cacheKey))
         } else {
@@ -87,7 +87,10 @@ export const mockCaches = () => {
           // The Range request header triggers the response header Content-Range ...
           const range = key.headers.get('range')
           if (range) {
-            response.headers.set('content-range', `bytes ${range.split('=').pop()}/${response.headers.get('content-length')}`)
+            response.headers.set(
+              'content-range',
+              `bytes ${range.split('=').pop()}/${response.headers.get('content-length')}`,
+            )
           }
           // ... which we are using in this repository to set status 206
           if (response.headers.has('content-range')) {
@@ -98,16 +101,16 @@ export const mockCaches = () => {
         }
         return response
       },
-      async put (key: any, val: Response) {
+      async put(key: any, val: Response) {
         let headers = new Headers(val.headers)
         let body = await val.text()
         let resp = new Response(body, { headers })
-        headers.set('content-length', (body.length).toString())
+        headers.set('content-length', body.length.toString())
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
-            'etag': `"${url.pathname.replace('/', '')}"`
-          }
+            etag: val.headers.get('etag'),
+          },
         }
         cacheStore.set(JSON.stringify(cacheKey), resNoBody)
         cacheKey.headers = {}
@@ -125,6 +128,6 @@ export function mockGlobal() {
   Object.assign(global, { caches: mockCaches() })
 }
 export const sleep = (milliseconds: number) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
+  return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
