@@ -112,6 +112,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       pathIsEncoded = true;
       requestKey = mappedRequest
     } else {
+      // use default mapRequestToAsset
       requestKey = options.mapRequestToAsset(request)
     }
   }
