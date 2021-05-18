@@ -93,11 +93,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     throw new InternalError(`there is no KV namespace bound to the script`)
   }
 
-  const SUPPORTED_METHODS = ['GET', 'HEAD']
-  if (!SUPPORTED_METHODS.includes(request.method)) {
-    throw new MethodNotAllowedError(`${request.method} is not a valid request method`)
-  }
-
   const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s
   let pathIsEncoded = false
   let requestKey
@@ -119,6 +114,11 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     } else {
       requestKey = options.mapRequestToAsset(request)
     }
+  }
+
+  const SUPPORTED_METHODS = ['GET', 'HEAD']
+  if (!SUPPORTED_METHODS.includes(requestKey.method)) {
+    throw new MethodNotAllowedError(`${requestKey.method} is not a valid request method`)
   }
 
   const parsedUrl = new URL(requestKey.url)
