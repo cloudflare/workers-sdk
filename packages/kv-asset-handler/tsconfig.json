@@ -4,7 +4,7 @@
     "noImplicitAny": true,
     "target": "es5",
     "allowJs": false,
-    "lib": ["webworker"]
+    "lib": ["WebWorker", "ES5", "ScriptHost"]
   },
   "include": ["./src/*.ts", "./src/**/*.ts", "./test/**/*.ts", "./test/*.ts", "./src/types.d.ts"],
   "exclude": ["node_modules/", "dist/"]
