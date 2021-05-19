@@ -2,9 +2,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noImplicitAny": true,
-    "target": "es5",
+    "target": "es6",
     "allowJs": false,
-    "lib": ["WebWorker", "ES5", "ScriptHost"]
+    "lib": ["WebWorker", "ES5", "ScriptHost"],
+    "module": "commonjs",
+    "moduleResolution": "node"
   },
   "include": ["./src/*.ts", "./src/**/*.ts", "./test/**/*.ts", "./test/*.ts", "./src/types.d.ts"],
   "exclude": ["node_modules/", "dist/"]
