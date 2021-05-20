@@ -26,7 +26,7 @@ const store: any = {
   'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
-  '你好/index.123HASHBROWN.html': 'My path is non-ascii'
+  '你好/index.123HASHBROWN.html': 'My path is non-ascii',
 }
 export const mockKV = (store: any) => {
   return {
@@ -49,22 +49,22 @@ export const mockManifest = () => {
     'sub/index.html': `sub/index.${HASH}.html`,
     client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
-    '你好/index.html': `你好/index.${HASH}.html`
+    '你好/index.html': `你好/index.${HASH}.html`,
   })
 }
 
 let cacheStore: any = new Map()
 interface CacheKey {
-  url: object
-  headers: object
+  url:object;
+  headers:object
 }
 export const mockCaches = () => {
   return {
     default: {
-      async match(key: any) {
+      async match (key: any) {
         let cacheKey: CacheKey = {
           url: key.url,
-          headers: {},
+          headers: {}
         }
         let response
         if (key.headers.has('if-none-match')) {
@@ -105,7 +105,7 @@ export const mockCaches = () => {
         }
         return response
       },
-      async put(key: any, val: Response) {
+      async put (key: any, val: Response) {
         let headers = new Headers(val.headers)
         let body = await val.text()
         let resp = new Response(body, { headers })
@@ -113,8 +113,8 @@ export const mockCaches = () => {
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
-            etag: `"${url.pathname.replace('/', '')}"`,
-          },
+            'etag': `"${url.pathname.replace('/', '')}"`
+          }
         }
         cacheStore.set(JSON.stringify(cacheKey), resNoBody)
         cacheKey.headers = {}
@@ -132,5 +132,5 @@ export function mockGlobal() {
   Object.assign(global, { caches: mockCaches() })
 }
 export const sleep = (milliseconds: number) => {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
