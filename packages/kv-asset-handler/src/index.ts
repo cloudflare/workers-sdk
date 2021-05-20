@@ -236,17 +236,19 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       }
       response = new Response(null, response)
     } else {
-      headers.set('CF-Cache-Status', 'HIT')
       // fixes #165
       let opts = {
-        headers,
+        headers: new Headers(response.headers),
         status: 0,
         statusText: '',
       }
+
+      opts.headers.set('cf-cache-status', 'HIT')
+
       if (response.status) {
         opts.status = response.status
         opts.statusText = response.statusText
-      } else if (headers.has('Content-Range')) {
+      } else if (opts.headers.has('Content-Range')) {
         opts.status = 206
         opts.statusText = 'Partial Content'
       } else {
@@ -255,7 +257,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       }
       response = new Response(response.body, opts)
     }
-
   } else {
     const body = await ASSET_NAMESPACE.get(pathKey, 'arrayBuffer')
     if (body === null) {

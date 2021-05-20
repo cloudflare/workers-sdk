@@ -212,7 +212,7 @@ test('getAssetFromKV caches on two sequential requests', async (t) => {
   const event2 = getEvent(
     new Request(`https://blah.com/${resourceKey}`, {
       headers: {
-        'if-none-match': resourceVersion,
+        'if-none-match': `"${resourceVersion}"`,
       },
     }),
   )
@@ -237,7 +237,7 @@ test('getAssetFromKV does not store max-age on two sequential requests', async (
   const event2 = getEvent(
     new Request(`https://blah.com/${resourceKey}`, {
       headers: {
-        'if-none-match': resourceVersion,
+        'if-none-match': `"${resourceVersion}"`,
       },
     }),
   )
@@ -354,7 +354,7 @@ test('getAssetFromKV when namespace not bound fails', async (t) => {
   t.is(error.status, 500)
 })
 
-test('getAssetFromKV when if-none-match === etag and etag === pathKey in manifest, should revalidate', async (t) => {
+test('getAssetFromKV when if-none-match === active resource version, should revalidate', async (t) => {
   mockGlobal()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
@@ -362,7 +362,7 @@ test('getAssetFromKV when if-none-match === etag and etag === pathKey in manifes
   const event2 = getEvent(
     new Request(`https://blah.com/${resourceKey}`, {
       headers: {
-        'if-none-match': resourceVersion,
+        'if-none-match': `W/"${resourceVersion}"`,
       },
     }),
   )
@@ -379,18 +379,18 @@ test('getAssetFromKV when if-none-match === etag and etag === pathKey in manifes
   }
 })
 
-test('getAssetFromKV when etag and if-none-match are present but if-none-match !== etag, should bypass cache', async (t) => {
+test('getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache', async (t) => {
   mockGlobal()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const req1 = new Request(`https://blah.com/${resourceKey}`, {
     headers: {
-      'if-none-match': resourceVersion,
+      'if-none-match': `"${resourceVersion}"`,
     },
   })
   const req2 = new Request(`https://blah.com/${resourceKey}`, {
     headers: {
-      'if-none-match': resourceVersion + 'another-version',
+      'if-none-match': `"${resourceVersion}-another-version"`,
     },
   })
   const event = getEvent(req1)
@@ -408,7 +408,27 @@ test('getAssetFromKV when etag and if-none-match are present but if-none-match !
     t.fail('Response was undefined')
   }
 })
-test('getAssetFromKV if-none-match not sent but resource in cache, should return hit', async (t) => {
+test('getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball', async (t) => {
+  mockGlobal()
+  const resourceKey = 'key1.png'
+  const resourceVersion = JSON.parse(mockManifest())[resourceKey]
+  const req1 = new Request(`https://blah.com/${resourceKey}`, {
+    headers: {
+      'if-none-match': `"${resourceVersion}"`,
+    },
+  })
+  const event = getEvent(req1)
+  const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })
+  const res2 = await getAssetFromKV(event)
+  if (res1 && res2) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res2.headers.get('etag'), `W/${req1.headers.get('if-none-match')}`)
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
+test('getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK', async (t) => {
   const resourceKey = 'cache.html'
   const event = getEvent(new Request(`https://blah.com/${resourceKey}`))
   const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })
@@ -430,10 +450,11 @@ test('getAssetFromKV if range request submitted and resource in cache, request f
   const event2 = getEvent(
     new Request(`https://blah.com/${resourceKey}`, { headers: { range: 'bytes=0-10' } }),
   )
-  const res1 = await getAssetFromKV(event1, { cacheControl: { edgeTTL: 720 } })
+  const res1 = getAssetFromKV(event1, { cacheControl: { edgeTTL: 720 } })
   await res1
   await sleep(2)
   const res2 = await getAssetFromKV(event2)
+  console.log(res2.headers)
   if (res2.headers.has('content-range')) {
     t.is(res2.status, 206)
   } else {
