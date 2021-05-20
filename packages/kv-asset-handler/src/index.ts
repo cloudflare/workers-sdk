@@ -85,7 +85,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
-  const ASSET_MANIFEST = typeof options.ASSET_MANIFEST === 'string'
+  const ASSET_MANIFEST = typeof (options.ASSET_MANIFEST) === 'string'
       ? JSON.parse(options.ASSET_MANIFEST)
       : options.ASSET_MANIFEST
 
