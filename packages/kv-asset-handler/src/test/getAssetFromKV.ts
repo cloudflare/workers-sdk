@@ -209,13 +209,11 @@ test('getAssetFromKV caches on two sequential requests', async t => {
   const resourceKey = 'cache.html'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`))
-  const event2 = getEvent(
-    new Request(`https://blah.com/${resourceKey}`, {
-      headers: {
-        'if-none-match': `"${resourceVersion}"`,
-      },
-    }),
-  )
+  const event2 = getEvent(new Request(`https://blah.com/${resourceKey}`, {
+    headers: {
+      'if-none-match': resourceVersion
+    }
+  }))
 
   const res1 = await getAssetFromKV(event1, { cacheControl: { edgeTTL: 720, browserTTL: 720 } })
   await sleep(1)

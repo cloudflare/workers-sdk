@@ -26,7 +26,7 @@ const store: any = {
   'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
-  '你好/index.123HASHBROWN.html': 'My path is non-ascii',
+  '你好/index.123HASHBROWN.html': 'My path is non-ascii'
 }
 export const mockKV = (store: any) => {
   return {
