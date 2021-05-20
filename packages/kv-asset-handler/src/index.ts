@@ -85,8 +85,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
-  const ASSET_MANIFEST =
-    typeof options.ASSET_MANIFEST === 'string'
+  const ASSET_MANIFEST = typeof options.ASSET_MANIFEST === 'string'
       ? JSON.parse(options.ASSET_MANIFEST)
       : options.ASSET_MANIFEST
 
@@ -104,13 +103,13 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   } else if (ASSET_MANIFEST[rawPathKey]) {
     requestKey = request
   } else if (ASSET_MANIFEST[decodeURIComponent(rawPathKey)]) {
-    pathIsEncoded = true
+    pathIsEncoded = true;
     requestKey = request
   } else {
     const mappedRequest = mapRequestToAsset(request)
     const mappedRawPathKey = new URL(mappedRequest.url).pathname.replace(/^\/+/, '')
     if (ASSET_MANIFEST[decodeURIComponent(mappedRawPathKey)]) {
-      pathIsEncoded = true
+      pathIsEncoded = true;
       requestKey = mappedRequest
     } else {
       // use default mapRequestToAsset
