@@ -26,7 +26,7 @@ const store: any = {
   'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
-  '你好/index.123HASHBROWN.html': 'My path is non-ascii',
+  '你好/index.123HASHBROWN.html': 'My path is non-ascii'
 }
 export const mockKV = (store: any) => {
   return {
@@ -49,7 +49,7 @@ export const mockManifest = () => {
     'sub/index.html': `sub/index.${HASH}.html`,
     client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
-    '你好/index.html': `你好/index.${HASH}.html`,
+    '你好/index.html': `你好/index.${HASH}.html`
   })
 }
 
@@ -68,9 +68,8 @@ export const mockCaches = () => {
         }
         let response
         if (key.headers.has('if-none-match')) {
-          cacheKey.headers = {
-            etag: key.headers.get('if-none-match'),
-          }
+          let makeStrongEtag = key.headers.get('if-none-match').replace('W/', '')
+          Reflect.set(cacheKey.headers, 'etag', makeStrongEtag)
           response = cacheStore.get(JSON.stringify(cacheKey))
         } else {
           // if client doesn't send if-none-match, we need to iterate through these keys
@@ -82,7 +81,8 @@ export const mockCaches = () => {
             }
           }
         }
-        if (response) {
+        // TODO: write test to accomodate for rare scenarios with where range requests accomodate etags
+        if (response && !key.headers.has('if-none-match')) {
           // this appears overly verbose, but is necessary to document edge cache behavior
           // The Range request header triggers the response header Content-Range ...
           const range = key.headers.get('range')
@@ -98,6 +98,10 @@ export const mockCaches = () => {
           } else {
             response.status = 200
           }
+          let etag = response.headers.get('etag')
+          if (etag && !etag.includes('W/')) {
+            response.headers.set('etag', `W/${etag}`)
+          }
         }
         return response
       },
@@ -109,7 +113,7 @@ export const mockCaches = () => {
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
-            etag: val.headers.get('etag'),
+            etag: `"${url.pathname.replace('/', '')}"`,
           },
         }
         cacheStore.set(JSON.stringify(cacheKey), resNoBody)
@@ -130,4 +134,3 @@ export function mockGlobal() {
 export const sleep = (milliseconds: number) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
-
