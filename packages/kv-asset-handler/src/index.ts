@@ -219,24 +219,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   }
 
   if (response) {
-    let headers = new Headers(response.headers)
-
-    let shouldRevalidate = false
-    // Four preconditions must be met for a 304 Not Modified:
-    // - the request cannot be a range request
-    // - client sends if-none-match
-    // - resource has etag
-    // - test if-none-match against the pathKey so that we test against KV, rather than against
-    // CF cache, which may modify the etag with a weak validator (e.g. W/"...")
-    shouldRevalidate = [
-      request.headers.has('range') !== true,
-      request.headers.has('if-none-match'),
-      response.headers.has('etag'),
-      request.headers.get('if-none-match') === `${pathKey}`,
-    ].every(Boolean)
-
-    if (shouldRevalidate) {
-      // fixes issue #118
+    if (response.status > 300 && response.status < 400) {
       if (response.body && 'cancel' in Object.getPrototypeOf(response.body)) {
         response.body.cancel()
         console.log('Body exists and environment supports readable streams. Body cancelled')

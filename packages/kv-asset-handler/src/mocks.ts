@@ -107,9 +107,9 @@ export const mockCaches = () => {
       },
       async put(key: any, val: Response) {
         let headers = new Headers(val.headers)
-        let body = await val.text()
-        let resp = new Response(body, { headers })
-        headers.set('content-length', body.length.toString())
+        let url = new URL(key.url)
+        let resWithBody = new Response(val.body, { headers, status: 200 })
+        let resNoBody = new Response(null, { headers, status: 304 })
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
