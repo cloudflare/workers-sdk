@@ -186,7 +186,6 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
         if (!entityId.startsWith('W/')) {
           return `W/${entityId}`
         }
-        console.log('weakened', entityId)
         return entityId
       case 'strong':
         if (entityId.startsWith(`W/"`)) {
