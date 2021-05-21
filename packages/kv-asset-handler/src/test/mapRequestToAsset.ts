@@ -23,3 +23,11 @@ test('mapRequestToAsset() correctly changes /about.me/ -> /about.me/index.html',
   let newRequest = mapRequestToAsset(request)
   t.is(newRequest.url, request.url + 'index.html')
 })
+
+test('mapRequestToAsset() correctly changes /about -> /about/default.html', async (t) => {
+  mockGlobal()
+  let path = '/about'
+  let request = new Request(`https://foo.com${path}`)
+  let newRequest = mapRequestToAsset(request, {defaultDocument: 'default.html'})
+  t.is(newRequest.url, request.url + '/default.html')
+})
