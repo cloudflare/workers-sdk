@@ -14,24 +14,25 @@ For users who _do_ want to customize their assets, and want to build complex exp
 
 The Cloudflare Workers Discord server is an active place where Workers users get help, share feedback, and collaborate on making our platform better. The `#workers-sites` channel in particular is a great place to chat about `kv-asset-handler`, and building cool experiences for your users using these tools! If you have questions, want to share what you're working on, or give feedback, [join us in Discord and say hello](https://discord.gg/cloudflaredev)!
 
-  * [Installation](#installation)
-  * [Usage](#usage)
-  * [`getAssetFromKV`](#-getassetfromkv-)
-      - [Example](#example)
-    + [Return](#return)
-    + [Optional Arguments](#optional-arguments)
-      - [`mapRequestToAsset`](#-maprequesttoasset-)
-      - [Example](#example-1)
-      - [`cacheControl`](#-cachecontrol-)
-        * [`browserTTL`](#-browserttl-)
-        * [`edgeTTL`](#-edgettl-)
-        * [`bypassCache`](#-bypasscache-)
-      - [`ASSET_NAMESPACE`](#-asset-namespace-)
-      - [`ASSET_MANIFEST` (optional)](#-asset-manifest---optional-)
-- [Helper functions](#helper-functions)
-  * [`mapRequestToAsset`](#-maprequesttoasset--1)
-  * [`serveSinglePageApp`](#-servesinglepageapp-)
-- [Cache revalidation and etags](#cache-revalidation-and-etags)
+- [Installation](#installation)
+- [Usage](#usage)
+- [`getAssetFromKV`](#-getassetfromkv)
+  - [Example](#example)
+  * [Return](#return)
+  * [Optional Arguments](#optional-arguments)
+    - [`mapRequestToAsset`](#-maprequesttoasset)
+    - [Example](#example-1)
+    - [`cacheControl`](#-cachecontrol)
+      - [`browserTTL`](#-browserttl)
+      - [`edgeTTL`](#-edgettl)
+      - [`bypassCache`](#-bypasscache)
+    - [`ASSET_NAMESPACE`](#-asset-namespace)
+    - [`ASSET_MANIFEST` (optional)](#-asset-manifest---optional)
+
+* [Helper functions](#helper-functions)
+  - [`mapRequestToAsset`](#-maprequesttoasset-1)
+  - [`serveSinglePageApp`](#-servesinglepageapp)
+* [Cache revalidation and etags](#cache-revalidation-and-etags)
 
 ## Installation
 

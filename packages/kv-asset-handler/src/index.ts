@@ -95,9 +95,10 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
-  const ASSET_MANIFEST = typeof (options.ASSET_MANIFEST) === 'string'
-    ? JSON.parse(options.ASSET_MANIFEST)
-    : options.ASSET_MANIFEST
+  const ASSET_MANIFEST =
+    typeof options.ASSET_MANIFEST === 'string'
+      ? JSON.parse(options.ASSET_MANIFEST)
+      : options.ASSET_MANIFEST
 
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new InternalError(`there is no KV namespace bound to the script`)
@@ -113,13 +114,13 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   } else if (ASSET_MANIFEST[rawPathKey]) {
     requestKey = request
   } else if (ASSET_MANIFEST[decodeURIComponent(rawPathKey)]) {
-    pathIsEncoded = true;
+    pathIsEncoded = true
     requestKey = request
   } else {
     const mappedRequest = mapRequestToAsset(request)
     const mappedRawPathKey = new URL(mappedRequest.url).pathname.replace(/^\/+/, '')
     if (ASSET_MANIFEST[decodeURIComponent(mappedRawPathKey)]) {
-      pathIsEncoded = true;
+      pathIsEncoded = true
       requestKey = mappedRequest
     } else {
       // use default mapRequestToAsset
@@ -142,7 +143,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   const cache = caches.default
   let mimeType = mime.getType(pathKey) || options.defaultMimeType
   if (mimeType.startsWith('text') || mimeType === 'application/javascript') {
-      mimeType += '; charset=utf-8'
+    mimeType += '; charset=utf-8'
   }
 
   let shouldEdgeCache = false // false if storing in KV by raw file path i.e. no hash
@@ -238,7 +239,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
     if (shouldRevalidate) {
       // fixes issue #118
       if (response.body && 'cancel' in Object.getPrototypeOf(response.body)) {
-        response.body.cancel();
+        response.body.cancel()
         console.log('Body exists and environment supports readable streams. Body cancelled')
       } else {
         console.log('Environment doesnt support readable streams')
@@ -249,7 +250,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
       let opts = {
         headers: new Headers(response.headers),
         status: 0,
-        statusText: ''
+        statusText: '',
       }
 
       opts.headers.set('cf-cache-status', 'HIT')

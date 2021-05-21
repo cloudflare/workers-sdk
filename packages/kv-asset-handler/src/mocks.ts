@@ -55,16 +55,16 @@ export const mockManifest = () => {
 
 let cacheStore: any = new Map()
 interface CacheKey {
-  url:object;
-  headers:object
+  url: object
+  headers: object
 }
 export const mockCaches = () => {
   return {
     default: {
-      async match (key: any) {
+      async match(key: any) {
         let cacheKey: CacheKey = {
           url: key.url,
-          headers: {}
+          headers: {},
         }
         let response
         if (key.headers.has('if-none-match')) {
@@ -105,7 +105,7 @@ export const mockCaches = () => {
         }
         return response
       },
-      async put (key: any, val: Response) {
+      async put(key: any, val: Response) {
         let headers = new Headers(val.headers)
         let body = await val.text()
         let resp = new Response(body, { headers })
@@ -132,5 +132,5 @@ export function mockGlobal() {
   Object.assign(global, { caches: mockCaches() })
 }
 export const sleep = (milliseconds: number) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
+  return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
