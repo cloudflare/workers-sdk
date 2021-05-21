@@ -49,7 +49,7 @@ export const mockManifest = () => {
     'sub/index.html': `sub/index.${HASH}.html`,
     client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
-    '你好/index.html': `你好/index.${HASH}.html`,
+    '你好/index.html': `你好/index.${HASH}.html`
   })
 }
 
