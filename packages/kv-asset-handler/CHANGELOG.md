@@ -1,5 +1,106 @@
 # Changelog
 
+## 0.1.2
+
+- ### Features
+
+  - **Support for `defaultDocument` configuration - [boemekeld], [pull/161]**
+
+    This PR adds support for customizing the `defaultDocument` option in `getAssetFromKV`. In situations where a project does not use `index.html` as the default document for a path, this can now be customized to values like `index.shtm`:
+
+    ```js
+    return getAssetFromKV(event, { 
+      defaultDocument: "index.shtm"
+    })
+    ```
+
+    [boemekeld]: https://github.com/boemekeld
+    [pull/161]: https://github.com/cloudflare/kv-asset-handler/pull/161
+
+- ### Fixes
+
+  - **Fire `mapRequestToAsset` for all requests, if explicitly defined - [Cherry], [pull/159]**
+
+    This PR fixes an issue where a custom `mapRequestToAsset` handler weren't fired if a matching asset path was found in `ASSET_MANIFEST` data. By correctly checking for this handler, we can conditionally handle any assets with this handler _even_ if they exist in the `ASSET_MANIFEST`.
+
+    **Note that this is a breaking change**, as previously, the mapRequestToAsset function was ignored if you set it, and an exact match was found in the `ASSET_MANIFEST`. That being said, this behavior was a bug, and unexpected behavior, as documented in [issue/158].
+
+    [Cherry]: https://github.com/Cherry
+    [issue/158]: https://github.com/kv-asset-handler/pull/158
+    [pull/159]: https://github.com/kv-asset-handler/pull/159
+
+  - **Etag logic refactor - [shagamemnon], [pull/133]**
+
+    This PR refactors a great deal of the Etag functionality introduced in [0.0.11](https://github.com/cloudflare/kv-asset-handler/milestone/7?closed=1). `kv-asset-handler` will now correctly set [strong and weak Etags](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) both to the Cloudflare CDN and to client eyeballs, allowing for higher cache percentages with Workers Sites projects.
+
+    [pull/133]: https://github.com/cloudflare/kv-asset-handler/pull/133
+    [shagamemnon]: https://github.com/shagamemnon
+
+  - **Fix path decoding issue - [xiaolanglanglang], [pull/142]**
+
+    This PR improves support for non-alphanumeric character paths in `kv-asset-handler`, for instance, if the path requested is in Chinese.
+
+    [xiaolanglanglang]: https://github.com/xiaolanglanglang
+    [pull/142]: https://github.com/cloudflare/kv-asset-handler/pull/142
+
+  - **Check HTTP method after mapRequestToAsset - [oliverpool], [pull/178]**
+
+    This PR fixes an issue where the HTTP method for an asset is checked before the `mapRequestToAsset` handler is called. This has caused issues for users in the past, where they need to generate a `requestKey` based on an asset path, even if the request method is not `GET`. This fixes [issue/151].
+
+    [oliverpool]: https://github.com/oliverpool
+    [pull/178]: https://github.com/cloudflare/kv-asset-handler/pull/178
+    [issue/151]: https://github.com/cloudflare/kv-asset-handler/issues/151
+
+- ### Maintenance
+
+  - **Add Markdown linting workflow to GitHub Actions - [jbampton], [pull/135]**
+
+    Our GitHub Actions workflow now includes a linting workflow for Markdown in the project, including the README, this CHANGELOG, and any other `.md` files in the source code.
+
+    [jbampton]: https://github.com/jbampton
+    [pull/135]: https://github.com/cloudflare/kv-asset-handler/pull/135
+
+  - **Dependabot updates**
+
+    A number of dependabot patch-level updates have been merged since our last release:
+
+    - Bump @types/node from 15.30.0 to 15.30.1 ([pull/180])
+    - Bump hosted-git-info from 2.8.8 to 2.8.9 ([pull/176])
+    - Bump ini from 1.3.5 to 1.3.8 ([pull/160])
+    - Bump lodash from 4.17.19 to 4.17.21 ([pull/175])
+    - Bump urijs from 1.19.2 to 1.19.6 ([pull/168])
+    - Bump y18n from 4.0.0 to 4.0.1 ([pull/173])
+
+    [pull/160]: https://github.com/cloudflare/kv-asset-handler/pull/160
+    [pull/168]: https://github.com/cloudflare/kv-asset-handler/pull/168
+    [pull/173]: https://github.com/cloudflare/kv-asset-handler/pull/173
+    [pull/175]: https://github.com/cloudflare/kv-asset-handler/pull/175
+    [pull/176]: https://github.com/cloudflare/kv-asset-handler/pull/176
+    [pull/180]: https://github.com/cloudflare/kv-asset-handler/pull/180
+
+  - **Repository maintenance - [Cherry], [pull/179]**
+
+    New project maintainer Cherry did a ton of maintenance in this release, improving workflows, code quality, and more. Check out the full list in [the PR][pull/179].
+
+    [Cherry]: https://github.com/Cherry
+    [pull/179]: https://github.com/cloudflare/kv-asset-handler/pull/179
+
+- ### Documentation
+
+  - **Update README.md - [signalnerve], [pull/177]**
+
+    This PR adds context to our README, with mentions about _what_ this project is, how to use it, and some new things since the last version of this package: namely, [Cloudflare Pages](https://pages.dev) and the new [Cloudflare Workers Discord server](https://discord.gg/cloudflaredev)
+
+    [signalnerve]: https://github.com/signalnerve
+    [pull/177]: https://github.com/cloudflare/kv-asset-handler/pull/177
+
+  - **Add instructions for updating version in related repos - [caass], [pull/171]**
+
+    This PR adds instructions for updating the `kv-asset-handler` version in related repositories, such as our templates, that use `kv-asset-handler` and are exposed to end-users of Wrangler and Workers.
+
+    [caass]: https://github.com/caass
+    [pull/177]: https://github.com/cloudflare/kv-asset-handler/pull/171
+
 ## 0.1.1
 
 - ### Fixes
