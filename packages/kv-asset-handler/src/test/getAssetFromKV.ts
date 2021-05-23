@@ -354,7 +354,7 @@ test('getAssetFromKV when namespace not bound fails', async (t) => {
   t.is(error.status, 500)
 })
 
-test('getAssetFromKV when if-none-match === active resource version, should revalidate', async t => {
+test('getAssetFromKV when if-none-match === active resource version, should revalidate', async (t) => {
   mockGlobal()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
@@ -379,7 +379,7 @@ test('getAssetFromKV when if-none-match === active resource version, should reva
   }
 })
 
-test('getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache', async t => {
+test('getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache', async (t) => {
   mockGlobal()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
@@ -408,7 +408,7 @@ test('getAssetFromKV when if-none-match equals etag of stale resource then shoul
     t.fail('Response was undefined')
   }
 })
-test('getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball', async t => {
+test('getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball', async (t) => {
   mockGlobal()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
@@ -428,7 +428,7 @@ test('getAssetFromKV when resource in cache, etag should be weakened before retu
   }
 })
 
-test('getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK', async t => {
+test('getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK', async (t) => {
   const resourceKey = 'cache.html'
   const event = getEvent(new Request(`https://blah.com/${resourceKey}`))
   const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } })

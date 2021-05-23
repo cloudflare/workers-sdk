@@ -26,7 +26,7 @@ const store: any = {
   'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
-  '你好/index.123HASHBROWN.html': 'My path is non-ascii'
+  '你好/index.123HASHBROWN.html': 'My path is non-ascii',
 }
 export const mockKV = (store: any) => {
   return {
@@ -49,7 +49,7 @@ export const mockManifest = () => {
     'sub/index.html': `sub/index.${HASH}.html`,
     client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
-    '你好/index.html': `你好/index.${HASH}.html`
+    '你好/index.html': `你好/index.${HASH}.html`,
   })
 }
 
@@ -113,8 +113,8 @@ export const mockCaches = () => {
         let cacheKey: CacheKey = {
           url: key.url,
           headers: {
-            'etag': `"${url.pathname.replace('/', '')}"`
-          }
+            etag: `"${url.pathname.replace('/', '')}"`,
+          },
         }
         cacheStore.set(JSON.stringify(cacheKey), resNoBody)
         cacheKey.headers = {}

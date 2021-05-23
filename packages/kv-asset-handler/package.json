@@ -9,6 +9,8 @@
     "build": "tsc -d",
     "format": "prettier --write \"**/*.{js,ts,json,md}\"",
     "pretest": "npm run build",
+    "lint:code": "prettier --check \"**/*.{js,ts,json,md}\"",
+    "lint:markdown": "markdownlint \"**/*.md\" --ignore node_modules",
     "test": "ava dist/test/*.js --verbose"
   },
   "repository": {

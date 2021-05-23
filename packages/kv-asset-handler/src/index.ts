@@ -34,7 +34,7 @@ function assignOptions(options?: Partial<Options>): Options {
  * @param {Request} request incoming request
  */
 const mapRequestToAsset = (request: Request, options?: Partial<Options>) => {
-  options = assignOptions(options);
+  options = assignOptions(options)
 
   const parsedUrl = new URL(request.url)
   let pathname = parsedUrl.pathname
@@ -59,7 +59,7 @@ const mapRequestToAsset = (request: Request, options?: Partial<Options>) => {
  * @param {Request} request incoming request
  */
 function serveSinglePageApp(request: Request, options?: Partial<Options>): Request {
-  options = assignOptions(options);
+  options = assignOptions(options)
 
   // First apply the default handler, which already has logic to detect
   // paths that should map to HTML files.
