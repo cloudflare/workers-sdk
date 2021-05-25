@@ -26,6 +26,8 @@ const store: any = {
   'sub/index.123HASHBROWN.html': 'picturedis',
   'client.123HASHBROWN': 'important file',
   'client.123HASHBROWN/index.html': 'Im here but serve my big bro above',
+  'image.123HASHBROWN.png': 'imagepng',
+  'image.123HASHBROWN.webp': 'imagewebp',
   '你好/index.123HASHBROWN.html': 'My path is non-ascii',
 }
 export const mockKV = (store: any) => {
@@ -49,6 +51,8 @@ export const mockManifest = () => {
     'sub/index.html': `sub/index.${HASH}.html`,
     client: `client.${HASH}`,
     'client/index.html': `client.${HASH}`,
+    'image.png': `image.${HASH}.png`,
+    'image.webp': `image.${HASH}.webp`,
     '你好/index.html': `你好/index.${HASH}.html`,
   })
 }
