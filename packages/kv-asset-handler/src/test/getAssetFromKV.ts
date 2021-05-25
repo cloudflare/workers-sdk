@@ -163,6 +163,28 @@ test('getAssetFromKV custom key modifier', async (t) => {
   }
 })
 
+test('getAssetFromKV request override with existing manifest file', async (t) => {
+  // see https://github.com/cloudflare/kv-asset-handler/pull/159 for more info
+  mockGlobal()
+  const event = getEvent(new Request('https://blah.com/image.png')) // real file in manifest
+
+  const customRequestMapper = (request: Request) => {
+    let defaultModifiedRequest = mapRequestToAsset(request)
+
+    let url = new URL(defaultModifiedRequest.url)
+    url.pathname = '/image.webp' // other different file in manifest
+    return new Request(url.toString(), request)
+  }
+
+  const res = await getAssetFromKV(event, { mapRequestToAsset: customRequestMapper })
+
+  if (res) {
+    t.is(await res.text(), 'imagewebp')
+  } else {
+    t.fail('Response was undefined')
+  }
+})
+
 test('getAssetFromKV when setting browser caching', async (t) => {
   mockGlobal()
   const event = getEvent(new Request('https://blah.com/'))
