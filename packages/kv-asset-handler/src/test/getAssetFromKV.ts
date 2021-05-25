@@ -1,10 +1,12 @@
 import test from 'ava'
-import { mockGlobal, getEvent, sleep, mockKV, mockManifest } from '../mocks'
+import { mockRequestScope, mockGlobalScope, getEvent, sleep, mockKV, mockManifest } from '../mocks'
+mockGlobalScope()
+
 import { getAssetFromKV, mapRequestToAsset } from '../index'
 import { KVError } from '../types'
 
 test('getAssetFromKV return correct val from KV and default caching', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/key1.txt'))
   const res = await getAssetFromKV(event)
 
@@ -18,14 +20,14 @@ test('getAssetFromKV return correct val from KV and default caching', async (t) 
   }
 })
 test('getAssetFromKV evaluated the file matching the extensionless path first /client/ -> client', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request(`https://foo.com/client/`))
   const res = await getAssetFromKV(event)
   t.is(await res.text(), 'important file')
   t.true(res.headers.get('content-type').includes('text'))
 })
 test('getAssetFromKV evaluated the file matching the extensionless path first /client -> client', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request(`https://foo.com/client`))
   const res = await getAssetFromKV(event)
   t.is(await res.text(), 'important file')
@@ -33,7 +35,7 @@ test('getAssetFromKV evaluated the file matching the extensionless path first /c
 })
 
 test('getAssetFromKV if not in asset manifest still returns nohash.txt', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/nohash.txt'))
   const res = await getAssetFromKV(event)
 
@@ -46,14 +48,14 @@ test('getAssetFromKV if not in asset manifest still returns nohash.txt', async (
 })
 
 test('getAssetFromKV if no asset manifest /client -> client fails', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request(`https://foo.com/client`))
   const error: KVError = await t.throwsAsync(getAssetFromKV(event, { ASSET_MANIFEST: {} }))
   t.is(error.status, 404)
 })
 
 test('getAssetFromKV if sub/ -> sub/index.html served', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request(`https://foo.com/sub`))
   const res = await getAssetFromKV(event)
   if (res) {
@@ -64,7 +66,7 @@ test('getAssetFromKV if sub/ -> sub/index.html served', async (t) => {
 })
 
 test('getAssetFromKV gets index.html by default for / requests', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/'))
   const res = await getAssetFromKV(event)
 
@@ -77,7 +79,7 @@ test('getAssetFromKV gets index.html by default for / requests', async (t) => {
 })
 
 test('getAssetFromKV non ASCII path support', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/测试.html'))
   const res = await getAssetFromKV(event)
 
@@ -89,7 +91,7 @@ test('getAssetFromKV non ASCII path support', async (t) => {
 })
 
 test('getAssetFromKV supports browser percent encoded URLs', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://example.com/%not-really-percent-encoded.html'))
   const res = await getAssetFromKV(event)
 
@@ -101,7 +103,7 @@ test('getAssetFromKV supports browser percent encoded URLs', async (t) => {
 })
 
 test('getAssetFromKV supports user percent encoded URLs', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/%2F.html'))
   const res = await getAssetFromKV(event)
 
@@ -113,7 +115,7 @@ test('getAssetFromKV supports user percent encoded URLs', async (t) => {
 })
 
 test('getAssetFromKV only decode URL when necessary', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event1 = getEvent(new Request('https://blah.com/%E4%BD%A0%E5%A5%BD.html'))
   const event2 = getEvent(new Request('https://blah.com/你好.html'))
   const res1 = await getAssetFromKV(event1)
@@ -128,7 +130,7 @@ test('getAssetFromKV only decode URL when necessary', async (t) => {
 })
 
 test('getAssetFromKV Support for user decode url path', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event1 = getEvent(new Request('https://blah.com/%E4%BD%A0%E5%A5%BD/'))
   const event2 = getEvent(new Request('https://blah.com/你好/'))
   const res1 = await getAssetFromKV(event1)
@@ -143,7 +145,7 @@ test('getAssetFromKV Support for user decode url path', async (t) => {
 })
 
 test('getAssetFromKV custom key modifier', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/docs/sub/blah.png'))
 
   const customRequestMapper = (request: Request) => {
@@ -186,7 +188,7 @@ test('getAssetFromKV request override with existing manifest file', async (t) =>
 })
 
 test('getAssetFromKV when setting browser caching', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/'))
 
   const res = await getAssetFromKV(event, { cacheControl: { browserTTL: 22 } })
@@ -199,7 +201,7 @@ test('getAssetFromKV when setting browser caching', async (t) => {
 })
 
 test('getAssetFromKV when setting custom cache setting', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event1 = getEvent(new Request('https://blah.com/'))
   const event2 = getEvent(new Request('https://blah.com/key1.png?blah=34'))
   const cacheOnlyPngs = (req: Request) => {
@@ -227,7 +229,7 @@ test('getAssetFromKV when setting custom cache setting', async (t) => {
   }
 })
 test('getAssetFromKV caches on two sequential requests', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const resourceKey = 'cache.html'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`))
@@ -252,7 +254,7 @@ test('getAssetFromKV caches on two sequential requests', async (t) => {
   }
 })
 test('getAssetFromKV does not store max-age on two sequential requests', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const resourceKey = 'cache.html'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`))
@@ -279,7 +281,7 @@ test('getAssetFromKV does not store max-age on two sequential requests', async (
 })
 
 test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/'))
 
   const res = await getAssetFromKV(event, { cacheControl: { bypassCache: true } })
@@ -293,7 +295,7 @@ test('getAssetFromKV does not cache on Cloudflare when bypass cache set', async 
 })
 
 test('getAssetFromKV with no trailing slash on root', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com'))
   const res = await getAssetFromKV(event)
   if (res) {
@@ -304,7 +306,7 @@ test('getAssetFromKV with no trailing slash on root', async (t) => {
 })
 
 test('getAssetFromKV with no trailing slash on a subdirectory', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/sub/blah.png'))
   const res = await getAssetFromKV(event)
   if (res) {
@@ -315,13 +317,13 @@ test('getAssetFromKV with no trailing slash on a subdirectory', async (t) => {
 })
 
 test('getAssetFromKV no result throws an error', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/random'))
   const error: KVError = await t.throwsAsync(getAssetFromKV(event))
   t.is(error.status, 404)
 })
 test('getAssetFromKV TTls set to null should not cache on browser or edge', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/'))
 
   const res1 = await getAssetFromKV(event, { cacheControl: { browserTTL: null, edgeTTL: null } })
@@ -338,7 +340,7 @@ test('getAssetFromKV TTls set to null should not cache on browser or edge', asyn
   }
 })
 test('getAssetFromKV passing in a custom NAMESPACE serves correct asset', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   let CUSTOM_NAMESPACE = mockKV({
     'key1.123HASHBROWN.txt': 'val1',
   })
@@ -353,7 +355,7 @@ test('getAssetFromKV passing in a custom NAMESPACE serves correct asset', async 
   }
 })
 test('getAssetFromKV when custom namespace without the asset should fail', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   let CUSTOM_NAMESPACE = mockKV({
     'key5.123HASHBROWN.txt': 'customvalu',
   })
@@ -365,7 +367,7 @@ test('getAssetFromKV when custom namespace without the asset should fail', async
   t.is(error.status, 404)
 })
 test('getAssetFromKV when namespace not bound fails', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   var MY_CUSTOM_NAMESPACE = undefined
   Object.assign(global, { MY_CUSTOM_NAMESPACE })
 
@@ -377,7 +379,7 @@ test('getAssetFromKV when namespace not bound fails', async (t) => {
 })
 
 test('getAssetFromKV when if-none-match === active resource version, should revalidate', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`))
@@ -402,7 +404,7 @@ test('getAssetFromKV when if-none-match === active resource version, should reva
 })
 
 test('getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const req1 = new Request(`https://blah.com/${resourceKey}`, {
@@ -431,7 +433,7 @@ test('getAssetFromKV when if-none-match equals etag of stale resource then shoul
   }
 })
 test('getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball', async (t) => {
-  mockGlobal()
+  mockRequestScope()
   const resourceKey = 'key1.png'
   const resourceVersion = JSON.parse(mockManifest())[resourceKey]
   const req1 = new Request(`https://blah.com/${resourceKey}`, {

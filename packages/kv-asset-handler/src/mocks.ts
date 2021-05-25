@@ -129,12 +129,20 @@ export const mockCaches = () => {
   }
 }
 
-export function mockGlobal() {
+// mocks functionality used inside worker request
+export function mockRequestScope() {
   Object.assign(global, makeServiceWorkerEnv())
   Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
   Object.assign(global, { __STATIC_CONTENT: mockKV(store) })
   Object.assign(global, { caches: mockCaches() })
 }
+
+// mocks functionality used on global isolate scope. such as the KV namespace bind
+export function mockGlobalScope() {
+  Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() })
+  Object.assign(global, { __STATIC_CONTENT: mockKV(store) })
+}
+
 export const sleep = (milliseconds: number) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
