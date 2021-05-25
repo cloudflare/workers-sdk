@@ -1,9 +1,11 @@
 import test from 'ava'
-import { mockGlobal } from '../mocks'
+import { mockRequestScope, mockGlobalScope } from '../mocks'
+mockGlobalScope()
+
 import { serveSinglePageApp } from '../index'
 
 function testRequest(path: string) {
-  mockGlobal()
+  mockRequestScope()
   let url = new URL('https://example.com')
   url.pathname = path
   let request = new Request(url.toString())

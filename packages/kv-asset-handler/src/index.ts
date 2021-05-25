@@ -1,5 +1,12 @@
 import * as mime from 'mime'
-import { Options, CacheControl, MethodNotAllowedError, NotFoundError, InternalError } from './types'
+import {
+  Options,
+  CacheControl,
+  MethodNotAllowedError,
+  NotFoundError,
+  InternalError,
+  AssetManifestType,
+} from './types'
 
 declare global {
   var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: string
@@ -11,20 +18,21 @@ const defaultCacheControl: CacheControl = {
   bypassCache: false, // do not bypass Cloudflare's cache
 }
 
+const parseStringAsObject = <T>(maybeString: string | T): T =>
+  typeof maybeString === 'string' ? (JSON.parse(maybeString) as T) : maybeString
+
+const getAssetFromKVDefaultOptions: Partial<Options> = {
+  ASSET_NAMESPACE: __STATIC_CONTENT,
+  ASSET_MANIFEST: parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST),
+  cacheControl: defaultCacheControl,
+  defaultMimeType: 'text/plain',
+  defaultDocument: 'index.html',
+}
+
 function assignOptions(options?: Partial<Options>): Options {
   // Assign any missing options passed in to the default
   // options.mapRequestToAsset is handled manually later
-  return Object.assign(
-    {
-      ASSET_NAMESPACE: typeof __STATIC_CONTENT !== 'undefined' ? __STATIC_CONTENT : undefined,
-      ASSET_MANIFEST:
-        typeof __STATIC_CONTENT_MANIFEST !== 'undefined' ? __STATIC_CONTENT_MANIFEST : undefined,
-      cacheControl: defaultCacheControl,
-      defaultMimeType: 'text/plain',
-      defaultDocument: 'index.html',
-    },
-    options,
-  )
+  return <Options>Object.assign({}, getAssetFromKVDefaultOptions, options)
 }
 
 /**
@@ -96,10 +104,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
 
   const request = event.request
   const ASSET_NAMESPACE = options.ASSET_NAMESPACE
-  const ASSET_MANIFEST =
-    typeof options.ASSET_MANIFEST === 'string'
-      ? JSON.parse(options.ASSET_MANIFEST)
-      : options.ASSET_MANIFEST
+  const ASSET_MANIFEST = parseStringAsObject<AssetManifestType>(options.ASSET_MANIFEST)
 
   if (typeof ASSET_NAMESPACE === 'undefined') {
     throw new InternalError(`there is no KV namespace bound to the script`)
