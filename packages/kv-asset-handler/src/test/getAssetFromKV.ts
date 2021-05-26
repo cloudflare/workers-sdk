@@ -167,7 +167,7 @@ test('getAssetFromKV custom key modifier', async (t) => {
 
 test('getAssetFromKV request override with existing manifest file', async (t) => {
   // see https://github.com/cloudflare/kv-asset-handler/pull/159 for more info
-  mockGlobal()
+  mockRequestScope()
   const event = getEvent(new Request('https://blah.com/image.png')) // real file in manifest
 
   const customRequestMapper = (request: Request) => {
