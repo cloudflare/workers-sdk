@@ -11,8 +11,8 @@ const defaultCacheControl: CacheControl = {
   bypassCache: false, // do not bypass Cloudflare's cache
 }
 
-var __STATIC_CONTENT;
-var __STATIC_CONTENT_MANIFEST;
+var __STATIC_CONTENT: any;
+var __STATIC_CONTENT_MANIFEST: any;
 
 function assignOptions(options?: Partial<Options>): Options {
   // Assign any missing options passed in to the default
