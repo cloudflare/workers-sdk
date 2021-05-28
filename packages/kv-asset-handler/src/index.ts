@@ -22,8 +22,11 @@ const parseStringAsObject = <T>(maybeString: string | T): T =>
   typeof maybeString === 'string' ? (JSON.parse(maybeString) as T) : maybeString
 
 const getAssetFromKVDefaultOptions: Partial<Options> = {
-  ASSET_NAMESPACE: __STATIC_CONTENT,
-  ASSET_MANIFEST: parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST),
+  ASSET_NAMESPACE: typeof __STATIC_CONTENT !== 'undefined' ? __STATIC_CONTENT : undefined,
+  ASSET_MANIFEST:
+    typeof __STATIC_CONTENT_MANIFEST !== 'undefined'
+      ? parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST)
+      : undefined,
   cacheControl: defaultCacheControl,
   defaultMimeType: 'text/plain',
   defaultDocument: 'index.html',
