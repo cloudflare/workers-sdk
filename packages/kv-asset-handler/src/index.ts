@@ -11,16 +11,14 @@ const defaultCacheControl: CacheControl = {
   bypassCache: false, // do not bypass Cloudflare's cache
 }
 
-var __STATIC_CONTENT: any;
-var __STATIC_CONTENT_MANIFEST: any;
-
 function assignOptions(options?: Partial<Options>): Options {
   // Assign any missing options passed in to the default
   // options.mapRequestToAsset is handled manually later
   return Object.assign(
     {
-      ASSET_NAMESPACE: __STATIC_CONTENT,
-      ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
+      ASSET_NAMESPACE: typeof __STATIC_CONTENT !== 'undefined' ? __STATIC_CONTENT : undefined,
+      ASSET_MANIFEST:
+        typeof __STATIC_CONTENT_MANIFEST !== 'undefined' ? __STATIC_CONTENT_MANIFEST : undefined,
       cacheControl: defaultCacheControl,
       defaultMimeType: 'text/plain',
       defaultDocument: 'index.html',
