@@ -12,6 +12,7 @@ const defaultCacheControl: CacheControl = {
 }
 
 var __STATIC_CONTENT;
+var __STATIC_CONTENT_MANIFEST;
 
 function assignOptions(options?: Partial<Options>): Options {
   // Assign any missing options passed in to the default
