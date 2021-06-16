@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.1.3
+
+- ### Performance
+
+  - **Only parse `ASSET_MANIFEST` once on startup - [Cherry], [pull/185]**
+
+    This PR improves performance of the `getAssetFromKV` function by only parsing the asset manifest once on startup, instead of on each request. This can have a significant improvement in response times for larger sites. An example of the performance improvement with an asset manifest of over 50k files:
+
+    > Before change:
+    100 iterations: Done. Mean kv response time is 16.61
+    1000 iterations: Done. Mean kv response time is 17.798
+    > After change:
+    100 iterations: Done. Mean kv response time is 6.62
+    1000 iterations: Done. Mean kv response time is 7.296
+
+    Initial work and credit to [groenlid] in [pull/143].
+
+    [Cherry]: https://github.com/Cherry
+    [groenlid]: https://github.com/groenlid
+    [pull/185]: https://github.com/cloudflare/kv-asset-handler/pull/185
+    [pull/143]: https://github.com/cloudflare/kv-asset-handler/pull/143
+
+- ### Fixes
+
+  - **ESM compatibility: fix crash on missing global environment variables - [ttraenkler], [pull/188]**
+
+    This PR fixes the library from crashing when global environment variables such as `__STATIC_CONTENT` and `__STATIC_CONTENT_MANIFEST` are missing, which is currently the case when using the new ESM module syntax.
+
+    Note that whilst this partially resolves the issue discussed in [issue/174], it does not provide full ESM compatibility yet. Please see [issue/174] for further discussion.
+
+    [ttraenkler]: https://github.com/ttraenkler
+    [pull/188]: https://github.com/cloudflare/kv-asset-handler/pull/188
+    [issue/174]: https://github.com/cloudflare/kv-asset-handler/issues/174
+
+- ### Maintenance
+
+  - **Tweak GitHub Actions Workflow for proper PR testing - [Cherry], [pull/185]**
+
+    This PR tweaks the GitHub Actions Workflow to test PRs properly, both in terms of linting and the repository tests. It runs `prettier` to maintain code quality and style, and all unit tests on every PR to ensure no regressions occur.
+
+    [pull/183]: https://github.com/cloudflare/kv-asset-handler/pull/185
+    [Cherry]: https://github.com/Cherry
+
+  - **Add test for `mapRequestToAsset` asset override - [Cherry], [pull/186]**
+
+    This PR adds a test for the functionality added in [pull/159]. This tests that when overriding the `mapRequestToAsset` function in its entirety, this function is always run.
+
+    [pull/159]: https://github.com/cloudflare/kv-asset-handler/pull/159
+    [pull/186]: https://github.com/cloudflare/kv-asset-handler/pull/186
+    [Cherry]: https://github.com/Cherry
+
+  - **Dependabot updates**
+
+    A number of dependabot patch-level updates have been merged:
+
+    - Bump @types/node from 15.3.1 to 15.6.0 ([pull/183])
+    - Bump @types/node from 15.6.0 to 15.6.1 ([pull/184])
+    - Bump @types/node from 15.6.1 to 15.9.0 ([pull/189])
+    - Bump @types/node from 15.9.0 to 15.12.0 ([pull/190])
+    - Bump @types/node from 15.12.0 to 15.12.1 ([pull/191])
+    - Bump @types/node from 15.12.1 to 15.12.2 ([pull/193])
+    - Bump typescript from 4.2.4 to 4.3.2 ([pull/187])
+    - Bump prettier from 2.3.0 to 2.3.1 ([pull/192])
+
+    [pull/183]: https://github.com/cloudflare/kv-asset-handler/pull/183
+    [pull/184]: https://github.com/cloudflare/kv-asset-handler/pull/184
+    [pull/189]: https://github.com/cloudflare/kv-asset-handler/pull/189
+    [pull/190]: https://github.com/cloudflare/kv-asset-handler/pull/190
+    [pull/191]: https://github.com/cloudflare/kv-asset-handler/pull/191
+    [pull/193]: https://github.com/cloudflare/kv-asset-handler/pull/193
+    [pull/187]: https://github.com/cloudflare/kv-asset-handler/pull/187
+    [pull/192]: https://github.com/cloudflare/kv-asset-handler/pull/192
+
 ## 0.1.2
 
 - ### Features
@@ -26,8 +99,8 @@
     **Note that this is a breaking change**, as previously, the mapRequestToAsset function was ignored if you set it, and an exact match was found in the `ASSET_MANIFEST`. That being said, this behavior was a bug, and unexpected behavior, as documented in [issue/158].
 
     [Cherry]: https://github.com/Cherry
-    [issue/158]: https://github.com/kv-asset-handler/pull/158
-    [pull/159]: https://github.com/kv-asset-handler/pull/159
+    [issue/158]: https://github.com/cloudflare/kv-asset-handler/pull/158
+    [pull/159]: https://github.com/cloudflare/kv-asset-handler/pull/159
 
   - **Etag logic refactor - [shagamemnon], [pull/133]**
 
