@@ -40,7 +40,7 @@
     "mime": "^2.5.2"
   },
   "devDependencies": {
-    "@ava/typescript": "^1.1.1",
+    "@ava/typescript": "^2.0.0",
     "@cloudflare/workers-types": "^2.2.2",
     "@types/mime": "^2.0.3",
     "@types/node": "^16.0.0",
