@@ -1,0 +1,39 @@
+{
+  "type": "module",
+  "exports": "./dist/index.js",
+  "devDependencies": {
+    "@types/node": "^16.4.13",
+    "@typescript-eslint/eslint-plugin": "^4.29.1",
+    "@typescript-eslint/parser": "^4.29.1",
+    "esbuild": "^0.12.19",
+    "eslint": "^7.32.0",
+    "ts-node": "^10.2.0",
+    "typescript": "^4.3.5"
+  },
+  "scripts": {
+    "lint": "eslint src/**/*.ts --fix",
+    "build": "tsc",
+    "start": "tsc && node --experimental-modules --no-warnings dist/index_node.js",
+    "bundle:node": "esbuild --bundle --platform=node --format=esm --outfile=dist/index_node.js src/index_node.ts"
+  },
+  "dependencies": {
+    "cac": "^6.7.3",
+    "formdata-node": "^3.6.3",
+    "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
+    "ws": "^8.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "eslintConfig": {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended"
+    ]
+  }
+}
