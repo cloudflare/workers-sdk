@@ -1,58 +1,60 @@
-import { CfAccount } from '../api/worker.js'
-import { FetchJson, fetchJson } from './fetch.js'
+import type { CfAccount } from "../api/worker";
+import type { FetchJson } from "./fetch";
+import { fetchJson } from "./fetch";
+import type { RequestInit } from "node-fetch";
 
 interface CfError {
-  code: number
-  message: string
-  error_chain?: CfError[]
+  code: number;
+  message: string;
+  error_chain?: CfError[];
 }
 
 interface CfResponse<T> {
-  success: boolean
-  errors: CfError[]
-  result: T
+  success: boolean;
+  errors: CfError[];
+  result: T;
 }
 
 /**
  * Creates a custom `fetch()` function for the Cloudflare API.
  */
 export function fetchCf(account: CfAccount): FetchJson {
-  const { apiToken } = account
+  const { apiToken } = account;
   const fetch = fetchJson({
-    userAgent: 'workers-cli/1.0',
-    host: 'api.cloudflare.com',
+    userAgent: "workers-cli/1.0",
+    host: "api.cloudflare.com",
     headers: {
-      'Authorization': 'Bearer ' + apiToken
-    }
-  })
+      Authorization: "Bearer " + apiToken,
+    },
+  });
 
-  return (async <T>(input: string, init?: RequestInit) => {
-    const response = await fetch<CfResponse<T>>(input, init)
-    const { success, errors, result } = response
+  return async <T>(input: string, init?: RequestInit) => {
+    const response = await fetch<CfResponse<T>>(input, init);
+    const { success, errors, result } = response;
 
     if (success) {
-      return result
+      return result;
     }
     if (errors) {
-      throw toError(errors[0])
+      throw toError(errors[0]);
     }
-    throw new Error('Invalid Cloudflare response: ' + JSON.stringify(response))
-  })
+    throw new Error("Invalid Cloudflare response: " + JSON.stringify(response));
+  };
 }
 
 /**
  * Converts a Cloudflare error into a JavaScript `Error`.
  */
 function toError(err: CfError): Error {
-  const { message, code, error_chain } = err
+  const { message, code, error_chain } = err;
 
-  let reason = `${message} [code: ${code}]`
+  let reason = `${message} [code: ${code}]`;
   if (error_chain) {
-    const { message, code } = error_chain[0]
-    reason += `\n\tcaused by, ${message} [code: ${code}]`
+    const { message, code } = error_chain[0];
+    reason += `\n\tcaused by, ${message} [code: ${code}]`;
   }
-  
-  const error = new Error(reason)
-  error.name = 'CloudflareError'
-  return error
+
+  const error = new Error(reason);
+  error.name = "CloudflareError";
+  return error;
 }

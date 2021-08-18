@@ -1,96 +1,125 @@
-import { CfWorkerInit, CfModuleType, CfVariable, CfModule, CfKvNamespace, CfCryptoKey } from './worker.js'
-import { CfPreviewMode } from './preview.js'
+import type {
+  CfWorkerInit,
+  CfModuleType,
+  CfVariable,
+  CfModule,
+  CfKvNamespace,
+  CfCryptoKey,
+} from "./worker.js";
+import type { CfPreviewMode } from "./preview.js";
+import { FormData, Blob } from "formdata-node";
 
 // Credit: https://stackoverflow.com/a/9458996
 function toBase64(source: BufferSource): string {
-  let result = ''
-  const buffer = source instanceof ArrayBuffer ? source : source.buffer
-  const bytes = new Uint8Array(buffer)
+  let result = "";
+  const buffer = source instanceof ArrayBuffer ? source : source.buffer;
+  const bytes = new Uint8Array(buffer);
   for (let i = 0; i < bytes.byteLength; i++) {
-    result += String.fromCharCode(bytes[i])
+    result += String.fromCharCode(bytes[i]);
   }
-  return btoa(result)
+  return btoa(result);
 }
 
-function toBinding(name: string, variable: CfVariable): Record<string, unknown> {
-  if (typeof variable === 'string') {
-    return { name, type: 'plain_text', text: variable }
+function toBinding(
+  name: string,
+  variable: CfVariable
+): Record<string, unknown> {
+  if (typeof variable === "string") {
+    return { name, type: "plain_text", text: variable };
   }
 
-  const { namespaceId } = variable as CfKvNamespace
+  const { namespaceId } = variable as CfKvNamespace;
   if (namespaceId) {
-    return { name, type: 'kv_namespace', namespace_id: namespaceId }
+    return { name, type: "kv_namespace", namespace_id: namespaceId };
   }
 
-  const { format, algorithm, usages, data } = variable as CfCryptoKey
+  const { format, algorithm, usages, data } = variable as CfCryptoKey;
   if (format) {
-    let key_base64
-    let key_jwk
+    let key_base64;
+    let key_jwk;
     if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      key_base64 = toBase64(data)
+      key_base64 = toBase64(data);
     } else {
-      key_jwk = data
+      key_jwk = data;
     }
-    return { name, type: 'secret_key', format, algorithm, usages, key_base64, key_jwk }
+    return {
+      name,
+      type: "secret_key",
+      format,
+      algorithm,
+      usages,
+      key_base64,
+      key_jwk,
+    };
   }
 
-  throw new TypeError('Unsupported variable: ' + variable)
+  throw new TypeError("Unsupported variable: " + variable);
 }
 
 export function toMimeType(type: CfModuleType): string {
   switch (type) {
-    case 'esm':           return 'application/javascript+module'
-    case 'commonjs':      return 'application/javascript'
-    case 'compiled-wasm': return 'application/wasm'
-    case 'buffer':        return 'application/octet-stream'
-    case 'text':          return 'text/plain'
+    case "esm":
+      return "application/javascript+module";
+    case "commonjs":
+      return "application/javascript";
+    case "compiled-wasm":
+      return "application/wasm";
+    case "buffer":
+      return "application/octet-stream";
+    case "text":
+      return "text/plain";
+    default:
+      throw new TypeError("Unsupported module: " + type);
   }
-
-  throw new TypeError('Unsupported module: ' + type)
 }
 
 function toModule(module: CfModule, entryType?: CfModuleType): Blob {
-  const { type: moduleType, content } = module
-  const type = toMimeType(moduleType ?? entryType)
+  const { type: moduleType, content } = module;
+  const type = toMimeType(moduleType ?? entryType);
 
-  return new Blob([ content ], { type })
+  return new Blob([content], { type });
 }
 
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
-export function toFormData(worker: CfWorkerInit, preview?: CfPreviewMode): FormData {
-  const formData = new FormData()
-  const { main, modules, variables } = worker
-  const { name, type: mainType } = main
+export function toFormData(
+  worker: CfWorkerInit,
+  preview?: CfPreviewMode
+): FormData {
+  const formData = new FormData();
+  const { main, modules, variables } = worker;
+  const { name, type: mainType } = main;
 
-  const bindings = []
+  const bindings = [];
   for (const [name, variable] of Object.entries(variables ?? {})) {
-    const binding = toBinding(name, variable)
-    bindings.push(binding)
+    const binding = toBinding(name, variable);
+    bindings.push(binding);
   }
 
-  const singleton = mainType === 'commonjs'
+  const singleton = mainType === "commonjs";
   const metadata = {
     main_module: singleton ? undefined : name,
     body_part: singleton ? name : undefined,
-    bindings
-  }
-  formData.set('metadata', JSON.stringify(metadata))
+    bindings,
+  };
+  formData.set("metadata", JSON.stringify(metadata));
 
   if (singleton && modules) {
-    throw new TypeError('More than one module can only be specified when type = \'esm\'')
+    throw new TypeError(
+      "More than one module can only be specified when type = 'esm'"
+    );
   }
 
   for (const module of [main].concat(modules ?? [])) {
-    const { name } = module
-    const blob = toModule(module, mainType ?? 'esm')
-    formData.set(name, blob, name)
+    const { name } = module;
+    const blob = toModule(module, mainType ?? "esm");
+    formData.set(name, blob, name);
   }
 
   if (preview) {
-    formData.set('wrangler-session-config', JSON.stringify(preview))
+    formData.set("wrangler-session-config", JSON.stringify(preview));
   }
 
-  return formData
+  return formData;
 }

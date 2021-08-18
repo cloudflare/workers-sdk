@@ -1,6 +1,10 @@
-import { CfPreviewToken, previewToken } from './preview.js'
-import { DtInspector } from './inspect.js'
-import { Fetch, fetchIt } from '../util/fetch.js'
+import type { Response, RequestInit } from "node-fetch";
+import type { CfPreviewToken } from "./preview";
+import { previewToken } from "./preview";
+import { DtInspector } from "./inspect";
+import type { Fetch } from "../util/fetch";
+import { fetchIt } from "../util/fetch";
+import fetch from "node-fetch";
 
 /**
  * A Cloudflare account.
@@ -11,26 +15,26 @@ export interface CfAccount {
    *
    * @link https://api.cloudflare.com/#user-api-tokens-properties
    */
-  apiToken: string
+  apiToken: string;
   /**
    * An account ID.
    */
-  accountId: string
+  accountId: string;
   /**
    * A zone ID, only required if not using `workers.dev`.
    */
-  zoneId?: string
+  zoneId?: string;
 }
 
 /**
  * A module type.
  */
-export type CfModuleType = 
-  | 'esm'
-  | 'commonjs'
-  | 'compiled-wasm'
-  | 'text'
-  | 'buffer'
+export type CfModuleType =
+  | "esm"
+  | "commonjs"
+  | "compiled-wasm"
+  | "text"
+  | "buffer";
 
 /**
  * An imported module.
@@ -42,7 +46,7 @@ export interface CfModule {
    * @example
    * './src/index.js'
    */
-  name: string
+  name: string;
   /**
    * The module content, usually JavaScript or WASM code.
    *
@@ -53,13 +57,13 @@ export interface CfModule {
    *   }
    * }
    */
-  content: string | BufferSource
+  content: string | BufferSource;
   /**
    * The module type.
    *
    * If absent, will default to the main module's type.
    */
-  type?: CfModuleType
+  type?: CfModuleType;
 }
 
 /**
@@ -69,7 +73,7 @@ export interface CfKvNamespace {
   /**
    * The namespace ID.
    */
-  namespaceId: string
+  namespaceId: string;
 }
 
 /**
@@ -81,28 +85,25 @@ export interface CfCryptoKey {
   /**
    * The format.
    */
-  format: string
+  format: string;
   /**
    * The algorithm.
    */
-  algorithm: string
+  algorithm: string;
   /**
    * The usages.
    */
-  usages: string[]
+  usages: string[];
   /**
    * The data.
    */
-  data: BufferSource | JsonWebKey
+  data: BufferSource | JsonWebKey;
 }
 
 /**
  * A variable (aka. environment variable).
  */
-export type CfVariable =
-  | string
-  | CfKvNamespace
-  | CfCryptoKey
+export type CfVariable = string | CfKvNamespace | CfCryptoKey;
 
 /**
  * Options for creating a `CfWorker`.
@@ -111,15 +112,15 @@ export interface CfWorkerInit {
   /**
    * The entrypoint module.
    */
-  main: CfModule
+  main: CfModule;
   /**
    * The list of additional modules.
    */
-  modules?: CfModule[]
+  modules?: CfModule[];
   /**
    * The map of names to variables. (aka. environment variables)
    */
-  variables?: { [name: string]: CfVariable }
+  variables?: { [name: string]: CfVariable };
 }
 
 /**
@@ -132,19 +133,19 @@ export interface CfWorkerInit {
  * console.log(response.statusText)
  */
 export class CfWorker {
-  #init: CfWorkerInit
-  #acct: CfAccount
-  #token?: CfPreviewToken
-  #fetch?: Fetch
-  #inspector?: DtInspector
+  #init: CfWorkerInit;
+  #acct: CfAccount;
+  #token?: CfPreviewToken;
+  #fetch?: Fetch;
+  #inspector?: DtInspector;
 
   /**
    * Creates a Cloudflare Worker stub.
    */
   constructor(init: CfWorkerInit, account: CfAccount) {
-    this.#init = init
+    this.#init = init;
     // TODO(someday): remove account requirement and use unauthenticated preview
-    this.#acct = account
+    this.#acct = account;
   }
 
   /**
@@ -152,9 +153,9 @@ export class CfWorker {
    */
   async fetch(input: string, init?: RequestInit): Promise<Response> {
     if (!this.#fetch) {
-      await this.refresh()
+      await this.refresh();
     }
-    return await this.#fetch(input, init)
+    return await this.#fetch(input, init);
   }
 
   /**
@@ -162,41 +163,39 @@ export class CfWorker {
    */
   async inspect(): Promise<DtInspector> {
     if (this.#inspector) {
-      return this.#inspector
+      return this.#inspector;
     }
     if (!this.#fetch) {
-      await this.refresh()
+      await this.refresh();
     }
-    const { inspectorUrl } = this.#token
-    return this.#inspector = new DtInspector(inspectorUrl.href)
+    const { inspectorUrl } = this.#token;
+    return (this.#inspector = new DtInspector(inspectorUrl.href));
   }
 
   /**
    * Refreshes the stub.
    */
   private async refresh(): Promise<void> {
-    this.#token = await previewToken(this.#acct, this.#init)
-    const { host, value, prewarmUrl } = this.#token
+    this.#token = await previewToken(this.#acct, this.#init);
+    const { host, value, prewarmUrl } = this.#token;
     this.#fetch = fetchIt({
       host,
       headers: {
-        'cf-workers-preview-token': value
-      }
-    })
-    console.log(prewarmUrl.href)
-    const r = await fetch(prewarmUrl.href, { method: 'POST' })
-    console.log(r.statusText)
+        "cf-workers-preview-token": value,
+      },
+    });
+    await fetch(prewarmUrl.href, { method: "POST" });
   }
 
   /**
    * Closes the stub.
    */
   close(): void {
-    this.#token = undefined
-    this.#fetch = undefined
+    this.#token = undefined;
+    this.#fetch = undefined;
     if (this.#inspector) {
-      this.#inspector.close()
-      this.#inspector = undefined
+      this.#inspector.close();
+      this.#inspector = undefined;
     }
   }
 }

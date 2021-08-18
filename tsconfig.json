@@ -5,8 +5,11 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "dist/"
+    "outDir": "dist/",
+    "isolatedModules": true,
+    "noEmit": true,
+    "lib": ["esnext"]
   },
-  "lib": ["es2015"],
+  "lib": ["esnext"],
   "exclude": ["node_modules/"]
 }
