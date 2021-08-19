@@ -155,7 +155,7 @@ export class CfWorker {
     if (!this.#fetch) {
       await this.refresh();
     }
-    return await this.#fetch(input, init);
+    return this.#fetch(input, init);
   }
 
   /**
@@ -169,7 +169,8 @@ export class CfWorker {
       await this.refresh();
     }
     const { inspectorUrl } = this.#token;
-    return (this.#inspector = new DtInspector(inspectorUrl.href));
+    this.#inspector = new DtInspector(inspectorUrl.href);
+    return this.#inspector;
   }
 
   /**
