@@ -153,7 +153,9 @@ export class CfWorker {
    */
   async fetch(input: string, init?: RequestInit): Promise<Response> {
     if (!this.#fetch) {
-      await this.refresh();
+      throw new Error(
+        "This worker hasn't been initialised yet, please call .refresh()"
+      );
     }
     return this.#fetch(input, init);
   }
@@ -166,7 +168,9 @@ export class CfWorker {
       return this.#inspector;
     }
     if (!this.#fetch) {
-      await this.refresh();
+      throw new Error(
+        "This worker hasn't been initialised yet, please call .refresh()"
+      );
     }
     const { inspectorUrl } = this.#token;
     this.#inspector = new DtInspector(inspectorUrl.href);
@@ -176,7 +180,7 @@ export class CfWorker {
   /**
    * Refreshes the stub.
    */
-  private async refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     this.#token = await previewToken(this.#acct, this.#init);
     const { host, value, prewarmUrl } = this.#token;
     this.#fetch = fetchIt({

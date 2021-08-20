@@ -1,8 +1,8 @@
 import type { DtInspector } from "./api/inspect";
-import type { CfAccount, CfWorkerInit } from "./api/worker";
+import type { CfAccount, CfWorkerInit, CfModuleType } from "./api/worker";
 import { CfWorker } from "./api/worker";
-
-import type { Response } from "node-fetch";
+import cac from "cac";
+import { readFile } from "fs/promises";
 
 if (!process.env.CF_ACCOUNT_ID || !process.env.CF_API_TOKEN) {
   throw new Error(
@@ -16,40 +16,42 @@ const account: CfAccount = {
   apiToken: process.env.CF_API_TOKEN,
 };
 
-const init: CfWorkerInit = {
-  main: {
-    name: "worker.js",
-    type: "commonjs",
-    content: `
-    addEventListener('fetch', (event) => {
-      console.log(
-        event.request.method,
-        event.request.url,
-        new Map([...event.request.headers]),
-        event.request.cf)
-
-      event.respondWith(new Response(DATE))
-    })`,
-  },
-  variables: {
-    DATE: new Date().toISOString(),
-  },
-};
-
 export async function main(): Promise<void> {
-  const worker: CfWorker = new CfWorker(init, account);
-  const inspector: DtInspector = await worker.inspect();
-  //inspector.proxyTo(9230)
+  const cli = cac();
+  cli.option("--type <type>", "Choose an entry type", {
+    default: "esm",
+  });
 
-  for (let i = 0; i < 3; i++) {
-    const response: Response = await worker.fetch("/hello");
-    const { status, statusText } = response;
-    const body = await response.text();
-    console.log("Response:", status, statusText, body.substring(0, 100));
-  }
+  cli
+    .command("run <filename>", "Run program")
+    .action(async (filename: string, options: { type: CfModuleType }) => {
+      const content = await readFile(filename, "utf-8");
+      // compile code
+      // run it
+      const init: CfWorkerInit = {
+        main: {
+          name: filename.replace("/", "-"), // do special chars like `/` have to stripped out?
+          type: options.type,
+          content,
+        },
+        variables: {
+          // ?? is this a good feature?
+        },
+      };
+      const worker: CfWorker = new CfWorker(init, account);
+      await worker.refresh();
+      // const inspector: DtInspector = await worker.inspect();
+      // inspector.proxyTo(9230);
 
-  /*for await (const event of inspector.drain()) {
-    console.log('Event:', event)
-  }
-  inspector.close()*/
+      const response = await worker.fetch("/hello-boy");
+      console.log(response.status, await response.text());
+      // for await (const event of inspector.drain()) {
+      //   console.log("Event:", event);
+      // }
+      // inspector.close()
+    });
+  cli.help();
+  cli.version("0.0.0");
+
+  cli.parse();
 }
