@@ -1,3 +1,4 @@
+import { now } from "./dep";
 export default {
   fetch(request) {
     console.log(
@@ -7,6 +8,6 @@ export default {
       request.cf
     );
 
-    return new Response(Date.now());
+    return new Response(now());
   },
 };

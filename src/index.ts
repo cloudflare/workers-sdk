@@ -3,6 +3,9 @@ import type { CfAccount, CfWorkerInit, CfModuleType } from "./api/worker";
 import { CfWorker } from "./api/worker";
 import cac from "cac";
 import { readFile } from "fs/promises";
+import tmp from "tmp-promise";
+import esbuild from "esbuild";
+import path from "path/posix";
 
 if (!process.env.CF_ACCOUNT_ID || !process.env.CF_API_TOKEN) {
   throw new Error(
@@ -25,14 +28,24 @@ export async function main(): Promise<void> {
   cli
     .command("run <filename>", "Run program")
     .action(async (filename: string, options: { type: CfModuleType }) => {
-      const content = await readFile(filename, "utf-8");
-      // compile code
-      // run it
+      const destinationDirectory = await tmp.dir({ unsafeCleanup: true });
+      await esbuild.build({
+        entryPoints: [filename],
+        bundle: true,
+        outdir: destinationDirectory.path,
+        format: "esm", // TODO: verify what changes are needed here
+      });
+
+      const content = await readFile(
+        path.join(destinationDirectory.path, path.basename(filename)),
+        "utf-8"
+      );
+
       const init: CfWorkerInit = {
         main: {
           name: filename.replace("/", "-"), // do special chars like `/` have to stripped out?
           type: options.type,
-          content,
+          content: content,
         },
         variables: {
           // ?? is this a good feature?
@@ -42,9 +55,12 @@ export async function main(): Promise<void> {
       await worker.initialise();
       // const inspector: DtInspector = await worker.inspect();
       // inspector.proxyTo(9230);
+      // how do we keep this alive "forever"
 
       const response = await worker.fetch("/hello-boy");
       console.log(response.status, await response.text());
+
+      destinationDirectory.cleanup();
       // for await (const event of inspector.drain()) {
       //   console.log("Event:", event);
       // }

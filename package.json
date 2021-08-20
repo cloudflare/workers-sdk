@@ -20,6 +20,7 @@
     "esbuild": "^0.12.19",
     "formdata-node": "^3.6.3",
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
+    "tmp-promise": "^3.0.2",
     "ws": "^8.1.0"
   },
   "engines": {
