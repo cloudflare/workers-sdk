@@ -39,7 +39,7 @@ export async function main(): Promise<void> {
         },
       };
       const worker: CfWorker = new CfWorker(init, account);
-      await worker.refresh();
+      await worker.initialise();
       // const inspector: DtInspector = await worker.inspect();
       // inspector.proxyTo(9230);
 

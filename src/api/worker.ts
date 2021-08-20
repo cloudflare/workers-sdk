@@ -154,7 +154,7 @@ export class CfWorker {
   async fetch(input: string, init?: RequestInit): Promise<Response> {
     if (!this.#fetch) {
       throw new Error(
-        "This worker hasn't been initialised yet, please call .refresh()"
+        "This worker hasn't been initialised yet, please call .initialise()"
       );
     }
     return this.#fetch(input, init);
@@ -169,7 +169,7 @@ export class CfWorker {
     }
     if (!this.#fetch) {
       throw new Error(
-        "This worker hasn't been initialised yet, please call .refresh()"
+        "This worker hasn't been initialised yet, please call .initialise()"
       );
     }
     const { inspectorUrl } = this.#token;
@@ -178,18 +178,35 @@ export class CfWorker {
   }
 
   /**
-   * Refreshes the stub.
+   * Initialises the stub.
    */
-  async refresh(): Promise<void> {
-    this.#token = await previewToken(this.#acct, this.#init);
-    const { host, value, prewarmUrl } = this.#token;
-    this.#fetch = fetchIt({
-      host,
-      headers: {
-        "cf-workers-preview-token": value,
-      },
-    });
-    await fetch(prewarmUrl.href, { method: "POST" });
+  private initialising: Promise<void> | null = null;
+  async initialise(): Promise<void> {
+    if (!this.initialising) {
+      this.#token = this.#fetch = undefined;
+      let resolve, reject;
+      this.initialising = new Promise((_resolve, _reject) => {
+        resolve = _resolve;
+        reject = _reject;
+      });
+      try {
+        this.#token = await previewToken(this.#acct, this.#init);
+        const { host, value, prewarmUrl } = this.#token;
+        this.#fetch = fetchIt({
+          host,
+          headers: {
+            "cf-workers-preview-token": value,
+          },
+        });
+        await fetch(prewarmUrl.href, { method: "POST" });
+        resolve();
+        this.initialising = undefined;
+      } catch (err) {
+        reject(err);
+      }
+    } else {
+      return this.initialising;
+    }
   }
 
   /**
