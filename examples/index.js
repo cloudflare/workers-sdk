@@ -8,6 +8,6 @@ export default {
       request.cf
     );
 
-    return new Response(now());
+    return new Response(`${request.url} ${now()}`);
   },
 };

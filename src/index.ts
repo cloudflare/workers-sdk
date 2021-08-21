@@ -1,4 +1,3 @@
-import type { DtInspector } from "./api/inspect";
 import type { CfAccount, CfWorkerInit, CfModuleType } from "./api/worker";
 import { CfWorker } from "./api/worker";
 import cac from "cac";
@@ -6,6 +5,10 @@ import { readFile } from "fs/promises";
 import tmp from "tmp-promise";
 import esbuild from "esbuild";
 import path from "path/posix";
+import http from "http";
+import httpProxy from "http-proxy";
+import { CfPreviewToken } from "./api/preview";
+import type { DtInspector } from "./api/inspect";
 
 if (!process.env.CF_ACCOUNT_ID || !process.env.CF_API_TOKEN) {
   throw new Error(
@@ -21,51 +24,96 @@ const account: CfAccount = {
 
 export async function main(): Promise<void> {
   const cli = cac();
-  cli.option("--type <type>", "Choose an entry type", {
-    default: "esm",
-  });
 
   cli
     .command("run <filename>", "Run program")
-    .action(async (filename: string, options: { type: CfModuleType }) => {
-      const destinationDirectory = await tmp.dir({ unsafeCleanup: true });
-      await esbuild.build({
-        entryPoints: [filename],
-        bundle: true,
-        outdir: destinationDirectory.path,
-        format: "esm", // TODO: verify what changes are needed here
-      });
+    .option("--type <type>", "Choose an entry type", {
+      default: "esm",
+    })
+    .option("--inspect", "Enable devtools")
+    .action(
+      async (
+        filename: string,
+        options: { type: CfModuleType; inspect: boolean }
+      ) => {
+        const destinationDirectory = await tmp.dir({ unsafeCleanup: true });
+        process.on("beforeExit", async () => {
+          await destinationDirectory.cleanup();
+        });
+        let token: CfPreviewToken;
+        let inspector: DtInspector;
+        const proxy = httpProxy.createProxyServer({
+          secure: false,
+          changeOrigin: true,
+        });
+        proxy.on("proxyReq", function (proxyReq, req, res, options) {
+          proxyReq.setHeader("cf-workers-preview-token", token.value);
+        });
+        proxy.on("proxyRes", function (proxyRes, req, res) {
+          console.log(
+            new Date().toLocaleTimeString(),
+            req.method,
+            req.url,
+            res.statusCode // TODO add a status message like Ok etc?
+          );
+        });
+        const server = http.createServer(function (req, res) {
+          proxy.web(req, res, {
+            target: `https://${token.host}`,
+          });
+        });
+        server.listen(8787);
 
-      const content = await readFile(
-        path.join(destinationDirectory.path, path.basename(filename)),
-        "utf-8"
-      );
+        async function start() {
+          if (inspector) {
+            inspector.close();
+            inspector = undefined;
+          }
 
-      const init: CfWorkerInit = {
-        main: {
-          name: filename.replace("/", "-"), // do special chars like `/` have to stripped out?
-          type: options.type,
-          content: content,
-        },
-        variables: {
-          // ?? is this a good feature?
-        },
-      };
-      const worker: CfWorker = new CfWorker(init, account);
-      await worker.initialise();
-      // const inspector: DtInspector = await worker.inspect();
-      // inspector.proxyTo(9230);
-      // how do we keep this alive "forever"
+          const content = await readFile(
+            path.join(destinationDirectory.path, path.basename(filename)),
+            "utf-8"
+          );
+          const init: CfWorkerInit = {
+            main: {
+              name: filename.replace("/", "-"), // do special chars like `/` have to stripped out?
+              type: options.type,
+              content,
+            },
+            modules: undefined,
+            variables: {
+              // ?? is this a good feature?
+            },
+          };
+          const worker = new CfWorker(init, account);
+          token = await worker.initialise();
+          if (options.inspect) {
+            inspector = await worker.inspect();
+            inspector.proxyTo(9229); // setup devtools
+          }
 
-      const response = await worker.fetch("/hello-boy");
-      console.log(response.status, await response.text());
+          console.log("👂 Listening on http://localhost:8787");
+        }
 
-      destinationDirectory.cleanup();
-      // for await (const event of inspector.drain()) {
-      //   console.log("Event:", event);
-      // }
-      // inspector.close()
-    });
+        await esbuild.build({
+          entryPoints: [filename],
+          bundle: true,
+          outdir: destinationDirectory.path,
+          format: "esm", // TODO: verify what changes are needed here
+          sourcemap: true,
+          watch: {
+            async onRebuild(error, result) {
+              if (error) console.error("watch build failed:", error);
+              else {
+                console.log("🌀 Detected changes, restarting server");
+                await start();
+              }
+            },
+          },
+        });
+        await start();
+      }
+    );
   cli.help();
   cli.version("0.0.0");
 

@@ -269,6 +269,7 @@ export class DtInspector {
       case "Runtime.exceptionThrown":
         break;
       default:
+        // console.log("recv", data);
         return;
     }
 
@@ -333,14 +334,12 @@ class DtInspectorBridge implements FetchServer {
   }
 
   upgrade(webSocket: WebSocket): void {
-    console.log("Upgrade");
     if (this.#connected) {
       webSocket.close(
         1013,
         "Too many clients; only one can be connected at a time"
       );
     } else {
-      console.log("Proxy");
       this.#connected = true;
       webSocket.addEventListener("close", () => (this.#connected = false));
       proxyWebSocket(webSocket, this.#webSocket);
@@ -350,7 +349,7 @@ class DtInspectorBridge implements FetchServer {
   private get version(): Response {
     const headers = { "Content-Type": "application/json" };
     const body = {
-      Browser: "workers-cli/1.0",
+      Browser: "workers-run/v0.0.0", // TODO: this should pick up version from package.json
       // TODO(someday): The DevTools protocol should match that of edgeworker.
       // This could be exposed by the preview API.
       "Protocol-Version": "1.3",
@@ -361,15 +360,16 @@ class DtInspectorBridge implements FetchServer {
   private get location(): Response {
     const headers = { "Content-Type": "application/json" };
     const localHost = `localhost:${this.#localPort}/ws`;
-    const devToolsUrl = `devtools://devtools/bundled/{}?experiments=true&v8only=true&ws=${localHost}`;
+    const devtoolsFrontendUrl = `devtools://devtools/bundled/js_app.html?experiments=true&v8only=true&ws=${localHost}`;
+    const devtoolsFrontendUrlCompat = `devtools://devtools/bundled/inspector.html?experiments=true&v8only=true&ws=${localHost}`;
     const body = [
       {
         id: randomId(),
         type: "node",
         description: "workers",
         webSocketDebuggerUrl: `ws://${localHost}`,
-        devtoolsFrontendUrl: devToolsUrl.replace("{}", "js_app.html"),
-        devtoolsFrontendUrlCompat: devToolsUrl.replace("{}", "inspector.html"),
+        devtoolsFrontendUrl,
+        devtoolsFrontendUrlCompat,
         // Below are fields that are visible in the DevTools UI.
         title: "Cloudflare Worker",
         faviconUrl: "https://workers.cloudflare.com/favicon.ico",
