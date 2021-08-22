@@ -1,4 +1,4 @@
-import { main } from "./";
+import { main } from ".";
 
 main().catch((cause) => {
   const { name, message } = cause;

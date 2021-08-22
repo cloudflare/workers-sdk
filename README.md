@@ -15,12 +15,12 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
   - [ ] should watch mode be off by default?
 - [x] request logs
 - [ ] custom port number
+- [ ] restart when session expires
 - [ ] login
 
   - [ ] read creds from somewhere
   - [ ] if not logged in, automatically open a browser and ask to login, and save creds somewhere
 
-- [ ] restart when session expires
 - [ ] my assumption is folks will use Pages (or something else?) for static assets; regardless, for local work there may be a need to serve it off the same localhost point. also figure out what the dev experience more widely would be.
 - [ ] sure would be nice to have typescript types for everything (including anything fancy that we add on to requests/responses)
 - [ ] `--local` mode should use miniflare?
@@ -43,3 +43,4 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 - [ ] uh, live reload?
 - [ ] don't crash on esbuild error
 - [ ] shut down inspector server on rebuild
+- [ ] when a worker starts up, it has to do 4 requests(!) in a row just to get the preview token and prewarm. Would be nice if this was a single call (and faster)

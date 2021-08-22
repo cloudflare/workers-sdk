@@ -5,10 +5,10 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "dist/",
     "isolatedModules": true,
     "noEmit": true,
-    "lib": ["esnext"]
+    "lib": ["esnext"],
+    "jsx": "react"
   },
   "lib": ["esnext"],
   "exclude": ["node_modules/"]

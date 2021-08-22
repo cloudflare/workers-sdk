@@ -1,10 +1,13 @@
 {
   "devDependencies": {
     "@types/node": "^16.4.13",
+    "@types/react": "^17.0.19",
     "@typescript-eslint/eslint-plugin": "^4.29.1",
     "@typescript-eslint/parser": "^4.29.1",
     "esbuild-register": "^3.0.0",
     "eslint": "^7.32.0",
+    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
     "prettier": "^2.3.2",
     "typescript": "^4.3.5"
   },
@@ -20,7 +23,10 @@
     "esbuild": "^0.12.19",
     "formdata-node": "^3.6.3",
     "http-proxy": "^1.18.1",
+    "ink": "^3.0.9",
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
+    "open": "^8.2.1",
+    "react": "^16.14.0",
     "tmp-promise": "^3.0.2",
     "ws": "^8.2.0"
   },
@@ -31,7 +37,9 @@
     "root": true,
     "parser": "@typescript-eslint/parser",
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "eslint-plugin-react",
+      "eslint-plugin-react-hooks"
     ],
     "overrides": [
       {
@@ -41,12 +49,16 @@
         ],
         "extends": [
           "eslint:recommended",
-          "plugin:@typescript-eslint/recommended"
+          "plugin:@typescript-eslint/recommended",
+          "plugin:react/recommended",
+          "plugin:react-hooks/recommended"
         ],
         "rules": {
           "@typescript-eslint/consistent-type-imports": [
             "error"
-          ]
+          ],
+          "no-empty-function": "off",
+          "@typescript-eslint/no-empty-function": "off"
         }
       }
     ]

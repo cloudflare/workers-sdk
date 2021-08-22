@@ -1,7 +1,5 @@
 import fetch, { Headers } from "node-fetch";
-import type { Request, Response, HeadersInit, RequestInit } from "node-fetch";
-import type WebSocket from "ws";
-import type { MessageEvent } from "ws";
+import type { Response, HeadersInit, RequestInit } from "node-fetch";
 
 /**
  * A `fetch()` function.
@@ -73,38 +71,4 @@ export function fetchJson(init?: FetchInit): FetchJson {
       throw new Error("Expected a JSON response, but instead got: " + text);
     }
   };
-}
-
-/**
- * A HTTP server that responds to `fetch()` requests.
- */
-export interface FetchServer {
-  /**
-   * Responds to a request.
-   */
-  fetch(request: Request): Promise<Response>;
-  /**
-   * Accepts a websocket connection.
-   */
-  upgrade?(webSocket: WebSocket): void;
-}
-
-/**
- * Creates a proxy bridge between two websockets.
- */
-export function proxyWebSocket(
-  webSocket: WebSocket,
-  otherSocket: WebSocket
-): void {
-  webSocket.addEventListener("message", (event: MessageEvent) =>
-    otherSocket.send(event.data)
-  );
-  otherSocket.addEventListener("message", (event: MessageEvent) =>
-    webSocket.send(event.data)
-  );
-
-  // Some close codes are marked as 'reserved' and will throw an error if used.
-  // Therefore, it's not worth the effort to passthrough the close code and reason.
-  webSocket.addEventListener("close", () => otherSocket.close());
-  otherSocket.addEventListener("close", () => webSocket.close());
 }
