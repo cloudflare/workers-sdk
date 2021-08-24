@@ -65,5 +65,10 @@
         }
       }
     ]
+  },
+  "cloudflare": {
+    "//": "This is temporary, not the config format we actually want.",
+    "account": "1fc1df98cc4420fe00367c3ab68c1639",
+    "zone": null
   }
 }

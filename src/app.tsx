@@ -96,9 +96,9 @@ function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
         modules: true,
         sourceMap: true,
         // to prevent reading any config
-        envPath: ".env.empty",
-        packagePath: "package.empty.json", // Containing empty object: {}
-        wranglerConfigPath: "wrangler.empty.toml",
+        envPath: "./miniflare-config-stubs/.env.empty",
+        packagePath: "./miniflare-config-stubs/package.empty.json", // Containing empty object: {}
+        wranglerConfigPath: "./miniflare-config-stubs/wrangler.empty.toml",
       });
       server = mf.createServer().listen(8787);
       console.log("⬣ Listening at http://localhost:8787");
@@ -312,7 +312,7 @@ function useTunnel(toggle) {
 function useHotkeys() {
   const [toggles, setToggles] = useState({
     tunnel: false,
-    local: true,
+    local: false,
   });
   useInput(
     (
@@ -328,14 +328,16 @@ function useHotkeys() {
             },
           });
           break;
-        case "i": // toggle inspector
-          open(`http://localhost:9229/workers/redirect/to/dev/tools`, {
-            // newInstance: true,
-            app: {
-              name: open.apps.chrome,
-              // todo - add firefox and edge fallbacks
-            },
-          });
+        case "d": // toggle inspector
+          open(
+            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`,
+            {
+              app: {
+                name: open.apps.chrome,
+                // todo - add firefox and edge fallbacks
+              },
+            }
+          );
           break;
         case "s": // toggle tunnel
           setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));

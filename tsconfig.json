@@ -7,9 +7,10 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,
-    "lib": ["esnext"],
-    "jsx": "react"
+    "lib": ["esnext", "webworker"],
+    "jsx": "react",
+    "resolveJsonModule": true
   },
-  "lib": ["esnext"],
+  "lib": ["esnext", "webworker"],
   "exclude": ["node_modules/"]
 }

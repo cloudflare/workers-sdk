@@ -4,17 +4,27 @@ import cac from "cac";
 import React from "react";
 import { render } from "ink";
 import { App } from "./app";
+import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-if (!process.env.CF_ACCOUNT_ID || !process.env.CF_API_TOKEN) {
-  throw new Error(
-    "Please set CF_ACCOUNT_ID and CF_API_TOKEN (and optionally CF_ZONE_ID)"
-  );
+import { cloudflare } from "../package.json";
+
+const apiToken = /api_token = "([a-zA-Z0-9_-]*)"/.exec(
+  readFileSync(
+    path.join(os.homedir(), ".wrangler/config/default.toml"),
+    "utf-8"
+  )
+)[1];
+
+if (!cloudflare.account || !apiToken) {
+  throw new Error("missing account or api token (and optionally CF_ZONE_ID)");
 }
 
 const account: CfAccount = {
-  accountId: process.env.CF_ACCOUNT_ID,
-  zoneId: process.env.CF_ZONE_ID,
-  apiToken: process.env.CF_API_TOKEN,
+  accountId: cloudflare.account,
+  zoneId: cloudflare.zone,
+  apiToken: apiToken,
 };
 
 export async function main(): Promise<void> {
