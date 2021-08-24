@@ -5,7 +5,11 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 
 ## TODO
 
-- [~] `--inspect` should open up a chrome dev tools instance automatically? what about vscode? or anything else with a debugger?
+fix the websocket timeout
+make the ui actually look nice
+implement useTunnel
+
+- [-] `--inspect` should open up a chrome dev tools instance automatically? what about vscode? or anything else with a debugger?
 - [x] a reverse proxy to get a localhost endpoint
   - [ ] proxy websockets as well (verify with durable objects)
 - [x] module resolution should just work. the idea here is to use esbuild behind the scenes to generate the script, but never expose the esbuild api.
@@ -31,10 +35,10 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 - [ ] use something like ncc/pkg to consume dependencies into a single bundle (except binaries like esbuild, ofc)
 - [ ] what's the rust/wasm story?
 - [ ] when running, maybe have keyboard shortcuts?
-  - B to open a browser.
-  - I to open inspector
-  - S to share / tunnel
-  - L to toggle local mode
+  - [x] B to open a browser.
+  - [ ] I to open inspector
+  - [x] S to share / tunnel
+  - [ ] L to toggle local mode
 - [ ] warn on node polyfills
 - [ ] warn on bundle size
 - [ ] automatically get zone id stuff?
@@ -44,3 +48,6 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 - [ ] don't crash on esbuild error
 - [ ] shut down inspector server on rebuild
 - [ ] when a worker starts up, it has to do 4 requests(!) in a row just to get the preview token and prewarm. Would be nice if this was a single call (and faster)
+- [ ] testssss
+- [ ] why aren't regular console.logs showing colors for numbers, etc?
+- [ ] model async work with `<Suspense>`

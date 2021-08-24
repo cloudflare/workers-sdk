@@ -5,13 +5,18 @@ import type { DirectoryResult } from "tmp-promise";
 import tmp from "tmp-promise";
 import type { CfPreviewToken } from "./api/preview";
 import { Box, Text, useInput } from "ink";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
 import type { CfModuleType } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
+import { spawn } from "child_process";
+import fetch from "node-fetch";
+import clipboardy from "clipboardy";
+import { Miniflare, ConsoleLog } from "miniflare";
+import type { Server } from "http";
 
 type Props = {
   entry: string;
@@ -20,28 +25,93 @@ type Props = {
 };
 
 export function App(props: Props): JSX.Element {
-  const [logs, setLogs] = useState([]);
   const directory = useTmpDir();
 
   const bundle = useEsbuild(props.entry, directory);
 
-  const token = useWorker(bundle, props.options.type, props.account);
+  const toggles = useHotkeys();
+
+  useTunnel(toggles.tunnel);
+
+  return (
+    <>
+      {toggles.local ? (
+        <Local
+          bundle={bundle}
+          options={props.options}
+          account={props.account}
+        />
+      ) : (
+        <Remote
+          bundle={bundle}
+          options={props.options}
+          account={props.account}
+        />
+      )}
+      <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
+        <Text>
+          {`B to open a browser, D to open Devtools, S to ${
+            toggles.tunnel ? "turn off" : "turn on"
+          } sharing, L to ${
+            toggles.local ? "turn off" : "turn on"
+          } local mode, X to exit`}
+        </Text>
+      </Box>
+    </>
+  );
+}
+
+function Remote(props: {
+  bundle: EsbuildBundle | void;
+  options: { type: CfModuleType };
+  account: CfAccount;
+}) {
+  const token = useWorker(props.bundle, props.options.type, props.account);
 
   useProxy(token);
 
   useInspector(token);
+  return null;
+}
+function Local(props: {
+  bundle: EsbuildBundle | void;
+  options: { type: CfModuleType };
+  account: CfAccount;
+}) {
+  useLocalWorker(props.bundle, props.options.type);
+  return null;
+}
 
-  useHotkeys();
-
-  return (
-    <Box>
-      {logs.map((log, i) => (
-        // sucks that we have to use array index for a key here
-        // but it's fine since we don't have any state/events on them
-        <Text key={i}>{log}</Text>
-      ))}
-    </Box>
-  );
+function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
+  useEffect(() => {
+    let mf: Miniflare;
+    let server: Server;
+    async function start() {
+      if (!bundle) return;
+      console.log("⎔ Starting a local server...");
+      mf = new Miniflare({
+        watch: true,
+        scriptPath: bundle.path,
+        log: new ConsoleLog(false),
+        modules: true,
+        sourceMap: true,
+        // to prevent reading any config
+        envPath: ".env.empty",
+        packagePath: "package.empty.json", // Containing empty object: {}
+        wranglerConfigPath: "wrangler.empty.toml",
+      });
+      server = mf.createServer().listen(8787);
+      console.log("⬣ Listening at http://localhost:8787");
+    }
+    start();
+    return () => {
+      if (mf) {
+        console.log("⎔ Shutting down local server.");
+      }
+      mf?.dispose();
+      server?.close();
+    };
+  }, [bundle]);
 }
 
 function useTmpDir(): string | void {
@@ -82,7 +152,6 @@ function useEsbuild(
           async onRebuild(error, result) {
             if (error) console.error("watch build failed:", error);
             else {
-              console.log("⎔ Detected changes, restarting server");
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
               setBundle((bundle) => ({ ...bundle, id: bundle.id + 1 }));
@@ -113,6 +182,11 @@ function useWorker(
   useEffect(() => {
     async function start() {
       if (!bundle) return;
+      if (token) {
+        console.log("⎔ Detected changes, restarting server...");
+      } else {
+        console.log("⎔ Starting server...");
+      }
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
         main: {
@@ -177,7 +251,69 @@ function useInspector(token: CfPreviewToken | void) {
   }, [token]);
 }
 
+function sleep(period) {
+  return new Promise((resolve) => setTimeout(resolve, period));
+}
+const SLEEP_DURATION = 2000;
+const hostNameRegex = /userHostname="(.*)"/g;
+async function findTunnelHostname() {
+  let hostName: string;
+  while (!hostName) {
+    try {
+      const resp = await fetch("http://localhost:8789/metrics");
+      const data = await resp.text();
+      const matches = Array.from(data.matchAll(hostNameRegex));
+      hostName = matches[0][1];
+    } catch (err) {
+      await sleep(SLEEP_DURATION);
+    }
+  }
+  return hostName;
+}
+
+function useTunnel(toggle) {
+  const tunnel = useRef<ReturnType<typeof spawn>>();
+  useEffect(() => {
+    async function startTunnel() {
+      if (toggle) {
+        console.log("⎔ Starting a tunnel...");
+        tunnel.current = spawn("cloudflared", [
+          "tunnel",
+          "--url",
+          "http://localhost:8787",
+          "--metrics",
+          "localhost:8789",
+        ]);
+
+        tunnel.current.on("close", (code) => {
+          if (code !== 0) {
+            console.log(`Tunnel process exited with code ${code}`);
+          }
+        });
+
+        const hostName = await findTunnelHostname();
+        clipboardy.write(hostName);
+        console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
+      }
+    }
+
+    startTunnel();
+
+    return () => {
+      if (tunnel.current) {
+        console.log("⎔ Shutting down tunnel.");
+        tunnel.current?.kill();
+        tunnel.current = undefined;
+      }
+    };
+  }, [toggle]);
+}
+
 function useHotkeys() {
+  const [toggles, setToggles] = useState({
+    tunnel: false,
+    local: true,
+  });
   useInput(
     (
       input,
@@ -186,15 +322,35 @@ function useHotkeys() {
     ) => {
       switch (input) {
         case "b": // open browser
-          open(`http://localhost:8787/`);
+          open(`http://localhost:8787/`, {
+            app: {
+              name: open.apps.chrome, // TODO: fallback on other browsers
+            },
+          });
           break;
         case "i": // toggle inspector
+          open(`http://localhost:9229/workers/redirect/to/dev/tools`, {
+            // newInstance: true,
+            app: {
+              name: open.apps.chrome,
+              // todo - add firefox and edge fallbacks
+            },
+          });
+          break;
         case "s": // toggle tunnel
+          setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));
+          break;
         case "l": // toggle local
+          setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
+          break;
+        case "x": // shut down
+          process.exit(0);
+          break;
         default:
           // nothing?
           break;
       }
     }
   );
+  return toggles;
 }

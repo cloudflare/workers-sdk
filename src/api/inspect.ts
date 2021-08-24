@@ -1,6 +1,6 @@
 import { Response, Request, Headers } from "node-fetch";
 import type { MessageEvent } from "ws";
-import WebSocket, { WebSocketServer } from "ws";
+import WebSocket, { Server as WebSocketServer } from "ws";
 import type { IncomingMessage, ServerResponse } from "http";
 import { createServer } from "http";
 
@@ -163,24 +163,29 @@ interface DtProtocolResponse<T> {
 export class DtInspector {
   #webSocket: WebSocket;
   #keepAlive?: NodeJS.Timer;
-  #events: DtEvent[];
-  #listeners: DtListener[];
 
   constructor(url: string) {
-    this.#events = [];
-    this.#listeners = [];
+    // this.#events = [];
+    // this.#listeners = [];
     this.#webSocket = new WebSocket(url);
-    this.#webSocket.onopen = () => this.enable();
-    this.#webSocket.onclose = () => this.disable();
-    this.#webSocket.onmessage = (event: MessageEvent) =>
-      this.recv(JSON.parse(event.data));
-  }
-
-  /**
-   * Pipes events to a listener.
-   */
-  pipeTo(listener: DtListener): void {
-    this.#listeners.push(listener);
+    this.#webSocket.onopen = () => {
+      this.enable();
+    };
+    this.#webSocket.onclose = () => {
+      this.disable();
+    };
+    this.#webSocket.on("unexpected-response", (unexpectedResponse) => {
+      console.log("504??"); // TODO: refactor this class to start again
+    });
+    this.#webSocket.onmessage = (event: MessageEvent) => {
+      // TODO: this seems unnecessary, unless we're planning
+      // on logging to console. We'll see.
+      if (typeof event.data === "string") {
+        // this.recv(JSON.parse(event.data));
+      } else {
+        // ??
+      }
+    };
   }
 
   /**
@@ -191,59 +196,10 @@ export class DtInspector {
   }
 
   /**
-   * Blocks until the next event is read.
-   */
-  async read(retries = 5): Promise<DtEvent> {
-    const event = this.#events.shift();
-    if (event) {
-      return event;
-    }
-
-    if (retries <= 0) {
-      throw new Error("Inspector has no events");
-    }
-
-    return new Promise((resolve, reject) => {
-      const timeout = Math.random() * 10;
-      setTimeout(
-        () =>
-          this.read(retries - 1)
-            .then(resolve)
-            .catch(reject),
-        timeout
-      );
-    });
-  }
-
-  /**
-   * The underlying `WebSocket` of the inspector.
-   */
-  get webSocket(): WebSocket {
-    return this.#webSocket;
-  }
-
-  /**
    * If the inspector is closed.
    */
   get closed(): boolean {
     return this.#webSocket.readyState === WebSocket.CLOSED;
-  }
-
-  /**
-   * Drains the backlog of messages.
-   */
-  async *drain(): AsyncGenerator<DtEvent, number, DtEvent> {
-    let backlog = -1;
-
-    while (backlog++) {
-      try {
-        yield await this.read();
-      } catch {
-        break;
-      }
-    }
-
-    return backlog;
   }
 
   /**
@@ -253,37 +209,13 @@ export class DtInspector {
     if (!this.closed) {
       this.#webSocket.close();
     }
-    this.#events = [];
+    // this.#events = [];
   }
 
   private send(event: Record<string, unknown>): void {
     if (!this.closed) {
       this.#webSocket.send(JSON.stringify(event));
     }
-  }
-
-  private recv(data: Record<string, unknown>): void {
-    const { method, params } = data;
-    switch (method) {
-      case "Runtime.consoleAPICalled":
-      case "Runtime.exceptionThrown":
-        break;
-      default:
-        // console.log("recv", data);
-        return;
-    }
-
-    const event = params as DtEvent;
-    for (const listener of this.#listeners) {
-      listener(event);
-    }
-
-    if (this.#events.length > 1000) {
-      throw new Error(
-        "Too many messages on inspector queue; use read() or drain()"
-      );
-    }
-    this.#events.push(event);
   }
 
   private enable(): void {
@@ -343,6 +275,8 @@ class DtInspectorBridge implements FetchServer {
       case "/json":
       case "/json/list":
         return this.location;
+      default:
+        break;
     }
     return new Response("Not Found", { status: 404 });
   }
@@ -364,7 +298,7 @@ class DtInspectorBridge implements FetchServer {
     const headers = { "Content-Type": "application/json" };
     const body = {
       Browser: "workers-run/v0.0.0", // TODO: this should pick up version from package.json
-      // TODO(someday): The DevTools protocol should match that of edgeworker.
+      // TODO: (someday): The DevTools protocol should match that of edgeworker.
       // This could be exposed by the preview API.
       "Protocol-Version": "1.3",
     };
@@ -466,13 +400,20 @@ async function toResponse(
 /**
  * Creates a proxy bridge between two websockets.
  */
-export function proxyWebSocket(
-  webSocket: WebSocket,
-  otherSocket: WebSocket
-): void {
-  webSocket.addEventListener("message", (event: MessageEvent) =>
-    otherSocket.send(event.data)
-  );
+function proxyWebSocket(webSocket: WebSocket, otherSocket: WebSocket): void {
+  webSocket.addEventListener("message", (event: MessageEvent) => {
+    try {
+      otherSocket.send(event.data);
+    } catch (e) {
+      if (e.message !== "WebSocket is not open: readyState 0 (CONNECTING)") {
+        // this just means we haven't opened a websocket yet
+        // usually happens until there's at least one request
+        // which is weird, because we may miss something that happens on
+        // the first request
+        console.error(e);
+      }
+    }
+  });
   otherSocket.addEventListener("message", (event: MessageEvent) =>
     webSocket.send(event.data)
   );
