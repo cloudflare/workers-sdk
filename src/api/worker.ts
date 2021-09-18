@@ -22,6 +22,8 @@ export interface CfAccount {
   zoneId?: string;
 }
 
+export type CfScriptFormat = "modules" | "service-worker";
+
 /**
  * A module type.
  */

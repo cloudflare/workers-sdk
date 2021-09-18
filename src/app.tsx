@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfModuleType } from "./api/worker";
+import type { CfModuleType, CfScriptFormat } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -20,7 +20,7 @@ import type { Server } from "http";
 
 type Props = {
   entry: string;
-  options: { type: CfModuleType };
+  options: { type: CfModuleType; format: CfScriptFormat };
   account: CfAccount;
 };
 
@@ -322,21 +322,24 @@ function useHotkeys() {
     ) => {
       switch (input) {
         case "b": // open browser
-          open(`http://localhost:8787/`, {
-            app: {
-              name: open.apps.chrome, // TODO: fallback on other browsers
-            },
-          });
+          open(
+            `http://localhost:8787/`
+            // {
+            //   app: {
+            //     name: open.apps.chrome, // TODO: fallback on other browsers
+            //   },
+            // }
+          );
           break;
         case "d": // toggle inspector
           open(
-            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`,
-            {
-              app: {
-                name: open.apps.chrome,
-                // todo - add firefox and edge fallbacks
-              },
-            }
+            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
+            // {
+            //   app: {
+            //     name: open.apps.chrome,
+            //     // todo - add firefox and edge fallbacks
+            //   },
+            // }
           );
           break;
         case "s": // toggle tunnel

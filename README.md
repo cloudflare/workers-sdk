@@ -5,19 +5,14 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 
 ## TODO
 
-fix the websocket timeout
+bash completion (and zsh?)
 make the ui actually look nice
-implement useTunnel
 
-- [-] `--inspect` should open up a chrome dev tools instance automatically? what about vscode? or anything else with a debugger?
-- [x] a reverse proxy to get a localhost endpoint
-  - [ ] proxy websockets as well (verify with durable objects)
-- [x] module resolution should just work. the idea here is to use esbuild behind the scenes to generate the script, but never expose the esbuild api.
+- [ ] proxy websockets as well (verify with durable objects)
 - [ ] for 'plugins' expose something like node's experimental loader?
-- [x] watch mode?
+- [-] watch mode?
   - [ ] block requests while the new token etc are being generated
   - [ ] should watch mode be off by default?
-- [x] request logs
 - [ ] custom port number
 - [ ] restart when session expires
 - [ ] login
