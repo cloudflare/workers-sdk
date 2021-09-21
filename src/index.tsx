@@ -3,13 +3,16 @@ import type { CfAccount, CfModuleType, CfScriptFormat } from "./api/worker";
 import React from "react";
 import { render } from "ink";
 import { App } from "./app";
-import { readFileSync } from "node:fs";
+import { readFile, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import makeCLI from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { cloudflare } from "../package.json";
 import cloudflareAPI from "cloudflare";
+import type yargs from "yargs";
+import { findUp } from "find-up";
+import TOML from "@iarna/toml";
+import type { Config } from "./config";
 
 const apiToken = /api_token = "([a-zA-Z0-9_-]*)"/.exec(
   readFileSync(
@@ -18,24 +21,46 @@ const apiToken = /api_token = "([a-zA-Z0-9_-]*)"/.exec(
   )
 )[1];
 
-if (!cloudflare.account || !apiToken) {
-  throw new Error("missing account or api token (and optionally CF_ZONE_ID)");
+if (!apiToken) {
+  throw new Error("missing api token");
 }
-
-const account: CfAccount = {
-  accountId: cloudflare.account,
-  zoneId: cloudflare.zone,
-  apiToken: apiToken,
-};
 
 const api = cloudflareAPI({
   token: apiToken,
 });
 
+async function readConfig(path?: string): Promise<Config | void> {
+  if (!path) {
+    path = await findUp("wrangler.toml");
+    // TODO - terminate this early instead of going all the way to the root
+  }
+  if (!path) {
+    // TODO: a default config?
+    return;
+  }
+  const tml: string = await new Promise((resolve, reject) => {
+    readFile(path, "utf-8", (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+
+  const parsed = TOML.parse(tml) as Config;
+  console.log(parsed);
+  // todo: validate, add defaults
+  // let's just do some basics for now
+  parsed.account_id ||= process.env.CF_ACCOUNT_ID;
+  if (!parsed.account_id) {
+    throw new Error("Missing account id");
+  }
+
+  return parsed;
+}
+
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 function demandOneOfOption(...options: string[]) {
-  return function (argv) {
+  return function (argv: yargs.Arguments) {
     const count = options.filter((option) => argv[option]).length;
     const lastOption = options.pop();
 
@@ -196,12 +221,19 @@ export async function main(): Promise<void> {
   );
 
   // publish
-  yargs.command("publish", "🆙 Publish your Worker to Cloudflare.", (yargs) => {
-    return yargs.option("env", {
-      type: "string",
-      describe: "Perform on a specific environment",
-    });
-  });
+  yargs.command(
+    "publish",
+    "🆙 Publish your Worker to Cloudflare.",
+    (yargs) => {
+      return yargs.option("env", {
+        type: "string",
+        describe: "Perform on a specific environment",
+      });
+    },
+    (args) => {
+      console.log(":publish", args);
+    }
+  );
 
   // dev
   yargs.command(
@@ -212,7 +244,7 @@ export async function main(): Promise<void> {
         .positional("filename", { describe: "entry point", type: "string" })
         .option("format", {
           default: "modules",
-          choices: ["modules", "service-worker"],
+          choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
         })
         .option("env", {
@@ -259,7 +291,16 @@ export async function main(): Promise<void> {
         type: "esm" as CfModuleType,
       };
 
-      render(<App entry={filename} options={options} account={account} />);
+      render(
+        <App
+          entry={filename}
+          options={options}
+          account={{
+            accountId: (args.config as Config).account_id,
+            apiToken,
+          }}
+        />
+      );
     }
   );
 
@@ -370,13 +411,18 @@ export async function main(): Promise<void> {
 
   // subdomain
   yargs.command(
-    "subdomain <name>",
+    "subdomain [name]",
     "👷 Create or change your workers.dev subdomain.",
     (yargs) => {
       return yargs.positional("name", { type: "string" });
     },
     (args) => {
       console.log(":subdomain", args);
+      if (!args.name) {
+        // get
+      } else {
+        // put
+      }
     }
   );
 
@@ -452,16 +498,61 @@ export async function main(): Promise<void> {
                 describe: "Interact with a preview namespace",
               });
           },
-          (args) => {
+          async (args) => {
             console.log(":kv:namespace create", args);
+            if (args._.length !== 2) {
+              throw new Error(
+                `Did you forget to add quotes around "${
+                  args.namespace
+                } ${args._.slice(2).join(" ")}"?`
+              );
+            }
+            const config = args.config as Config;
+
+            const title = `${config.name}${args.env ? `-${args.env}` : ""}'-'${
+              args.namespace
+            }${args.preview ? "_preview" : ""}`;
+
+            if (/[\W]+/.test(args.namespace)) {
+              throw new Error("invalid binding name, needs to be js friendly");
+            }
+
+            // TODO: generate a binding name stripping non alphanumeric chars
+
+            console.log(`🌀 Creating namespace with title "${title}"`);
+
+            const response = await api.enterpriseZoneWorkersKVNamespaces.add(
+              config.account_id,
+              { title }
+            );
+            console.log(response);
+            if (response.success) {
+              console.log("✨ Success!");
+              console.log(
+                `Add the following to your configuration file in your kv_namespaces array${
+                  args.env ? ` under [env.${args.env}]` : ""
+                }:`
+              );
+              console.log(
+                `{ binding = "${args.namespace}", ${
+                  args.preview ? "preview_" : ""
+                }id = ${response.result.id} }`
+              );
+            }
           }
         )
         .command(
           "list",
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
-          (args) => {
+          async (args) => {
             console.log(":kv:namespace list", args);
+            // TODO: we should show bindings if they exist for given ids
+            console.log(
+              await api.enterpriseZoneWorkersKVNamespaces.browse(
+                (args.config as Config).account_id
+              )
+            );
           }
         )
         .command(
@@ -489,6 +580,26 @@ export async function main(): Promise<void> {
           },
           (args) => {
             console.log(":kv:namespace delete", args);
+            const id =
+              args["namespace-id"] ||
+              (args.env
+                ? (args.config as Config)[`env.${args.env}`]
+                : (args.config as Config)
+              ).kv_namespaces.find(
+                (namespace) => namespace.binding === args.binding
+              )[args.preview ? "preview_id" : "id"];
+            if (!id) {
+              throw new Error("Are your sure? id not found");
+            }
+
+            api.enterpriseZoneWorkersKVNamespaces.del(
+              (args.config as Config).account_id,
+              id
+            );
+
+            // TODO: recommend they remove it from wrangler.toml
+            // TODO: do it automatically
+            // TODO: delete the preview namespace as well?
           }
         );
     }
@@ -673,6 +784,17 @@ export async function main(): Promise<void> {
     }
   );
 
-  // yargs.version("0.0.0");
+  yargs.option("config", {
+    describe: "Path to .toml configuration file",
+    type: "string",
+    async coerce(arg) {
+      return readConfig(arg);
+    },
+  });
+
+  yargs.group(["config", "help", "version"], "Flags:");
+
   yargs.parse();
+
+  // yargs.version("0.0.0");
 }

@@ -7,6 +7,7 @@ This takes ashcon's work from https://bitbucket.cfdata.org/users/ashcon/repos/wo
 
 bash completion (and zsh?)
 make the ui actually look nice
+middleware to add the apiToken into the yargs args
 
 - [ ] proxy websockets as well (verify with durable objects)
 - [ ] for 'plugins' expose something like node's experimental loader?
@@ -46,3 +47,8 @@ make the ui actually look nice
 - [ ] testssss
 - [ ] why aren't regular console.logs showing colors for numbers, etc?
 - [ ] model async work with `<Suspense>`
+
+init
+create
+tsconfig?
+literally anything with the api

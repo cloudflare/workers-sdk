@@ -21,9 +21,11 @@
     "start": "node --no-warnings --experimental-vm-modules -r esbuild-register src/index_node.ts"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "clipboardy": "^2.3.0",
     "cloudflare": "^2.9.1",
     "esbuild": "^0.12.19",
+    "find-up": "^6.0.0",
     "formdata-node": "^3.6.3",
     "http-proxy": "^1.18.1",
     "ink": "^3.0.9",
@@ -32,7 +34,6 @@
     "open": "^8.2.1",
     "react": "^16.14.0",
     "tmp-promise": "^3.0.2",
-    "toml": "^3.0.0",
     "ws": "^8.2.0",
     "yargs": "^17.1.1"
   },
