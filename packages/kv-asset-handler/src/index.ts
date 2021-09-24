@@ -30,6 +30,7 @@ const getAssetFromKVDefaultOptions: Partial<Options> = {
   cacheControl: defaultCacheControl,
   defaultMimeType: 'text/plain',
   defaultDocument: 'index.html',
+  pathIsEncoded: false,
 }
 
 function assignOptions(options?: Partial<Options>): Options {
@@ -114,7 +115,7 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   }
 
   const rawPathKey = new URL(request.url).pathname.replace(/^\/+/, '') // strip any preceding /'s
-  let pathIsEncoded = false
+  let pathIsEncoded = options.pathIsEncoded
   let requestKey
   // if options.mapRequestToAsset is explicitly passed in, always use it and assume user has own intentions
   // otherwise handle request as normal, with default mapRequestToAsset below
