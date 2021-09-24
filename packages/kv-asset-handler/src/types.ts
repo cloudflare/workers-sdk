@@ -13,6 +13,7 @@ export type Options = {
   mapRequestToAsset?: (req: Request, options?: Partial<Options>) => Request
   defaultMimeType: string
   defaultDocument: string
+  pathIsEncoded: boolean
 }
 
 export class KVError extends Error {
