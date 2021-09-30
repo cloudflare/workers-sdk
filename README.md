@@ -52,3 +52,47 @@ init
 create
 tsconfig?
 literally anything with the api
+
+commands
+
+---
+
+- [ ] DEPRECATE generate
+  - [ ] descibe alternatives
+- [ ] init
+  - [ ] generate wrangler.toml
+  - [ ] interactive flow
+- [ ] DEPRECATE build
+  - [ ] Q: what if folks want to see the generated script? For debugging or whatever.
+- [ ] login
+  - [ ] login
+  - [ ] refresh
+  - [ ] logout
+  - [ ] transparent refresh across commands
+- [ ] logout (same as login.logout)
+- [ ] DEPRECATE config
+  - [ ] describe alternative, still allow env vars
+- [ ] publish
+  - [ ] how does this tie to new environments work?
+- [~] dev
+  - [ ] seamless refresh (pause and resume incoming requests when rebuilding)
+  - [ ] sourcemaps
+  - [ ]
+- [ ] tail
+  - [ ] interactive (so you don't have to install the whole project just to tail)
+- [ ] DEPRECATE preview
+  - [ ] describe alternatives
+- [ ] route
+  - [ ] list
+  - [ ] delete
+  - [ ] interactive
+- [ ] DEPRECATE subdomain
+  - [ ] describe alternatives (redirect to dashboard?)
+- [ ] secret put/delete/list
+  - [ ] interactive?
+- [ ] kv
+  - [~] kv:namespace
+  - [ ] kv:key
+  - [ ] kv:bulk
+  - [ ] (all the commands)
+  - [ ] interactive
