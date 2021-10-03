@@ -13,21 +13,28 @@ import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import type { Config } from "./config";
+import { login, logout, listScopes } from "./user";
 
-const apiToken = /api_token = "([a-zA-Z0-9_-]*)"/.exec(
-  readFileSync(
-    path.join(os.homedir(), ".wrangler/config/default.toml"),
-    "utf-8"
-  )
-)[1];
-
-if (!apiToken) {
-  throw new Error("missing api token");
+let apiToken: string | void;
+function getAPI() {
+  try {
+    apiToken = /oauth_token = "([a-zA-Z0-9_\-.]*)"/.exec(
+      readFileSync(
+        path.join(os.homedir(), ".wrangler/config/default.toml"),
+        "utf-8"
+      )
+    )[1];
+  } catch (err) {
+    console.error("could not parse api token");
+    throw err;
+  }
+  if (!apiToken) {
+    throw new Error("missing api token");
+  }
+  return cloudflareAPI({
+    token: apiToken,
+  });
 }
-
-const api = cloudflareAPI({
-  token: apiToken,
-});
 
 async function readConfig(path?: string): Promise<Config | void> {
   if (!path) {
@@ -189,9 +196,53 @@ export async function main(): Promise<void> {
     // this needs scopes as an option?
     "login",
     "🔓 Login to Cloudflare",
-    () => {},
-    (args) => {
+    (yargs) => {
+      // TODO: This needs some copy editing
+      // I mean, this entire app does, but this too.
+      return yargs
+        .option("scopes-list", {
+          describe: "list all the available OAuth scopes with descriptions.",
+        })
+        .option("scopes", {
+          describe: "allows to choose your set of OAuth scopes.",
+          array: true,
+          type: "string",
+        });
+
+      // TODO: scopes
+    },
+    async (args) => {
       console.log(":login", args);
+      if (args["scopes-list"]) {
+        listScopes();
+        return;
+      }
+      if (args.scopes) {
+        if (args.scopes.length === 0) {
+          // don't allow no scopes to be passed, that would be weird
+          listScopes();
+          return;
+        }
+        await login({ scopes: args.scopes });
+        return;
+      }
+      await login();
+
+      // TODO: would be nice if it optionally saved login
+      // creds inside node_modules/.cache or something
+      // this way you could have multiple users on a single machine
+    }
+  );
+
+  // logout
+  yargs.command(
+    // this needs scopes as an option?
+    "logout",
+    "🚪 Logout from Cloudflare",
+    () => {},
+    async (args) => {
+      console.log(":logout", args);
+      await logout();
     }
   );
 
@@ -290,6 +341,9 @@ export async function main(): Promise<void> {
         format: format as CfScriptFormat,
         type: "esm" as CfModuleType,
       };
+      if (!apiToken) {
+        throw new Error("missing API token");
+      }
 
       render(
         <App
@@ -520,6 +574,7 @@ export async function main(): Promise<void> {
             // TODO: generate a binding name stripping non alphanumeric chars
 
             console.log(`🌀 Creating namespace with title "${title}"`);
+            const api = getAPI();
 
             const response = await api.enterpriseZoneWorkersKVNamespaces.add(
               config.account_id,
@@ -547,6 +602,7 @@ export async function main(): Promise<void> {
           {},
           async (args) => {
             console.log(":kv:namespace list", args);
+            const api = getAPI();
             // TODO: we should show bindings if they exist for given ids
             console.log(
               await api.enterpriseZoneWorkersKVNamespaces.browse(
@@ -591,7 +647,7 @@ export async function main(): Promise<void> {
             if (!id) {
               throw new Error("Are your sure? id not found");
             }
-
+            const api = getAPI();
             api.enterpriseZoneWorkersKVNamespaces.del(
               (args.config as Config).account_id,
               id

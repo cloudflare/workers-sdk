@@ -1,3 +1,6 @@
+import React from "react";
+import { render } from "ink";
+import Table from "ink-table";
 import fetch from "node-fetch";
 import { webcrypto as crypto } from "node:crypto";
 import { TextEncoder } from "node:util";
@@ -5,11 +8,12 @@ import open from "open";
 import url from "node:url";
 import http from "node:http";
 import { readFileSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import assert from "node:assert";
+import type { ParsedUrlQuery } from "node:querystring";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -102,7 +106,7 @@ const LocalState: State = {};
     }
   } catch (err) {
     // no config yet, let's chill
-    console.error(err);
+    // console.error(err);
   }
 }
 
@@ -116,7 +120,7 @@ interface AccessContext {
  * A list of OAuth2AuthCodePKCE errors.
  */
 // To "namespace" all errors.
-class ErrorOAuth2 {
+class ErrorOAuth2 extends Error {
   toString(): string {
     return "ErrorOAuth2";
   }
@@ -222,7 +226,7 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
   }
 }
 
-const RawErrorToErrorClassMap: { [_: string]: any } = {
+const RawErrorToErrorClassMap: { [_: string]: typeof ErrorOAuth2 } = {
   invalid_request: ErrorInvalidRequest,
   invalid_grant: ErrorInvalidGrant,
   unauthorized_client: ErrorUnauthorizedClient,
@@ -273,8 +277,11 @@ const PKCE_CHARSET =
  * If there is no code, the user should be redirected via
  * [fetchAuthorizationCode].
  */
-function isReturningFromAuthServer(query: { [key: string]: string }): boolean {
+function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
   if (query.error) {
+    if (Array.isArray(query.error)) {
+      throw toErrorClass(query.error[0]);
+    }
     throw toErrorClass(query.error);
   }
 
@@ -298,7 +305,7 @@ function isReturningFromAuthServer(query: { [key: string]: string }): boolean {
   return true;
 }
 
-export async function getAuthURL(): Promise<string> {
+export async function getAuthURL(scopes?: string[]): Promise<string> {
   const { codeChallenge, codeVerifier } = await generatePKCECodes();
   const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -308,12 +315,16 @@ export async function getAuthURL(): Promise<string> {
     stateQueryParam,
   });
 
+  // TODO: verify that the scopes passed are legit
+
   return (
     AUTH_URL +
     `?response_type=code&` +
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    `scope=${encodeURIComponent(Scopes.concat("offline_access").join(" "))}&` +
+    `scope=${encodeURIComponent(
+      (scopes || Scopes).concat("offline_access").join(" ")
+    )}&` +
     `state=${stateQueryParam}&` +
     `code_challenge=${encodeURIComponent(codeChallenge)}&` +
     `code_challenge_method=S256`
@@ -531,51 +542,87 @@ function generateRandomState(lengthOfState: number): string {
 async function writeToConfigFile(tokenData: AccessContext) {
   await writeFile(
     path.join(os.homedir(), ".wrangler/config/default.toml"),
-    `oauth_token = "${tokenData.token?.value || ""}"
+    `
+oauth_token = "${tokenData.token?.value || ""}"
 refresh_token = "${tokenData.refreshToken?.value}"
-expiration_time = "${tokenData.token?.expiry}"\n`,
+expiration_time = "${tokenData.token?.expiry}"
+`,
     { encoding: "utf-8" }
   );
 }
 
-const server = http.createServer(async (req, res) => {
-  assert(req.url, "This request doesn't have a URL"); // This should never happen
-  const { pathname, query } = url.parse(req.url, true);
-  switch (pathname) {
-    case "/oauth/callback": {
-      let hasAuthCode = false;
-      try {
-        hasAuthCode = isReturningFromAuthServer(query);
-      } catch (err) {
-        console.log({ err });
-        // render an error page instead
+type LoginProps = {
+  scopes?: string[];
+};
+
+function getErrorPage(err: Error) {
+  return `<!doctype html>
+<html>
+  <head></head>
+  <body>
+    ${err.message}
+    ${err.stack.split("\n").join("<br/>")}
+  </body>
+</html>
+  `;
+}
+
+export async function login(props?: LoginProps): Promise<void> {
+  // TODO: if there already is a token, then logout first
+  // TODO: ask permission before opening browser
+  open(await getAuthURL(props?.scopes));
+
+  return new Promise((resolve, reject) => {
+    const server = http.createServer(async (req, res) => {
+      function finish(error?: Error) {
+        server.close((closeErr?: Error) => {
+          if (error || closeErr) {
+            // render an error page
+            reject(error || closeErr);
+          } else resolve();
+        });
       }
-      if (!hasAuthCode) {
-        // render an error page here
-        console.log("no auth code, render error page");
-      } else {
-        if (query.code === LocalState.authorizationCode) {
-          const tokenData = await exchangeAuthCodeForAccessToken();
-          console.log(tokenData);
-          await writeToConfigFile(tokenData);
-          // write to file
-        } else {
-          console.log("not matching?");
-          // ???
+
+      assert(req.url, "This request doesn't have a URL"); // This should never happen
+      const { pathname, query } = url.parse(req.url, true);
+      switch (pathname) {
+        case "/oauth/callback": {
+          let hasAuthCode = false;
+          try {
+            hasAuthCode = isReturningFromAuthServer(query);
+          } catch (err) {
+            if (err instanceof ErrorAccessDenied) {
+              res.writeHead(307, {
+                Location:
+                  "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+              });
+              res.end(finish);
+              return;
+            } else {
+              finish(err);
+              return;
+            }
+          }
+          if (!hasAuthCode) {
+            // render an error page here
+            finish(new ErrorNoAuthCode());
+            return;
+          } else {
+            const tokenData = await exchangeAuthCodeForAccessToken();
+            await writeToConfigFile(tokenData);
+            res.writeHead(307, {
+              Location:
+                "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+            });
+            res.end(finish);
+            return;
+          }
         }
       }
-    }
-  }
+    });
 
-  res.statusCode = 200;
-  res.setHeader("Content-Type", "text/plain");
-  res.end(`Hello ${req.url}`);
-});
-
-// server.listen(8976);
-
-export async function login(): Promise<void> {
-  open(await getAuthURL());
+    server.listen(8976);
+  });
 }
 
 /**
@@ -587,7 +634,7 @@ export function isAccessTokenExpired(): boolean {
 }
 
 export async function refresh(): Promise<void> {
-  // // refresh
+  // refresh
   try {
     const refreshed = await exchangeRefreshTokenForAccessToken();
     console.log({ refreshed });
@@ -600,6 +647,10 @@ export async function refresh(): Promise<void> {
 
 export async function logout(): Promise<void> {
   const { refreshToken } = LocalState;
+  if (!refreshToken) {
+    console.log("Not logged in, exiting...");
+    return;
+  }
   const body =
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `token_type_hint=refresh_token&` +
@@ -613,12 +664,22 @@ export async function logout(): Promise<void> {
     },
   });
   await response.text(); // blank text? would be nice if it was something meaningful
+  console.log(
+    "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
+  );
+  // delete the file
+  await rm(path.join(os.homedir(), ".wrangler/config/default.toml"));
+  console.log(
+    "Removing /Users/threepointone/.wrangler/config/default.toml.. success!"
+  );
 }
 
-// async function run() {
-//   // // login
-//   // // logout
-//   // await logout();
-// }
-
-// run();
+export function listScopes(): void {
+  console.log("💁 Available scopes:");
+  const data = Scopes.map((scope, index) => ({
+    Scope: scope,
+    Description: ScopeDescriptions[index],
+  }));
+  render(<Table data={data} />);
+  // TODO: maybe a good idea to show usage here
+}
