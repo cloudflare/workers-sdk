@@ -1,6 +1,7 @@
 {
   "name": "nu-wrangler",
   "devDependencies": {
+    "@types/cloudflare": "^2.7.6",
     "@types/node": "^16.4.13",
     "@types/react": "^17.0.19",
     "@types/ws": "^7.4.7",
