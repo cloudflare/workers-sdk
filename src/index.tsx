@@ -18,12 +18,12 @@ import { login, logout, listScopes } from "./user";
 let apiToken: string | void;
 function getAPI() {
   try {
-    apiToken = /oauth_token = "([a-zA-Z0-9_\-.]*)"/.exec(
+    apiToken = /(oauth|api)_token = "([a-zA-Z0-9_\-.]*)"/.exec(
       readFileSync(
         path.join(os.homedir(), ".wrangler/config/default.toml"),
         "utf-8"
       )
-    )[1];
+    )[2];
   } catch (err) {
     console.error("could not parse api token");
     throw err;
@@ -31,6 +31,7 @@ function getAPI() {
   if (!apiToken) {
     throw new Error("missing api token");
   }
+  // @ts-expect-error `cloudflareAPI`'s type says it's not callable, but clearly it is.
   return cloudflareAPI({
     token: apiToken,
   });
