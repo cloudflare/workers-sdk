@@ -69,8 +69,8 @@ type Env = {
 };
 
 export type Config = {
-  name: string; // inherited
-  account_id: string; // inherited
+  name?: string; // inherited
+  account_id?: string; // inherited
   // @deprecated Don't use this
   type?: Project; // top level
   // -- there's some mutually exclusive logic for this next block,
@@ -90,6 +90,6 @@ export type Config = {
   dev?: Dev;
   usage_model?: UsageModel; // inherited
   // top level
-  build: Build;
-  env: { [envName: string]: Env };
+  build?: Build;
+  env?: { [envName: string]: Env };
 };

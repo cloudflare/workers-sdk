@@ -3,7 +3,7 @@ import type { CfAccount, CfModuleType, CfScriptFormat } from "./api/worker";
 import React from "react";
 import { render } from "ink";
 import { App } from "./app";
-import { readFile, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import makeCLI from "yargs/yargs";
@@ -15,11 +15,13 @@ import TOML from "@iarna/toml";
 import type { Config } from "./config";
 import { login, logout, listScopes } from "./user";
 
-let apiToken: string | void;
-function getAPI() {
+import fetch from "node-fetch";
+
+async function getAPIToken() {
+  let apiToken: string | void;
   try {
     apiToken = /(oauth|api)_token = "([a-zA-Z0-9_\-.]*)"/.exec(
-      readFileSync(
+      await readFile(
         path.join(os.homedir(), ".wrangler/config/default.toml"),
         "utf-8"
       )
@@ -28,6 +30,10 @@ function getAPI() {
     console.error("could not parse api token");
     throw err;
   }
+  return apiToken;
+}
+async function getAPI() {
+  const apiToken = await getAPIToken();
   if (!apiToken) {
     throw new Error("missing api token");
   }
@@ -37,32 +43,53 @@ function getAPI() {
   });
 }
 
-async function readConfig(path?: string): Promise<Config | void> {
+async function readConfig(path?: string): Promise<Config> {
+  const config: Config = {};
   if (!path) {
     path = await findUp("wrangler.toml");
     // TODO - terminate this early instead of going all the way to the root
   }
-  if (!path) {
-    // TODO: a default config?
-    return;
-  }
-  const tml: string = await new Promise((resolve, reject) => {
-    readFile(path, "utf-8", (err, data) => {
-      if (err) reject(err);
-      else resolve(data);
-    });
-  });
 
-  const parsed = TOML.parse(tml) as Config;
-  console.log(parsed);
+  if (path) {
+    const tml: string = await readFile(path, "utf-8");
+    const parsed = TOML.parse(tml) as Config;
+    Object.assign(config, parsed);
+  }
+
   // todo: validate, add defaults
   // let's just do some basics for now
-  parsed.account_id ||= process.env.CF_ACCOUNT_ID;
-  if (!parsed.account_id) {
+
+  // env var overrides
+  if (process.env.CF_ACCOUNT_ID) {
+    config.account_id = process.env.CF_ACCOUNT_ID;
+  }
+
+  if (!config.account_id) {
+    // try to get it from api?
+    const apiToken = await getAPIToken();
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/memberships`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: "Bearer " + apiToken,
+        },
+      }
+    );
+    // @ts-expect-error TODO: we don't have a type for this
+    config.account_id = (await res.json()).result[0].account.id;
+    // TODO: if there are more than one memberships,
+    // then we should show a drop down asking them to
+    // pick one.
+    // TODO: we should save this in node_modules/.cache
+    // so we don't have to always make this call
+  }
+
+  if (!config.account_id) {
     throw new Error("Missing account id");
   }
 
-  return parsed;
+  return config;
 }
 
 // a helper to demand one of a set of options
@@ -342,6 +369,7 @@ export async function main(): Promise<void> {
         format: format as CfScriptFormat,
         type: "esm" as CfModuleType,
       };
+      const apiToken = await getAPIToken();
       if (!apiToken) {
         throw new Error("missing API token");
       }
@@ -575,7 +603,7 @@ export async function main(): Promise<void> {
             // TODO: generate a binding name stripping non alphanumeric chars
 
             console.log(`🌀 Creating namespace with title "${title}"`);
-            const api = getAPI();
+            const api = await getAPI();
 
             const response = await api.enterpriseZoneWorkersKVNamespaces.add(
               config.account_id,
@@ -603,7 +631,7 @@ export async function main(): Promise<void> {
           {},
           async (args) => {
             console.log(":kv:namespace list", args);
-            const api = getAPI();
+            const api = await getAPI();
             // TODO: we should show bindings if they exist for given ids
             console.log(
               await api.enterpriseZoneWorkersKVNamespaces.browse(
@@ -635,7 +663,7 @@ export async function main(): Promise<void> {
                 describe: "Interact with a preview namespace",
               });
           },
-          (args) => {
+          async (args) => {
             console.log(":kv:namespace delete", args);
             const id =
               args["namespace-id"] ||
@@ -648,7 +676,7 @@ export async function main(): Promise<void> {
             if (!id) {
               throw new Error("Are your sure? id not found");
             }
-            const api = getAPI();
+            const api = await getAPI();
             api.enterpriseZoneWorkersKVNamespaces.del(
               (args.config as Config).account_id,
               id
