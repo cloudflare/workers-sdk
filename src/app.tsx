@@ -22,6 +22,7 @@ type Props = {
   entry: string;
   options: { type: CfModuleType; format: CfScriptFormat };
   account: CfAccount;
+  initialMode: "local" | "remote";
 };
 
 export function App(props: Props): JSX.Element {
@@ -29,7 +30,10 @@ export function App(props: Props): JSX.Element {
 
   const bundle = useEsbuild(props.entry, directory);
 
-  const toggles = useHotkeys();
+  const toggles = useHotkeys({
+    local: props.initialMode === "local",
+    tunnel: false,
+  });
 
   useTunnel(toggles.tunnel);
 
@@ -271,7 +275,7 @@ async function findTunnelHostname() {
   return hostName;
 }
 
-function useTunnel(toggle) {
+function useTunnel(toggle: boolean) {
   const tunnel = useRef<ReturnType<typeof spawn>>();
   useEffect(() => {
     async function startTunnel() {
@@ -309,11 +313,12 @@ function useTunnel(toggle) {
   }, [toggle]);
 }
 
-function useHotkeys() {
-  const [toggles, setToggles] = useState({
-    tunnel: false,
-    local: false,
-  });
+type useHotkeysInitialState = {
+  local: boolean;
+  tunnel: boolean;
+};
+function useHotkeys(initial: useHotkeysInitialState) {
+  const [toggles, setToggles] = useState(initial);
   useInput(
     (
       input,

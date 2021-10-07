@@ -13,9 +13,15 @@ import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import type { Config } from "./config";
-import { login, logout, listScopes } from "./user";
+import {
+  login,
+  logout,
+  listScopes,
+  initialise as initialiseUserConfig,
+} from "./user";
 
 import fetch from "node-fetch";
+import assert from "node:assert";
 
 async function getAPIToken() {
   let apiToken: string | void;
@@ -27,8 +33,7 @@ async function getAPIToken() {
       )
     )[2];
   } catch (err) {
-    console.error("could not parse api token");
-    throw err;
+    // the file probably doesn't exist
   }
   return apiToken;
 }
@@ -67,27 +72,38 @@ async function readConfig(path?: string): Promise<Config> {
   if (!config.account_id) {
     // try to get it from api?
     const apiToken = await getAPIToken();
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/memberships`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: "Bearer " + apiToken,
-        },
+    if (apiToken) {
+      let response;
+      try {
+        response = await fetch(
+          `https://api.cloudflare.com/client/v4/memberships`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + apiToken,
+            },
+          }
+        );
+      } catch (err) {
+        // probably offline
       }
-    );
-    // @ts-expect-error TODO: we don't have a type for this
-    config.account_id = (await res.json()).result[0].account.id;
-    // TODO: if there are more than one memberships,
-    // then we should show a drop down asking them to
-    // pick one.
-    // TODO: we should save this in node_modules/.cache
-    // so we don't have to always make this call
+
+      const responseJSON = await response.json();
+
+      if (responseJSON.success === true) {
+        config.account_id = responseJSON.result[0].account.id;
+      }
+
+      // TODO: if there are more than one memberships,
+      // then we should show a drop down asking them to
+      // pick one.
+      // TODO: we should save this in node_modules/.cache
+      // so we don't have to always make this call
+    }
   }
 
-  if (!config.account_id) {
-    throw new Error("Missing account id");
-  }
+  // @ts-expect-error we're being sneaky here for now
+  config.__path__ = path;
 
   return config;
 }
@@ -346,11 +362,6 @@ export async function main(): Promise<void> {
           describe:
             "Host to forward requests to, defaults to the zone of project or to tutorial.cloudflareworkers.com if unauthenticated",
         })
-        .option("local", {
-          type: "boolean",
-          describe: "Run program locally",
-          default: false,
-        })
         .option("local-protocol", {
           default: "http",
           describe: "Protocol to listen to requests on, defaults to http.",
@@ -369,17 +380,39 @@ export async function main(): Promise<void> {
         format: format as CfScriptFormat,
         type: "esm" as CfModuleType,
       };
-      const apiToken = await getAPIToken();
+      let config = args.config as Config;
+      let apiToken = await getAPIToken();
       if (!apiToken) {
-        throw new Error("missing API token");
+        const loggedIn = await login();
+        if (loggedIn) {
+          apiToken = await getAPIToken();
+          // @ts-expect-error being sneaky
+          config = await readConfig(args.config.__path__);
+        } else {
+          // didn't login, let's just quit
+          return;
+        }
+      }
+
+      assert(
+        apiToken,
+        "This should never trigger, please file an issue if you see it"
+      );
+
+      // login
+
+      const accountId = config.account_id;
+      if (!accountId) {
+        throw new Error("Missing account id");
       }
 
       render(
         <App
           entry={filename}
           options={options}
+          initialMode={args.local ? "local" : "remote"}
           account={{
-            accountId: (args.config as Config).account_id,
+            accountId: accountId,
             apiToken,
           }}
         />
@@ -632,11 +665,13 @@ export async function main(): Promise<void> {
           async (args) => {
             console.log(":kv:namespace list", args);
             const api = await getAPI();
+            const accountId = (args.config as Config).account_id;
+            if (!accountId) {
+              throw new Error("Missing account id");
+            }
             // TODO: we should show bindings if they exist for given ids
             console.log(
-              await api.enterpriseZoneWorkersKVNamespaces.browse(
-                (args.config as Config).account_id
-              )
+              await api.enterpriseZoneWorkersKVNamespaces.browse(accountId)
             );
           }
         )
@@ -674,13 +709,14 @@ export async function main(): Promise<void> {
                 (namespace) => namespace.binding === args.binding
               )[args.preview ? "preview_id" : "id"];
             if (!id) {
-              throw new Error("Are your sure? id not found");
+              throw new Error("Are you sure? id not found");
             }
             const api = await getAPI();
-            api.enterpriseZoneWorkersKVNamespaces.del(
-              (args.config as Config).account_id,
-              id
-            );
+            const accountId = (args.config as Config).account_id;
+            if (!accountId) {
+              throw new Error("Missing account id");
+            }
+            api.enterpriseZoneWorkersKVNamespaces.del(accountId, id);
 
             // TODO: recommend they remove it from wrangler.toml
             // TODO: do it automatically
@@ -869,15 +905,23 @@ export async function main(): Promise<void> {
     }
   );
 
-  yargs.option("config", {
-    describe: "Path to .toml configuration file",
-    type: "string",
-    async coerce(arg) {
-      return readConfig(arg);
-    },
-  });
+  yargs
+    .option("config", {
+      describe: "Path to .toml configuration file",
+      type: "string",
+      async coerce(arg) {
+        return readConfig(arg);
+      },
+    })
+    .option("local", {
+      describe: "Run on my machine",
+      type: "boolean",
+      default: false, // I bet this will a point of contention. We'll revisit it.
+    });
 
   yargs.group(["config", "help", "version"], "Flags:");
+
+  await initialiseUserConfig();
 
   yargs.parse();
 

@@ -7,8 +7,7 @@ import { TextEncoder } from "node:util";
 import open from "open";
 import url from "node:url";
 import http from "node:http";
-import { readFileSync } from "node:fs";
-import { writeFile, rm } from "node:fs/promises";
+import { readFile, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import TOML from "@iarna/toml";
@@ -84,12 +83,16 @@ const CALLBACK_URL = "http://localhost:8976/oauth/callback";
 const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
 
 const LocalState: State = {};
+let initialised = false;
 
-{
+// we do this because we have some async stuff
+// TODO: this should just happen in the top level
+// abd we should fiure out how to do top level await
+export async function initialise(): Promise<void> {
   // get refreshtoken/accesstoken from fs if exists
   try {
     const toml = TOML.parse(
-      readFileSync(path.join(os.homedir(), ".wrangler/config/default.toml"), {
+      await readFile(path.join(os.homedir(), ".wrangler/config/default.toml"), {
         encoding: "utf-8",
       })
     );
@@ -107,6 +110,16 @@ const LocalState: State = {};
   } catch (err) {
     // no config yet, let's chill
     // console.error(err);
+  }
+  initialised = true;
+}
+
+// ugh. TODO: see fix from above.
+function throwIfNotInitialised() {
+  if (initialised === false) {
+    throw new Error(
+      "did you forget to call initialise() from the user module?"
+    );
   }
 }
 
@@ -567,19 +580,24 @@ function getErrorPage(err: Error) {
   `;
 }
 
-export async function login(props?: LoginProps): Promise<void> {
-  // TODO: if there already is a token, then logout first
+export async function loginOrRefreshIfRequired() {
+  // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
-  open(await getAuthURL(props?.scopes));
+}
+
+export async function login(props?: LoginProps): Promise<boolean> {
+  const urlToOpen = await getAuthURL(props?.scopes);
+  open(urlToOpen);
+  // console.log(`💁 Opened ${urlToOpen}`);
 
   return new Promise((resolve, reject) => {
     const server = http.createServer(async (req, res) => {
-      function finish(error?: Error) {
+      function finish(status: boolean, error?: Error) {
         server.close((closeErr?: Error) => {
           if (error || closeErr) {
             // render an error page
             reject(error || closeErr);
-          } else resolve();
+          } else resolve(status);
         });
       }
 
@@ -590,22 +608,26 @@ export async function login(props?: LoginProps): Promise<void> {
           let hasAuthCode = false;
           try {
             hasAuthCode = isReturningFromAuthServer(query);
-          } catch (err) {
+          } catch (err: unknown) {
             if (err instanceof ErrorAccessDenied) {
               res.writeHead(307, {
                 Location:
                   "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
               });
               res.end(finish);
+              console.log(
+                "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider using `wrangler config`"
+              ); // TODO: implement wrangler config lol
+
               return;
             } else {
-              finish(err);
+              finish(false, err as Error);
               return;
             }
           }
           if (!hasAuthCode) {
             // render an error page here
-            finish(new ErrorNoAuthCode());
+            finish(false, new ErrorNoAuthCode());
             return;
           } else {
             const tokenData = await exchangeAuthCodeForAccessToken();
@@ -614,7 +636,13 @@ export async function login(props?: LoginProps): Promise<void> {
               Location:
                 "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
             });
-            res.end(finish);
+            res.end(() => {
+              finish(true);
+            });
+            console.log(
+              `Successfully configured. You can find your configuration file at: ${os.homedir()}/.wrangler/config/default.toml`
+            );
+
             return;
           }
         }
@@ -629,11 +657,13 @@ export async function login(props?: LoginProps): Promise<void> {
  * Checks to see if the access token has expired.
  */
 export function isAccessTokenExpired(): boolean {
+  throwIfNotInitialised();
   const { accessToken } = LocalState;
   return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
 export async function refresh(): Promise<void> {
+  throwIfNotInitialised();
   // refresh
   try {
     const refreshed = await exchangeRefreshTokenForAccessToken();
@@ -646,6 +676,7 @@ export async function refresh(): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
+  throwIfNotInitialised();
   const { refreshToken } = LocalState;
   if (!refreshToken) {
     console.log("Not logged in, exiting...");
@@ -670,11 +701,12 @@ export async function logout(): Promise<void> {
   // delete the file
   await rm(path.join(os.homedir(), ".wrangler/config/default.toml"));
   console.log(
-    "Removing /Users/threepointone/.wrangler/config/default.toml.. success!"
+    `Removing ${os.homedir()}/.wrangler/config/default.toml.. success!`
   );
 }
 
 export function listScopes(): void {
+  throwIfNotInitialised();
   console.log("💁 Available scopes:");
   const data = Scopes.map((scope, index) => ({
     Scope: scope,
