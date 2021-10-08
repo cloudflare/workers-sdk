@@ -497,13 +497,44 @@ export async function main(): Promise<void> {
         "list",
         "List a route associated with a zone",
         (yargs) => {
-          return yargs.option("env", {
-            type: "string",
-            describe: "Perform on a specific environment",
-          });
+          return yargs
+            .option("env", {
+              type: "string",
+              describe: "Perform on a specific environment",
+            })
+            .option("zone", {
+              type: "string",
+              describe: "zone id",
+            })
+            .positional("zone", {
+              describe: "zone id",
+              type: "string",
+            });
         },
-        (args) => {
+        async (args) => {
           console.log(":route list", args);
+          // TODO: use environment (current wrangler doesn't do so?)
+          const apiToken = await getAPIToken();
+          const zone = args.zone || (args.config as Config).zone_id;
+          if (!zone) {
+            throw new Error("missing zone id");
+          }
+
+          const response = await fetch(
+            `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: "Bearer " + apiToken,
+              },
+            }
+          );
+          const json = await response.json();
+          if (json.success === true) {
+            console.log(json.result);
+          } else {
+            throw json.errors[0];
+          }
         }
       )
       .command(
@@ -515,13 +546,39 @@ export async function main(): Promise<void> {
               describe: "The hash of the route ID to delete.",
               type: "string",
             })
+            .option("zone", {
+              type: "string",
+              describe: "zone id",
+            })
             .option("env", {
               type: "string",
               describe: "Perform on a specific environment",
             });
         },
-        (args) => {
+        async (args) => {
           console.log(":route delete", args);
+          // TODO: use environment (current wrangler doesn't do so?)
+          const apiToken = await getAPIToken();
+          const zone = args.zone || (args.config as Config).zone_id;
+          if (!zone) {
+            throw new Error("missing zone id");
+          }
+
+          const response = await fetch(
+            `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes/${args.id}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: "Bearer " + apiToken,
+              },
+            }
+          );
+          const json = await response.json();
+          if (json.success === true) {
+            console.log(json.result);
+          } else {
+            throw json.errors[0];
+          }
         }
       );
   });

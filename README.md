@@ -16,14 +16,14 @@ middleware to add the apiToken into the yargs args
   - [ ] should watch mode be off by default?
 - [ ] custom port number
 - [ ] restart when session expires
-- [ ] login
+- [~] login
 
-  - [ ] read creds from somewhere
+  - [~] read creds from somewhere
   - [ ] if not logged in, automatically open a browser and ask to login, and save creds somewhere
 
 - [ ] my assumption is folks will use Pages (or something else?) for static assets; regardless, for local work there may be a need to serve it off the same localhost point. also figure out what the dev experience more widely would be.
-- [ ] sure would be nice to have typescript types for everything (including anything fancy that we add on to requests/responses)
-- [ ] `--local` mode should use miniflare?
+- [~] sure would be nice to have typescript types for everything (including anything fancy that we add on to requests/responses)
+- [~] `--local` mode should use miniflare?
 
 - [ ] have to be very careful when using types here. typescript assumes this is a browser environment, and I haven't figured out how to disable that.
   - should use types specific to our cloudflare environment, kv and all
@@ -32,9 +32,9 @@ middleware to add the apiToken into the yargs args
 - [ ] what's the rust/wasm story?
 - [ ] when running, maybe have keyboard shortcuts?
   - [x] B to open a browser.
-  - [ ] I to open inspector
+  - [~] I to open inspector
   - [x] S to share / tunnel
-  - [ ] L to toggle local mode
+  - [~] L to toggle local mode
 - [ ] warn on node polyfills
 - [ ] warn on bundle size
 - [ ] automatically get zone id stuff?
@@ -57,42 +57,47 @@ commands
 
 ---
 
-- [ ] DEPRECATE generate
-  - [ ] descibe alternatives
+- [💀] DEPRECATE generate
 - [ ] init
   - [ ] generate wrangler.toml
   - [ ] interactive flow
-- [ ] DEPRECATE build
+- [💀] DEPRECATE build
   - [ ] Q: what if folks want to see the generated script? For debugging or whatever.
-- [ ] login
-  - [ ] login
-  - [ ] refresh
-  - [ ] logout
-  - [ ] transparent refresh across commands
-- [ ] logout (same as login.logout)
-- [ ] DEPRECATE config
-  - [ ] describe alternative, still allow env vars
+- [~] login
+  - [~] login
+  - [~] refresh
+  - [~] logout
+  - [~] transparent refresh across commands
+- [~] logout (same as login.logout)
+- [💀] DEPRECATE config?
 - [ ] publish
   - [ ] how does this tie to new environments work?
 - [~] dev
   - [ ] seamless refresh (pause and resume incoming requests when rebuilding)
   - [ ] sourcemaps
-  - [ ]
 - [ ] tail
   - [ ] interactive (so you don't have to install the whole project just to tail)
-- [ ] DEPRECATE preview
-  - [ ] describe alternatives
+- [💀] DEPRECATE preview
 - [ ] route
   - [ ] list
   - [ ] delete
   - [ ] interactive
-- [ ] DEPRECATE subdomain
+- [ ] subdomain
   - [ ] describe alternatives (redirect to dashboard?)
 - [ ] secret put/delete/list
   - [ ] interactive?
 - [ ] kv
   - [~] kv:namespace
-  - [ ] kv:key
+  - [~] kv:key
   - [ ] kv:bulk
   - [ ] (all the commands)
   - [ ] interactive
+- [ ] cron / triggers
+- [ ] durable objects
+
+## config
+
+- to deprecate
+  - [ ] sites
+  - [ ] build? needs to be redone, really
+  - [ ] webpack_config
