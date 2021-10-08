@@ -19,6 +19,7 @@ import {
   listScopes,
   initialise as initialiseUserConfig,
 } from "./user";
+import { getNamespaceId } from "./commands/kv";
 
 import fetch from "node-fetch";
 import assert from "node:assert";
@@ -638,10 +639,13 @@ export async function main(): Promise<void> {
             console.log(`🌀 Creating namespace with title "${title}"`);
             const api = await getAPI();
 
-            const response = await api.enterpriseZoneWorkersKVNamespaces.add(
+            const response = (await api.enterpriseZoneWorkersKVNamespaces.add(
               config.account_id,
               { title }
-            );
+              // when there's better types on the api bindings
+              // this can be cleaned up
+            )) as { success: boolean; result: { id: string } };
+
             console.log(response);
             if (response.success) {
               console.log("✨ Success!");
@@ -747,7 +751,7 @@ export async function main(): Promise<void> {
               })
               .option("binding", {
                 type: "string",
-                describe: "The name of the namespace to write to.",
+                describe: "The binding of the namespace to write to.",
               })
               .option("namespace-id", {
                 type: "string",
@@ -776,8 +780,27 @@ export async function main(): Promise<void> {
                 describe: "Read value from the file at a given path.",
               });
           },
-          (args) => {
-            console.log(":kv:key put", args);
+          async ({ key, ttl, expiration, ...args }) => {
+            // TODO make the bindings better
+            if (ttl || expiration) {
+              console.warn(
+                "The cloudflare api bindings don't yet allow for ttl or expiration"
+              );
+            }
+            const namespaceId = getNamespaceId(args);
+            const value = args.value || (await readFile(args.path));
+            const accountId = (args.config as Config).account_id;
+
+            console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
+
+            const api = await getAPI();
+
+            return api.enterpriseZoneWorkersKV.add(
+              accountId,
+              namespaceId,
+              key,
+              value
+            );
           }
         )
         .command(
@@ -803,8 +826,18 @@ export async function main(): Promise<void> {
                 describe: "A prefix to filter listed keys",
               });
           },
-          (args) => {
-            console.log(":kv:key list", args);
+          async ({ prefix, ...args }) => {
+            if (prefix) {
+              console.warn(
+                "Current API bindings don't allow for prefix filtering!"
+              );
+            }
+
+            const namespaceId = getNamespaceId(args);
+            const accountId = (args.config as Config).account_id;
+
+            const api = await getAPI();
+            return api.enterpriseZoneWorkersKV.browse(accountId, namespaceId);
           }
         )
         .command(
@@ -834,8 +867,16 @@ export async function main(): Promise<void> {
                 describe: "Interact with a preview namespace",
               });
           },
-          (args) => {
-            console.log(":kv:key get", args);
+          async ({ key, ...args }) => {
+            const namespaceId = getNamespaceId(args);
+            const accountId = (args.config as Config).account_id;
+
+            const api = await getAPI();
+            return api.enterpriseZoneWorkersKV.read(
+              accountId,
+              namespaceId,
+              key
+            );
           }
         )
         .command(
@@ -865,8 +906,12 @@ export async function main(): Promise<void> {
                 describe: "Interact with a preview namespace",
               });
           },
-          (args) => {
-            console.log(":kv:key delete", args);
+          async ({ key, ...args }) => {
+            const namespaceId = getNamespaceId(args);
+            const accountId = (args.config as Config).account_id;
+
+            const api = await getAPI();
+            return api.enterpriseZoneWorkersKV.del(accountId, namespaceId, key);
           }
         );
     }
