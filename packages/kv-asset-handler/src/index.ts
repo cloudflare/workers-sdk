@@ -231,10 +231,10 @@ const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Pr
   if (response) {
     if (response.status > 300 && response.status < 400) {
       if (response.body && 'cancel' in Object.getPrototypeOf(response.body)) {
+        // Body exists and environment supports readable streams
         response.body.cancel()
-        console.log('Body exists and environment supports readable streams. Body cancelled')
       } else {
-        console.log('Environment doesnt support readable streams')
+        // Environment doesnt support readable streams, or null repsonse body. Nothing to do
       }
       response = new Response(null, response)
     } else {
