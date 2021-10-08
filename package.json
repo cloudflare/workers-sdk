@@ -17,7 +17,8 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "lint": "eslint src/**/*.ts --fix && tsc",
+    "lint": "eslint src/**",
+    "prettify": "prettier src/** --write",
     "bundle": "esbuild --bundle --platform=node --outdir=dist src/index_node.ts",
     "build": "npm run clean && npm run lint && npm run bundle",
     "start": "node --no-warnings --experimental-vm-modules -r esbuild-register src/index_node.ts"
@@ -51,6 +52,11 @@
       "eslint-plugin-react",
       "eslint-plugin-react-hooks"
     ],
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    },
     "overrides": [
       {
         "files": [

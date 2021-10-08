@@ -312,7 +312,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
     );
     throw new ErrorInvalidReturnedStateParam();
   }
-
+  assert(!Array.isArray(code));
   state.authorizationCode = code;
   state.hasAuthCodeBeenExchangedForAccessToken = false;
   return true;

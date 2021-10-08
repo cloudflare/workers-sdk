@@ -153,7 +153,7 @@ function useEsbuild(
         format: "esm", // TODO: verify what changes are needed here
         sourcemap: true,
         watch: {
-          async onRebuild(error, result) {
+          async onRebuild(error) {
             if (error) console.error("watch build failed:", error);
             else {
               // nothing really changes here, so let's increment the id
