@@ -1,4 +1,4 @@
-import { fetchCf } from "../util/fetch_cf";
+import cfetch from "../fetchwithauthandloginifrequired";
 import { fetchJson } from "../util/fetch";
 import { toFormData } from "./form_data";
 import type { CfAccount, CfWorkerInit } from "./worker";
@@ -57,10 +57,11 @@ export interface CfPreviewToken {
 async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
   const { accountId, zoneId } = account;
   const initUrl = zoneId
-    ? `/client/v4/zones/${zoneId}/workers/edge-preview`
-    : `/client/v4/accounts/${accountId}/workers/subdomain/edge-preview`;
+    ? `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/edge-preview`
+    : `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url: tokenUrl } = await fetchCf(account)(initUrl);
+  const { exchange_url: tokenUrl } = (await (await cfetch(initUrl)).json())
+    .result;
   const { inspector_websocket: url, token } = await fetchJson()(tokenUrl);
   const { host } = new URL(url);
   const query = `cf_workers_preview_token=${token}`;
@@ -95,7 +96,7 @@ export async function previewToken(
 
   const { accountId, zoneId } = account;
   const scriptId = zoneId ? randomId() : host.split(".")[0];
-  const url = `/client/v4/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode = zoneId ? { routes: ["*/*"] } : { workers_dev: true };
   const init = {
@@ -107,7 +108,8 @@ export async function previewToken(
   };
 
   // @ts-expect-error TODO: fix this type error!
-  const { preview_token: token } = await fetchCf(account)(url, init);
+  const { preview_token: token } = (await (await cfetch(url, init)).json())
+    .result;
   return {
     value: token,
     host,

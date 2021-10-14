@@ -36,6 +36,7 @@ type Build = {
   | {
       upload?: {
         format: "service-worker";
+        main: string;
       };
     }
   | {

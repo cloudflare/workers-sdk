@@ -123,6 +123,11 @@ function throwIfNotInitialised() {
   }
 }
 
+export async function getAPIToken(): Promise<string> {
+  throwIfNotInitialised();
+  return LocalState.accessToken?.value;
+}
+
 interface AccessContext {
   token?: AccessToken;
   scopes?: Scope[];
@@ -583,6 +588,16 @@ function getErrorPage(err: Error) {
 export async function loginOrRefreshIfRequired() {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
+
+  if (!LocalState.accessToken) {
+    // not logged in.
+    const loggedIn = await login();
+    if (!loggedIn) {
+      throw new Error("Did not login");
+    }
+  } else if (isAccessTokenExpired()) {
+    await refreshToken();
+  }
 }
 
 export async function login(props?: LoginProps): Promise<boolean> {
@@ -662,7 +677,7 @@ export function isAccessTokenExpired(): boolean {
   return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
-export async function refresh(): Promise<void> {
+export async function refreshToken(): Promise<void> {
   throwIfNotInitialised();
   // refresh
   try {

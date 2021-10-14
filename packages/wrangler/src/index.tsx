@@ -22,22 +22,11 @@ import {
 import { getNamespaceId } from "./commands/kv";
 
 import fetch from "node-fetch";
+import cfetch from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
+import publish from "./publish";
+import { getAPIToken } from "./user";
 
-async function getAPIToken() {
-  let apiToken: string | void;
-  try {
-    apiToken = /(oauth|api)_token = "([a-zA-Z0-9_\-.]*)"/.exec(
-      await readFile(
-        path.join(os.homedir(), ".wrangler/config/default.toml"),
-        "utf-8"
-      )
-    )[2];
-  } catch (err) {
-    // the file probably doesn't exist
-  }
-  return apiToken;
-}
 async function getAPI() {
   const apiToken = await getAPIToken();
   if (!apiToken) {
@@ -318,16 +307,32 @@ export async function main(): Promise<void> {
 
   // publish
   yargs.command(
-    "publish",
+    "publish [script] [name]",
     "🆙 Publish your Worker to Cloudflare.",
     (yargs) => {
-      return yargs.option("env", {
-        type: "string",
-        describe: "Perform on a specific environment",
-      });
+      return yargs
+        .option("env", {
+          type: "string",
+          describe: "Perform on a specific environment",
+        })
+        .positional("script", {
+          describe: "script to upload",
+          type: "string",
+        })
+        .positional("name", {
+          describe: "name to use when uploading",
+          type: "string",
+        });
     },
-    (args) => {
+    async (args) => {
       console.log(":publish", args);
+      const apiToken = await getAPIToken();
+      assert(apiToken, "Missing api token");
+      await publish({
+        config: args.config as Config,
+        name: args.name,
+        script: args.script,
+      });
     }
   );
 
@@ -391,6 +396,7 @@ export async function main(): Promise<void> {
           config = await readConfig(args.config.__path__);
         } else {
           // didn't login, let's just quit
+          console.log("Did not login, quitting...");
           return;
         }
       }
@@ -514,19 +520,15 @@ export async function main(): Promise<void> {
         async (args) => {
           console.log(":route list", args);
           // TODO: use environment (current wrangler doesn't do so?)
-          const apiToken = await getAPIToken();
           const zone = args.zone || (args.config as Config).zone_id;
           if (!zone) {
             throw new Error("missing zone id");
           }
 
-          const response = await fetch(
+          const response = await cfetch(
             `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes`,
             {
               method: "GET",
-              headers: {
-                Authorization: "Bearer " + apiToken,
-              },
             }
           );
           const json = await response.json();
@@ -564,14 +566,9 @@ export async function main(): Promise<void> {
             throw new Error("missing zone id");
           }
 
-          const response = await fetch(
+          const response = await cfetch(
             `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes/${args.id}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: "Bearer " + apiToken,
-              },
-            }
+            { method: "DELETE" }
           );
           const json = await response.json();
           if (json.success === true) {
