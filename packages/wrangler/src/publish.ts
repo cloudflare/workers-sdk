@@ -17,6 +17,7 @@ type Props = {
 };
 
 export default async function publish(props: Props): Promise<void> {
+  // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
   const {
     account_id: accountId,
@@ -45,7 +46,7 @@ export default async function publish(props: Props): Promise<void> {
   scriptName += props.env ? `-${props.env}` : "";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
-  const result = await esbuild.build({
+  await esbuild.build({
     entryPoints: [file],
     bundle: true,
     outdir: destination.path,
@@ -120,6 +121,7 @@ export default async function publish(props: Props): Promise<void> {
       )
     ).json();
 
+    // @ts-expect-error TODO: we need to have types for all cf api responses
     assert(subDomainResponse.result.subdomain, "subdomain is not registered");
 
     const mode = { workers_dev: true };

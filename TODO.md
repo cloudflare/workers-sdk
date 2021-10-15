@@ -9,7 +9,6 @@ middleware to add the apiToken into the yargs args
 - [ ] block requests while the new token etc are being generated
 - [ ] custom port number
 - [ ] restart when session expires
-
 - [ ] what's the rust/wasm story?
 - [ ] warn on node polyfills
 - [ ] warn on bundle size
@@ -19,6 +18,7 @@ middleware to add the apiToken into the yargs args
 - [ ] shut down inspector server on rebuild
 - [ ] when a worker starts up, it has to do 4 requests(!) in a row just to get the preview token and prewarm. Would be nice if this was a single call (and faster)
 - [ ] testssss
+- [ ] error reporting (ala https://github.com/cloudflare/wrangler/blob/master/src/reporter/mod.rs)
 
 commands
 
@@ -37,7 +37,7 @@ commands
   - [~] transparent refresh across commands
 - [~] logout (same as login.logout)
 - [💀] DEPRECATE config?
-- [ ] publish
+- [~] publish
   - [ ] how does this tie to new environments work?
 - [~] dev
   - [ ] seamless refresh (pause and resume incoming requests when rebuilding)
@@ -60,7 +60,7 @@ commands
   - [ ] kv:bulk
   - [ ] (all the commands)
   - [ ] interactive
-- [ ] cron / triggers
+- [ ] whoami
 - [ ] durable objects
 
 ## config
@@ -70,7 +70,7 @@ commands
   - [ ] build? needs to be redone, really
   - [ ] webpack_config
 
-- setup builds/publish
+- setup publish to npm
 - base acceptance with all commands
 - feature complete on all commands
 - production ready on all commands

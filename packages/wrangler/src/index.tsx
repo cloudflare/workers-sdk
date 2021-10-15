@@ -1,11 +1,9 @@
-import type { CfAccount, CfModuleType, CfScriptFormat } from "./api/worker";
+import type { CfModuleType, CfScriptFormat } from "./api/worker";
 
 import React from "react";
 import { render } from "ink";
 import { App } from "./app";
 import { readFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import makeCLI from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import cloudflareAPI from "cloudflare";
@@ -537,9 +535,12 @@ export async function main(): Promise<void> {
             }
           );
           const json = await response.json();
+          // @ts-expect-error TODO: we need to have types for all cf api responses
           if (json.success === true) {
+            // @ts-expect-error TODO: we need to have types for all cf api responses
             console.log(json.result);
           } else {
+            // @ts-expect-error TODO: we need to have types for all cf api responses
             throw json.errors[0];
           }
         }
@@ -565,7 +566,6 @@ export async function main(): Promise<void> {
         async (args) => {
           console.log(":route delete", args);
           // TODO: use environment (current wrangler doesn't do so?)
-          const apiToken = await getAPIToken();
           const zone = args.zone || (args.config as Config).zone_id;
           if (!zone) {
             throw new Error("missing zone id");
@@ -576,9 +576,12 @@ export async function main(): Promise<void> {
             { method: "DELETE" }
           );
           const json = await response.json();
+          // @ts-expect-error TODO: we need to have types for all cf api responses
           if (json.success === true) {
+            // @ts-expect-error TODO: we need to have types for all cf api responses
             console.log(json.result);
           } else {
+            // @ts-expect-error TODO: we need to have types for all cf api responses
             throw json.errors[0];
           }
         }

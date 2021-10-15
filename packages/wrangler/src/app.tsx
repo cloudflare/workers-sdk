@@ -15,8 +15,7 @@ import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
 import fetch from "node-fetch";
 import clipboardy from "clipboardy";
-import { Miniflare, ConsoleLog } from "miniflare";
-import type { Server } from "http";
+import onExit from "signal-exit";
 
 type Props = {
   entry: string;
@@ -87,35 +86,61 @@ function Local(props: {
 }
 
 function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
+  const local = useRef<ReturnType<typeof spawn>>();
+  const removeSignalExitListener = useRef<() => void>();
   useEffect(() => {
-    let mf: Miniflare;
-    let server: Server;
-    async function start() {
+    async function startLocalWorker() {
       if (!bundle) return;
       console.log("⎔ Starting a local server...");
-      mf = new Miniflare({
-        watch: true,
-        scriptPath: bundle.path,
-        log: new ConsoleLog(false),
-        modules: true,
-        sourceMap: true,
-        // to prevent reading any config
-        envPath: "./miniflare-config-stubs/.env.empty",
-        packagePath: "./miniflare-config-stubs/package.empty.json", // Containing empty object: {}
-        wranglerConfigPath: "./miniflare-config-stubs/wrangler.empty.toml",
+      local.current = spawn("node", [
+        "--experimental-vm-modules",
+        "--inspect",
+        require.resolve("miniflare/dist/cli"),
+        bundle.path,
+        "--watch",
+        "--wrangler-config",
+        "./miniflare-config-stubs/wrangler.empty.toml",
+        "--env",
+        "miniflare-config-stubs/.env.empty",
+        "--package",
+        "miniflare-config-stubs/package.empty.json",
+        "--modules",
+        type === "esm" ? "true" : "false",
+      ]);
+
+      local.current.on("close", (code) => {
+        if (code !== 0) {
+          console.log(`miniflare process exited with code ${code}`);
+        }
       });
-      server = mf.createServer().listen(8787);
-      console.log("⬣ Listening at http://localhost:8787");
-    }
-    start();
-    return () => {
-      if (mf) {
+
+      local.current.stdout.on("data", (data) => {
+        console.log(`stdout: ${data}`);
+      });
+
+      local.current.stderr.on("data", (data) => {
+        console.error(`stderr: ${data}`);
+      });
+
+      removeSignalExitListener.current = onExit((code, signal) => {
         console.log("⎔ Shutting down local server.");
+        local.current?.kill();
+        local.current = undefined;
+      });
+    }
+
+    startLocalWorker();
+
+    return () => {
+      if (local.current) {
+        console.log("⎔ Shutting down local server.");
+        local.current?.kill();
+        local.current = undefined;
+        removeSignalExitListener.current && removeSignalExitListener.current();
+        removeSignalExitListener.current = undefined;
       }
-      mf?.dispose();
-      server?.close();
     };
-  }, [bundle]);
+  }, [bundle, type]);
 }
 
 function useTmpDir(): string | void {
@@ -353,6 +378,7 @@ function useHotkeys(initial: useHotkeysInitialState) {
         case "l": // toggle local
           setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
           break;
+        case "q": // shut down
         case "x": // shut down
           process.exit(0);
           break;

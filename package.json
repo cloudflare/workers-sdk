@@ -12,19 +12,20 @@
     "packages/*"
   ],
   "dependencies": {
-    "@types/node": "^16.4.13",
-    "@typescript-eslint/eslint-plugin": "^4.29.1",
-    "@typescript-eslint/parser": "^4.29.1",
+    "@types/node": "^16.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
     "esbuild-register": "^3.0.0",
     "eslint": "^7.32.0",
-    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react": "^7.26.1",
     "eslint-plugin-react-hooks": "^4.2.0",
-    "prettier": "^2.3.2",
+    "prettier": "^2.4.1",
     "source-map-explorer": "^2.5.2",
-    "typescript": "^4.3.5"
+    "typescript": "^4.4.4"
   },
   "scripts": {
     "lint": "eslint packages/**",
+    "check": "tsc && npm run lint",
     "prettify": "prettier packages/** --write"
   },
   "engines": {

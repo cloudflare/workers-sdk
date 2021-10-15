@@ -60,8 +60,9 @@ async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
     ? `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/edge-preview`
     : `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url: tokenUrl } = (await (await cfetch(initUrl)).json())
-    .result;
+  const { exchange_url: tokenUrl } =
+    // @ts-expect-error TODO: fix this
+    (await (await cfetch(initUrl)).json()).result;
   const { inspector_websocket: url, token } = await fetchJson()(tokenUrl);
   const { host } = new URL(url);
   const query = `cf_workers_preview_token=${token}`;
@@ -107,9 +108,9 @@ export async function previewToken(
     },
   };
 
-  // @ts-expect-error TODO: fix this type error!
-  const { preview_token: token } = (await (await cfetch(url, init)).json())
-    .result;
+  const { preview_token: token } =
+    // @ts-expect-error TODO: fix this
+    (await (await cfetch(url, init)).json()).result;
   return {
     value: token,
     host,
