@@ -322,6 +322,10 @@ export async function main(): Promise<void> {
         .option("name", {
           describe: "name to use when uploading",
           type: "string",
+        })
+        .option("triggers", {
+          describe: "an array of crons",
+          type: "array",
         });
     },
     async (args) => {

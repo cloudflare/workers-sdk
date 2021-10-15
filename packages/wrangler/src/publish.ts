@@ -13,6 +13,7 @@ type Props = {
   script?: string;
   name?: string;
   env?: string;
+  triggers?: string[];
 };
 
 export default async function publish(props: Props): Promise<void> {
@@ -24,8 +25,9 @@ export default async function publish(props: Props): Promise<void> {
     build,
     // @ts-expect-error hidden
     __path__,
-    triggers,
   } = config;
+
+  const triggers = props.triggers || config.triggers?.crons;
 
   assert(config.account_id, "missing account id");
 
@@ -38,6 +40,9 @@ export default async function publish(props: Props): Promise<void> {
     assert(config.name, "missing name");
     file = path.join(path.dirname(__path__), build.upload.main);
   }
+
+  let scriptName = props.script ? props.name : config.name;
+  scriptName += props.env ? `-${props.env}` : "";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
   const result = await esbuild.build({
@@ -66,8 +71,42 @@ export default async function publish(props: Props): Promise<void> {
       type: "esm", // TODO: this should read from build.upload format
     },
   };
+
   if (triggers) {
-    // TODO: scheduled workers
+    const mode = { workers_dev: true };
+    const init = {
+      method: "PUT",
+      body: toFormData(worker, mode),
+    };
+    console.log("publishing to workers.dev subdomain");
+
+    console.log(
+      await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
+          // @ts-expect-error TODO: fix this type error!
+          init
+        )
+      ).json()
+    );
+
+    // then mark it as a cron
+    console.log(
+      await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+              triggers.map((trigger) => ({ cron: trigger }))
+            ),
+          }
+        )
+      ).json()
+    );
   } else if (zoneId) {
     // TODO: zoned
   } else {
@@ -89,35 +128,33 @@ export default async function publish(props: Props): Promise<void> {
       body: toFormData(worker, mode),
     };
     console.log("publishing to workers.dev subdomain");
-    const response = await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${
-        props.script ? props.name : config.name
-      }${props.env ? `-${props.env}` : ""}`,
-      // @ts-expect-error TODO: fix this type error!
-      init
+    console.log(
+      await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
+          // @ts-expect-error TODO: fix this type error!
+          init
+        )
+      ).json()
     );
-
-    console.log(await response.json());
 
     // ok now enable it
     console.log("Making public on subdomain...");
-    const json = await (
-      await cfetch(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${
-          props.script ? props.name : config.name // we don't want to add the env to the name here
-        }/subdomain`,
-        {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
-          body: JSON.stringify({
-            enabled: true,
-          }),
-        }
-      )
-    ).json();
-
-    console.log(json);
+    console.log(
+      await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
+          {
+            method: "POST",
+            headers: {
+              "Content-type": "application/json",
+            },
+            body: JSON.stringify({
+              enabled: true,
+            }),
+          }
+        )
+      ).json()
+    );
   }
 }

@@ -65,7 +65,7 @@ type Env = {
   webpack_config?: string; // inherited
   site?: Site;
   // we should use typescript to parse cron patterns
-  triggers?: string[]; // inherited
+  triggers?: { crons: Cron[] }; // inherited
   kv_namespaces?: KVNamespace[];
 };
 
@@ -87,7 +87,7 @@ export type Config = {
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited
   // we should use typescript to parse cron patterns
-  triggers?: Cron[]; // inherited
+  triggers?: { crons: Cron[] }; // inherited
   dev?: Dev;
   usage_model?: UsageModel; // inherited
   // top level
