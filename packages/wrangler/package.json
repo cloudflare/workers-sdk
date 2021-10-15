@@ -1,5 +1,5 @@
 {
-  "name": "rangla",
+  "name": "wrangler",
   "version": "0.0.0",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",

@@ -12,6 +12,7 @@ type Props = {
   config: Config;
   script?: string;
   name?: string;
+  env?: string;
 };
 
 export default async function publish(props: Props): Promise<void> {
@@ -91,7 +92,7 @@ export default async function publish(props: Props): Promise<void> {
     const response = await cfetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${
         props.script ? props.name : config.name
-      }`,
+      }${props.env ? `-${props.env}` : ""}`,
       // @ts-expect-error TODO: fix this type error!
       init
     );
@@ -103,7 +104,7 @@ export default async function publish(props: Props): Promise<void> {
     const json = await (
       await cfetch(
         `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${
-          props.script ? props.name : config.name
+          props.script ? props.name : config.name // we don't want to add the env to the name here
         }/subdomain`,
         {
           method: "POST",

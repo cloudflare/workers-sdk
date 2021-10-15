@@ -1,5 +1,5 @@
 {
-  "name": "rangla-root",
+  "name": "wrangler-root",
   "version": "0.0.0",
   "author": "wrangler@cloudflare.com",
   "description": "Monorepo for wrangler and associated packages",

@@ -307,7 +307,7 @@ export async function main(): Promise<void> {
 
   // publish
   yargs.command(
-    "publish [script] [name]",
+    "publish [script]",
     "🆙 Publish your Worker to Cloudflare.",
     (yargs) => {
       return yargs
@@ -319,7 +319,7 @@ export async function main(): Promise<void> {
           describe: "script to upload",
           type: "string",
         })
-        .positional("name", {
+        .option("name", {
           describe: "name to use when uploading",
           type: "string",
         });
@@ -332,6 +332,7 @@ export async function main(): Promise<void> {
         config: args.config as Config,
         name: args.name,
         script: args.script,
+        env: args.env,
       });
     }
   );
