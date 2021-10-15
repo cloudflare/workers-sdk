@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noImplicitAny": true,
-    "target": "es6",
+    "target": "ES2017",
     "allowJs": false,
     "lib": ["WebWorker", "ES5", "ScriptHost"],
     "module": "commonjs",
