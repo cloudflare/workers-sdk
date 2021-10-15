@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@ava/typescript": "^2.0.0",
-    "@cloudflare/workers-types": "^2.2.2",
+    "@cloudflare/workers-types": "^3.0.0",
     "@types/mime": "^2.0.3",
     "@types/node": "^15.14.9",
     "ava": "^3.15.0",
