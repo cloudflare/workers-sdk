@@ -26,7 +26,7 @@ const getAssetFromKVDefaultOptions: Partial<Options> = {
   ASSET_MANIFEST:
     typeof __STATIC_CONTENT_MANIFEST !== 'undefined'
       ? parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST)
-      : undefined,
+      : {},
   cacheControl: defaultCacheControl,
   defaultMimeType: 'text/plain',
   defaultDocument: 'index.html',
