@@ -23,15 +23,15 @@ The Cloudflare Workers Discord server is an active place where Workers users get
     - [`mapRequestToAsset`](#-maprequesttoasset)
     - [Example](#example-1)
     - [`cacheControl`](#-cachecontrol)
-      - [`browserTTL`](#-browserttl)
-      - [`edgeTTL`](#-edgettl)
-      - [`bypassCache`](#-bypasscache)
-    - [`ASSET_NAMESPACE`](#-asset-namespace)
-    - [`ASSET_MANIFEST` (optional)](#-asset-manifest---optional)
+      - [`browserTTL`](#browserttl)
+      - [`edgeTTL`](#edgettl)
+      - [`bypassCache`](#bypasscache)
+    - [`ASSET_NAMESPACE`](#asset_namespace)
+    - [`ASSET_MANIFEST` (optional)](#asset_manifest-optional)
 
 * [Helper functions](#helper-functions)
-  - [`mapRequestToAsset`](#-maprequesttoasset-1)
-  - [`serveSinglePageApp`](#-servesinglepageapp)
+  - [`mapRequestToAsset`](#maprequesttoasset-1)
+  - [`serveSinglePageApp`](#servesinglepageapp)
 * [Cache revalidation and etags](#cache-revalidation-and-etags)
 
 ## Installation
