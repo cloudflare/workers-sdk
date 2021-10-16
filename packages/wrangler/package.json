@@ -45,6 +45,7 @@
     "@iarna/toml": "^2.2.5",
     "@types/cloudflare": "^2.7.6",
     "@types/react": "^17.0.19",
+    "@types/signal-exit": "^3.0.1",
     "@types/ws": "^7.4.7",
     "@types/yargs": "^17.0.2",
     "clipboardy": "^2.3.0",

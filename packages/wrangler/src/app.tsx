@@ -302,6 +302,7 @@ async function findTunnelHostname() {
 
 function useTunnel(toggle: boolean) {
   const tunnel = useRef<ReturnType<typeof spawn>>();
+  const removeSignalExitListener = useRef<() => void>();
   useEffect(() => {
     async function startTunnel() {
       if (toggle) {
@@ -320,6 +321,12 @@ function useTunnel(toggle: boolean) {
           }
         });
 
+        removeSignalExitListener.current = onExit((code, signal) => {
+          console.log("⎔ Shutting down local server.");
+          tunnel.current?.kill();
+          tunnel.current = undefined;
+        });
+
         const hostName = await findTunnelHostname();
         clipboardy.write(hostName);
         console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
@@ -333,6 +340,8 @@ function useTunnel(toggle: boolean) {
         console.log("⎔ Shutting down tunnel.");
         tunnel.current?.kill();
         tunnel.current = undefined;
+        removeSignalExitListener.current && removeSignalExitListener.current();
+        removeSignalExitListener.current = undefined;
       }
     };
   }, [toggle]);
