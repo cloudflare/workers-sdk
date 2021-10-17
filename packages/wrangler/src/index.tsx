@@ -863,25 +863,20 @@ export async function main(): Promise<void> {
               });
           },
           async ({ key, ttl, expiration, ...args }) => {
-            // TODO make the bindings better
-            if (ttl || expiration) {
-              console.warn(
-                "The cloudflare api bindings don't yet allow for ttl or expiration"
-              );
-            }
             const namespaceId = getNamespaceId(args);
-            const value = args.value || (await readFile(args.path));
+            const value = args.path ? await readFile(args.path) : args.value;
             const accountId = (args.config as Config).account_id;
 
             console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
 
-            const api = await getAPI();
-
-            return api.enterpriseZoneWorkersKV.add(
-              accountId,
-              namespaceId,
-              key,
-              value
+            console.log(
+              await (
+                await cfetch(
+                  `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
+                    expiration ? `expiration=${expiration}` : ""
+                  }${ttl ? `expiration_ttl=${ttl}` : ""}`
+                )
+              ).json()
             );
           }
         )
@@ -909,17 +904,20 @@ export async function main(): Promise<void> {
               });
           },
           async ({ prefix, ...args }) => {
-            if (prefix) {
-              console.warn(
-                "Current API bindings don't allow for prefix filtering!"
-              );
-            }
+            // TODO: support for limit+cursor (pagination)
 
             const namespaceId = getNamespaceId(args);
             const accountId = (args.config as Config).account_id;
 
-            const api = await getAPI();
-            return api.enterpriseZoneWorkersKV.browse(accountId, namespaceId);
+            console.log(
+              await (
+                await cfetch(
+                  `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys/?${
+                    prefix ? `prefix=${prefix}` : ""
+                  }`
+                )
+              ).json()
+            );
           }
         )
         .command(
