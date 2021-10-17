@@ -132,6 +132,9 @@ export async function createWorker(
   account: CfAccount
 ): Promise<CfPreviewToken> {
   const token = await previewToken(account, init);
-  await fetch(token.prewarmUrl.href, { method: "POST" });
+  const response = await fetch(token.prewarmUrl.href, { method: "POST" });
+  if (!response.ok) {
+    // console.error("worker failed to prewarm: ", response.statusText);
+  }
   return token;
 }

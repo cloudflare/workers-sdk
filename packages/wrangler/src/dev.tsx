@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfModuleType, CfScriptFormat } from "./api/worker";
+import type { CfModuleType, CfScriptFormat, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -22,6 +22,7 @@ type Props = {
   options: { type: CfModuleType; format: CfScriptFormat };
   account: CfAccount;
   initialMode: "local" | "remote";
+  variables?: { [name: string]: CfVariable };
 };
 
 export function App(props: Props): JSX.Element {
@@ -73,7 +74,7 @@ function Remote(props: {
 
   useProxy(token);
 
-  useInspector(token);
+  useInspector(token ? token.inspectorUrl.href : undefined);
   return null;
 }
 function Local(props: {
@@ -81,13 +82,15 @@ function Local(props: {
   options: { type: CfModuleType };
   account: CfAccount;
 }) {
-  useLocalWorker(props.bundle, props.options.type);
+  const { inspectorUrl } = useLocalWorker(props.bundle, props.options.type);
+  useInspector(inspectorUrl);
   return null;
 }
 
 function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
+  const [inspectorUrl, setInspectorUrl] = useState<string | void>();
   useEffect(() => {
     async function startLocalWorker() {
       if (!bundle) return;
@@ -107,19 +110,27 @@ function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
         "--modules",
         type === "esm" ? "true" : "false",
       ]);
+      console.log("⬣ Listening at http://localhost:8787");
 
       local.current.on("close", (code) => {
-        if (code !== 0) {
+        if (code !== null) {
           console.log(`miniflare process exited with code ${code}`);
         }
       });
 
-      local.current.stdout.on("data", (data) => {
-        console.log(`stdout: ${data}`);
+      local.current.stdout.on("data", (data: string) => {
+        // console.log(`stdout: ${data}`);
       });
 
-      local.current.stderr.on("data", (data) => {
-        console.error(`stderr: ${data}`);
+      local.current.stderr.on("data", (data: string) => {
+        // console.error(`stderr: ${data}`);
+        const matches =
+          /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
+            data
+          );
+        if (matches) {
+          setInspectorUrl(matches[1]);
+        }
       });
 
       removeSignalExitListener.current = onExit((code, signal) => {
@@ -141,6 +152,7 @@ function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
       }
     };
   }, [bundle, type]);
+  return { inspectorUrl };
 }
 
 function useTmpDir(): string | void {
@@ -268,19 +280,20 @@ function useProxy(token: CfPreviewToken | void) {
   }, [token]);
 }
 
-function useInspector(token: CfPreviewToken | void) {
+function useInspector(inspectorUrl: string | void) {
   useEffect(() => {
-    if (!token) return;
-    const inspector = new DtInspector(token.inspectorUrl.href);
+    if (!inspectorUrl) return;
+
+    const inspector = new DtInspector(inspectorUrl);
     const abortController = inspector.proxyTo(9229);
     return () => {
       inspector.close();
       abortController.abort();
     };
-  }, [token]);
+  }, [inspectorUrl]);
 }
 
-function sleep(period) {
+function sleep(period: number) {
   return new Promise((resolve) => setTimeout(resolve, period));
 }
 const SLEEP_DURATION = 2000;
@@ -322,7 +335,7 @@ function useTunnel(toggle: boolean) {
         });
 
         removeSignalExitListener.current = onExit((code, signal) => {
-          console.log("⎔ Shutting down local server.");
+          console.log("⎔ Shutting down local tunnel.");
           tunnel.current?.kill();
           tunnel.current = undefined;
         });

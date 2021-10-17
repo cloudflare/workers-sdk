@@ -208,7 +208,11 @@ export class DtInspector {
    */
   close(): void {
     if (!this.closed) {
-      this.#webSocket.close();
+      try {
+        this.#webSocket.close();
+      } catch (err) {
+        // Closing before the websocket is ready will throw an error.
+      }
     }
     // this.#events = [];
   }
@@ -346,7 +350,10 @@ function bind(fetcher: FetchServer, port?: number): AbortController {
   }
 
   const socket = server.listen({ port });
-  controller.signal.onabort = () => socket.close();
+  controller.signal.onabort = () => {
+    server.close();
+    socket.close();
+  };
   return controller;
 }
 

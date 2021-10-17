@@ -445,6 +445,7 @@ export async function main(): Promise<void> {
             accountId: accountId,
             apiToken,
           }}
+          variables={{}}
         />
       );
     }
