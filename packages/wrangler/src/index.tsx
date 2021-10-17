@@ -2,7 +2,7 @@ import type { CfModuleType, CfScriptFormat } from "./api/worker";
 
 import React from "react";
 import { render } from "ink";
-import { App } from "./app";
+import { App } from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
@@ -18,7 +18,7 @@ import {
   initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
 } from "./user";
-import { getNamespaceId } from "./commands/kv";
+import { getNamespaceId } from "./kv";
 
 import fetch from "node-fetch";
 import cfetch from "./fetchwithauthandloginifrequired";
