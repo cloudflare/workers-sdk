@@ -100,9 +100,11 @@ export async function previewToken(
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode = zoneId ? { routes: ["*/*"] } : { workers_dev: true };
+  const formData = toFormData(worker);
+  formData.set("wrangler-session-config", JSON.stringify(mode));
   const init = {
     method: "POST",
-    body: toFormData(worker, mode),
+    body: formData,
     headers: {
       "cf-preview-upload-config-token": value,
     },

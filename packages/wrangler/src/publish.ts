@@ -13,7 +13,9 @@ type Props = {
   script?: string;
   name?: string;
   env?: string;
-  triggers?: string[];
+  triggers?: (string | number)[];
+  zone?: string;
+  routes?: (string | number)[];
 };
 
 export default async function publish(props: Props): Promise<void> {
@@ -21,14 +23,14 @@ export default async function publish(props: Props): Promise<void> {
   const { config } = props;
   const {
     account_id: accountId,
-    zone_id: zoneId,
-    //name,
     build,
     // @ts-expect-error hidden
     __path__,
   } = config;
 
   const triggers = props.triggers || config.triggers?.crons;
+  const zone = props.zone || config.zone_id;
+  const routes = props.routes || config.routes;
 
   assert(config.account_id, "missing account id");
 
@@ -59,9 +61,7 @@ export default async function publish(props: Props): Promise<void> {
       destination.path,
       props.script ? path.basename(props.script) : build.upload?.main
     ),
-    {
-      encoding: "utf-8",
-    }
+    { encoding: "utf-8" }
   );
   destination.cleanup();
 
@@ -74,19 +74,17 @@ export default async function publish(props: Props): Promise<void> {
   };
 
   if (triggers) {
-    const mode = { workers_dev: true };
-    const init = {
-      method: "PUT",
-      body: toFormData(worker, mode),
-    };
     console.log("publishing to workers.dev subdomain");
 
     console.log(
       await (
         await cfetch(
           `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
-          // @ts-expect-error TODO: fix this type error!
-          init
+          {
+            method: "PUT",
+            // @ts-expect-error TODO: fix this type error!
+            body: toFormData(worker),
+          }
         )
       ).json()
     );
@@ -102,14 +100,93 @@ export default async function publish(props: Props): Promise<void> {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(
-              triggers.map((trigger) => ({ cron: trigger }))
+              triggers.map((trigger) => ({ cron: `${trigger}` }))
             ),
           }
         )
       ).json()
     );
-  } else if (zoneId) {
-    // TODO: zoned
+  } else if (zone) {
+    if (!routes) {
+      throw new Error("missing routes");
+    }
+    // if zoneid is a domain, convert to zone id
+    let zoneId: string;
+    if (zone.indexOf(".") > -1) {
+      // TODO: verify this is a domain properly
+      const zoneResult = await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(
+            zone
+          )}`
+        )
+      ).json();
+      console.log(zoneResult);
+      // @ts-expect-error TODO: fix this type error!
+      zoneId = zoneResult.result[0].id;
+    } else {
+      zoneId = zone;
+    }
+
+    // get all routes for this zone
+
+    const allRoutes = await (
+      await cfetch(
+        `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`
+      )
+    ).json();
+
+    console.log(allRoutes);
+
+    // upload the script
+
+    console.log(
+      await (
+        await cfetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
+          {
+            method: "PUT",
+            // @ts-expect-error TODO: fix this type error!
+            body: toFormData(worker),
+          }
+        )
+      ).json()
+    );
+
+    for (const route of routes) {
+      // @ts-expect-error TODO: fix this type error!
+      const matchingRoute = allRoutes.result.find((r) => r.pattern === route);
+      if (!matchingRoute) {
+        console.log(`publishing ${scriptName} to ${route}`);
+        const json = await (
+          await cfetch(
+            `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                pattern: route,
+                script: scriptName,
+              }),
+            }
+          )
+        ).json();
+        console.log(json);
+      } else {
+        if (matchingRoute.script !== scriptName) {
+          // conflict;
+          console.error(
+            `A worker with a different name "${matchingRoute.script}" was previously deployed to the specified route ${route}, skipping...`
+          );
+        } else {
+          console.log(
+            `${scriptName} already published to ${route}, skipping...`
+          );
+        }
+      }
+    }
   } else {
     console.log("checking that subdomain is registered");
     // check if subdomain is registered
@@ -124,18 +201,16 @@ export default async function publish(props: Props): Promise<void> {
     // @ts-expect-error TODO: we need to have types for all cf api responses
     assert(subDomainResponse.result.subdomain, "subdomain is not registered");
 
-    const mode = { workers_dev: true };
-    const init = {
-      method: "PUT",
-      body: toFormData(worker, mode),
-    };
     console.log("publishing to workers.dev subdomain");
     console.log(
       await (
         await cfetch(
           `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
-          // @ts-expect-error TODO: fix this type error!
-          init
+          {
+            method: "PUT",
+            // @ts-expect-error TODO: fix this type error!
+            body: toFormData(worker),
+          }
         )
       ).json()
     );

@@ -585,7 +585,7 @@ function getErrorPage(err: Error) {
   `;
 }
 
-export async function loginOrRefreshIfRequired() {
+export async function loginOrRefreshIfRequired(): Promise<void> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
 

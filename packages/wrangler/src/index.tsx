@@ -16,6 +16,7 @@ import {
   logout,
   listScopes,
   initialise as initialiseUserConfig,
+  loginOrRefreshIfRequired,
 } from "./user";
 import { getNamespaceId } from "./commands/kv";
 
@@ -324,6 +325,16 @@ export async function main(): Promise<void> {
         .option("triggers", {
           describe: "an array of crons",
           type: "array",
+        })
+        .option("zone", {
+          describe: "a domain or a zone id",
+          alias: "zone_id",
+          type: "string",
+        })
+        .option("routes", {
+          describe: "routes to upload",
+          alias: "route",
+          type: "array",
         });
     },
     async (args) => {
@@ -335,6 +346,9 @@ export async function main(): Promise<void> {
         name: args.name,
         script: args.script,
         env: args.env,
+        zone: args.zone,
+        triggers: args.triggers,
+        routes: args.routes,
       });
     }
   );
@@ -390,6 +404,12 @@ export async function main(): Promise<void> {
         type: "esm" as CfModuleType,
       };
       let config = args.config as Config;
+      if (!args.local) {
+        await loginOrRefreshIfRequired();
+        // TODO: this is a hack
+        // @ts-expect-error being sneaky
+        config = await readConfig(args.config.__path__);
+      }
       let apiToken = await getAPIToken();
       if (!apiToken) {
         const loggedIn = await login();

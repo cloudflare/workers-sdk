@@ -83,10 +83,7 @@ function toModule(module: CfModule, entryType?: CfModuleType): Blob {
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
-export function toFormData(
-  worker: CfWorkerInit,
-  preview?: CfPreviewMode
-): FormData {
+export function toFormData(worker: CfWorkerInit): FormData {
   const formData = new FormData();
   const { main, modules, variables } = worker;
   const { name, type: mainType } = main;
@@ -115,10 +112,6 @@ export function toFormData(
     const { name } = module;
     const blob = toModule(module, mainType ?? "esm");
     formData.set(name, blob, name);
-  }
-
-  if (preview) {
-    formData.set("wrangler-session-config", JSON.stringify(preview));
   }
 
   return formData;
