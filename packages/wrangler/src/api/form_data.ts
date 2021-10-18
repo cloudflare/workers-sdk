@@ -6,7 +6,6 @@ import type {
   CfKvNamespace,
   CfCryptoKey,
 } from "./worker.js";
-import type { CfPreviewMode } from "./preview.js";
 import { FormData, Blob } from "formdata-node";
 
 // Credit: https://stackoverflow.com/a/9458996
