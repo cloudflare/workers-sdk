@@ -35,7 +35,6 @@
   "dependencies": {
     "esbuild": "^0.12.19",
     "miniflare": "^1.3.3",
-    "signal-exit": "^3.0.5",
     "yargs": "^17.1.1"
   },
   "optionalDependencies": {
@@ -58,6 +57,7 @@
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
     "open": "^8.2.1",
     "react": "^17.0.2",
+    "signal-exit": "^3.0.5",
     "tmp-promise": "^3.0.2",
     "ws": "^8.2.0"
   },
