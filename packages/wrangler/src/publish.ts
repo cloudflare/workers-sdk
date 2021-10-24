@@ -48,21 +48,19 @@ export default async function publish(props: Props): Promise<void> {
   scriptName += props.env ? `-${props.env}` : "";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
-  await esbuild.build({
+  const result = await esbuild.build({
     entryPoints: [file],
     bundle: true,
     outdir: destination.path,
     format: "esm", // TODO: verify what changes are needed here
     sourcemap: true,
+    metafile: true,
   });
-
-  const content = await readFile(
-    path.join(
-      destination.path,
-      props.script ? path.basename(props.script) : build.upload?.main
-    ),
-    { encoding: "utf-8" }
+  const [filepath] = Object.entries(result.metafile.outputs).find(
+    ([path, { entryPoint }]) => entryPoint === file
   );
+
+  const content = await readFile(filepath, { encoding: "utf-8" });
   destination.cleanup();
 
   const worker: CfWorkerInit = {

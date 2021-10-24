@@ -182,6 +182,7 @@ function useEsbuild(
         entryPoints: [entry],
         bundle: true,
         outdir: destination,
+        metafile: true,
         format: "esm", // TODO: verify what changes are needed here
         sourcemap: true,
         watch: {
@@ -195,10 +196,15 @@ function useEsbuild(
           },
         },
       });
+
+      const [filepath] = Object.entries(result.metafile.outputs).find(
+        ([path, { entryPoint }]) => entryPoint === entry
+      );
+
       setBundle({
         id: 0,
         entry,
-        path: path.join(destination, path.basename(entry)),
+        path: filepath,
       });
     }
     build();
