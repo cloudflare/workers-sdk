@@ -32,10 +32,7 @@ export function App(props: Props): JSX.Element {
 
   const toggles = useHotkeys({
     local: props.initialMode === "local",
-    tunnel: false,
   });
-
-  useTunnel(toggles.tunnel);
 
   return (
     <>
@@ -54,9 +51,7 @@ export function App(props: Props): JSX.Element {
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text>
-          {`B to open a browser, D to open Devtools, S to ${
-            toggles.tunnel ? "turn off" : "turn on"
-          } sharing, L to ${
+          {`B to open a browser, D to open Devtools, L to ${
             toggles.local ? "turn off" : "turn on"
           } local mode, X to exit`}
         </Text>
@@ -293,76 +288,8 @@ function useInspector(inspectorUrl: string | void) {
   }, [inspectorUrl]);
 }
 
-function sleep(period: number) {
-  return new Promise((resolve) => setTimeout(resolve, period));
-}
-const SLEEP_DURATION = 2000;
-const hostNameRegex = /userHostname="(.*)"/g;
-async function findTunnelHostname() {
-  let hostName: string;
-  while (!hostName) {
-    try {
-      const resp = await fetch("http://localhost:8789/metrics");
-      const data = await resp.text();
-      const matches = Array.from(data.matchAll(hostNameRegex));
-      hostName = matches[0][1];
-    } catch (err) {
-      await sleep(SLEEP_DURATION);
-    }
-  }
-  return hostName;
-}
-
-function useTunnel(toggle: boolean) {
-  const tunnel = useRef<ReturnType<typeof spawn>>();
-  const removeSignalExitListener = useRef<() => void>();
-  useEffect(() => {
-    async function startTunnel() {
-      if (toggle) {
-        console.log("⎔ Starting a tunnel...");
-        tunnel.current = spawn("cloudflared", [
-          "tunnel",
-          "--url",
-          "http://localhost:8787",
-          "--metrics",
-          "localhost:8789",
-        ]);
-
-        tunnel.current.on("close", (code) => {
-          if (code !== 0) {
-            console.log(`Tunnel process exited with code ${code}`);
-          }
-        });
-
-        removeSignalExitListener.current = onExit((code, signal) => {
-          console.log("⎔ Shutting down local tunnel.");
-          tunnel.current?.kill();
-          tunnel.current = undefined;
-        });
-
-        const hostName = await findTunnelHostname();
-        clipboardy.write(hostName);
-        console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
-      }
-    }
-
-    startTunnel();
-
-    return () => {
-      if (tunnel.current) {
-        console.log("⎔ Shutting down tunnel.");
-        tunnel.current?.kill();
-        tunnel.current = undefined;
-        removeSignalExitListener.current && removeSignalExitListener.current();
-        removeSignalExitListener.current = undefined;
-      }
-    };
-  }, [toggle]);
-}
-
 type useHotkeysInitialState = {
   local: boolean;
-  tunnel: boolean;
 };
 function useHotkeys(initial: useHotkeysInitialState) {
   const [toggles, setToggles] = useState(initial);
@@ -393,9 +320,6 @@ function useHotkeys(initial: useHotkeysInitialState) {
             //   },
             // }
           );
-          break;
-        case "s": // toggle tunnel
-          setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));
           break;
         case "l": // toggle local
           setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
