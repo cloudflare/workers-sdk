@@ -13,8 +13,6 @@ import type { CfModuleType, CfScriptFormat, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
-import fetch from "node-fetch";
-import clipboardy from "clipboardy";
 import onExit from "signal-exit";
 
 type Props = {
@@ -41,12 +39,14 @@ export function App(props: Props): JSX.Element {
           bundle={bundle}
           options={props.options}
           account={props.account}
+          variables={props.variables}
         />
       ) : (
         <Remote
           bundle={bundle}
           options={props.options}
           account={props.account}
+          variables={props.variables}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -64,8 +64,14 @@ function Remote(props: {
   bundle: EsbuildBundle | void;
   options: { type: CfModuleType };
   account: CfAccount;
+  variables: { [name: string]: CfVariable };
 }) {
-  const token = useWorker(props.bundle, props.options.type, props.account);
+  const token = useWorker(
+    props.bundle,
+    props.options.type,
+    props.account,
+    props.variables
+  );
 
   useProxy(token);
 
@@ -76,13 +82,23 @@ function Local(props: {
   bundle: EsbuildBundle | void;
   options: { type: CfModuleType };
   account: CfAccount;
+  variables: { [name: string]: CfVariable };
 }) {
-  const { inspectorUrl } = useLocalWorker(props.bundle, props.options.type);
+  const { inspectorUrl } = useLocalWorker(
+    props.bundle,
+    props.options.type,
+    props.variables
+  );
   useInspector(inspectorUrl);
   return null;
 }
 
-function useLocalWorker(bundle: EsbuildBundle | void, type: CfModuleType) {
+function useLocalWorker(
+  bundle: EsbuildBundle | void,
+  type: CfModuleType,
+  variables: { [name: string]: CfVariable }
+) {
+  // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | void>();
@@ -218,7 +234,8 @@ function useEsbuild(
 function useWorker(
   bundle: EsbuildBundle | void,
   moduleType: CfModuleType,
-  account: CfAccount
+  account: CfAccount,
+  variables: { [name: string]: CfVariable }
 ): CfPreviewToken | void {
   const [token, setToken] = useState<CfPreviewToken>();
   useEffect(() => {

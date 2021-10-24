@@ -436,6 +436,8 @@ export async function main(): Promise<void> {
         throw new Error("Missing account id");
       }
 
+      const envRootObj = args.env ? config[`env.${args.env}`] : config;
+
       render(
         <App
           entry={filename}
@@ -445,7 +447,22 @@ export async function main(): Promise<void> {
             accountId: accountId,
             apiToken,
           }}
-          variables={{}}
+          variables={{
+            ...(envRootObj?.vars || {}),
+            ...(envRootObj?.kv_namespaces || []).reduce(
+              (obj, { binding, preview_id, id }) => {
+                if (!preview_id) {
+                  // TODO: This error has to be a _lot_ better, ideally just asking
+                  // to create a preview namespace for the user automatically
+                  throw new Error(
+                    "kv namespaces need a preview id during dev mode"
+                  );
+                }
+                return { ...obj, [binding]: { namespaceId: preview_id } };
+              },
+              {}
+            ),
+          }}
         />
       );
     }

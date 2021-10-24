@@ -1,4 +1,4 @@
-import type { CfWorkerInit } from "./api/worker";
+import type { CfVariable, CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
 import esbuild from "esbuild";
 import tmp from "tmp-promise";
@@ -63,11 +63,22 @@ export default async function publish(props: Props): Promise<void> {
   const content = await readFile(filepath, { encoding: "utf-8" });
   destination.cleanup();
 
+  const envRootObj = props.env ? config[`env.${props.env}`] : config;
+
   const worker: CfWorkerInit = {
     main: {
-      name: props.script ? props.name : config.name,
+      name: scriptName,
       content: content,
       type: "esm", // TODO: this should read from build.upload format
+    },
+    variables: {
+      ...(envRootObj?.vars || {}),
+      ...(envRootObj?.kv_namespaces || []).reduce(
+        (obj, { binding, preview_id, id }) => {
+          return { ...obj, [binding]: { namespaceId: id } };
+        },
+        {}
+      ),
     },
   };
 
@@ -195,9 +206,10 @@ export default async function publish(props: Props): Promise<void> {
         { method: "GET" }
       )
     ).json();
-
     // @ts-expect-error TODO: we need to have types for all cf api responses
-    assert(subDomainResponse.result.subdomain, "subdomain is not registered");
+    const subdomainName = subDomainResponse.result.subdomain;
+
+    assert(subdomainName, "subdomain is not registered");
 
     console.log("publishing to workers.dev subdomain");
     console.log(
@@ -231,5 +243,6 @@ export default async function publish(props: Props): Promise<void> {
         )
       ).json()
     );
+    console.log(`published to ${scriptName}.${subdomainName}.workers.dev`);
   }
 }
