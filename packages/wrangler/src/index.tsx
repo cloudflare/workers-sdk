@@ -1043,8 +1043,33 @@ export async function main(): Promise<void> {
           describe: "Interact with a preview namespace",
         });
     },
-    (args) => {
+    async ({ filename, ...args }) => {
       console.log(":kv:bulk put", args);
+      // The simplest implementation I could think of.
+      // This could be made more efficient with a streaming parser/uploader
+      // but we'll do that in the future if needed.
+
+      const namespaceId = getNamespaceId(args);
+      const accountId = (args.config as Config).account_id;
+      const content = await readFile(filename, "utf-8");
+      try {
+        JSON.parse(content);
+      } catch (err) {
+        console.error(`could not parse json from ${filename}`);
+        throw err;
+      }
+
+      console.log(
+        await (
+          await cfetch(
+            `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk/`,
+            {
+              method: "PUT",
+              body: content,
+            }
+          )
+        ).json()
+      );
     }
   );
 
