@@ -18,3 +18,18 @@ make the ui actually look nice
 - [ ] when a worker starts up, it has to do 4 requests(!) in a row just to get the preview token and prewarm. Would be nice if this was a single call (and faster)
 - [ ] testssss
 - [ ] error reporting (ala https://github.com/cloudflare/wrangler/blob/master/src/reporter/mod.rs)
+
+- [ ] publish to npm as a canary on every commit
+- [ ] integrate with changesets?
+- [ ] fix zoned publish
+- [ ] dropdown when multiple account ids
+- [ ] literally any tests
+- [ ] config: compat dates, usage_model
+- [ ] the remaining `dev` flags
+
+big remaining features
+
+- [ ] sites
+- [ ] tail
+- [ ] durable objects / websockets
+- [ ] secrets
