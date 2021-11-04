@@ -1,0 +1,48 @@
+name: CI
+
+on: 
+  push:
+    branches:    
+      - main
+
+jobs:
+  build:
+    name: Build & Publish an alpha release to NPM
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version: [16]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node_version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node_version }}
+      
+      - uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+
+      - name: Install NPM dependencies
+        run: npm install
+      
+      - name: Build
+        run: npm run build
+        working-directory: packages/wrangler
+
+      - name: Get Hash
+        run: echo "git_hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+        working-directory: packages/wrangler
+
+      # modify package.json "version": "0.0.0-{{ hash }}"
+      - name: Modify package.json version
+        run: sed -i -e "s/0.0.0/0.0.0-${{ env.git_hash }}/g" package.json
+      
+      - name: Publish Alpha to NPM
+        run: npm publish --tag alpha --token ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/wrangler
