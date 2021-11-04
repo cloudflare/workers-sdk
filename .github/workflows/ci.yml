@@ -27,7 +27,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-
       - name: Install NPM dependencies
         run: npm install
       
@@ -35,14 +34,11 @@ jobs:
         run: npm run build
         working-directory: packages/wrangler
 
-      - name: Get Hash
-        run: echo "git_hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
-        working-directory: packages/wrangler
-
-      # modify package.json "version": "0.0.0-{{ hash }}"
       - name: Modify package.json version
-        run: sed -i -e "s/0.0.0/0.0.0-${{ env.git_hash }}/g" package.json
-      
+        run: node .github/version-script.js
+
       - name: Publish Alpha to NPM
-        run: npm publish --tag alpha --token ${{ secrets.NPM_PUBLISH_TOKEN }}
+        run: npm publish --tag alpha
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: packages/wrangler
