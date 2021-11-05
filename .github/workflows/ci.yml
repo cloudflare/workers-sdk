@@ -40,5 +40,5 @@ jobs:
       - name: Publish Alpha to NPM
         run: npm publish --tag alpha
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         working-directory: packages/wrangler
