@@ -1094,6 +1094,7 @@ export async function main(): Promise<void> {
     });
 
   yargs.group(["config", "help", "version"], "Flags:");
+  yargs.completion();
 
   await initialiseUserConfig();
 
