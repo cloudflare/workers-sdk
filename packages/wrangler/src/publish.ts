@@ -59,7 +59,7 @@ export default async function publish(props: Props): Promise<void> {
               await readFile(path.join(__dirname, "../facade.js"), "utf8")
             )
               .replace("__ENTRY_POINT__", path.join(process.cwd(), file))
-              .replace("__DEBUG__", "true"),
+              .replace("__DEBUG__", "false"),
             sourcefile: "facade.js",
             resolveDir: path.dirname(file),
           },
