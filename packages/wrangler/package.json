@@ -64,7 +64,8 @@
   "files": [
     "bin",
     "miniflare-config-stubs",
-    "dist"
+    "dist",
+    "facade.js"
   ],
   "scripts": {
     "clean": "rm -rf dist",

@@ -56,7 +56,7 @@ export default async function publish(props: Props): Promise<void> {
       ? {
           stdin: {
             contents: (
-              await readFile(path.join(__dirname, "facade.js"), "utf8")
+              await readFile(path.join(__dirname, "../facade.js"), "utf8")
             )
               .replace("__ENTRY_POINT__", path.join(file))
               .replace("__DEBUG__", "true"),

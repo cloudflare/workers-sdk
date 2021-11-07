@@ -215,7 +215,7 @@ function useEsbuild(
           ? {
               stdin: {
                 contents: (
-                  await readFile(path.join(__dirname, "facade.js"), "utf8")
+                  await readFile(path.join(__dirname, "../facade.js"), "utf8")
                 )
                   .replace("__ENTRY_POINT__", path.join(entry))
                   .replace("__DEBUG__", "true"),
