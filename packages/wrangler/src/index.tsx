@@ -130,6 +130,15 @@ function demandOneOfOption(...options: string[]) {
 
 export async function main(): Promise<void> {
   const yargs = makeCLI(hideBin(process.argv))
+    .command(
+      // the default is to simply print the help menu
+      ["*"],
+      false,
+      () => {},
+      () => {
+        yargs.showHelp();
+      }
+    )
     .scriptName("wrangler")
     .wrap(null);
 
