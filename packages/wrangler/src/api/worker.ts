@@ -114,7 +114,7 @@ export interface CfWorkerInit {
   /**
    * The list of additional modules.
    */
-  modules?: CfModule[];
+  modules: void | CfModule[];
   /**
    * The map of names to variables. (aka. environment variables)
    */

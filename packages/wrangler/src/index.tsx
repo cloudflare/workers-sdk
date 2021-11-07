@@ -2,7 +2,7 @@ import type { CfModuleType, CfScriptFormat } from "./api/worker";
 
 import React from "react";
 import { render } from "ink";
-import { App } from "./dev";
+import { Dev } from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
@@ -18,7 +18,13 @@ import {
   initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
 } from "./user";
-import { getNamespaceId } from "./kv";
+import {
+  getNamespaceId,
+  listNamespaces,
+  listNamespaceKeys,
+  putKeyValue,
+  putBulkKeyValue,
+} from "./kv";
 
 import fetch from "node-fetch";
 import cfetch from "./fetchwithauthandloginifrequired";
@@ -27,7 +33,7 @@ import publish from "./publish";
 import { getAPIToken } from "./user";
 
 async function getAPI() {
-  const apiToken = await getAPIToken();
+  const apiToken = getAPIToken();
   if (!apiToken) {
     throw new Error("missing api token");
   }
@@ -60,7 +66,7 @@ async function readConfig(path?: string): Promise<Config> {
 
   if (!config.account_id) {
     // try to get it from api?
-    const apiToken = await getAPIToken();
+    const apiToken = getAPIToken();
     if (apiToken) {
       let response;
       try {
@@ -322,6 +328,10 @@ export async function main(): Promise<void> {
           describe: "name to use when uploading",
           type: "string",
         })
+        .option("public", {
+          describe: "Static assets to be served",
+          type: "string",
+        })
         .option("triggers", {
           describe: "an array of crons",
           type: "array",
@@ -339,7 +349,7 @@ export async function main(): Promise<void> {
     },
     async (args) => {
       console.log(":publish", args);
-      const apiToken = await getAPIToken();
+      const apiToken = getAPIToken();
       assert(apiToken, "Missing api token");
       await publish({
         config: args.config as Config,
@@ -349,6 +359,7 @@ export async function main(): Promise<void> {
         zone: args.zone,
         triggers: args.triggers,
         routes: args.routes,
+        public: args.public,
       });
     }
   );
@@ -390,6 +401,10 @@ export async function main(): Promise<void> {
           describe: "Protocol to listen to requests on, defaults to http.",
           choices: ["http", "https"],
         })
+        .option("public", {
+          describe: "Static assets to be served",
+          type: "string",
+        })
         .option("upstream-protocol", {
           default: "https",
           describe:
@@ -410,11 +425,11 @@ export async function main(): Promise<void> {
         // @ts-expect-error being sneaky
         config = await readConfig(args.config.__path__);
       }
-      let apiToken = await getAPIToken();
+      let apiToken = getAPIToken();
       if (!apiToken) {
         const loggedIn = await login();
         if (loggedIn) {
-          apiToken = await getAPIToken();
+          apiToken = getAPIToken();
           // @ts-expect-error being sneaky
           config = await readConfig(args.config.__path__);
         } else {
@@ -439,7 +454,7 @@ export async function main(): Promise<void> {
       const envRootObj = args.env ? config[`env.${args.env}`] : config;
 
       render(
-        <App
+        <Dev
           entry={filename}
           options={options}
           initialMode={args.local ? "local" : "remote"}
@@ -447,6 +462,7 @@ export async function main(): Promise<void> {
             accountId: accountId,
             apiToken,
           }}
+          public={args.public}
           variables={{
             ...(envRootObj?.vars || {}),
             ...(envRootObj?.kv_namespaces || []).reduce(
@@ -768,15 +784,13 @@ export async function main(): Promise<void> {
           {},
           async (args) => {
             console.log(":kv:namespace list", args);
-            const api = await getAPI();
+
             const accountId = (args.config as Config).account_id;
             if (!accountId) {
               throw new Error("Missing account id");
             }
             // TODO: we should show bindings if they exist for given ids
-            console.log(
-              await api.enterpriseZoneWorkersKVNamespaces.browse(accountId)
-            );
+            console.log(await listNamespaces(accountId));
           }
         )
         .command(
@@ -882,19 +896,18 @@ export async function main(): Promise<void> {
           },
           async ({ key, ttl, expiration, ...args }) => {
             const namespaceId = getNamespaceId(args);
-            const value = args.path ? await readFile(args.path) : args.value;
+            const value = args.path
+              ? await readFile(args.path, "utf-8")
+              : args.value;
             const accountId = (args.config as Config).account_id;
 
             console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
 
             console.log(
-              await (
-                await cfetch(
-                  `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
-                    expiration ? `expiration=${expiration}` : ""
-                  }${ttl ? `expiration_ttl=${ttl}` : ""}`
-                )
-              ).json()
+              await putKeyValue(accountId, namespaceId, key, value, {
+                expiration,
+                expiration_ttl: ttl,
+              })
             );
           }
         )
@@ -917,7 +930,7 @@ export async function main(): Promise<void> {
                 describe: "Perform on a specific environment",
               })
               .option("prefix", {
-                type: "boolean",
+                type: "string",
                 describe: "A prefix to filter listed keys",
               });
           },
@@ -928,13 +941,7 @@ export async function main(): Promise<void> {
             const accountId = (args.config as Config).account_id;
 
             console.log(
-              await (
-                await cfetch(
-                  `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys/?${
-                    prefix ? `prefix=${prefix}` : ""
-                  }`
-                )
-              ).json()
+              await listNamespaceKeys(accountId, namespaceId, prefix)
             );
           }
         )
@@ -1059,17 +1066,7 @@ export async function main(): Promise<void> {
         throw err;
       }
 
-      console.log(
-        await (
-          await cfetch(
-            `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk/`,
-            {
-              method: "PUT",
-              body: content,
-            }
-          )
-        ).json()
-      );
+      console.log(await putBulkKeyValue(accountId, namespaceId, content));
     }
   );
 

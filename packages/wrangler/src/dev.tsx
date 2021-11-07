@@ -9,11 +9,17 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfModuleType, CfScriptFormat, CfVariable } from "./api/worker";
+import type {
+  CfModule,
+  CfModuleType,
+  CfScriptFormat,
+  CfVariable,
+} from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
 import onExit from "signal-exit";
+import { syncAssets } from "./sites";
 
 type Props = {
   entry: string;
@@ -21,12 +27,13 @@ type Props = {
   account: CfAccount;
   initialMode: "local" | "remote";
   variables?: { [name: string]: CfVariable };
+  public: void | string;
 };
 
-export function App(props: Props): JSX.Element {
+export function Dev(props: Props): JSX.Element {
   const directory = useTmpDir();
 
-  const bundle = useEsbuild(props.entry, directory);
+  const bundle = useEsbuild(props.entry, directory, props.public);
 
   const toggles = useHotkeys({
     local: props.initialMode === "local",
@@ -47,6 +54,7 @@ export function App(props: Props): JSX.Element {
           options={props.options}
           account={props.account}
           variables={props.variables}
+          public={props.public}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -63,14 +71,17 @@ export function App(props: Props): JSX.Element {
 function Remote(props: {
   bundle: EsbuildBundle | void;
   options: { type: CfModuleType };
+  public: void | string;
   account: CfAccount;
   variables: { [name: string]: CfVariable };
 }) {
   const token = useWorker(
     props.bundle,
     props.options.type,
+    [],
     props.account,
-    props.variables
+    props.variables,
+    props.public
   );
 
   useProxy(token);
@@ -183,11 +194,16 @@ function useTmpDir(): string | void {
   return directory?.path;
 }
 
-type EsbuildBundle = { id: number; path: string; entry: string };
+type EsbuildBundle = {
+  id: number;
+  path: string;
+  entry: string;
+};
 
 function useEsbuild(
   entry: string,
-  destination: string | void
+  destination: string | void,
+  staticRoot: void | string
 ): EsbuildBundle | void {
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
@@ -195,12 +211,27 @@ function useEsbuild(
     async function build() {
       if (!destination) return;
       result = await esbuild.build({
-        entryPoints: [entry],
+        ...(staticRoot
+          ? {
+              stdin: {
+                contents: (
+                  await readFile(path.join(__dirname, "facade.js"), "utf8")
+                )
+                  .replace("__ENTRY_POINT__", path.join(entry))
+                  .replace("__DEBUG__", "true"),
+                sourcefile: "facade.js",
+                resolveDir: path.dirname(entry),
+              },
+            }
+          : { entryPoints: [entry] }),
+
         bundle: true,
         outdir: destination,
         metafile: true,
         format: "esm", // TODO: verify what changes are needed here
         sourcemap: true,
+        nodePaths: staticRoot ? [path.join(__dirname, "../vendor")] : undefined,
+        external: ["__STATIC_CONTENT_MANIFEST"],
         watch: {
           async onRebuild(error) {
             if (error) console.error("watch build failed:", error);
@@ -213,29 +244,33 @@ function useEsbuild(
         },
       });
 
-      const [filepath] = Object.entries(result.metafile.outputs).find(
-        ([path, { entryPoint }]) => entryPoint === entry
+      const chunks = Object.entries(result.metafile.outputs).find(
+        ([_path, { entryPoint }]) =>
+          entryPoint ===
+          (staticRoot ? path.join(path.dirname(entry), "facade.js") : entry)
       );
 
       setBundle({
         id: 0,
         entry,
-        path: filepath,
+        path: chunks[0],
       });
     }
     build();
     return () => {
       result?.stop();
     };
-  }, [entry, destination]);
+  }, [entry, destination, staticRoot]);
   return bundle;
 }
 
 function useWorker(
   bundle: EsbuildBundle | void,
   moduleType: CfModuleType,
+  modules: CfModule[],
   account: CfAccount,
-  variables: { [name: string]: CfVariable }
+  variables: { [name: string]: CfVariable },
+  publicFolder: void | string
 ): CfPreviewToken | void {
   const [token, setToken] = useState<CfPreviewToken>();
   useEffect(() => {
@@ -246,6 +281,21 @@ function useWorker(
       } else {
         console.log("⎔ Starting server...");
       }
+      const scriptName = path.basename(bundle.path);
+
+      const assets = publicFolder
+        ? await syncAssets(
+            account.accountId,
+            scriptName,
+            publicFolder,
+            true,
+            undefined // TODO: env
+          )
+        : {
+            manifest: undefined,
+            namespace: undefined,
+          }; // TODO: cancellable?
+
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
         main: {
@@ -253,10 +303,19 @@ function useWorker(
           type: moduleType,
           content,
         },
-        modules: undefined,
-        variables: {
-          // ?? is this a good feature?
-        },
+        modules: assets.manifest
+          ? modules.concat({
+              name: "__STATIC_CONTENT_MANIFEST",
+              content: JSON.stringify(assets.manifest),
+              type: "text",
+            })
+          : modules,
+        variables: assets.namespace
+          ? {
+              ...variables,
+              __STATIC_CONTENT: { namespaceId: assets.namespace },
+            }
+          : variables,
       };
       setToken(await createWorker(init, account));
       console.log("⬣ Listening at http://localhost:8787");

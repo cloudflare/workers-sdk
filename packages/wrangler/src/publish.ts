@@ -7,12 +7,14 @@ import path from "path";
 import { readFile } from "fs/promises";
 import cfetch from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
+import { syncAssets } from "./sites";
 
 type Props = {
   config: Config;
   script?: string;
   name?: string;
   env?: string;
+  public?: string;
   triggers?: (string | number)[];
   zone?: string;
   routes?: (string | number)[];
@@ -48,20 +50,41 @@ export default async function publish(props: Props): Promise<void> {
   scriptName += props.env ? `-${props.env}` : "";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
+
   const result = await esbuild.build({
-    entryPoints: [file],
+    ...(props.public
+      ? {
+          stdin: {
+            contents: (
+              await readFile(path.join(__dirname, "facade.js"), "utf8")
+            )
+              .replace("__ENTRY_POINT__", path.join(file))
+              .replace("__DEBUG__", "true"),
+            sourcefile: "facade.js",
+            resolveDir: path.dirname(file),
+          },
+        }
+      : { entryPoints: [file] }),
     bundle: true,
+    nodePaths: props.public ? [path.join(__dirname, "../vendor")] : undefined,
     outdir: destination.path,
+    external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm", // TODO: verify what changes are needed here
     sourcemap: true,
     metafile: true,
   });
-  const [filepath] = Object.entries(result.metafile.outputs).find(
-    ([path, { entryPoint }]) => entryPoint === file
+
+  const chunks = Object.entries(result.metafile.outputs).find(
+    ([_path, { entryPoint }]) =>
+      entryPoint ===
+      (props.public ? path.join(path.dirname(file), "facade.js") : file)
   );
 
-  const content = await readFile(filepath, { encoding: "utf-8" });
+  const content = await readFile(chunks[0], { encoding: "utf-8" });
   destination.cleanup();
+  const assets = props.public
+    ? await syncAssets(accountId, scriptName, props.public, false)
+    : { manifest: undefined, namespace: undefined };
 
   const envRootObj = props.env ? config[`env.${props.env}`] : config;
 
@@ -79,7 +102,17 @@ export default async function publish(props: Props): Promise<void> {
         },
         {}
       ),
+      ...(assets.namespace
+        ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
+        : {}),
     },
+    modules: assets.manifest
+      ? [].concat({
+          name: "__STATIC_CONTENT_MANIFEST",
+          content: JSON.stringify(assets.manifest),
+          type: "text",
+        })
+      : [],
   };
 
   if (triggers) {

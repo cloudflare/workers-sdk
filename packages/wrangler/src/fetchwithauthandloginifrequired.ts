@@ -13,7 +13,7 @@ export default async function fetchWithAuthAndLoginIfRequired(
     return fetch(resource, init);
   }
   await loginOrRefreshIfRequired();
-  const apiToken = await getAPIToken();
+  const apiToken = getAPIToken();
   if (!apiToken) {
     throw new Error("No API token found");
   }

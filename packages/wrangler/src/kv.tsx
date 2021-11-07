@@ -1,4 +1,6 @@
 import type { Config } from "./config";
+import cfetch from "./fetchwithauthandloginifrequired";
+import qs from "node:querystring";
 
 type KvArgs = {
   binding?: string;
@@ -7,6 +9,89 @@ type KvArgs = {
   preview?: boolean;
   config?: Config;
 };
+
+export async function listNamespaces(accountId: string) {
+  let page = 1,
+    done = false,
+    results = [];
+  while (!(done || results.length % 100 !== 0)) {
+    const response = await cfetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`,
+      {
+        method: "GET",
+      }
+    );
+    page++;
+    const json = await response.json();
+    // @ts-expect-error we neeed to type these responses
+    if (json.success) {
+      // @ts-expect-error we neeed to type these responses
+      results = [...results, ...json.result];
+      // @ts-expect-error we neeed to type these responses
+      if (json.result.length === 0) {
+        done = true;
+      }
+    } else {
+      // @ts-expect-error we neeed to type these responses
+      throw new Error(json.errors[0]);
+    }
+  }
+  return results;
+}
+
+export async function listNamespaceKeys(
+  accountId: string,
+  namespaceId: string,
+  prefix?: string,
+  limit?: number
+) {
+  return await (
+    await cfetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
+        { prefix, limit }
+      )}`
+    )
+  ).json();
+}
+
+export async function putKeyValue(
+  accountId: string,
+  namespaceId: string,
+  key: string,
+  value: string,
+  args?: { expiration?: number; expiration_ttl?: number }
+) {
+  await (
+    await cfetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
+        args
+          ? qs.stringify({
+              expiration: args.expiration,
+              expiration_ttl: args.expiration_ttl,
+            })
+          : ""
+      }`,
+      { method: "PUT", body: value }
+    )
+  ).json();
+}
+
+export async function putBulkKeyValue(
+  accountId: string,
+  namespaceId: string,
+  keyvalueStr: string
+) {
+  await (
+    await cfetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+      {
+        method: "PUT",
+        body: keyvalueStr,
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+  ).json();
+}
 
 export function getNamespaceId({
   preview,

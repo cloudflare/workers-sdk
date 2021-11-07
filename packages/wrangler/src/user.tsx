@@ -123,7 +123,7 @@ function throwIfNotInitialised() {
   }
 }
 
-export async function getAPIToken(): Promise<string> {
+export function getAPIToken(): string {
   throwIfNotInitialised();
   return LocalState.accessToken?.value;
 }

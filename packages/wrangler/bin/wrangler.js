@@ -1,2 +1,2 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --no-warnings
 require("../dist/index_node.js");
