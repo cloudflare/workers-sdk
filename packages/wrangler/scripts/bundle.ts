@@ -9,7 +9,7 @@ async function run() {
     outdir: "./dist",
     platform: "node",
     format: "cjs",
-    minify: true,
+    // minify: true, // TODO: enable this again
     external: [
       "fsevents",
       "yargs", // we should fix this one
@@ -17,7 +17,6 @@ async function run() {
       "miniflare", // only because it imports all of typescript, which is weird
     ],
     sourcemap: true,
-    // metafile: true,
   });
 }
 
