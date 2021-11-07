@@ -31,6 +31,8 @@ import cfetch from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
 import publish from "./publish";
 import { getAPIToken } from "./user";
+import path from "path/posix";
+import { writeFile } from "node:fs/promises";
 
 async function getAPI() {
   const apiToken = getAPIToken();
@@ -155,7 +157,7 @@ export async function main(): Promise<void> {
     // we definitely want to move away from us cloning github templates
     // we can do something better here, let's see
     "generate [name] [template]",
-    "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
+    false,
     (yargs) => {
       return yargs
         .positional("name", {
@@ -165,77 +167,63 @@ export async function main(): Promise<void> {
         .positional("template", {
           describe: "a link to a GitHub template",
           default: "https://github.com/cloudflare/worker-template",
-        })
-        .option("type", {
-          default: "javascript",
-          describe: "The type of project you want generated.",
-          choices: ["webpack", "javascript", "rust"],
-        })
-        .option(
-          // we'll want to deprecate/replace this with Pages
-          "site",
-          {
-            describe:
-              "Initialise as a Workers Sites project. Overrides `type` and `template`",
-          }
-        );
+        });
     },
-    (args) => {
-      console.log(":generate", args);
+    () => {
+      // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
+      console.error(
+        "`wrangler generate` has been deprecated, please refer to TODO://some/path for alernatives"
+      );
     }
   );
 
   // init
   yargs.command(
     "init [name]",
-    "📥 Create a wrangler.toml for an existing project",
+    "📥 Create a wrangler.toml configuration file",
     (yargs) => {
-      return yargs
-        .positional("name", {
-          describe: "The name of your worker.",
-          type: "string",
-          // TODO: default: <name of working directory>
-        })
-        .positional("template", {
-          type: "string",
-          describe:
-            "GitHub URL of the repo to use as the template for generating the project.",
-        })
-        .option(
-          // we'll want to deprecate this option, it should effectively be
-          // "javascript" (i.e - custom builds) for all
-          "type",
-          {
-            describe: "The type of project you want to generate",
-            choices: ["javascript", "webpack", "rust"],
-            default: "javascript",
-          }
-        )
-        .option(
-          // we'll want to deprecate/replace this with Pages
-          "site",
-          {
-            describe: "Initialise a Workers Sites project",
-            type: "boolean",
-          }
-        );
+      return yargs.positional("name", {
+        describe: "The name of your worker.",
+        type: "string",
+      });
     },
-    (args) => {
+    async (args) => {
       console.log(":init", args);
+      try {
+        await writeFile(
+          path.join(process.cwd(), "wrangler.toml"),
+          `
+name = ${args.name || path.basename(process.cwd())}
+compatibility_date = ${new Date()
+            .toISOString()
+            .substring(0, 10)
+            .replace(/-/g, "/")}
+`
+        );
+        console.log(`✨  Succesfully created wrangler.toml`);
+        // TODO: suggest next steps?
+      } catch (err) {
+        console.error(`Failed to create wrangler.toml`);
+        console.error(err);
+        throw err;
+      }
     }
   );
 
   // build
   yargs.command(
     "build",
-    "🦀 Build your project (if applicable)",
+    false,
     (yargs) => {
       return yargs.option("env", {
         describe: "Perform on a specific environment",
       });
     },
-    (args) => {
-      console.log(":build", args);
+    () => {
+      // "[DEPRECATED] 🦀 Build your project (if applicable)",
+      console.error(
+        "`wrangler build` has been deprecated, please refer to TODO://some/path for alernatives"
+      );
     }
   );
 
@@ -243,7 +231,8 @@ export async function main(): Promise<void> {
   yargs.command(
     // this needs scopes as an option?
     "login",
-    "🔓 Login to Cloudflare",
+    false, // we don't need to show this in the menu
+    // "🔓 Login to Cloudflare",
     (yargs) => {
       // TODO: This needs some copy editing
       // I mean, this entire app does, but this too.
@@ -286,7 +275,8 @@ export async function main(): Promise<void> {
   yargs.command(
     // this needs scopes as an option?
     "logout",
-    "🚪 Logout from Cloudflare",
+    false, // we don't need to show this in the menu
+    // "🚪 Logout from Cloudflare",
     () => {},
     async (args) => {
       console.log(":logout", args);
@@ -297,7 +287,8 @@ export async function main(): Promise<void> {
   // whoami
   yargs.command(
     "whoami",
-    "🕵️  Retrieve your user info and test your auth config",
+    false, // we don't need to show this the menu
+    // "🕵️  Retrieve your user info and test your auth config",
     () => {},
     (args) => {
       console.log(":whoami", args);
@@ -307,69 +298,14 @@ export async function main(): Promise<void> {
   // config
   yargs.command(
     "config",
-    "🕵️  [DEPRECATED] Authenticate Wrangler by prompting you for a Cloudflare API Token or Global API key.",
-    (yargs) => {
-      return yargs.option("api-key", {
-        type: "string",
-        describe: "Provide email and Global API key (not recommended)",
-      });
-    },
+    false,
+    () => {},
     (args) => {
+      // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
+      console.error(
+        "`wrangler config` has been deprecated, please refer to TODO://some/path for alernatives"
+      );
       console.log(":config", args);
-    }
-  );
-
-  // publish
-  yargs.command(
-    "publish [script]",
-    "🆙 Publish your Worker to Cloudflare.",
-    (yargs) => {
-      return yargs
-        .option("env", {
-          type: "string",
-          describe: "Perform on a specific environment",
-        })
-        .positional("script", {
-          describe: "script to upload",
-          type: "string",
-        })
-        .option("name", {
-          describe: "name to use when uploading",
-          type: "string",
-        })
-        .option("public", {
-          describe: "Static assets to be served",
-          type: "string",
-        })
-        .option("triggers", {
-          describe: "an array of crons",
-          type: "array",
-        })
-        .option("zone", {
-          describe: "a domain or a zone id",
-          alias: "zone_id",
-          type: "string",
-        })
-        .option("routes", {
-          describe: "routes to upload",
-          alias: "route",
-          type: "array",
-        });
-    },
-    async (args) => {
-      console.log(":publish", args);
-      const apiToken = getAPIToken();
-      assert(apiToken, "Missing api token");
-      await publish({
-        config: args.config as Config,
-        name: args.name,
-        script: args.script,
-        env: args.env,
-        zone: args.zone,
-        triggers: args.triggers,
-        routes: args.routes,
-        public: args.public,
-      });
     }
   );
 
@@ -493,6 +429,60 @@ export async function main(): Promise<void> {
     }
   );
 
+  // publish
+  yargs.command(
+    "publish [script]",
+    "🆙 Publish your Worker to Cloudflare.",
+    (yargs) => {
+      return yargs
+        .option("env", {
+          type: "string",
+          describe: "Perform on a specific environment",
+        })
+        .positional("script", {
+          describe: "script to upload",
+          type: "string",
+        })
+        .option("name", {
+          describe: "name to use when uploading",
+          type: "string",
+        })
+        .option("public", {
+          describe: "Static assets to be served",
+          type: "string",
+        })
+        .option("triggers", {
+          describe: "an array of crons",
+          type: "array",
+        })
+        .option("zone", {
+          describe: "a domain or a zone id",
+          alias: "zone_id",
+          type: "string",
+        })
+        .option("routes", {
+          describe: "routes to upload",
+          alias: "route",
+          type: "array",
+        });
+    },
+    async (args) => {
+      console.log(":publish", args);
+      const apiToken = getAPIToken();
+      assert(apiToken, "Missing api token");
+      await publish({
+        config: args.config as Config,
+        name: args.name,
+        script: args.script,
+        env: args.env,
+        zone: args.zone,
+        triggers: args.triggers,
+        routes: args.routes,
+        public: args.public,
+      });
+    }
+  );
+
   // tail
   yargs.command(
     "tail",
@@ -534,7 +524,7 @@ export async function main(): Promise<void> {
   // preview
   yargs.command(
     "preview [method] [body]",
-    "🔬 [DEPRECATED] Preview your code temporarily on cloudflareworkers.com",
+    false,
     (yargs) => {
       return yargs
         .positional("method", {
@@ -557,8 +547,11 @@ export async function main(): Promise<void> {
           type: "boolean",
         });
     },
-    (args) => {
-      console.log(":preview", args);
+    () => {
+      // "🔬 [DEPRECATED] Preview your code temporarily on cloudflareworkers.com"
+      console.error(
+        "`wrangler preview` has been deprecated, please refer to TODO://some/path for alernatives"
+      );
     }
   );
 
@@ -654,17 +647,15 @@ export async function main(): Promise<void> {
   // subdomain
   yargs.command(
     "subdomain [name]",
-    "👷 Create or change your workers.dev subdomain.",
+    false,
+    // "👷 Create or change your workers.dev subdomain.",
     (yargs) => {
       return yargs.positional("name", { type: "string" });
     },
-    (args) => {
-      console.log(":subdomain", args);
-      if (!args.name) {
-        // get
-      } else {
-        // put
-      }
+    () => {
+      console.error(
+        "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alernatives"
+      );
     }
   );
 
@@ -1034,7 +1025,7 @@ export async function main(): Promise<void> {
   // :bulk
   yargs.command(
     "kv:bulk put <filename>",
-    "💪 Interact with multiple Workers KV key-value pairs at once",
+    "💪 Add multiple Workers KV key-value pairs at once from a file",
     (yargs) => {
       return yargs
         .positional("filename", {

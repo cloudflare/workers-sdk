@@ -1,4 +1,4 @@
-import type { CfVariable, CfWorkerInit } from "./api/worker";
+import type { CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
 import esbuild from "esbuild";
 import tmp from "tmp-promise";
