@@ -65,13 +65,14 @@
     "bin",
     "miniflare-config-stubs",
     "dist",
-    "facade.js"
+    "facade.js",
+    "vendor"
   ],
   "scripts": {
     "clean": "rm -rf dist",
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
-    "start": "node --no-warnings --experimental-vm-modules -r esbuild-register src/index_node.ts"
+    "start": "npm run bundle && ./bin/wrangler.js"
   },
   "engines": {
     "node": ">=16.0.0"
