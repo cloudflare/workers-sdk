@@ -103,7 +103,13 @@ function serveSinglePageApp(request: Request, options?: Partial<Options>): Reque
  * @param {Object | string} [options.ASSET_NAMESPACE] the binding to the namespace that script references
  * @param {any} [options.ASSET_MANIFEST] the map of the key to cache and store in KV
  * */
-const getAssetFromKV = async (event: FetchEvent, options?: Partial<Options>): Promise<Response> => {
+
+type Evt = {
+  request: Request
+  waitUntil: (promise: Promise<any>) => void
+}
+
+const getAssetFromKV = async (event: Evt, options?: Partial<Options>): Promise<Response> => {
   options = assignOptions(options)
 
   const request = event.request
