@@ -64,12 +64,12 @@
   "files": [
     "bin",
     "miniflare-config-stubs",
-    "dist",
+    "wrangler-dist",
     "facade.js",
     "vendor"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "rm -rf wrangler-dist",
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
     "start": "npm run bundle && ./bin/wrangler.js"

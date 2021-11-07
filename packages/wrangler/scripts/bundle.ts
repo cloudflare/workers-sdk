@@ -6,7 +6,7 @@ async function run() {
   const result = await esbuild.build({
     entryPoints: ["./src/index_node.ts"],
     bundle: true,
-    outdir: "./dist",
+    outdir: "./wrangler-dist",
     platform: "node",
     format: "cjs",
     // minify: true, // TODO: enable this again
