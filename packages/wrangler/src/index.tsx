@@ -188,16 +188,14 @@ export async function main(): Promise<void> {
       });
     },
     async (args) => {
-      console.log(":init", args);
       try {
         await writeFile(
           path.join(process.cwd(), "wrangler.toml"),
-          `
-name = ${args.name || path.basename(process.cwd())}
-compatibility_date = ${new Date()
+          `name = "${args.name || path.basename(process.cwd())}"
+compatibility_date = "${new Date()
             .toISOString()
             .substring(0, 10)
-            .replace(/-/g, "/")}
+            .replace(/-/g, "/")}"
 `
         );
         console.log(`✨  Succesfully created wrangler.toml`);
