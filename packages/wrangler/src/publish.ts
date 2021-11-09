@@ -84,11 +84,11 @@ export default async function publish(props: Props): Promise<void> {
   const content = await readFile(chunks[0], { encoding: "utf-8" });
   destination.cleanup();
   const assets =
-    props.public || props.site // TODO: allow both
+    props.public || props.site || props.config.site?.bucket // TODO: allow both
       ? await syncAssets(
           accountId,
           scriptName,
-          props.public || props.site,
+          props.public || props.site || props.config.site?.bucket,
           false
         )
       : { manifest: undefined, namespace: undefined };

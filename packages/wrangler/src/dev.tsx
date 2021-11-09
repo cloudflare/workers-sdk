@@ -30,8 +30,8 @@ type Props = {
   account: CfAccount;
   initialMode: "local" | "remote";
   variables?: { [name: string]: CfVariable };
-  public?: string;
-  site?: string;
+  public?: void | string;
+  site?: void | string;
 };
 
 export function Dev(props: Props): JSX.Element {
@@ -141,6 +141,18 @@ function useLocalWorker(
         "miniflare-config-stubs/.env.empty",
         "--package",
         "miniflare-config-stubs/package.empty.json",
+        ...Object.entries(variables)
+          .map(([varKey, varVal]) => {
+            if (typeof varVal === "string") {
+              return `--binding ${varKey}=${varVal}`;
+            } else if (
+              "namespaceId" in varVal &&
+              typeof varVal.namespaceId === "string"
+            ) {
+              return `--kv ${varKey}`;
+            }
+          })
+          .filter(Boolean),
         "--modules",
         type === "esm" ? "true" : "false",
       ]);

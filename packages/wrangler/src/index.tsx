@@ -247,7 +247,6 @@ compatibility_date = "${new Date()
       // TODO: scopes
     },
     async (args) => {
-      console.log(":login", args);
       if (args["scopes-list"]) {
         listScopes();
         return;
@@ -348,6 +347,10 @@ compatibility_date = "${new Date()
           describe: "Static assets to be served",
           type: "string",
         })
+        .option("site", {
+          describe: "Root folder of static assets for Workers Sites",
+          type: "string",
+        })
         .option("upstream-protocol", {
           default: "https",
           describe:
@@ -405,6 +408,7 @@ compatibility_date = "${new Date()
             accountId: accountId,
             apiToken,
           }}
+          site={args.site || config.site?.bucket}
           port={args.port}
           public={args.public}
           variables={{
@@ -450,6 +454,10 @@ compatibility_date = "${new Date()
           describe: "Static assets to be served",
           type: "string",
         })
+        .option("site", {
+          describe: "Root folder of static assets for Workers Sites",
+          type: "string",
+        })
         .option("triggers", {
           describe: "an array of crons",
           type: "array",
@@ -478,6 +486,7 @@ compatibility_date = "${new Date()
         triggers: args.triggers,
         routes: args.routes,
         public: args.public,
+        site: args.site,
       });
     }
   );
