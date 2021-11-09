@@ -15,6 +15,7 @@ type Props = {
   name?: string;
   env?: string;
   public?: string;
+  site?: string;
   triggers?: (string | number)[];
   zone?: string;
   routes?: (string | number)[];
@@ -82,9 +83,15 @@ export default async function publish(props: Props): Promise<void> {
 
   const content = await readFile(chunks[0], { encoding: "utf-8" });
   destination.cleanup();
-  const assets = props.public
-    ? await syncAssets(accountId, scriptName, props.public, false)
-    : { manifest: undefined, namespace: undefined };
+  const assets =
+    props.public || props.site // TODO: allow both
+      ? await syncAssets(
+          accountId,
+          scriptName,
+          props.public || props.site,
+          false
+        )
+      : { manifest: undefined, namespace: undefined };
 
   const envRootObj = props.env ? config[`env.${props.env}`] : config;
 

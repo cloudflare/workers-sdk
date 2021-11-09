@@ -405,6 +405,7 @@ compatibility_date = "${new Date()
             accountId: accountId,
             apiToken,
           }}
+          port={args.port}
           public={args.public}
           variables={{
             ...(envRootObj?.vars || {}),
@@ -554,93 +555,98 @@ compatibility_date = "${new Date()
   );
 
   // route
-  yargs.command("route", "➡️  List or delete worker routes", (yargs) => {
-    return yargs
-      .command(
-        "list",
-        "List a route associated with a zone",
-        (yargs) => {
-          return yargs
-            .option("env", {
-              type: "string",
-              describe: "Perform on a specific environment",
-            })
-            .option("zone", {
-              type: "string",
-              describe: "zone id",
-            })
-            .positional("zone", {
-              describe: "zone id",
-              type: "string",
-            });
-        },
-        async (args) => {
-          console.log(":route list", args);
-          // TODO: use environment (current wrangler doesn't do so?)
-          const zone = args.zone || (args.config as Config).zone_id;
-          if (!zone) {
-            throw new Error("missing zone id");
-          }
-
-          const response = await cfetch(
-            `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes`,
-            {
-              method: "GET",
+  yargs.command(
+    "route",
+    false, // I think we want to hide this command
+    // "➡️  List or delete worker routes",
+    (yargs) => {
+      return yargs
+        .command(
+          "list",
+          "List a route associated with a zone",
+          (yargs) => {
+            return yargs
+              .option("env", {
+                type: "string",
+                describe: "Perform on a specific environment",
+              })
+              .option("zone", {
+                type: "string",
+                describe: "zone id",
+              })
+              .positional("zone", {
+                describe: "zone id",
+                type: "string",
+              });
+          },
+          async (args) => {
+            console.log(":route list", args);
+            // TODO: use environment (current wrangler doesn't do so?)
+            const zone = args.zone || (args.config as Config).zone_id;
+            if (!zone) {
+              throw new Error("missing zone id");
             }
-          );
-          const json = await response.json();
-          // @ts-expect-error TODO: we need to have types for all cf api responses
-          if (json.success === true) {
-            // @ts-expect-error TODO: we need to have types for all cf api responses
-            console.log(json.result);
-          } else {
-            // @ts-expect-error TODO: we need to have types for all cf api responses
-            throw json.errors[0];
-          }
-        }
-      )
-      .command(
-        "delete <id>",
-        "Delete a route associated with a zone",
-        (yargs) => {
-          return yargs
-            .positional("id", {
-              describe: "The hash of the route ID to delete.",
-              type: "string",
-            })
-            .option("zone", {
-              type: "string",
-              describe: "zone id",
-            })
-            .option("env", {
-              type: "string",
-              describe: "Perform on a specific environment",
-            });
-        },
-        async (args) => {
-          console.log(":route delete", args);
-          // TODO: use environment (current wrangler doesn't do so?)
-          const zone = args.zone || (args.config as Config).zone_id;
-          if (!zone) {
-            throw new Error("missing zone id");
-          }
 
-          const response = await cfetch(
-            `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes/${args.id}`,
-            { method: "DELETE" }
-          );
-          const json = await response.json();
-          // @ts-expect-error TODO: we need to have types for all cf api responses
-          if (json.success === true) {
+            const response = await cfetch(
+              `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes`,
+              {
+                method: "GET",
+              }
+            );
+            const json = await response.json();
             // @ts-expect-error TODO: we need to have types for all cf api responses
-            console.log(json.result);
-          } else {
-            // @ts-expect-error TODO: we need to have types for all cf api responses
-            throw json.errors[0];
+            if (json.success === true) {
+              // @ts-expect-error TODO: we need to have types for all cf api responses
+              console.log(json.result);
+            } else {
+              // @ts-expect-error TODO: we need to have types for all cf api responses
+              throw json.errors[0];
+            }
           }
-        }
-      );
-  });
+        )
+        .command(
+          "delete <id>",
+          "Delete a route associated with a zone",
+          (yargs) => {
+            return yargs
+              .positional("id", {
+                describe: "The hash of the route ID to delete.",
+                type: "string",
+              })
+              .option("zone", {
+                type: "string",
+                describe: "zone id",
+              })
+              .option("env", {
+                type: "string",
+                describe: "Perform on a specific environment",
+              });
+          },
+          async (args) => {
+            console.log(":route delete", args);
+            // TODO: use environment (current wrangler doesn't do so?)
+            const zone = args.zone || (args.config as Config).zone_id;
+            if (!zone) {
+              throw new Error("missing zone id");
+            }
+
+            const response = await cfetch(
+              `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes/${args.id}`,
+              { method: "DELETE" }
+            );
+            const json = await response.json();
+            // @ts-expect-error TODO: we need to have types for all cf api responses
+            if (json.success === true) {
+              // @ts-expect-error TODO: we need to have types for all cf api responses
+              console.log(json.result);
+            } else {
+              // @ts-expect-error TODO: we need to have types for all cf api responses
+              throw json.errors[0];
+            }
+          }
+        );
+    }
+  );
 
   // subdomain
   yargs.command(

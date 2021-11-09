@@ -20,14 +20,18 @@ import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
 import onExit from "signal-exit";
 import { syncAssets } from "./sites";
+import http from "node:http";
+import serveStatic from "serve-static";
 
 type Props = {
   entry: string;
+  port?: number;
   options: { type: CfModuleType; format: CfScriptFormat };
   account: CfAccount;
   initialMode: "local" | "remote";
   variables?: { [name: string]: CfVariable };
-  public: void | string;
+  public?: string;
+  site?: string;
 };
 
 export function Dev(props: Props): JSX.Element {
@@ -47,6 +51,8 @@ export function Dev(props: Props): JSX.Element {
           options={props.options}
           account={props.account}
           variables={props.variables}
+          site={props.site}
+          public={props.public}
         />
       ) : (
         <Remote
@@ -54,7 +60,9 @@ export function Dev(props: Props): JSX.Element {
           options={props.options}
           account={props.account}
           variables={props.variables}
+          site={props.site}
           public={props.public}
+          port={props.port}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -72,6 +80,8 @@ function Remote(props: {
   bundle: EsbuildBundle | void;
   options: { type: CfModuleType };
   public: void | string;
+  site: void | string;
+  port: void | number;
   account: CfAccount;
   variables: { [name: string]: CfVariable };
 }) {
@@ -81,10 +91,10 @@ function Remote(props: {
     [],
     props.account,
     props.variables,
-    props.public
+    props.site
   );
 
-  useProxy(token);
+  useProxy({ token, publicRoot: props.public, port: props.port });
 
   useInspector(token ? token.inspectorUrl.href : undefined);
   return null;
@@ -94,6 +104,8 @@ function Local(props: {
   options: { type: CfModuleType };
   account: CfAccount;
   variables: { [name: string]: CfVariable };
+  public: void | string;
+  site: void | string;
 }) {
   const { inspectorUrl } = useLocalWorker(
     props.bundle,
@@ -211,26 +223,13 @@ function useEsbuild(
     async function build() {
       if (!destination) return;
       result = await esbuild.build({
-        ...(staticRoot
-          ? {
-              stdin: {
-                contents: (
-                  await readFile(path.join(__dirname, "../facade.js"), "utf8")
-                )
-                  .replace("__ENTRY_POINT__", path.join(process.cwd(), entry))
-                  .replace("__DEBUG__", "true"),
-                sourcefile: "facade.js",
-                resolveDir: path.dirname(entry),
-              },
-            }
-          : { entryPoints: [entry] }),
-
+        entryPoints: [entry],
         bundle: true,
         outdir: destination,
         metafile: true,
         format: "esm", // TODO: verify what changes are needed here
         sourcemap: true,
-        nodePaths: staticRoot ? [path.join(__dirname, "../vendor")] : undefined,
+        // nodePaths: staticRoot ? [path.join(__dirname, "../vendor")] : undefined,
         external: ["__STATIC_CONTENT_MANIFEST"],
         watch: {
           async onRebuild(error) {
@@ -245,9 +244,8 @@ function useEsbuild(
       });
 
       const chunks = Object.entries(result.metafile.outputs).find(
-        ([_path, { entryPoint }]) =>
-          entryPoint ===
-          (staticRoot ? path.join(path.dirname(entry), "facade.js") : entry)
+        ([_path, { entryPoint }]) => entryPoint === entry
+        // (staticRoot ? path.join(path.dirname(entry), "facade.js") : entry)
       );
 
       setBundle({
@@ -270,7 +268,7 @@ function useWorker(
   modules: CfModule[],
   account: CfAccount,
   variables: { [name: string]: CfVariable },
-  publicFolder: void | string
+  sitesFolder: void | string
 ): CfPreviewToken | void {
   const [token, setToken] = useState<CfPreviewToken>();
   useEffect(() => {
@@ -283,11 +281,11 @@ function useWorker(
       }
       const scriptName = path.basename(bundle.path);
 
-      const assets = publicFolder
+      const assets = sitesFolder
         ? await syncAssets(
             account.accountId,
             scriptName,
-            publicFolder,
+            sitesFolder,
             true,
             undefined // TODO: env
           )
@@ -325,20 +323,44 @@ function useWorker(
   return token;
 }
 
-function useProxy(token: CfPreviewToken | void) {
+function useProxy({
+  token,
+  publicRoot,
+  port,
+}: {
+  token: CfPreviewToken | void;
+  publicRoot: void | string;
+  port: void | number;
+}) {
   useEffect(() => {
     if (!token) return;
-    const proxy = httpProxy
-      .createProxyServer({
-        secure: false,
-        changeOrigin: true,
-        headers: {
-          "cf-workers-preview-token": token.value,
-        },
-        target: `https://${token.host}`,
-        // TODO: log websockets too? validate durables, etc
+    const proxy = httpProxy.createProxyServer({
+      secure: false,
+      changeOrigin: true,
+      headers: {
+        "cf-workers-preview-token": token.value,
+      },
+      target: `https://${token.host}`,
+      // TODO: log websockets too? validate durables, etc
+    });
+
+    const servePublic =
+      publicRoot &&
+      serveStatic(publicRoot, {
+        cacheControl: false,
+      });
+    const server = http
+      .createServer((req, res) => {
+        if (publicRoot) {
+          servePublic(req, res, () => {
+            console.log("serving from edge");
+            proxy.web(req, res);
+          });
+        } else {
+          proxy.web(req, res);
+        }
       })
-      .listen(8787); // TODO: custom port
+      .listen(port || 8787); // TODO: custom port
 
     proxy.on("proxyRes", function (proxyRes, req, res) {
       // log all requests
@@ -353,8 +375,9 @@ function useProxy(token: CfPreviewToken | void) {
 
     return () => {
       proxy.close();
+      server.close();
     };
-  }, [token]);
+  }, [token, publicRoot]);
 }
 
 function useInspector(inspectorUrl: string | void) {

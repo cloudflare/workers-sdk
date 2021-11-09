@@ -43,7 +43,7 @@
     "util",
     "mime"
   ],
-  "name": "mime",
+  "name": "wrangler-mime",
   "repository": {
     "url": "https://github.com/broofa/mime",
     "type": "git"
