@@ -57,11 +57,14 @@ export default async function publish(props: Props): Promise<void> {
       ? {
           stdin: {
             contents: (
-              await readFile(path.join(__dirname, "../facade.js"), "utf8")
+              await readFile(
+                path.join(__dirname, "../static-asset-facade.js"),
+                "utf8"
+              )
             )
               .replace("__ENTRY_POINT__", path.join(process.cwd(), file))
               .replace("__DEBUG__", "false"),
-            sourcefile: "facade.js",
+            sourcefile: "static-asset-facade.js",
             resolveDir: path.dirname(file),
           },
         }
@@ -78,7 +81,9 @@ export default async function publish(props: Props): Promise<void> {
   const chunks = Object.entries(result.metafile.outputs).find(
     ([_path, { entryPoint }]) =>
       entryPoint ===
-      (props.public ? path.join(path.dirname(file), "facade.js") : file)
+      (props.public
+        ? path.join(path.dirname(file), "static-asset-facade.js")
+        : file)
   );
 
   const content = await readFile(chunks[0], { encoding: "utf-8" });

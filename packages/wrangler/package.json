@@ -67,7 +67,7 @@
     "bin",
     "miniflare-config-stubs",
     "wrangler-dist",
-    "facade.js",
+    "static-asset-facade.js",
     "vendor"
   ],
   "scripts": {

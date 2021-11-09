@@ -268,7 +268,7 @@ function useEsbuild(
 
       const chunks = Object.entries(result.metafile.outputs).find(
         ([_path, { entryPoint }]) => entryPoint === entry
-        // (staticRoot ? path.join(path.dirname(entry), "facade.js") : entry)
+        // (staticRoot ? path.join(path.dirname(entry), "static-asset-facade.js") : entry)
       );
 
       setBundle({
