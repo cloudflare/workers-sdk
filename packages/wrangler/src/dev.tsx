@@ -35,13 +35,17 @@ type Props = {
 };
 
 export function Dev(props: Props): JSX.Element {
+  const port = props.port || 8787;
   const directory = useTmpDir();
 
   const bundle = useEsbuild(props.entry, directory, props.public);
 
-  const toggles = useHotkeys({
-    local: props.initialMode === "local",
-  });
+  const toggles = useHotkeys(
+    {
+      local: props.initialMode === "local",
+    },
+    port
+  );
 
   return (
     <>
@@ -53,6 +57,7 @@ export function Dev(props: Props): JSX.Element {
           variables={props.variables}
           site={props.site}
           public={props.public}
+          port={props.port}
         />
       ) : (
         <Remote
@@ -81,7 +86,7 @@ function Remote(props: {
   options: { type: CfModuleType };
   public: void | string;
   site: void | string;
-  port: void | number;
+  port: number;
   account: CfAccount;
   variables: { [name: string]: CfVariable };
 }) {
@@ -91,7 +96,8 @@ function Remote(props: {
     [],
     props.account,
     props.variables,
-    props.site
+    props.site,
+    props.port
   );
 
   useProxy({ token, publicRoot: props.public, port: props.port });
@@ -106,11 +112,13 @@ function Local(props: {
   variables: { [name: string]: CfVariable };
   public: void | string;
   site: void | string;
+  port: number;
 }) {
   const { inspectorUrl } = useLocalWorker(
     props.bundle,
     props.options.type,
-    props.variables
+    props.variables,
+    props.port
   );
   useInspector(inspectorUrl);
   return null;
@@ -119,7 +127,8 @@ function Local(props: {
 function useLocalWorker(
   bundle: EsbuildBundle | void,
   type: CfModuleType,
-  variables: { [name: string]: CfVariable }
+  variables: { [name: string]: CfVariable },
+  port: number
 ) {
   // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
@@ -141,6 +150,8 @@ function useLocalWorker(
         "miniflare-config-stubs/.env.empty",
         "--package",
         "miniflare-config-stubs/package.empty.json",
+        "--port",
+        port.toString(),
         ...Object.entries(variables)
           .map(([varKey, varVal]) => {
             if (typeof varVal === "string") {
@@ -156,7 +167,7 @@ function useLocalWorker(
         "--modules",
         type === "esm" ? "true" : "false",
       ]);
-      console.log("⬣ Listening at http://localhost:8787");
+      console.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {
         if (code !== null) {
@@ -280,7 +291,8 @@ function useWorker(
   modules: CfModule[],
   account: CfAccount,
   variables: { [name: string]: CfVariable },
-  sitesFolder: void | string
+  sitesFolder: void | string,
+  port: number
 ): CfPreviewToken | void {
   const [token, setToken] = useState<CfPreviewToken>();
   useEffect(() => {
@@ -328,7 +340,7 @@ function useWorker(
           : variables,
       };
       setToken(await createWorker(init, account));
-      console.log("⬣ Listening at http://localhost:8787");
+      console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start();
   }, [bundle, moduleType, account]);
@@ -342,7 +354,7 @@ function useProxy({
 }: {
   token: CfPreviewToken | void;
   publicRoot: void | string;
-  port: void | number;
+  port: number;
 }) {
   useEffect(() => {
     if (!token) return;
@@ -372,7 +384,7 @@ function useProxy({
           proxy.web(req, res);
         }
       })
-      .listen(port || 8787); // TODO: custom port
+      .listen(port); // TODO: custom port
 
     proxy.on("proxyRes", function (proxyRes, req, res) {
       // log all requests
@@ -408,7 +420,8 @@ function useInspector(inspectorUrl: string | void) {
 type useHotkeysInitialState = {
   local: boolean;
 };
-function useHotkeys(initial: useHotkeysInitialState) {
+function useHotkeys(initial: useHotkeysInitialState, port: number) {
+  // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
   useInput(
     (
@@ -419,7 +432,7 @@ function useHotkeys(initial: useHotkeysInitialState) {
       switch (input) {
         case "b": // open browser
           open(
-            `http://localhost:8787/`
+            `http://localhost:${port}/`
             // {
             //   app: {
             //     name: open.apps.chrome, // TODO: fallback on other browsers

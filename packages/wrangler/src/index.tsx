@@ -409,7 +409,7 @@ compatibility_date = "${new Date()
             apiToken,
           }}
           site={args.site || config.site?.bucket}
-          port={args.port}
+          port={args.port || config.dev?.port}
           public={args.public}
           variables={{
             ...(envRootObj?.vars || {}),
@@ -745,7 +745,6 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
-            console.log(":kv:namespace create", args);
             if (args._.length !== 2) {
               throw new Error(
                 `Did you forget to add quotes around "${
@@ -754,13 +753,30 @@ compatibility_date = "${new Date()
               );
             }
             const config = args.config as Config;
+            if (!config.name) {
+              console.warn(
+                "No config present, using `worker` as a prefix for the title"
+              );
+            }
 
-            const title = `${config.name}${args.env ? `-${args.env}` : ""}'-'${
-              args.namespace
-            }${args.preview ? "_preview" : ""}`;
+            const title = `${config.name || "worker"}${
+              args.env ? `-${args.env}` : ""
+            }-${args.namespace}${args.preview ? "_preview" : ""}`;
 
             if (/[\W]+/.test(args.namespace)) {
               throw new Error("invalid binding name, needs to be js friendly");
+            }
+
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: `export default {fetch(){}}`,
+                modules: true,
+              });
+              mf.getKVNamespace(title); // this should "create" the namespace
+              console.log(`✨ Success! Created KV namespace ${title}`);
+              return;
             }
 
             // TODO: generate a binding name stripping non alphanumeric chars
@@ -775,7 +791,6 @@ compatibility_date = "${new Date()
               // this can be cleaned up
             )) as { success: boolean; result: { id: string } };
 
-            console.log(response);
             if (response.success) {
               console.log("✨ Success!");
               console.log(
@@ -796,7 +811,10 @@ compatibility_date = "${new Date()
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            console.log(":kv:namespace list", args);
+            if (args.local) {
+              console.error(`local mode is not yet supported for this command`);
+              return;
+            }
 
             const accountId = (args.config as Config).account_id;
             if (!accountId) {
@@ -830,7 +848,10 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
-            console.log(":kv:namespace delete", args);
+            if (args.local) {
+              console.error(`local mode is not yet supported for this command`);
+              return;
+            }
             const id =
               args["namespace-id"] ||
               (args.env
@@ -915,6 +936,17 @@ compatibility_date = "${new Date()
             const accountId = (args.config as Config).account_id;
 
             console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: `export default {fetch(){}}`,
+                modules: true,
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              await ns.put(key, value, { expiration, expirationTtl: ttl });
+              return;
+            }
 
             console.log(
               await putKeyValue(accountId, namespaceId, key, value, {
@@ -953,6 +985,18 @@ compatibility_date = "${new Date()
             const namespaceId = getNamespaceId(args);
             const accountId = (args.config as Config).account_id;
 
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: `export default {fetch(){}}`,
+                modules: true,
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              console.log(await ns.list({ prefix }));
+              return;
+            }
+
             console.log(
               await listNamespaceKeys(accountId, namespaceId, prefix)
             );
@@ -988,6 +1032,18 @@ compatibility_date = "${new Date()
           async ({ key, ...args }) => {
             const namespaceId = getNamespaceId(args);
             const accountId = (args.config as Config).account_id;
+
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: `export default {fetch(){}}`,
+                modules: true,
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              console.log(await ns.get(key));
+              return;
+            }
 
             const api = await getAPI();
             return api.enterpriseZoneWorkersKV.read(
@@ -1025,7 +1081,23 @@ compatibility_date = "${new Date()
               });
           },
           async ({ key, ...args }) => {
+            if (args.local) {
+              console.error(`local mode is not yet supported for this command`);
+              return;
+            }
             const namespaceId = getNamespaceId(args);
+
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: `export default {fetch(){}}`,
+                modules: true,
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              console.log(await ns.delete(key));
+              return;
+            }
             const accountId = (args.config as Config).account_id;
 
             const api = await getAPI();
@@ -1064,7 +1136,6 @@ compatibility_date = "${new Date()
         });
     },
     async ({ filename, ...args }) => {
-      console.log(":kv:bulk put", args);
       // The simplest implementation I could think of.
       // This could be made more efficient with a streaming parser/uploader
       // but we'll do that in the future if needed.
@@ -1072,11 +1143,35 @@ compatibility_date = "${new Date()
       const namespaceId = getNamespaceId(args);
       const accountId = (args.config as Config).account_id;
       const content = await readFile(filename, "utf-8");
+      let parsedContent;
       try {
-        JSON.parse(content);
+        parsedContent = JSON.parse(content);
       } catch (err) {
         console.error(`could not parse json from ${filename}`);
         throw err;
+      }
+
+      if (args.local) {
+        const { Miniflare } = await import("miniflare");
+        const mf = new Miniflare({
+          // TODO: these options shouldn't be required
+          script: `export default {fetch(){}}`,
+          modules: true,
+        });
+        const ns = await mf.getKVNamespace(namespaceId);
+        for (const {
+          key,
+          value,
+          expiration,
+          expiration_ttl,
+        } of parsedContent) {
+          await ns.put(key, value, {
+            expiration,
+            expirationTtl: expiration_ttl,
+          });
+        }
+
+        return;
       }
 
       console.log(await putBulkKeyValue(accountId, namespaceId, content));
