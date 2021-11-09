@@ -1,4 +1,5 @@
 # Changelog
+
 ## 0.2.0
 
 - ### Features
@@ -48,7 +49,7 @@
 
   - **fix: default ASSET_MANIFEST to empty object - [Cherry], [pull/254]**
 
-    As per [discussion in Discord](https://canary.discord.com/channels/595317990191398933/831143699999752262/898392183999197184) and the repo at https://github.com/Erisa-bits/getassetfromkv-undefined-error, allowing `ASSET_MANIFEST` to be optional got lost somewhere along the years and errors when attempted to be used without it. This PR restores this functionality by setting it to an empty object (instead of `undefined`), which allows fall-through to the standard `mapRequestToAsset` function.
+    As per [discussion in Discord](https://canary.discord.com/channels/595317990191398933/831143699999752262/898392183999197184) and the repo at [https://github.com/Erisa-bits/getassetfromkv-undefined-error], allowing `ASSET_MANIFEST` to be optional got lost somewhere along the years and errors when attempted to be used without it. This PR restores this functionality by setting it to an empty object (instead of `undefined`), which allows fall-through to the standard `mapRequestToAsset` function.
 
     chore: bump dependencies - This updates a few dependencies and also pins `@types/node` to `15.x` since `16.x` has some incompatible types.
     feat: generate more modern code - This removes the unnecessary async/await polyfill added by TypeScript
