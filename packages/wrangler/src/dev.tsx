@@ -9,12 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type {
-  CfModule,
-  CfModuleType,
-  CfScriptFormat,
-  CfVariable,
-} from "./api/worker";
+import type { CfModule, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -23,10 +18,12 @@ import { syncAssets } from "./sites";
 import http from "node:http";
 import serveStatic from "serve-static";
 
+type CfScriptFormat = void | "modules" | "service-worker";
+
 type Props = {
   entry: string;
   port?: number;
-  options: { type: CfModuleType; format: CfScriptFormat };
+  format: CfScriptFormat;
   account: CfAccount;
   initialMode: "local" | "remote";
   variables?: { [name: string]: CfVariable };
@@ -52,7 +49,7 @@ export function Dev(props: Props): JSX.Element {
       {toggles.local ? (
         <Local
           bundle={bundle}
-          options={props.options}
+          format={props.format}
           account={props.account}
           variables={props.variables}
           site={props.site}
@@ -62,7 +59,7 @@ export function Dev(props: Props): JSX.Element {
       ) : (
         <Remote
           bundle={bundle}
-          options={props.options}
+          format={props.format}
           account={props.account}
           variables={props.variables}
           site={props.site}
@@ -83,7 +80,7 @@ export function Dev(props: Props): JSX.Element {
 
 function Remote(props: {
   bundle: EsbuildBundle | void;
-  options: { type: CfModuleType };
+  format: CfScriptFormat;
   public: void | string;
   site: void | string;
   port: number;
@@ -92,7 +89,7 @@ function Remote(props: {
 }) {
   const token = useWorker(
     props.bundle,
-    props.options.type,
+    props.format,
     [],
     props.account,
     props.variables,
@@ -107,7 +104,7 @@ function Remote(props: {
 }
 function Local(props: {
   bundle: EsbuildBundle | void;
-  options: { type: CfModuleType };
+  format: CfScriptFormat;
   account: CfAccount;
   variables: { [name: string]: CfVariable };
   public: void | string;
@@ -116,7 +113,7 @@ function Local(props: {
 }) {
   const { inspectorUrl } = useLocalWorker(
     props.bundle,
-    props.options.type,
+    props.format,
     props.variables,
     props.port
   );
@@ -126,7 +123,7 @@ function Local(props: {
 
 function useLocalWorker(
   bundle: EsbuildBundle | void,
-  type: CfModuleType,
+  format: CfScriptFormat,
   variables: { [name: string]: CfVariable },
   port: number
 ) {
@@ -137,6 +134,17 @@ function useLocalWorker(
   useEffect(() => {
     async function startLocalWorker() {
       if (!bundle) return;
+      if (format === "modules" && bundle.type === "commonjs") {
+        console.error("⎔ Cannot use modules with a commonjs bundle.");
+        // TODO: a much better error message here, with what to do next
+        return;
+      }
+      if (format === "service-worker" && bundle.type !== "esm") {
+        console.error("⎔ Cannot use service-worker with a esm bundle.");
+        // TODO: a much better error message here, with what to do next
+        return;
+      }
+
       console.log("⎔ Starting a local server...");
       local.current = spawn("node", [
         "--experimental-vm-modules",
@@ -165,7 +173,10 @@ function useLocalWorker(
           })
           .filter(Boolean),
         "--modules",
-        type === "esm" ? "true" : "false",
+        format ||
+        (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
+          ? "true"
+          : "false",
       ]);
       console.log(`⬣ Listening at http://localhost:${port}`);
 
@@ -208,7 +219,7 @@ function useLocalWorker(
         removeSignalExitListener.current = undefined;
       }
     };
-  }, [bundle, type]);
+  }, [bundle, format, port]);
   return { inspectorUrl };
 }
 
@@ -233,6 +244,8 @@ type EsbuildBundle = {
   id: number;
   path: string;
   entry: string;
+  type: "esm" | "commonjs";
+  exports: string[];
 };
 
 function useEsbuild(
@@ -250,9 +263,8 @@ function useEsbuild(
         bundle: true,
         outdir: destination,
         metafile: true,
-        format: "esm", // TODO: verify what changes are needed here
+        format: "esm",
         sourcemap: true,
-        // nodePaths: staticRoot ? [path.join(__dirname, "../vendor")] : undefined,
         external: ["__STATIC_CONTENT_MANIFEST"],
         watch: {
           async onRebuild(error) {
@@ -268,13 +280,14 @@ function useEsbuild(
 
       const chunks = Object.entries(result.metafile.outputs).find(
         ([_path, { entryPoint }]) => entryPoint === entry
-        // (staticRoot ? path.join(path.dirname(entry), "static-asset-facade.js") : entry)
-      );
+      ); // assumedly only one entry point
 
       setBundle({
         id: 0,
         entry,
         path: chunks[0],
+        type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
+        exports: chunks[1].exports,
       });
     }
     build();
@@ -287,7 +300,7 @@ function useEsbuild(
 
 function useWorker(
   bundle: EsbuildBundle | void,
-  moduleType: CfModuleType,
+  format: CfScriptFormat,
   modules: CfModule[],
   account: CfAccount,
   variables: { [name: string]: CfVariable },
@@ -298,6 +311,17 @@ function useWorker(
   useEffect(() => {
     async function start() {
       if (!bundle) return;
+      if (format === "modules" && bundle.type === "commonjs") {
+        console.error("⎔ Cannot use modules with a commonjs bundle.");
+        // TODO: a much better error message here, with what to do next
+        return;
+      }
+      if (format === "service-worker" && bundle.type !== "esm") {
+        console.error("⎔ Cannot use service-worker with a esm bundle.");
+        // TODO: a much better error message here, with what to do next
+        return;
+      }
+
       if (token) {
         console.log("⎔ Detected changes, restarting server...");
       } else {
@@ -322,7 +346,11 @@ function useWorker(
       const init: CfWorkerInit = {
         main: {
           name: path.basename(bundle.path),
-          type: moduleType,
+          type:
+            format ||
+            (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
+              ? "esm"
+              : "commonjs",
           content,
         },
         modules: assets.manifest
@@ -343,7 +371,7 @@ function useWorker(
       console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start();
-  }, [bundle, moduleType, account]);
+  }, [bundle, format, account, port, sitesFolder]);
   return token;
 }
 
@@ -401,7 +429,7 @@ function useProxy({
       proxy.close();
       server.close();
     };
-  }, [token, publicRoot]);
+  }, [token, publicRoot, port]);
 }
 
 function useInspector(inspectorUrl: string | void) {

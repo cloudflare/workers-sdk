@@ -101,13 +101,13 @@ export function toFormData(worker: CfWorkerInit): FormData {
   };
   formData.set("metadata", JSON.stringify(metadata));
 
-  if (singleton && modules) {
+  if (singleton && modules && modules.length > 0) {
     throw new TypeError(
       "More than one module can only be specified when type = 'esm'"
     );
   }
 
-  for (const module of [main].concat(modules ?? [])) {
+  for (const module of [main].concat(modules || [])) {
     const { name } = module;
     const blob = toModule(module, mainType ?? "esm");
     formData.set(name, blob, name);

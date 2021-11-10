@@ -1,4 +1,4 @@
-import type { CfModuleType, CfScriptFormat } from "./api/worker";
+import type { CfModuleType } from "./api/worker";
 
 import React from "react";
 import { render } from "ink";
@@ -314,7 +314,6 @@ compatibility_date = "${new Date()
       return yargs
         .positional("filename", { describe: "entry point", type: "string" })
         .option("format", {
-          default: "modules",
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
         })
@@ -360,10 +359,6 @@ compatibility_date = "${new Date()
     },
     async (args) => {
       const { filename, format } = args;
-      const options = {
-        format: format as CfScriptFormat,
-        type: "esm" as CfModuleType,
-      };
       let config = args.config as Config;
       if (!args.local) {
         await loginOrRefreshIfRequired();
@@ -402,7 +397,7 @@ compatibility_date = "${new Date()
       render(
         <Dev
           entry={filename}
-          options={options}
+          format={format}
           initialMode={args.local ? "local" : "remote"}
           account={{
             accountId: accountId,

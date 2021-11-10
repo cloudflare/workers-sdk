@@ -1,17 +1,13 @@
 ## TODO
 
-bash completion (and zsh?)
-make the ui actually look nice
-
+- [ ] bash completion (and zsh?)
 - [ ] proxy websockets as well (verify with durable objects)
 - [ ] for 'plugins' expose something like node's experimental loader?
 - [ ] block requests while the new token etc are being generated
-- [ ] custom port number
 - [ ] restart when session expires
 - [ ] what's the rust/wasm story?
 - [ ] warn on node polyfills
 - [ ] warn on bundle size
-- [ ] automatically get zone id stuff?
 - [ ] I think we want to default to modules, but should be able to try service-workers syntax
 - [ ] don't crash on esbuild error
 - [ ] shut down inspector server on rebuild
@@ -19,7 +15,6 @@ make the ui actually look nice
 - [ ] testssss
 - [ ] error reporting (ala https://github.com/cloudflare/wrangler/blob/master/src/reporter/mod.rs)
 
-- [ ] publish to npm as a canary on every commit
 - [ ] integrate with changesets?
 - [ ] fix zoned publish
 - [ ] dropdown when multiple account ids
@@ -27,9 +22,37 @@ make the ui actually look nice
 - [ ] config: compat dates, usage_model
 - [ ] the remaining `dev` flags
 
+- [ ] instead of bundling the facade with the worker, we should just bundle the worker and expose it as a module.
+
 big remaining features
 
-- [ ] sites
 - [ ] tail
 - [ ] durable objects / websockets
 - [ ] secrets
+
+awesome new features
+
+---
+
+- pass in cli
+  - file name
+  - site
+  - public
+    - which automatically serves assets
+  - tail <zone>
+  - dev <...>
+  - publish <...>
+- infer
+  - account id
+  - zone id
+  - module format (!!!)
+- local mode for everything (dev, kv, do\*)
+- inbuilt devtools
+- modules, jsx, ts; ootb
+- auto login
+- share dev url
+
+more features
+
+- auto publish every commit to npm
+- it's allll typescript

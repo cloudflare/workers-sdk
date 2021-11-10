@@ -9,8 +9,11 @@ import cfetch from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
 import { syncAssets } from "./sites";
 
+type CfScriptFormat = void | "modules" | "service-worker";
+
 type Props = {
   config: Config;
+  format?: CfScriptFormat;
   script?: string;
   name?: string;
   env?: string;
@@ -73,7 +76,7 @@ export default async function publish(props: Props): Promise<void> {
     nodePaths: props.public ? [path.join(__dirname, "../vendor")] : undefined,
     outdir: destination.path,
     external: ["__STATIC_CONTENT_MANIFEST"],
-    format: "esm", // TODO: verify what changes are needed here
+    format: "esm",
     sourcemap: true,
     metafile: true,
   });
@@ -85,6 +88,23 @@ export default async function publish(props: Props): Promise<void> {
         ? path.join(path.dirname(file), "static-asset-facade.js")
         : file)
   );
+
+  const { format } = props;
+  const bundle = {
+    type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
+    exports: chunks[1].exports,
+  };
+
+  if (format === "modules" && bundle.type === "commonjs") {
+    console.error("⎔ Cannot use modules with a commonjs bundle.");
+    // TODO: a much better error message here, with what to do next
+    return;
+  }
+  if (format === "service-worker" && bundle.type !== "esm") {
+    console.error("⎔ Cannot use service-worker with a esm bundle.");
+    // TODO: a much better error message here, with what to do next
+    return;
+  }
 
   const content = await readFile(chunks[0], { encoding: "utf-8" });
   destination.cleanup();
@@ -104,7 +124,10 @@ export default async function publish(props: Props): Promise<void> {
     main: {
       name: scriptName,
       content: content,
-      type: "esm", // TODO: this should read from build.upload format
+      type:
+        (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
+          ? "esm"
+          : "commonjs",
     },
     variables: {
       ...(envRootObj?.vars || {}),
