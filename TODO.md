@@ -6,9 +6,8 @@
 - [ ] block requests while the new token etc are being generated
 - [ ] restart when session expires
 - [ ] what's the rust/wasm story?
-- [ ] warn on node polyfills
+- [ ] `--polyfill-node`
 - [ ] warn on bundle size
-- [ ] I think we want to default to modules, but should be able to try service-workers syntax
 - [ ] don't crash on esbuild error
 - [ ] shut down inspector server on rebuild
 - [ ] when a worker starts up, it has to do 4 requests(!) in a row just to get the preview token and prewarm. Would be nice if this was a single call (and faster)
@@ -30,16 +29,14 @@ big remaining features
 - [ ] durable objects / websockets
 - [ ] secrets
 
-awesome new features
-
----
+## awesome new features
 
 - pass in cli
   - file name
   - site
   - public
     - which automatically serves assets
-  - tail <zone>
+  - tail <zone>\*
   - dev <...>
   - publish <...>
 - infer
