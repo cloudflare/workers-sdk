@@ -26,6 +26,8 @@ import {
   putBulkKeyValue,
 } from "./kv";
 
+import { pages } from "./pages";
+
 import fetch from "node-fetch";
 import cfetch from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
@@ -1172,6 +1174,8 @@ compatibility_date = "${new Date()
       console.log(await putBulkKeyValue(accountId, namespaceId, content));
     }
   );
+
+  yargs.command("pages", "⚡️ Configure Cloudflare Pages", pages);
 
   yargs
     .option("config", {
