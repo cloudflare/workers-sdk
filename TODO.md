@@ -29,7 +29,7 @@ big remaining features
 - [ ] durable objects / websockets
 - [ ] secrets
 
-## awesome new features
+## new features
 
 - pass in cli
   - file name
@@ -53,3 +53,4 @@ more features
 
 - auto publish every commit to npm
 - it's allll typescript
+- react/ink

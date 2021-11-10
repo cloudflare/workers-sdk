@@ -25,6 +25,12 @@ type Props = {
 };
 
 export default async function publish(props: Props): Promise<void> {
+  if (props.public && props.format === "service-worker") {
+    // TODO: check config too
+    throw new Error(
+      "You cannot use the service worker format with a public directory."
+    );
+  }
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
   const {
@@ -64,9 +70,7 @@ export default async function publish(props: Props): Promise<void> {
                 path.join(__dirname, "../static-asset-facade.js"),
                 "utf8"
               )
-            )
-              .replace("__ENTRY_POINT__", path.join(process.cwd(), file))
-              .replace("__DEBUG__", "false"),
+            ).replace("__ENTRY_POINT__", path.join(process.cwd(), file)),
             sourcefile: "static-asset-facade.js",
             resolveDir: path.dirname(file),
           },
@@ -94,6 +98,9 @@ export default async function publish(props: Props): Promise<void> {
     type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
     exports: chunks[1].exports,
   };
+
+  // TODO: instead of bundling the facade with the worker, we should just bundle the worker and expose it as a module.
+  // That way we'll be able to accurately tell if this is a service worker or not.
 
   if (format === "modules" && bundle.type === "commonjs") {
     console.error("⎔ Cannot use modules with a commonjs bundle.");

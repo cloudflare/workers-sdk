@@ -16,13 +16,6 @@ export default {
     };
 
     try {
-      if (__DEBUG__) {
-        // customize caching
-        options.cacheControl = {
-          bypassCache: true,
-        };
-      }
-
       const page = await getAssetFromKV(
         {
           request,
@@ -47,6 +40,8 @@ export default {
       console.error(e);
       // if an error is thrown then serve from actual worker
       return worker.fetch(request);
+      // TODO: throw here if worker is not available
+      // (which implies it may be a service worker)
     }
   },
 };

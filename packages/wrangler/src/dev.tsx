@@ -32,10 +32,20 @@ type Props = {
 };
 
 export function Dev(props: Props): JSX.Element {
+  if (props.public && props.format === "service-worker") {
+    throw new Error(
+      "You cannot use the service worker format with a public directory."
+    );
+  }
   const port = props.port || 8787;
   const directory = useTmpDir();
 
   const bundle = useEsbuild(props.entry, directory, props.public);
+  if (bundle && bundle.type === "commonjs" && !props.format && props.public) {
+    throw new Error(
+      "You cannot use the service worker format with a public directory."
+    );
+  }
 
   const toggles = useHotkeys(
     {
@@ -405,7 +415,6 @@ function useProxy({
       .createServer((req, res) => {
         if (publicRoot) {
           servePublic(req, res, () => {
-            console.log("serving from edge");
             proxy.web(req, res);
           });
         } else {
