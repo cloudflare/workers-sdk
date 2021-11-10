@@ -49,6 +49,7 @@
     "@types/yargs": "^17.0.5",
     "clipboardy": "^3.0.0",
     "cloudflare": "^2.9.1",
+    "command-exists": "^1.2.9",
     "finalhandler": "^1.1.2",
     "find-up": "^6.2.0",
     "formdata-node": "^4.3.1",

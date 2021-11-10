@@ -15,8 +15,10 @@ import type { CfAccount, CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
 import onExit from "signal-exit";
 import { syncAssets } from "./sites";
+import clipboardy from "clipboardy";
 import http from "node:http";
 import serveStatic from "serve-static";
+import commandExists from "command-exists";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -50,9 +52,12 @@ export function Dev(props: Props): JSX.Element {
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
+      tunnel: false,
     },
     port
   );
+
+  useTunnel(toggles.tunnel);
 
   return (
     <>
@@ -79,7 +84,9 @@ export function Dev(props: Props): JSX.Element {
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text>
-          {`B to open a browser, D to open Devtools, L to ${
+          {`B to open a browser, D to open Devtools, S to ${
+            toggles.tunnel ? "turn off" : "turn on"
+          } (experimental) sharing, L to ${
             toggles.local ? "turn off" : "turn on"
           } local mode, X to exit`}
         </Text>
@@ -454,8 +461,84 @@ function useInspector(inspectorUrl: string | void) {
   }, [inspectorUrl]);
 }
 
+function sleep(period: number) {
+  return new Promise((resolve) => setTimeout(resolve, period));
+}
+const SLEEP_DURATION = 2000;
+const hostNameRegex = /userHostname="(.*)"/g;
+async function findTunnelHostname() {
+  let hostName: string;
+  while (!hostName) {
+    try {
+      const resp = await fetch("http://localhost:8789/metrics");
+      const data = await resp.text();
+      const matches = Array.from(data.matchAll(hostNameRegex));
+      hostName = matches[0][1];
+    } catch (err) {
+      await sleep(SLEEP_DURATION);
+    }
+  }
+  return hostName;
+}
+
+function useTunnel(toggle: boolean) {
+  const tunnel = useRef<ReturnType<typeof spawn>>();
+  const removeSignalExitListener = useRef<() => void>();
+  // TODO: test if cloudflared is available, if not
+  // point them to a url where they can get docs to install it
+  useEffect(() => {
+    async function startTunnel() {
+      if (!(await commandExists("cloudflared"))) {
+        console.error(
+          "Please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+        );
+        return;
+      }
+      if (toggle) {
+        console.log("⎔ Starting a tunnel...");
+        tunnel.current = spawn("cloudflared", [
+          "tunnel",
+          "--url",
+          "http://localhost:8787",
+          "--metrics",
+          "localhost:8789",
+        ]);
+
+        tunnel.current.on("close", (code) => {
+          if (code !== 0) {
+            console.log(`Tunnel process exited with code ${code}`);
+          }
+        });
+
+        removeSignalExitListener.current = onExit((code, signal) => {
+          console.log("⎔ Shutting down local tunnel.");
+          tunnel.current?.kill();
+          tunnel.current = undefined;
+        });
+
+        const hostName = await findTunnelHostname();
+        clipboardy.write(hostName);
+        console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
+      }
+    }
+
+    startTunnel();
+
+    return () => {
+      if (tunnel.current) {
+        console.log("⎔ Shutting down tunnel.");
+        tunnel.current?.kill();
+        tunnel.current = undefined;
+        removeSignalExitListener.current && removeSignalExitListener.current();
+        removeSignalExitListener.current = undefined;
+      }
+    };
+  }, [toggle]);
+}
+
 type useHotkeysInitialState = {
   local: boolean;
+  tunnel: boolean;
 };
 function useHotkeys(initial: useHotkeysInitialState, port: number) {
   // UGH, we should put port in context instead
@@ -487,6 +570,9 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
             //   },
             // }
           );
+          break;
+        case "s": // toggle tunnel
+          setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));
           break;
         case "l": // toggle local
           setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
