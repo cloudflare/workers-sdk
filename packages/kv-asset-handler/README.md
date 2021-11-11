@@ -86,7 +86,7 @@ export default {
             },
           },
           {
-            ASSET_NAMESPACE: env.ASSET_NAMESPACE,
+            ASSET_NAMESPACE: env.__STATIC_CONTENT,
             ASSET_MANIFEST: assetManifest,
           },
         )
@@ -219,7 +219,7 @@ return getAssetFromKV(
     },
   },
   {
-    ASSET_NAMESPACE: env.ASSET_NAMESPACE,
+    ASSET_NAMESPACE: env.__STATIC_CONTENT,
   },
 )
 ```
