@@ -35,7 +35,11 @@ import path from "path/posix";
 import { writeFile } from "node:fs/promises";
 import { DeleteConfirmation, GetSecretValue } from "./secret";
 
-async function getAPI() {
+import { createTail } from "./tail";
+import onExit from "signal-exit";
+import { setTimeout } from "node:timers/promises";
+
+function getAPI() {
   const apiToken = getAPIToken();
   if (!apiToken) {
     throw new Error("missing api token");
@@ -489,39 +493,99 @@ compatibility_date = "${new Date()
 
   // tail
   yargs.command(
-    "tail",
+    "tail [name]",
     "🦚 Starts a log tailing session for a deployed Worker.",
     (yargs) => {
-      return yargs
-        .option("format", {
-          default: "json",
-          choices: ["json", "pretty"],
-          describe: "The format of log entries",
-        })
-        .option("status", {
-          choices: ["ok", "error", "canceled"],
-          describe:
-            "Filter by invocation status (possible values: ok, error, canceled)",
-        })
-        .option("header", {
-          type: "string",
-          describe: "Filter by HTTP header",
-        })
-        .option("method", {
-          type: "string",
-          describe: "Filter by HTTP method",
-        })
-        .option("sampling-rate", {
-          type: "number",
-          describe: "Adds a percentage of requests to log sampling rate",
-        })
-        .option("search", {
-          type: "string",
-          describe: "Filter by a text match in console.log messages",
-        });
+      return (
+        yargs
+          .positional("name", {
+            describe: "name of the worker",
+            type: "string",
+          })
+          // TODO: auto-detect if this should be json or pretty based on atty
+          .option("format", {
+            default: "json",
+            choices: ["json", "pretty"],
+            describe: "The format of log entries",
+          })
+          .option("status", {
+            choices: ["ok", "error", "canceled"],
+            describe: "Filter by invocation status",
+          })
+          .option("header", {
+            type: "string",
+            describe: "Filter by HTTP header",
+          })
+          .option("method", {
+            type: "string",
+            describe: "Filter by HTTP method",
+          })
+          .option("sampling-rate", {
+            type: "number",
+            describe: "Adds a percentage of requests to log sampling rate",
+          })
+          .option("search", {
+            type: "string",
+            describe: "Filter by a text match in console.log messages",
+          })
+          .option("env", {
+            type: "string",
+            describe: "Perform on a specific environment",
+          })
+      );
+      // TODO: filter by client ip, which can be 'self' or an ip address
     },
-    (args) => {
-      console.log(":tail", args);
+    async (args) => {
+      const config = args.config as Config;
+      const accountId = config.account_id;
+      if (!(args.name || config.name)) {
+        throw new Error("Missing script name");
+      }
+      const scriptName = `${args.name || config.name}${
+        args.env ? `-${args.env}` : ""
+      }`;
+
+      const filters = {
+        status: args.status as "ok" | "error" | "canceled",
+        header: args.header,
+        method: args.method,
+        "sampling-rate": args["sampling-rate"],
+        search: args.search,
+      };
+
+      const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
+        await createTail(accountId, scriptName, filters);
+
+      console.log(
+        `successfully created tail, expires on ${expiration.toLocaleString()}`
+      );
+
+      onExit(() => {
+        tail.terminate();
+        deleteTail();
+      });
+
+      tail.on("message", (data) => {
+        console.log(data.toString());
+      });
+
+      while (tail.readyState !== tail.OPEN) {
+        switch (tail.readyState) {
+          case tail.CONNECTING:
+            console.log("still connecting to websocket");
+            await setTimeout(1000);
+            break;
+          case tail.CLOSING:
+            console.log("connection...closing?");
+            await setTimeout(1000);
+            break;
+          case tail.CLOSED:
+            console.log("connection closed");
+            process.exit(1);
+        }
+      }
+
+      console.log("connected");
     }
   );
 
