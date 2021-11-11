@@ -56,6 +56,7 @@
     "http-proxy": "^1.18.1",
     "ink": "^3.2.0",
     "ink-table": "^3.0.0",
+    "ink-text-input": "^4.0.1",
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
     "open": "^8.4.0",
     "react": "^17.0.2",

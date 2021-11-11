@@ -1,5 +1,3 @@
-import type { CfModuleType } from "./api/worker";
-
 import React from "react";
 import { render } from "ink";
 import { Dev } from "./dev";
@@ -35,6 +33,7 @@ import publish from "./publish";
 import { getAPIToken } from "./user";
 import path from "path/posix";
 import { writeFile } from "node:fs/promises";
+import { DeleteConfirmation, GetSecretValue } from "./secret";
 
 async function getAPI() {
   const apiToken = getAPIToken();
@@ -676,12 +675,16 @@ compatibility_date = "${new Date()
     (yargs) => {
       return yargs
         .command(
-          "put <name>",
-          "create or replace a secret",
+          "put <key>",
+          "Create or update a secret variable for a script",
           (yargs) => {
             return yargs
-              .positional("name", {
+              .positional("key", {
                 describe: "The variable name to be accessible in the script.",
+                type: "string",
+              })
+              .option("name", {
+                describe: "name of the script",
                 type: "string",
               })
               .option("env", {
@@ -690,17 +693,54 @@ compatibility_date = "${new Date()
                   "Binds the secret to the script of the specific environment.",
               });
           },
-          (args) => {
-            console.log(":secret put", args);
+          async (args) => {
+            const config = args.config as Config;
+
+            const accountId = config.account_id;
+            if (!accountId) {
+              throw new Error("Missing account id");
+            }
+            // TODO: use environment (how does current wrangler do it?)
+            const scriptName = args.name || config.name;
+            if (!scriptName) {
+              throw new Error("Missing script name");
+            }
+
+            const { unmount } = render(
+              <GetSecretValue
+                onSubmit={async (value) => {
+                  unmount();
+                  const response = await (
+                    await cfetch(
+                      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: args.key,
+                          text: value,
+                          type: "secret_text",
+                        }),
+                      }
+                    )
+                  ).json();
+                  console.log(response);
+                }}
+              />
+            );
           }
         )
         .command(
-          "delete <name>",
-          "delete a secret from a specific script",
+          "delete <key>",
+          "Delete a secret variable from a script",
           (yargs) => {
             return yargs
-              .positional("name", {
+              .positional("key", {
                 describe: "The variable name to be accessible in the script.",
+                type: "string",
+              })
+              .option("name", {
+                describe: "name of the script",
                 type: "string",
               })
               .option("env", {
@@ -709,8 +749,76 @@ compatibility_date = "${new Date()
                   "Binds the secret to the script of the specific environment.",
               });
           },
-          (args) => {
-            console.log(":secret delete", args);
+          async (args) => {
+            // TODO: "Are you sure you want to permanently delete the variable {} on the script named {}?",
+
+            const config = args.config as Config;
+
+            const accountId = config.account_id;
+            if (!accountId) {
+              throw new Error("Missing account id");
+            }
+            // TODO: use environment (how does current wrangler do it?)
+            const scriptName = args.name || config.name;
+            if (!scriptName) {
+              throw new Error("Missing script name");
+            }
+            const { unmount } = render(
+              <DeleteConfirmation
+                onConfirm={async (confirmation: boolean) => {
+                  unmount();
+                  if (confirmation) {
+                    console.log(
+                      `Deleting the secret ${args.key} on script ${scriptName}.`
+                    );
+
+                    const response = await (
+                      await cfetch(
+                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/${args.key}`,
+                        { method: "DELETE" }
+                      )
+                    ).json();
+                    console.log(response);
+                  }
+                }}
+              />
+            );
+          }
+        )
+        .command(
+          "list",
+          "List all secrets for a script",
+          (yargs) => {
+            return yargs
+              .option("name", {
+                describe: "name of the script",
+                type: "string",
+              })
+              .option("env", {
+                type: "string",
+                describe:
+                  "Binds the secret to the script of the specific environment.",
+              });
+          },
+          async (args) => {
+            const config = args.config as Config;
+
+            const accountId = config.account_id;
+            if (!accountId) {
+              throw new Error("Missing account id");
+            }
+            // TODO: use environment (how does current wrangler do it?)
+            const scriptName = args.name || config.name;
+            if (!scriptName) {
+              throw new Error("Missing script name");
+            }
+
+            const response = await (
+              await cfetch(
+                `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+              )
+            ).json();
+            console.log(response);
           }
         );
     }
@@ -768,8 +876,7 @@ compatibility_date = "${new Date()
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
                 // TODO: these options shouldn't be required
-                script: `export default {fetch(){}}`,
-                modules: true,
+                script: ` `, // has to be a string with at least one char
               });
               mf.getKVNamespace(title); // this should "create" the namespace
               console.log(`✨ Success! Created KV namespace ${title}`);
@@ -937,8 +1044,7 @@ compatibility_date = "${new Date()
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
                 // TODO: these options shouldn't be required
-                script: `export default {fetch(){}}`,
-                modules: true,
+                script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
               await ns.put(key, value, { expiration, expirationTtl: ttl });
@@ -986,8 +1092,7 @@ compatibility_date = "${new Date()
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
                 // TODO: these options shouldn't be required
-                script: `export default {fetch(){}}`,
-                modules: true,
+                script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
               console.log(await ns.list({ prefix }));
@@ -1034,8 +1139,7 @@ compatibility_date = "${new Date()
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
                 // TODO: these options shouldn't be required
-                script: `export default {fetch(){}}`,
-                modules: true,
+                script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
               console.log(await ns.get(key));
@@ -1088,8 +1192,7 @@ compatibility_date = "${new Date()
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
                 // TODO: these options shouldn't be required
-                script: `export default {fetch(){}}`,
-                modules: true,
+                script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
               console.log(await ns.delete(key));
@@ -1152,8 +1255,7 @@ compatibility_date = "${new Date()
         const { Miniflare } = await import("miniflare");
         const mf = new Miniflare({
           // TODO: these options shouldn't be required
-          script: `export default {fetch(){}}`,
-          modules: true,
+          script: ` `, // has to be a string with at least one char
         });
         const ns = await mf.getKVNamespace(namespaceId);
         for (const {
