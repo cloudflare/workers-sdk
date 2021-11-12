@@ -30,7 +30,7 @@ import { pages } from "./pages";
 import fetch from "node-fetch";
 import cfetch from "./fetchwithauthandloginifrequired";
 
-import { CF_BASE_URL } from "./fetchwithauthandloginifrequired";
+import { CF_API_BASE_URL } from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
 import publish from "./publish";
 import { getAPIToken } from "./user";
@@ -81,7 +81,7 @@ async function readConfig(path?: string): Promise<Config> {
     if (apiToken) {
       let response;
       try {
-        response = await fetch(`${CF_BASE_URL}/memberships`, {
+        response = await fetch(`${CF_API_BASE_URL}/memberships`, {
           method: "GET",
           headers: {
             Authorization: "Bearer " + apiToken,

@@ -3,7 +3,9 @@ import type { RequestInit, Response } from "node-fetch";
 import { getAPIToken } from "./user";
 import { loginOrRefreshIfRequired } from "./user";
 
-export const CF_BASE_URL = "https://api.cloudflare.com/client/v4";
+export const CF_API_BASE_URL =
+  process.env.CF_API_BASE_URL || "https://api.cloudflare.com/client/v4";
+
 export default async function fetchWithAuthAndLoginIfRequired(
   resource: string,
   init: RequestInit = {}
@@ -23,7 +25,7 @@ export default async function fetchWithAuthAndLoginIfRequired(
   // should I bother with response code?
   // maybe I can just throw the json error?
 
-  const response = await fetch(`${CF_BASE_URL}${resource}`, {
+  const response = await fetch(`${CF_API_BASE_URL}${resource}`, {
     method: "GET",
     ...init,
     headers: {
