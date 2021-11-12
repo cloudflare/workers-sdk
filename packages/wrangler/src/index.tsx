@@ -15,6 +15,7 @@ import {
   listScopes,
   initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
+  ChooseAccount,
 } from "./user";
 import {
   getNamespaceId,
@@ -54,8 +55,11 @@ function getAPI() {
   });
 }
 
-async function readConfig(path?: string): Promise<Config> {
-  const config: Config = {};
+async function readConfig(
+  path?: string,
+  defaults: Config = {}
+): Promise<Config> {
+  const config: Config = defaults;
   if (!path) {
     path = await findUp("wrangler.toml");
     // TODO - terminate this early instead of going all the way to the root
@@ -91,10 +95,30 @@ async function readConfig(path?: string): Promise<Config> {
         // probably offline
       }
 
-      const responseJSON = await response.json();
+      const responseJSON: {
+        success: boolean;
+        result: { id: string; account: { id: string; name: string } }[];
+      } = await response.json();
 
       if (responseJSON.success === true) {
-        config.account_id = responseJSON.result[0].account.id;
+        if (responseJSON.result.length === 1) {
+          config.account_id = responseJSON.result[0].account.id;
+        } else {
+          const selectedId = await new Promise((resolve) => {
+            const accounts = responseJSON.result.map((x) => x.account);
+            const { unmount } = render(
+              <ChooseAccount
+                accounts={accounts}
+                onSelect={async (selected) => {
+                  resolve(selected.value.id);
+                  unmount();
+                }}
+              />
+            );
+          });
+          // @ts-expect-error - we know this is a string
+          config.account_id = selectedId;
+        }
       }
 
       // TODO: if there are more than one memberships,
@@ -370,9 +394,10 @@ compatibility_date = "${new Date()
         await loginOrRefreshIfRequired();
         // TODO: this is a hack
         // @ts-expect-error being sneaky
-        config = await readConfig(args.config.__path__);
+        config = await readConfig(args.config.__path__, config);
       }
       let apiToken = getAPIToken();
+
       if (!apiToken) {
         const loggedIn = await login();
         if (loggedIn) {
