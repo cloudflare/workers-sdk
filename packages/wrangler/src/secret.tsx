@@ -9,7 +9,7 @@ export function GetSecretValue(props: { onSubmit: (value: string) => void }) {
 
   return (
     <Box>
-      <Text>Enter a secret value:</Text>
+      <Text>Enter a secret value: </Text>
       <Box>
         <TextInput
           mask="*"

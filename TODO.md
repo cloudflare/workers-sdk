@@ -15,7 +15,7 @@
 - [ ] error reporting (ala https://github.com/cloudflare/wrangler/blob/master/src/reporter/mod.rs)
 
 - [ ] integrate with changesets?
-- [ ] fix zoned publish
+- [ ] add a dns record when you publish to a zoned subdomain that doesn't exist yet
 - [ ] dropdown when multiple account ids
 - [ ] literally any tests
 - [ ] config: compat dates, usage_model
@@ -27,7 +27,6 @@ big remaining features
 
 - [ ] tail
 - [ ] durable objects / websockets
-- [ ] secrets
 
 ## new features
 

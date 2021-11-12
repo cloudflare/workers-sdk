@@ -34,6 +34,7 @@ import { getAPIToken } from "./user";
 import path from "path/posix";
 import { writeFile } from "node:fs/promises";
 import { DeleteConfirmation, GetSecretValue } from "./secret";
+import { toFormData } from "./api/form_data";
 
 import { createTail } from "./tail";
 import onExit from "signal-exit";
@@ -177,7 +178,7 @@ export async function main(): Promise<void> {
     () => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
       console.error(
-        "`wrangler generate` has been deprecated, please refer to TODO://some/path for alernatives"
+        "`wrangler generate` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
   );
@@ -225,7 +226,7 @@ compatibility_date = "${new Date()
     () => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
       console.error(
-        "`wrangler build` has been deprecated, please refer to TODO://some/path for alernatives"
+        "`wrangler build` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
   );
@@ -305,7 +306,7 @@ compatibility_date = "${new Date()
     (args) => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
       console.error(
-        "`wrangler config` has been deprecated, please refer to TODO://some/path for alernatives"
+        "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
       );
       console.log(":config", args);
     }
@@ -618,7 +619,7 @@ compatibility_date = "${new Date()
     () => {
       // "🔬 [DEPRECATED] Preview your code temporarily on cloudflareworkers.com"
       console.error(
-        "`wrangler preview` has been deprecated, please refer to TODO://some/path for alernatives"
+        "`wrangler preview` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
   );
@@ -727,7 +728,7 @@ compatibility_date = "${new Date()
     },
     () => {
       console.error(
-        "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alernatives"
+        "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
   );
@@ -774,21 +775,52 @@ compatibility_date = "${new Date()
               <GetSecretValue
                 onSubmit={async (value) => {
                   unmount();
-                  const response = await (
-                    await cfetch(
-                      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
-                      {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          name: args.key,
-                          text: value,
-                          type: "secret_text",
-                        }),
-                      }
-                    )
-                  ).json();
-                  console.log(response);
+                  async function submitSecret() {
+                    return await (
+                      await cfetch(
+                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
+                        {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            name: args.key,
+                            text: value,
+                            type: "secret_text",
+                          }),
+                        }
+                      )
+                    ).json();
+                  }
+
+                  const response = await submitSecret();
+
+                  // @ts-expect-error TODO: fix response types
+                  if (response.errors?.[0]?.code === 10007) {
+                    // upload a draft worker
+
+                    await (
+                      await cfetch(
+                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
+                        {
+                          method: "PUT",
+                          // @ts-expect-error TODO: fix this error!
+                          body: toFormData({
+                            main: {
+                              name: scriptName,
+                              content: `export default { fetch() {} }`,
+                              type: "esm",
+                            },
+                            variables: {},
+                            modules: [],
+                          }),
+                        }
+                      )
+                    ).json();
+                    // and then try again
+                    console.log(await submitSecret());
+                  } else {
+                    console.log(response);
+                  }
                 }}
               />
             );
@@ -814,8 +846,6 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
-            // TODO: "Are you sure you want to permanently delete the variable {} on the script named {}?",
-
             const config = args.config as Config;
 
             const accountId = config.account_id;
