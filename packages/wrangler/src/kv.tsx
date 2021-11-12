@@ -81,12 +81,29 @@ export async function putBulkKeyValue(
   namespaceId: string,
   keyvalueStr: string
 ) {
-  await (
+  return await (
     await cfetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
       {
         method: "PUT",
         body: keyvalueStr,
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+  ).json();
+}
+
+export async function deleteBulkKeyValue(
+  accountId: string,
+  namespaceId: string,
+  keyStr: string
+) {
+  return await (
+    await cfetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+      {
+        method: "DELETE",
+        body: keyStr,
         headers: { "Content-Type": "application/json" },
       }
     )

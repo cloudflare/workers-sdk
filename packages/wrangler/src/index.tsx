@@ -22,6 +22,7 @@ import {
   listNamespaceKeys,
   putKeyValue,
   putBulkKeyValue,
+  deleteBulkKeyValue,
 } from "./kv";
 
 import { pages } from "./pages";
@@ -759,6 +760,10 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
+            if (args.local) {
+              console.error("--local not implemented for this command yet");
+              return;
+            }
             const config = args.config as Config;
 
             const accountId = config.account_id;
@@ -846,6 +851,10 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
+            if (args.local) {
+              console.error("--local not implemented for this command yet");
+              return;
+            }
             const config = args.config as Config;
 
             const accountId = config.account_id;
@@ -895,6 +904,10 @@ compatibility_date = "${new Date()
               });
           },
           async (args) => {
+            if (args.local) {
+              console.error("--local not implemented for this command yet");
+              return;
+            }
             const config = args.config as Config;
 
             const accountId = config.account_id;
@@ -1303,71 +1316,135 @@ compatibility_date = "${new Date()
 
   // :bulk
   yargs.command(
-    "kv:bulk put <filename>",
-    "💪 Add multiple Workers KV key-value pairs at once from a file",
+    "kv:bulk",
+    "💪 Interact with multiple Workers KV key-value pairs at once",
     (yargs) => {
       return yargs
-        .positional("filename", {
-          describe: "The file to write to the namespace",
-          type: "string",
-        })
-        .option("binding", {
-          type: "string",
-          describe: "The name of the namespace to put to",
-        })
-        .option("namespace-id", {
-          type: "string",
-          describe: "The id of the namespace to put to",
-        })
-        .check(demandOneOfOption("binding", "namespace-id"))
-        .option("env", {
-          type: "string",
-          describe: "Perform on a specific environment",
-        })
-        .option("preview", {
-          type: "boolean",
-          describe: "Interact with a preview namespace",
-        });
-    },
-    async ({ filename, ...args }) => {
-      // The simplest implementation I could think of.
-      // This could be made more efficient with a streaming parser/uploader
-      // but we'll do that in the future if needed.
+        .command(
+          "put <filename>",
+          "Upload multiple key-value pairs to a namespace",
+          (yargs) => {
+            return yargs
+              .positional("filename", {
+                describe: `The JSON file of key-value pairs to upload, in form [{"key":..., "value":...}"...]`,
+                type: "string",
+              })
+              .option("binding", {
+                type: "string",
+                describe: "The name of the namespace to put to",
+              })
+              .option("namespace-id", {
+                type: "string",
+                describe: "The id of the namespace to put to",
+              })
+              .check(demandOneOfOption("binding", "namespace-id"))
+              .option("env", {
+                type: "string",
+                describe: "Perform on a specific environment",
+              })
+              .option("preview", {
+                type: "boolean",
+                describe: "Interact with a preview namespace",
+              });
+          },
+          async ({ filename, ...args }) => {
+            // The simplest implementation I could think of.
+            // This could be made more efficient with a streaming parser/uploader
+            // but we'll do that in the future if needed.
 
-      const namespaceId = getNamespaceId(args);
-      const accountId = (args.config as Config).account_id;
-      const content = await readFile(filename, "utf-8");
-      let parsedContent;
-      try {
-        parsedContent = JSON.parse(content);
-      } catch (err) {
-        console.error(`could not parse json from ${filename}`);
-        throw err;
-      }
+            const namespaceId = getNamespaceId(args);
+            const accountId = (args.config as Config).account_id;
+            const content = await readFile(filename, "utf-8");
+            let parsedContent;
+            try {
+              parsedContent = JSON.parse(content);
+            } catch (err) {
+              console.error(`could not parse json from ${filename}`);
+              throw err;
+            }
 
-      if (args.local) {
-        const { Miniflare } = await import("miniflare");
-        const mf = new Miniflare({
-          // TODO: these options shouldn't be required
-          script: ` `, // has to be a string with at least one char
-        });
-        const ns = await mf.getKVNamespace(namespaceId);
-        for (const {
-          key,
-          value,
-          expiration,
-          expiration_ttl,
-        } of parsedContent) {
-          await ns.put(key, value, {
-            expiration,
-            expirationTtl: expiration_ttl,
-          });
-        }
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: ` `, // has to be a string with at least one char
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              for (const {
+                key,
+                value,
+                expiration,
+                expiration_ttl,
+              } of parsedContent) {
+                await ns.put(key, value, {
+                  expiration,
+                  expirationTtl: expiration_ttl,
+                });
+              }
 
-        return;
-      }
+              return;
+            }
 
-      console.log(await putBulkKeyValue(accountId, namespaceId, content));
+            console.log(await putBulkKeyValue(accountId, namespaceId, content));
+          }
+        )
+        .command(
+          "delete <filename>",
+          "Upload multiple key-value pairs to a namespace",
+          (yargs) => {
+            return yargs
+              .positional("filename", {
+                describe: `The JSON file of key-value pairs to upload, in form ["key1", "key2", ...]`,
+                type: "string",
+              })
+              .option("binding", {
+                type: "string",
+                describe: "The name of the namespace to delete from",
+              })
+              .option("namespace-id", {
+                type: "string",
+                describe: "The id of the namespace to delete from",
+              })
+              .check(demandOneOfOption("binding", "namespace-id"))
+              .option("env", {
+                type: "string",
+                describe: "Perform on a specific environment",
+              })
+              .option("preview", {
+                type: "boolean",
+                describe: "Interact with a preview namespace",
+              });
+          },
+          async ({ filename, ...args }) => {
+            const namespaceId = getNamespaceId(args);
+            const accountId = (args.config as Config).account_id;
+            const content = await readFile(filename, "utf-8");
+            let parsedContent;
+            try {
+              parsedContent = JSON.parse(content);
+            } catch (err) {
+              console.error(`could not parse json from ${filename}`);
+              throw err;
+            }
+
+            if (args.local) {
+              const { Miniflare } = await import("miniflare");
+              const mf = new Miniflare({
+                // TODO: these options shouldn't be required
+                script: ` `, // has to be a string with at least one char
+              });
+              const ns = await mf.getKVNamespace(namespaceId);
+              for (const key of parsedContent) {
+                await ns.delete(key);
+              }
+
+              return;
+            }
+            console.log(
+              await deleteBulkKeyValue(accountId, namespaceId, content)
+            );
+          }
+        );
     }
   );
 
