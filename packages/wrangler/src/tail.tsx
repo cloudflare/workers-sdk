@@ -27,8 +27,7 @@ async function createTailButDontConnect(
 ): Promise<TailApiResponse> {
   const createTailUrl = makeCreateTailUrl(accountId, workerName);
   /// https://api.cloudflare.com/#worker-tail-logs-start-tail
-  // @ts-expect-error we need to type the api responses
-  return await cfetch(createTailUrl, { method: "POST" });
+  return await cfetch<TailApiResponse>(createTailUrl, { method: "POST" });
 }
 
 export async function createTail(

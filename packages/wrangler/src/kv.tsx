@@ -15,9 +15,11 @@ export async function listNamespaces(accountId: string) {
     done = false,
     results = [];
   while (!(done || results.length % 100 !== 0)) {
-    const json = (await cfetch(
+    const json = await cfetch<
+      { id: string; title: string; supports_url_encoding: boolean }[]
+    >(
       `/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`
-    )) as unknown[];
+    );
     page++;
     results = [...results, ...json];
     if (json.length === 0) {
@@ -33,7 +35,9 @@ export async function listNamespaceKeys(
   prefix?: string,
   limit?: number
 ) {
-  return await cfetch(
+  return await cfetch<
+    { name: string; expiration: number; metadata: { [key: string]: unknown } }[]
+  >(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
       { prefix, limit }
     )}`

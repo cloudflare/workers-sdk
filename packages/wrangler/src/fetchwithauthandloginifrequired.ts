@@ -1,15 +1,15 @@
 import fetch from "node-fetch";
-import type { RequestInit, Response } from "node-fetch";
+import type { RequestInit } from "node-fetch";
 import { getAPIToken } from "./user";
 import { loginOrRefreshIfRequired } from "./user";
 
 export const CF_API_BASE_URL =
   process.env.CF_API_BASE_URL || "https://api.cloudflare.com/client/v4";
 
-export default async function fetchWithAuthAndLoginIfRequired(
+export default async function fetchWithAuthAndLoginIfRequired<ResponseType>(
   resource: string,
   init: RequestInit = {}
-): Promise<unknown> {
+): Promise<ResponseType> {
   await loginOrRefreshIfRequired();
   const apiToken = getAPIToken();
   if (!apiToken) {
@@ -17,10 +17,9 @@ export default async function fetchWithAuthAndLoginIfRequired(
   }
   // @ts-expect-error Authorization isn't non HeadersInit, annoyingly
   if (init.headers?.Authorization) {
-    console.warn(
+    throw new Error(
       "fetchWithAuthAndLoginIfRequired will not add an authorisation header a request that already specifies it"
     );
-    return fetch(resource, init);
   }
   // should I bother with response code?
   // maybe I can just throw the json error?

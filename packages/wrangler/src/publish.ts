@@ -191,11 +191,10 @@ export default async function publish(props: Props): Promise<void> {
     let zoneId: string;
     if (zone.indexOf(".") > -1) {
       // TODO: verify this is a domain properly
-      const zoneResult = await cfetch(
+      const zoneResult = await cfetch<{ id: string }>(
         `/zones?name=${encodeURIComponent(zone)}`
       );
       console.log(zoneResult);
-      // @ts-expect-error we need to type specific responses
       zoneId = zoneResult.id;
     } else {
       zoneId = zone;
@@ -203,7 +202,9 @@ export default async function publish(props: Props): Promise<void> {
 
     // get all routes for this zone
 
-    const allRoutes = await cfetch(`/zones/${zoneId}/workers/routes`);
+    const allRoutes = await cfetch<
+      { id: string; pattern: string; script: string }[]
+    >(`/zones/${zoneId}/workers/routes`);
 
     console.log(allRoutes);
 
@@ -218,7 +219,6 @@ export default async function publish(props: Props): Promise<void> {
     );
 
     for (const route of routes) {
-      // @ts-expect-error TODO: fix this type error!
       const matchingRoute = allRoutes.find((r) => r.pattern === route);
       if (!matchingRoute) {
         console.log(`publishing ${scriptName} to ${route}`);
@@ -250,10 +250,9 @@ export default async function publish(props: Props): Promise<void> {
     console.log("checking that subdomain is registered");
     // check if subdomain is registered
     // if not, register it
-    const subDomainResponse = await cfetch(
+    const subDomainResponse = await cfetch<{ subdomain: string }>(
       `/accounts/${config.account_id}/workers/subdomain`
     );
-    // @ts-expect-error TODO: we need to have types for all cf api responses
     const subdomainName = subDomainResponse.subdomain;
 
     assert(subdomainName, "subdomain is not registered");

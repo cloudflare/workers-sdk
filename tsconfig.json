@@ -12,5 +12,5 @@
     "resolveJsonModule": true
   },
   "lib": ["esnext", "webworker"],
-  "exclude": ["node_modules/"]
+  "exclude": ["node_modules/", "packages/wrangler/vendor"]
 }

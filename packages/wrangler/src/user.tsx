@@ -411,7 +411,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
         refreshToken: LocalState.refreshToken,
       };
       return accessContext;
-    } catch (err: any) {
+    } catch (err) {
       const error = err?.error || "There was a network error.";
       switch (error) {
         case "invalid_grant":
@@ -572,18 +572,6 @@ expiration_time = "${tokenData.token?.expiry}"
 type LoginProps = {
   scopes?: string[];
 };
-
-function getErrorPage(err: Error) {
-  return `<!doctype html>
-<html>
-  <head></head>
-  <body>
-    ${err.message}
-    ${err.stack.split("\n").join("<br/>")}
-  </body>
-</html>
-  `;
-}
 
 export async function loginOrRefreshIfRequired(): Promise<void> {
   // TODO: if there already is a token, then try refreshing

@@ -1,6 +1,5 @@
 import { Response, Request, Headers } from "node-fetch";
 import type { MessageEvent } from "ws";
-// @ts-expect-error WebSocketServer isn't on the type for some reason bleh
 import WebSocket, { WebSocketServer } from "ws";
 import type { IncomingMessage, ServerResponse } from "http";
 import { createServer } from "http";

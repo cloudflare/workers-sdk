@@ -60,8 +60,9 @@ async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
     ? `/zones/${zoneId}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  // @ts-expect-error TODO: fix this
-  const { exchange_url: tokenUrl } = await cfetch(initUrl);
+  const { exchange_url: tokenUrl } = await cfetch<{ exchange_url: string }>(
+    initUrl
+  );
   const { inspector_websocket: url, token } = await fetchJson()(tokenUrl);
   const { host } = new URL(url);
   const query = `cf_workers_preview_token=${token}`;
@@ -101,16 +102,18 @@ export async function previewToken(
   const mode = zoneId ? { routes: ["*/*"] } : { workers_dev: true };
   const formData = toFormData(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
-  const init = {
-    method: "POST",
-    body: formData,
-    headers: {
-      "cf-preview-upload-config-token": value,
-    },
-  };
 
-  // @ts-expect-error TODO: fix this
-  const { preview_token: token } = await cfetch(url, init);
+  const { preview_token: token } = await cfetch<{ preview_token: string }>(
+    url,
+    {
+      method: "POST",
+      // @ts-expect-error TODO: fix this
+      body: formData,
+      headers: {
+        "cf-preview-upload-config-token": value,
+      },
+    }
+  );
   return {
     value: token,
     host,

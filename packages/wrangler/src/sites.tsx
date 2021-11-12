@@ -53,18 +53,21 @@ async function createKVNamespaceIfNotAlreadyExisting(
   }
 
   // else we make the namespace
-  const json = await cfetch(`/accounts/${accountId}/storage/kv/namespaces`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ title }),
-  });
+  // TODO: use an export from ./kv
+  const json = await cfetch<{ id: string }>(
+    `/accounts/${accountId}/storage/kv/namespaces`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title }),
+    }
+  );
 
   return {
     created: true,
-    // @ts-expect-error responses need to be typed
-    id: json.result.id,
+    id: json.id,
   };
 }
 
@@ -83,8 +86,7 @@ export async function syncAssets(
 
   // let's get all the keys in this namespace
   const keys = new Set(
-    // @ts-expect-error responses need to be typed
-    (await listNamespaceKeys(accountId, namespace)).result.map((x) => x.name)
+    (await listNamespaceKeys(accountId, namespace)).map((x) => x.name)
   );
 
   const manifest = {};
