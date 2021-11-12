@@ -29,6 +29,8 @@ import { pages } from "./pages";
 
 import fetch from "node-fetch";
 import cfetch from "./fetchwithauthandloginifrequired";
+
+import { CF_BASE_URL } from "./fetchwithauthandloginifrequired";
 import assert from "node:assert";
 import publish from "./publish";
 import { getAPIToken } from "./user";
@@ -79,15 +81,12 @@ async function readConfig(path?: string): Promise<Config> {
     if (apiToken) {
       let response;
       try {
-        response = await fetch(
-          `https://api.cloudflare.com/client/v4/memberships`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: "Bearer " + apiToken,
-            },
-          }
-        );
+        response = await fetch(`${CF_BASE_URL}/memberships`, {
+          method: "GET",
+          headers: {
+            Authorization: "Bearer " + apiToken,
+          },
+        });
       } catch (err) {
         // probably offline
       }
@@ -658,21 +657,7 @@ compatibility_date = "${new Date()
               throw new Error("missing zone id");
             }
 
-            const response = await cfetch(
-              `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes`,
-              {
-                method: "GET",
-              }
-            );
-            const json = await response.json();
-            // @ts-expect-error TODO: we need to have types for all cf api responses
-            if (json.success === true) {
-              // @ts-expect-error TODO: we need to have types for all cf api responses
-              console.log(json.result);
-            } else {
-              // @ts-expect-error TODO: we need to have types for all cf api responses
-              throw json.errors[0];
-            }
+            console.log(await cfetch(`/zones/${zone}/workers/routes`));
           }
         )
         .command(
@@ -701,19 +686,11 @@ compatibility_date = "${new Date()
               throw new Error("missing zone id");
             }
 
-            const response = await cfetch(
-              `https://api.cloudflare.com/client/v4/zones/${zone}/workers/routes/${args.id}`,
-              { method: "DELETE" }
+            console.log(
+              await cfetch(`/zones/${zone}/workers/routes/${args.id}`, {
+                method: "DELETE",
+              })
             );
-            const json = await response.json();
-            // @ts-expect-error TODO: we need to have types for all cf api responses
-            if (json.success === true) {
-              // @ts-expect-error TODO: we need to have types for all cf api responses
-              console.log(json.result);
-            } else {
-              // @ts-expect-error TODO: we need to have types for all cf api responses
-              throw json.errors[0];
-            }
           }
         );
     }
@@ -781,31 +758,27 @@ compatibility_date = "${new Date()
                 onSubmit={async (value) => {
                   unmount();
                   async function submitSecret() {
-                    return await (
-                      await cfetch(
-                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
-                        {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            name: args.key,
-                            text: value,
-                            type: "secret_text",
-                          }),
-                        }
-                      )
-                    ).json();
+                    return await cfetch(
+                      `/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: args.key,
+                          text: value,
+                          type: "secret_text",
+                        }),
+                      }
+                    );
                   }
 
-                  const response = await submitSecret();
-
-                  // @ts-expect-error TODO: fix response types
-                  if (response.errors?.[0]?.code === 10007) {
-                    // upload a draft worker
-
-                    await (
+                  try {
+                    console.log(await submitSecret());
+                  } catch (e) {
+                    if (e.code === 10007) {
+                      // upload a draft worker
                       await cfetch(
-                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
+                        `/accounts/${accountId}/workers/scripts/${scriptName}`,
                         {
                           method: "PUT",
                           // @ts-expect-error TODO: fix this error!
@@ -819,12 +792,11 @@ compatibility_date = "${new Date()
                             modules: [],
                           }),
                         }
-                      )
-                    ).json();
-                    // and then try again
-                    console.log(await submitSecret());
-                  } else {
-                    console.log(response);
+                      );
+
+                      // and then try again
+                      console.log(await submitSecret());
+                    }
                   }
                 }}
               />
@@ -875,13 +847,12 @@ compatibility_date = "${new Date()
                       `Deleting the secret ${args.key} on script ${scriptName}.`
                     );
 
-                    const response = await (
+                    console.log(
                       await cfetch(
-                        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets/${args.key}`,
+                        `/accounts/${accountId}/workers/scripts/${scriptName}/secrets/${args.key}`,
                         { method: "DELETE" }
                       )
-                    ).json();
-                    console.log(response);
+                    );
                   }
                 }}
               />
@@ -920,12 +891,11 @@ compatibility_date = "${new Date()
               throw new Error("Missing script name");
             }
 
-            const response = await (
+            console.log(
               await cfetch(
-                `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+                `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
               )
-            ).json();
-            console.log(response);
+            );
           }
         );
     }

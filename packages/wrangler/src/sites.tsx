@@ -53,18 +53,13 @@ async function createKVNamespaceIfNotAlreadyExisting(
   }
 
   // else we make the namespace
-  const response = await cfetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title }),
-    }
-  );
-
-  const json = await response.json();
+  const json = await cfetch(`/accounts/${accountId}/storage/kv/namespaces`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title }),
+  });
 
   return {
     created: true,

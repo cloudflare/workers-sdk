@@ -9,7 +9,7 @@ export type TailApiResponse = {
 };
 
 function makeCreateTailUrl(accountId: string, workerName: string): string {
-  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${workerName}/tails`;
+  return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }
 
 function makeDeleteTailUrl(
@@ -17,7 +17,7 @@ function makeDeleteTailUrl(
   workerName: string,
   tailId: string
 ): string {
-  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
+  return `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
 /// Creates a tail, but doesn't connect to it.
@@ -27,20 +27,8 @@ async function createTailButDontConnect(
 ): Promise<TailApiResponse> {
   const createTailUrl = makeCreateTailUrl(accountId, workerName);
   /// https://api.cloudflare.com/#worker-tail-logs-start-tail
-  const response = await cfetch(createTailUrl, { method: "POST" });
-  if (!response.ok) {
-    // - tail API can return 3 errors according to the docs:
-    //   - 10057: too much traffic to add a tail
-    //   - 10059: too many active tails, max is 10
-    //   - 10076: worker can't be tailed due to abuse
-    throw new Error(
-      `Received error from server when creating tail!\n${JSON.stringify(
-        await response.json()
-      )}`
-    );
-  }
   // @ts-expect-error we need to type the api responses
-  return (await response.json()).result;
+  return await cfetch(createTailUrl, { method: "POST" });
 }
 
 export async function createTail(
@@ -61,12 +49,7 @@ export async function createTail(
 
   // deletes the tail
   async function deleteTail() {
-    const response = await cfetch(deleteUrl, { method: "DELETE" });
-    if (!response.ok) {
-      throw new Error(
-        `Received error from server when deleting tail!\n${await response.json()}`
-      );
-    }
+    await cfetch(deleteUrl, { method: "DELETE" });
   }
 
   const tail = new WebSocket(websocketUrl, "trace-v1", {
@@ -77,7 +60,6 @@ export async function createTail(
   });
 
   // TODO: send filters as well
-
   return { tail, expiration, deleteTail };
 }
 

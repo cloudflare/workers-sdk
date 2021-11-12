@@ -15,25 +15,13 @@ export async function listNamespaces(accountId: string) {
     done = false,
     results = [];
   while (!(done || results.length % 100 !== 0)) {
-    const response = await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`,
-      {
-        method: "GET",
-      }
-    );
+    const json = (await cfetch(
+      `/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`
+    )) as unknown[];
     page++;
-    const json = await response.json();
-    // @ts-expect-error we neeed to type these responses
-    if (json.success) {
-      // @ts-expect-error we neeed to type these responses
-      results = [...results, ...json.result];
-      // @ts-expect-error we neeed to type these responses
-      if (json.result.length === 0) {
-        done = true;
-      }
-    } else {
-      // @ts-expect-error we neeed to type these responses
-      throw new Error(json.errors[0]);
+    results = [...results, ...json];
+    if (json.length === 0) {
+      done = true;
     }
   }
   return results;
@@ -45,13 +33,11 @@ export async function listNamespaceKeys(
   prefix?: string,
   limit?: number
 ) {
-  return await (
-    await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
-        { prefix, limit }
-      )}`
-    )
-  ).json();
+  return await cfetch(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
+      { prefix, limit }
+    )}`
+  );
 }
 
 export async function putKeyValue(
@@ -61,19 +47,17 @@ export async function putKeyValue(
   value: string,
   args?: { expiration?: number; expiration_ttl?: number }
 ) {
-  await (
-    await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
-        args
-          ? qs.stringify({
-              expiration: args.expiration,
-              expiration_ttl: args.expiration_ttl,
-            })
-          : ""
-      }`,
-      { method: "PUT", body: value }
-    )
-  ).json();
+  return await cfetch(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
+      args
+        ? qs.stringify({
+            expiration: args.expiration,
+            expiration_ttl: args.expiration_ttl,
+          })
+        : ""
+    }`,
+    { method: "PUT", body: value }
+  );
 }
 
 export async function putBulkKeyValue(
@@ -81,16 +65,14 @@ export async function putBulkKeyValue(
   namespaceId: string,
   keyvalueStr: string
 ) {
-  return await (
-    await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
-      {
-        method: "PUT",
-        body: keyvalueStr,
-        headers: { "Content-Type": "application/json" },
-      }
-    )
-  ).json();
+  return await cfetch(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+    {
+      method: "PUT",
+      body: keyvalueStr,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
 
 export async function deleteBulkKeyValue(
@@ -98,16 +80,14 @@ export async function deleteBulkKeyValue(
   namespaceId: string,
   keyStr: string
 ) {
-  return await (
-    await cfetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
-      {
-        method: "DELETE",
-        body: keyStr,
-        headers: { "Content-Type": "application/json" },
-      }
-    )
-  ).json();
+  return await cfetch(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+    {
+      method: "DELETE",
+      body: keyStr,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
 
 export function getNamespaceId({

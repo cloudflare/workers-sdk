@@ -161,34 +161,27 @@ export default async function publish(props: Props): Promise<void> {
     console.log("publishing to workers.dev subdomain");
 
     console.log(
-      await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
-          {
-            method: "PUT",
-            // @ts-expect-error TODO: fix this type error!
-            body: toFormData(worker),
-          }
-        )
-      ).json()
+      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+        method: "PUT",
+        // @ts-expect-error TODO: fix this type error!
+        body: toFormData(worker),
+      })
     );
 
     // then mark it as a cron
     console.log(
-      await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(
-              triggers.map((trigger) => ({ cron: `${trigger}` }))
-            ),
-          }
-        )
-      ).json()
+      await cfetch(
+        `/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            triggers.map((trigger) => ({ cron: `${trigger}` }))
+          ),
+        }
+      )
     );
   } else if (zone) {
     if (!routes) {
@@ -198,65 +191,47 @@ export default async function publish(props: Props): Promise<void> {
     let zoneId: string;
     if (zone.indexOf(".") > -1) {
       // TODO: verify this is a domain properly
-      const zoneResult = await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(
-            zone
-          )}`
-        )
-      ).json();
+      const zoneResult = await cfetch(
+        `/zones?name=${encodeURIComponent(zone)}`
+      );
       console.log(zoneResult);
-      // @ts-expect-error TODO: fix this type error!
-      zoneId = zoneResult.result[0].id;
+      // @ts-expect-error we need to type specific responses
+      zoneId = zoneResult.id;
     } else {
       zoneId = zone;
     }
 
     // get all routes for this zone
 
-    const allRoutes = await (
-      await cfetch(
-        `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`
-      )
-    ).json();
+    const allRoutes = await cfetch(`/zones/${zoneId}/workers/routes`);
 
     console.log(allRoutes);
 
     // upload the script
 
     console.log(
-      await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
-          {
-            method: "PUT",
-            // @ts-expect-error TODO: fix this type error!
-            body: toFormData(worker),
-          }
-        )
-      ).json()
+      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+        method: "PUT",
+        // @ts-expect-error TODO: fix this type error!
+        body: toFormData(worker),
+      })
     );
 
     for (const route of routes) {
       // @ts-expect-error TODO: fix this type error!
-      const matchingRoute = allRoutes.result.find((r) => r.pattern === route);
+      const matchingRoute = allRoutes.find((r) => r.pattern === route);
       if (!matchingRoute) {
         console.log(`publishing ${scriptName} to ${route}`);
-        const json = await (
-          await cfetch(
-            `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                pattern: route,
-                script: scriptName,
-              }),
-            }
-          )
-        ).json();
+        const json = await cfetch(`/zones/${zoneId}/workers/routes`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pattern: route,
+            script: scriptName,
+          }),
+        });
         console.log(json);
       } else {
         if (matchingRoute.script !== scriptName) {
@@ -275,48 +250,38 @@ export default async function publish(props: Props): Promise<void> {
     console.log("checking that subdomain is registered");
     // check if subdomain is registered
     // if not, register it
-    const subDomainResponse = await (
-      await cfetch(
-        `https://api.cloudflare.com/client/v4/accounts/${config.account_id}/workers/subdomain`,
-        { method: "GET" }
-      )
-    ).json();
+    const subDomainResponse = await cfetch(
+      `/accounts/${config.account_id}/workers/subdomain`
+    );
     // @ts-expect-error TODO: we need to have types for all cf api responses
-    const subdomainName = subDomainResponse.result.subdomain;
+    const subdomainName = subDomainResponse.subdomain;
 
     assert(subdomainName, "subdomain is not registered");
 
     console.log("publishing to workers.dev subdomain");
     console.log(
-      await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`,
-          {
-            method: "PUT",
-            // @ts-expect-error TODO: fix this type error!
-            body: toFormData(worker),
-          }
-        )
-      ).json()
+      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+        method: "PUT",
+        // @ts-expect-error TODO: fix this type error!
+        body: toFormData(worker),
+      })
     );
 
     // ok now enable it
     console.log("Making public on subdomain...");
     console.log(
-      await (
-        await cfetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
-          {
-            method: "POST",
-            headers: {
-              "Content-type": "application/json",
-            },
-            body: JSON.stringify({
-              enabled: true,
-            }),
-          }
-        )
-      ).json()
+      await cfetch(
+        `/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
+        {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            enabled: true,
+          }),
+        }
+      )
     );
     console.log(`published to ${scriptName}.${subdomainName}.workers.dev`);
   }

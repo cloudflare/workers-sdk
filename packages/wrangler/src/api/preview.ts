@@ -57,12 +57,11 @@ export interface CfPreviewToken {
 async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
   const { accountId, zoneId } = account;
   const initUrl = zoneId
-    ? `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/edge-preview`
-    : `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain/edge-preview`;
+    ? `/zones/${zoneId}/workers/edge-preview`
+    : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url: tokenUrl } =
-    // @ts-expect-error TODO: fix this
-    (await (await cfetch(initUrl)).json()).result;
+  // @ts-expect-error TODO: fix this
+  const { exchange_url: tokenUrl } = await cfetch(initUrl);
   const { inspector_websocket: url, token } = await fetchJson()(tokenUrl);
   const { host } = new URL(url);
   const query = `cf_workers_preview_token=${token}`;
@@ -97,7 +96,7 @@ export async function previewToken(
 
   const { accountId, zoneId } = account;
   const scriptId = zoneId ? randomId() : host.split(".")[0];
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
+  const url = `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode = zoneId ? { routes: ["*/*"] } : { workers_dev: true };
   const formData = toFormData(worker);
@@ -110,9 +109,8 @@ export async function previewToken(
     },
   };
 
-  const { preview_token: token } =
-    // @ts-expect-error TODO: fix this
-    (await (await cfetch(url, init)).json()).result;
+  // @ts-expect-error TODO: fix this
+  const { preview_token: token } = await cfetch(url, init);
   return {
     value: token,
     host,
