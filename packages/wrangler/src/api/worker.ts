@@ -117,6 +117,8 @@ export interface CfWorkerInit {
    * The map of names to variables. (aka. environment variables)
    */
   variables?: { [name: string]: CfVariable };
+  compatibility_date?: string;
+  usage_model?: void | "bundled" | "unbound";
 }
 
 /**

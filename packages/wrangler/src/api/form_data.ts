@@ -84,7 +84,7 @@ function toModule(module: CfModule, entryType?: CfModuleType): Blob {
  */
 export function toFormData(worker: CfWorkerInit): FormData {
   const formData = new FormData();
-  const { main, modules, variables } = worker;
+  const { main, modules, variables, usage_model, compatibility_date } = worker;
   const { name, type: mainType } = main;
 
   const bindings = [];
@@ -99,6 +99,14 @@ export function toFormData(worker: CfWorkerInit): FormData {
     body_part: singleton ? name : undefined,
     bindings,
   };
+  if (compatibility_date) {
+    // @ts-expect-error - we should type metadata
+    metadata.compatibility_date = compatibility_date;
+  }
+  if (usage_model) {
+    // @ts-expect-error - we should type metadata
+    metadata.usage_model = usage_model;
+  }
   formData.set("metadata", JSON.stringify(metadata));
 
   if (singleton && modules && modules.length > 0) {

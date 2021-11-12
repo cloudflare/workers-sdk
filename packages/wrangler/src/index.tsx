@@ -43,6 +43,7 @@ import { toFormData } from "./api/form_data";
 import { createTail } from "./tail";
 import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
+import { fsyncSync, statSync } from "node:fs";
 
 function getAPI() {
   const apiToken = getAPIToken();
@@ -218,14 +219,21 @@ export async function main(): Promise<void> {
       });
     },
     async (args) => {
+      const destination = path.join(process.cwd(), "wrangler.toml");
+      if (statSync(destination).isFile()) {
+        console.error(`${destination} already exists.`);
+        return;
+      }
+      const name = args.name || path.basename(process.cwd());
+      const compatibilityDate = new Date()
+        .toISOString()
+        .substring(0, 10)
+        .replace(/-/g, "/");
       try {
         await writeFile(
-          path.join(process.cwd(), "wrangler.toml"),
-          `name = "${args.name || path.basename(process.cwd())}"
-compatibility_date = "${new Date()
-            .toISOString()
-            .substring(0, 10)
-            .replace(/-/g, "/")}"
+          destination,
+          `name = "${name}"
+compatibility_date = "${compatibilityDate}"
 `
         );
         console.log(`✨ Succesfully created wrangler.toml`);
