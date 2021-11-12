@@ -313,8 +313,7 @@ compatibility_date = "${compatibilityDate}"
     false, // we don't need to show this in the menu
     // "🚪 Logout from Cloudflare",
     () => {},
-    async (args) => {
-      console.log(":logout", args);
+    async () => {
       await logout();
     }
   );
@@ -340,7 +339,6 @@ compatibility_date = "${compatibilityDate}"
       console.error(
         "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
       );
-      console.log(":config", args);
     }
   );
 
@@ -508,7 +506,6 @@ compatibility_date = "${compatibilityDate}"
         });
     },
     async (args) => {
-      console.log(":publish", args);
       const apiToken = getAPIToken();
       assert(apiToken, "Missing api token");
       await publish({

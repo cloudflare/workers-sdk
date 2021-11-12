@@ -160,28 +160,24 @@ export default async function publish(props: Props): Promise<void> {
   if (triggers) {
     console.log("publishing to workers.dev subdomain");
 
-    console.log(
-      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
-        method: "PUT",
-        // @ts-expect-error TODO: fix this type error!
-        body: toFormData(worker),
-      })
-    );
+    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+      method: "PUT",
+      // @ts-expect-error TODO: fix this type error!
+      body: toFormData(worker),
+    });
 
     // then mark it as a cron
-    console.log(
-      await cfetch(
-        `/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(
-            triggers.map((trigger) => ({ cron: `${trigger}` }))
-          ),
-        }
-      )
+    await cfetch(
+      `/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          triggers.map((trigger) => ({ cron: `${trigger}` }))
+        ),
+      }
     );
   } else if (zone) {
     if (!routes) {
@@ -194,7 +190,6 @@ export default async function publish(props: Props): Promise<void> {
       const zoneResult = await cfetch<{ id: string }>(
         `/zones?name=${encodeURIComponent(zone)}`
       );
-      console.log(zoneResult);
       zoneId = zoneResult.id;
     } else {
       zoneId = zone;
@@ -206,23 +201,19 @@ export default async function publish(props: Props): Promise<void> {
       { id: string; pattern: string; script: string }[]
     >(`/zones/${zoneId}/workers/routes`);
 
-    console.log(allRoutes);
-
     // upload the script
 
-    console.log(
-      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
-        method: "PUT",
-        // @ts-expect-error TODO: fix this type error!
-        body: toFormData(worker),
-      })
-    );
+    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+      method: "PUT",
+      // @ts-expect-error TODO: fix this type error!
+      body: toFormData(worker),
+    });
 
     for (const route of routes) {
       const matchingRoute = allRoutes.find((r) => r.pattern === route);
       if (!matchingRoute) {
         console.log(`publishing ${scriptName} to ${route}`);
-        const json = await cfetch(`/zones/${zoneId}/workers/routes`, {
+        await cfetch(`/zones/${zoneId}/workers/routes`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -232,7 +223,6 @@ export default async function publish(props: Props): Promise<void> {
             script: scriptName,
           }),
         });
-        console.log(json);
       } else {
         if (matchingRoute.script !== scriptName) {
           // conflict;
@@ -258,29 +248,25 @@ export default async function publish(props: Props): Promise<void> {
     assert(subdomainName, "subdomain is not registered");
 
     console.log("publishing to workers.dev subdomain");
-    console.log(
-      await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
-        method: "PUT",
-        // @ts-expect-error TODO: fix this type error!
-        body: toFormData(worker),
-      })
-    );
+    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+      method: "PUT",
+      // @ts-expect-error TODO: fix this type error!
+      body: toFormData(worker),
+    });
 
     // ok now enable it
-    console.log("Making public on subdomain...");
-    console.log(
-      await cfetch(
-        `/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
-        {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
-          body: JSON.stringify({
-            enabled: true,
-          }),
-        }
-      )
+    console.log("making public on subdomain...");
+    await cfetch(
+      `/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
+      {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          enabled: true,
+        }),
+      }
     );
     console.log(`published to ${scriptName}.${subdomainName}.workers.dev`);
   }
