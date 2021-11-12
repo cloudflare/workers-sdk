@@ -204,7 +204,7 @@ compatibility_date = "${new Date()
             .replace(/-/g, "/")}"
 `
         );
-        console.log(`✨  Succesfully created wrangler.toml`);
+        console.log(`✨ Succesfully created wrangler.toml`);
         // TODO: suggest next steps?
       } catch (err) {
         console.error(`Failed to create wrangler.toml`);
