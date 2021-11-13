@@ -58,13 +58,8 @@ describe("wrangler", () => {
 
     it("should error when wrangler.toml already exists", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
-      const { stdout, stderr } = await w("init");
-      expect({ stdout, stderr }).toMatchInlineSnapshot(`
-        Object {
-          "stderr": "/Users/sunilpai/code/nu-wrangler/packages/wrangler/src/__tests__/fixtures/init/wrangler.toml already exists.",
-          "stdout": "Creating /Users/sunilpai/code/nu-wrangler/packages/wrangler/src/__tests__/fixtures/init/wrangler.toml",
-        }
-      `);
+      const { stderr } = await w("init");
+      expect(stderr.endsWith("wrangler.toml already exists.")).toBe(true);
     });
     it("should create a named config", async () => {
       await w("init xyz");

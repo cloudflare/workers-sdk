@@ -35,6 +35,7 @@ export async function listNamespaceKeys(
   prefix?: string,
   limit?: number
 ) {
+  // TODO: this doesn't appear to do pagination
   return await cfetch<
     { name: string; expiration: number; metadata: { [key: string]: unknown } }[]
   >(

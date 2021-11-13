@@ -4,7 +4,6 @@ import { Dev } from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import cloudflareAPI from "cloudflare";
 import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
@@ -44,17 +43,6 @@ import { createTail } from "./tail";
 import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
-
-function getAPI() {
-  const apiToken = getAPIToken();
-  if (!apiToken) {
-    throw new Error("missing api token");
-  }
-  // @ts-expect-error `cloudflareAPI`'s type says it's not callable, but clearly it is.
-  return cloudflareAPI({
-    token: apiToken,
-  });
-}
 
 async function readConfig(
   path?: string,
@@ -973,6 +961,10 @@ compatibility_date = "${compatibilityDate}"
               );
             }
 
+            if (!config.account_id) {
+              throw new Error("Missing account id");
+            }
+
             const title = `${config.name || "worker"}${
               args.env ? `-${args.env}` : ""
             }-${args.namespace}${args.preview ? "_preview" : ""}`;
@@ -995,28 +987,31 @@ compatibility_date = "${compatibilityDate}"
             // TODO: generate a binding name stripping non alphanumeric chars
 
             console.log(`🌀 Creating namespace with title "${title}"`);
-            const api = await getAPI();
 
-            const response = (await api.enterpriseZoneWorkersKVNamespaces.add(
-              config.account_id,
-              { title }
-              // when there's better types on the api bindings
-              // this can be cleaned up
-            )) as { success: boolean; result: { id: string } };
+            const response = await cfetch<{ id: string }>(
+              `/accounts/${config.account_id}/storage/kv/namespaces`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  title,
+                }),
+              }
+            );
 
-            if (response.success) {
-              console.log("✨ Success!");
-              console.log(
-                `Add the following to your configuration file in your kv_namespaces array${
-                  args.env ? ` under [env.${args.env}]` : ""
-                }:`
-              );
-              console.log(
-                `{ binding = "${args.namespace}", ${
-                  args.preview ? "preview_" : ""
-                }id = ${response.result.id} }`
-              );
-            }
+            console.log("✨ Success!");
+            console.log(
+              `Add the following to your configuration file in your kv_namespaces array${
+                args.env ? ` under [env.${args.env}]` : ""
+              }:`
+            );
+            console.log(
+              `{ binding = "${args.namespace}", ${
+                args.preview ? "preview_" : ""
+              }id = ${response.id} }`
+            );
           }
         )
         .command(
@@ -1076,12 +1071,14 @@ compatibility_date = "${compatibilityDate}"
             if (!id) {
               throw new Error("Are you sure? id not found");
             }
-            const api = await getAPI();
             const accountId = (args.config as Config).account_id;
             if (!accountId) {
               throw new Error("Missing account id");
             }
-            api.enterpriseZoneWorkersKVNamespaces.del(accountId, id);
+            await cfetch<{ id: string }>(
+              `/accounts/${accountId}/storage/kv/namespaces/${id}`,
+              { method: "DELETE" }
+            );
 
             // TODO: recommend they remove it from wrangler.toml
             // TODO: do it automatically
@@ -1160,12 +1157,10 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
-            console.log(
-              await putKeyValue(accountId, namespaceId, key, value, {
-                expiration,
-                expiration_ttl: ttl,
-              })
-            );
+            await putKeyValue(accountId, namespaceId, key, value, {
+              expiration,
+              expiration_ttl: ttl,
+            });
           }
         )
         .command(
@@ -1241,6 +1236,10 @@ compatibility_date = "${compatibilityDate}"
               });
           },
           async ({ key, ...args }) => {
+            const apiToken = getAPIToken();
+            if (!apiToken) {
+              throw new Error("Missing API token");
+            }
             const namespaceId = getNamespaceId(args);
             const accountId = (args.config as Config).account_id;
 
@@ -1255,12 +1254,37 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
-            const api = await getAPI();
-            return api.enterpriseZoneWorkersKV.read(
-              accountId,
-              namespaceId,
-              key
+            // annoyingly, the API for this one doesn't return the
+            // data in the 'standard' format. goddamit.
+            // TODO: login or refresh if required
+            const response = await fetch(
+              `${CF_API_BASE_URL}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${apiToken}`,
+                },
+              }
             );
+            const json = await response.json();
+            // @ts-expect-error these types aren't good
+            if (json.success === false) {
+              // @ts-expect-error these types aren't good
+              const errorDesc = json.errors?.[0];
+              if (errorDesc) {
+                // TODO: map .message to real human readable strings
+                const error = new Error(
+                  `${errorDesc.code}: ${errorDesc.message}`
+                );
+                // @ts-expect-error hacksss
+                error.code = errorDesc.code;
+                throw error;
+              } else {
+                throw new Error(`${response.status}: ${response.statusText}`);
+              }
+            } else {
+              console.log(json);
+            }
           }
         )
         .command(
@@ -1309,8 +1333,10 @@ compatibility_date = "${compatibilityDate}"
             }
             const accountId = (args.config as Config).account_id;
 
-            const api = await getAPI();
-            return api.enterpriseZoneWorkersKV.del(accountId, namespaceId, key);
+            await cfetch(
+              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              { method: "DELETE" }
+            );
           }
         );
     }

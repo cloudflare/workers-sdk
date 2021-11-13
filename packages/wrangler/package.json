@@ -48,7 +48,6 @@
     "@types/ws": "^8.2.0",
     "@types/yargs": "^17.0.5",
     "clipboardy": "^3.0.0",
-    "cloudflare": "^2.9.1",
     "command-exists": "^1.2.9",
     "execa": "^5.1.1",
     "finalhandler": "^1.1.2",
