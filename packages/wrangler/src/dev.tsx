@@ -49,6 +49,9 @@ export function Dev(props: Props): JSX.Element {
     );
   }
 
+  // @ts-expect-error whack
+  useDevtoolsRefresh(bundle?.id ?? 0);
+
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
@@ -93,6 +96,36 @@ export function Dev(props: Props): JSX.Element {
       </Box>
     </>
   );
+}
+
+function useDevtoolsRefresh(bundleId: number) {
+  // TODO: this is a hack while we figure out
+  // a better cleaner solution to get devtools to reconnect
+  // without having to do a full refresh
+  const ref = useRef();
+  // @ts-expect-error whack
+  ref.current = bundleId;
+
+  useEffect(() => {
+    const server = http.createServer((req, res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Request-Method", "*");
+      res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET");
+      res.setHeader("Access-Control-Allow-Headers", "*");
+      if (req.method === "OPTIONS") {
+        res.writeHead(200);
+        res.end();
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ value: ref.current }));
+    });
+
+    server.listen(3142);
+    return () => {
+      server.close();
+    };
+  }, []);
 }
 
 function Remote(props: {
