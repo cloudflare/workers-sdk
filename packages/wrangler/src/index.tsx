@@ -43,7 +43,7 @@ import { toFormData } from "./api/form_data";
 import { createTail } from "./tail";
 import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
-import { fsyncSync, statSync } from "node:fs";
+import * as fs from "node:fs";
 
 function getAPI() {
   const apiToken = getAPIToken();
@@ -96,29 +96,31 @@ async function readConfig(
         // probably offline
       }
 
-      const responseJSON: {
-        success: boolean;
-        result: { id: string; account: { id: string; name: string } }[];
-      } = await response.json();
+      if (response) {
+        const responseJSON: {
+          success: boolean;
+          result: { id: string; account: { id: string; name: string } }[];
+        } = await response.json();
 
-      if (responseJSON.success === true) {
-        if (responseJSON.result.length === 1) {
-          config.account_id = responseJSON.result[0].account.id;
-        } else {
-          const selectedId = await new Promise((resolve) => {
-            const accounts = responseJSON.result.map((x) => x.account);
-            const { unmount } = render(
-              <ChooseAccount
-                accounts={accounts}
-                onSelect={async (selected) => {
-                  resolve(selected.value.id);
-                  unmount();
-                }}
-              />
-            );
-          });
-          // @ts-expect-error - we know this is a string
-          config.account_id = selectedId;
+        if (responseJSON.success === true) {
+          if (responseJSON.result.length === 1) {
+            config.account_id = responseJSON.result[0].account.id;
+          } else {
+            const selectedId = await new Promise((resolve) => {
+              const accounts = responseJSON.result.map((x) => x.account);
+              const { unmount } = render(
+                <ChooseAccount
+                  accounts={accounts}
+                  onSelect={async (selected) => {
+                    resolve(selected.value.id);
+                    unmount();
+                  }}
+                />
+              );
+            });
+            // @ts-expect-error - we know this is a string
+            config.account_id = selectedId;
+          }
         }
       }
 
@@ -169,7 +171,7 @@ export async function main(): Promise<void> {
       false,
       () => {},
       () => {
-        yargs.showHelp();
+        yargs.showHelp("log");
       }
     )
     .scriptName("wrangler")
@@ -220,7 +222,7 @@ export async function main(): Promise<void> {
     },
     async (args) => {
       const destination = path.join(process.cwd(), "wrangler.toml");
-      if (statSync(destination).isFile()) {
+      if (fs.existsSync(destination)) {
         console.error(`${destination} already exists.`);
         return;
       }
