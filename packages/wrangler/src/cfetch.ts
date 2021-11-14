@@ -35,13 +35,27 @@ export default async function fetchWithAuthAndLoginIfRequired<ResponseType>(
       Authorization: `Bearer ${apiToken}`,
     },
   });
-  const json = await response.json();
-  // @ts-expect-error these types aren't good
+  const text = await response.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (parseError) {
+    // hate this edge case
+    // the only api call I know that doesn't return json is kv:key get <key>
+
+    // maybe it's a plain response
+    if (response.ok) {
+      // @ts-expect-error bleh
+      return text;
+    } else {
+      // UGH.
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+  }
+
   if (json.success) {
-    // @ts-expect-error these types aren't good
     return json.result;
   } else {
-    // @ts-expect-error these types aren't good
     const errorDesc = json.errors?.[0];
     if (errorDesc) {
       // TODO: map .message to real human readable strings
@@ -50,6 +64,8 @@ export default async function fetchWithAuthAndLoginIfRequired<ResponseType>(
       error.code = errorDesc.code;
       throw error;
     } else {
+      // This should almost never happen.
+      // ... which means it'll probably happen, lol.
       throw new Error(`${response.status}: ${response.statusText}`);
     }
   }

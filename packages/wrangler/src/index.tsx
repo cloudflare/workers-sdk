@@ -27,12 +27,9 @@ import {
 
 import { pages } from "./pages";
 
-import fetch from "node-fetch";
 import cfetch from "./cfetch";
 
-import { CF_API_BASE_URL } from "./cfetch";
 import publish from "./publish";
-import { getAPIToken } from "./user";
 import path from "path/posix";
 import { writeFile } from "node:fs/promises";
 import { DeleteConfirmation, GetSecretValue } from "./secret";
@@ -1413,40 +1410,13 @@ compatibility_date = "${compatibilityDate}"
 
             // annoyingly, the API for this one doesn't return the
             // data in the 'standard' format. goddamit.
-            // so we implement it here fully
-            const apiToken = getAPIToken();
-            if (!apiToken) {
-              throw new Error("Missing API token");
-            }
-
-            const response = await fetch(
-              `${CF_API_BASE_URL}/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
-              {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${apiToken}`,
-                },
-              }
+            // That's why we have the fallthrough response in cfetch.
+            // Oh well.
+            console.log(
+              await cfetch(
+                `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`
+              )
             );
-            const json = await response.json();
-            // @ts-expect-error these types aren't good
-            if (json.success === false) {
-              // @ts-expect-error these types aren't good
-              const errorDesc = json.errors?.[0];
-              if (errorDesc) {
-                // TODO: map .message to real human readable strings
-                const error = new Error(
-                  `${errorDesc.code}: ${errorDesc.message}`
-                );
-                // @ts-expect-error hacksss
-                error.code = errorDesc.code;
-                throw error;
-              } else {
-                throw new Error(`${response.status}: ${response.statusText}`);
-              }
-            } else {
-              console.log(json);
-            }
           }
         )
         .command(

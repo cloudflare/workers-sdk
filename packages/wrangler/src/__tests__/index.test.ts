@@ -72,7 +72,6 @@ describe("wrangler", () => {
   describe("kv:namespace", () => {
     it("can create a namespace", async () => {
       const { stdout } = await w('kv:namespace create "UnitTestNamespace"');
-      console.log(stdout);
       expect(stdout.includes(`{ binding = "UnitTestNamespace",`)).toBe(true);
     });
 
@@ -104,6 +103,7 @@ describe("wrangler", () => {
     afterAll(async () => {
       await w(`kv:namespace delete --namespace-id ${namespaceId}`);
     });
+    it("stub", () => {});
     // it("can add a key", () => {});
     // it("can read a key", () => {});
     // it("can list keys", () => {});
