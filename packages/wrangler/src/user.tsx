@@ -801,13 +801,23 @@ export async function login(props?: LoginProps): Promise<boolean> {
   open(urlToOpen);
   // TODO: log url only if on system where it's unreliable/unavailable
   // console.log(`💁 Opened ${urlToOpen}`);
+  let server;
+  let loginTimeoutHandle;
+  const timerPromise = new Promise<boolean>((resolve) => {
+    loginTimeoutHandle = setTimeout(() => {
+      console.error("Timed out waiting for authorization code.");
+      server.close();
+      clearTimeout(loginTimeoutHandle);
+      resolve(false);
+    }, 30000); // wait for 30 seconds for the user to authorize
+  });
 
-  return new Promise((resolve, reject) => {
-    const server = http.createServer(async (req, res) => {
+  const loginPromise = new Promise<boolean>((resolve, reject) => {
+    server = http.createServer(async (req, res) => {
       function finish(status: boolean, error?: Error) {
+        clearTimeout(loginTimeoutHandle);
         server.close((closeErr?: Error) => {
           if (error || closeErr) {
-            // render an error page
             reject(error || closeErr);
           } else resolve(status);
         });
@@ -826,7 +836,9 @@ export async function login(props?: LoginProps): Promise<boolean> {
                 Location:
                   "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
               });
-              res.end(finish);
+              res.end(() => {
+                finish(false);
+              });
               console.log(
                 "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider passing an API token with CF_API_TOKEN variable"
               ); // TODO: implement wrangler config lol
@@ -863,6 +875,8 @@ export async function login(props?: LoginProps): Promise<boolean> {
 
     server.listen(8976);
   });
+
+  return Promise.race([timerPromise, loginPromise]);
 }
 
 /**
