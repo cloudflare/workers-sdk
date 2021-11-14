@@ -34,7 +34,7 @@
   ],
   "dependencies": {
     "esbuild": "^0.13.12",
-    "miniflare": "^1.4.1",
+    "miniflare": "2.0.0-rc.1",
     "yargs": "^17.2.1"
   },
   "optionalDependencies": {

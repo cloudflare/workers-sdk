@@ -15,7 +15,7 @@ async function run() {
       "fsevents",
       "yargs", // we should fix this one
       "esbuild",
-      "miniflare", // only because it imports all of typescript, which is weird
+      "miniflare",
     ],
     sourcemap: true,
     inject: [path.join(__dirname, "../import_meta_url.js")],

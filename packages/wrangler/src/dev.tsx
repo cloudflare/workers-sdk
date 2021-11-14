@@ -205,7 +205,7 @@ function useLocalWorker(
       local.current = spawn("node", [
         "--experimental-vm-modules",
         "--inspect",
-        require.resolve("miniflare/dist/cli"),
+        require.resolve("miniflare/cli"),
         bundle.path,
         "--watch",
         "--wrangler-config",
