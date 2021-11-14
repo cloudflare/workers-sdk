@@ -514,7 +514,8 @@ compatibility_date = "${compatibilityDate}"
       const config = args.config as Config;
 
       if (!(args.name || config.name)) {
-        throw new Error("Missing script name");
+        console.error("Missing script name");
+        return;
       }
       const scriptName = `${args.name || config.name}${
         args.env ? `-${args.env}` : ""
@@ -647,7 +648,8 @@ compatibility_date = "${compatibilityDate}"
             // TODO: use environment (current wrangler doesn't do so?)
             const zone = args.zone || (args.config as Config).zone_id;
             if (!zone) {
-              throw new Error("missing zone id");
+              console.error("missing zone id");
+              return;
             }
 
             console.log(await cfetch(`/zones/${zone}/workers/routes`));
@@ -739,7 +741,8 @@ compatibility_date = "${compatibilityDate}"
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
-              throw new Error("Missing script name");
+              console.error("Missing script name");
+              return;
             }
 
             // -- snip, extract --
@@ -911,7 +914,8 @@ compatibility_date = "${compatibilityDate}"
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
-              throw new Error("Missing script name");
+              console.error("Missing script name");
+              return;
             }
 
             // -- snip, extract --

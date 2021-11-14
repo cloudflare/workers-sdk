@@ -40,7 +40,7 @@ type Props = {
 export function Dev(props: Props): JSX.Element {
   if (props.public && props.format === "service-worker") {
     throw new Error(
-      "You cannot use the service worker format with a public directory."
+      "You cannot use the service worker format with a `public` directory."
     );
   }
   const port = props.port || 8787;
@@ -50,7 +50,7 @@ export function Dev(props: Props): JSX.Element {
   const bundle = useEsbuild(props.entry, directory, props.public);
   if (bundle && bundle.type === "commonjs" && !props.format && props.public) {
     throw new Error(
-      "You cannot use the service worker format with a public directory."
+      "You cannot use the service worker format with a `public` directory."
     );
   }
 
