@@ -21,6 +21,7 @@ import serveStatic from "serve-static";
 import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
+import fetch from "node-fetch";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -511,6 +512,7 @@ function sleep(period: number) {
   return new Promise((resolve) => setTimeout(resolve, period));
 }
 const SLEEP_DURATION = 2000;
+// really need a first class api for this
 const hostNameRegex = /userHostname="(.*)"/g;
 async function findTunnelHostname() {
   let hostName: string;
