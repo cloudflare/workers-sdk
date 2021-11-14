@@ -26,6 +26,7 @@ import fetch from "node-fetch";
 type CfScriptFormat = void | "modules" | "service-worker";
 
 type Props = {
+  name?: string;
   entry: string;
   port?: number;
   format: CfScriptFormat;
@@ -70,6 +71,7 @@ export function Dev(props: Props): JSX.Element {
     <>
       {toggles.local ? (
         <Local
+          name={props.name}
           bundle={bundle}
           format={props.format}
           variables={props.variables}
@@ -79,6 +81,7 @@ export function Dev(props: Props): JSX.Element {
         />
       ) : (
         <Remote
+          name={props.name}
           bundle={bundle}
           format={props.format}
           accountId={props.accountId}
@@ -133,6 +136,7 @@ function useDevtoolsRefresh(bundleId: number) {
 }
 
 function Remote(props: {
+  name: void | string;
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
   public: void | string;
@@ -144,16 +148,17 @@ function Remote(props: {
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
-  const token = useWorker(
-    props.bundle,
-    props.format,
-    [],
-    props.accountId,
-    props.apiToken,
-    props.variables,
-    props.site,
-    props.port
-  );
+  const token = useWorker({
+    name: props.name,
+    bundle: props.bundle,
+    format: props.format,
+    modules: [],
+    accountId: props.accountId,
+    apiToken: props.apiToken,
+    variables: props.variables,
+    sitesFolder: props.site,
+    port: props.port,
+  });
 
   useProxy({ token, publicRoot: props.public, port: props.port });
 
@@ -161,6 +166,7 @@ function Remote(props: {
   return null;
 }
 function Local(props: {
+  name: void | string;
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
   variables: { [name: string]: CfVariable };
@@ -168,23 +174,26 @@ function Local(props: {
   site: void | string;
   port: number;
 }) {
-  const { inspectorUrl } = useLocalWorker(
-    props.bundle,
-    props.format,
-    props.variables,
-    props.port
-  );
+  const { inspectorUrl } = useLocalWorker({
+    name: props.name,
+    bundle: props.bundle,
+    format: props.format,
+    variables: props.variables,
+    port: props.port,
+  });
   useInspector(inspectorUrl);
   return null;
 }
 
-function useLocalWorker(
-  bundle: EsbuildBundle | void,
-  format: CfScriptFormat,
-  variables: { [name: string]: CfVariable },
-  port: number
-) {
+function useLocalWorker(props: {
+  name: void | string;
+  bundle: EsbuildBundle | void;
+  format: CfScriptFormat;
+  variables: { [name: string]: CfVariable };
+  port: number;
+}) {
   // TODO: pass vars via command line
+  const { bundle, format, variables, port } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | void>();
@@ -217,6 +226,8 @@ function useLocalWorker(
         "miniflare-config-stubs/package.empty.json",
         "--port",
         port.toString(),
+        "--kv-persist",
+        "--cache-persist",
         ...Object.entries(variables)
           .map(([varKey, varVal]) => {
             if (typeof varVal === "string") {
@@ -356,16 +367,28 @@ function useEsbuild(
   return bundle;
 }
 
-function useWorker(
-  bundle: EsbuildBundle | void,
-  format: CfScriptFormat,
-  modules: CfModule[],
-  accountId: string,
-  apiToken: string,
-  variables: { [name: string]: CfVariable },
-  sitesFolder: void | string,
-  port: number
-): CfPreviewToken | void {
+function useWorker(props: {
+  name: void | string;
+  bundle: EsbuildBundle | void;
+  format: CfScriptFormat;
+  modules: CfModule[];
+  accountId: string;
+  apiToken: string;
+  variables: { [name: string]: CfVariable };
+  sitesFolder: void | string;
+  port: number;
+}): CfPreviewToken | void {
+  const {
+    name,
+    bundle,
+    format,
+    modules,
+    accountId,
+    apiToken,
+    variables,
+    sitesFolder,
+    port,
+  } = props;
   const [token, setToken] = useState<CfPreviewToken>();
   useEffect(() => {
     async function start() {
@@ -404,7 +427,7 @@ function useWorker(
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
         main: {
-          name: path.basename(bundle.path),
+          name: name || path.basename(bundle.path),
           type:
             format ||
             (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
@@ -435,7 +458,7 @@ function useWorker(
       console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start();
-  }, [bundle, format, accountId, apiToken, port, sitesFolder]);
+  }, [name, bundle, format, accountId, apiToken, port, sitesFolder]);
   return token;
 }
 

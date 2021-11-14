@@ -40,11 +40,8 @@ import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
 
-async function readConfig(
-  path?: string,
-  defaults: Config = {}
-): Promise<Config> {
-  const config: Config = defaults;
+async function readConfig(path?: string): Promise<Config> {
+  const config: Config = {};
   if (!path) {
     path = await findUp("wrangler.toml");
     // TODO - terminate this early instead of going all the way to the root
@@ -283,6 +280,10 @@ compatibility_date = "${compatibilityDate}"
     (yargs) => {
       return yargs
         .positional("filename", { describe: "entry point", type: "string" })
+        .option("name", {
+          describe: "name of the script",
+          type: "string",
+        })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
@@ -355,6 +356,7 @@ compatibility_date = "${compatibilityDate}"
 
       render(
         <Dev
+          name={args.name || config.name}
           entry={filename}
           format={format}
           initialMode={args.local ? "local" : "remote"}
@@ -1686,7 +1688,7 @@ compatibility_date = "${compatibilityDate}"
       describe: "Path to .toml configuration file",
       type: "string",
       async coerce(arg) {
-        return readConfig(arg);
+        return await readConfig(arg);
       },
     })
     .option("local", {
