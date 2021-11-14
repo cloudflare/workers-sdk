@@ -1,4 +1,4 @@
-import cfetch from "../fetchwithauthandloginifrequired";
+import cfetch from "../cfetch";
 import { fetchJson } from "../util/fetch";
 import { toFormData } from "./form_data";
 import type { CfAccount, CfWorkerInit } from "./worker";

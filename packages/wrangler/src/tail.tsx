@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import cfetch from "./fetchwithauthandloginifrequired";
+import cfetch from "./cfetch";
 import { version as packageVersion } from "../package.json";
 
 export type TailApiResponse = {

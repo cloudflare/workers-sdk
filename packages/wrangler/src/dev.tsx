@@ -11,7 +11,7 @@ import open from "open";
 import { DtInspector } from "./api/inspect";
 import type { CfModule, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
-import type { CfAccount, CfWorkerInit } from "./api/worker";
+import type { CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
 import onExit from "signal-exit";
 import { syncAssets } from "./sites";
@@ -19,6 +19,8 @@ import clipboardy from "clipboardy";
 import http from "node:http";
 import serveStatic from "serve-static";
 import commandExists from "command-exists";
+import assert from "assert";
+import { getAPIToken } from "./user";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -26,7 +28,7 @@ type Props = {
   entry: string;
   port?: number;
   format: CfScriptFormat;
-  account: CfAccount;
+  accountId: void | string;
   initialMode: "local" | "remote";
   variables?: { [name: string]: CfVariable };
   public?: void | string;
@@ -40,6 +42,7 @@ export function Dev(props: Props): JSX.Element {
     );
   }
   const port = props.port || 8787;
+  const apiToken = getAPIToken();
   const directory = useTmpDir();
 
   const bundle = useEsbuild(props.entry, directory, props.public);
@@ -68,7 +71,6 @@ export function Dev(props: Props): JSX.Element {
         <Local
           bundle={bundle}
           format={props.format}
-          account={props.account}
           variables={props.variables}
           site={props.site}
           public={props.public}
@@ -78,7 +80,8 @@ export function Dev(props: Props): JSX.Element {
         <Remote
           bundle={bundle}
           format={props.format}
-          account={props.account}
+          accountId={props.accountId}
+          apiToken={apiToken}
           variables={props.variables}
           site={props.site}
           public={props.public}
@@ -134,14 +137,18 @@ function Remote(props: {
   public: void | string;
   site: void | string;
   port: number;
-  account: CfAccount;
+  accountId: void | string;
+  apiToken: void | string;
   variables: { [name: string]: CfVariable };
 }) {
+  assert(props.accountId, "accountId is required");
+  assert(props.apiToken, "apiToken is required");
   const token = useWorker(
     props.bundle,
     props.format,
     [],
-    props.account,
+    props.accountId,
+    props.apiToken,
     props.variables,
     props.site,
     props.port
@@ -155,7 +162,6 @@ function Remote(props: {
 function Local(props: {
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
-  account: CfAccount;
   variables: { [name: string]: CfVariable };
   public: void | string;
   site: void | string;
@@ -316,6 +322,7 @@ function useEsbuild(
         format: "esm",
         sourcemap: true,
         external: ["__STATIC_CONTENT_MANIFEST"],
+        // TODO: import.meta.url
         watch: {
           async onRebuild(error) {
             if (error) console.error("watch build failed:", error);
@@ -352,7 +359,8 @@ function useWorker(
   bundle: EsbuildBundle | void,
   format: CfScriptFormat,
   modules: CfModule[],
-  account: CfAccount,
+  accountId: string,
+  apiToken: string,
   variables: { [name: string]: CfVariable },
   sitesFolder: void | string,
   port: number
@@ -381,7 +389,7 @@ function useWorker(
 
       const assets = sitesFolder
         ? await syncAssets(
-            account.accountId,
+            accountId,
             scriptName,
             sitesFolder,
             true,
@@ -417,11 +425,16 @@ function useWorker(
             }
           : variables,
       };
-      setToken(await createWorker(init, account));
+      setToken(
+        await createWorker(init, {
+          accountId,
+          apiToken,
+        })
+      );
       console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start();
-  }, [bundle, format, account, port, sitesFolder]);
+  }, [bundle, format, accountId, apiToken, port, sitesFolder]);
   return token;
 }
 

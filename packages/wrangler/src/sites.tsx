@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import cfetch from "./fetchwithauthandloginifrequired";
+import cfetch from "./cfetch";
 import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
 
 import * as path from "path";

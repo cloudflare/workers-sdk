@@ -174,7 +174,7 @@ export class DtInspector {
     this.#webSocket.onclose = () => {
       this.disable();
     };
-    this.#webSocket.on("unexpected-response", (unexpectedResponse) => {
+    this.#webSocket.on("unexpected-response", () => {
       console.log("504??"); // TODO: refactor this class to start again
     });
     this.#webSocket.onmessage = (event: MessageEvent) => {

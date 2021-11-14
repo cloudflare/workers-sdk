@@ -10,7 +10,10 @@ export default async function fetchWithAuthAndLoginIfRequired<ResponseType>(
   resource: string,
   init: RequestInit = {}
 ): Promise<ResponseType> {
-  await loginOrRefreshIfRequired();
+  const loggedIn = await loginOrRefreshIfRequired();
+  if (!loggedIn) {
+    throw new Error("Not logged in");
+  }
   const apiToken = getAPIToken();
   if (!apiToken) {
     throw new Error("No API token found");

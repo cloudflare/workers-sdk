@@ -71,7 +71,8 @@
     "miniflare-config-stubs",
     "wrangler-dist",
     "static-asset-facade.js",
-    "vendor"
+    "vendor",
+    "import_meta_url.js"
   ],
   "scripts": {
     "clean": "rm -rf wrangler-dist",

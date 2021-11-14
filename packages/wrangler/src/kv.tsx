@@ -1,5 +1,5 @@
 import type { Config } from "./config";
-import cfetch from "./fetchwithauthandloginifrequired";
+import cfetch from "./cfetch";
 import qs from "node:querystring";
 
 type KvArgs = {

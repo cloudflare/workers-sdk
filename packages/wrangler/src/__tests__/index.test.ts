@@ -49,7 +49,7 @@ describe("wrangler", () => {
       process.chdir(ogcwd);
     });
 
-    test("simple", async () => {
+    it("should create a wrangler.toml", async () => {
       await w("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(parsed.name).toBe("init");
@@ -61,12 +61,62 @@ describe("wrangler", () => {
       const { stderr } = await w("init");
       expect(stderr.endsWith("wrangler.toml already exists.")).toBe(true);
     });
+
     it("should create a named config", async () => {
       await w("init xyz");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(parsed.name).toBe("xyz");
     });
   });
+
+  describe("kv:namespace", () => {
+    it("can create a namespace", async () => {
+      const { stdout } = await w('kv:namespace create "UnitTestNamespace"');
+      console.log(stdout);
+      expect(stdout.includes(`{ binding = "UnitTestNamespace",`)).toBe(true);
+    });
+
+    let createdNamespace: { id: string; title: string };
+    it("can list namespaces", async () => {
+      const { stdout } = await w("kv:namespace list");
+      const namespaces = JSON.parse(stdout);
+      createdNamespace = namespaces.find(
+        (ns) => ns.title === "worker-UnitTestNamespace"
+      );
+      expect(createdNamespace.title).toBe("worker-UnitTestNamespace");
+    });
+
+    it("can delete a namespace", async () => {
+      const { stdout } = await w(
+        `kv:namespace delete --namespace-id ${createdNamespace.id}`
+      );
+      console.log(stdout);
+    });
+  });
+  describe("kv:key", () => {
+    let namespaceId: string;
+    beforeAll(async () => {
+      await w('kv:namespace create "UnitTestNamespace"');
+      namespaceId = JSON.parse((await w("kv:namespace list")).stdout).find(
+        (ns) => ns.title === "worker-UnitTestNamespace"
+      ).id;
+    });
+    afterAll(async () => {
+      await w(`kv:namespace delete --namespace-id ${namespaceId}`);
+    });
+    // it("can add a key", () => {});
+    // it("can read a key", () => {});
+    // it("can list keys", () => {});
+    // it("can delete a key", () => {});
+  });
+
+  // describe("login", () => {
+  //   it("should show possible scopes", async () => {
+  //     const { stdout } = await w("login --scopes-list");
+  //     // UGH jest doesn't like wide text huh
+  //     expect(stdout).toMatchInlineSnapshot();
+  //   });
+  // });
 
   // TODO: setup a "api server" to mock requests
 });

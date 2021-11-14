@@ -221,6 +221,8 @@ import os from "node:os";
 import TOML from "@iarna/toml";
 import assert from "node:assert";
 import type { ParsedUrlQuery } from "node:querystring";
+import { CF_API_BASE_URL } from "./cfetch";
+import type { Response } from "node-fetch";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -781,24 +783,23 @@ type LoginProps = {
   scopes?: string[];
 };
 
-export async function loginOrRefreshIfRequired(): Promise<void> {
+export async function loginOrRefreshIfRequired(): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
-
   if (!LocalState.accessToken) {
     // not logged in.
-    const loggedIn = await login();
-    if (!loggedIn) {
-      throw new Error("Did not login");
-    }
+    return await login();
   } else if (isAccessTokenExpired()) {
-    await refreshToken();
+    return await refreshToken();
+  } else {
+    return true;
   }
 }
 
 export async function login(props?: LoginProps): Promise<boolean> {
   const urlToOpen = await getAuthURL(props?.scopes);
   open(urlToOpen);
+  // TODO: log url only if on system where it's unreliable/unavailable
   // console.log(`💁 Opened ${urlToOpen}`);
 
   return new Promise((resolve, reject) => {
@@ -827,7 +828,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
               });
               res.end(finish);
               console.log(
-                "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider using `wrangler config`"
+                "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider passing an API token with CF_API_TOKEN variable"
               ); // TODO: implement wrangler config lol
 
               return;
@@ -873,16 +874,16 @@ export function isAccessTokenExpired(): boolean {
   return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
-export async function refreshToken(): Promise<void> {
+export async function refreshToken(): Promise<boolean> {
   throwIfNotInitialised();
   // refresh
   try {
     const refreshed = await exchangeRefreshTokenForAccessToken();
-    console.log({ refreshed });
     await writeToConfigFile(refreshed);
+    return true;
   } catch (err) {
-    console.log(err);
-    throw err;
+    console.error(err);
+    return false;
   }
 }
 
@@ -927,13 +928,57 @@ export function listScopes(): void {
   // TODO: maybe a good idea to show usage here
 }
 
+export async function getAccountId() {
+  const apiToken = getAPIToken();
+  if (!apiToken) return;
+
+  let response: Response;
+  try {
+    response = await fetch(`${CF_API_BASE_URL}/memberships`, {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer " + apiToken,
+      },
+    });
+  } catch (err) {
+    // probably offline
+  }
+  if (!response) return;
+  let accountId: string;
+  // @ts-expect-error need to type this response
+  const responseJSON: {
+    success: boolean;
+    result: { id: string; account: { id: string; name: string } }[];
+  } = await response.json();
+
+  if (responseJSON.success === true) {
+    if (responseJSON.result.length === 1) {
+      accountId = responseJSON.result[0].account.id;
+    } else {
+      accountId = await new Promise((resolve) => {
+        const accounts = responseJSON.result.map((x) => x.account);
+        const { unmount } = render(
+          <ChooseAccount
+            accounts={accounts}
+            onSelect={async (selected) => {
+              resolve(selected.value.id);
+              unmount();
+            }}
+          />
+        );
+      });
+    }
+  }
+  return accountId;
+}
+
 type ChooseAccountItem = {
   id: string;
   name: string;
 };
 export function ChooseAccount(props: {
   accounts: ChooseAccountItem[];
-  onSelect: (ChooseAccountItem) => void;
+  onSelect: (item) => void;
 }) {
   return (
     <SelectInput

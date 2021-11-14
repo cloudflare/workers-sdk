@@ -5,7 +5,7 @@ import tmp from "tmp-promise";
 import type { Config } from "./config";
 import path from "path";
 import { readFile } from "fs/promises";
-import cfetch from "./fetchwithauthandloginifrequired";
+import cfetch from "./cfetch";
 import assert from "node:assert";
 import { syncAssets } from "./sites";
 

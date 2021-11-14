@@ -14,7 +14,7 @@ import {
   listScopes,
   initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
-  ChooseAccount,
+  getAccountId,
 } from "./user";
 import {
   getNamespaceId,
@@ -28,10 +28,9 @@ import {
 import { pages } from "./pages";
 
 import fetch from "node-fetch";
-import cfetch from "./fetchwithauthandloginifrequired";
+import cfetch from "./cfetch";
 
-import { CF_API_BASE_URL } from "./fetchwithauthandloginifrequired";
-import assert from "node:assert";
+import { CF_API_BASE_URL } from "./cfetch";
 import publish from "./publish";
 import { getAPIToken } from "./user";
 import path from "path/posix";
@@ -66,58 +65,6 @@ async function readConfig(
   // env var overrides
   if (process.env.CF_ACCOUNT_ID) {
     config.account_id = process.env.CF_ACCOUNT_ID;
-  }
-
-  if (!config.account_id) {
-    // try to get it from api?
-    const apiToken = getAPIToken();
-    if (apiToken) {
-      let response;
-      try {
-        response = await fetch(`${CF_API_BASE_URL}/memberships`, {
-          method: "GET",
-          headers: {
-            Authorization: "Bearer " + apiToken,
-          },
-        });
-      } catch (err) {
-        // probably offline
-      }
-
-      if (response) {
-        const responseJSON: {
-          success: boolean;
-          result: { id: string; account: { id: string; name: string } }[];
-        } = await response.json();
-
-        if (responseJSON.success === true) {
-          if (responseJSON.result.length === 1) {
-            config.account_id = responseJSON.result[0].account.id;
-          } else {
-            const selectedId = await new Promise((resolve) => {
-              const accounts = responseJSON.result.map((x) => x.account);
-              const { unmount } = render(
-                <ChooseAccount
-                  accounts={accounts}
-                  onSelect={async (selected) => {
-                    resolve(selected.value.id);
-                    unmount();
-                  }}
-                />
-              );
-            });
-            // @ts-expect-error - we know this is a string
-            config.account_id = selectedId;
-          }
-        }
-      }
-
-      // TODO: if there are more than one memberships,
-      // then we should show a drop down asking them to
-      // pick one.
-      // TODO: we should save this in node_modules/.cache
-      // so we don't have to always make this call
-    }
   }
 
   // @ts-expect-error we're being sneaky here for now
@@ -324,7 +271,7 @@ compatibility_date = "${compatibilityDate}"
     "config",
     false,
     () => {},
-    (args) => {
+    () => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
       console.error(
         "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
@@ -385,39 +332,27 @@ compatibility_date = "${compatibilityDate}"
     },
     async (args) => {
       const { filename, format } = args;
-      let config = args.config as Config;
-      if (!args.local) {
-        await loginOrRefreshIfRequired();
-        // TODO: this is a hack
-        // @ts-expect-error being sneaky
-        config = await readConfig(args.config.__path__, config);
-      }
-      let apiToken = getAPIToken();
+      const config = args.config as Config;
 
-      if (!apiToken) {
-        const loggedIn = await login();
-        if (loggedIn) {
-          apiToken = getAPIToken();
-          // @ts-expect-error being sneaky
-          config = await readConfig(args.config.__path__);
-        } else {
+      // -- snip, extract --
+
+      if (!args.local) {
+        const loggedIn = await loginOrRefreshIfRequired();
+        if (!loggedIn) {
           // didn't login, let's just quit
           console.log("Did not login, quitting...");
           return;
         }
+        if (!config.account_id) {
+          config.account_id = await getAccountId();
+          if (!config.account_id) {
+            console.error("No account id found, quitting...");
+            return;
+          }
+        }
       }
 
-      assert(
-        apiToken,
-        "This should never trigger, please file an issue if you see it"
-      );
-
-      // login
-
-      const accountId = config.account_id;
-      if (!accountId) {
-        throw new Error("Missing account id");
-      }
+      // -- snip, end --
 
       const envRootObj = args.env ? config[`env.${args.env}`] : config;
 
@@ -426,17 +361,14 @@ compatibility_date = "${compatibilityDate}"
           entry={filename}
           format={format}
           initialMode={args.local ? "local" : "remote"}
-          account={{
-            accountId: accountId,
-            apiToken,
-          }}
+          accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
           public={args.public}
           variables={{
             ...(envRootObj?.vars || {}),
             ...(envRootObj?.kv_namespaces || []).reduce(
-              (obj, { binding, preview_id, id }) => {
+              (obj, { binding, preview_id }) => {
                 if (!preview_id) {
                   // TODO: This error has to be a _lot_ better, ideally just asking
                   // to create a preview namespace for the user automatically
@@ -496,8 +428,31 @@ compatibility_date = "${compatibilityDate}"
         });
     },
     async (args) => {
-      const apiToken = getAPIToken();
-      assert(apiToken, "Missing api token");
+      if (args.local) {
+        console.error("🚫  Local publishing is not yet supported");
+        return;
+      }
+      const config = args.config as Config;
+
+      // -- snip, extract --
+      if (!args.local) {
+        const loggedIn = await loginOrRefreshIfRequired();
+        if (!loggedIn) {
+          // didn't login, let's just quit
+          console.log("Did not login, quitting...");
+          return;
+        }
+        if (!config.account_id) {
+          config.account_id = await getAccountId();
+          if (!config.account_id) {
+            console.error("No account id found, quitting...");
+            return;
+          }
+        }
+      }
+
+      // -- snip, end --
+
       await publish({
         config: args.config as Config,
         name: args.name,
@@ -558,13 +513,35 @@ compatibility_date = "${compatibilityDate}"
     },
     async (args) => {
       const config = args.config as Config;
-      const accountId = config.account_id;
+
       if (!(args.name || config.name)) {
         throw new Error("Missing script name");
       }
       const scriptName = `${args.name || config.name}${
         args.env ? `-${args.env}` : ""
       }`;
+
+      // -- snip, extract --
+
+      if (!args.local) {
+        const loggedIn = await loginOrRefreshIfRequired();
+        if (!loggedIn) {
+          // didn't login, let's just quit
+          console.log("Did not login, quitting...");
+          return;
+        }
+        if (!config.account_id) {
+          config.account_id = await getAccountId();
+          if (!config.account_id) {
+            console.error("No account id found, quitting...");
+            return;
+          }
+        }
+      }
+
+      // -- snip, end --
+
+      const accountId = config.account_id;
 
       const filters = {
         status: args.status as "ok" | "error" | "canceled",
@@ -578,7 +555,7 @@ compatibility_date = "${compatibilityDate}"
         await createTail(accountId, scriptName, filters);
 
       console.log(
-        `successfully created tail, expires on ${expiration.toLocaleString()}`
+        `successfully created tail, expires at ${expiration.toLocaleString()}`
       );
 
       onExit(() => {
@@ -587,26 +564,23 @@ compatibility_date = "${compatibilityDate}"
       });
 
       tail.on("message", (data) => {
-        console.log(data.toString());
+        console.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
       });
 
       while (tail.readyState !== tail.OPEN) {
         switch (tail.readyState) {
           case tail.CONNECTING:
-            console.log("still connecting to websocket");
             await setTimeout(1000);
             break;
           case tail.CLOSING:
-            console.log("connection...closing?");
             await setTimeout(1000);
             break;
           case tail.CLOSED:
-            console.log("connection closed");
             process.exit(1);
         }
       }
 
-      console.log("connected");
+      console.log(`Connected to ${scriptName}, waiting for logs...`);
     }
   );
 
@@ -763,15 +737,31 @@ compatibility_date = "${compatibilityDate}"
             }
             const config = args.config as Config;
 
-            const accountId = config.account_id;
-            if (!accountId) {
-              throw new Error("Missing account id");
-            }
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
             }
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
 
             const { unmount } = render(
               <GetSecretValue
@@ -779,7 +769,7 @@ compatibility_date = "${compatibilityDate}"
                   unmount();
                   async function submitSecret() {
                     return await cfetch(
-                      `/accounts/${accountId}/workers/scripts/${scriptName}/secrets/`,
+                      `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
                       {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
@@ -798,7 +788,7 @@ compatibility_date = "${compatibilityDate}"
                     if (e.code === 10007) {
                       // upload a draft worker
                       await cfetch(
-                        `/accounts/${accountId}/workers/scripts/${scriptName}`,
+                        `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
                         {
                           method: "PUT",
                           // @ts-expect-error TODO: fix this error!
@@ -816,6 +806,7 @@ compatibility_date = "${compatibilityDate}"
 
                       // and then try again
                       console.log(await submitSecret());
+                      // TODO: delete the draft worker if this failed too?
                     }
                   }
                 }}
@@ -849,15 +840,32 @@ compatibility_date = "${compatibilityDate}"
             }
             const config = args.config as Config;
 
-            const accountId = config.account_id;
-            if (!accountId) {
-              throw new Error("Missing account id");
-            }
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
             }
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
             const { unmount } = render(
               <DeleteConfirmation
                 onConfirm={async (confirmation: boolean) => {
@@ -869,7 +877,7 @@ compatibility_date = "${compatibilityDate}"
 
                     console.log(
                       await cfetch(
-                        `/accounts/${accountId}/workers/scripts/${scriptName}/secrets/${args.key}`,
+                        `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
                         { method: "DELETE" }
                       )
                     );
@@ -901,19 +909,35 @@ compatibility_date = "${compatibilityDate}"
             }
             const config = args.config as Config;
 
-            const accountId = config.account_id;
-            if (!accountId) {
-              throw new Error("Missing account id");
-            }
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
             }
 
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
             console.log(
               await cfetch(
-                `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
               )
             );
           }
@@ -957,12 +981,8 @@ compatibility_date = "${compatibilityDate}"
             const config = args.config as Config;
             if (!config.name) {
               console.warn(
-                "No config present, using `worker` as a prefix for the title"
+                "No configured name present, using `worker` as a prefix for the title"
               );
-            }
-
-            if (!config.account_id) {
-              throw new Error("Missing account id");
             }
 
             const title = `${config.name || "worker"}${
@@ -983,6 +1003,26 @@ compatibility_date = "${compatibilityDate}"
               console.log(`✨ Success! Created KV namespace ${title}`);
               return;
             }
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
 
             // TODO: generate a binding name stripping non alphanumeric chars
 
@@ -1024,12 +1064,37 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
-            const accountId = (args.config as Config).account_id;
-            if (!accountId) {
-              throw new Error("Missing account id");
+            const config = args.config as Config;
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
             }
+
+            // -- snip, end --
+
             // TODO: we should show bindings if they exist for given ids
-            console.log(await listNamespaces(accountId));
+
+            console.log(
+              JSON.stringify(
+                await listNamespaces(config.account_id),
+                null,
+                "  "
+              )
+            );
           }
         )
         .command(
@@ -1060,28 +1125,62 @@ compatibility_date = "${compatibilityDate}"
               console.error(`local mode is not yet supported for this command`);
               return;
             }
+            const config = args.config as Config;
+
             const id =
               args["namespace-id"] ||
               (args.env
-                ? (args.config as Config)[`env.${args.env}`]
-                : (args.config as Config)
+                ? config[`env.${args.env}`]
+                : config
               ).kv_namespaces.find(
                 (namespace) => namespace.binding === args.binding
               )[args.preview ? "preview_id" : "id"];
             if (!id) {
               throw new Error("Are you sure? id not found");
             }
-            const accountId = (args.config as Config).account_id;
-            if (!accountId) {
-              throw new Error("Missing account id");
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
             }
+
+            // -- snip, end --
+
             await cfetch<{ id: string }>(
-              `/accounts/${accountId}/storage/kv/namespaces/${id}`,
+              `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
               { method: "DELETE" }
             );
 
             // TODO: recommend they remove it from wrangler.toml
+
+            // test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+            // n
+            // 💁  Not deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+            // ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+            // y
+            // 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+            // ✨  Success
+            // ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
+            // ➜  test-mf
+
             // TODO: do it automatically
+
             // TODO: delete the preview namespace as well?
           }
         );
@@ -1143,7 +1242,7 @@ compatibility_date = "${compatibilityDate}"
             const value = args.path
               ? await readFile(args.path, "utf-8")
               : args.value;
-            const accountId = (args.config as Config).account_id;
+            const config = args.config as Config;
 
             console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
             if (args.local) {
@@ -1156,8 +1255,28 @@ compatibility_date = "${compatibilityDate}"
               await ns.put(key, value, { expiration, expirationTtl: ttl });
               return;
             }
+            // -- snip, extract --
 
-            await putKeyValue(accountId, namespaceId, key, value, {
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
+            await putKeyValue(config.account_id, namespaceId, key, value, {
               expiration,
               expiration_ttl: ttl,
             });
@@ -1190,7 +1309,7 @@ compatibility_date = "${compatibilityDate}"
             // TODO: support for limit+cursor (pagination)
 
             const namespaceId = getNamespaceId(args);
-            const accountId = (args.config as Config).account_id;
+            const config = args.config as Config;
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -1203,8 +1322,29 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
             console.log(
-              await listNamespaceKeys(accountId, namespaceId, prefix)
+              await listNamespaceKeys(config.account_id, namespaceId, prefix)
             );
           }
         )
@@ -1236,12 +1376,8 @@ compatibility_date = "${compatibilityDate}"
               });
           },
           async ({ key, ...args }) => {
-            const apiToken = getAPIToken();
-            if (!apiToken) {
-              throw new Error("Missing API token");
-            }
             const namespaceId = getNamespaceId(args);
-            const accountId = (args.config as Config).account_id;
+            const config = args.config as Config;
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -1254,11 +1390,37 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
             // annoyingly, the API for this one doesn't return the
             // data in the 'standard' format. goddamit.
-            // TODO: login or refresh if required
+            // so we implement it here fully
+            const apiToken = getAPIToken();
+            if (!apiToken) {
+              throw new Error("Missing API token");
+            }
+
             const response = await fetch(
-              `${CF_API_BASE_URL}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              `${CF_API_BASE_URL}/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
               {
                 method: "GET",
                 headers: {
@@ -1331,10 +1493,32 @@ compatibility_date = "${compatibilityDate}"
               console.log(await ns.delete(key));
               return;
             }
-            const accountId = (args.config as Config).account_id;
+
+            const config = args.config as Config;
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
 
             await cfetch(
-              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
               { method: "DELETE" }
             );
           }
@@ -1381,7 +1565,7 @@ compatibility_date = "${compatibilityDate}"
             // but we'll do that in the future if needed.
 
             const namespaceId = getNamespaceId(args);
-            const accountId = (args.config as Config).account_id;
+            const config = args.config as Config;
             const content = await readFile(filename, "utf-8");
             let parsedContent;
             try {
@@ -1413,7 +1597,30 @@ compatibility_date = "${compatibilityDate}"
               return;
             }
 
-            console.log(await putBulkKeyValue(accountId, namespaceId, content));
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
+            console.log(
+              await putBulkKeyValue(config.account_id, namespaceId, content)
+            );
           }
         )
         .command(
@@ -1445,7 +1652,7 @@ compatibility_date = "${compatibilityDate}"
           },
           async ({ filename, ...args }) => {
             const namespaceId = getNamespaceId(args);
-            const accountId = (args.config as Config).account_id;
+            const config = args.config as Config;
             const content = await readFile(filename, "utf-8");
             let parsedContent;
             try {
@@ -1468,8 +1675,30 @@ compatibility_date = "${compatibilityDate}"
 
               return;
             }
+
+            // -- snip, extract --
+
+            if (!args.local) {
+              const loggedIn = await loginOrRefreshIfRequired();
+              if (!loggedIn) {
+                // didn't login, let's just quit
+                console.log("Did not login, quitting...");
+                return;
+              }
+
+              if (!config.account_id) {
+                config.account_id = await getAccountId();
+                if (!config.account_id) {
+                  console.error("No account id found, quitting...");
+                  return;
+                }
+              }
+            }
+
+            // -- snip, end --
+
             console.log(
-              await deleteBulkKeyValue(accountId, namespaceId, content)
+              await deleteBulkKeyValue(config.account_id, namespaceId, content)
             );
           }
         );
