@@ -24,6 +24,10 @@ type Props = {
   routes?: (string | number)[];
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default async function publish(props: Props): Promise<void> {
   if (props.public && props.format === "service-worker") {
     // TODO: check config too
@@ -268,6 +272,8 @@ export default async function publish(props: Props): Promise<void> {
         }),
       }
     );
+    await sleep(3000); // roughly wait for the subdomain to be enabled
+    // TODO: we should fix this on the edge cache
     console.log(`published to ${scriptName}.${subdomainName}.workers.dev`);
   }
 }
