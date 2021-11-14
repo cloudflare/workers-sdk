@@ -1,5 +1,4 @@
 import esbuild from "esbuild";
-import httpProxy from "http-proxy";
 import { readFile } from "fs/promises";
 import type { DirectoryResult } from "tmp-promise";
 import tmp from "tmp-promise";
@@ -16,12 +15,12 @@ import { spawn } from "child_process";
 import onExit from "signal-exit";
 import { syncAssets } from "./sites";
 import clipboardy from "clipboardy";
-import http from "node:http";
-import serveStatic from "serve-static";
 import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
 import fetch from "node-fetch";
+import { createHttpProxy } from "./util/proxy";
+import { createServer } from "http";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -111,7 +110,7 @@ function useDevtoolsRefresh(bundleId: number) {
   ref.current = bundleId;
 
   useEffect(() => {
-    const server = http.createServer((req, res) => {
+    const server = createServer((req, res) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Request-Method", "*");
       res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET");
@@ -450,43 +449,55 @@ function useProxy({
 }) {
   useEffect(() => {
     if (!token) return;
-    const proxy = httpProxy.createProxyServer({
-      secure: false,
-      changeOrigin: true,
-      headers: {
-        "cf-workers-preview-token": token.value,
+
+    // TODO(soon): since headers are added in callbacks, the server
+    // does not need to restart when changes are made.
+    const host = token.host;
+    const proxy = createHttpProxy({
+      host,
+      assetPath: typeof publicRoot === "string" ? publicRoot : null,
+      onRequest: (headers) => {
+        headers["cf-workers-preview-token"] = token.value;
       },
-      target: `https://${token.host}`,
-      // TODO: log websockets too? validate durables, etc
+      onResponse: (headers) => {
+        for (const [name, value] of Object.entries(headers)) {
+          // Rewrite the remote host to the local host.
+          if (typeof value === "string" && value.includes(host)) {
+            headers[name] = value
+              .replaceAll(`https://${host}`, `http://localhost:${port}`)
+              .replaceAll(host, `localhost:${port}`)
+          }
+        }
+      }
     });
 
-    const servePublic =
-      publicRoot &&
-      serveStatic(publicRoot, {
-        cacheControl: false,
-      });
-    const server = http
-      .createServer((req, res) => {
-        if (publicRoot) {
-          servePublic(req, res, () => {
-            proxy.web(req, res);
-          });
-        } else {
-          proxy.web(req, res);
-        }
-      })
-      .listen(port); // TODO: custom port
+    const server = proxy.listen(port);
 
-    proxy.on("proxyRes", function (proxyRes, req, res) {
+    // TODO(soon): refactor logging format into its own function
+    proxy.on("request", function (req, res) {
       // log all requests
       console.log(
         new Date().toLocaleTimeString(),
         req.method,
         req.url,
-        res.statusCode // TODO add a status message like Ok etc?
+        res.statusCode
       );
     });
-    // TODO: log errors?
+    proxy.on("upgrade", (req) => {
+      console.log(
+        new Date().toLocaleTimeString(),
+        req.method,
+        req.url,
+        101,
+        '(WebSocket)'
+      );
+    });
+    proxy.on("error", (err) => {
+      console.error(
+        new Date().toLocaleTimeString(),
+        err
+      );
+    });
 
     return () => {
       proxy.close();
