@@ -993,6 +993,7 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
@@ -1245,6 +1246,7 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
@@ -1311,11 +1313,13 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
-              console.log(await ns.list({ prefix }));
+              const listResponse = await ns.list({ prefix });
+              console.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
               return;
             }
 
@@ -1379,6 +1383,7 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
@@ -1447,15 +1452,12 @@ compatibility_date = "${compatibilityDate}"
               });
           },
           async ({ key, ...args }) => {
-            if (args.local) {
-              console.error(`local mode is not yet supported for this command`);
-              return;
-            }
             const namespaceId = getNamespaceId(args);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
@@ -1548,6 +1550,7 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
@@ -1635,6 +1638,7 @@ compatibility_date = "${compatibilityDate}"
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
+                kvPersist: (args.kvPersist as string) || true,
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
