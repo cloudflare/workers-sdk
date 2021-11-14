@@ -98,9 +98,13 @@ export async function syncAssets(
     // now put each of the files into kv
     if (!keys.has(filePath)) {
       console.log(`uploading ${file}...`);
+      const content = await readFile(file, "base64");
+      if (content.length > 25 * 1024 * 1024) {
+        throw new Error(`File ${file} is too big, it should be under 25 mb.`);
+      }
       upload.push({
         key: filePath,
-        value: await readFile(file, "base64"),
+        value: content,
         base64: true,
       });
     }
