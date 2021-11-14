@@ -34,8 +34,7 @@
   ],
   "dependencies": {
     "esbuild": "^0.13.12",
-    "miniflare": "2.0.0-rc.1",
-    "yargs": "^17.2.1"
+    "miniflare": "2.0.0-rc.1"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
@@ -64,7 +63,8 @@
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.5",
     "tmp-promise": "^3.0.3",
-    "ws": "^8.2.3"
+    "ws": "^8.2.3",
+    "yargs": "^17.2.1"
   },
   "files": [
     "bin",

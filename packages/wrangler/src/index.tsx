@@ -2,7 +2,7 @@ import React from "react";
 import { render } from "ink";
 import { Dev } from "./dev";
 import { readFile } from "node:fs/promises";
-import makeCLI from "yargs/yargs";
+import makeCLI from "yargs";
 import { hideBin } from "yargs/helpers";
 import type yargs from "yargs";
 import { findUp } from "find-up";
