@@ -1,9 +1,9 @@
-name: CI
+name: Pages
 
 on:
   push:
     branches:
-      - main
+      - "pages-cli"
 
 jobs:
   build:
@@ -38,7 +38,7 @@ jobs:
         run: node .github/version-script.js
 
       - name: Publish Alpha to NPM
-        run: npm publish --tag alpha
+        run: npm publish --tag pages
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         working-directory: packages/wrangler
