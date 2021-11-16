@@ -215,7 +215,7 @@ import { TextEncoder } from "node:util";
 import open from "open";
 import url from "node:url";
 import http from "node:http";
-import { readFile, writeFile, rm } from "node:fs/promises";
+import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import TOML from "@iarna/toml";
@@ -768,6 +768,9 @@ function generateRandomState(lengthOfState: number): string {
 }
 
 async function writeToConfigFile(tokenData: AccessContext) {
+  await mkdir(path.join(os.homedir(), ".wrangler/config/"), {
+    recursive: true,
+  });
   await writeFile(
     path.join(os.homedir(), ".wrangler/config/default.toml"),
     `
@@ -809,7 +812,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
       server.close();
       clearTimeout(loginTimeoutHandle);
       resolve(false);
-    }, 30000); // wait for 30 seconds for the user to authorize
+    }, 60000); // wait for 30 seconds for the user to authorize
   });
 
   const loginPromise = new Promise<boolean>((resolve, reject) => {
