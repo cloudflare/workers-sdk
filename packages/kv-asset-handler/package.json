@@ -1,6 +1,6 @@
 {
   "name": "@cloudflare/kv-asset-handler",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Routes requests to KV assets",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
