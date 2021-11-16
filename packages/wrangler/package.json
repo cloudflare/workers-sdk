@@ -68,6 +68,7 @@
     "yargs": "^17.2.1"
   },
   "files": [
+    "src",
     "bin",
     "miniflare-config-stubs",
     "wrangler-dist",
