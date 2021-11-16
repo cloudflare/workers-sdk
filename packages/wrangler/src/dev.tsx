@@ -299,9 +299,15 @@ function useTmpDir(): string | void {
   useEffect(() => {
     let dir: DirectoryResult;
     async function create() {
-      dir = await tmp.dir({ unsafeCleanup: true });
-      setDirectory(dir);
-      return;
+      try {
+        dir = await tmp.dir({ unsafeCleanup: true });
+        setDirectory(dir);
+        return;
+      } catch (err) {
+        console.error("failed to create tmp dir");
+        console.error(err);
+        throw err;
+      }
     }
     create();
     return () => {
