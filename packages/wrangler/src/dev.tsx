@@ -54,6 +54,8 @@ export function Dev(props: Props): JSX.Element {
     );
   }
 
+  console.log({ entry: props.entry });
+
   // @ts-expect-error whack
   useDevtoolsRefresh(bundle?.id ?? 0);
 
@@ -146,6 +148,7 @@ function Remote(props: {
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
 }) {
+  console.log("remote", props);
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
   const token = useWorker({
@@ -326,6 +329,7 @@ function useEsbuild(
     let result: esbuild.BuildResult;
     async function build() {
       if (!destination) return;
+      console.log("esbuild", entry, destination);
       result = await esbuild.build({
         entryPoints: [entry],
         bundle: true,
