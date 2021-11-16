@@ -54,7 +54,7 @@ export function Dev(props: Props): JSX.Element {
     );
   }
 
-  console.log({ entry: props.entry });
+  console.log({ entry: props.entry, bundle });
 
   // @ts-expect-error whack
   useDevtoolsRefresh(bundle?.id ?? 0);
@@ -300,8 +300,10 @@ function useTmpDir(): string | void {
     let dir: DirectoryResult;
     async function create() {
       try {
+        console.log("creating dir");
         dir = await tmp.dir({ unsafeCleanup: true });
         setDirectory(dir);
+        console.log("created", dir);
         return;
       } catch (err) {
         console.error("failed to create tmp dir");
