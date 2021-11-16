@@ -20,8 +20,8 @@ type Props = {
   public?: string;
   site?: string;
   triggers?: (string | number)[];
-  zone?: string;
   routes?: (string | number)[];
+  legacyEnv?: boolean;
 };
 
 function sleep(ms: number) {
@@ -45,7 +45,6 @@ export default async function publish(props: Props): Promise<void> {
   } = config;
 
   const triggers = props.triggers || config.triggers?.crons;
-  const zone = props.zone || config.zone_id;
   const routes = props.routes || config.routes;
 
   assert(config.account_id, "missing account id");
@@ -61,7 +60,10 @@ export default async function publish(props: Props): Promise<void> {
   }
 
   let scriptName = props.script ? props.name : config.name;
-  scriptName += props.env ? `-${props.env}` : "";
+  if (props.legacyEnv) {
+    scriptName += props.env ? `-${props.env}` : "";
+  }
+  const envName = props.env ?? "production";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
 
@@ -161,119 +163,113 @@ export default async function publish(props: Props): Promise<void> {
       : [],
   };
 
-  if (triggers) {
-    console.log("publishing to workers.dev subdomain");
+  const start = Date.now();
+  const formatTime = (duration) => {
+    return `(${(duration / 1000).toFixed(2)} sec)`;
+  };
 
-    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
+  const notProd = !props.legacyEnv && props.env;
+  const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
+  const workerUrl = notProd
+    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+    : `/accounts/${accountId}/workers/scripts/${scriptName}`;
+
+  // Upload the script so it has time to propogate.
+  const { available_on_subdomain } = await cfetch(
+    `${workerUrl}?available_on_subdomain=true`,
+    {
       method: "PUT",
-      // @ts-expect-error TODO: fix this type error!
+      // @ts-expect-error: TODO: fix this type error!
       body: toFormData(worker),
+    }
+  );
+
+  const uploadMs = Date.now() - start;
+  console.log("Uploaded", workerName, formatTime(uploadMs));
+  const deployments: Promise<string[]>[] = [];
+
+  const subdomain = () =>
+    cfetch(`/accounts/${accountId}/workers/subdomain`).then(({ subdomain }) => {
+      if (props.legacyEnv || !props.env) {
+        return [`${scriptName}.${subdomain}.workers.dev`];
+      }
+      return [`${envName}.${scriptName}.${subdomain}.workers.dev`];
     });
 
-    // then mark it as a cron
-    await cfetch(
-      `/accounts/${accountId}/workers/scripts/${scriptName}/schedules`,
-      {
+  // Enable the `workers.dev` subdomain.
+  // TODO: Make this configurable.
+  if (!available_on_subdomain) {
+    deployments.push(
+      cfetch(`${workerUrl}/subdomain`, {
         method: "POST",
+        body: JSON.stringify({ enabled: true }),
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(
-          triggers.map((trigger) => ({ cron: `${trigger}` }))
-        ),
-      }
+      })
+        .then(() => subdomain())
+        // Add a delay when the subdomain is first created.
+        // This is to prevent an issue where a negative cache-hit
+        // causes the subdomain to be unavailable for 30 seconds.
+        // This is a temporary measure until we fix this on the edge.
+        .then((url) => {
+          sleep(5_000);
+          return url;
+        })
     );
-  } else if (zone) {
-    if (!routes) {
-      throw new Error("missing routes");
-    }
-    // if zoneid is a domain, convert to zone id
-    let zoneId: string;
-    if (zone.indexOf(".") > -1) {
-      // TODO: verify this is a domain properly
-      const zoneResult = await cfetch<{ id: string }>(
-        `/zones?name=${encodeURIComponent(zone)}`
-      );
-      zoneId = zoneResult.id;
-    } else {
-      zoneId = zone;
-    }
-
-    // get all routes for this zone
-
-    const allRoutes = await cfetch<
-      { id: string; pattern: string; script: string }[]
-    >(`/zones/${zoneId}/workers/routes`);
-
-    // upload the script
-
-    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
-      method: "PUT",
-      // @ts-expect-error TODO: fix this type error!
-      body: toFormData(worker),
-    });
-
-    for (const route of routes) {
-      const matchingRoute = allRoutes.find((r) => r.pattern === route);
-      if (!matchingRoute) {
-        console.log(`publishing ${scriptName} to ${route}`);
-        await cfetch(`/zones/${zoneId}/workers/routes`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            pattern: route,
-            script: scriptName,
-          }),
-        });
-      } else {
-        if (matchingRoute.script !== scriptName) {
-          // conflict;
-          console.error(
-            `A worker with a different name "${matchingRoute.script}" was previously deployed to the specified route ${route}, skipping...`
-          );
-        } else {
-          console.log(
-            `${scriptName} already published to ${route}, skipping...`
-          );
-        }
-      }
-    }
   } else {
-    console.log("checking that subdomain is registered");
-    // check if subdomain is registered
-    // if not, register it
-    const subDomainResponse = await cfetch<{ subdomain: string }>(
-      `/accounts/${config.account_id}/workers/subdomain`
-    );
-    const subdomainName = subDomainResponse.subdomain;
+    deployments.push(subdomain());
+  }
 
-    assert(subdomainName, "subdomain is not registered");
-
-    console.log("publishing to workers.dev subdomain");
-    await cfetch(`/accounts/${accountId}/workers/scripts/${scriptName}`, {
-      method: "PUT",
-      // @ts-expect-error TODO: fix this type error!
-      body: toFormData(worker),
-    });
-
-    // ok now enable it
-    console.log("making public on subdomain...");
-    await cfetch(
-      `/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
-      {
-        method: "POST",
+  // Update routing table for the script.
+  if (routes && routes.length) {
+    deployments.push(
+      cfetch(`${workerUrl}/routes`, {
+        // TODO: PATCH will not delete previous routes on this script,
+        // whereas PUT will. We need to decide on the default behaviour
+        // and how to configure it.
+        method: "PUT",
+        body: JSON.stringify(routes.map((pattern) => ({ pattern }))),
         headers: {
-          "Content-type": "application/json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          enabled: true,
-        }),
-      }
+      }).then(() => {
+        if (routes.length > 10) {
+          return routes
+            .slice(0, 9)
+            .map(String)
+            .concat([`...and ${routes.length - 10} more routes`]);
+        }
+        return routes.map(String);
+      })
     );
-    await sleep(3000); // roughly wait for the subdomain to be enabled
-    // TODO: we should fix this on the edge cache
-    console.log(`published to ${scriptName}.${subdomainName}.workers.dev`);
+  }
+
+  // Configure any schedules for the script.
+  // TODO: rename this to `schedules`?
+  if (triggers && triggers.length) {
+    deployments.push(
+      cfetch(`${workerUrl}/schedules`, {
+        // TODO: Unlike routes, this endpoint does not support PATCH.
+        // So technically, this will override any previous schedules.
+        // We should change the endpoint to support PATCH.
+        method: "PUT",
+        body: JSON.stringify(triggers.map((cron) => ({ cron }))),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(() => triggers.map(String))
+    );
+  }
+
+  if (!deployments.length) {
+    return;
+  }
+
+  const targets = await Promise.all(deployments);
+  const deployMs = Date.now() - start - uploadMs;
+  console.log("Deployed", workerName, formatTime(deployMs));
+  for (const target of targets.flat()) {
+    console.log(" ", target);
   }
 }
