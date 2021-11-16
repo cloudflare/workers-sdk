@@ -565,7 +565,9 @@ function useTunnel(toggle: boolean) {
   // point them to a url where they can get docs to install it
   useEffect(() => {
     async function startTunnel() {
-      if (!(await commandExists("cloudflared"))) {
+      try {
+        await commandExists("cloudflared");
+      } catch (e) {
         console.error(
           "Please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
         );
