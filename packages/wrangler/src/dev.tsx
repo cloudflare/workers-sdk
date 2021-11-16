@@ -54,8 +54,6 @@ export function Dev(props: Props): JSX.Element {
     );
   }
 
-  console.log({ entry: props.entry, bundle });
-
   // @ts-expect-error whack
   useDevtoolsRefresh(bundle?.id ?? 0);
 
@@ -148,7 +146,6 @@ function Remote(props: {
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
 }) {
-  console.log("remote", props);
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
   const token = useWorker({
@@ -300,10 +297,8 @@ function useTmpDir(): string | void {
     let dir: DirectoryResult;
     async function create() {
       try {
-        console.log("creating dir");
         dir = await tmp.dir({ unsafeCleanup: true });
         setDirectory(dir);
-        console.log("created", dir);
         return;
       } catch (err) {
         console.error("failed to create tmp dir");
@@ -337,7 +332,6 @@ function useEsbuild(
     let result: esbuild.BuildResult;
     async function build() {
       if (!destination) return;
-      console.log("esbuild", entry, destination);
       result = await esbuild.build({
         entryPoints: [entry],
         bundle: true,
