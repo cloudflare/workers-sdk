@@ -2,22 +2,28 @@
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
+[(Read the full stack week launch blog post.)](https://blog.cloudflare.com/wrangler-v2-beta/)
+
+**DISCLAIMER**: This is a work in progress, and is NOT recommended for use in production. We are opening this preview for feedback from the community, and to openly share our [roadmap](https://github.com/cloudflare/wrangler2/issues/12) for the future. As such, expect APIs and documentation to change before the end of the preview.
+
+Further, we will NOT do a general release until we are both feature complete, and have a full backward compatibility and incremental migration plan in place. For more details, follow the [parent roadmap issue](https://github.com/cloudflare/wrangler2/issues/12).
+
 ## Quick Start
 
 ```bash
 # Make a javascript file
 $ echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
-$ npx wrangler dev index.js
+$ npx wrangler@beta dev index.js
 # and then publish it
-$ npx wrangler publish index.js --name my-worker
-# visit https://my-worker.<username>.workers.dev
+$ npx wrangler@beta publish index.js --name my-worker
+# visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
 ## Installation:
 
 ```bash
-$ npm install wrangler
+$ npm install wrangler@beta
 ```
 
 ## Commands
