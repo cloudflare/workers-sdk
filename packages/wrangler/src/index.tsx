@@ -406,19 +406,27 @@ compatibility_date = "${compatibilityDate}"
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
         })
-        .option("triggers", {
-          describe: "an array of crons",
-          type: "array",
+        .option("schedules", {
+          describe: "cron schedules to attach",
+          alias: ["schedule", "triggers"],
+          type: "array"
         })
         .option("zone", {
           describe: "a domain or a zone id",
           alias: "zone_id",
           type: "string",
+          hidden: true // No longer needed, since routes support multi-zone.
         })
         .option("routes", {
           describe: "routes to upload",
           alias: "route",
           type: "array",
+        })
+        .option("services", {
+          describe: "experimental support for services",
+          type: "boolean",
+          default: "false",
+          hidden: true
         });
     },
     async (args) => {
