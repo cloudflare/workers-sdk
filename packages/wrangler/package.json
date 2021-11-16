@@ -34,8 +34,7 @@
   ],
   "dependencies": {
     "esbuild": "^0.13.12",
-    "miniflare": "2.0.0-rc.1",
-    "semiver": "^1.1.0"
+    "miniflare": "2.0.0-rc.1"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
@@ -55,9 +54,9 @@
     "formdata-node": "^4.3.1",
     "http-proxy": "^1.18.1",
     "ink": "^3.2.0",
-    "ink-select-input": "^4.2.0",
     "ink-table": "^3.0.0",
     "ink-text-input": "^4.0.1",
+    "ink-select-input": "^4.2.0",
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
     "open": "^8.4.0",
     "react": "^17.0.2",
