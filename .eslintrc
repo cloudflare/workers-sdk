@@ -1,0 +1,24 @@
+{
+  "ecmaFeatures": {
+    "jsx": true
+  },
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "extends": [
+    "./tsconfig.json",
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "plugins": ["@typescript-eslint", "prettier"],
+  "rules": {
+    "prettier/prettier": "error"
+  },
+  "includes": [
+    "./**/*.ts",
+    "./**/*.js"
+  ],
+  "excludes": [
+    "./**/*.d.ts",
+    "./node_modules"
+  ]
+}
