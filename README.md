@@ -41,3 +41,11 @@ Start a local development server, with live reloading and devtools.
 Publish the given script to the worldwide Cloudflare network.
 
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/commands).
+
+### `wrangler pages dev [directory] [-- command]`
+
+Either serves a static build asset directory, or proxies itself in front of a command.
+
+Builds and runs functions from a `./functions` directory or uses a `_worker.js` file inside the static build asset directory.
+
+For more commands and options, refer to the [documentation](https://developers.cloudflare.com/pages/platform/functions#develop-and-preview-locally) or run `wrangler pages dev --help`.

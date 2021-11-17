@@ -33,9 +33,11 @@
     "cli"
   ],
   "dependencies": {
+    "@cloudflare/pages-functions-compiler": "^0.3.3",
     "esbuild": "0.13.12",
     "miniflare": "2.0.0-rc.1",
-    "semiver": "^1.1.0"
+    "semiver": "^1.1.0",
+    "serve": "^13.0.2"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
@@ -43,6 +45,7 @@
   "devDependencies": {
     "@iarna/toml": "^2.2.5",
     "@types/cloudflare": "^2.7.6",
+    "@types/express": "^4.17.13",
     "@types/react": "^17.0.34",
     "@types/signal-exit": "^3.0.1",
     "@types/ws": "^8.2.0",
@@ -50,10 +53,12 @@
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
     "execa": "^5.1.1",
+    "express": "^4.17.1",
     "finalhandler": "^1.1.2",
     "find-up": "^6.2.0",
     "formdata-node": "^4.3.1",
     "http-proxy": "^1.18.1",
+    "http-proxy-middleware": "^2.0.1",
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.0",
     "ink-table": "^3.0.0",

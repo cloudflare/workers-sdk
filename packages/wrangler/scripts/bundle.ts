@@ -11,7 +11,7 @@ async function run() {
     platform: "node",
     format: "cjs",
     // minify: true, // TODO: enable this again
-    external: ["fsevents", "esbuild", "miniflare"],
+    external: ["fsevents", "esbuild", "miniflare", "@miniflare/core"],
     sourcemap: true,
     inject: [path.join(__dirname, "../import_meta_url.js")],
     define: {

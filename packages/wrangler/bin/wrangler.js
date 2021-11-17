@@ -14,7 +14,7 @@ async function main() {
 You should use the latest Node.js version if possible, as Cloudflare Workers use a very up-to-date version of V8.
 Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
     );
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
