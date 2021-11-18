@@ -217,6 +217,7 @@ import url from "node:url";
 import http from "node:http";
 import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
 import path from "node:path";
+import process from "node:process";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import assert from "node:assert";
@@ -334,6 +335,10 @@ function throwIfNotInitialised() {
 }
 
 export function getAPIToken(): string {
+  if (process.env.CF_API_TOKEN) {
+    return process.env.CF_API_TOKEN;
+  }
+
   throwIfNotInitialised();
   return LocalState.accessToken?.value;
 }
@@ -948,6 +953,10 @@ export function listScopes(): void {
 export async function getAccountId() {
   const apiToken = getAPIToken();
   if (!apiToken) return;
+
+  if (process.env.CF_ACCOUNT_ID) {
+    return process.env.CF_ACCOUNT_ID;
+  }
 
   let response: Response;
   try {
