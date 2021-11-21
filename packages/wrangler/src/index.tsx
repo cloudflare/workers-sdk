@@ -56,11 +56,6 @@ async function readConfig(path?: string): Promise<Config> {
   // todo: validate, add defaults
   // let's just do some basics for now
 
-  // env var overrides
-  if (process.env.CF_ACCOUNT_ID) {
-    config.account_id = process.env.CF_ACCOUNT_ID;
-  }
-
   // @ts-expect-error we're being sneaky here for now
   config.__path__ = path;
 
