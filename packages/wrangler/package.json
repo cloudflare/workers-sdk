@@ -33,7 +33,7 @@
     "cli"
   ],
   "dependencies": {
-    "@cloudflare/pages-functions-compiler": "^0.3.3",
+    "@cloudflare/pages-functions-compiler": "0.3.4",
     "esbuild": "0.13.12",
     "miniflare": "2.0.0-rc.1",
     "semiver": "^1.1.0",
