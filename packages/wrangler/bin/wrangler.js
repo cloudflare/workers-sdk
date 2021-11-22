@@ -10,7 +10,7 @@ async function main() {
     // Note Volta and nvm are also recommended in the official docs:
     // https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
     console.error(
-      `Wrangler requires at least Node.js ${MIN_NODE_VERSION}. 
+      `Wrangler requires at least Node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}.
 You should use the latest Node.js version if possible, as Cloudflare Workers use a very up-to-date version of V8.
 Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
     );
