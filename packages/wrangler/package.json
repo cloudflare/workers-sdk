@@ -89,7 +89,7 @@
     "test": "npm run build && NODE_OPTIONS=--enable-source-maps jest --silent=false"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.7.0"
   },
   "jest": {
     "transform": {
