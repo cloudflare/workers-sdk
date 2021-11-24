@@ -73,7 +73,7 @@ const getPort = (pid: number) => {
   }
 };
 
-const spawnProxyProcess = async ({
+const spawnStaticFileProxy = async ({
   directory,
   port,
   remaining,
@@ -169,7 +169,7 @@ const spawnProxyProcess = async ({
     // port = server.address()
   }
 
-  return { proxy, port, exit };
+  return { port, exit };
 };
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
@@ -247,7 +247,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       const functionsDirectory = "./functions";
       const usingFunctions = existsSync(functionsDirectory);
 
-      const proxy = await spawnProxyProcess({
+      const proxy = await spawnStaticFileProxy({
         directory,
         port: requestedProxyPort,
         remaining: remaining as (string | number)[],
