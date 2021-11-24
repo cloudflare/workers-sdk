@@ -1,13 +1,14 @@
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { existsSync } from "fs";
+import { existsSync, createReadStream } from "fs";
 import type { ChildProcess } from "child_process";
 import { execSync, spawn } from "child_process";
 import express from "express";
 import type { MiniflareOptions } from "miniflare";
 import type { RequestInfo, RequestInit } from "@miniflare/core";
 import httpProxyMiddleware from "http-proxy-middleware";
+import { createServer } from "http";
 
 type Exit = (message?: string) => undefined;
 
@@ -81,19 +82,30 @@ const spawnProxyProcess = async ({
   port?: number;
   remaining: (string | number)[];
 }) => {
-  let proxy: ChildProcess;
+  let server: ReturnType<typeof createServer>;
+  let proxy: ChildProcess | undefined = undefined;
 
   const exit: Exit = (message) => {
     if (message) console.error(message);
+    if (server) server.close();
     if (proxy) proxy.kill();
     return undefined;
   };
 
   if (directory !== undefined) {
     console.log(`Serving ${directory}...`);
-    const args = ["serve", directory];
-    if (port) args.push("-p", port.toString());
-    proxy = spawn("npx", args, { shell: isWindows() });
+
+    server = createServer((req, res) => {
+      var stream = createReadStream(join(directory, req.url));
+      stream.on("error", function () {
+        res.writeHead(404);
+        res.end();
+      });
+      stream.pipe(res);
+    }).listen(port);
+    // const args = ["serve", directory];
+    // if (port) args.push("-p", port.toString());
+    // proxy = spawn("npx", args, { shell: isWindows() });
   } else {
     const command = remaining;
     if (command.length === 0)
@@ -109,22 +121,28 @@ const spawnProxyProcess = async ({
     );
   }
 
-  proxy.stdout.on("data", (data) => {
+  proxy?.stdout.on("data", (data) => {
     console.log(`[proxy]: ${data}`);
   });
 
-  proxy.stderr.on("data", (data) => {
+  proxy?.stderr.on("data", (data) => {
     console.error(`[proxy]: ${data}`);
   });
 
-  proxy.on("close", (code) => {
+  proxy?.on("close", (code) => {
     console.error(`Proxy exited with status ${code}.`);
   });
 
-  // Wait for proxy process to start...
-  while (!proxy.pid) {}
+  server?.on("close", () => {
+    console.error(`Static asset proxy closed.`);
+  });
 
-  if (port === undefined) {
+  if (proxy) {
+    // Wait for proxy process to start...
+    while (!proxy.pid) {}
+  }
+
+  if (port === undefined && proxy) {
     console.log(
       `Sleeping ${SECONDS_TO_WAIT_FOR_PROXY} seconds to allow proxy process to start before attempting to automatically determine port...`
     );
@@ -142,6 +160,13 @@ const spawnProxyProcess = async ({
     } else {
       console.log(`Automatically determined the proxy port to be ${port}.`);
     }
+  } else if (port === undefined && server) {
+    let address = server.address();
+    if (typeof address !== "object") {
+      return exit("Could not determin static asset proxy port.");
+    }
+    port = address.port;
+    // port = server.address()
   }
 
   return { proxy, port, exit };
