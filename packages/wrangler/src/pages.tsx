@@ -200,6 +200,11 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             description: "Durable Object to bind (NAME=CLASS)",
             alias: "o",
           },
+          watch: {
+            type: "array",
+            description: "Additional directories to watch for code changes",
+            alias: "w",
+          },
           // TODO: Miniflare user options
         });
     },
@@ -212,6 +217,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       binding: bindings = [],
       kv: kvs = [],
       do: durableObjects = [],
+      watch,
       "--": remaining = [],
     }) => {
       if (!local) {
@@ -237,7 +243,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
         miniflareArgs = {
           scriptPath,
-          buildWatchPaths: [functionsDirectory],
+          buildWatchPaths: [functionsDirectory, ...watch.map(w => w.toString())],
           buildCommand: `npx @cloudflare/pages-functions-compiler build ${functionsDirectory} --outfile ${scriptPath}`,
         };
       } else {
