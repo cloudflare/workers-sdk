@@ -219,7 +219,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         return;
       }
 
-      const functionsDirectory = "./functions";
+      const functionsDirectory = directory !== undefined
+        ? join(directory, "./functions")
+        : "./functions";
       const usingFunctions = existsSync(functionsDirectory);
 
       const proxy = await spawnProxyProcess({
