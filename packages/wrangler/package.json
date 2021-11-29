@@ -87,7 +87,7 @@
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
     "start": "npm run bundle && NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-    "test": "NODE_OPTIONS=enable-source-maps CF_API_TOKEN=some-api-token CF_ACCOUNT_ID=some-account-id jest --silent=false --verbose=true"
+    "test": "CF_API_TOKEN=some-api-token CF_ACCOUNT_ID=some-account-id jest --silent=false --verbose=true"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -95,7 +95,7 @@
   "jest": {
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists)"
+      "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|data-uri-to-buffer|formdata-polyfill)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/clipboardy-mock.js"
