@@ -65,6 +65,7 @@
     "ink-text-input": "^4.0.1",
     "node-fetch": "github:tekwiz/node-fetch#fix/redirect-with-empty-chunked-transfer-encoding",
     "open": "^8.4.0",
+    "path-to-regexp": "^6.2.0",
     "react": "^17.0.2",
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.5",
@@ -86,20 +87,24 @@
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
     "start": "npm run bundle && NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-    "test": "npm run build && NODE_OPTIONS=--enable-source-maps jest --silent=false"
+    "test": "NODE_OPTIONS=enable-source-maps CF_API_TOKEN=some-api-token CF_ACCOUNT_ID=some-account-id jest --silent=false --verbose=true"
   },
   "engines": {
     "node": ">=16.0.0"
   },
   "jest": {
+    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
+    "transformIgnorePatterns": [
+      "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists)"
+    ],
+    "moduleNameMapper": {
+      "clipboardy": "<rootDir>/src/__tests__/clipboardy-mock.js"
+    },
     "transform": {
-      "^.+\\.tsx?$": [
+      "^.+\\.c?(t|j)sx?$": [
         "esbuild-jest",
         {
-          "sourcemap": true,
-          "loaders": {
-            ".spec.ts": "tsx"
-          }
+          "sourcemap": true
         }
       ]
     }
