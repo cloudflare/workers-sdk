@@ -31,6 +31,9 @@ function isWindows() {
 }
 
 const SECONDS_TO_WAIT_FOR_PROXY = 5;
+const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
+  /^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
+);
 
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -692,8 +695,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       proxy: requestedProxyPort,
       "script-path": singleWorkerScriptPath,
       binding: bindings = [],
-      kv: kvs = [],
-      do: durableObjects = [],
+      kv: kvBindings = [],
+      do: durableObjectBindings = [],
       "--": remaining = [],
     }) => {
       if (!local) {
@@ -785,6 +788,33 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         }
       }
 
+      const scriptNames = durableObjectBindings
+        .map(
+          (durableObjectBinding) =>
+            DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObjectBinding.toString())
+              ?.groups.scriptName
+        )
+        .filter((scriptName) => scriptName !== undefined);
+      const mounts = Object.fromEntries(
+        // By prepending the mount with `./`, we intentionally break the automatic routing since this URL gets normalized before it hits Miniflare.
+        scriptNames.map((scriptName) => [`./${scriptName}`, scriptName])
+      );
+      const kvNamespaces = kvBindings.map((kv) => kv.toString());
+      const durableObjects = Object.fromEntries(
+        durableObjectBindings.map((durableObject) => {
+          const {
+            groups: { binding, className, scriptName },
+          } = DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString());
+          return [binding, { className, scriptName: `./${scriptName}` }];
+        })
+      );
+
+      if (Object.keys(durableObjects).length > 0) {
+        console.log(
+          "Caution! The interface for setting Durable Objects is currently very much still under active development. It is liable to change at any time."
+        );
+      }
+
       const miniflare = new Miniflare({
         port,
         watch: true,
@@ -794,13 +824,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         logUnhandledRejections: true,
         sourceMap: true,
 
-        kvNamespaces: kvs.map((kv) => kv.toString()),
-
-        durableObjects: Object.fromEntries(
-          durableObjects.map((durableObject) =>
-            durableObject.toString().split("=")
-          )
-        ),
+        mounts,
+        kvNamespaces,
+        durableObjects,
 
         bindings: {
           // User bindings
