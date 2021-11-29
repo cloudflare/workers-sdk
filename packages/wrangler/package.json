@@ -93,7 +93,7 @@
     "test": "CF_API_TOKEN=some-api-token CF_ACCOUNT_ID=some-account-id jest --silent=false --verbose=true"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.7.0"
   },
   "jest": {
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",

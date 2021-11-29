@@ -1743,12 +1743,12 @@ export async function main(argv: string[]): Promise<void> {
     });
 
   yargs.group(["config", "help", "version"], "Flags:");
-
+  yargs.version(wranglerVersion);
   await initialiseUserConfig();
+
   await yargs.parse(argv, (err, argv, output) => {
     if (output) {
       console.log(output);
     }
   });
-  yargs.version(wranglerVersion);
 }

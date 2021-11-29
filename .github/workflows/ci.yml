@@ -30,12 +30,12 @@ jobs:
       - name: Install NPM dependencies
         run: npm install
 
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
       - name: Build
         run: npm run build
         working-directory: packages/wrangler
-
-      - name: Modify package.json version
-        run: node .github/version-script.js
 
       - name: Publish Alpha to NPM
         run: npm publish --tag alpha
