@@ -59,6 +59,7 @@ async function readConfig(path?: string): Promise<Config> {
     "name",
     "account_id",
     "workers_dev",
+    "compatibility_date",
     "zone_id",
     "routes",
     "route",
@@ -191,8 +192,7 @@ export async function main(argv: string[]): Promise<void> {
         try {
           await writeFile(
             destination,
-            `compatibility_date = "${compatibilityDate}"
-  `
+            `compatibility_date = "${compatibilityDate}"` + "\n"
           );
           console.log(`✨ Succesfully created wrangler.toml`);
           // TODO: suggest next steps?
@@ -447,6 +447,7 @@ export async function main(argv: string[]): Promise<void> {
       // -- snip, end --
 
       const envRootObj = args.env ? config[`env.${args.env}`] : config;
+      console.log(config.compatibility_date);
 
       render(
         <Dev
@@ -460,6 +461,8 @@ export async function main(argv: string[]): Promise<void> {
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
           public={args.public}
+          compatibilityDate={config.compatibility_date}
+          usageModel={config.usage_model}
           variables={{
             ...(envRootObj?.vars || {}),
             ...(envRootObj?.kv_namespaces || []).reduce(

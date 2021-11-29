@@ -59,6 +59,7 @@ type Env = {
   name?: string; // inherited
   account_id?: string; // inherited
   workers_dev?: boolean; // inherited
+  compatibility_date?: string; // inherited
   zone_id?: string; // inherited
   routes?: string[]; // inherited
   route?: string; // inherited
@@ -69,6 +70,7 @@ type Env = {
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited
   kv_namespaces?: KVNamespace[];
+  usage_model?: UsageModel; // inherited
 };
 
 export type Config = {
@@ -76,6 +78,7 @@ export type Config = {
   account_id?: string; // inherited
   // @deprecated Don't use this
   type?: Project; // top level
+  compatibility_date?: string; // inherited
   // -- there's some mutually exclusive logic for this next block,
   // but I didn't bother for now
   workers_dev?: boolean; // inherited

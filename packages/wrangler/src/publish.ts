@@ -171,6 +171,8 @@ export default async function publish(props: Props): Promise<void> {
           type: "text",
         })
       : [],
+    compatibility_date: config.compatibility_date,
+    usage_model: config.usage_model,
   };
 
   const start = Date.now();

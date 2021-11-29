@@ -37,6 +37,8 @@ type Props = {
   variables: { [name: string]: CfVariable };
   public: void | string;
   site: void | string;
+  compatibilityDate: void | string;
+  usageModel: void | "bundled" | "unbound";
 };
 
 export function Dev(props: Props): JSX.Element {
@@ -98,6 +100,8 @@ export function Dev(props: Props): JSX.Element {
           site={props.site}
           public={props.public}
           port={props.port}
+          compatibilityDate={props.compatibilityDate}
+          usageModel={props.usageModel}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -153,6 +157,8 @@ function Remote(props: {
   accountId: void | string;
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
+  compatibilityDate: string | void;
+  usageModel: void | "bundled" | "unbound";
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -166,6 +172,8 @@ function Remote(props: {
     variables: props.variables,
     sitesFolder: props.site,
     port: props.port,
+    compatibilityDate: props.compatibilityDate,
+    usageModel: props.usageModel,
   });
 
   useProxy({ token, publicRoot: props.public, port: props.port });
@@ -399,6 +407,8 @@ function useWorker(props: {
   variables: { [name: string]: CfVariable };
   sitesFolder: void | string;
   port: number;
+  compatibilityDate: string | void;
+  usageModel: void | "bundled" | "unbound";
 }): CfPreviewToken | void {
   const {
     name,
@@ -447,7 +457,6 @@ function useWorker(props: {
           }; // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");
-      console.log(content);
       const init: CfWorkerInit = {
         main: {
           name: name || path.basename(bundle.path),
@@ -471,6 +480,8 @@ function useWorker(props: {
               __STATIC_CONTENT: { namespaceId: assets.namespace },
             }
           : variables,
+        compatibility_date: props.compatibilityDate,
+        usage_model: props.usageModel,
       };
       setToken(
         await createWorker(init, {
