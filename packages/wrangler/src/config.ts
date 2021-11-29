@@ -60,6 +60,7 @@ type Env = {
   account_id?: string; // inherited
   workers_dev?: boolean; // inherited
   compatibility_date?: string; // inherited
+  compatibility_flags?: string[]; // inherited
   zone_id?: string; // inherited
   routes?: string[]; // inherited
   route?: string; // inherited
@@ -79,6 +80,7 @@ export type Config = {
   // @deprecated Don't use this
   type?: Project; // top level
   compatibility_date?: string; // inherited
+  compatibility_flags?: string[]; // inherited
   // -- there's some mutually exclusive logic for this next block,
   // but I didn't bother for now
   workers_dev?: boolean; // inherited

@@ -60,6 +60,7 @@ async function readConfig(path?: string): Promise<Config> {
     "account_id",
     "workers_dev",
     "compatibility_date",
+    "compatibility_flags",
     "zone_id",
     "routes",
     "route",
@@ -447,7 +448,6 @@ export async function main(argv: string[]): Promise<void> {
       // -- snip, end --
 
       const envRootObj = args.env ? config[`env.${args.env}`] : config;
-      console.log(config.compatibility_date);
 
       render(
         <Dev
@@ -462,6 +462,7 @@ export async function main(argv: string[]): Promise<void> {
           port={args.port || config.dev?.port}
           public={args.public}
           compatibilityDate={config.compatibility_date}
+          compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
           variables={{
             ...(envRootObj?.vars || {}),

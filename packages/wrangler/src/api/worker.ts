@@ -118,6 +118,7 @@ export interface CfWorkerInit {
    */
   variables?: { [name: string]: CfVariable };
   compatibility_date: string | void;
+  compatibility_flags: void | string[];
   usage_model: void | "bundled" | "unbound";
 }
 

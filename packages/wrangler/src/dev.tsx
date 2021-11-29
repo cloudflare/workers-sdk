@@ -38,6 +38,7 @@ type Props = {
   public: void | string;
   site: void | string;
   compatibilityDate: void | string;
+  compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
 };
 
@@ -101,6 +102,7 @@ export function Dev(props: Props): JSX.Element {
           public={props.public}
           port={props.port}
           compatibilityDate={props.compatibilityDate}
+          compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
         />
       )}
@@ -158,6 +160,7 @@ function Remote(props: {
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
   compatibilityDate: string | void;
+  compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
 }) {
   assert(props.accountId, "accountId is required");
@@ -173,6 +176,7 @@ function Remote(props: {
     sitesFolder: props.site,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
+    compatibilityFlags: props.compatibilityFlags,
     usageModel: props.usageModel,
   });
 
@@ -408,6 +412,7 @@ function useWorker(props: {
   sitesFolder: void | string;
   port: number;
   compatibilityDate: string | void;
+  compatibilityFlags: string[] | void;
   usageModel: void | "bundled" | "unbound";
 }): CfPreviewToken | void {
   const {
@@ -481,6 +486,7 @@ function useWorker(props: {
             }
           : variables,
         compatibility_date: props.compatibilityDate,
+        compatibility_flags: props.compatibilityFlags,
         usage_model: props.usageModel,
       };
       setToken(

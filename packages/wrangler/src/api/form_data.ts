@@ -84,7 +84,14 @@ function toModule(module: CfModule, entryType?: CfModuleType): Blob {
  */
 export function toFormData(worker: CfWorkerInit): FormData {
   const formData = new FormData();
-  const { main, modules, variables, usage_model, compatibility_date } = worker;
+  const {
+    main,
+    modules,
+    variables,
+    usage_model,
+    compatibility_date,
+    compatibility_flags,
+  } = worker;
   const { name, type: mainType } = main;
 
   const bindings = [];
@@ -102,6 +109,10 @@ export function toFormData(worker: CfWorkerInit): FormData {
   if (compatibility_date) {
     // @ts-expect-error - we should type metadata
     metadata.compatibility_date = compatibility_date;
+  }
+  if (compatibility_flags) {
+    // @ts-expect-error - we should type metadata
+    metadata.compatibility_flags = compatibility_flags;
   }
   if (usage_model) {
     // @ts-expect-error - we should type metadata

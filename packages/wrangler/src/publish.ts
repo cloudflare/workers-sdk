@@ -172,6 +172,7 @@ export default async function publish(props: Props): Promise<void> {
         })
       : [],
     compatibility_date: config.compatibility_date,
+    compatibility_flags: config.compatibility_flags,
     usage_model: config.usage_model,
   };
 
