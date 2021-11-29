@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
-  "bin": "./bin/wrangler.js",
+  "bin": {
+    "wrangler": "./bin/wrangler.js",
+    "wrangler2": "./bin/wrangler.js"
+  },
   "license": "MIT OR Apache-2.0",
   "bugs": {
     "url": "https://github.com/cloudflare/wrangler/issues"
