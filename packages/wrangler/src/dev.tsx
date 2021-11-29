@@ -565,15 +565,15 @@ function useTunnel(toggle: boolean) {
   // point them to a url where they can get docs to install it
   useEffect(() => {
     async function startTunnel() {
-      try {
-        await commandExists("cloudflared");
-      } catch (e) {
-        console.error(
-          "Please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
-        );
-        return;
-      }
       if (toggle) {
+        try {
+          await commandExists("cloudflared");
+        } catch (e) {
+          console.error(
+            "To share your worker on the internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+          );
+          return;
+        }
         console.log("⎔ Starting a tunnel...");
         tunnel.current = spawn("cloudflared", [
           "tunnel",

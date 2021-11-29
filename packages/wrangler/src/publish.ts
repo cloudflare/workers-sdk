@@ -188,13 +188,16 @@ export default async function publish(props: Props): Promise<void> {
   console.log("Uploaded", workerName, formatTime(uploadMs));
   const deployments: Promise<string[]>[] = [];
 
-  const subdomain = () =>
-    cfetch(`/accounts/${accountId}/workers/subdomain`).then(({ subdomain }) => {
-      if (props.legacyEnv || !props.env) {
-        return [`${scriptName}.${subdomain}.workers.dev`];
-      }
-      return [`${envName}.${scriptName}.${subdomain}.workers.dev`];
-    });
+  const userSubdomain = (
+    await cfetch<{ subdomain: string }>(
+      `/accounts/${accountId}/workers/subdomain`
+    )
+  ).subdomain;
+
+  const scriptURL =
+    props.legacyEnv || !props.env
+      ? `${scriptName}.${userSubdomain}.workers.dev`
+      : `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
 
   // Enable the `workers.dev` subdomain.
   // TODO: Make this configurable.
@@ -207,18 +210,18 @@ export default async function publish(props: Props): Promise<void> {
           "Content-Type": "application/json",
         },
       })
-        .then(() => subdomain())
+        .then(() => [scriptURL])
         // Add a delay when the subdomain is first created.
         // This is to prevent an issue where a negative cache-hit
         // causes the subdomain to be unavailable for 30 seconds.
         // This is a temporary measure until we fix this on the edge.
         .then((url) => {
-          sleep(5_000);
+          sleep(3000);
           return url;
         })
     );
   } else {
-    deployments.push(subdomain());
+    deployments.push(Promise.resolve([scriptURL]));
   }
 
   // Update routing table for the script.
