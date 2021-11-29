@@ -55,6 +55,42 @@ async function readConfig(path?: string): Promise<Config> {
     Object.assign(config, parsed);
   }
 
+  const inheritedFields = [
+    "name",
+    "account_id",
+    "workers_dev",
+    "zone_id",
+    "routes",
+    "route",
+    "jsxFactory",
+    "jsxFragment",
+    "site",
+    "triggers",
+    "usage_model",
+  ];
+
+  Object.keys(config.env || {}).forEach((env) => {
+    inheritedFields.forEach((field) => {
+      if (config[field] !== undefined && config.env[env][field] === undefined) {
+        config.env[env][field] = config[field]; // TODO: - shallow copy?
+      }
+    });
+  });
+
+  const mirroredFields = ["vars", "kv_namespaces", "durable_objects"];
+  Object.keys(config.env || {}).forEach((env) => {
+    mirroredFields.forEach((field) => {
+      // if it exists on top level, it should exist on env defns
+      Object.keys(config[field] || {}).forEach((fieldKey) => {
+        if (!config.env[env][field]?.[fieldKey]) {
+          console.error(
+            `In your configuration, "${field}.${fieldKey}" exists at a top level, but not on "env.${env}". This is not what you probably want, since the field "${field}" is not inherited by environments. Please add "${field}.${fieldKey}" to "env.${env}".`
+          );
+        }
+      });
+    });
+  });
+
   // todo: validate, add defaults
   // let's just do some basics for now
 
