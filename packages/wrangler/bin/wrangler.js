@@ -24,7 +24,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
       "--no-warnings",
       "--experimental-vm-modules",
       ...process.execArgv,
-      join(__dirname, "../wrangler-dist/index_node.js"),
+      join(__dirname, "../wrangler-dist/cli.js"),
       ...process.argv.slice(2),
     ],
     { stdio: "inherit" }

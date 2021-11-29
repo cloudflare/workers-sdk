@@ -5,7 +5,7 @@ import path from "path";
 
 async function run() {
   await esbuild.build({
-    entryPoints: ["./src/index_node.ts"],
+    entryPoints: ["./src/cli.ts"],
     bundle: true,
     outdir: "./wrangler-dist",
     platform: "node",
