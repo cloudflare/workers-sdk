@@ -302,6 +302,16 @@ let initialised = false;
 export async function initialise(): Promise<void> {
   // get refreshtoken/accesstoken from fs if exists
   try {
+    // if CF_API_TOKEN available, use that
+    if (process.env.CF_API_TOKEN) {
+      LocalState.accessToken = {
+        value: process.env.CF_API_TOKEN,
+        expiry: "3021-12-31T23:59:59+00:00",
+      };
+      initialised = true;
+      return;
+    }
+
     const toml = TOML.parse(
       await readFile(path.join(os.homedir(), ".wrangler/config/default.toml"), {
         encoding: "utf-8",

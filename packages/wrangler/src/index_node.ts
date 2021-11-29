@@ -1,6 +1,6 @@
 import { main } from ".";
 
-main().catch((cause) => {
+main(process.argv.slice(2)).catch((cause) => {
   const { name, message } = cause;
   if (name === "CloudflareError") {
     console.error("\x1b[31m", message);

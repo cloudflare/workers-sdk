@@ -8,6 +8,8 @@ import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import type { Config } from "./config";
+import { confirm, prompt } from "./dialogs";
+import { version as wranglerVersion } from "../package.json";
 import {
   login,
   logout,
@@ -32,13 +34,13 @@ import cfetch from "./cfetch";
 import publish from "./publish";
 import path from "path/posix";
 import { writeFile } from "node:fs/promises";
-import { DeleteConfirmation, GetSecretValue } from "./secret";
 import { toFormData } from "./api/form_data";
 
 import { createTail } from "./tail";
 import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
+import execa from "execa";
 
 async function readConfig(path?: string): Promise<Config> {
   const config: Config = {};
@@ -87,7 +89,7 @@ function demandOneOfOption(...options: string[]) {
   };
 }
 
-export async function main(): Promise<void> {
+export async function main(argv: string[]): Promise<void> {
   const yargs = makeCLI(hideBin(process.argv))
     .command(
       // the default is to simply print the help menu
@@ -144,30 +146,83 @@ export async function main(): Promise<void> {
         type: "string",
       });
     },
-    async (args) => {
+    async () => {
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
         console.error(`${destination} already exists.`);
-        return;
+      } else {
+        const compatibilityDate = new Date().toISOString().substring(0, 10);
+        try {
+          await writeFile(
+            destination,
+            `compatibility_date = "${compatibilityDate}"
+  `
+          );
+          console.log(`✨ Succesfully created wrangler.toml`);
+          // TODO: suggest next steps?
+        } catch (err) {
+          console.error(`Failed to create wrangler.toml`);
+          console.error(err);
+          throw err;
+        }
       }
-      const name = args.name || path.basename(process.cwd());
-      const compatibilityDate = new Date()
-        .toISOString()
-        .substring(0, 10)
-        .replace(/-/g, "/");
-      try {
-        await writeFile(
-          destination,
-          `name = "${name}"
-compatibility_date = "${compatibilityDate}"
-`
-        );
-        console.log(`✨ Succesfully created wrangler.toml`);
-        // TODO: suggest next steps?
-      } catch (err) {
-        console.error(`Failed to create wrangler.toml`);
-        console.error(err);
-        throw err;
+
+      // if no package.json, ask, and if yes, create one
+      let pathToPackageJson = await findUp("package.json");
+
+      if (!pathToPackageJson) {
+        if (
+          await confirm("No package.json found. Would you like to create one?")
+        ) {
+          await writeFile(
+            path.join(process.cwd(), "package.json"),
+            JSON.stringify(
+              {
+                name: "worker",
+                version: "0.0.1",
+              },
+              null,
+              "  "
+            ) + "\n"
+          );
+          console.log(`✨ Created package.json`);
+          pathToPackageJson = path.join(process.cwd(), "package.json");
+        } else {
+          return;
+        }
+      }
+
+      // if workers-types doesn't exist as a dependency
+      // offer to install it
+      // and make a tsconfig?
+      let pathToTSConfig = await findUp("tsconfig.json");
+      if (!pathToTSConfig) {
+        if (await confirm("Would you like to use typescript?")) {
+          await writeFile(
+            path.join(process.cwd(), "tsconfig.json"),
+            JSON.stringify(
+              {
+                compilerOptions: {
+                  target: "ES2020",
+                  module: "CommonJS",
+                  lib: ["ES2020"],
+                  types: ["@cloudflare/workers-types"],
+                },
+              },
+              null,
+              "  "
+            ) + "\n"
+          );
+          await execa("npm", [
+            "install",
+            "@cloudflare/workers-types",
+            "--save-dev",
+          ]);
+          console.log(
+            `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
+          );
+          pathToTSConfig = path.join(process.cwd(), "tsconfig.json");
+        }
       }
     }
   );
@@ -406,16 +461,10 @@ compatibility_date = "${compatibilityDate}"
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
         })
-        .option("schedules", {
+        .option("triggers", {
           describe: "cron schedules to attach",
-          alias: ["schedule", "triggers"],
-          type: "array"
-        })
-        .option("zone", {
-          describe: "a domain or a zone id",
-          alias: "zone_id",
-          type: "string",
-          hidden: true // No longer needed, since routes support multi-zone.
+          alias: ["schedule", "schedules"],
+          type: "array",
         })
         .option("routes", {
           describe: "routes to upload",
@@ -426,7 +475,7 @@ compatibility_date = "${compatibilityDate}"
           describe: "experimental support for services",
           type: "boolean",
           default: "false",
-          hidden: true
+          hidden: true,
         });
     },
     async (args) => {
@@ -460,7 +509,6 @@ compatibility_date = "${compatibilityDate}"
         name: args.name,
         script: args.script,
         env: args.env,
-        zone: args.zone,
         triggers: args.triggers,
         routes: args.routes,
         public: args.public,
@@ -768,55 +816,52 @@ compatibility_date = "${compatibilityDate}"
 
             // -- snip, end --
 
-            const { unmount } = render(
-              <GetSecretValue
-                onSubmit={async (value) => {
-                  unmount();
-                  async function submitSecret() {
-                    return await cfetch(
-                      `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
-                      {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          name: args.key,
-                          text: value,
-                          type: "secret_text",
-                        }),
-                      }
-                    );
-                  }
-
-                  try {
-                    console.log(await submitSecret());
-                  } catch (e) {
-                    if (e.code === 10007) {
-                      // upload a draft worker
-                      await cfetch(
-                        `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
-                        {
-                          method: "PUT",
-                          // @ts-expect-error TODO: fix this error!
-                          body: toFormData({
-                            main: {
-                              name: scriptName,
-                              content: `export default { fetch() {} }`,
-                              type: "esm",
-                            },
-                            variables: {},
-                            modules: [],
-                          }),
-                        }
-                      );
-
-                      // and then try again
-                      console.log(await submitSecret());
-                      // TODO: delete the draft worker if this failed too?
-                    }
-                  }
-                }}
-              />
+            const secretValue = await prompt(
+              "Enter a secret value:",
+              "password"
             );
+            async function submitSecret() {
+              return await cfetch(
+                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
+                {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: args.key,
+                    text: secretValue,
+                    type: "secret_text",
+                  }),
+                }
+              );
+            }
+
+            try {
+              console.log(await submitSecret());
+            } catch (e) {
+              if (e.code === 10007) {
+                // upload a draft worker
+                await cfetch(
+                  `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
+                  {
+                    method: "PUT",
+                    // @ts-expect-error TODO: fix this error!
+                    body: toFormData({
+                      main: {
+                        name: scriptName,
+                        content: `export default { fetch() {} }`,
+                        type: "esm",
+                      },
+                      variables: {},
+                      modules: [],
+                    }),
+                  }
+                );
+
+                // and then try again
+                console.log(await submitSecret());
+                // TODO: delete the draft worker if this failed too?
+              }
+            }
           }
         )
         .command(
@@ -871,25 +916,18 @@ compatibility_date = "${compatibilityDate}"
 
             // -- snip, end --
 
-            const { unmount } = render(
-              <DeleteConfirmation
-                onConfirm={async (confirmation: boolean) => {
-                  unmount();
-                  if (confirmation) {
-                    console.log(
-                      `Deleting the secret ${args.key} on script ${scriptName}.`
-                    );
+            if (await confirm("Are you sure you want to delete this secret?")) {
+              console.log(
+                `Deleting the secret ${args.key} on script ${scriptName}.`
+              );
 
-                    console.log(
-                      await cfetch(
-                        `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
-                        { method: "DELETE" }
-                      )
-                    );
-                  }
-                }}
-              />
-            );
+              console.log(
+                await cfetch(
+                  `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
+                  { method: "DELETE" }
+                )
+              );
+            }
           }
         )
         .command(
@@ -1707,8 +1745,10 @@ compatibility_date = "${compatibilityDate}"
   yargs.group(["config", "help", "version"], "Flags:");
 
   await initialiseUserConfig();
-
-  yargs.parse();
-
-  // yargs.version("0.0.0");
+  await yargs.parse(argv, (err, argv, output) => {
+    if (output) {
+      console.log(output);
+    }
+  });
+  yargs.version(wranglerVersion);
 }

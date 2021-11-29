@@ -1,19 +1,53 @@
-import execa from "execa";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import { main } from "../index";
+// @ts-expect-error we're mocking cfetch, so of course setMock isn't a thing
+import { setMock, unsetAllMocks } from "../cfetch";
 
-async function w(cmd: string | string[] = []) {
-  return await execa(
-    path.join(__dirname, "../../bin/wrangler.js"),
-    typeof cmd === "string" ? cmd.split(" ") : cmd
-  );
+jest.mock("../cfetch", () => {
+  return jest.requireActual("./mock-cfetch");
+});
+
+async function w(cmd: void | string, options?: { tap: boolean }) {
+  const tapped = options?.tap ? tap() : undefined;
+  await main([...(cmd ? cmd.split(" ") : [])]);
+  tapped?.off();
+  return { stdout: tapped?.out, stderr: tapped?.err };
+}
+
+function tap() {
+  const oldLog = console.log;
+  const oldError = console.error;
+
+  const toReturn = {
+    off: () => {
+      console.log = oldLog;
+      console.error = oldError;
+    },
+    out: "",
+    err: "",
+  };
+
+  console.log = (...args) => {
+    toReturn.out += args.join("");
+    oldLog.apply(console, args);
+    // console.trace(...args); // use this if you want to find the true source of your console.log
+  };
+  console.error = (...args) => {
+    toReturn.err += args.join("");
+    oldError.apply(console, args);
+  };
+
+  return toReturn;
 }
 
 describe("wrangler", () => {
   it("should run", async () => {
-    expect((await w()).stdout).toMatchInlineSnapshot(`
+    const { stdout } = await w(undefined, { tap: true });
+
+    expect(stdout).toMatchInlineSnapshot(`
       "wrangler
 
       Commands:
@@ -52,32 +86,46 @@ describe("wrangler", () => {
     it("should create a wrangler.toml", async () => {
       await w("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
-      expect(parsed.name).toBe("init");
       expect(typeof parsed.compatibility_date).toBe("string");
     });
 
     it("should error when wrangler.toml already exists", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
-      const { stderr } = await w("init");
+      const { stderr } = await w("init", { tap: true });
       expect(stderr.endsWith("wrangler.toml already exists.")).toBe(true);
-    });
-
-    it("should create a named config", async () => {
-      await w("init xyz");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
-      expect(parsed.name).toBe("xyz");
     });
   });
 
   describe("kv:namespace", () => {
+    afterAll(() => {
+      unsetAllMocks();
+    });
+    let KVNamespaces: { title: string; id: string }[] = [];
     it("can create a namespace", async () => {
-      const { stdout } = await w('kv:namespace create "UnitTestNamespace"');
-      expect(stdout.includes(`{ binding = "UnitTestNamespace",`)).toBe(true);
+      setMock("/accounts/:accountId/storage/kv/namespaces", (uri, init) => {
+        expect(init.method === "POST");
+        const body = JSON.parse(init.body);
+        expect(body.title).toBe("worker-UnitTestNamespace");
+        KVNamespaces.push({ title: body.title, id: "some-namespace-id" });
+        return { id: "some-namespace-id" };
+      });
+
+      await w('kv:namespace create "UnitTestNamespace"');
+      expect(
+        KVNamespaces.find((ns) => ns.title === `worker-UnitTestNamespace`)
+      ).toBeTruthy();
     });
 
     let createdNamespace: { id: string; title: string };
     it("can list namespaces", async () => {
-      const { stdout } = await w("kv:namespace list");
+      setMock(
+        "/accounts/:accountId/storage/kv/namespaces\\?:qs",
+        (uri, init) => {
+          expect(init).toBe(undefined);
+          return KVNamespaces;
+        }
+      );
+      const { stdout } = await w("kv:namespace list", { tap: true });
       const namespaces = JSON.parse(stdout);
       createdNamespace = namespaces.find(
         (ns) => ns.title === "worker-UnitTestNamespace"
@@ -86,37 +134,20 @@ describe("wrangler", () => {
     });
 
     it("can delete a namespace", async () => {
-      const { stdout } = await w(
-        `kv:namespace delete --namespace-id ${createdNamespace.id}`
+      const namespaceIdToDelete = createdNamespace.id;
+      setMock(
+        "/accounts/:accountId/storage/kv/namespaces/:namespaceId",
+        (uri, init) => {
+          expect(init.method).toBe("DELETE");
+          KVNamespaces = KVNamespaces.filter(
+            (ns) => ns.id !== namespaceIdToDelete
+          );
+        }
       );
-      console.log(stdout);
+      await w(`kv:namespace delete --namespace-id ${namespaceIdToDelete}`);
+      expect(KVNamespaces.find((ns) => ns.id === namespaceIdToDelete)).toBe(
+        undefined
+      );
     });
   });
-  describe("kv:key", () => {
-    let namespaceId: string;
-    beforeAll(async () => {
-      await w('kv:namespace create "UnitTestNamespace"');
-      namespaceId = JSON.parse((await w("kv:namespace list")).stdout).find(
-        (ns) => ns.title === "worker-UnitTestNamespace"
-      ).id;
-    });
-    afterAll(async () => {
-      await w(`kv:namespace delete --namespace-id ${namespaceId}`);
-    });
-    it("stub", () => {});
-    // it("can add a key", () => {});
-    // it("can read a key", () => {});
-    // it("can list keys", () => {});
-    // it("can delete a key", () => {});
-  });
-
-  // describe("login", () => {
-  //   it("should show possible scopes", async () => {
-  //     const { stdout } = await w("login --scopes-list");
-  //     // UGH jest doesn't like wide text huh
-  //     expect(stdout).toMatchInlineSnapshot();
-  //   });
-  // });
-
-  // TODO: setup a "api server" to mock requests
 });
