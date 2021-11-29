@@ -356,7 +356,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("host", {
           type: "string",
           describe:
-            "Host to forward requests to, defaults to the zone of project or to tutorial.cloudflareworkers.com if unauthenticated",
+            "Host to forward requests to, defaults to the zone of project",
         })
         .option("local-protocol", {
           default: "http",
@@ -376,6 +376,14 @@ export async function main(argv: string[]): Promise<void> {
           describe:
             "Protocol to forward requests to host on, defaults to https.",
           choices: ["http", "https"],
+        })
+        .option("jsx-factory", {
+          describe: "The function that is called for each JSX element",
+          type: "string",
+        })
+        .option("jsx-fragment", {
+          describe: "The function that is called for each JSX fragment",
+          type: "string",
         });
     },
     async (args) => {
@@ -410,6 +418,8 @@ export async function main(argv: string[]): Promise<void> {
           entry={filename}
           format={format}
           initialMode={args.local ? "local" : "remote"}
+          jsxFactory={args["jsx-factory"] || envRootObj.jsxFactory}
+          jsxFragment={args["jsx-fragment"] || envRootObj.jsxFragment}
           accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
@@ -476,6 +486,14 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
           default: "false",
           hidden: true,
+        })
+        .option("jsx-factory", {
+          describe: "The function that is called for each JSX element",
+          type: "string",
+        })
+        .option("jsx-fragment", {
+          describe: "The function that is called for each JSX fragment",
+          type: "string",
         });
     },
     async (args) => {
@@ -510,6 +528,8 @@ export async function main(argv: string[]): Promise<void> {
         script: args.script,
         env: args.env,
         triggers: args.triggers,
+        jsxFactory: args["jsx-factory"],
+        jsxFragment: args["jsx-fragment"],
         routes: args.routes,
         public: args.public,
         site: args.site,

@@ -22,6 +22,8 @@ type Props = {
   triggers?: (string | number)[];
   routes?: (string | number)[];
   legacyEnv?: boolean;
+  jsxFactory: void | string;
+  jsxFragment: void | string;
 };
 
 function sleep(ms: number) {
@@ -46,6 +48,9 @@ export default async function publish(props: Props): Promise<void> {
 
   const triggers = props.triggers || config.triggers?.crons;
   const routes = props.routes || config.routes;
+
+  const jsxFactory = props.jsxFactory || config.jsxFactory;
+  const jsxFragment = props.jsxFragment || config.jsxFragment;
 
   assert(config.account_id, "missing account id");
 
@@ -89,6 +94,11 @@ export default async function publish(props: Props): Promise<void> {
     format: "esm",
     sourcemap: true,
     metafile: true,
+    loader: {
+      ".js": "jsx",
+    },
+    ...(jsxFactory && { jsxFactory }),
+    ...(jsxFragment && { jsxFragment }),
   });
 
   const chunks = Object.entries(result.metafile.outputs).find(
@@ -164,9 +174,9 @@ export default async function publish(props: Props): Promise<void> {
   };
 
   const start = Date.now();
-  const formatTime = (duration) => {
+  function formatTime(duration: number) {
     return `(${(duration / 1000).toFixed(2)} sec)`;
-  };
+  }
 
   const notProd = !props.legacyEnv && props.env;
   const workerName = notProd ? `${scriptName} (${envName})` : scriptName;

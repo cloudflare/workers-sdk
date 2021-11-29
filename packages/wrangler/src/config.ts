@@ -64,6 +64,8 @@ type Env = {
   route?: string; // inherited
   webpack_config?: string; // inherited
   site?: Site;
+  jsxFactory?: string; // inherited
+  jsxFragment?: string; // inherited
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited
   kv_namespaces?: KVNamespace[];
@@ -83,6 +85,8 @@ export type Config = {
   // -- end mutually exclusive stuff
   // @deprecated Don't use this
   webpack_config?: string; // inherited
+  jsxFactory?: string; // inherited
+  jsxFragment?: string; // inherited
   vars?: Vars;
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited

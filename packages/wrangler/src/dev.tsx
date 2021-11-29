@@ -32,9 +32,11 @@ type Props = {
   format: CfScriptFormat;
   accountId: void | string;
   initialMode: "local" | "remote";
-  variables?: { [name: string]: CfVariable };
-  public?: void | string;
-  site?: void | string;
+  jsxFactory: void | string;
+  jsxFragment: void | string;
+  variables: { [name: string]: CfVariable };
+  public: void | string;
+  site: void | string;
 };
 
 export function Dev(props: Props): JSX.Element {
@@ -47,7 +49,13 @@ export function Dev(props: Props): JSX.Element {
   const apiToken = getAPIToken();
   const directory = useTmpDir();
 
-  const bundle = useEsbuild(props.entry, directory, props.public);
+  const bundle = useEsbuild({
+    entry: props.entry,
+    destination: directory,
+    staticRoot: props.public,
+    jsxFactory: props.jsxFactory,
+    jsxFragment: props.jsxFragment,
+  });
   if (bundle && bundle.type === "commonjs" && !props.format && props.public) {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
@@ -322,11 +330,14 @@ type EsbuildBundle = {
   exports: string[];
 };
 
-function useEsbuild(
-  entry: string,
-  destination: string | void,
-  staticRoot: void | string
-): EsbuildBundle | void {
+function useEsbuild(props: {
+  entry: string;
+  destination: string | void;
+  staticRoot: void | string;
+  jsxFactory: string | void;
+  jsxFragment: string | void;
+}): EsbuildBundle | void {
+  const { entry, destination, staticRoot, jsxFactory, jsxFragment } = props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
     let result: esbuild.BuildResult;
@@ -339,6 +350,11 @@ function useEsbuild(
         metafile: true,
         format: "esm",
         sourcemap: true,
+        loader: {
+          ".js": "jsx",
+        },
+        ...(jsxFactory && { jsxFactory }),
+        ...(jsxFragment && { jsxFragment }),
         external: ["__STATIC_CONTENT_MANIFEST"],
         // TODO: import.meta.url
         watch: {
@@ -431,6 +447,7 @@ function useWorker(props: {
           }; // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");
+      console.log(content);
       const init: CfWorkerInit = {
         main: {
           name: name || path.basename(bundle.path),
