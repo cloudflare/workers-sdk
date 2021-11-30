@@ -447,7 +447,7 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      const envRootObj: Config = args.env ? config[`env.${args.env}`] : config;
+      const envRootObj: Config = args.env ? (config.env?.[args.env] ?? config) : config;
 
       render(
         <Dev
