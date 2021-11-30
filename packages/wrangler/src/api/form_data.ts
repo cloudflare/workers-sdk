@@ -134,8 +134,6 @@ export function toFormData(worker: CfWorkerInit): FormData {
     metadata.usage_model = usage_model;
   }
 
-  console.log(metadata);
-
   formData.set("metadata", JSON.stringify(metadata));
 
   if (singleton && modules && modules.length > 0) {
