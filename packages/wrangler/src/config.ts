@@ -28,6 +28,12 @@ type KVNamespace = {
   id: string;
 };
 
+type DurableObject = {
+  name: string;
+  class_name: string;
+  script_name?: string;
+};
+
 type Build = {
   command?: string;
   cwd?: string;
@@ -93,6 +99,7 @@ export type Config = {
   jsxFactory?: string; // inherited
   jsxFragment?: string; // inherited
   vars?: Vars;
+  durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited
   // we should use typescript to parse cron patterns

@@ -72,6 +72,11 @@ export interface CfKvNamespace {
   namespaceId: string;
 }
 
+export interface CfDurableObject {
+  class_name: string;
+  script_name?: string;
+}
+
 /**
  * A `WebCrypto` key.
  *
@@ -99,7 +104,7 @@ export interface CfCryptoKey {
 /**
  * A variable (aka. environment variable).
  */
-export type CfVariable = string | CfKvNamespace | CfCryptoKey;
+export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject;
 
 /**
  * Options for creating a `CfWorker`.

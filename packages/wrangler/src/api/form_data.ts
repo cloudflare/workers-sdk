@@ -5,6 +5,7 @@ import type {
   CfModule,
   CfKvNamespace,
   CfCryptoKey,
+  CfDurableObject,
 } from "./worker.js";
 import { FormData, Blob } from "formdata-node";
 
@@ -27,9 +28,23 @@ function toBinding(
     return { name, type: "plain_text", text: variable };
   }
 
-  const { namespaceId } = variable as CfKvNamespace;
-  if (namespaceId) {
-    return { name, type: "kv_namespace", namespace_id: namespaceId };
+  if ((variable as CfKvNamespace).namespaceId) {
+    return {
+      name,
+      type: "kv_namespace",
+      namespace_id: (variable as CfKvNamespace).namespaceId,
+    };
+  }
+
+  if ((variable as CfDurableObject).class_name) {
+    return {
+      name,
+      type: "durable_object_namespace",
+      class_name: (variable as CfDurableObject).class_name,
+      ...((variable as CfDurableObject).script_name && {
+        script_name: (variable as CfDurableObject).script_name,
+      }),
+    };
   }
 
   const { format, algorithm, usages, data } = variable as CfCryptoKey;
@@ -118,6 +133,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
     // @ts-expect-error - we should type metadata
     metadata.usage_model = usage_model;
   }
+
   formData.set("metadata", JSON.stringify(metadata));
 
   if (singleton && modules && modules.length > 0) {
