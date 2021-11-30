@@ -28,26 +28,26 @@ function toBinding(
     return { name, type: "plain_text", text: variable };
   }
 
-  if ((variable as CfKvNamespace).namespaceId) {
+  if ("namespaceId" in variable) {
     return {
       name,
       type: "kv_namespace",
-      namespace_id: (variable as CfKvNamespace).namespaceId,
+      namespace_id: variable.namespaceId,
     };
   }
 
-  if ((variable as CfDurableObject).class_name) {
+  if ("class_name" in variable) {
     return {
       name,
       type: "durable_object_namespace",
-      class_name: (variable as CfDurableObject).class_name,
-      ...((variable as CfDurableObject).script_name && {
-        script_name: (variable as CfDurableObject).script_name,
+      class_name: variable.class_name,
+      ...(variable.script_name && {
+        script_name: variable.script_name,
       }),
     };
   }
 
-  const { format, algorithm, usages, data } = variable as CfCryptoKey;
+  const { format, algorithm, usages, data } = variable;
   if (format) {
     let key_base64;
     let key_jwk;
@@ -133,6 +133,8 @@ export function toFormData(worker: CfWorkerInit): FormData {
     // @ts-expect-error - we should type metadata
     metadata.usage_model = usage_model;
   }
+
+  console.log(metadata);
 
   formData.set("metadata", JSON.stringify(metadata));
 

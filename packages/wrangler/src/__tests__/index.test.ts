@@ -110,7 +110,7 @@ describe("wrangler", () => {
         return { id: "some-namespace-id" };
       });
 
-      await w('kv:namespace create "UnitTestNamespace"');
+      await w("kv:namespace create UnitTestNamespace");
       expect(
         KVNamespaces.find((ns) => ns.title === `worker-UnitTestNamespace`)
       ).toBeTruthy();

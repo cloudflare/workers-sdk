@@ -40,7 +40,7 @@ import { createTail } from "./tail";
 import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
-import execa from "execa";
+import { execa } from "execa";
 
 async function readConfig(path?: string): Promise<Config> {
   const config: Config = {};

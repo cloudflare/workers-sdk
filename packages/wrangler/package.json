@@ -36,8 +36,8 @@
     "cli"
   ],
   "dependencies": {
-    "@cloudflare/pages-functions-compiler": "0.3.5",
-    "esbuild": "0.13.12",
+    "@cloudflare/pages-functions-compiler": "0.3.6",
+    "esbuild": "0.14.1",
     "miniflare": "2.0.0-rc.2",
     "semiver": "^1.1.0",
     "serve": "^13.0.2"
@@ -49,13 +49,13 @@
     "@iarna/toml": "^2.2.5",
     "@types/cloudflare": "^2.7.6",
     "@types/express": "^4.17.13",
-    "@types/react": "^17.0.34",
+    "@types/react": "^17.0.37",
     "@types/signal-exit": "^3.0.1",
-    "@types/ws": "^8.2.0",
-    "@types/yargs": "^17.0.5",
+    "@types/ws": "^8.2.1",
+    "@types/yargs": "^17.0.7",
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
-    "execa": "^5.1.1",
+    "execa": "^6.0.0",
     "express": "^4.17.1",
     "finalhandler": "^1.1.2",
     "find-up": "^6.2.0",
@@ -63,18 +63,18 @@
     "http-proxy": "^1.18.1",
     "http-proxy-middleware": "^2.0.1",
     "ink": "^3.2.0",
-    "ink-select-input": "^4.2.0",
+    "ink-select-input": "^4.2.1",
     "ink-table": "^3.0.0",
-    "ink-text-input": "^4.0.1",
+    "ink-text-input": "^4.0.2",
     "node-fetch": "^3.1.0",
     "open": "^8.4.0",
     "path-to-regexp": "^6.2.0",
     "react": "^17.0.2",
     "serve-static": "^1.14.1",
-    "signal-exit": "^3.0.5",
+    "signal-exit": "^3.0.6",
     "tmp-promise": "^3.0.3",
-    "ws": "^8.2.3",
-    "yargs": "^17.2.1"
+    "ws": "^8.3.0",
+    "yargs": "^17.3.0"
   },
   "files": [
     "src",
@@ -98,7 +98,7 @@
   "jest": {
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|data-uri-to-buffer|formdata-polyfill)"
+      "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|data-uri-to-buffer|formdata-polyfill|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/clipboardy-mock.js"
