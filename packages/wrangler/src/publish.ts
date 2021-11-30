@@ -141,7 +141,7 @@ export default async function publish(props: Props): Promise<void> {
         )
       : { manifest: undefined, namespace: undefined };
 
-  const envRootObj = props.env ? config[`env.${props.env}`] : config;
+  const envRootObj = props.env ? config.env[props.env] || {} : config;
 
   const worker: CfWorkerInit = {
     main: {

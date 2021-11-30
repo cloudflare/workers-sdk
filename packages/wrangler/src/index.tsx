@@ -447,7 +447,7 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      const envRootObj: Config = args.env ? config[`env.${args.env}`] : config;
+      const envRootObj = args.env ? config.env[args.env] || {} : config;
 
       render(
         <Dev
@@ -455,8 +455,8 @@ export async function main(argv: string[]): Promise<void> {
           entry={filename}
           format={format}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={args["jsx-factory"] || envRootObj.jsxFactory}
-          jsxFragment={args["jsx-fragment"] || envRootObj.jsxFragment}
+          jsxFactory={args["jsx-factory"] || envRootObj?.jsxFactory}
+          jsxFragment={args["jsx-fragment"] || envRootObj?.jsxFragment}
           accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
@@ -1241,7 +1241,7 @@ export async function main(argv: string[]): Promise<void> {
             const id =
               args["namespace-id"] ||
               (args.env
-                ? config[`env.${args.env}`]
+                ? config.env[args.env] || {}
                 : config
               ).kv_namespaces.find(
                 (namespace) => namespace.binding === args.binding
