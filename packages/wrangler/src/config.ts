@@ -76,6 +76,8 @@ type Env = {
   jsxFragment?: string; // inherited
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited
+  vars?: Vars;
+  durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
   usage_model?: UsageModel; // inherited
 };
@@ -108,5 +110,5 @@ export type Config = {
   usage_model?: UsageModel; // inherited
   // top level
   build?: Build;
-  env?: { [envName: string]: Env };
+  env?: { [envName: string]: void | Env };
 };
