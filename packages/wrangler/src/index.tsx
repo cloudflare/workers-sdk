@@ -447,7 +447,7 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      const envRootObj = args.env ? config[`env.${args.env}`] : config;
+      const envRootObj: Config = args.env ? config[`env.${args.env}`] : config;
 
       render(
         <Dev
@@ -476,6 +476,12 @@ export async function main(argv: string[]): Promise<void> {
                   );
                 }
                 return { ...obj, [binding]: { namespaceId: preview_id } };
+              },
+              {}
+            ),
+            ...(envRootObj?.durable_objects?.bindings || []).reduce(
+              (obj, { name, class_name, script_name }) => {
+                return { ...obj, [name]: { class_name, script_name } };
               },
               {}
             ),

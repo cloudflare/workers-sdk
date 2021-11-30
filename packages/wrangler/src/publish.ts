@@ -160,6 +160,15 @@ export default async function publish(props: Props): Promise<void> {
         },
         {}
       ),
+      ...(envRootObj?.durable_objects?.bindings || []).reduce(
+        (obj, { name, class_name, script_name }) => {
+          return {
+            ...obj,
+            [name]: { class_name, ...(script_name && { script_name }) },
+          };
+        },
+        {}
+      ),
       ...(assets.namespace
         ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
         : {}),
