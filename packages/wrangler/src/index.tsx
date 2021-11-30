@@ -93,8 +93,6 @@ async function readConfig(path?: string): Promise<Config> {
     });
   });
 
-  console.log(config.env);
-
   // todo: validate, add defaults
   // let's just do some basics for now
 
