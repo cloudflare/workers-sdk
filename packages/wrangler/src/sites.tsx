@@ -76,7 +76,7 @@ export async function syncAssets(
   scriptName: string,
   dirPath: string,
   preview: boolean,
-  env?: string
+  _env?: string
 ) {
   const title = `__${scriptName}_sites_assets${preview ? "_preview" : ""}`;
   const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(

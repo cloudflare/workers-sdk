@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfModule, CfVariable } from "./api/worker";
+import type { CfDOMigration, CfModule, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -35,6 +35,7 @@ type Props = {
   jsxFactory: void | string;
   jsxFragment: void | string;
   variables: { [name: string]: CfVariable };
+  migrations: CfDOMigration[] | void;
   public: void | string;
   site: void | string;
   compatibilityDate: void | string;
@@ -104,6 +105,7 @@ export function Dev(props: Props): JSX.Element {
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
+          migrations={props.migrations}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -159,6 +161,7 @@ function Remote(props: {
   accountId: void | string;
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
+  migrations: void | CfDOMigration[];
   compatibilityDate: string | void;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
@@ -173,6 +176,7 @@ function Remote(props: {
     accountId: props.accountId,
     apiToken: props.apiToken,
     variables: props.variables,
+    migrations: props.migrations,
     sitesFolder: props.site,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
@@ -274,7 +278,7 @@ function useLocalWorker(props: {
         }
       });
 
-      local.current.stdout.on("data", (data: string) => {
+      local.current.stdout.on("data", (_data: string) => {
         // console.log(`stdout: ${data}`);
       });
 
@@ -289,7 +293,7 @@ function useLocalWorker(props: {
         }
       });
 
-      removeSignalExitListener.current = onExit((code, signal) => {
+      removeSignalExitListener.current = onExit((_code, _signal) => {
         console.log("⎔ Shutting down local server.");
         local.current?.kill();
         local.current = undefined;
@@ -397,7 +401,7 @@ function useEsbuild(props: {
     return () => {
       result?.stop();
     };
-  }, [entry, destination, staticRoot]);
+  }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
   return bundle;
 }
 
@@ -409,6 +413,7 @@ function useWorker(props: {
   accountId: string;
   apiToken: string;
   variables: { [name: string]: CfVariable };
+  migrations: void | CfDOMigration[];
   sitesFolder: void | string;
   port: number;
   compatibilityDate: string | void;
@@ -424,6 +429,9 @@ function useWorker(props: {
     apiToken,
     variables,
     sitesFolder,
+    compatibilityDate,
+    compatibilityFlags,
+    usageModel,
     port,
   } = props;
   const [token, setToken] = useState<CfPreviewToken>();
@@ -465,11 +473,7 @@ function useWorker(props: {
       const init: CfWorkerInit = {
         main: {
           name: name || path.basename(bundle.path),
-          type:
-            format ||
-            (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
-              ? "esm"
-              : "commonjs",
+          type: format || bundle.type === "esm" ? "esm" : "commonjs",
           content,
         },
         modules: assets.manifest
@@ -485,9 +489,10 @@ function useWorker(props: {
               __STATIC_CONTENT: { namespaceId: assets.namespace },
             }
           : variables,
-        compatibility_date: props.compatibilityDate,
-        compatibility_flags: props.compatibilityFlags,
-        usage_model: props.usageModel,
+        migrations: undefined, // no migrations in dev
+        compatibility_date: compatibilityDate,
+        compatibility_flags: compatibilityFlags,
+        usage_model: usageModel,
       };
       setToken(
         await createWorker(init, {
@@ -498,7 +503,18 @@ function useWorker(props: {
       console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start();
-  }, [name, bundle, format, accountId, apiToken, port, sitesFolder]);
+  }, [
+    name,
+    bundle,
+    format,
+    accountId,
+    apiToken,
+    port,
+    sitesFolder,
+    compatibilityDate,
+    compatibilityFlags,
+    usageModel,
+  ]);
   return token;
 }
 
@@ -623,7 +639,7 @@ function useTunnel(toggle: boolean) {
           }
         });
 
-        removeSignalExitListener.current = onExit((code, signal) => {
+        removeSignalExitListener.current = onExit((_code, _signal) => {
           console.log("⎔ Shutting down local tunnel.");
           tunnel.current?.kill();
           tunnel.current = undefined;

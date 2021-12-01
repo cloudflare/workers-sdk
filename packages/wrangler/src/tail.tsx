@@ -33,7 +33,7 @@ async function createTailButDontConnect(
 export async function createTail(
   accountId: string,
   workerName: string,
-  filters: Filters
+  _filters: Filters
 ): Promise<{
   tail: WebSocket;
   expiration: Date;

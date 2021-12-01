@@ -1,6 +1,8 @@
 // we're going to manually write both the type definition AND
 // the validator for the config, so that we can give better error messages
 
+import type { CfDOMigration } from "./api/worker";
+
 type Project = "webpack" | "javascript" | "rust";
 
 type Site = {
@@ -72,8 +74,8 @@ type Env = {
   route?: string; // inherited
   webpack_config?: string; // inherited
   site?: Site;
-  jsxFactory?: string; // inherited
-  jsxFragment?: string; // inherited
+  jsx_factory?: string; // inherited
+  jsx_fragment?: string; // inherited
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited
   vars?: Vars;
@@ -98,9 +100,10 @@ export type Config = {
   // -- end mutually exclusive stuff
   // @deprecated Don't use this
   webpack_config?: string; // inherited
-  jsxFactory?: string; // inherited
-  jsxFragment?: string; // inherited
+  jsx_factory?: string; // inherited
+  jsx_fragment?: string; // inherited
   vars?: Vars;
+  migrations?: CfDOMigration[];
   durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited

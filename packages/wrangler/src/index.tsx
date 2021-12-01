@@ -64,8 +64,8 @@ async function readConfig(path?: string): Promise<Config> {
     "zone_id",
     "routes",
     "route",
-    "jsxFactory",
-    "jsxFragment",
+    "jsx_factory",
+    "jsx_fragment",
     "site",
     "triggers",
     "usage_model",
@@ -455,12 +455,13 @@ export async function main(argv: string[]): Promise<void> {
           entry={filename}
           format={format}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={args["jsx-factory"] || envRootObj?.jsxFactory}
-          jsxFragment={args["jsx-fragment"] || envRootObj?.jsxFragment}
+          jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
+          jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
           accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
           public={args.public}
+          migrations={config.migrations}
           compatibilityDate={config.compatibility_date}
           compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
