@@ -225,6 +225,7 @@ export class DtInspector {
   private enable(): void {
     let id = 1;
     this.send({ method: "Runtime.enable", id });
+    this.send({ method: "Network.enable", id: id++ });
     this.#keepAlive = setInterval(() => {
       this.send({ method: "Runtime.getIsolateId", id: id++ });
     }, 10_000);

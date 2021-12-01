@@ -675,7 +675,7 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
           break;
         case "d": // toggle inspector
           open(
-            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
+            `https://cloudflareworkers.com/devtools-ui/95a05beae6f54001bea698cb79e2513819404ea0/cf_app.html?experiments=true&v8only=true&ws=localhost:9229/ws`
             // {
             //   app: {
             //     name: open.apps.chrome,
