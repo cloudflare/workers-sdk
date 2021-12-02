@@ -106,6 +106,13 @@ export interface CfCryptoKey {
  */
 export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject;
 
+export type CfDOMigration = {
+  tag: string;
+  new_classes: string[];
+  renamed_class: string[];
+  deleted_classes: string[];
+};
+
 /**
  * Options for creating a `CfWorker`.
  */
@@ -122,6 +129,7 @@ export interface CfWorkerInit {
    * The map of names to variables. (aka. environment variables)
    */
   variables?: { [name: string]: CfVariable };
+  migrations: void | CfDOMigration[];
   compatibility_date: string | void;
   compatibility_flags: void | string[];
   usage_model: void | "bundled" | "unbound";

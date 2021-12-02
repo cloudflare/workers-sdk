@@ -3,9 +3,6 @@ import type {
   CfModuleType,
   CfVariable,
   CfModule,
-  CfKvNamespace,
-  CfCryptoKey,
-  CfDurableObject,
 } from "./worker.js";
 import { FormData, Blob } from "formdata-node";
 
@@ -103,6 +100,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
     main,
     modules,
     variables,
+    migrations,
     usage_model,
     compatibility_date,
     compatibility_flags,
@@ -115,12 +113,16 @@ export function toFormData(worker: CfWorkerInit): FormData {
     bindings.push(binding);
   }
 
-  const singleton = mainType === "commonjs";
-  const metadata = {
-    main_module: singleton ? undefined : name,
-    body_part: singleton ? name : undefined,
-    bindings,
-  };
+  const metadata =
+    mainType !== "commonjs"
+      ? {
+          main_module: name,
+          bindings,
+        }
+      : {
+          body_part: name,
+          bindings,
+        };
   if (compatibility_date) {
     // @ts-expect-error - we should type metadata
     metadata.compatibility_date = compatibility_date;
@@ -133,10 +135,14 @@ export function toFormData(worker: CfWorkerInit): FormData {
     // @ts-expect-error - we should type metadata
     metadata.usage_model = usage_model;
   }
+  if (migrations) {
+    // @ts-expect-error - we should type metadata
+    metadata.migrations = migrations;
+  }
 
   formData.set("metadata", JSON.stringify(metadata));
 
-  if (singleton && modules && modules.length > 0) {
+  if (mainType === "commonjs" && modules && modules.length > 0) {
     throw new TypeError(
       "More than one module can only be specified when type = 'esm'"
     );

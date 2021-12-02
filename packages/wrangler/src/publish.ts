@@ -49,8 +49,8 @@ export default async function publish(props: Props): Promise<void> {
   const triggers = props.triggers || config.triggers?.crons;
   const routes = props.routes || config.routes;
 
-  const jsxFactory = props.jsxFactory || config.jsxFactory;
-  const jsxFragment = props.jsxFragment || config.jsxFragment;
+  const jsxFactory = props.jsxFactory || config.jsx_factory;
+  const jsxFragment = props.jsxFragment || config.jsx_fragment;
 
   assert(config.account_id, "missing account id");
 
@@ -131,6 +131,29 @@ export default async function publish(props: Props): Promise<void> {
 
   const content = await readFile(chunks[0], { encoding: "utf-8" });
   destination.cleanup();
+
+  // if config.migrations
+  // get current migration tag
+  const migrationsToSend = config.migrations;
+  if (migrationsToSend) {
+    const scripts = await cfetch<{ id: string; migration_tag: string }[]>(
+      `/accounts/${accountId}/workers/scripts`
+    );
+    const script = scripts.find((script) => script.id === scriptName);
+    if (script?.migration_tag) {
+      // was already published once
+      const foundIndex = migrationsToSend.findIndex(
+        (migration) => migration.tag === script.migration_tag
+      );
+      if (foundIndex === -1) {
+        console.warn(
+          `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already delated it. Applying all available migrations to the script...`
+        );
+      }
+      migrationsToSend.splice(0, foundIndex + 1);
+    }
+  }
+
   const assets =
     props.public || props.site || props.config.site?.bucket // TODO: allow both
       ? await syncAssets(
@@ -147,15 +170,12 @@ export default async function publish(props: Props): Promise<void> {
     main: {
       name: scriptName,
       content: content,
-      type:
-        (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
-          ? "esm"
-          : "commonjs",
+      type: bundle.type === "esm" ? "esm" : "commonjs",
     },
     variables: {
       ...(envRootObj?.vars || {}),
       ...(envRootObj?.kv_namespaces || []).reduce(
-        (obj, { binding, preview_id, id }) => {
+        (obj, { binding, preview_id: _preview_id, id }) => {
           return { ...obj, [binding]: { namespaceId: id } };
         },
         {}
@@ -173,6 +193,7 @@ export default async function publish(props: Props): Promise<void> {
         ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
         : {}),
     },
+    migrations: migrationsToSend,
     modules: assets.manifest
       ? [].concat({
           name: "__STATIC_CONTENT_MANIFEST",
