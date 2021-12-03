@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfDOMigration, CfModule, CfVariable } from "./api/worker";
+import type { CfModule, CfVariable } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -35,7 +35,6 @@ type Props = {
   jsxFactory: void | string;
   jsxFragment: void | string;
   variables: { [name: string]: CfVariable };
-  migrations: CfDOMigration[] | void;
   public: void | string;
   site: void | string;
   compatibilityDate: void | string;
@@ -105,7 +104,6 @@ export function Dev(props: Props): JSX.Element {
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
-          migrations={props.migrations}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -161,7 +159,6 @@ function Remote(props: {
   accountId: void | string;
   apiToken: void | string;
   variables: { [name: string]: CfVariable };
-  migrations: void | CfDOMigration[];
   compatibilityDate: string | void;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
@@ -176,7 +173,6 @@ function Remote(props: {
     accountId: props.accountId,
     apiToken: props.apiToken,
     variables: props.variables,
-    migrations: props.migrations,
     sitesFolder: props.site,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
@@ -413,7 +409,6 @@ function useWorker(props: {
   accountId: string;
   apiToken: string;
   variables: { [name: string]: CfVariable };
-  migrations: void | CfDOMigration[];
   sitesFolder: void | string;
   port: number;
   compatibilityDate: string | void;

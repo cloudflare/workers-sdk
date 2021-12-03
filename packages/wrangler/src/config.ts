@@ -1,7 +1,12 @@
 // we're going to manually write both the type definition AND
 // the validator for the config, so that we can give better error messages
 
-import type { CfDOMigration } from "./api/worker";
+type DOMigration = {
+  tag: string;
+  new_classes?: string[];
+  renamed_classes?: string[];
+  deleted_classes?: string[];
+};
 
 type Project = "webpack" | "javascript" | "rust";
 
@@ -103,7 +108,7 @@ export type Config = {
   jsx_factory?: string; // inherited
   jsx_fragment?: string; // inherited
   vars?: Vars;
-  migrations?: CfDOMigration[];
+  migrations?: DOMigration[];
   durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited
