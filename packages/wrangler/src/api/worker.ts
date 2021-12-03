@@ -77,7 +77,7 @@ export interface CfDurableObject {
   script_name?: string;
 }
 
-interface CfDOMigration {
+interface CfDOMigrations {
   old_tag?: string;
   new_tag: string;
   steps: {
@@ -132,7 +132,7 @@ export interface CfWorkerInit {
    * The map of names to variables. (aka. environment variables)
    */
   variables?: { [name: string]: CfVariable };
-  migrations: void | CfDOMigration;
+  migrations: void | CfDOMigrations;
   compatibility_date: string | void;
   compatibility_flags: void | string[];
   usage_model: void | "bundled" | "unbound";
