@@ -1,0 +1,4 @@
+[[migrations]]
+tag = "v3"
+deleted_classes = [ "Counter", "B" ]
+

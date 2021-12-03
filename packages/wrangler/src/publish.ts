@@ -150,6 +150,7 @@ export default async function publish(props: Props): Promise<void> {
           `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already delated it. Applying all available migrations to the script...`
         );
         migrations = {
+          old_tag: script.migration_tag,
           new_tag: config.migrations[config.migrations.length - 1].tag,
           steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
         };
