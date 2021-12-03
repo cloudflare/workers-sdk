@@ -461,7 +461,6 @@ export async function main(argv: string[]): Promise<void> {
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
           public={args.public}
-          migrations={config.migrations}
           compatibilityDate={config.compatibility_date}
           compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}

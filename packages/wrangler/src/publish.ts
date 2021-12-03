@@ -134,23 +134,39 @@ export default async function publish(props: Props): Promise<void> {
 
   // if config.migrations
   // get current migration tag
-  const migrationsToSend = config.migrations;
-  if (migrationsToSend) {
+  let migrations;
+  if ("migrations" in config) {
     const scripts = await cfetch<{ id: string; migration_tag: string }[]>(
       `/accounts/${accountId}/workers/scripts`
     );
     const script = scripts.find((script) => script.id === scriptName);
     if (script?.migration_tag) {
       // was already published once
-      const foundIndex = migrationsToSend.findIndex(
+      const foundIndex = config.migrations.findIndex(
         (migration) => migration.tag === script.migration_tag
       );
       if (foundIndex === -1) {
         console.warn(
           `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already delated it. Applying all available migrations to the script...`
         );
+        migrations = {
+          new_tag: config.migrations[config.migrations.length - 1].tag,
+          steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
+        };
+      } else {
+        migrations = {
+          old_tag: script.migration_tag,
+          new_tag: config.migrations[config.migrations.length - 1].tag,
+          steps: config.migrations
+            .slice(foundIndex + 1)
+            .map(({ tag: _tag, ...rest }) => rest),
+        };
       }
-      migrationsToSend.splice(0, foundIndex + 1);
+    } else {
+      migrations = {
+        new_tag: config.migrations[config.migrations.length - 1].tag,
+        steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
+      };
     }
   }
 
@@ -193,7 +209,7 @@ export default async function publish(props: Props): Promise<void> {
         ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
         : {}),
     },
-    migrations: migrationsToSend,
+    ...(migrations && { migrations }),
     modules: assets.manifest
       ? [].concat({
           name: "__STATIC_CONTENT_MANIFEST",
