@@ -22,6 +22,8 @@ import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
 import fetch from "node-fetch";
+import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
+import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -40,6 +42,7 @@ type Props = {
   compatibilityDate: void | string;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
+  polyfillNode: void | boolean;
 };
 
 export function Dev(props: Props): JSX.Element {
@@ -58,6 +61,7 @@ export function Dev(props: Props): JSX.Element {
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
     jsxFragment: props.jsxFragment,
+    polyfillNode: props.polyfillNode,
   });
   if (bundle && bundle.type === "commonjs" && !props.format && props.public) {
     throw new Error(
@@ -348,8 +352,16 @@ function useEsbuild(props: {
   staticRoot: void | string;
   jsxFactory: string | void;
   jsxFragment: string | void;
+  polyfillNode: boolean | void;
 }): EsbuildBundle | void {
-  const { entry, destination, staticRoot, jsxFactory, jsxFragment } = props;
+  const {
+    entry,
+    destination,
+    staticRoot,
+    jsxFactory,
+    jsxFragment,
+    polyfillNode,
+  } = props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
     let result: esbuild.BuildResult;
@@ -357,6 +369,9 @@ function useEsbuild(props: {
       if (!destination) return;
       result = await esbuild.build({
         entryPoints: [entry],
+        define: {
+          ...(polyfillNode && { global: "globalThis" }),
+        },
         bundle: true,
         outdir: destination,
         metafile: true,
@@ -365,6 +380,9 @@ function useEsbuild(props: {
         loader: {
           ".js": "jsx",
         },
+        plugins: polyfillNode
+          ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+          : undefined,
         ...(jsxFactory && { jsxFactory }),
         ...(jsxFragment && { jsxFragment }),
         external: ["__STATIC_CONTENT_MANIFEST"],
@@ -397,7 +415,7 @@ function useEsbuild(props: {
     return () => {
       result?.stop();
     };
-  }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
+  }, [entry, destination, staticRoot, jsxFactory, jsxFragment, polyfillNode]);
   return bundle;
 }
 
