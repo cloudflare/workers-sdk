@@ -252,6 +252,7 @@ function useLocalWorker(props: {
         port.toString(),
         "--kv-persist",
         "--cache-persist",
+        "--do-persist",
         ...Object.entries(variables)
           .map(([varKey, varVal]) => {
             if (typeof varVal === "string") {
@@ -261,6 +262,8 @@ function useLocalWorker(props: {
               typeof varVal.namespaceId === "string"
             ) {
               return `--kv ${varKey}`;
+            } else if ("class_name" in varVal) {
+              return `--do ${varKey}=${varVal.class_name}`;
             }
           })
           .filter(Boolean),
