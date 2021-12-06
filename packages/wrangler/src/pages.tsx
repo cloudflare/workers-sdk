@@ -302,6 +302,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           },
         },
 
+        kvPersist: true,
+        durableObjectsPersist: true,
+        cachePersist: true,
+
         ...miniflareArgs,
       });
       const miniflareServer = await miniflare.createServer();
