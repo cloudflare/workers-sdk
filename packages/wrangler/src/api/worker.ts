@@ -121,6 +121,10 @@ export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject;
  */
 export interface CfWorkerInit {
   /**
+   * The name of the worker.
+   */
+  name: string;
+  /**
    * The entrypoint module.
    */
   main: CfModule;
