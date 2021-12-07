@@ -449,12 +449,11 @@ function useWorker(props: {
       } else {
         console.log("⎔ Starting server...");
       }
-      const scriptName = path.basename(bundle.path);
 
       const assets = sitesFolder
         ? await syncAssets(
             accountId,
-            scriptName,
+            path.basename(bundle.path),
             sitesFolder,
             true,
             undefined // TODO: env
@@ -466,8 +465,9 @@ function useWorker(props: {
 
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
+        name: name || path.basename(bundle.path),
         main: {
-          name: name || path.basename(bundle.path),
+          name: path.basename(bundle.path),
           type: format || bundle.type === "esm" ? "esm" : "commonjs",
           content,
         },

@@ -54,17 +54,20 @@ export default async function publish(props: Props): Promise<void> {
 
   assert(config.account_id, "missing account id");
 
+  let scriptName = props.name || config.name;
+  assert(
+    scriptName,
+    'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+  );
+
   let file: string;
   if (props.script) {
     file = props.script;
-    assert(props.name, "name is required when using script");
   } else {
     assert(build?.upload?.main, "missing main file");
-    assert(config.name, "missing name");
     file = path.join(path.dirname(__path__), build.upload.main);
   }
 
-  let scriptName = props.script ? props.name : config.name;
   if (props.legacyEnv) {
     scriptName += props.env ? `-${props.env}` : "";
   }
@@ -184,8 +187,9 @@ export default async function publish(props: Props): Promise<void> {
   const envRootObj = props.env ? config.env[props.env] || {} : config;
 
   const worker: CfWorkerInit = {
+    name: scriptName,
     main: {
-      name: scriptName,
+      name: path.basename(chunks[0]),
       content: content,
       type: bundle.type === "esm" ? "esm" : "commonjs",
     },
