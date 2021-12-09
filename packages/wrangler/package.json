@@ -38,7 +38,7 @@
   "dependencies": {
     "@cloudflare/pages-functions-compiler": "0.3.7",
     "esbuild": "0.14.1",
-    "miniflare": "2.0.0-rc.2",
+    "miniflare": "2.0.0-rc.3",
     "semiver": "^1.1.0",
     "serve": "^13.0.2",
     "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
