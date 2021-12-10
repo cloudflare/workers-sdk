@@ -45,7 +45,8 @@
     "plugins": [
       "@typescript-eslint",
       "eslint-plugin-react",
-      "eslint-plugin-react-hooks"
+      "eslint-plugin-react-hooks",
+      "prettier"
     ],
     "settings": {
       "react": {
@@ -65,6 +66,7 @@
           "plugin:react-hooks/recommended"
         ],
         "rules": {
+          "prettier/prettier": "error",
           "@typescript-eslint/consistent-type-imports": [
             "error"
           ],
