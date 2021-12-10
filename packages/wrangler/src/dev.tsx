@@ -374,6 +374,13 @@ function useEsbuild(props: {
         ...(jsxFactory && { jsxFactory }),
         ...(jsxFragment && { jsxFragment }),
         external: ["__STATIC_CONTENT_MANIFEST"],
+        conditions: [
+          "cloudflare-worker",
+          "worker",
+          "browser",
+          "module",
+          "default",
+        ],
         plugins: [moduleCollector.plugin],
         // TODO: import.meta.url
         watch: {
