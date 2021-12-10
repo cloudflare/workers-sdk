@@ -12,17 +12,19 @@
     "packages/*"
   ],
   "dependencies": {
+    "@changesets/cli": "^2.18.0",
     "@types/jest": "^27.0.3",
     "@types/node": "^16.11.11",
-    "@typescript-eslint/eslint-plugin": "^5.5.0",
-    "@typescript-eslint/parser": "^5.5.0",
+    "@typescript-eslint/eslint-plugin": "^5.6.0",
+    "@typescript-eslint/parser": "^5.6.0",
     "esbuild-jest": "0.5.0",
     "esbuild-register": "^3.2.0",
     "eslint": "^7.32.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.27.1",
     "eslint-plugin-react-hooks": "^4.3.0",
     "jest": "^27.4.2",
-    "prettier": "^2.5.0",
+    "prettier": "^2.5.1",
     "source-map-explorer": "^2.5.2",
     "typescript": "^4.5.2"
   },

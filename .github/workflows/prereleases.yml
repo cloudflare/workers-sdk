@@ -1,4 +1,4 @@
-name: CI
+name: Prerelease
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install NPM dependencies
-        run: npm install
+        run: npm ci --prefer-offline
 
       - name: Copy README.md
         run: cp README.md packages/wrangler/README.md
