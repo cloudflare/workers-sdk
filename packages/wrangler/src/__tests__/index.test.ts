@@ -62,12 +62,12 @@ describe("wrangler", () => {
         wrangler pages             ⚡️ Configure Cloudflare Pages
 
       Flags:
-        --config   Path to .toml configuration file  [string]
-        --help     Show help  [boolean]
-        --version  Show version number  [boolean]
+        -c, --config   Path to .toml configuration file  [string]
+        -h, --help     Show help  [boolean]
+        -v, --version  Show version number  [boolean]
 
       Options:
-        --local  Run on my machine  [boolean] [default: false]"
+        -l, --local  Run on my machine  [boolean] [default: false]"
     `);
   });
 

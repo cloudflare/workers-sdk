@@ -1821,6 +1821,7 @@ export async function main(argv: string[]): Promise<void> {
 
   yargs
     .option("config", {
+      alias: "c",
       describe: "Path to .toml configuration file",
       type: "string",
       async coerce(arg) {
@@ -1828,13 +1829,15 @@ export async function main(argv: string[]): Promise<void> {
       },
     })
     .option("local", {
+      alias: "l",
       describe: "Run on my machine",
       type: "boolean",
       default: false, // I bet this will a point of contention. We'll revisit it.
     });
 
   yargs.group(["config", "help", "version"], "Flags:");
-  yargs.version(wranglerVersion);
+  yargs.help().alias("h", "help");
+  yargs.version(wranglerVersion).alias("v", "version");
   await initialiseUserConfig();
 
   await yargs.parse(argv, (err, argv, output) => {
