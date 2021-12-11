@@ -880,7 +880,6 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
-            // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               console.error("Missing script name");
@@ -912,18 +911,19 @@ export async function main(argv: string[]): Promise<void> {
               "password"
             );
             async function submitSecret() {
-              return await cfetch(
-                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
-                {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    name: args.key,
-                    text: secretValue,
-                    type: "secret_text",
-                  }),
-                }
-              );
+              let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
+              if (args.env) {
+                url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+              }
+              return await cfetch(url, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: args.key,
+                  text: secretValue,
+                  type: "secret_text",
+                }),
+              });
             }
 
             try {
@@ -981,7 +981,6 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
-            // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
@@ -1007,16 +1006,18 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
+            let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
+            if (args.env) {
+              url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+            }
+
             if (await confirm("Are you sure you want to delete this secret?")) {
               console.log(
                 `Deleting the secret ${args.key} on script ${scriptName}.`
               );
 
               console.log(
-                await cfetch(
-                  `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
-                  { method: "DELETE" }
-                )
+                await cfetch(`${url}/${args.key}`, { method: "DELETE" })
               );
             }
           }
@@ -1043,7 +1044,6 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
-            // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               console.error("Missing script name");
@@ -1070,11 +1070,12 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            console.log(
-              await cfetch(
-                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
-              )
-            );
+            let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
+            if (args.env) {
+              url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+            }
+
+            console.log(await cfetch(url));
           }
         );
     }
