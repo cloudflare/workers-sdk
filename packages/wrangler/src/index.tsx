@@ -880,8 +880,6 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
-            console.log(config);
-
             const scriptName = args.name || config.name;
             if (!scriptName) {
               console.error("Missing script name");
