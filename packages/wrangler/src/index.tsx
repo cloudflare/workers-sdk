@@ -880,6 +880,8 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
+            console.log(config);
+
             const scriptName = args.name || config.name;
             if (!scriptName) {
               console.error("Missing script name");
@@ -913,7 +915,7 @@ export async function main(argv: string[]): Promise<void> {
             async function submitSecret() {
               let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
               if (args.env) {
-                url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+                url = `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
               }
               return await cfetch(url, {
                 method: "PUT",
@@ -1008,7 +1010,7 @@ export async function main(argv: string[]): Promise<void> {
 
             let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
             if (args.env) {
-              url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+              url = `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
             }
 
             if (await confirm("Are you sure you want to delete this secret?")) {
@@ -1072,7 +1074,7 @@ export async function main(argv: string[]): Promise<void> {
 
             let url = `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`;
             if (args.env) {
-              url = `/accounts/${config.account_id}/workers/services/${scriptName}/development/${args.env}/secrets`;
+              url = `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
             }
 
             console.log(await cfetch(url));
