@@ -123,7 +123,7 @@ export interface CfWorkerInit {
   /**
    * The name of the worker.
    */
-  name: string;
+  name: string | void;
   /**
    * The entrypoint module.
    */
