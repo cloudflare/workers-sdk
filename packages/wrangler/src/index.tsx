@@ -66,7 +66,6 @@ async function readConfig(path?: string): Promise<Config> {
     "route",
     "jsx_factory",
     "jsx_fragment",
-    "polyfill_node",
     "site",
     "triggers",
     "usage_model",
@@ -422,10 +421,6 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
-        })
-        .option("polyfill-node", {
-          describe: "Try to polyfill node builtins",
-          type: "boolean",
         });
     },
     async (args) => {
@@ -454,13 +449,6 @@ export async function main(argv: string[]): Promise<void> {
 
       const envRootObj = args.env ? config.env[args.env] || {} : config;
 
-      const polyfillNode = args["polyfill-node"] ?? config.polyfill_node;
-      if (polyfillNode) {
-        console.warn(
-          "Using polyfills for node builtin modules. These are not meant to be completely reliable, and have serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-        );
-      }
-
       // TODO: this error shouldn't actually happen,
       // but we haven't fixed it internally yet
       if ("durable_objects" in envRootObj) {
@@ -483,7 +471,6 @@ export async function main(argv: string[]): Promise<void> {
           accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
-          polyfillNode={polyfillNode}
           public={args.public}
           compatibilityDate={config.compatibility_date}
           compatibilityFlags={config.compatibility_flags}
@@ -564,10 +551,6 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
-        })
-        .option("polyfill-node", {
-          describe: "Try to polyfill node builtins",
-          type: "boolean",
         });
     },
     async (args) => {
@@ -596,13 +579,6 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      const polyfillNode = args["polyfill-node"] ?? config.polyfill_node;
-      if (polyfillNode) {
-        console.warn(
-          "Using polyfills for node builtin modules. These are not meant to be completely reliable, and have serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-        );
-      }
-
       await publish({
         config: args.config as Config,
         name: args.name,
@@ -611,7 +587,6 @@ export async function main(argv: string[]): Promise<void> {
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
-        polyfillNode: args["polyfill-node"],
         routes: args.routes,
         public: args.public,
         site: args.site,

@@ -8,8 +8,6 @@ import { readFile } from "fs/promises";
 import cfetch from "./cfetch";
 import assert from "node:assert";
 import { syncAssets } from "./sites";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -26,7 +24,6 @@ type Props = {
   legacyEnv?: boolean;
   jsxFactory: void | string;
   jsxFragment: void | string;
-  polyfillNode: void | boolean;
 };
 
 function sleep(ms: number) {
@@ -94,19 +91,10 @@ export default async function publish(props: Props): Promise<void> {
         }
       : { entryPoints: [file] }),
     bundle: true,
-    define: {
-      ...((props.polyfillNode ?? config.polyfill_node) && {
-        global: "globalThis",
-      }),
-    },
     nodePaths: props.public ? [path.join(__dirname, "../vendor")] : undefined,
     outdir: destination.path,
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
-    plugins:
-      props.polyfillNode ?? config.polyfill_node
-        ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
-        : undefined,
     sourcemap: true,
     metafile: true,
     loader: {

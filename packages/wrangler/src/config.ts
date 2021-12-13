@@ -81,7 +81,6 @@ type Env = {
   site?: Site;
   jsx_factory?: string; // inherited
   jsx_fragment?: string; // inherited
-  polyfill_node?: boolean; //inherited
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited
   vars?: Vars;
@@ -108,7 +107,6 @@ export type Config = {
   webpack_config?: string; // inherited
   jsx_factory?: string; // inherited
   jsx_fragment?: string; // inherited
-  polyfill_node?: boolean; //inherited
   vars?: Vars;
   migrations?: DOMigration[];
   durable_objects?: { bindings: DurableObject[] };
