@@ -461,6 +461,15 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
+      // TODO: this error shouldn't actually happen,
+      // but we haven't fixed it internally yet
+      if ("durable_objects" in envRootObj) {
+        if (!(args.name || config.name)) {
+          throw new Error("Workers with durable objects need to be named");
+        }
+        // TODO: if not already published, publish a draft worker
+      }
+
       render(
         <Dev
           name={args.name || config.name}

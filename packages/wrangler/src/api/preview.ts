@@ -1,7 +1,7 @@
 import cfetch from "../cfetch";
-import { fetchJson } from "../util/fetch";
 import { toFormData } from "./form_data";
 import type { CfAccount, CfWorkerInit } from "./worker";
+import fetch from "node-fetch";
 
 /**
  * A preview mode.
@@ -9,7 +9,7 @@ import type { CfAccount, CfWorkerInit } from "./worker";
  * * If true, then using a `workers.dev` subdomain.
  * * Otherwise, a list of routes under a single zone.
  */
-export type CfPreviewMode = { workers_dev: boolean } | { routes: string[] };
+type CfPreviewMode = { workers_dev: boolean } | { routes: string[] };
 
 /**
  * A preview token.
@@ -60,10 +60,10 @@ async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
     ? `/zones/${zoneId}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url: tokenUrl } = await cfetch<{ exchange_url: string }>(
-    initUrl
-  );
-  const { inspector_websocket: url, token } = await fetchJson()(tokenUrl);
+  const { exchange_url } = await cfetch<{ exchange_url: string }>(initUrl);
+  const { inspector_websocket: url, token } = (await (
+    await fetch(exchange_url)
+  ).json()) as { inspector_websocket: string; token: string };
   const { host } = new URL(url);
   const query = `cf_workers_preview_token=${token}`;
 
@@ -99,7 +99,9 @@ export async function previewToken(
   const scriptId = zoneId ? randomId() : host.split(".")[0];
   const url = `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
-  const mode = zoneId ? { routes: ["*/*"] } : { workers_dev: true };
+  const mode: CfPreviewMode = zoneId
+    ? { routes: ["*/*"] }
+    : { workers_dev: true };
   const formData = toFormData(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
 
