@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Added optional shortcuts
