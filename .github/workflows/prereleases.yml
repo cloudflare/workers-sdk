@@ -1,13 +1,15 @@
 name: Prerelease
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Tests, Linter & Typecheck"]
+    branches: [main]
+    types: 
+      - completed
 
 jobs:
   build:
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: ${{ github.repository_owner == 'cloudflare' && github.event.workflow_run.conclusion == 'success' }}
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
     strategy:
