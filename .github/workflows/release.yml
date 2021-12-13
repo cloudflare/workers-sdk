@@ -31,7 +31,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install NPM dependencies
-        run: npm ci --prefer-offline
+        run: npm install
 
       - name: Copy README.md
         run: cp README.md packages/wrangler/README.md
