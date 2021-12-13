@@ -61,16 +61,16 @@ async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
   const { exchange_url } = await cfetch<{ exchange_url: string }>(initUrl);
-  const { inspector_websocket: url, token } = (await (
+  const { inspector_websocket, token } = (await (
     await fetch(exchange_url)
   ).json()) as { inspector_websocket: string; token: string };
-  const { host } = new URL(url);
+  const { host } = new URL(inspector_websocket);
   const query = `cf_workers_preview_token=${token}`;
 
   return {
     value: token,
     host,
-    inspectorUrl: new URL(`${url}?${query}`),
+    inspectorUrl: new URL(`${inspector_websocket}?${query}`),
     prewarmUrl: new URL(
       `https://${host}/cdn-cgi/workers/preview/prewarm?${query}`
     ),
@@ -96,29 +96,32 @@ export async function previewToken(
   const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(account);
 
   const { accountId, zoneId } = account;
-  const scriptId = zoneId ? randomId() : host.split(".")[0];
+  const scriptId = zoneId ? randomId() : worker.name || host.split(".")[0];
   const url = `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode: CfPreviewMode = zoneId
     ? { routes: ["*/*"] }
     : { workers_dev: true };
+
   const formData = toFormData(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
 
-  const { preview_token: token } = await cfetch<{ preview_token: string }>(
-    url,
-    {
-      method: "POST",
-      // @ts-expect-error TODO: fix this
-      body: formData,
-      headers: {
-        "cf-preview-upload-config-token": value,
-      },
-    }
-  );
+  const { preview_token } = await cfetch<{ preview_token: string }>(url, {
+    method: "POST",
+    // @ts-expect-error TODO: fix this
+    body: formData,
+    headers: {
+      "cf-preview-upload-config-token": value,
+    },
+  });
+
   return {
-    value: token,
-    host,
+    value: preview_token,
+    // TODO: verify this works with zoned workers
+    host:
+      worker.name && !zoneId
+        ? `${worker.name}.${host.split(".").slice(1).join(".")}`
+        : host,
     inspectorUrl,
     prewarmUrl,
   };

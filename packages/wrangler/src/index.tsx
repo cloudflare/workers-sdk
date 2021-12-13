@@ -465,7 +465,9 @@ export async function main(argv: string[]): Promise<void> {
       // but we haven't fixed it internally yet
       if ("durable_objects" in envRootObj) {
         if (!(args.name || config.name)) {
-          throw new Error("Workers with durable objects need to be named");
+          console.warn(
+            'A worker with durable objects need to be named, or it may not work as expected. Add a "name" into wrangler.toml, or pass it in the command line with --name.'
+          );
         }
         // TODO: if not already published, publish a draft worker
       }

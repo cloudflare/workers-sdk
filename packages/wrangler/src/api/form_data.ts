@@ -113,32 +113,15 @@ export function toFormData(worker: CfWorkerInit): FormData {
     bindings.push(binding);
   }
 
-  const metadata =
-    mainType !== "commonjs"
-      ? {
-          main_module: name,
-          bindings,
-        }
-      : {
-          body_part: name,
-          bindings,
-        };
-  if (compatibility_date) {
-    // @ts-expect-error - we should type metadata
-    metadata.compatibility_date = compatibility_date;
-  }
-  if (compatibility_flags) {
-    // @ts-expect-error - we should type metadata
-    metadata.compatibility_flags = compatibility_flags;
-  }
-  if (usage_model) {
-    // @ts-expect-error - we should type metadata
-    metadata.usage_model = usage_model;
-  }
-  if (migrations) {
-    // @ts-expect-error - we should type metadata
-    metadata.migrations = migrations;
-  }
+  // TODO: this object should be typed
+  const metadata = {
+    ...(mainType !== "commonjs" ? { main_module: name } : { body_part: name }),
+    bindings,
+    ...(compatibility_date && { compatibility_date }),
+    ...(compatibility_flags && { compatibility_flags }),
+    ...(usage_model && { usage_model }),
+    ...(migrations && { migrations }),
+  };
 
   formData.set("metadata", JSON.stringify(metadata));
 
