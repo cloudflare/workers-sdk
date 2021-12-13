@@ -40,9 +40,7 @@
     "esbuild": "0.14.1",
     "miniflare": "2.0.0-rc.3",
     "semiver": "^1.1.0",
-    "serve": "^13.0.2",
-    "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
-    "@esbuild-plugins/node-modules-polyfill": "^0.1.2"
+    "serve": "^13.0.2"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"

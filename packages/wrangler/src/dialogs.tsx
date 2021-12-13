@@ -43,7 +43,7 @@ type PromptProps = {
   onSubmit: (text: string) => void;
 };
 
-export function Prompt(props: PromptProps) {
+function Prompt(props: PromptProps) {
   const [value, setValue] = useState("");
 
   return (
