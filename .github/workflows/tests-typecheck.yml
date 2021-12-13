@@ -50,7 +50,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-        # Prefer offline will skip registry verification with cached NPM packages
       - name: Install NPM dependencies
         run: npm install
       

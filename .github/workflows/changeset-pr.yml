@@ -1,12 +1,15 @@
 name: Create Changeset PR
 
-on:
-  push: 
-    branches:
-      - main
+on: 
+  workflow_run:
+    workflows: ["Tests, Linter & Typecheck"]
+    branches: [main]
+    types: 
+      - completed
       
 jobs:
   changeset-pr:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Create Changeset PR
     runs-on: ubuntu-latest
     steps:
