@@ -486,7 +486,8 @@ function useWorker(props: {
 
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
-        name: name || path.basename(bundle.path),
+        name:
+          name || path.basename(bundle.path).replace(/([^a-zA-Z_-]+)/g, "-"),
         main: {
           name: path.basename(bundle.path),
           type: format || bundle.type === "esm" ? "esm" : "commonjs",
