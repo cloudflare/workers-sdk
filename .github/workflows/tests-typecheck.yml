@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: ${{ matrix.node_version }}
       - name: Install NPM Dependencies
-        run: npm install --registry https://registry.npmjs.org --network-timeout 300000
+        run: npm install
       - name: Build
         run: npm run build
         working-directory: packages/wrangler
