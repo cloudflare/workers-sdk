@@ -30,10 +30,11 @@ export default function makeModuleCollector(): {
         build.onResolve(
           // filter on "known" file types,
           // we can expand this list later
-          { filter: /.*\.(pem|txt|html)$/ },
+          { filter: /.*\.(pem|txt|html|wasm)$/ },
           async (args: esbuild.OnResolveArgs) => {
             // take the file and massage it to a
             // transportable/manageable format
+            const fileExt = path.extname(args.path);
             const filePath = path.join(args.resolveDir, args.path);
             const fileContent = await readFile(filePath);
             const fileHash = crypto
@@ -46,7 +47,7 @@ export default function makeModuleCollector(): {
             modules.push({
               name: fileName,
               content: fileContent,
-              type: "text",
+              type: fileExt === ".wasm" ? "compiled-wasm" : "text",
             });
 
             return {
