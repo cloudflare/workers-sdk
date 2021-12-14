@@ -1,4 +1,4 @@
-import { CfModule } from "./api/worker";
+import type { CfModule } from "./api/worker";
 import type esbuild from "esbuild";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
