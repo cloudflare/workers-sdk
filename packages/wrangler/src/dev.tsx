@@ -22,6 +22,7 @@ import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
 import fetch from "node-fetch";
+import makeModuleCollector from "./module-collection";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -169,7 +170,7 @@ function Remote(props: {
     name: props.name,
     bundle: props.bundle,
     format: props.format,
-    modules: [],
+    modules: props.bundle ? props.bundle.modules : [],
     accountId: props.accountId,
     apiToken: props.apiToken,
     variables: props.variables,
@@ -343,6 +344,7 @@ type EsbuildBundle = {
   entry: string;
   type: "esm" | "commonjs";
   exports: string[];
+  modules: CfModule[];
 };
 
 function useEsbuild(props: {
@@ -358,6 +360,7 @@ function useEsbuild(props: {
     let result: esbuild.BuildResult;
     async function build() {
       if (!destination) return;
+      const moduleCollector = makeModuleCollector();
       result = await esbuild.build({
         entryPoints: [entry],
         bundle: true,
@@ -371,6 +374,7 @@ function useEsbuild(props: {
         ...(jsxFactory && { jsxFactory }),
         ...(jsxFragment && { jsxFragment }),
         external: ["__STATIC_CONTENT_MANIFEST"],
+        plugins: [moduleCollector.plugin],
         // TODO: import.meta.url
         watch: {
           async onRebuild(error) {
@@ -394,6 +398,7 @@ function useEsbuild(props: {
         path: chunks[0],
         type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
         exports: chunks[1].exports,
+        modules: moduleCollector.modules,
       });
     }
     build();

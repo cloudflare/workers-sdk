@@ -8,6 +8,7 @@ import { readFile } from "fs/promises";
 import cfetch from "./cfetch";
 import assert from "node:assert";
 import { syncAssets } from "./sites";
+import makeModuleCollector from "./module-collection";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -75,6 +76,7 @@ export default async function publish(props: Props): Promise<void> {
 
   const destination = await tmp.dir({ unsafeCleanup: true });
 
+  const moduleCollector = makeModuleCollector();
   const result = await esbuild.build({
     ...(props.public
       ? {
@@ -100,6 +102,7 @@ export default async function publish(props: Props): Promise<void> {
     loader: {
       ".js": "jsx",
     },
+    plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),
   });
@@ -216,12 +219,12 @@ export default async function publish(props: Props): Promise<void> {
     },
     ...(migrations && { migrations }),
     modules: assets.manifest
-      ? [].concat({
+      ? moduleCollector.modules.concat({
           name: "__STATIC_CONTENT_MANIFEST",
           content: JSON.stringify(assets.manifest),
           type: "text",
         })
-      : [],
+      : moduleCollector.modules,
     compatibility_date: config.compatibility_date,
     compatibility_flags: config.compatibility_flags,
     usage_model: config.usage_model,
