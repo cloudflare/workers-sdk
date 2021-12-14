@@ -1316,7 +1316,7 @@ export async function main(argv: string[]): Promise<void> {
     (yargs) => {
       return yargs
         .command(
-          "put <key> <value>",
+          "put <key> [value]",
           "Writes a single key/value pair to the given namespace.",
           (yargs) => {
             return yargs
@@ -1357,7 +1357,8 @@ export async function main(argv: string[]): Promise<void> {
               .option("path", {
                 type: "string",
                 describe: "Read value from the file at a given path.",
-              });
+              })
+              .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
             const namespaceId = getNamespaceId(args);
@@ -1826,9 +1827,19 @@ export async function main(argv: string[]): Promise<void> {
   yargs.version(wranglerVersion).alias("v", "version");
   await initialiseUserConfig();
 
-  await yargs.parse(argv, (err, argv, output) => {
-    if (output) {
-      console.log(output);
-    }
-  });
+  await yargs.parse(
+    argv
+    /* TODO: we'd like to use the parse callback, 
+    but there's a serious bug with it 
+    https://github.com/yargs/yargs/issues/1975#issuecomment-874237906
+    
+    , (err, argv, output) => {
+      if (output) {
+        console.log(output);
+      }
+      console.log({ err });
+      console.log("what now");
+    } 
+  */
+  );
 }

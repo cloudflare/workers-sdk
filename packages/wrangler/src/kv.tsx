@@ -118,7 +118,7 @@ export function getNamespaceId({
   if (!config) {
     throw new Error(
       "Failed to find a config file.\n" +
-        "Either use --namespace to upload directly or create a configuration file with a binding."
+        "Either use --namespace-id to upload directly or create a configuration file with a binding."
     );
   }
 
@@ -149,7 +149,7 @@ export function getNamespaceId({
   // there's no KV namespaces
   if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
     throw new Error(
-      "No KV Namespace to upload to! Either use --namespace to upload directly or add a KV namespace to your wrangler config file."
+      "No KV Namespace to upload to! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
     );
   }
 
