@@ -17,8 +17,6 @@ jobs:
         os: [ubuntu-latest]
         node_version: [16.7]
       fail-fast: false
-    needs:
-      - build
     steps:
       - name: Checkout
         uses: actions/checkout@v2

@@ -3,7 +3,7 @@ name: Prerelease
 on:
   workflow_run:
     workflows: ["Tests, Linter & Typecheck"]
-    branches: [main]
+    branches: ["master", "!changeset-release/main"]
     types: 
       - completed
 

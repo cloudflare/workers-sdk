@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: github.event.pull_request.merged
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
     strategy:
@@ -41,7 +41,7 @@ jobs:
         working-directory: packages/wrangler
 
   release:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: github.event.pull_request.merged
     needs: [build]
     name: Release
     runs-on: ubuntu-latest
