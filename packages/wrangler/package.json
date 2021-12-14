@@ -41,7 +41,7 @@
     "esbuild": "0.14.1",
     "miniflare": "2.0.0-rc.3",
     "semiver": "^1.1.0",
-    "undici": "^4.12.0"
+    "undici": "^4.11.1"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
