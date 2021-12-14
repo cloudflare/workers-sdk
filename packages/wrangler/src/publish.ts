@@ -101,7 +101,6 @@ export default async function publish(props: Props): Promise<void> {
     metafile: true,
     mainFields: ["browser", "module", "main"],
     conditions: [
-      "cloudflare-worker",
       "worker",
       "browser",
       envName === "production" ? "production" : false,
