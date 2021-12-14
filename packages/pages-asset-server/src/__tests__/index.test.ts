@@ -14,7 +14,7 @@ describe("@cloudflare/pages-asset-server", () => {
       "index.js [command]
 
       Commands:
-        index.js test  test
+        index.js serve [directory]  Serve a directory of static assets.
 
       Options:
         --help     Show help                                                 [boolean]

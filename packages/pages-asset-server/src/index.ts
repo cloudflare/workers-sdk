@@ -1,22 +1,146 @@
 #!/usr/bin/env node
 
+import { Request, Headers } from "cross-fetch";
 import yargs from "yargs";
 import { existsSync, lstatSync, readFileSync } from "fs";
 import { join } from "path";
 import { hideBin } from "yargs/helpers";
-import type { IncomingMessage, RequestListener, ServerResponse } from "http";
-import { createServer } from "http";
+import type { IncomingMessage, RequestListener } from "http";
+import { createServer, ServerResponse } from "http";
 import { watch } from "chokidar";
+
+const escapeRegex = (str: string) => {
+  return str.replace(/[-/\\^$*+?.()|[]{}]/g, "\\$&");
+};
+
+export type Replacements = Record<string, string>;
+
+export const replacer = (str: string, replacements: Replacements) => {
+  for (const [replacement, value] of Object.entries(replacements)) {
+    str = str.replace(`:${replacement}`, value);
+  }
+  return str;
+};
+
+export const generateRulesMatcher = <T>(
+  rules?: Record<string, T>,
+  replacer: (match: T, replacements: Replacements) => T = (match) => match
+) => {
+  // TODO: How can you test cross-host rules?
+  if (!rules) return () => [];
+
+  const compiledRules = Object.entries(rules)
+    .map(([rule, match]) => {
+      const crossHost = rule.startsWith("https://");
+
+      rule = rule.split("*").map(escapeRegex).join("(?<splat>.*)");
+
+      const host_matches = rule.matchAll(
+        /(?<=^https:\\\/\\\/[^/]*?):([^\\]+)(?=\\)/g
+      );
+      for (const match of host_matches) {
+        rule = rule.split(match[0]).join(`(?<${match[1]}>[^/.]+)`);
+      }
+
+      const path_matches = rule.matchAll(/:(\w+)/g);
+      for (const match of path_matches) {
+        rule = rule.split(match[0]).join(`(?<${match[1]}>[^/]+)`);
+      }
+
+      rule = "^" + rule + "$";
+
+      try {
+        const regExp = new RegExp(rule);
+        return [{ crossHost, regExp }, match];
+      } catch {}
+    })
+    .filter((value) => value !== undefined) as [
+    { crossHost: boolean; regExp: RegExp },
+    T
+  ][];
+
+  return ({ request }: { request: Request }) => {
+    const { pathname, host } = new URL(request.url);
+
+    return compiledRules
+      .map(([{ crossHost, regExp }, match]) => {
+        const test = crossHost ? `https://${host}${pathname}` : pathname;
+        const result = regExp.exec(test);
+        if (result) {
+          return replacer(match, result.groups || {});
+        }
+      })
+      .filter((value) => value !== undefined) as T[];
+  };
+};
 
 const generateHeadersMatcher = (headersFile: string) => {
   if (existsSync(headersFile)) {
     const contents = readFileSync(headersFile).toString();
 
-    return (
-      req: IncomingMessage
-    ): undefined | { status?: number; to: string } => {
-      // return { status: 302, to: "/test" };
-      return;
+    // TODO: Log errors
+    const lines = contents
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => !line.startsWith("#") && line !== "");
+
+    const rules: Record<string, Record<string, string>> = {};
+    let rule: { path: string; headers: Record<string, string> } | undefined =
+      undefined;
+
+    for (const line of lines) {
+      if (/^([^\s]+:\/\/|^\/)/.test(line)) {
+        if (rule && Object.keys(rule.headers).length > 0) {
+          rules[rule.path] = rule.headers;
+        }
+
+        const path = validateURL(line);
+        if (path) {
+          rule = {
+            path,
+            headers: {},
+          };
+          continue;
+        }
+      }
+
+      if (!line.includes(":")) continue;
+
+      const [rawName, ...rawValue] = line.split(":");
+      const name = rawName.trim().toLowerCase();
+      const value = rawValue.join(":").trim();
+
+      if (name === "") continue;
+      if (!rule) continue;
+
+      const existingValues = rule.headers[name];
+      rule.headers[name] = existingValues
+        ? `${existingValues}, ${value}`
+        : value;
+    }
+
+    if (rule && Object.keys(rule.headers).length > 0) {
+      rules[rule.path] = rule.headers;
+    }
+
+    const rulesMatcher = generateRulesMatcher(rules, (match, replacements) =>
+      Object.fromEntries(
+        Object.entries(match).map(([name, value]) => [
+          name,
+          replacer(value, replacements),
+        ])
+      )
+    );
+
+    return (req: IncomingMessage) => {
+      if (req.url) {
+        const url = new URL(`http://fakehost${decodeURIComponent(req.url)}`);
+
+        const matches = rulesMatcher({
+          request: new Request(url.toString()),
+        });
+        if (matches) return matches;
+      }
     };
   } else {
     return () => undefined;
@@ -27,50 +151,65 @@ const generateRedirectsMatcher = (redirectsFile: string) => {
   if (existsSync(redirectsFile)) {
     const contents = readFileSync(redirectsFile).toString();
 
+    // TODO: Log errors
     const lines = contents
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => !line.startsWith("#") && line !== "");
 
-    const rules = lines
-      .map((line) => line.split(" "))
-      .filter((tokens) => tokens.length === 2 || tokens.length === 3)
-      .map((tokens) => {
-        const from = validateURL(tokens[0], true, false, false);
-        const to = validateURL(tokens[1], false, true, true);
-        let status: number | undefined = parseInt(tokens[2]) || 302;
-        status = [301, 302, 303, 307, 308].includes(status)
-          ? status
-          : undefined;
+    const rules = Object.fromEntries(
+      lines
+        .map((line) => line.split(" "))
+        .filter((tokens) => tokens.length === 2 || tokens.length === 3)
+        .map((tokens) => {
+          const from = validateURL(tokens[0], true, false, false);
+          const to = validateURL(tokens[1], false, true, true);
+          let status: number | undefined = parseInt(tokens[2]) || 302;
+          status = [301, 302, 303, 307, 308].includes(status)
+            ? status
+            : undefined;
 
-        return from && to && status
-          ? {
-              from,
-              to,
-              status,
-            }
-          : undefined;
+          return from && to && status ? [from, { to, status }] : undefined;
+        })
+        .filter((rule) => rule !== undefined) as [
+        string,
+        { to: string; status?: number }
+      ][]
+    );
+
+    const rulesMatcher = generateRulesMatcher(
+      rules,
+      ({ status, to }, replacements) => ({
+        status,
+        to: replacer(to, replacements),
       })
-      .filter((rule) => rule !== undefined);
+    );
 
-    return (
-      req: IncomingMessage
-    ): undefined | { status?: number; to: string } => {
-      const url = new URL(
-        `http://fakehost${decodeURIComponent(req.url || "/")}`
-      );
+    return (req: IncomingMessage) => {
+      if (req.url) {
+        const url = new URL(`http://fakehost${decodeURIComponent(req.url)}`);
 
-      // for (const rule of rules) {
-      //   if (url.pathname === rule.from) {
-      //     return;
-      //   }
-      // }
-
-      return;
+        const match = rulesMatcher({
+          request: new Request(url.toString()),
+        })[0];
+        if (match) return match;
+      }
     };
   } else {
     return () => undefined;
   }
+};
+
+const extractPathname = (
+  path = "/",
+  includeSearch: boolean,
+  includeHash: boolean
+) => {
+  if (!path.startsWith("/")) path = `/${path}`;
+  const url = new URL(`//${path}`, "relative://");
+  return `${url.pathname}${includeSearch ? url.search : ""}${
+    includeHash ? url.hash : ""
+  }`;
 };
 
 const validateURL = (
@@ -79,6 +218,25 @@ const validateURL = (
   includeSearch = false,
   includeHash = false
 ) => {
+  const host = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/.exec(token);
+  if (host && host.groups && host.groups.host) {
+    if (onlyRelative) return;
+
+    return `https://${host.groups.host}${extractPathname(
+      host.groups.path,
+      includeSearch,
+      includeHash
+    )}`;
+  } else {
+    if (!token.startsWith("/") && onlyRelative) token = `/${token}`;
+
+    const path = /^\//.exec(token);
+    if (path) {
+      try {
+        return extractPathname(token, includeSearch, includeHash);
+      } catch {}
+    }
+  }
   return "";
 };
 
@@ -131,6 +289,12 @@ yargs(hideBin(process.argv))
         );
       };
 
+      const getAsset = (path: string) => {
+        if (assetExists(path)) {
+          return join(directory, path);
+        }
+      };
+
       let redirectsMatcher = generateRedirectsMatcher(redirectsFile);
       let headersMatcher = generateHeadersMatcher(headersFile);
 
@@ -151,10 +315,16 @@ yargs(hideBin(process.argv))
         }
       });
 
-      const generateResponse: RequestListener = (req, res) => {
+      const generateResponse = (req: IncomingMessage) => {
         const url = new URL(
           `http://fakehost${decodeURIComponent(req.url || "/")}`
         );
+
+        const res: { status: number; headers: Headers; data?: Buffer } = {
+          status: 200,
+          headers: new Headers(),
+          data: undefined,
+        };
 
         const match = redirectsMatcher(req);
         if (match) {
@@ -171,19 +341,19 @@ yargs(hideBin(process.argv))
 
           location = `${location}${search ? "" : url.search}`;
 
-          res.setHeader("Location", location);
-
           if (status && [301, 302, 303, 307, 308].includes(status)) {
-            res.writeHead(status);
+            res.status = status;
           } else {
-            res.writeHead(302);
+            res.status = 302;
           }
-          return;
+
+          res.headers.set("Location", location);
+          return res;
         }
 
         if (!req.method?.match(/^(get|head)$/i)) {
-          res.writeHead(405);
-          return;
+          res.status = 405;
+          return res;
         }
 
         const notFound = () => {
@@ -192,13 +362,15 @@ yargs(hideBin(process.argv))
             cwd = cwd.slice(0, cwd.lastIndexOf("/"));
 
             if ((asset = getAsset(`${cwd}/404.html`))) {
-              res.writeHead(404);
-              return serveAsset(asset, res);
+              res.status = 404;
+              res.data = serveAsset(asset);
+              return res;
             }
           }
 
           if ((asset = getAsset(`/index.html`))) {
-            return serveAsset(asset, res);
+            res.data = serveAsset(asset);
+            return res;
           }
         };
 
@@ -206,84 +378,107 @@ yargs(hideBin(process.argv))
 
         if (url.pathname.endsWith("/")) {
           if ((asset = getAsset(`${url.pathname}/index.html`))) {
-            return serveAsset(asset, res);
+            res.data = serveAsset(asset);
+            return res;
           } else if (
             (asset = getAsset(`${url.pathname.replace(/\/$/, ".html")}`))
           ) {
-            res.setHeader(
+            res.status = 301;
+            res.headers.set(
               "Location",
               `${url.pathname.slice(0, -1)}${url.search}`
             );
-            res.writeHead(301);
-            return;
+            return res;
           }
         }
 
         if (url.pathname.endsWith("/index")) {
-          res.setHeader(
+          res.status = 301;
+          res.headers.set(
             "Location",
             `${url.pathname.slice(0, -"index".length)}${url.search}`
           );
-          res.writeHead(301);
-          return;
+          return res;
         }
 
         if ((asset = getAsset(url.pathname))) {
           if (url.pathname.endsWith(".html")) {
             const extensionlessPath = url.pathname.slice(0, -".html".length);
             if (getAsset(extensionlessPath) || extensionlessPath === "/") {
-              return serveAsset(asset, res);
+              res.data = serveAsset(asset);
+              return res;
             } else {
-              res.setHeader("Location", `${extensionlessPath}${url.search}`);
-              res.writeHead(301);
-              return;
+              res.status = 301;
+              res.headers.set("Location", `${extensionlessPath}${url.search}`);
+              return res;
             }
           } else {
-            return serveAsset(asset, res);
+            res.data = serveAsset(asset);
+            return res;
           }
         } else if (hasFileExtension(url.pathname)) {
           notFound();
-          return;
+          return res;
         }
 
         if ((asset = getAsset(`${url.pathname}.html`))) {
-          return serveAsset(asset, res);
+          res.data = serveAsset(asset);
+          return res;
         }
 
         if ((asset = getAsset(`${url.pathname}/index.html`))) {
-          res.setHeader("Location", `${url.pathname}/${url.search}`);
-          res.writeHead(301);
-          return;
+          res.status = 301;
+          res.headers.set("Location", `${url.pathname}/${url.search}`);
+          return res;
         } else {
           notFound();
-          return;
+          return res;
         }
       };
 
-      const getAsset = (path: string) => {
-        if (assetExists(path)) {
-          return join(directory, path);
-        }
+      const serveAsset = (file: string) => {
+        return readFileSync(file);
       };
 
-      const serveAsset = (file: string, res: ServerResponse) => {
-        const data = readFileSync(file);
-        res.write(data);
-      };
+      const attachHeaders = (
+        req: IncomingMessage,
+        res: { status: number; headers: Headers; data?: Buffer }
+      ) => {
+        const headers = res.headers;
+        const newHeaders = new Headers({});
+        const matches = headersMatcher(req) || [];
 
-      const attachHeaders: RequestListener = (req, res) => {
-        const headers = res.getHeaders();
-        const match = headersMatcher(req);
-        if (match) {
-        }
+        matches.forEach((match) => {
+          Object.entries(match).forEach(([name, value]) => {
+            newHeaders.append(name, value);
+          });
+        });
+
+        const combinedHeaders = {
+          ...Object.fromEntries(headers.entries()),
+          ...Object.fromEntries(newHeaders.entries()),
+        };
+
+        res.headers = new Headers({});
+        Object.entries(combinedHeaders).forEach(([name, value]) => {
+          if (value) res.headers.set(name, value);
+        });
       };
 
       const server = createServer((req, res) => {
-        generateResponse(req, res);
-        attachHeaders(req, res);
+        const generatedResponse = generateResponse(req);
+        attachHeaders(req, generatedResponse);
+
+        [...generatedResponse.headers.entries()].forEach(([name, value]) => {
+          if (value) res.setHeader(name, value);
+        });
+        res.writeHead(generatedResponse.status);
+        if (generatedResponse.data) res.write(generatedResponse.data);
+
         if (log) {
           console.log(res.statusCode, req.method, req.url);
         }
+
         res.end();
       });
 

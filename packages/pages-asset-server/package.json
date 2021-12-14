@@ -46,6 +46,7 @@
     }
   },
   "dependencies": {
-    "chokidar": "^3.5.2"
+    "chokidar": "^3.5.2",
+    "cross-fetch": "^3.1.4"
   }
 }
