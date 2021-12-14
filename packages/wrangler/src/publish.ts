@@ -105,6 +105,7 @@ export default async function publish(props: Props): Promise<void> {
       "browser",
       envName === "production" ? "production" : false,
       "module",
+      "imports",
       "default",
     ].filter(Boolean) as string[],
     loader: {
