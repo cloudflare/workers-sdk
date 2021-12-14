@@ -99,15 +99,7 @@ export default async function publish(props: Props): Promise<void> {
     format: "esm",
     sourcemap: true,
     metafile: true,
-    mainFields: ["browser", "module", "main"],
-    conditions: [
-      "worker",
-      "browser",
-      envName === "production" ? "production" : false,
-      "module",
-      "imports",
-      "default",
-    ].filter(Boolean) as string[],
+    conditions: ["worker", "browser", "module", "imports", "default"],
     loader: {
       ".js": "jsx",
     },
