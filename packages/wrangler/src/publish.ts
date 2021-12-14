@@ -99,7 +99,15 @@ export default async function publish(props: Props): Promise<void> {
     format: "esm",
     sourcemap: true,
     metafile: true,
-    conditions: ["cloudflare-worker", "worker", "browser", "module", "default"],
+    mainFields: ["browser", "module", "main"],
+    conditions: [
+      "cloudflare-worker",
+      "worker",
+      "browser",
+      envName === "production" ? "production" : false,
+      "module",
+      "default",
+    ].filter(Boolean) as string[],
     loader: {
       ".js": "jsx",
     },

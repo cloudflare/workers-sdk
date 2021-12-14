@@ -378,6 +378,7 @@ function useEsbuild(props: {
           "cloudflare-worker",
           "worker",
           "browser",
+          "development",
           "module",
           "default",
         ],
