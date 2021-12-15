@@ -1,26 +1,27 @@
 name: Prerelease
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Tests, Linter & Typecheck"]
+    branches: ["main"]
+    types: 
+      - completed
 
 jobs:
   build:
-    if: ${{ github.repository_owner == 'cloudflare' }}
+
+    if: ${{ github.repository_owner == 'cloudflare' && github.event.workflow_run.conclusion == 'success' }}
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node_version: [16.7]
 
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node_version }}
+      
+      - name: Use Node.js 16.7
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ matrix.node_version }}
-
+          node-version: 16.7
+      
       - uses: actions/cache@v2
         with:
           path: ~/.npm

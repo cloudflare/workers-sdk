@@ -1,48 +1,12 @@
-
 name: Release
 
 on:
   pull_request:
     types: [closed]
-    branches:
-      - changeset-release/main
 
 jobs:
-  build:
-    if: ${{ github.event.pull_request.merged == true }}
-    name: Build & Publish an alpha release to NPM
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node_version: [16.7]
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node_version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node_version }}
-
-      - uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install NPM dependencies
-        run: npm install
-
-      - name: Copy README.md
-        run: cp README.md packages/wrangler/README.md
-
-      - name: Build
-        run: npm run build
-        working-directory: packages/wrangler
-
   release:
-    if: ${{ github.event.pull_request.merged == true }}
-    needs: [build]
+    if: ${{github.event.pull_request.merged}}
     name: Release
     runs-on: ubuntu-latest
     steps:
@@ -51,10 +15,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js 16.7
+      - name: Copy README.md
+        run: cp README.md packages/wrangler/README.md
+
+      - name: Use Node.js 16.7
         uses: actions/setup-node@v2
         with:
           node-version: 16.7
+      
+      - uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install NPM dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+        working-directory: packages/wrangler
 
       - name: Publish to NPM
         id: changesets
