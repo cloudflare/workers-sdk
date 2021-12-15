@@ -99,7 +99,7 @@ export default async function publish(props: Props): Promise<void> {
     format: "esm",
     sourcemap: true,
     metafile: true,
-    conditions: ["worker", "browser", "module", "imports", "default"],
+    conditions: ["worker", "browser"],
     loader: {
       ".js": "jsx",
     },
