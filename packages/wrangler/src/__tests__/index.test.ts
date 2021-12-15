@@ -7,43 +7,28 @@ import { setMock, unsetAllMocks } from "./mock-cfetch";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
-async function w(cmd: void | string, options?: { tap: boolean }) {
-  const tapped = options?.tap ? tap() : undefined;
-  await main([...(cmd ? cmd.split(" ") : [])]);
-  tapped?.off();
-  return { stdout: tapped?.out, stderr: tapped?.err };
-}
-
-function tap() {
-  const oldLog = console.log;
-  const oldError = console.error;
-
-  const toReturn = {
-    off: () => {
-      console.log = oldLog;
-      console.error = oldError;
-    },
-    out: "",
-    err: "",
-  };
-
-  console.log = (...args) => {
-    toReturn.out += args.join("");
-    oldLog.apply(console, args);
-    // console.trace(...args); // use this if you want to find the true source of your console.log
-  };
-  console.error = (...args) => {
-    toReturn.err += args.join("");
-    oldError.apply(console, args);
-  };
-
-  return toReturn;
+async function w(cmd?: string) {
+  const logSpy = jest.spyOn(console, "log").mockImplementation();
+  const errorSpy = jest.spyOn(console, "error").mockImplementation();
+  const warnSpy = jest.spyOn(console, "warn").mockImplementation();
+  try {
+    await main(cmd?.split(" ") ?? []);
+    return {
+      stdout: logSpy.mock.calls.flat(2).join("\n"),
+      stderr: errorSpy.mock.calls.flat(2).join("\n"),
+      warnings: warnSpy.mock.calls.flat(2).join("\n"),
+    };
+  } finally {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  }
 }
 
 describe("wrangler", () => {
   describe("no command", () => {
     it("should display a list of available commands", async () => {
-      const { stdout, stderr } = await w(undefined, { tap: true });
+      const { stdout, stderr } = await w();
 
       expect(stdout).toMatchInlineSnapshot(`
         "wrangler
@@ -68,13 +53,13 @@ describe("wrangler", () => {
           -l, --local  Run on my machine  [boolean] [default: false]"
       `);
 
-      expect(stderr).toEqual("");
+      expect(stderr).toMatchInlineSnapshot(`""`);
     });
   });
 
   describe("invalid command", () => {
     it("should display an error", async () => {
-      const { stdout, stderr } = await w("invalid-command", { tap: true });
+      const { stdout, stderr } = await w("invalid-command");
 
       expect(stdout).toMatchInlineSnapshot(`
         "wrangler
@@ -126,8 +111,8 @@ describe("wrangler", () => {
 
     it("should error when wrangler.toml already exists", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
-      const { stderr } = await w("init", { tap: true });
-      expect(stderr.endsWith("wrangler.toml already exists.")).toBe(true);
+      const { stderr } = await w("init");
+      expect(stderr).toContain("wrangler.toml already exists.");
     });
   });
 
@@ -160,7 +145,7 @@ describe("wrangler", () => {
           return KVNamespaces;
         }
       );
-      const { stdout } = await w("kv:namespace list", { tap: true });
+      const { stdout } = await w("kv:namespace list");
       const namespaces = JSON.parse(stdout);
       createdNamespace = namespaces.find(
         (ns) => ns.title === "worker-UnitTestNamespace"
