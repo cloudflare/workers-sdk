@@ -374,6 +374,7 @@ function useEsbuild(props: {
         ...(jsxFactory && { jsxFactory }),
         ...(jsxFragment && { jsxFragment }),
         external: ["__STATIC_CONTENT_MANIFEST"],
+        conditions: ["worker", "browser"],
         plugins: [moduleCollector.plugin],
         // TODO: import.meta.url
         watch: {
