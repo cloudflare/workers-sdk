@@ -8,7 +8,7 @@ const { pathToRegexp } = require("path-to-regexp");
 
 let mocks = [];
 
-function mockCfetch(resource, init) {
+export function mockCfetch(resource, init) {
   for (const { regexp, handler } of mocks) {
     if (regexp.test(resource)) {
       return handler(resource, init); // should we have some kind of fallthrough system? we'll see.
@@ -17,7 +17,7 @@ function mockCfetch(resource, init) {
   throw new Error(`no mocks found for ${resource}`);
 }
 
-function setMock(resource, handler) {
+export function setMock(resource, handler) {
   const mock = {
     resource,
     handler,
@@ -29,18 +29,11 @@ function setMock(resource, handler) {
   };
 }
 
-function unsetAllMocks() {
+export function unsetAllMocks() {
   mocks = [];
 }
 
-const CF_API_BASE_URL =
+export const CF_API_BASE_URL =
   process.env.CF_API_BASE_URL || "https://api.cloudflare.com/client/v4";
 
-Object.assign(module.exports, {
-  __esModule: true,
-  default: mockCfetch,
-  mockCfetch,
-  setMock,
-  unsetAllMocks,
-  CF_API_BASE_URL,
-});
+export default mockCfetch;

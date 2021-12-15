@@ -3,12 +3,9 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { main } from "../index";
-// @ts-expect-error we're mocking cfetch, so of course setMock isn't a thing
-import { setMock, unsetAllMocks } from "../cfetch";
+import { setMock, unsetAllMocks } from "./mock-cfetch";
 
-jest.mock("../cfetch", () => {
-  return jest.requireActual("./mock-cfetch");
-});
+jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
 async function w(cmd: void | string, options?: { tap: boolean }) {
   const tapped = options?.tap ? tap() : undefined;
