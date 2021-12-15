@@ -1,0 +1,39 @@
+routes:
+  '/:path*':
+    middleware:
+      - './functions/logger.ts'
+      - './functions/errorHandler.ts'
+      - './functions/helloMiddleware.ts'
+
+  '/time':
+    module: './functions/time.ts'
+
+  'GET /todos':
+    module:
+      - './functions/auth.js'
+      - './functions/todos.ts:getTodosList'
+
+  'POST /todos':
+    module:
+      - './functions/auth.js'
+      - './functions/todos.ts:createTodo'
+
+  'GET /todos/:id':
+    module:
+      - './functions/auth.js'
+      - './functions/todos.ts:getTodo'
+
+  'PUT|PATCH /todos/:id':
+    module:
+      - './functions/auth.js'
+      - './functions/todos.ts:getTodosList'
+
+  'DELETE /todos/:id':
+    module:
+      - './functions/auth.js'
+      - './functions/todos.ts:deleteTodo'
+
+schedules:
+  - '0 0 * * *':
+      module: './functions/heartbeat.ts'
+
