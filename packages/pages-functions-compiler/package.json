@@ -1,0 +1,58 @@
+{
+  "name": "@cloudflare/pages-functions-compiler",
+  "version": "0.3.8",
+  "description": "",
+  "main": "index.ts",
+  "directories": {
+    "examples": "examples"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "build": "esbuild cli.ts --format=esm --platform=node --bundle --external:esbuild --external:commander --outfile=bin/pages-functions-compiler.mjs",
+    "example:config": "npm run build && ./bin/pages-functions-compiler.mjs -c examples/config-routing/pages.json examples/config-routing",
+    "example:filepath": "npm run build && ./bin/pages-functions-compiler.mjs examples/filepath-routing",
+    "prepublishOnly": "npm run build",
+    "test": "jest"
+  },
+  "bin": {
+    "pages-functions-compiler": "bin/pages-functions-compiler.mjs"
+  },
+  "files": [
+    "bin",
+    "templates"
+  ],
+  "author": "Cina Saffary <cina@cloudflare.com>",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^8.4.1",
+    "acorn-walk": "^8.1.1",
+    "commander": "^8.1.0",
+    "esbuild": "0.14.1",
+    "path-to-regexp": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/acorn": "^4.0.6",
+    "@types/jest": "^27.0.2",
+    "esbuild-jest": "^0.5.0",
+    "jest": "^27.2.2",
+    "mock-fs": "^5.1.2"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.[tj]sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true,
+          "format": "cjs"
+        }
+      ]
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
