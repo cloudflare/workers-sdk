@@ -41,31 +41,69 @@ function tap() {
 }
 
 describe("wrangler", () => {
-  it("should run", async () => {
-    const { stdout } = await w(undefined, { tap: true });
+  describe("no command", () => {
+    it("should display a list of available commands", async () => {
+      const { stdout, stderr } = await w(undefined, { tap: true });
 
-    expect(stdout).toMatchInlineSnapshot(`
-      "wrangler
+      expect(stdout).toMatchInlineSnapshot(`
+        "wrangler
 
-      Commands:
-        wrangler init [name]       📥 Create a wrangler.toml configuration file
-        wrangler dev <filename>    👂 Start a local server for developing your worker
-        wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-        wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
-        wrangler secret            🤫 Generate a secret that can be referenced in the worker script
-        wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
-        wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
-        wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
-        wrangler pages             ⚡️ Configure Cloudflare Pages
+        Commands:
+          wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+          wrangler pages             ⚡️ Configure Cloudflare Pages
 
-      Flags:
-        -c, --config   Path to .toml configuration file  [string]
-        -h, --help     Show help  [boolean]
-        -v, --version  Show version number  [boolean]
+        Flags:
+          -c, --config   Path to .toml configuration file  [string]
+          -h, --help     Show help  [boolean]
+          -v, --version  Show version number  [boolean]
 
-      Options:
-        -l, --local  Run on my machine  [boolean] [default: false]"
-    `);
+        Options:
+          -l, --local  Run on my machine  [boolean] [default: false]"
+      `);
+
+      expect(stderr).toEqual("");
+    });
+  });
+
+  describe("invalid command", () => {
+    it("should display an error", async () => {
+      const { stdout, stderr } = await w("invalid-command", { tap: true });
+
+      expect(stdout).toMatchInlineSnapshot(`
+        "wrangler
+
+        Commands:
+          wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+          wrangler pages             ⚡️ Configure Cloudflare Pages
+
+        Flags:
+          -c, --config   Path to .toml configuration file  [string]
+          -h, --help     Show help  [boolean]
+          -v, --version  Show version number  [boolean]
+
+        Options:
+          -l, --local  Run on my machine  [boolean] [default: false]"
+      `);
+
+      expect(stderr).toMatchInlineSnapshot(`
+        "
+        Unknown command: invalid-command."
+      `);
+    });
   });
 
   describe("init", () => {

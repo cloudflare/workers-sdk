@@ -134,8 +134,11 @@ export async function main(argv: string[]): Promise<void> {
       ["*"],
       false,
       () => {},
-      () => {
+      (args) => {
         yargs.showHelp("log");
+        if (args._.length > 0) {
+          console.error(`\nUnknown command: ${args._}.`);
+        }
       }
     )
     .scriptName("wrangler")
