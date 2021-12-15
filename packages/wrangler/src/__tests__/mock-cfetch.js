@@ -1,7 +1,7 @@
 // This file mocks ../cfetch.ts
 // so we can insert whatever responses we want from it
 
-const pathToRegexp = require("path-to-regexp");
+const { pathToRegexp } = require("path-to-regexp");
 // TODO: add jsdoc style types here
 
 // type MockHandler = (resource: string, init?: RequestInit) => any; // TODO: use a generic here
