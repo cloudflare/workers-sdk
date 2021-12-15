@@ -787,7 +787,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   const url = new URL(request.url);
                   url.host = `127.0.0.1:${proxyPort}`;
                   request = new Request(url.toString(), request);
-                  return await fetch(request);
+                  return await fetch(request.url, request);
                 } catch (thrown) {
                   console.error(`Could not proxy request: ${thrown}`);
 
