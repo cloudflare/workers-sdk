@@ -39,8 +39,7 @@
     "@cloudflare/pages-functions-compiler": "0.3.8",
     "esbuild": "0.14.1",
     "miniflare": "2.0.0-rc.3",
-    "semiver": "^1.1.0",
-    "serve": "^13.0.2"
+    "semiver": "^1.1.0"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
@@ -53,15 +52,14 @@
     "@types/signal-exit": "^3.0.1",
     "@types/ws": "^8.2.1",
     "@types/yargs": "^17.0.7",
+    "chokidar": "^3.5.2",
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
     "execa": "^6.0.0",
-    "express": "^4.17.1",
     "finalhandler": "^1.1.2",
     "find-up": "^6.2.0",
     "formdata-node": "^4.3.1",
     "http-proxy": "^1.18.1",
-    "http-proxy-middleware": "^2.0.1",
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.1",
     "ink-table": "^3.0.0",
@@ -73,6 +71,7 @@
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.6",
     "tmp-promise": "^3.0.3",
+    "undici": "^4.11.1",
     "ws": "^8.3.0",
     "yargs": "^17.3.0"
   },
