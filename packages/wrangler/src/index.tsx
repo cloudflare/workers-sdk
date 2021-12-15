@@ -1367,7 +1367,16 @@ export async function main(argv: string[]): Promise<void> {
               : args.value;
             const config = args.config as Config;
 
-            console.log(`writing ${key}=${value} to namespace ${namespaceId}`);
+            if (args.path) {
+              console.log(
+                `writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}`
+              );
+            } else {
+              console.log(
+                `writing the value "${value}" to key "${key}" on namespace ${namespaceId}`
+              );
+            }
+
             if (args.local) {
               const { Miniflare } = await import("miniflare");
               const mf = new Miniflare({
@@ -1578,6 +1587,10 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ...args }) => {
             const namespaceId = getNamespaceId(args);
+
+            console.log(
+              `deleting the key "${key}" on namespace ${namespaceId}`
+            );
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
