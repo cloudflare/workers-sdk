@@ -712,6 +712,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       const { Miniflare } = await import("miniflare");
       const { fetch } = await import("@miniflare/core");
+
       const miniflare = new Miniflare({
         port,
         watch: true,
@@ -739,7 +740,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ) => {
               if (proxyPort) {
                 try {
-                  let request = new Request(input, init);
+                  let request = new Request(input as any, init);
                   const url = new URL(request.url);
                   url.host = `127.0.0.1:${proxyPort}`;
                   request = new Request(url.toString(), request);
@@ -758,7 +759,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   return await (
                     await generateAssetsFetch(directory)
                   )(input as any, init as any);
-                  return new Response("Static file.");
                 } catch (thrown) {
                   console.error(`Could not serve static asset: ${thrown}`);
 
