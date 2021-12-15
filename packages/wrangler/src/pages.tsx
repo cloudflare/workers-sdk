@@ -474,6 +474,9 @@ const generateAssetsFetch = async (
         deconstructedResponse.body = serveAsset(asset);
         return deconstructedResponse;
       }
+
+      deconstructedResponse.status = 404;
+      return deconstructedResponse;
     };
 
     let asset;
