@@ -23,6 +23,7 @@
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.27.1",
     "eslint-plugin-react-hooks": "^4.3.0",
+    "ioredis": "^4.28.2",
     "jest": "^27.4.2",
     "prettier": "^2.5.1",
     "source-map-explorer": "^2.5.2",
@@ -30,7 +31,7 @@
   },
   "scripts": {
     "lint": "eslint packages/**",
-    "check": "tsc && npm run lint",
+    "check": "prettier packages/** --check && tsc && npm run lint",
     "prettify": "prettier packages/** --write"
   },
   "engines": {
@@ -42,6 +43,13 @@
       "packages/wrangler/vendor"
     ],
     "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "project": [
+        "tsconfig.json"
+      ],
+      "sourceType": "module"
+    },
     "plugins": [
       "@typescript-eslint",
       "eslint-plugin-react",
@@ -66,10 +74,10 @@
           "plugin:react-hooks/recommended"
         ],
         "rules": {
-          "prettier/prettier": "error",
           "@typescript-eslint/consistent-type-imports": [
             "error"
           ],
+          "@typescript-eslint/no-floating-promises": "error",
           "no-empty": "off",
           "require-yield": "off",
           "no-empty-function": "off",

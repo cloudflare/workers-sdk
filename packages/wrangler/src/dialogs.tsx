@@ -4,7 +4,7 @@ import { Box, Text, useInput, render } from "ink";
 import TextInput from "ink-text-input";
 type ConfirmProps = {
   text: string;
-  onConfirm: (answer: boolean) => void | Promise<void>;
+  onConfirm: (answer: boolean) => void;
 };
 function Confirm(props: ConfirmProps) {
   useInput((input: string) => {

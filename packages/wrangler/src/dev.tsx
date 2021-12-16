@@ -23,6 +23,7 @@ import assert from "assert";
 import { getAPIToken } from "./user";
 import fetch from "node-fetch";
 import makeModuleCollector from "./module-collection";
+import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -43,7 +44,7 @@ type Props = {
   usageModel: void | "bundled" | "unbound";
 };
 
-export function Dev(props: Props): JSX.Element {
+function Dev(props: Props): JSX.Element {
   if (props.public && props.format === "service-worker") {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
@@ -233,6 +234,7 @@ function useLocalWorker(props: {
       }
 
       console.log("⎔ Starting a local server...");
+      // TODO: just use execa for this
       local.current = spawn("node", [
         "--experimental-vm-modules",
         "--inspect",
@@ -293,6 +295,17 @@ function useLocalWorker(props: {
         }
       });
 
+      local.current.on("exit", (code) => {
+        if (code !== 0) {
+          console.error(`miniflare process exited with code ${code}`);
+        }
+      });
+
+      local.current.on("error", (error: Error) => {
+        console.error(`miniflare process failed to spawn`);
+        console.error(error);
+      });
+
       removeSignalExitListener.current = onExit((_code, _signal) => {
         console.log("⎔ Shutting down local server.");
         local.current?.kill();
@@ -300,7 +313,9 @@ function useLocalWorker(props: {
       });
     }
 
-    startLocalWorker();
+    startLocalWorker().catch((err) => {
+      console.error("local worker:", err);
+    });
 
     return () => {
       if (local.current) {
@@ -317,6 +332,7 @@ function useLocalWorker(props: {
 
 function useTmpDir(): string | void {
   const [directory, setDirectory] = useState<DirectoryResult>();
+  const handleError = useErrorHandler();
   useEffect(() => {
     let dir: DirectoryResult;
     async function create() {
@@ -326,15 +342,22 @@ function useTmpDir(): string | void {
         return;
       } catch (err) {
         console.error("failed to create tmp dir");
-        console.error(err);
         throw err;
       }
     }
-    create();
+    create().catch((err) => {
+      // we want to break here
+      // we can't do much without a temp dir anyway
+      handleError(err);
+    });
     return () => {
-      dir.cleanup();
+      dir.cleanup().catch(() => {
+        // extremely unlikely,
+        // but it's 2021 after all
+        console.error("failed to cleanup tmp dir");
+      });
     };
-  }, []);
+  }, [handleError]);
   return directory?.path;
 }
 
@@ -402,7 +425,12 @@ function useEsbuild(props: {
         modules: moduleCollector.modules,
       });
     }
-    build();
+    build().catch((_err) => {
+      // esbuild already logs errors to stderr
+      // and we don't want to end the process
+      // on build errors anyway
+      // so this is a no-op error handler
+    });
     return () => {
       result?.stop();
     };
@@ -506,7 +534,11 @@ function useWorker(props: {
       );
       console.log(`⬣ Listening at http://localhost:${port}`);
     }
-    start();
+    start().catch((err) => {
+      // we want to log the error, but not end the process
+      // since it could recover after the developer fixes whatever's wrong
+      console.error("remote worker:", err);
+    });
   }, [
     name,
     bundle,
@@ -650,12 +682,14 @@ function useTunnel(toggle: boolean) {
         });
 
         const hostName = await findTunnelHostname();
-        clipboardy.write(hostName);
+        await clipboardy.write(hostName);
         console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
       }
     }
 
-    startTunnel();
+    startTunnel().catch((err) => {
+      console.error("tunnel:", err);
+    });
 
     return () => {
       if (tunnel.current) {
@@ -677,14 +711,14 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
   useInput(
-    (
+    async (
       input,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       key
     ) => {
       switch (input) {
         case "b": // open browser
-          open(
+          await open(
             `http://localhost:${port}/`
             // {
             //   app: {
@@ -694,7 +728,7 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
           );
           break;
         case "d": // toggle inspector
-          open(
+          await open(
             `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
             // {
             //   app: {
@@ -722,3 +756,21 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
   );
   return toggles;
 }
+
+function ErrorFallback(props: {
+  error: Error;
+  resetErrorBoundary: () => void;
+}) {
+  useEffect(() => {
+    console.error(props.error);
+    process.exit(1);
+  });
+  return (
+    <Box>
+      <Text>Something went wrong:</Text>
+      <Text>{props.error.message}</Text>
+    </Box>
+  );
+}
+
+export default withErrorBoundary(Dev, { FallbackComponent: ErrorFallback });

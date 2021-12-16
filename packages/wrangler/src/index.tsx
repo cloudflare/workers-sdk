@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "ink";
-import { Dev } from "./dev";
+import Dev from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -689,9 +689,9 @@ export async function main(argv: string[]): Promise<void> {
         `successfully created tail, expires at ${expiration.toLocaleString()}`
       );
 
-      onExit(() => {
+      onExit(async () => {
         tail.terminate();
-        deleteTail();
+        await deleteTail();
       });
 
       tail.on("message", (data) => {
@@ -1124,7 +1124,7 @@ export async function main(argv: string[]): Promise<void> {
                 // TODO: these options shouldn't be required
                 script: ` `, // has to be a string with at least one char
               });
-              mf.getKVNamespace(title); // this should "create" the namespace
+              await mf.getKVNamespace(title); // this should "create" the namespace
               console.log(`✨ Success! Created KV namespace ${title}`);
               return;
             }

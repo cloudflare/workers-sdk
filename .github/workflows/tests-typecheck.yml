@@ -48,13 +48,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-        # Prefer offline will skip registry verification with cached NPM packages
       - name: Install NPM dependencies
         run: npm install
 
       - name: Run Type Checking & ESLint
-        #TODO remove the --skipLibCheck flag at some point
-        run: tsc --skipLibCheck && npm run lint
+        run: npm run check
 
       - name: Test
         run: npm run test

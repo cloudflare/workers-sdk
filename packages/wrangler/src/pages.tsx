@@ -5,7 +5,7 @@ import { existsSync, lstatSync, readFileSync } from "fs";
 import { execSync, spawn } from "child_process";
 import { Headers, Request, Response } from "undici";
 import type { MiniflareOptions } from "miniflare";
-import type { RequestInfo, RequestInit } from "@miniflare/core";
+import type { RequestInfo, RequestInit } from "undici";
 import open from "open";
 import { watch } from "chokidar";
 
@@ -747,7 +747,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           }
         }
 
-        log(message: string) {}
+        log(_message: string) {}
 
         error(message: Error) {
           this.logWithLevel(
@@ -786,7 +786,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ) => {
               if (proxyPort) {
                 try {
-                  let request = new Request(input as any, init);
+                  let request = new Request(input, init);
                   const url = new URL(request.url);
                   url.host = `127.0.0.1:${proxyPort}`;
                   request = new Request(url.toString(), request);
@@ -830,16 +830,20 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       console.log(`Serving at http://127.0.0.1:${port}/`);
 
       if (process.env.BROWSER !== "none") {
-        open(`http://127.0.0.1:${port}/`);
+        await open(`http://127.0.0.1:${port}/`);
       }
 
       process.on("SIGINT", () => {
         server.close();
-        miniflare.dispose();
+        miniflare.dispose().catch((err) => {
+          console.error(err);
+        });
       });
       process.on("SIGTERM", () => {
         server.close();
-        miniflare.dispose();
+        miniflare.dispose().catch((err) => {
+          console.error(err);
+        });
       });
     }
   );
