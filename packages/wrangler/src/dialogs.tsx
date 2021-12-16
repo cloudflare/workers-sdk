@@ -23,7 +23,7 @@ function Confirm(props: ConfirmProps) {
   );
 }
 
-export function confirm(text: string): Promise<boolean> {
+function confirm(text: string): Promise<boolean> {
   return new Promise((resolve) => {
     const { unmount } = render(
       <Confirm
@@ -61,7 +61,7 @@ function Prompt(props: PromptProps) {
   );
 }
 
-export async function prompt(text: string, type: "text" | "password" = "text") {
+async function prompt(text: string, type: "text" | "password" = "text") {
   return new Promise((resolve) => {
     const { unmount } = render(
       <Prompt
@@ -83,3 +83,9 @@ export async function prompt(text: string, type: "text" | "password" = "text") {
 // ): Promise<{ label: string; value: string }>{
 
 // }
+
+// Export as an object so that it is easier to mock for testing
+export const dialogs = {
+  confirm,
+  prompt,
+};

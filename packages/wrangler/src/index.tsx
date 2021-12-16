@@ -8,7 +8,7 @@ import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import type { Config } from "./config";
-import { confirm, prompt } from "./dialogs";
+import { dialogs } from "./dialogs";
 import { version as wranglerVersion } from "../package.json";
 import {
   login,
@@ -214,7 +214,9 @@ export async function main(argv: string[]): Promise<void> {
 
       if (!pathToPackageJson) {
         if (
-          await confirm("No package.json found. Would you like to create one?")
+          await dialogs.confirm(
+            "No package.json found. Would you like to create one?"
+          )
         ) {
           await writeFile(
             path.join(process.cwd(), "package.json"),
@@ -239,7 +241,7 @@ export async function main(argv: string[]): Promise<void> {
       // and make a tsconfig?
       let pathToTSConfig = await findUp("tsconfig.json");
       if (!pathToTSConfig) {
-        if (await confirm("Would you like to use typescript?")) {
+        if (await dialogs.confirm("Would you like to use typescript?")) {
           await writeFile(
             path.join(process.cwd(), "tsconfig.json"),
             JSON.stringify(
@@ -898,7 +900,7 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            const secretValue = await prompt(
+            const secretValue = await dialogs.prompt(
               "Enter a secret value:",
               "password"
             );
@@ -998,7 +1000,11 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            if (await confirm("Are you sure you want to delete this secret?")) {
+            if (
+              await dialogs.confirm(
+                "Are you sure you want to delete this secret?"
+              )
+            ) {
               console.log(
                 `Deleting the secret ${args.key} on script ${scriptName}.`
               );
