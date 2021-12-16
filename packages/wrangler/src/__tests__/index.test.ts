@@ -5,6 +5,7 @@ import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
 import { existsSync } from "node:fs";
+import { dialogs } from "../dialogs";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
@@ -112,10 +113,28 @@ describe("wrangler", () => {
       expect(typeof parsed.compatibility_date).toBe("string");
     });
 
-    it("should error when wrangler.toml already exists", async () => {
+    it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      mockConfirm({
+        text: "Do you want to continue initializing this project?",
+        result: false,
+      });
       const { stderr } = await w("init");
       expect(stderr).toContain("wrangler.toml file already exists!");
+      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      expect(typeof parsed.compatibility_date).toBe("undefined");
+    });
+
+    it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
+      fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      mockConfirm({
+        text: "Do you want to continue initializing this project?",
+        result: true,
+      });
+      const { stderr } = await w("init");
+      expect(stderr).toContain("wrangler.toml file already exists!");
+      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      expect(typeof parsed.compatibility_date).toBe("string");
     });
 
     it("should error if `--type` is used", async () => {
@@ -203,3 +222,22 @@ describe("wrangler", () => {
     });
   });
 });
+
+/**
+ * Create a mock version of `confirm()` that will respond with configured results
+ * for configured confirmation text messages.
+ *
+ * If there is a call to `confirm()` that does not match any of the expectations
+ * then an error is thrown.
+ */
+function mockConfirm(...expectations: { text: string; result: boolean }[]) {
+  const mockImplementation = async (text: string) => {
+    for (const { text: expectedText, result } of expectations) {
+      if (text === expectedText) {
+        return result;
+      }
+    }
+    throw new Error(`Unexpected confirmation message: ${text}`);
+  };
+  return jest.spyOn(dialogs, "confirm").mockImplementation(mockImplementation);
+}

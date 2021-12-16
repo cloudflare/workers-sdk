@@ -201,23 +201,27 @@ export async function main(argv: string[]): Promise<void> {
 
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
-        console.error(
-          `${destination} file already exists! Please remove it before running this command again.`
+        console.error(`${destination} file already exists!`);
+        const result = await dialogs.confirm(
+          "Do you want to continue initializing this project?"
         );
-      } else {
-        const compatibilityDate = new Date().toISOString().substring(0, 10);
-        try {
-          await writeFile(
-            destination,
-            `compatibility_date = "${compatibilityDate}"` + "\n"
-          );
-          console.log(`✨ Succesfully created wrangler.toml`);
-          // TODO: suggest next steps?
-        } catch (err) {
-          console.error(`Failed to create wrangler.toml`);
-          console.error(err);
-          throw err;
+        if (!result) {
+          return;
         }
+      }
+
+      const compatibilityDate = new Date().toISOString().substring(0, 10);
+      try {
+        await writeFile(
+          destination,
+          `compatibility_date = "${compatibilityDate}"` + "\n"
+        );
+        console.log(`✨ Succesfully created wrangler.toml`);
+        // TODO: suggest next steps?
+      } catch (err) {
+        console.error(`Failed to create wrangler.toml`);
+        console.error(err);
+        throw err;
       }
 
       // if no package.json, ask, and if yes, create one
