@@ -112,7 +112,7 @@ describe("wrangler", () => {
     it("should error when wrangler.toml already exists", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
       const { stderr } = await w("init");
-      expect(stderr).toContain("wrangler.toml already exists.");
+      expect(stderr).toContain("wrangler.toml file already exists!");
     });
   });
 
