@@ -96,6 +96,7 @@
     "node": ">=16.7.0"
   },
   "jest": {
+    "restoreMocks": true,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
       "node_modules/(?!node-fetch|fetch-blob|find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|data-uri-to-buffer|formdata-polyfill|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
