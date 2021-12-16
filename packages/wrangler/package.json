@@ -73,7 +73,8 @@
     "tmp-promise": "^3.0.3",
     "undici": "^4.11.1",
     "ws": "^8.3.0",
-    "yargs": "^17.3.0"
+    "yargs": "^17.3.0",
+    "react-error-boundary": "^3.1.4"
   },
   "files": [
     "src",

@@ -140,16 +140,16 @@ export type DtEvent = DtLogEvent | DtExceptionEvent;
  */
 export type DtListener = (event: DtEvent) => void;
 
-interface DtProtocolRequest<T> {
-  id: number;
-  method: string;
-  params?: T;
-}
+// interface DtProtocolRequest<T> {
+//   id: number;
+//   method: string;
+//   params?: T;
+// }
 
-interface DtProtocolResponse<T> {
-  id: number;
-  result: T;
-}
+// interface DtProtocolResponse<T> {
+//   id: number;
+//   result: T;
+// }
 
 /**
  * A DevTools inspector that listens to logs and debug events from a Worker.

@@ -816,7 +816,7 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 
 export async function login(props?: LoginProps): Promise<boolean> {
   const urlToOpen = await getAuthURL(props?.scopes);
-  open(urlToOpen);
+  await open(urlToOpen);
   // TODO: log url only if on system where it's unreliable/unavailable
   // console.log(`💁 Opened ${urlToOpen}`);
   let server;

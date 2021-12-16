@@ -4,14 +4,14 @@ import { Box, Text, useInput, render } from "ink";
 import TextInput from "ink-text-input";
 type ConfirmProps = {
   text: string;
-  onConfirm: (answer: boolean) => void | Promise<void>;
+  onConfirm: (answer: boolean) => Promise<void>;
 };
 function Confirm(props: ConfirmProps) {
   useInput((input: string) => {
     if (input === "y") {
-      props.onConfirm(true);
+      props.onConfirm(true).catch((err) => console.error(err));
     } else if (input === "n") {
-      props.onConfirm(false);
+      props.onConfirm(false).catch((err) => console.error(err));
     } else {
       console.log("Unrecognised input");
     }
@@ -28,7 +28,7 @@ export function confirm(text: string): Promise<boolean> {
     const { unmount } = render(
       <Confirm
         text={text}
-        onConfirm={(answer: boolean) => {
+        onConfirm={async (answer: boolean) => {
           unmount();
           resolve(answer);
         }}

@@ -137,7 +137,7 @@ export default async function publish(props: Props): Promise<void> {
   }
 
   const content = await readFile(chunks[0], { encoding: "utf-8" });
-  destination.cleanup();
+  await destination.cleanup();
 
   // if config.migrations
   // get current migration tag
@@ -283,8 +283,8 @@ export default async function publish(props: Props): Promise<void> {
         // This is to prevent an issue where a negative cache-hit
         // causes the subdomain to be unavailable for 30 seconds.
         // This is a temporary measure until we fix this on the edge.
-        .then((url) => {
-          sleep(3000);
+        .then(async (url) => {
+          await sleep(3000);
           return url;
         })
     );
