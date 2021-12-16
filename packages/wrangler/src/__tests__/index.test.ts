@@ -4,6 +4,7 @@ import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
+import { existsSync } from "node:fs";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
@@ -99,7 +100,9 @@ describe("wrangler", () => {
     });
 
     afterEach(async () => {
-      await fsp.rm("./wrangler.toml");
+      if (existsSync("./wrangler.toml")) {
+        await fsp.rm("./wrangler.toml");
+      }
       process.chdir(ogcwd);
     });
 
