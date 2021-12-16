@@ -187,7 +187,18 @@ export async function main(argv: string[]): Promise<void> {
         type: "string",
       });
     },
-    async () => {
+    async (args) => {
+      if ("type" in args) {
+        let message = "The --type option is no longer supported.";
+        if (args.type === "webpack") {
+          message +=
+            "\nIf you wish to use webpack then you will need to create a custom build.";
+          // TODO: Add a link to docs
+        }
+        console.error(message);
+        return;
+      }
+
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
         console.error(

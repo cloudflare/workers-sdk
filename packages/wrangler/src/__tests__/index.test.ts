@@ -114,6 +114,35 @@ describe("wrangler", () => {
       const { stderr } = await w("init");
       expect(stderr).toContain("wrangler.toml file already exists!");
     });
+
+    it("should error if `--type` is used", async () => {
+      const noValue = await w("init --type");
+      expect(noValue.stderr).toMatchInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
+    });
+
+    it("should error if `--type javascript` is used", async () => {
+      const javascriptValue = await w("init --type javascript");
+      expect(javascriptValue.stderr).toMatchInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
+    });
+
+    it("should error if `--type rust` is used", async () => {
+      const rustValue = await w("init --type rust");
+      expect(rustValue.stderr).toMatchInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
+    });
+
+    it("should error if `--type webpack` is used", async () => {
+      const webpackValue = await w("init --type webpack");
+      expect(webpackValue.stderr).toMatchInlineSnapshot(`
+        "The --type option is no longer supported.
+        If you wish to use webpack then you will need to create a custom build."
+      `);
+    });
   });
 
   describe("kv:namespace", () => {
