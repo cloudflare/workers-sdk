@@ -190,7 +190,9 @@ export async function main(argv: string[]): Promise<void> {
     async () => {
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
-        console.error(`${destination} already exists.`);
+        console.error(
+          `${destination} file already exists! Please remove it before running this command again.`
+        );
       } else {
         const compatibilityDate = new Date().toISOString().substring(0, 10);
         try {
