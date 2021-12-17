@@ -525,6 +525,16 @@ export async function main(argv: string[]): Promise<void> {
               },
               {}
             ),
+            ...(envRootObj?.services || []).reduce(
+              (obj, { name, script_name, env }) => {
+                const varname = name || script_name;
+                return {
+                  ...obj,
+                  [varname]: { script_name, env },
+                };
+              },
+              {},
+            ),
           }}
         />
       );
