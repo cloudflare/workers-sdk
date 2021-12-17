@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    if: ${{github.event.pull_request.merged}}
+    if: ${{github.repository_owner == 'cloudflare'}}
     name: Release
     runs-on: ubuntu-latest
     steps:
