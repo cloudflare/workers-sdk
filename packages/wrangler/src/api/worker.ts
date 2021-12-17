@@ -72,6 +72,9 @@ export interface CfKvNamespace {
   namespaceId: string;
 }
 
+/**
+ * A Durable Object.
+ */
 export interface CfDurableObject {
   class_name: string;
   script_name?: string;
@@ -112,9 +115,23 @@ export interface CfCryptoKey {
 }
 
 /**
+ * A service binding (reference to another worker).
+ */
+export interface CfServiceRef {
+  /**
+   * Name of the script to reference.
+   */
+  script_name: string;
+  /**
+   * Environment of the script to reference, uses default environment if not provided.
+   */
+  env: string | undefined;
+}
+
+/**
  * A variable (aka. environment variable).
  */
-export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject;
+export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject | CfServiceRef;
 
 /**
  * Options for creating a `CfWorker`.

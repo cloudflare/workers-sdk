@@ -17,10 +17,11 @@ function toBase64(source: BufferSource): string {
   return btoa(result);
 }
 
-function toBinding(
-  name: string,
-  variable: CfVariable
-): Record<string, unknown> {
+/**
+ * Converts the given variable to an API binding. Throws error if the variable
+ * cannot be handled.
+ */
+function toBinding(name: string, variable: CfVariable): Record<string, unknown> {
   if (typeof variable === "string") {
     return { name, type: "plain_text", text: variable };
   }
@@ -41,6 +42,15 @@ function toBinding(
       ...(variable.script_name && {
         script_name: variable.script_name,
       }),
+    };
+  }
+
+  if ("script_name" in variable && "env" in variable) {
+    return {
+      name,
+      type: "service",
+      service: variable.script_name,
+      ...(variable.env && { environment: variable.env }),
     };
   }
 
@@ -107,11 +117,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
   } = worker;
   const { name, type: mainType } = main;
 
-  const bindings = [];
-  for (const [name, variable] of Object.entries(variables ?? {})) {
-    const binding = toBinding(name, variable);
-    bindings.push(binding);
-  }
+  const bindings = Object.entries(variables || {}).map(([name, variable]) => toBinding(name, variable));
 
   // TODO: this object should be typed
   const metadata = {

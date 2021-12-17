@@ -79,7 +79,7 @@ async function readConfig(path?: string): Promise<Config> {
     });
   });
 
-  const mirroredFields = ["vars", "kv_namespaces", "durable_objects"];
+  const mirroredFields = ["vars", "kv_namespaces", "durable_objects", "services"];
   Object.keys(config.env || {}).forEach((env) => {
     mirroredFields.forEach((field) => {
       // if it exists on top level, it should exist on env defns

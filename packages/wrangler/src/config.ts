@@ -41,6 +41,12 @@ type DurableObject = {
   script_name?: string;
 };
 
+type Service = {
+  name?: string;
+  script_name: string;
+  env?: string;
+};
+
 type Build = {
   command?: string;
   cwd?: string;
@@ -86,6 +92,7 @@ type Env = {
   vars?: Vars;
   durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
+  services?: Service[];
   usage_model?: UsageModel; // inherited
 };
 
@@ -111,6 +118,7 @@ export type Config = {
   migrations?: DOMigration[];
   durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
+  services?: Service[];
   site?: Site; // inherited
   // we should use typescript to parse cron patterns
   triggers?: { crons: Cron[] }; // inherited

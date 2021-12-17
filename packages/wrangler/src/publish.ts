@@ -226,6 +226,16 @@ export default async function publish(props: Props): Promise<void> {
         },
         {}
       ),
+      ...(envRootObj?.services || []).reduce(
+        (obj, { name, script_name, env }) => {
+          const varname = name || script_name;
+          return {
+            ...obj,
+            [varname]: { script_name, env },
+          };
+        },
+        {},
+      ),
       ...(assets.namespace
         ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
         : {}),
