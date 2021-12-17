@@ -5,9 +5,38 @@ import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
 import { existsSync } from "node:fs";
-import { dialogs } from "../dialogs";
+import { confirm } from "../dialogs";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
+
+jest.mock("../dialogs", () => {
+  return {
+    // @ts-expect-error typescript doesn't know that jest.requireActual
+    // returns the 'object' form of the dialogs module
+    ...jest.requireActual("../dialogs"),
+    confirm: jest.fn().mockName("confirmMock"),
+  };
+});
+
+/**
+ * Mock the implementation of `confirm()` that will respond with configured results
+ * for configured confirmation text messages.
+ *
+ * If there is a call to `confirm()` that does not match any of the expectations
+ * then an error is thrown.
+ */
+function mockConfirm(...expectations: { text: string; result: boolean }[]) {
+  // @ts-expect-error - we're mocking the implementation of confirm()
+  // but typescript doesn't know we've previously replaced confirm with a mock
+  confirm.mockImplementationOnce((text: string) => {
+    for (const { text: expectedText, result } of expectations) {
+      if (text === expectedText) {
+        return result;
+      }
+    }
+    throw new Error(`Unexpected confirmation message: ${text}`);
+  });
+}
 
 async function w(cmd?: string) {
   const logSpy = jest.spyOn(console, "log").mockImplementation();
@@ -222,22 +251,3 @@ describe("wrangler", () => {
     });
   });
 });
-
-/**
- * Create a mock version of `confirm()` that will respond with configured results
- * for configured confirmation text messages.
- *
- * If there is a call to `confirm()` that does not match any of the expectations
- * then an error is thrown.
- */
-function mockConfirm(...expectations: { text: string; result: boolean }[]) {
-  const mockImplementation = async (text: string) => {
-    for (const { text: expectedText, result } of expectations) {
-      if (text === expectedText) {
-        return result;
-      }
-    }
-    throw new Error(`Unexpected confirmation message: ${text}`);
-  };
-  return jest.spyOn(dialogs, "confirm").mockImplementation(mockImplementation);
-}
