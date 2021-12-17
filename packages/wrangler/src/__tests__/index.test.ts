@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
-import { existsSync } from "node:fs";
 import { confirm } from "../dialogs";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
@@ -12,7 +12,13 @@ jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 jest.mock("../dialogs", () => {
   return {
     ...jest.requireActual<object>("../dialogs"),
-    confirm: jest.fn().mockName("confirmMock"),
+    confirm: jest
+      .fn()
+      .mockName("confirmMock")
+      .mockImplementation(() => {
+        // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
+        throw new Error("Unexpected call to `confirm()`.");
+      }),
   };
 });
 
@@ -24,7 +30,7 @@ jest.mock("../dialogs", () => {
  * then an error is thrown.
  */
 function mockConfirm(...expectations: { text: string; result: boolean }[]) {
-  (confirm as jest.Mock).mockImplementationOnce((text: string) => {
+  (confirm as jest.Mock).mockImplementation((text: string) => {
     for (const { text: expectedText, result } of expectations) {
       if (text === expectedText) {
         return result;
@@ -120,19 +126,23 @@ describe("wrangler", () => {
 
   describe("init", () => {
     const ogcwd = process.cwd();
+    let tmpDir: string;
 
-    beforeEach(() => {
-      process.chdir(path.join(__dirname, "fixtures", "init"));
+    beforeEach(async () => {
+      tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), "init-"));
+      process.chdir(tmpDir);
     });
 
     afterEach(async () => {
-      if (existsSync("./wrangler.toml")) {
-        await fsp.rm("./wrangler.toml");
-      }
       process.chdir(ogcwd);
+      await fsp.rm(tmpDir, { recursive: true });
     });
 
     it("should create a wrangler.toml", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
       await w("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
@@ -152,10 +162,16 @@ describe("wrangler", () => {
 
     it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
       fs.closeSync(fs.openSync("./wrangler.toml", "w"));
-      mockConfirm({
-        text: "Do you want to continue initializing this project?",
-        result: true,
-      });
+      mockConfirm(
+        {
+          text: "Do you want to continue initializing this project?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: false,
+        }
+      );
       const { stderr } = await w("init");
       expect(stderr).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
