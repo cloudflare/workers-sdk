@@ -16,9 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Copy README.md
-        run: cp README.md packages/wrangler/README.md
-
       - name: Use Node.js 16.7
         uses: actions/setup-node@v2
         with:
@@ -42,7 +39,9 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npx changeset publish --tag beta
+          publish:
+            - cp README.md packages/wrangler/README.md
+            - npx changeset publish --tag beta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
