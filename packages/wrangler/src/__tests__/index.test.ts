@@ -26,8 +26,8 @@ jest.mock("../dialogs", () => {
  * then an error is thrown.
  */
 function mockConfirm(...expectations: { text: string; result: boolean }[]) {
-  // @ts-expect-error - we're mocking  the implementation of a function
-  // but typescript doesn't know we've replaced confirm up there
+  // @ts-expect-error - we're mocking the implementation of confirm()
+  // but typescript doesn't know we've previously replaced confirm with a mock
   confirm.mockImplementationOnce((text: string) => {
     for (const { text: expectedText, result } of expectations) {
       if (text === expectedText) {
