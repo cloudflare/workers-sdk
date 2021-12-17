@@ -11,9 +11,7 @@ jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
 jest.mock("../dialogs", () => {
   return {
-    // @ts-expect-error typescript doesn't know that jest.requireActual
-    // returns the 'object' form of the dialogs module
-    ...jest.requireActual("../dialogs"),
+    ...jest.requireActual<object>("../dialogs"),
     confirm: jest.fn().mockName("confirmMock"),
   };
 });
@@ -26,9 +24,7 @@ jest.mock("../dialogs", () => {
  * then an error is thrown.
  */
 function mockConfirm(...expectations: { text: string; result: boolean }[]) {
-  // @ts-expect-error - we're mocking the implementation of confirm()
-  // but typescript doesn't know we've previously replaced confirm with a mock
-  confirm.mockImplementationOnce((text: string) => {
+  (confirm as jest.Mock).mockImplementationOnce((text: string) => {
     for (const { text: expectedText, result } of expectations) {
       if (text === expectedText) {
         return result;
