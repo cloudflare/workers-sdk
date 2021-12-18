@@ -724,10 +724,38 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
+
+        const functionsCompiler = spawn(
+          "node",
+          [
+            "/Users/gregbrimble/Developer/wrangler2/packages/pages-functions-compiler/bin/pages-functions-compiler.mjs",
+            "build",
+            functionsDirectory,
+            "--outfile",
+            scriptPath,
+            "--watch",
+          ],
+          {
+            shell: isWindows(),
+          }
+        );
+
+        functionsCompiler.stdout.on("data", (data) => {
+          console.log(`[pages-functions-compiler]: ${data}`);
+        });
+
+        functionsCompiler.stderr.on("data", (data) => {
+          console.error(`[pages-functions-compiler]: ${data}`);
+        });
+
+        functionsCompiler.on("close", (code) => {
+          console.error(`pages-functions-compiler exited with status ${code}.`);
+        });
+
+        RUNNING_PROCESSES.push(functionsCompiler);
+
         miniflareArgs = {
           scriptPath,
-          buildWatchPaths: [functionsDirectory],
-          buildCommand: `npx @cloudflare/pages-functions-compiler build ${functionsDirectory} --outfile ${scriptPath}`,
         };
       } else {
         const scriptPath =
