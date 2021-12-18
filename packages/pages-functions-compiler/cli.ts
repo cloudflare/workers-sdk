@@ -1,15 +1,10 @@
 #!/usr/bin/env node
 
-import path from "path";
-import fs from "fs/promises";
-import os from "os";
 import { Command } from "commander";
-import { Config, writeRoutesModule } from "./routes";
-import { buildWorker } from "./buildWorker";
 import pkg from "./package.json";
-import { generateConfigFromFileTree } from "./filepath-routing";
+import { build } from "./build";
 
-type Options = {
+export type Options = {
   minify: boolean;
   config: string;
   outfile: string;
@@ -47,43 +42,5 @@ program
   .option("-R, --outputConfig <filepath>", "path to output JSON file of config")
   .option("-b, --baseURL <path>", "path to use as a base URL for all routes")
   .action(build);
-
-async function build(
-  baseDir,
-  {
-    minify = false,
-    config: configPath,
-    outfile = "out/worker-bundle.mjs",
-    outputConfig = "",
-    baseURL = "/",
-  }: Options
-) {
-  let config: Config;
-  if (configPath) {
-    config = JSON.parse(await fs.readFile(configPath, "utf-8"));
-  } else {
-    config = await generateConfigFromFileTree({ baseDir, baseURL });
-  }
-
-  const tmpDir = await fs.mkdtemp(
-    path.join(os.tmpdir(), "pages-functions-compiler-")
-  );
-  const routesModule = path.join(tmpDir, "routes.mjs");
-
-  await writeRoutesModule({
-    config,
-    srcDir: baseDir,
-    outfile: routesModule,
-  });
-
-  await buildWorker({ routesModule, outfile, minify });
-
-  if (outputConfig) {
-    await fs.writeFile(
-      outputConfig,
-      JSON.stringify({ ...config, baseURL }, null, 2)
-    );
-  }
-}
 
 program.parse();
