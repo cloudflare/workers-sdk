@@ -32,9 +32,6 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
-      - name: Copy README.md
-        run: cp README.md packages/wrangler/README.md
-
       - name: Modify package.json version
         run: node .github/version-script.js
 
