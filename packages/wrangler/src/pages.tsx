@@ -2,13 +2,24 @@ import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { existsSync, lstatSync, readFileSync } from "fs";
-import { execSync, spawn } from "child_process";
+import { ChildProcess, execSync, spawn } from "child_process";
 import { Headers, Request, Response } from "undici";
 import type { MiniflareOptions } from "miniflare";
 import type { RequestInfo, RequestInit } from "undici";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
+
+const RUNNING_PROCESSES: ChildProcess[] = [];
+const EXIT = (message?: string) => {
+  if (message) console.log(message);
+  RUNNING_PROCESSES.forEach((runningProcess) => runningProcess.kill());
+
+  return undefined;
+};
+
+process.on("SIGINT", () => EXIT());
+process.on("SIGTERM", () => EXIT());
 
 type Exit = (message?: string) => undefined;
 
@@ -80,14 +91,8 @@ const spawnProxyProcess = async ({
   port?: number;
   command: (string | number)[];
 }) => {
-  const exit: Exit = (message) => {
-    if (message) console.error(message);
-    if (proxy) proxy.kill();
-    return undefined;
-  };
-
   if (command.length === 0)
-    return exit(
+    return EXIT(
       "Must specify a directory of static assets to serve or a command to run."
     );
 
@@ -131,7 +136,7 @@ const spawnProxyProcess = async ({
       .filter((port) => port !== undefined)[0];
 
     if (port === undefined) {
-      return exit(
+      return EXIT(
         "Could not automatically determine proxy port. Please specify the proxy port with --proxy."
       );
     } else {
@@ -139,7 +144,7 @@ const spawnProxyProcess = async ({
     }
   }
 
-  return { port, exit };
+  return { port };
 };
 
 const escapeRegex = (str: string) => {
@@ -693,10 +698,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       const command = remaining as (string | number)[];
 
       let proxyPort: number | undefined;
-      let exit: Exit = (message) => {
-        console.error(message);
-        return undefined;
-      };
 
       if (directory === undefined) {
         const proxy = await spawnProxyProcess({
@@ -705,11 +706,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         });
         if (proxy === undefined) return undefined;
 
-        exit = proxy.exit;
         proxyPort = proxy.port;
-
-        process.on("SIGINT", () => exit());
-        process.on("SIGTERM", () => exit());
       }
 
       let miniflareArgs: MiniflareOptions = {};
@@ -728,7 +725,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             : singleWorkerScriptPath;
 
         if (!existsSync(scriptPath)) {
-          return exit(
+          return EXIT(
             `No Worker script found at ${scriptPath}. Please either create a functions directory or create a single Worker at ${scriptPath}.`
           );
         }
