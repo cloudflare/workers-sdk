@@ -1,7 +1,7 @@
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { existsSync, lstatSync, readFileSync } from "fs";
+import { closeSync, existsSync, lstatSync, openSync, readFileSync } from "fs";
 import { ChildProcess, execSync, spawn } from "child_process";
 import { Headers, Request, Response } from "undici";
 import type { MiniflareOptions } from "miniflare";
@@ -713,10 +713,40 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
+
+        closeSync(openSync(scriptPath, "w"));
+
+        const functionsCompiler = spawn(
+          "node",
+          [
+            "/Users/gregbrimble/Developer/wrangler2/packages/pages-functions-compiler/bin/pages-functions-compiler.mjs",
+            "build",
+            functionsDirectory,
+            "--outfile",
+            scriptPath,
+            "--watch",
+          ],
+          {
+            shell: isWindows(),
+          }
+        );
+
+        functionsCompiler.stdout.on("data", (data) => {
+          console.log(`[pages-functions-compiler]: ${data}`);
+        });
+
+        functionsCompiler.stderr.on("data", (data) => {
+          console.error(`[pages-functions-compiler]: ${data}`);
+        });
+
+        functionsCompiler.on("close", (code) => {
+          console.error(`pages-functions-compiler exited with status ${code}.`);
+        });
+
+        RUNNING_PROCESSES.push(functionsCompiler);
+
         miniflareArgs = {
           scriptPath,
-          buildWatchPaths: [functionsDirectory],
-          buildCommand: `npx @cloudflare/pages-functions-compiler build ${functionsDirectory} --outfile ${scriptPath}`,
         };
       } else {
         const scriptPath =
