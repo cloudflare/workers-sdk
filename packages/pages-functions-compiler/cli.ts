@@ -10,6 +10,7 @@ export type Options = {
   outfile: string;
   outputConfig;
   baseURL: string;
+  watch: boolean;
 };
 
 const program = new Command();
@@ -41,6 +42,7 @@ program
   .option("-m, --minify", "minify the output")
   .option("-R, --outputConfig <filepath>", "path to output JSON file of config")
   .option("-b, --baseURL <path>", "path to use as a base URL for all routes")
+  .option("-w, --watch", "rebuild on changes")
   .action(build);
 
 program.parse();

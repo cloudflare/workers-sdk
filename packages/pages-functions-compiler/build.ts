@@ -14,6 +14,7 @@ export async function build(
     outfile = "out/worker-bundle.mjs",
     outputConfig = "",
     baseURL = "/",
+    watch = false,
   }: Options
 ) {
   let config: Config;
@@ -34,7 +35,7 @@ export async function build(
     outfile: routesModule,
   });
 
-  await buildWorker({ routesModule, outfile, minify });
+  await buildWorker({ routesModule, outfile, minify, watch });
 
   if (outputConfig) {
     await fs.writeFile(
