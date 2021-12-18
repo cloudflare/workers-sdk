@@ -144,8 +144,49 @@ describe("wrangler", () => {
         result: false,
       });
       await w("init");
+      expect(fs.existsSync("./wrangler.toml")).toBe(true);
+    });
+
+    it("should add a compatibility date to the wrangler.toml", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
+      await w("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
+    });
+
+    it("should add the current directory as the name to the wrangler.toml, if no name is specified", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
+      await w("init");
+      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      expect(parsed.name).toEqual(path.basename(tmpDir).toLowerCase());
+    });
+
+    it("should add a specified name to the wrangler.toml", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
+      await w("init foo-bar");
+      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      expect(parsed.name).toEqual("foo-bar");
+    });
+
+    it("should error if a specified name is not valid", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
+      const { stderr } = await w("init FOO!!BAR");
+      expect(fs.existsSync("./wrangler.toml")).toBe(false);
+      expect(stderr).toMatchInlineSnapshot(
+        `"Worker name \\"FOO!!BAR\\" invalid. Ensure that you only use lowercase letters, dashes, underscores, and numbers."`
+      );
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {

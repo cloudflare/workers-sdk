@@ -7,6 +7,7 @@ import { hideBin } from "yargs/helpers";
 import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
+import { validateWorkerName } from "./config";
 import type { Config } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { version as wranglerVersion } from "../package.json";
@@ -82,7 +83,7 @@ async function readConfig(path?: string): Promise<Config> {
   const mirroredFields = ["vars", "kv_namespaces", "durable_objects"];
   Object.keys(config.env || {}).forEach((env) => {
     mirroredFields.forEach((field) => {
-      // if it exists on top level, it should exist on env defns
+      // if it exists on top level, it should exist on env definitions
       Object.keys(config[field] || {}).forEach((fieldKey) => {
         if (!(fieldKey in config.env[env][field])) {
           console.error(
@@ -188,6 +189,12 @@ export async function main(argv: string[]): Promise<void> {
       });
     },
     async (args) => {
+      const name =
+        "name" in args ? args.name : path.basename(process.cwd()).toLowerCase();
+      if (!validateWorkerName(name)) {
+        return;
+      }
+
       if ("type" in args) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
@@ -214,9 +221,12 @@ export async function main(argv: string[]): Promise<void> {
       try {
         await writeFile(
           destination,
-          `compatibility_date = "${compatibilityDate}"` + "\n"
+          [
+            `name = "${name}"`,
+            `compatibility_date = "${compatibilityDate}"`,
+          ].join("\n")
         );
-        console.log(`✨ Succesfully created wrangler.toml`);
+        console.log(`✨ Successfully created wrangler.toml`);
         // TODO: suggest next steps?
       } catch (err) {
         console.error(`Failed to create wrangler.toml`);
@@ -339,7 +349,7 @@ export async function main(argv: string[]): Promise<void> {
       await login();
 
       // TODO: would be nice if it optionally saved login
-      // creds inside node_modules/.cache or something
+      // credentials inside node_modules/.cache or something
       // this way you could have multiple users on a single machine
     }
   );
@@ -1568,7 +1578,7 @@ export async function main(argv: string[]): Promise<void> {
             // -- snip, end --
 
             // annoyingly, the API for this one doesn't return the
-            // data in the 'standard' format. goddamit.
+            // data in the 'standard' format. goddammit.
             // That's why we have the fallthrough response in cfetch.
             // Oh well.
             console.log(

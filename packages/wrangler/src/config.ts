@@ -120,3 +120,13 @@ export type Config = {
   build?: Build;
   env?: { [envName: string]: void | Env };
 };
+
+export function validateWorkerName(name: string): boolean {
+  if (!/^[a-z0-9_][a-z0-9-_]*$/.test(name)) {
+    console.error(
+      `Worker name "${name}" invalid. Ensure that you only use lowercase letters, dashes, underscores, and numbers.`
+    );
+    return false;
+  }
+  return true;
+}
