@@ -7,12 +7,14 @@ type Options = {
   routesModule: string;
   outfile: string;
   minify?: boolean;
+  watch?: boolean;
 };
 
 export function buildWorker({
   routesModule,
   outfile = "bundle.js",
   minify = false,
+  watch = false,
 }: Options) {
   console.log(`Compiling worker to "${outfile}"`);
   return build({
@@ -28,6 +30,7 @@ export function buildWorker({
     target: "esnext",
     outfile,
     minify,
+    watch,
     allowOverwrite: true,
   });
 }
