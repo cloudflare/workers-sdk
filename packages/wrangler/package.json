@@ -46,8 +46,6 @@
   },
   "devDependencies": {
     "@iarna/toml": "^2.2.5",
-    "@types/cloudflare": "^2.7.6",
-    "@types/express": "^4.17.13",
     "@types/react": "^17.0.37",
     "@types/signal-exit": "^3.0.1",
     "@types/ws": "^8.2.1",
