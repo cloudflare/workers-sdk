@@ -1,3 +1,12 @@
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "cSpell.words": [
+    "bleh",
+    "cfetch",
+    "cloudflareworkers",
+    "execa",
+    "iarna",
+    "Miniflare",
+    "ogcwd"
+  ]
 }
