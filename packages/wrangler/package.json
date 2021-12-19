@@ -38,7 +38,7 @@
   "dependencies": {
     "@cloudflare/pages-functions-compiler": "0.3.8",
     "esbuild": "0.14.1",
-    "miniflare": "2.0.0-rc.3",
+    "miniflare": "^2.0.0-rc.4",
     "semiver": "^1.1.0"
   },
   "optionalDependencies": {
@@ -66,13 +66,13 @@
     "open": "^8.4.0",
     "path-to-regexp": "^6.2.0",
     "react": "^17.0.2",
+    "react-error-boundary": "^3.1.4",
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.6",
     "tmp-promise": "^3.0.3",
     "undici": "^4.11.1",
     "ws": "^8.3.0",
-    "yargs": "^17.3.0",
-    "react-error-boundary": "^3.1.4"
+    "yargs": "^17.3.0"
   },
   "files": [
     "src",

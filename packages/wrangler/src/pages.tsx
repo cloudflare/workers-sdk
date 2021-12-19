@@ -717,43 +717,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       const { fetch } = await import("@miniflare/core");
 
       class MiniflareLogger extends Log {
-        logWithLevel(level: number, message: string) {
-          if (level <= this.level) {
-            switch (level) {
-              case LogLevel.NONE: {
-                break;
-              }
-              case LogLevel.ERROR: {
-                console.error(message);
-                break;
-              }
-              case LogLevel.WARN: {
-                console.warn(message);
-                break;
-              }
-              case LogLevel.INFO: {
-                console.info(message);
-                break;
-              }
-              case LogLevel.DEBUG: {
-                console.debug(message);
-                break;
-              }
-              case LogLevel.VERBOSE: {
-                console.debug(message);
-                break;
-              }
-            }
-          }
-        }
-
-        log(_message: string) {}
-
-        error(message: Error) {
-          this.logWithLevel(
-            LogLevel.ERROR,
-            message.stack ? message.stack : `${message}`
-          );
+        log(message: string) {
+          message = message.replace("[mf:", "[pages:");
+          console.log(message);
         }
       }
 
@@ -763,6 +729,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         modules: true,
 
         log: new MiniflareLogger(LogLevel.ERROR),
+        logUnhandledRejections: true,
+        sourceMap: true,
 
         kvNamespaces: kvs.map((kv) => kv.toString()),
 
