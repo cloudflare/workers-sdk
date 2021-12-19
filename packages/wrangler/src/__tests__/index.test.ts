@@ -146,6 +146,8 @@ describe("wrangler", () => {
       await w("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
+      expect(fs.existsSync("./package.json")).toBe(false);
+      expect(fs.existsSync("./tsconfig.json")).toBe(false);
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
@@ -176,6 +178,144 @@ describe("wrangler", () => {
       expect(stderr).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
+    });
+
+    it("should create a package.json if none is found and user confirms", async () => {
+      mockConfirm(
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use typescript?",
+          result: false,
+        }
+      );
+      await w("init");
+      expect(fs.existsSync("./package.json")).toBe(true);
+      const packageJson = JSON.parse(
+        fs.readFileSync("./package.json", "utf-8")
+      );
+      expect(packageJson.name).toEqual("worker"); // TODO: should we infer the name from the directory?
+      expect(packageJson.version).toEqual("0.0.1");
+      expect(fs.existsSync("./tsconfig.json")).toBe(false);
+    });
+
+    it("should not touch an existing package.json in the same directory", async () => {
+      mockConfirm({
+        text: "Would you like to use typescript?",
+        result: false,
+      });
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      await w("init");
+      const packageJson = JSON.parse(
+        fs.readFileSync("./package.json", "utf-8")
+      );
+      expect(packageJson.name).toEqual("test");
+      expect(packageJson.version).toEqual("1.0.0");
+    });
+
+    it("should not touch an existing package.json in an ancestor directory", async () => {
+      mockConfirm({
+        text: "Would you like to use typescript?",
+        result: false,
+      });
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      fs.mkdirSync("./sub-1/sub-2", { recursive: true });
+      process.chdir("./sub-1/sub-2");
+
+      await w("init");
+      expect(fs.existsSync("./package.json")).toBe(false);
+      expect(fs.existsSync("../../package.json")).toBe(true);
+
+      const packageJson = JSON.parse(
+        fs.readFileSync("../../package.json", "utf-8")
+      );
+      expect(packageJson.name).toEqual("test");
+      expect(packageJson.version).toEqual("1.0.0");
+    });
+
+    it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
+      mockConfirm(
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use typescript?",
+          result: true,
+        }
+      );
+      await w("init");
+      expect(fs.existsSync("./tsconfig.json")).toBe(true);
+      const tsconfigJson = JSON.parse(
+        fs.readFileSync("./tsconfig.json", "utf-8")
+      );
+      expect(tsconfigJson.compilerOptions.types).toEqual([
+        "@cloudflare/workers-types",
+      ]);
+      const packageJson = JSON.parse(
+        fs.readFileSync("./package.json", "utf-8")
+      );
+      expect(packageJson.devDependencies).toEqual({
+        "@cloudflare/workers-types": expect.any(String),
+      });
+    });
+
+    it("should not touch an existing tsconfig.json in the same directory", async () => {
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+      fs.writeFileSync(
+        "./tsconfig.json",
+        JSON.stringify({ compilerOptions: {} }),
+        "utf-8"
+      );
+
+      await w("init");
+      const tsconfigJson = JSON.parse(
+        fs.readFileSync("./tsconfig.json", "utf-8")
+      );
+      expect(tsconfigJson.compilerOptions).toEqual({});
+    });
+
+    it("should not touch an existing package.json in an ancestor directory", async () => {
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+      fs.writeFileSync(
+        "./tsconfig.json",
+        JSON.stringify({ compilerOptions: {} }),
+        "utf-8"
+      );
+
+      fs.mkdirSync("./sub-1/sub-2", { recursive: true });
+      process.chdir("./sub-1/sub-2");
+
+      await w("init");
+      expect(fs.existsSync("./tsconfig.json")).toBe(false);
+      expect(fs.existsSync("../../tsconfig.json")).toBe(true);
+
+      const tsconfigJson = JSON.parse(
+        fs.readFileSync("../../tsconfig.json", "utf-8")
+      );
+      expect(tsconfigJson.compilerOptions).toEqual({});
     });
 
     it("should error if `--type` is used", async () => {
