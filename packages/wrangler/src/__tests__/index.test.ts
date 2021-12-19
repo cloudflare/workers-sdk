@@ -209,57 +209,74 @@ describe("wrangler", () => {
   });
 
   describe("kv:namespace", () => {
-    afterAll(() => {
+    afterEach(() => {
       unsetAllMocks();
     });
-    let KVNamespaces: { title: string; id: string }[] = [];
+
     it("can create a namespace", async () => {
+      const KVNamespaces: { title: string; id: string }[] = [];
       setMock("/accounts/:accountId/storage/kv/namespaces", (uri, init) => {
         expect(init.method === "POST");
-        const body = JSON.parse(init.body);
-        expect(body.title).toBe("worker-UnitTestNamespace");
-        KVNamespaces.push({ title: body.title, id: "some-namespace-id" });
+        expect(uri[0]).toEqual(
+          "/accounts/some-account-id/storage/kv/namespaces"
+        );
+        const { title } = JSON.parse(init.body);
+        expect(title).toEqual("worker-UnitTestNamespace");
+        KVNamespaces.push({ title, id: "some-namespace-id" });
         return { id: "some-namespace-id" };
       });
 
       await w("kv:namespace create UnitTestNamespace");
-      expect(
-        KVNamespaces.find((ns) => ns.title === `worker-UnitTestNamespace`)
-      ).toBeTruthy();
+
+      expect(KVNamespaces).toEqual([
+        {
+          title: "worker-UnitTestNamespace",
+          id: "some-namespace-id",
+        },
+      ]);
     });
 
-    let createdNamespace: { id: string; title: string };
     it("can list namespaces", async () => {
+      const KVNamespaces: { title: string; id: string }[] = [
+        { title: "title-1", id: "id-1" },
+        { title: "title-2", id: "id-2" },
+      ];
       setMock(
         "/accounts/:accountId/storage/kv/namespaces\\?:qs",
         (uri, init) => {
+          expect(uri[0]).toContain(
+            "/accounts/some-account-id/storage/kv/namespaces"
+          );
+          expect(uri[2]).toContain("per_page=100");
+          expect(uri[2]).toContain("order=title");
+          expect(uri[2]).toContain("direction=asc");
+          expect(uri[2]).toContain("page=1");
           expect(init).toBe(undefined);
           return KVNamespaces;
         }
       );
       const { stdout } = await w("kv:namespace list");
-      const namespaces = JSON.parse(stdout);
-      createdNamespace = namespaces.find(
-        (ns) => ns.title === "worker-UnitTestNamespace"
-      );
-      expect(createdNamespace.title).toBe("worker-UnitTestNamespace");
+      const namespaces = JSON.parse(stdout) as { id: string; title: string }[];
+      expect(namespaces).toEqual(KVNamespaces);
     });
 
     it("can delete a namespace", async () => {
-      const namespaceIdToDelete = createdNamespace.id;
+      let accountId = "";
+      let namespaceId = "";
       setMock(
         "/accounts/:accountId/storage/kv/namespaces/:namespaceId",
         (uri, init) => {
-          expect(init.method).toBe("DELETE");
-          KVNamespaces = KVNamespaces.filter(
-            (ns) => ns.id !== namespaceIdToDelete
+          accountId = uri[1];
+          namespaceId = uri[2];
+          expect(uri[0]).toEqual(
+            "/accounts/some-account-id/storage/kv/namespaces/some-namespace-id"
           );
+          expect(init.method).toBe("DELETE");
         }
       );
-      await w(`kv:namespace delete --namespace-id ${namespaceIdToDelete}`);
-      expect(KVNamespaces.find((ns) => ns.id === namespaceIdToDelete)).toBe(
-        undefined
-      );
+      await w(`kv:namespace delete --namespace-id some-namespace-id`);
+      expect(accountId).toEqual("some-account-id");
+      expect(namespaceId).toEqual("some-namespace-id");
     });
   });
 });
