@@ -1858,21 +1858,9 @@ export async function main(argv: string[]): Promise<void> {
   yargs.group(["config", "help", "version"], "Flags:");
   yargs.help().alias("h", "help");
   yargs.version(wranglerVersion).alias("v", "version");
+  yargs.exitProcess(false);
+
   await initialiseUserConfig();
 
-  await yargs.parse(
-    argv
-    /* TODO: we'd like to use the parse callback, 
-    but there's a serious bug with it 
-    https://github.com/yargs/yargs/issues/1975#issuecomment-874237906
-    
-    , (err, argv, output) => {
-      if (output) {
-        console.log(output);
-      }
-      console.log({ err });
-      console.log("what now");
-    } 
-  */
-  );
+  await yargs.parse(argv);
 }
