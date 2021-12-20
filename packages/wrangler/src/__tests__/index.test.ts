@@ -5,7 +5,7 @@ import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
-import { mockConfirm } from "./mock-confirm";
+import { mockConfirm } from "./mock-dialogs";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 
