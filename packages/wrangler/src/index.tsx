@@ -216,7 +216,7 @@ export async function main(argv: string[]): Promise<void> {
           destination,
           `compatibility_date = "${compatibilityDate}"` + "\n"
         );
-        console.log(`✨ Succesfully created wrangler.toml`);
+        console.log(`✨ Successfully created wrangler.toml`);
         // TODO: suggest next steps?
       } catch (err) {
         console.error(`Failed to create wrangler.toml`);
@@ -260,9 +260,17 @@ export async function main(argv: string[]): Promise<void> {
             JSON.stringify(
               {
                 compilerOptions: {
-                  target: "ES2020",
-                  module: "CommonJS",
-                  lib: ["ES2020"],
+                  target: "esnext",
+                  module: "esnext",
+                  moduleResolution: "node",
+                  esModuleInterop: true,
+                  allowJs: true,
+                  allowSyntheticDefaultImports: true,
+                  isolatedModules: true,
+                  noEmit: true,
+                  lib: ["esnext"],
+                  jsx: "react",
+                  resolveJsonModule: true,
                   types: ["@cloudflare/workers-types"],
                 },
               },
@@ -1568,7 +1576,7 @@ export async function main(argv: string[]): Promise<void> {
             // -- snip, end --
 
             // annoyingly, the API for this one doesn't return the
-            // data in the 'standard' format. goddamit.
+            // data in the 'standard' format. goddammit.
             // That's why we have the fallthrough response in cfetch.
             // Oh well.
             console.log(

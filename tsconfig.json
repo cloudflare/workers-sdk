@@ -12,6 +12,5 @@
     "jsx": "react",
     "resolveJsonModule": true
   },
-  "lib": ["esnext"],
   "exclude": ["node_modules/", "packages/wrangler/vendor"]
 }
