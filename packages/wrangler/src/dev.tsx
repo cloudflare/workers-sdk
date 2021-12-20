@@ -1,5 +1,6 @@
 import esbuild from "esbuild";
 import { readFile } from "fs/promises";
+import { existsSync } from "fs";
 import type { DirectoryResult } from "tmp-promise";
 import tmp from "tmp-promise";
 import type { CfPreviewToken } from "./api/preview";
@@ -16,7 +17,6 @@ import onExit from "signal-exit";
 import { syncAssets } from "./sites";
 import clipboardy from "clipboardy";
 import http from "node:http";
-import serveStatic from "serve-static";
 import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
@@ -24,6 +24,7 @@ import fetch from "node-fetch";
 import makeModuleCollector from "./module-collection";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import { createHttpProxy } from "./proxy";
+import { execa } from "execa";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -42,6 +43,7 @@ type Props = {
   compatibilityDate: void | string;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
+  buildCommand: { command: void | string; cwd: void | string };
 };
 
 function Dev(props: Props): JSX.Element {
@@ -54,8 +56,13 @@ function Dev(props: Props): JSX.Element {
   const apiToken = getAPIToken();
   const directory = useTmpDir();
 
+  // is there isn't a build command, we just return the entry immediately
+  // ideally there would be a conditional here, but the rules of hooks
+  // kinda forbid that, so we thread the entry through useCustomBuild
+  const entry = useCustomBuild(props.entry, props.buildCommand);
+
   const bundle = useEsbuild({
-    entry: props.entry,
+    entry,
     destination: directory,
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
@@ -361,6 +368,50 @@ function useTmpDir(): string | void {
   return directory?.path;
 }
 
+function useCustomBuild(
+  expectedEntry: string,
+  props: {
+    command: void | string;
+    cwd: void | string;
+  }
+): void | string {
+  const [entry, setEntry] = useState<string | void>(
+    // if there's no build command, just return the expected entry
+    props.command ? null : expectedEntry
+  );
+  const { command, cwd } = props;
+  useEffect(() => {
+    if (!command) return;
+    let cmd, interval;
+    console.log("running:", command);
+    const commandPieces = command.split(" ");
+    cmd = execa(commandPieces[0], commandPieces.slice(1), {
+      ...(cwd && { cwd }),
+      stderr: "inherit",
+      stdout: "inherit",
+    });
+
+    // check every so often whether `expectedEntry` exists
+    // if it does, we're done
+    interval = setInterval(() => {
+      if (existsSync(expectedEntry)) {
+        clearInterval(interval);
+        setEntry(expectedEntry);
+      }
+    }, 200);
+    // TODO: we could probably timeout here after a while
+
+    return () => {
+      if (cmd) {
+        cmd.kill();
+        cmd = undefined;
+      }
+      clearInterval(interval);
+    };
+  }, [command, cwd]);
+  return entry;
+}
+
 type EsbuildBundle = {
   id: number;
   path: string;
@@ -371,7 +422,7 @@ type EsbuildBundle = {
 };
 
 function useEsbuild(props: {
-  entry: string;
+  entry: void | string;
   destination: string | void;
   staticRoot: void | string;
   jsxFactory: string | void;
@@ -382,7 +433,7 @@ function useEsbuild(props: {
   useEffect(() => {
     let result: esbuild.BuildResult;
     async function build() {
-      if (!destination) return;
+      if (!destination || !entry) return;
       const moduleCollector = makeModuleCollector();
       result = await esbuild.build({
         entryPoints: [entry],
