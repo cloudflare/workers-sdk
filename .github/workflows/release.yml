@@ -22,20 +22,22 @@ jobs:
           node-version: 16.7
 
       - uses: actions/cache@v2
+        id: cache
         with:
-          path: ~/.npm
+          path: |
+            node_modules
+            */*/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
-      - name: Install NPM dependencies
+      - name: Install NPM Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm install
 
       - name: Build
         run: npm run build
         working-directory: packages/wrangler
 
-      - name: Publish to NPM
+      - name: Create Version PR or Publish to NPM
         id: changesets
         uses: changesets/action@v1
         with:

@@ -4,32 +4,33 @@ on:
   workflow_run:
     workflows: ["Tests, Linter & Typecheck"]
     branches: ["main"]
-    types: 
+    types:
       - completed
 
 jobs:
   build:
-
     if: ${{ github.repository_owner == 'cloudflare' && github.event.workflow_run.conclusion == 'success' }}
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Use Node.js 16.7
         uses: actions/setup-node@v2
         with:
           node-version: 16.7
-      
-      - uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
-      - name: Install NPM dependencies
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install NPM Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm install
 
       - name: Copy README.md
