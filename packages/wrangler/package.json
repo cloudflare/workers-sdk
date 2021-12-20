@@ -109,6 +109,9 @@
           "sourcemap": true
         }
       ]
-    }
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/__tests__/jest.setup.ts"
+    ]
   }
 }

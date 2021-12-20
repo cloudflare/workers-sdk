@@ -1,7 +1,4 @@
-import * as dialogs from "../dialogs";
-
-// This assignment just avoids casting later on.
-const confirm = dialogs.confirm as jest.Mock;
+import { confirm } from "../dialogs";
 
 /**
  * The expected values for a confirmation request.
@@ -21,7 +18,7 @@ export interface ConfirmExpectation {
  * then an error is thrown.
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
-  confirm.mockImplementation((text: string) => {
+  (confirm as jest.Mock).mockImplementation((text: string) => {
     for (const { text: expectedText, result } of expectations) {
       if (text === expectedText) {
         return Promise.resolve(result);
@@ -30,8 +27,3 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
     throw new Error(`Unexpected confirmation message: ${text}`);
   });
 }
-
-// By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
-confirm.mockImplementation(() => {
-  throw new Error("Unexpected call to `confirm()`.");
-});

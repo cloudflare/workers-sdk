@@ -8,7 +8,6 @@ import { setMock, unsetAllMocks } from "./mock-cfetch";
 import { mockConfirm } from "./mock-confirm";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
-jest.mock("../dialogs");
 
 async function w(cmd?: string) {
   const logSpy = jest.spyOn(console, "log").mockImplementation();
