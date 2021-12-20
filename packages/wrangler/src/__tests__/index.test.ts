@@ -5,40 +5,10 @@ import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { main } from "../index";
 import { setMock, unsetAllMocks } from "./mock-cfetch";
-import { confirm } from "../dialogs";
+import { mockConfirm } from "./mock-confirm";
 
 jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
-
-jest.mock("../dialogs", () => {
-  return {
-    ...jest.requireActual<object>("../dialogs"),
-    confirm: jest
-      .fn()
-      .mockName("confirmMock")
-      .mockImplementation(() => {
-        // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
-        throw new Error("Unexpected call to `confirm()`.");
-      }),
-  };
-});
-
-/**
- * Mock the implementation of `confirm()` that will respond with configured results
- * for configured confirmation text messages.
- *
- * If there is a call to `confirm()` that does not match any of the expectations
- * then an error is thrown.
- */
-function mockConfirm(...expectations: { text: string; result: boolean }[]) {
-  (confirm as jest.Mock).mockImplementation((text: string) => {
-    for (const { text: expectedText, result } of expectations) {
-      if (text === expectedText) {
-        return result;
-      }
-    }
-    throw new Error(`Unexpected confirmation message: ${text}`);
-  });
-}
+jest.mock("../dialogs");
 
 async function w(cmd?: string) {
   const logSpy = jest.spyOn(console, "log").mockImplementation();
