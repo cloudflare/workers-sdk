@@ -407,6 +407,7 @@ function useCustomBuild(
         cmd = undefined;
       }
       clearInterval(interval);
+      interval = undefined;
     };
   }, [command, cwd]);
   return entry;
