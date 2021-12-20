@@ -21,13 +21,14 @@ jobs:
           node-version: ${{ matrix.node_version }}
 
       - uses: actions/cache@v2
+        id: node-modules-cache
         with:
-          path: ~/.npm
+          path: |
+            node_modules
+            */*/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
-      - name: Install NPM dependencies
+      - name: Install NPM Dependencies
         run: npm install
 
       - name: Copy README.md
