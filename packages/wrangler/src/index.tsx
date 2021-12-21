@@ -491,7 +491,7 @@ export async function main(argv: string[]): Promise<void> {
       render(
         <Dev
           name={args.name || config.name}
-          entry={filename}
+          entry={path.relative(process.cwd(), filename)}
           buildCommand={config.build || {}}
           format={format}
           initialMode={args.local ? "local" : "remote"}
