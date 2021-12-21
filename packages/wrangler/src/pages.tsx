@@ -726,8 +726,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       let miniflareArgs: MiniflareOptions = {};
 
-      let functionsCompiler: Promise<BuildResult>;
-
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
         const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
@@ -743,7 +741,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           outfile: routesModule,
         });
 
-        functionsCompiler = buildWorker({
+        buildWorker({
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
