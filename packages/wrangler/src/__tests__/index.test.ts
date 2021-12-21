@@ -41,9 +41,10 @@ describe("wrangler", () => {
 
   describe("invalid command", () => {
     it("should display an error", async () => {
-      const { stdout, stderr } = await runWrangler("invalid-command");
+      const { error, stdout, stderr } = await runWrangler("invalid-command");
 
-      expect(stdout).toMatchInlineSnapshot(`
+      expect(stdout).toMatchInlineSnapshot(`""`);
+      expect(stderr).toMatchInlineSnapshot(`
         "wrangler
 
         Commands:
@@ -63,13 +64,13 @@ describe("wrangler", () => {
           -v, --version  Show version number  [boolean]
 
         Options:
-          -l, --local  Run on my machine  [boolean] [default: false]"
-      `);
+          -l, --local  Run on my machine  [boolean] [default: false]
 
-      expect(stderr).toMatchInlineSnapshot(`
-        "
         Unknown command: invalid-command."
       `);
+      expect(error).toMatchInlineSnapshot(
+        `[Error: Unknown command: invalid-command.]`
+      );
     });
   });
 
@@ -92,8 +93,8 @@ describe("wrangler", () => {
         text: "Do you want to continue initializing this project?",
         result: false,
       });
-      const { stderr } = await runWrangler("init");
-      expect(stderr).toContain("wrangler.toml file already exists!");
+      const { warnings } = await runWrangler("init");
+      expect(warnings).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("undefined");
     });
@@ -110,8 +111,8 @@ describe("wrangler", () => {
           result: false,
         }
       );
-      const { stderr } = await runWrangler("init");
-      expect(stderr).toContain("wrangler.toml file already exists!");
+      const { warnings } = await runWrangler("init");
+      expect(warnings).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
     });
@@ -255,31 +256,31 @@ describe("wrangler", () => {
     });
 
     it("should error if `--type` is used", async () => {
-      const noValue = await runWrangler("init --type");
-      expect(noValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type javascript` is used", async () => {
-      const javascriptValue = await runWrangler("init --type javascript");
-      expect(javascriptValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type javascript");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type rust` is used", async () => {
-      const rustValue = await runWrangler("init --type rust");
-      expect(rustValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type rust");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type webpack` is used", async () => {
-      const webpackValue = await runWrangler("init --type webpack");
-      expect(webpackValue.stderr).toMatchInlineSnapshot(`
-        "The --type option is no longer supported.
-        If you wish to use webpack then you will need to create a custom build."
+      const { error } = await runWrangler("init --type webpack");
+      expect(error).toMatchInlineSnapshot(`
+        [Error: The --type option is no longer supported.
+        If you wish to use webpack then you will need to create a custom build.]
       `);
     });
   });

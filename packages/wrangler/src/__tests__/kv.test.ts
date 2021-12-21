@@ -26,7 +26,9 @@ describe("wrangler", () => {
       }
 
       it("should error if no namespace is given", async () => {
-        const { stdout, stderr } = await runWrangler("kv:namespace create");
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:namespace create"
+        );
         expect(stdout).toMatchInlineSnapshot(`""`);
         expect(stderr).toMatchInlineSnapshot(`
           "wrangler kv:namespace create <namespace>
@@ -45,12 +47,16 @@ describe("wrangler", () => {
             -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
+
           Not enough non-option arguments: got 0, need at least 1"
         `);
+        expect(error).toMatchInlineSnapshot(
+          `[Error: Not enough non-option arguments: got 0, need at least 1]`
+        );
       });
 
       it("should error if the namespace to create contains spaces", async () => {
-        const { stdout, stderr } = await runWrangler(
+        const { error, stdout, stderr } = await runWrangler(
           "kv:namespace create abc def ghi"
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
@@ -71,12 +77,16 @@ describe("wrangler", () => {
             -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
+
           Unexpected additional positional arguments \\"def ghi\\"."
         `);
+        expect(error).toMatchInlineSnapshot(
+          `[Error: Unexpected additional positional arguments "def ghi".]`
+        );
       });
 
       it("should error if the namespace to create is not valid", async () => {
-        const { stdout, stderr } = await runWrangler(
+        const { error, stdout, stderr } = await runWrangler(
           "kv:namespace create abc-def"
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
@@ -97,8 +107,12 @@ describe("wrangler", () => {
             -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
+
           The namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number."
         `);
+        expect(error).toMatchInlineSnapshot(
+          `[Error: The namespace binding name "abc-def" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.]`
+        );
       });
 
       it("should create a namespace", async () => {
@@ -280,6 +294,7 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to delete  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
+
           Not able to delete namespace.
           A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
         `);
