@@ -9,6 +9,7 @@ import cfetch from "./cfetch";
 import assert from "node:assert";
 import { syncAssets } from "./sites";
 import makeModuleCollector from "./module-collection";
+import { execa } from "execa";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -75,6 +76,17 @@ export default async function publish(props: Props): Promise<void> {
   const envName = props.env ?? "production";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
+
+  if (props.config.build?.command) {
+    // TODO: add a deprecation message here?
+    console.log("running:", props.config.build.command);
+    const buildCommandPieces = props.config.build.command.split(" ");
+    await execa(buildCommandPieces[0], buildCommandPieces.slice(1), {
+      stdout: "inherit",
+      stderr: "inherit",
+      ...(props.config.build?.cwd && { cwd: props.config.build.cwd }),
+    });
+  }
 
   const moduleCollector = makeModuleCollector();
   const result = await esbuild.build({

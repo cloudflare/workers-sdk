@@ -492,6 +492,7 @@ export async function main(argv: string[]): Promise<void> {
         <Dev
           name={args.name || config.name}
           entry={filename}
+          buildCommand={config.build || {}}
           format={format}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
