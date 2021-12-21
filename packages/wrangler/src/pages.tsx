@@ -14,6 +14,7 @@ import { watch } from "chokidar";
 import { buildWorker } from "../lib/functions/buildWorker";
 import { Config, writeRoutesModule } from "../lib/functions/routes";
 import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
+import { BuildResult } from "esbuild";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -725,6 +726,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       let miniflareArgs: MiniflareOptions = {};
 
+      let functionsCompiler: Promise<BuildResult>;
+
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
         const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
@@ -740,7 +743,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           outfile: routesModule,
         });
 
-        const functionsCompiler = buildWorker({
+        functionsCompiler = buildWorker({
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
