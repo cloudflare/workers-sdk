@@ -1,5 +1,11 @@
 # wrangler
 
+## 0.0.6
+
+### Patch Changes
+
+- 421f2e4: Update base version to 0.0.5, copy the README to packages/wrangler
+
 ## 0.0.5
 
 ### Patch Changes
