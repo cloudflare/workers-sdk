@@ -79,6 +79,7 @@
   "files": [
     "src",
     "bin",
+    "lib",
     "miniflare-config-stubs",
     "wrangler-dist",
     "static-asset-facade.js",
