@@ -11,6 +11,9 @@ import { URL } from "url";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
+import { buildWorker } from "../lib/functions/buildWorker";
+import { Config, writeRoutesModule } from "../lib/functions/routes";
+import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -724,35 +727,25 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
+        const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
 
-        const functionsCompiler = spawn(
-          "node",
-          [
-            "/Users/gregbrimble/Developer/wrangler2/packages/pages-functions-compiler/bin/pages-functions-compiler.mjs",
-            "build",
-            functionsDirectory,
-            "--outfile",
-            scriptPath,
-            "--watch",
-          ],
-          {
-            shell: isWindows(),
-          }
-        );
-
-        functionsCompiler.stdout.on("data", (data) => {
-          console.log(`[pages-functions-compiler]: ${data}`);
+        const config: Config = await generateConfigFromFileTree({
+          baseDir: functionsDirectory,
+          baseURL: "/",
         });
 
-        functionsCompiler.stderr.on("data", (data) => {
-          console.error(`[pages-functions-compiler]: ${data}`);
+        await writeRoutesModule({
+          config,
+          srcDir: functionsDirectory,
+          outfile: routesModule,
         });
 
-        functionsCompiler.on("close", (code) => {
-          console.error(`pages-functions-compiler exited with status ${code}.`);
+        const functionsCompiler = buildWorker({
+          routesModule,
+          outfile: scriptPath,
+          minify: false, // TODO: Expose option to enable
+          watch: true,
         });
-
-        RUNNING_PROCESSES.push(functionsCompiler);
 
         miniflareArgs = {
           scriptPath,
@@ -763,15 +756,24 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ? join(directory, singleWorkerScriptPath)
             : singleWorkerScriptPath;
 
-        if (!existsSync(scriptPath)) {
-          return EXIT(
-            `No Worker script found at ${scriptPath}. Please either create a functions directory or create a single Worker at ${scriptPath}.`
-          );
+        if (existsSync(scriptPath)) {
+          miniflareArgs = {
+            scriptPath,
+          };
+        } else {
+          console.log("No functions. Shimming...");
+          miniflareArgs = {
+            // TODO: The fact that these request/response hacks are necessary is ridiculous.
+            // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
+            script: `
+            export default {
+              async fetch(request, env, context) {
+                const response = await env.ASSETS.fetch(request.url, request)
+                return new Response(response.body, response)
+              }
+            }`,
+          };
         }
-
-        miniflareArgs = {
-          scriptPath,
-        };
       }
 
       // Defer importing miniflare until we really need it
