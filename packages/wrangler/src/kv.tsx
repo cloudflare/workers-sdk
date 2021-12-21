@@ -164,10 +164,12 @@ export function getNamespaceId({
 
   // end pre-flight checks
 
-  // we're in preview mode, `--preview true` or `--preivew` was passed
+  // we're in preview mode, `--preview true` or `--preview` was passed
   if (preview && namespace.preview_id) {
     namespaceId = namespace.preview_id;
-  } else {
+    // We don't want to execute code below if preview is set to true, so we just return. Otherwise we will get errors!
+    return namespaceId;
+  } else if (preview) {
     throw new Error(
       `No preview ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`
     );
@@ -180,7 +182,9 @@ export function getNamespaceId({
   // --preview false was passed
   if (previewIsDefined && namespace.id) {
     namespaceId = namespace.id;
-  } else {
+    // We don't want to execute code below if preview is set to true, so we just return. Otherwise we can get error!
+    return namespaceId;
+  } else if (previewIsDefined) {
     throw new Error(
       `No namespace ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`
     );
