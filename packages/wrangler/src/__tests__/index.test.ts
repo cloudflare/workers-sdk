@@ -1,12 +1,13 @@
-import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { mockConfirm } from "./mock-dialogs";
 import { runWrangler } from "./run-wrangler";
+import { runInTempDir } from "./run-in-tmp";
+import * as fs from "node:fs";
 
 describe("wrangler", () => {
+  runInTempDir();
+
   describe("no command", () => {
     it("should display a list of available commands", async () => {
       const { stdout, stderr } = await runWrangler();
@@ -73,19 +74,6 @@ describe("wrangler", () => {
   });
 
   describe("init", () => {
-    const ogcwd = process.cwd();
-    let tmpDir: string;
-
-    beforeEach(async () => {
-      tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), "init-"));
-      process.chdir(tmpDir);
-    });
-
-    afterEach(async () => {
-      process.chdir(ogcwd);
-      await fsp.rm(tmpDir, { recursive: true });
-    });
-
     it("should create a wrangler.toml", async () => {
       mockConfirm({
         text: "No package.json found. Would you like to create one?",
@@ -99,7 +87,7 @@ describe("wrangler", () => {
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
-      fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      fs.writeFileSync("./wrangler.toml", "", "utf-8");
       mockConfirm({
         text: "Do you want to continue initializing this project?",
         result: false,
@@ -111,7 +99,7 @@ describe("wrangler", () => {
     });
 
     it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
-      fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      fs.writeFileSync("./wrangler.toml", "", "utf-8");
       mockConfirm(
         {
           text: "Do you want to continue initializing this project?",
