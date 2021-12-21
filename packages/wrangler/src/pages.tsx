@@ -96,7 +96,7 @@ const spawnProxyProcess = async ({
 }: {
   port?: number;
   command: (string | number)[];
-}) => {
+}): Promise<undefined | number> => {
   if (command.length === 0)
     return EXIT(
       "Must specify a directory of static assets to serve or a command to run."
@@ -150,7 +150,7 @@ const spawnProxyProcess = async ({
     }
   }
 
-  return { port };
+  return port;
 };
 
 const escapeRegex = (str: string) => {
@@ -706,13 +706,11 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       let proxyPort: number | undefined;
 
       if (directory === undefined) {
-        const proxy = await spawnProxyProcess({
+        proxyPort = await spawnProxyProcess({
           port: requestedProxyPort,
           command,
         });
-        if (proxy === undefined) return undefined;
-
-        proxyPort = proxy.port;
+        if (proxyPort === undefined) return undefined;
       }
 
       let miniflareArgs: MiniflareOptions = {};
