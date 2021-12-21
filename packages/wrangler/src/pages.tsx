@@ -717,8 +717,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       let miniflareArgs: MiniflareOptions = {};
 
-      let functionsCompiler: Promise<BuildResult>;
-
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
         const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
@@ -739,7 +737,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           outfile: routesModule,
         });
 
-        functionsCompiler = buildWorker({
+        buildWorker({
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
@@ -861,7 +859,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       if (process.env.BROWSER !== "none") {
         if (functionsCompiler) {
-          await functionsCompiler.then(() => open(`http://127.0.0.1:${port}/`));
+          await sleep(500);
+          await open(`http://127.0.0.1:${port}/`);
         } else {
           await open(`http://127.0.0.1:${port}/`);
         }
