@@ -25,6 +25,7 @@ import makeModuleCollector from "./module-collection";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import { createHttpProxy } from "./proxy";
 import { execa } from "execa";
+import { watch } from "chokidar";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -43,7 +44,11 @@ type Props = {
   compatibilityDate: void | string;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
-  buildCommand: { command: void | string; cwd: void | string };
+  buildCommand: {
+    command?: undefined | string;
+    cwd?: undefined | string;
+    watch_dir?: undefined | string;
+  };
 };
 
 function Dev(props: Props): JSX.Element {
@@ -56,7 +61,7 @@ function Dev(props: Props): JSX.Element {
   const apiToken = getAPIToken();
   const directory = useTmpDir();
 
-  // is there isn't a build command, we just return the entry immediately
+  // if there isn't a build command, we just return the entry immediately
   // ideally there would be a conditional here, but the rules of hooks
   // kinda forbid that, so we thread the entry through useCustomBuild
   const entry = useCustomBuild(props.entry, props.buildCommand);
@@ -371,15 +376,16 @@ function useTmpDir(): string | void {
 function useCustomBuild(
   expectedEntry: string,
   props: {
-    command: void | string;
-    cwd: void | string;
+    command?: undefined | string;
+    cwd?: undefined | string;
+    watch_dir?: undefined | string;
   }
 ): void | string {
   const [entry, setEntry] = useState<string | void>(
     // if there's no build command, just return the expected entry
     props.command ? null : expectedEntry
   );
-  const { command, cwd } = props;
+  const { command, cwd, watch_dir } = props;
   useEffect(() => {
     if (!command) return;
     let cmd, interval;
@@ -390,13 +396,36 @@ function useCustomBuild(
       stderr: "inherit",
       stdout: "inherit",
     });
+    if (watch_dir) {
+      watch(watch_dir, { persistent: true, ignoreInitial: true }).on(
+        "all",
+        (_event, _path) => {
+          console.log("Restarting build...");
+          cmd.kill();
+          cmd = execa(commandPieces[0], commandPieces.slice(1), {
+            ...(cwd && { cwd }),
+            stderr: "inherit",
+            stdout: "inherit",
+          });
+        }
+      );
+    }
 
     // check every so often whether `expectedEntry` exists
     // if it does, we're done
+    const startedAt = Date.now();
     interval = setInterval(() => {
       if (existsSync(expectedEntry)) {
         clearInterval(interval);
         setEntry(expectedEntry);
+      } else {
+        const elapsed = Date.now() - startedAt;
+        // timeout after 30 seconds of waiting
+        if (elapsed > 1000 * 60 * 30) {
+          console.error("⎔ Build timed out.");
+          clearInterval(interval);
+          cmd.kill();
+        }
       }
     }, 200);
     // TODO: we could probably timeout here after a while
@@ -409,7 +438,7 @@ function useCustomBuild(
       clearInterval(interval);
       interval = undefined;
     };
-  }, [command, cwd]);
+  }, [command, cwd, expectedEntry, watch_dir]);
   return entry;
 }
 

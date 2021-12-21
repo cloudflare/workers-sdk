@@ -390,7 +390,7 @@ export async function main(argv: string[]): Promise<void> {
 
   // dev
   yargs.command(
-    "dev <filename> [-- build]",
+    "dev <filename>",
     "👂 Start a local server for developing your worker",
     (yargs) => {
       return yargs
@@ -398,10 +398,6 @@ export async function main(argv: string[]): Promise<void> {
         .option("name", {
           describe: "name of the script",
           type: "string",
-        })
-        .positional("build", {
-          type: "string",
-          description: "The command to run a build",
         })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
@@ -491,21 +487,12 @@ export async function main(argv: string[]): Promise<void> {
         }
         // TODO: if not already published, publish a draft worker
       }
-      let buildCommand;
-      if (args["--"]) {
-        // args.build doesn't actually have the command, so we read it from `--`
-        buildCommand = { command: (args["--"] as string[]).join(" ") };
-      } else if (config.build?.command) {
-        buildCommand = { command: config.build.command, cwd: config.build.cwd };
-      } else {
-        buildCommand = { command: undefined };
-      }
 
       render(
         <Dev
           name={args.name || config.name}
           entry={filename}
-          buildCommand={buildCommand}
+          buildCommand={config.build || {}}
           format={format}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
@@ -546,7 +533,7 @@ export async function main(argv: string[]): Promise<void> {
 
   // publish
   yargs.command(
-    "publish [script] [-- build]",
+    "publish [script]",
     "🆙 Publish your Worker to Cloudflare.",
     (yargs) => {
       return yargs
@@ -557,10 +544,6 @@ export async function main(argv: string[]): Promise<void> {
         .positional("script", {
           describe: "script to upload",
           type: "string",
-        })
-        .positional("build", {
-          type: "string",
-          description: "The command to run a build",
         })
         .option("name", {
           describe: "name to use when uploading",
@@ -625,9 +608,6 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      // args.build doesn't actually have the command, so we read it from `--`
-      const buildCommand = (args["--"] as string[] | undefined)?.join(" ");
-
       await publish({
         config: args.config as Config,
         name: args.name,
@@ -639,7 +619,6 @@ export async function main(argv: string[]): Promise<void> {
         routes: args.routes,
         public: args.public,
         site: args.site,
-        buildCommand,
       });
     }
   );

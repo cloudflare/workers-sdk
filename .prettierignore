@@ -1,2 +1,3 @@
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
+packages/example-worker-app/dist/

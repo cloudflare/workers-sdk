@@ -36,15 +36,15 @@ describe("wrangler", () => {
         "wrangler
 
         Commands:
-          wrangler init [name]                  📥 Create a wrangler.toml configuration file
-          wrangler dev <filename> [-- build]    👂 Start a local server for developing your worker
-          wrangler publish [script] [-- build]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]                  🦚 Starts a log tailing session for a deployed Worker.
-          wrangler secret                       🤫 Generate a secret that can be referenced in the worker script
-          wrangler kv:namespace                 🗂️  Interact with your Workers KV Namespaces
-          wrangler kv:key                       🔑 Individually manage Workers KV key-value pairs
-          wrangler kv:bulk                      💪 Interact with multiple Workers KV key-value pairs at once
-          wrangler pages                        ⚡️ Configure Cloudflare Pages
+          wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+          wrangler pages             ⚡️ Configure Cloudflare Pages
 
         Flags:
           -c, --config   Path to .toml configuration file  [string]
@@ -67,15 +67,15 @@ describe("wrangler", () => {
         "wrangler
 
         Commands:
-          wrangler init [name]                  📥 Create a wrangler.toml configuration file
-          wrangler dev <filename> [-- build]    👂 Start a local server for developing your worker
-          wrangler publish [script] [-- build]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]                  🦚 Starts a log tailing session for a deployed Worker.
-          wrangler secret                       🤫 Generate a secret that can be referenced in the worker script
-          wrangler kv:namespace                 🗂️  Interact with your Workers KV Namespaces
-          wrangler kv:key                       🔑 Individually manage Workers KV key-value pairs
-          wrangler kv:bulk                      💪 Interact with multiple Workers KV key-value pairs at once
-          wrangler pages                        ⚡️ Configure Cloudflare Pages
+          wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+          wrangler pages             ⚡️ Configure Cloudflare Pages
 
         Flags:
           -c, --config   Path to .toml configuration file  [string]

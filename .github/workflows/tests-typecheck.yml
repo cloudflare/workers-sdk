@@ -35,4 +35,3 @@ jobs:
 
       - name: Test
         run: npm run test
-        working-directory: packages/wrangler

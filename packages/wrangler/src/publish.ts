@@ -26,7 +26,6 @@ type Props = {
   legacyEnv?: boolean;
   jsxFactory: void | string;
   jsxFragment: void | string;
-  buildCommand: void | string;
 };
 
 function sleep(ms: number) {
@@ -78,14 +77,7 @@ export default async function publish(props: Props): Promise<void> {
 
   const destination = await tmp.dir({ unsafeCleanup: true });
 
-  if (props.buildCommand) {
-    const buildCommandPieces = props.buildCommand.split(" ");
-    console.log("running:", props.buildCommand);
-    await execa(buildCommandPieces[0], buildCommandPieces.slice(1), {
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-  } else if (props.config.build?.command) {
+  if (props.config.build?.command) {
     // TODO: add a deprecation message here?
     console.log("running:", props.config.build.command);
     const buildCommandPieces = props.config.build.command.split(" ");
