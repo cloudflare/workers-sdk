@@ -1,5 +1,6 @@
 import { confirm, prompt } from "../dialogs";
 
+jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
 jest.mock("../dialogs");
 
 // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
