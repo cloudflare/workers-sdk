@@ -3,7 +3,6 @@ import { render } from "ink";
 import Dev from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs";
-import { hideBin } from "yargs/helpers";
 import type yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
@@ -92,7 +91,7 @@ async function readConfig(path?: string): Promise<Config> {
       // if it exists on top level, it should exist on env definitions
       Object.keys(config[field] || {}).forEach((fieldKey) => {
         if (!(fieldKey in config.env[env][field])) {
-          console.error(
+          console.warn(
             `In your configuration, "${field}.${fieldKey}" exists at a top level, but not on "env.${env}". This is not what you probably want, since the field "${field}" is not inherited by environments. Please add "${field}.${fieldKey}" to "env.${env}".`
           );
         }
@@ -123,13 +122,13 @@ function demandOneOfOption(...options: string[]) {
     const lastOption = options.pop();
 
     if (count === 0) {
-      throw new Error(
+      throw new CommandLineArgsError(
         `Exactly one of the arguments ${options.join(
           ", "
         )} and ${lastOption} is required`
       );
     } else if (count > 1) {
-      throw new Error(
+      throw new CommandLineArgsError(
         `Arguments ${options.join(
           ", "
         )} and ${lastOption} are mutually exclusive`
@@ -140,30 +139,46 @@ function demandOneOfOption(...options: string[]) {
   };
 }
 
+class CommandLineArgsError extends Error {}
+class DeprecationError extends Error {}
+class NotImplementedError extends Error {}
+
 export async function main(argv: string[]): Promise<void> {
-  const yargs = makeCLI(hideBin(process.argv))
-    .command(
-      // the default is to simply print the help menu
-      ["*"],
-      false,
-      () => {},
-      (args) => {
-        yargs.showHelp("log");
-        if (args._.length > 0) {
-          console.error(`\nUnknown command: ${args._}.`);
-        }
+  const yargs = makeCLI(argv)
+    // We handle errors ourselves in a try-catch around `yargs.parse`.
+    // If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
+    // Otherwise we just log the error that was thrown without any "help info".
+    .showHelpOnFail(false)
+    .fail((msg, error) => {
+      if (!error) {
+        // If there is only a `msg` then this came from yargs own validation, so wrap in a `CommandLineArgsError`.
+        error = new CommandLineArgsError(msg);
       }
-    )
+      throw error;
+    })
     .scriptName("wrangler")
     .wrap(null);
 
-  // you will note that we use the form for all commands where we use the builder function
-  // to define options and subcommands. Further we return the result of this builder even
-  // tho it's not completely necessary. The reason is that it's required for type inference
-  // of the args in the handle function.I wish we could enforce this pattern, but this
-  // comment will have to do for now.
+  // the default is to simply print the help menu
+  yargs.command(
+    ["*"],
+    false,
+    () => {},
+    (args) => {
+      if (args._.length > 0) {
+        throw new CommandLineArgsError(`Unknown command: ${args._}.`);
+      } else {
+        yargs.showHelp("log");
+      }
+    }
+  );
 
-  // also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.
+  // You will note that we use the form for all commands where we use the builder function
+  // to define options and subcommands.
+  // Further we return the result of this builder even though it's not completely necessary.
+  // The reason is that it's required for type inference of the args in the handle function.
+  // I wish we could enforce this pattern, but this comment will have to do for now.
+  // (It's also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.)
 
   // [DEPRECATED] generate
   yargs.command(
@@ -184,7 +199,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
-      console.error(
+      throw new DeprecationError(
         "`wrangler generate` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
@@ -208,13 +223,12 @@ export async function main(argv: string[]): Promise<void> {
             "\nIf you wish to use webpack then you will need to create a custom build.";
           // TODO: Add a link to docs
         }
-        console.error(message);
-        return;
+        throw new CommandLineArgsError(message);
       }
 
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
-        console.error(`${destination} file already exists!`);
+        console.warn(`${destination} file already exists!`);
         const result = await confirm(
           "Do you want to continue initializing this project?"
         );
@@ -232,9 +246,9 @@ export async function main(argv: string[]): Promise<void> {
         console.log(`✨ Successfully created wrangler.toml`);
         // TODO: suggest next steps?
       } catch (err) {
-        console.error(`Failed to create wrangler.toml`);
-        console.error(err);
-        throw err;
+        throw new Error(
+          `Failed to create wrangler.toml.\n${err.message ?? err}`
+        );
       }
 
       // if no package.json, ask, and if yes, create one
@@ -316,7 +330,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
-      console.error(
+      throw new DeprecationError(
         "`wrangler build` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
@@ -395,7 +409,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {},
     () => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
-      console.error(
+      throw new DeprecationError(
         "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
@@ -480,8 +494,7 @@ export async function main(argv: string[]): Promise<void> {
         if (!config.account_id) {
           config.account_id = await getAccountId();
           if (!config.account_id) {
-            console.error("No account id found, quitting...");
-            return;
+            throw new Error("No account id found, quitting...");
           }
         }
       }
@@ -601,8 +614,9 @@ export async function main(argv: string[]): Promise<void> {
     },
     async (args) => {
       if (args.local) {
-        console.error("🚫  Local publishing is not yet supported");
-        return;
+        throw new NotImplementedError(
+          "🚫  Local publishing is not yet supported"
+        );
       }
       const config = args.config as Config;
 
@@ -617,8 +631,7 @@ export async function main(argv: string[]): Promise<void> {
         if (!config.account_id) {
           config.account_id = await getAccountId();
           if (!config.account_id) {
-            console.error("No account id found, quitting...");
-            return;
+            throw new Error("No account id found, quitting...");
           }
         }
       }
@@ -688,8 +701,7 @@ export async function main(argv: string[]): Promise<void> {
       const config = args.config as Config;
 
       if (!(args.name || config.name)) {
-        console.error("Missing script name");
-        return;
+        throw new Error("Missing script name");
       }
       const scriptName = `${args.name || config.name}${
         args.env ? `-${args.env}` : ""
@@ -707,8 +719,7 @@ export async function main(argv: string[]): Promise<void> {
         if (!config.account_id) {
           config.account_id = await getAccountId();
           if (!config.account_id) {
-            console.error("No account id found, quitting...");
-            return;
+            throw new Error("No account id found, quitting...");
           }
         }
       }
@@ -786,7 +797,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       // "🔬 [DEPRECATED] Preview your code temporarily on https://cloudflareworkers.com"
-      console.error(
+      throw new DeprecationError(
         "`wrangler preview` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
@@ -822,8 +833,7 @@ export async function main(argv: string[]): Promise<void> {
             // TODO: use environment (current wrangler doesn't do so?)
             const zone = args.zone || (args.config as Config).zone_id;
             if (!zone) {
-              console.error("missing zone id");
-              return;
+              throw new Error("missing zone id");
             }
 
             console.log(await cfetch(`/zones/${zone}/workers/routes`));
@@ -874,7 +884,7 @@ export async function main(argv: string[]): Promise<void> {
       return yargs.positional("name", { type: "string" });
     },
     () => {
-      console.error(
+      throw new DeprecationError(
         "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alternatives"
       );
     }
@@ -907,16 +917,16 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             if (args.local) {
-              console.error("--local not implemented for this command yet");
-              return;
+              throw new NotImplementedError(
+                "--local not implemented for this command yet"
+              );
             }
             const config = args.config as Config;
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
-              console.error("Missing script name");
-              return;
+              throw new Error("Missing script name");
             }
 
             // -- snip, extract --
@@ -931,8 +941,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1012,8 +1021,9 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             if (args.local) {
-              console.error("--local not implemented for this command yet");
-              return;
+              throw new NotImplementedError(
+                "--local not implemented for this command yet"
+              );
             }
             const config = args.config as Config;
 
@@ -1035,8 +1045,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1074,16 +1083,16 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             if (args.local) {
-              console.error("--local not implemented for this command yet");
-              return;
+              throw new NotImplementedError(
+                "--local not implemented for this command yet"
+              );
             }
             const config = args.config as Config;
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
-              console.error("Missing script name");
-              return;
+              throw new Error("Missing script name");
             }
 
             // -- snip, extract --
@@ -1098,8 +1107,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1144,7 +1152,9 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             if (args._.length > 2) {
               const extraArgs = args._.slice(2).join(" ");
-              throw `Unexpected additional positional arguments "${extraArgs}".`;
+              throw new CommandLineArgsError(
+                `Unexpected additional positional arguments "${extraArgs}".`
+              );
             }
 
             if (!isValidNamespaceBinding(args.namespace)) {
@@ -1189,8 +1199,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1221,8 +1230,9 @@ export async function main(argv: string[]): Promise<void> {
           {},
           async (args) => {
             if (args.local) {
-              console.error(`local mode is not yet supported for this command`);
-              return;
+              throw new NotImplementedError(
+                `local mode is not yet supported for this command`
+              );
             }
 
             const config = args.config as Config;
@@ -1239,8 +1249,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1283,8 +1292,9 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             if (args.local) {
-              console.error(`local mode is not yet supported for this command`);
-              return;
+              throw new NotImplementedError(
+                `local mode is not yet supported for this command`
+              );
             }
             const config = args.config as Config;
 
@@ -1297,9 +1307,9 @@ export async function main(argv: string[]): Promise<void> {
                 (namespace) => namespace.binding === args.binding
               )?.[args.preview ? "preview_id" : "id"];
             if (!id) {
-              throw (
+              throw new CommandLineArgsError(
                 "Not able to delete namespace.\n" +
-                `A namespace with binding name "${args.binding}" was not found in the configured "kv_namespaces".`
+                  `A namespace with binding name "${args.binding}" was not found in the configured "kv_namespaces".`
               );
             }
 
@@ -1316,8 +1326,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1443,8 +1452,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1512,8 +1520,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1581,8 +1588,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1661,8 +1667,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1723,8 +1728,9 @@ export async function main(argv: string[]): Promise<void> {
             try {
               parsedContent = JSON.parse(content);
             } catch (err) {
-              console.error(`could not parse json from ${filename}`);
-              throw err;
+              throw new Error(
+                `Could not parse json from ${filename}.\n${err.message ?? err}`
+              );
             }
 
             if (args.local) {
@@ -1763,8 +1769,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1811,8 +1816,9 @@ export async function main(argv: string[]): Promise<void> {
             try {
               parsedContent = JSON.parse(content);
             } catch (err) {
-              console.error(`could not parse json from ${filename}`);
-              throw err;
+              throw new Error(
+                `Could not parse json from ${filename}.\n${err.message ?? err}`
+              );
             }
 
             if (args.local) {
@@ -1843,8 +1849,7 @@ export async function main(argv: string[]): Promise<void> {
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
-                  console.error("No account id found, quitting...");
-                  return;
+                  throw new Error("No account id found, quitting...");
                 }
               }
             }
@@ -1884,5 +1889,14 @@ export async function main(argv: string[]): Promise<void> {
 
   await initialiseUserConfig();
 
-  await yargs.parse(argv);
+  try {
+    await yargs.parse();
+  } catch (e) {
+    if (e instanceof CommandLineArgsError) {
+      yargs.showHelp("error");
+      console.error(""); // Just adds a bit of space
+    }
+    console.error(e.message);
+    throw e;
+  }
 }
