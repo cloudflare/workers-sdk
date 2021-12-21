@@ -373,6 +373,8 @@ function useTmpDir(): string | void {
   return directory?.path;
 }
 
+function runCommand() {}
+
 function useCustomBuild(
   expectedEntry: string,
   props: {
@@ -400,7 +402,7 @@ function useCustomBuild(
       watch(watch_dir, { persistent: true, ignoreInitial: true }).on(
         "all",
         (_event, _path) => {
-          console.log("Restarting build...");
+          console.log(`The file ${path} changed, restarting build...`);
           cmd.kill();
           cmd = execa(commandPieces[0], commandPieces.slice(1), {
             ...(cwd && { cwd }),
