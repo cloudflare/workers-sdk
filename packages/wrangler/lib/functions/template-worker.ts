@@ -1,12 +1,30 @@
 import { match } from "path-to-regexp";
-import { HTTPMethod } from "../routes";
-import { EventContext, Params, RequestHandler } from "../public";
+import { HTTPMethod } from "./routes";
+
+/* TODO: Grab these from @cloudflare/workers-types instead */
+type Params<P extends string = any> = Record<P, string | string[]>;
+
+type EventContext<Env, P extends string, Data> = {
+  request: Request;
+  waitUntil: (promise: Promise<any>) => void;
+  next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
+  env: Env & { ASSETS: { fetch: typeof fetch } };
+  params: Params<P>;
+  data: Data;
+};
+
+declare type PagesFunction<
+  Env = unknown,
+  Params extends string = any,
+  Data extends Record<string, unknown> = Record<string, unknown>
+> = (context: EventContext<Env, Params, Data>) => Response | Promise<Response>;
+/* end @cloudflare/workers-types */
 
 type RouteHandler = {
   routePath: string;
   methods: HTTPMethod[];
-  modules: RequestHandler[];
-  middlewares: RequestHandler[];
+  modules: PagesFunction[];
+  middlewares: PagesFunction[];
 };
 
 // inject `routes` via ESBuild
@@ -87,7 +105,7 @@ export default {
       const { value } = handlerIterator.next();
       if (value) {
         const { handler, params } = value;
-        const context: EventContext<any, any> = {
+        const context: EventContext<unknown, any, any> = {
           request: new Request(request.clone()),
           next,
           params,

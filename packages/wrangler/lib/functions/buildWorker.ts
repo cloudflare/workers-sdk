@@ -1,7 +1,7 @@
 import path from "path";
 import { build } from "esbuild";
 import { fileURLToPath } from "url";
-const __dirname = fileURLToPath(path.dirname(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Options = {
   routesModule: string;
@@ -19,10 +19,7 @@ export function buildWorker({
   console.log(`Compiling worker to "${outfile}"`);
   return build({
     entryPoints: [
-      path.resolve(
-        __dirname,
-        "../templates/pages-functions-compiler.worker.ts"
-      ),
+      path.resolve(__dirname, "../lib/functions/template-worker.ts"),
     ],
     inject: [routesModule],
     bundle: true,
