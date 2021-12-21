@@ -87,7 +87,7 @@ async function readConfig(path?: string): Promise<Config> {
   ];
   Object.keys(config.env || {}).forEach((env) => {
     mirroredFields.forEach((field) => {
-      // if it exists on top level, it should exist on env defns
+      // if it exists on top level, it should exist on env definitions
       Object.keys(config[field] || {}).forEach((fieldKey) => {
         if (!(fieldKey in config.env[env][field])) {
           console.error(
@@ -161,7 +161,7 @@ export async function main(argv: string[]): Promise<void> {
   // of the args in the handle function.I wish we could enforce this pattern, but this
   // comment will have to do for now.
 
-  // also annoying that choices[] doesn't get inferred as an enum. bleh.
+  // also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.
 
   // [DEPRECATED] generate
   yargs.command(
@@ -358,7 +358,7 @@ export async function main(argv: string[]): Promise<void> {
       await login();
 
       // TODO: would be nice if it optionally saved login
-      // creds inside node_modules/.cache or something
+      // credentials inside node_modules/.cache or something
       // this way you could have multiple users on a single machine
     }
   );
@@ -783,7 +783,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     () => {
-      // "🔬 [DEPRECATED] Preview your code temporarily on cloudflareworkers.com"
+      // "🔬 [DEPRECATED] Preview your code temporarily on https://cloudflareworkers.com"
       console.error(
         "`wrangler preview` has been deprecated, please refer to TODO://some/path for alternatives"
       );
