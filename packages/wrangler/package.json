@@ -47,6 +47,7 @@
   "devDependencies": {
     "@iarna/toml": "^2.2.5",
     "@types/mime": "^2.0.3",
+    "@types/estree": "^0.0.50",
     "@types/react": "^17.0.37",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",

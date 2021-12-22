@@ -92,8 +92,5 @@
   },
   "volta": {
     "node": "16.7.0"
-  },
-  "devDependencies": {
-    "@types/estree": "^0.0.50"
   }
 }
