@@ -10,6 +10,31 @@ type KvArgs = {
   config?: Config;
 };
 
+/**
+ * Create a new namespace under the given `accountId` with the given `title`.
+ *
+ * @returns the generated id of the created namespace.
+ */
+export async function createNamespace(
+  accountId: string,
+  title: string
+): Promise<string> {
+  const response = await cfetch<{ id: string }>(
+    `/accounts/${accountId}/storage/kv/namespaces`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title,
+      }),
+    }
+  );
+
+  return response.id;
+}
+
 export async function listNamespaces(accountId: string) {
   let page = 1,
     done = false,
@@ -212,4 +237,11 @@ export function getNamespaceId({
   }
 
   return namespaceId;
+}
+
+/**
+ * KV namespace binding names must be valid JS identifiers.
+ */
+export function isValidNamespaceBinding(binding: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding);
 }
