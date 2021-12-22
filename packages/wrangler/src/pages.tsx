@@ -739,6 +739,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
+          sourcemap: true,
           watch: true,
         });
 
@@ -856,12 +857,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       console.log(`Serving at http://127.0.0.1:${port}/`);
 
       if (process.env.BROWSER !== "none") {
-        if (functionsCompiler) {
-          await sleep(500);
-          await open(`http://127.0.0.1:${port}/`);
-        } else {
-          await open(`http://127.0.0.1:${port}/`);
-        }
+        await sleep(500);
+        await open(`http://127.0.0.1:${port}/`);
       }
 
       process.on("SIGINT", () => {
