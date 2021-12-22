@@ -35,20 +35,32 @@ export async function createNamespace(
   return response.id;
 }
 
-export async function listNamespaces(accountId: string) {
-  let page = 1,
-    done = false,
-    results = [];
-  while (!(done || results.length % 100 !== 0)) {
-    const json = await cfetch<
-      { id: string; title: string; supports_url_encoding: boolean }[]
-    >(
-      `/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`
+/**
+ * The information about a namespace that is returned from `listNamespaces()`.
+ */
+export interface KVNamespaceInfo {
+  id: string;
+  title: string;
+  supports_url_encoding?: boolean;
+}
+
+/**
+ * Fetch a list of all the namespaces under the given `accountId`.
+ */
+export async function listNamespaces(
+  accountId: string
+): Promise<KVNamespaceInfo[]> {
+  const pageSize = 100;
+  let page = 1;
+  const results: KVNamespaceInfo[] = [];
+  while (results.length % pageSize === 0) {
+    const json = await cfetch<KVNamespaceInfo[]>(
+      `/accounts/${accountId}/storage/kv/namespaces?per_page=${pageSize}&order=title&direction=asc&page=${page}`
     );
     page++;
-    results = [...results, ...json];
-    if (json.length === 0) {
-      done = true;
+    results.push(...json);
+    if (json.length < pageSize) {
+      break;
     }
   }
   return results;
@@ -155,7 +167,7 @@ export function getNamespaceId({
       );
     }
 
-    // TODO: either a bespoke arg type for this function to avoid undefineds or a EnvOrConfig type
+    // TODO: either a bespoke arg type for this function to avoid `undefined`s or an `EnvOrConfig` type
     return getNamespaceId({
       binding,
       "namespace-id": namespaceId,
