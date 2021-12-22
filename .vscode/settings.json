@@ -1,4 +1,11 @@
 {
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "cSpell.words": ["cfetch", "execa", "iarna", "Miniflare", "Positionals"]
+  "cSpell.words": [
+    "cfetch",
+    "execa",
+    "iarna",
+    "keyvalue",
+    "Miniflare",
+    "Positionals"
+  ]
 }

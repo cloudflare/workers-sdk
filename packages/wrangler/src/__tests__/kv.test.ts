@@ -156,31 +156,48 @@ describe("wrangler", () => {
     });
 
     describe("list", () => {
+      function mockListRequest(namespaces: unknown[]) {
+        const requests = { count: 0 };
+        setMock(
+          "/accounts/:accountId/storage/kv/namespaces\\?:qs",
+          ([_url, accountId, query], init) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(query).toContain("per_page=100");
+            expect(query).toContain("order=title");
+            expect(query).toContain("direction=asc");
+            expect(query).toContain("page=");
+            expect(init).toBe(undefined);
+            const pageSize = Number(/\bper_page=(\d+)\b/.exec(query)[1]);
+            const page = Number(/\bpage=(\d+)/.exec(query)[1]);
+            return namespaces.slice((page - 1) * pageSize, page * pageSize);
+          }
+        );
+        return requests;
+      }
+
       it("should list namespaces", async () => {
-        const KVNamespaces: { title: string; id: string }[] = [
+        const KVNamespaces = [
           { title: "title-1", id: "id-1" },
           { title: "title-2", id: "id-2" },
         ];
-        setMock(
-          "/accounts/:accountId/storage/kv/namespaces\\?:qs",
-          (uri, init) => {
-            expect(uri[0]).toContain(
-              "/accounts/some-account-id/storage/kv/namespaces"
-            );
-            expect(uri[2]).toContain("per_page=100");
-            expect(uri[2]).toContain("order=title");
-            expect(uri[2]).toContain("direction=asc");
-            expect(uri[2]).toContain("page=1");
-            expect(init).toBe(undefined);
-            return KVNamespaces;
-          }
-        );
+        mockListRequest(KVNamespaces);
         const { stdout } = await runWrangler("kv:namespace list");
-        const namespaces = JSON.parse(stdout) as {
-          id: string;
-          title: string;
-        }[];
+        const namespaces = JSON.parse(stdout);
         expect(namespaces).toEqual(KVNamespaces);
+      });
+
+      it("should make multiple requests for paginated results", async () => {
+        // Create a lot of mock namespaces, so that the cfetch requests will be paginated
+        const KVNamespaces = [];
+        for (let i = 0; i < 550; i++) {
+          KVNamespaces.push({ title: "title-" + i, id: "id-" + i });
+        }
+        const requests = mockListRequest(KVNamespaces);
+        const { stdout } = await runWrangler("kv:namespace list");
+        const namespaces = JSON.parse(stdout);
+        expect(namespaces).toEqual(KVNamespaces);
+        expect(requests.count).toEqual(6);
       });
     });
 
