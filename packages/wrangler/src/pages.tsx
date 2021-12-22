@@ -12,7 +12,8 @@ import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
 import { buildWorker } from "../lib/functions/buildWorker";
-import { Config, writeRoutesModule } from "../lib/functions/routes";
+import type { Config } from "../lib/functions/routes";
+import { writeRoutesModule } from "../lib/functions/routes";
 import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
@@ -738,7 +739,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           outfile: routesModule,
         });
 
-        buildWorker({
+        await buildWorker({
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
