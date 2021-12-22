@@ -14,7 +14,6 @@ import { watch } from "chokidar";
 import { buildWorker } from "../lib/functions/buildWorker";
 import { Config, writeRoutesModule } from "../lib/functions/routes";
 import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
-import { BuildResult } from "esbuild";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
