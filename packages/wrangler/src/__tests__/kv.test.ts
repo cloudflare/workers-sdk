@@ -202,25 +202,105 @@ describe("wrangler", () => {
     });
 
     describe("delete", () => {
-      it("should delete a namespace", async () => {
-        let accountId = "";
-        let namespaceId = "";
+      function mockDeleteRequest(expectedNamespaceId: string) {
+        const requests = { count: 0 };
         setMock(
           "/accounts/:accountId/storage/kv/namespaces/:namespaceId",
-          (uri, init) => {
-            accountId = uri[1];
-            namespaceId = uri[2];
-            expect(uri[0]).toEqual(
-              "/accounts/some-account-id/storage/kv/namespaces/some-namespace-id"
-            );
-            expect(init.method).toBe("DELETE");
+          "DELETE",
+          ([_url, accountId, namespaceId]) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(namespaceId).toEqual(expectedNamespaceId);
+            return null;
           }
         );
+        return requests;
+      }
+
+      function writeWranglerConfig() {
+        writeFileSync(
+          "./wrangler.toml",
+          [
+            'name = "otherWorker"',
+            "kv_namespaces = [",
+            '  { binding = "someBinding", id = "bound-id", preview_id = "preview-bound-id" }',
+            "]",
+            "",
+            "[env.some-environment]",
+            "kv_namespaces = [",
+            '  { binding = "someBinding", id = "env-bound-id", preview_id = "preview-env-bound-id" }',
+            "]",
+          ].join("\n"),
+          "utf-8"
+        );
+      }
+
+      it("should delete a namespace specified by id", async () => {
+        const requests = mockDeleteRequest("some-namespace-id");
         await runWrangler(
           `kv:namespace delete --namespace-id some-namespace-id`
         );
-        expect(accountId).toEqual("some-account-id");
-        expect(namespaceId).toEqual("some-namespace-id");
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a namespace specified by binding name", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("bound-id");
+        await runWrangler(`kv:namespace delete --binding someBinding`);
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a preview namespace specified by binding name", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("preview-bound-id");
+        await runWrangler(
+          `kv:namespace delete --binding someBinding --preview`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should error if a given binding name is not in the configured kv namespaces", async () => {
+        writeWranglerConfig();
+        const { stderr } = await runWrangler(
+          `kv:namespace delete --binding otherBinding`
+        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "wrangler kv:namespace delete
+
+          Deletes a given namespace.
+
+          Flags:
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
+
+          Options:
+            -l, --local         Run on my machine  [boolean] [default: false]
+                --binding       The name of the namespace to delete  [string]
+                --namespace-id  The id of the namespace to delete  [string]
+                --env           Perform on a specific environment  [string]
+                --preview       Interact with a preview namespace  [boolean]
+          Not able to delete namespace.
+          A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
+        `);
+      });
+
+      it("should delete a namespace specified by binding name in a given environment", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("env-bound-id");
+        await runWrangler(
+          `kv:namespace delete --binding someBinding --env some-environment`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a preview namespace specified by binding name in a given environment", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("preview-env-bound-id");
+        await runWrangler(
+          `kv:namespace delete --binding someBinding --env some-environment --preview`
+        );
+        expect(requests.count).toEqual(1);
       });
     });
   });

@@ -1211,6 +1211,8 @@ export async function main(argv: string[]): Promise<void> {
             console.log(
               `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
             );
+
+            // TODO: automatically write this block to the wrangler.toml config file??
           }
         )
         .command(
@@ -1293,9 +1295,12 @@ export async function main(argv: string[]): Promise<void> {
                 : config
               ).kv_namespaces.find(
                 (namespace) => namespace.binding === args.binding
-              )[args.preview ? "preview_id" : "id"];
+              )?.[args.preview ? "preview_id" : "id"];
             if (!id) {
-              throw new Error("Are you sure? id not found");
+              throw (
+                "Not able to delete namespace.\n" +
+                `A namespace with binding name "${args.binding}" was not found in the configured "kv_namespaces".`
+              );
             }
 
             // -- snip, extract --
