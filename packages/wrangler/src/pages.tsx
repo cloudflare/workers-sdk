@@ -2,7 +2,8 @@ import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { closeSync, existsSync, lstatSync, openSync, readFileSync } from "fs";
-import { ChildProcess, execSync, spawn } from "child_process";
+import type { ChildProcess } from "child_process";
+import { execSync, spawn } from "child_process";
 import { Headers, Request, Response } from "undici";
 import type { MiniflareOptions } from "miniflare";
 import type { RequestInfo, RequestInit } from "undici";
@@ -10,7 +11,8 @@ import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
 import { buildWorker } from "../lib/functions/buildWorker";
-import { Config, writeRoutesModule } from "../lib/functions/routes";
+import type { Config } from "../lib/functions/routes";
+import { writeRoutesModule } from "../lib/functions/routes";
 import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
@@ -734,7 +736,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           outfile: routesModule,
         });
 
-        buildWorker({
+        await buildWorker({
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
