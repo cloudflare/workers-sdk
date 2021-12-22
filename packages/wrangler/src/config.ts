@@ -1,7 +1,7 @@
 // we're going to manually write both the type definition AND
 // the validator for the config, so that we can give better error messages
 
-type DOMigration = {
+type DurableObjectMigration = {
   tag: string;
   new_classes?: string[];
   renamed_classes?: string[];
@@ -25,17 +25,17 @@ type Dev = {
   upstream_protocol?: string;
 };
 
-type Vars = { [key: string]: string };
+export type Vars = { [key: string]: string };
 
 type Cron = string; // TODO: we should be able to parse a cron pattern with ts
 
-type KVNamespace = {
-  binding?: string;
-  preview_id: string;
+export type KVNamespace = {
+  binding: string;
+  preview_id?: string;
   id: string;
 };
 
-type DurableObject = {
+export type DurableObject = {
   name: string;
   class_name: string;
   script_name?: string;
@@ -108,7 +108,7 @@ export type Config = {
   jsx_factory?: string; // inherited
   jsx_fragment?: string; // inherited
   vars?: Vars;
-  migrations?: DOMigration[];
+  migrations?: DurableObjectMigration[];
   durable_objects?: { bindings: DurableObject[] };
   kv_namespaces?: KVNamespace[];
   site?: Site; // inherited

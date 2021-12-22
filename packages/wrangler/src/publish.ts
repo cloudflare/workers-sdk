@@ -166,7 +166,7 @@ export default async function publish(props: Props): Promise<void> {
       );
       if (foundIndex === -1) {
         console.warn(
-          `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already delated it. Applying all available migrations to the script...`
+          `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already deleted it. Applying all available migrations to the script...`
         );
         migrations = {
           old_tag: script.migration_tag,
@@ -201,6 +201,15 @@ export default async function publish(props: Props): Promise<void> {
       : { manifest: undefined, namespace: undefined };
 
   const envRootObj = props.env ? config.env[props.env] || {} : config;
+  const bindings: CfWorkerInit["bindings"] = {
+    kv_namespaces: envRootObj.kv_namespaces?.concat(
+      assets.namespace
+        ? { binding: "__STATIC_CONTENT", id: assets.namespace }
+        : []
+    ),
+    vars: envRootObj.vars,
+    durable_objects: envRootObj.durable_objects,
+  };
 
   const worker: CfWorkerInit = {
     name: scriptName,
@@ -209,35 +218,17 @@ export default async function publish(props: Props): Promise<void> {
       content: content,
       type: bundle.type === "esm" ? "esm" : "commonjs",
     },
-    variables: {
-      ...(envRootObj?.vars || {}),
-      ...(envRootObj?.kv_namespaces || []).reduce(
-        (obj, { binding, preview_id: _preview_id, id }) => {
-          return { ...obj, [binding]: { namespaceId: id } };
-        },
-        {}
-      ),
-      ...(envRootObj?.durable_objects?.bindings || []).reduce(
-        (obj, { name, class_name, script_name }) => {
-          return {
-            ...obj,
-            [name]: { class_name, ...(script_name && { script_name }) },
-          };
-        },
-        {}
-      ),
-      ...(assets.namespace
-        ? { __STATIC_CONTENT: { namespaceId: assets.namespace } }
-        : {}),
-    },
+    bindings,
     ...(migrations && { migrations }),
-    modules: assets.manifest
-      ? moduleCollector.modules.concat({
-          name: "__STATIC_CONTENT_MANIFEST",
-          content: JSON.stringify(assets.manifest),
-          type: "text",
-        })
-      : moduleCollector.modules,
+    modules: moduleCollector.modules.concat(
+      assets.manifest
+        ? {
+            name: "__STATIC_CONTENT_MANIFEST",
+            content: JSON.stringify(assets.manifest),
+            type: "text",
+          }
+        : []
+    ),
     compatibility_date: config.compatibility_date,
     compatibility_flags: config.compatibility_flags,
     usage_model: config.usage_model,

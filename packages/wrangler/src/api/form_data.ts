@@ -1,71 +1,10 @@
 import type {
   CfWorkerInit,
   CfModuleType,
-  CfVariable,
   CfModule,
+  CfDurableObjectMigrations,
 } from "./worker.js";
 import { FormData, Blob } from "formdata-node";
-
-// Credit: https://stackoverflow.com/a/9458996
-function toBase64(source: BufferSource): string {
-  let result = "";
-  const buffer = source instanceof ArrayBuffer ? source : source.buffer;
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    result += String.fromCharCode(bytes[i]);
-  }
-  return btoa(result);
-}
-
-function toBinding(
-  name: string,
-  variable: CfVariable
-): Record<string, unknown> {
-  if (typeof variable === "string") {
-    return { name, type: "plain_text", text: variable };
-  }
-
-  if ("namespaceId" in variable) {
-    return {
-      name,
-      type: "kv_namespace",
-      namespace_id: variable.namespaceId,
-    };
-  }
-
-  if ("class_name" in variable) {
-    return {
-      name,
-      type: "durable_object_namespace",
-      class_name: variable.class_name,
-      ...(variable.script_name && {
-        script_name: variable.script_name,
-      }),
-    };
-  }
-
-  const { format, algorithm, usages, data } = variable;
-  if (format) {
-    let key_base64;
-    let key_jwk;
-    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      key_base64 = toBase64(data);
-    } else {
-      key_jwk = data;
-    }
-    return {
-      name,
-      type: "secret_key",
-      format,
-      algorithm,
-      usages,
-      key_base64,
-      key_jwk,
-    };
-  }
-
-  throw new TypeError("Unsupported variable: " + variable);
-}
 
 export function toMimeType(type: CfModuleType): string {
   switch (type) {
@@ -91,6 +30,23 @@ function toModule(module: CfModule, entryType?: CfModuleType): Blob {
   return new Blob([content], { type });
 }
 
+interface WorkerMetadata {
+  compatibility_date?: string;
+  compatibility_flags?: string[];
+  usage_model?: "bundled" | "unbound";
+  migrations?: CfDurableObjectMigrations;
+  bindings: (
+    | { type: "kv_namespace"; binding: string; namespace_id: string }
+    | { type: "plain_text"; name: string; text: string }
+    | {
+        name: string;
+        type: "durable_object_namespace";
+        class_name: string;
+        script_name?: string;
+      }
+  )[];
+}
+
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
@@ -99,7 +55,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
   const {
     main,
     modules,
-    variables,
+    bindings,
     migrations,
     usage_model,
     compatibility_date,
@@ -107,16 +63,34 @@ export function toFormData(worker: CfWorkerInit): FormData {
   } = worker;
   const { name, type: mainType } = main;
 
-  const bindings = [];
-  for (const [name, variable] of Object.entries(variables ?? {})) {
-    const binding = toBinding(name, variable);
-    bindings.push(binding);
-  }
+  const metadataBindings: WorkerMetadata["bindings"] = [];
 
-  // TODO: this object should be typed
-  const metadata = {
+  bindings.kv_namespaces?.forEach(({ id, binding }) => {
+    metadataBindings.push({
+      binding,
+      type: "kv_namespace",
+      namespace_id: id,
+    });
+  });
+
+  bindings.durable_objects?.bindings.forEach(
+    ({ name, class_name, script_name }) => {
+      metadataBindings.push({
+        name,
+        type: "durable_object_namespace",
+        class_name: class_name,
+        ...(script_name && { script_name }),
+      });
+    }
+  );
+
+  Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
+    metadataBindings.push({ name: key, type: "plain_text", text: value });
+  });
+
+  const metadata: WorkerMetadata = {
     ...(mainType !== "commonjs" ? { main_module: name } : { body_part: name }),
-    bindings,
+    bindings: metadataBindings,
     ...(compatibility_date && { compatibility_date }),
     ...(compatibility_flags && { compatibility_flags }),
     ...(usage_model && { usage_model }),
