@@ -12,7 +12,6 @@ import { watch } from "chokidar";
 import { buildWorker } from "../lib/functions/buildWorker";
 import { Config, writeRoutesModule } from "../lib/functions/routes";
 import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
-import { BuildResult } from "esbuild";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
 const EXIT = (message?: string) => {
