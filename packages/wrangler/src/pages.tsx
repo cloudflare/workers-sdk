@@ -743,6 +743,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           routesModule,
           outfile: scriptPath,
           minify: false, // TODO: Expose option to enable
+          sourcemap: true,
           watch: true,
         });
 
