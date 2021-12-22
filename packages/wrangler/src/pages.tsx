@@ -6,6 +6,7 @@ import { execSync, spawn } from "child_process";
 import { Headers, Request, Response } from "undici";
 import type { MiniflareOptions } from "miniflare";
 import type { RequestInfo, RequestInit } from "undici";
+import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
 
@@ -466,12 +467,20 @@ const generateAssetsFetch = async (
         if ((asset = getAsset(`${cwd}/404.html`))) {
           deconstructedResponse.status = 404;
           deconstructedResponse.body = serveAsset(asset);
+          deconstructedResponse.headers.set(
+            "Content-Type",
+            getType(asset) || "application/octet-stream"
+          );
           return deconstructedResponse;
         }
       }
 
       if ((asset = getAsset(`/index.html`))) {
         deconstructedResponse.body = serveAsset(asset);
+        deconstructedResponse.headers.set(
+          "Content-Type",
+          getType(asset) || "application/octet-stream"
+        );
         return deconstructedResponse;
       }
 
@@ -484,6 +493,10 @@ const generateAssetsFetch = async (
     if (url.pathname.endsWith("/")) {
       if ((asset = getAsset(`${url.pathname}/index.html`))) {
         deconstructedResponse.body = serveAsset(asset);
+        deconstructedResponse.headers.set(
+          "Content-Type",
+          getType(asset) || "application/octet-stream"
+        );
         return deconstructedResponse;
       } else if (
         (asset = getAsset(`${url.pathname.replace(/\/$/, ".html")}`))
@@ -511,6 +524,10 @@ const generateAssetsFetch = async (
         const extensionlessPath = url.pathname.slice(0, -".html".length);
         if (getAsset(extensionlessPath) || extensionlessPath === "/") {
           deconstructedResponse.body = serveAsset(asset);
+          deconstructedResponse.headers.set(
+            "Content-Type",
+            getType(asset) || "application/octet-stream"
+          );
           return deconstructedResponse;
         } else {
           deconstructedResponse.status = 301;
@@ -522,6 +539,10 @@ const generateAssetsFetch = async (
         }
       } else {
         deconstructedResponse.body = serveAsset(asset);
+        deconstructedResponse.headers.set(
+          "Content-Type",
+          getType(asset) || "application/octet-stream"
+        );
         return deconstructedResponse;
       }
     } else if (hasFileExtension(url.pathname)) {
@@ -531,6 +552,10 @@ const generateAssetsFetch = async (
 
     if ((asset = getAsset(`${url.pathname}.html`))) {
       deconstructedResponse.body = serveAsset(asset);
+      deconstructedResponse.headers.set(
+        "Content-Type",
+        getType(asset) || "application/octet-stream"
+      );
       return deconstructedResponse;
     }
 

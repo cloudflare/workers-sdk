@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@iarna/toml": "^2.2.5",
+    "@types/mime": "^2.0.3",
     "@types/react": "^17.0.37",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",
@@ -63,6 +64,7 @@
     "ink-select-input": "^4.2.1",
     "ink-table": "^3.0.0",
     "ink-text-input": "^4.0.2",
+    "mime": "^3.0.0",
     "node-fetch": "^3.1.0",
     "open": "^8.4.0",
     "path-to-regexp": "^6.2.0",
