@@ -25,6 +25,8 @@ import {
   putKeyValue,
   putBulkKeyValue,
   deleteBulkKeyValue,
+  createNamespace,
+  isValidNamespaceBinding,
 } from "./kv";
 
 import { pages } from "./pages";
@@ -1140,13 +1142,17 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            if (args._.length !== 2) {
-              throw new Error(
-                `Did you forget to add quotes around "${
-                  args.namespace
-                } ${args._.slice(2).join(" ")}"?`
+            if (args._.length > 2) {
+              const extraArgs = args._.slice(2).join(" ");
+              throw `Unexpected additional positional arguments "${extraArgs}".`;
+            }
+
+            if (!isValidNamespaceBinding(args.namespace)) {
+              throw new CommandLineArgsError(
+                `The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
               );
             }
+
             const config = args.config as Config;
             if (!config.name) {
               console.warn(
@@ -1154,13 +1160,10 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const title = `${config.name || "worker"}${
-              args.env ? `-${args.env}` : ""
-            }-${args.namespace}${args.preview ? "_preview" : ""}`;
-
-            if (/[\W]+/.test(args.namespace)) {
-              throw new Error("invalid binding name, needs to be js friendly");
-            }
+            const name = config.name || "worker";
+            const environment = args.env ? `-${args.env}` : "";
+            const preview = args.preview ? "_preview" : "";
+            const title = `${name}${environment}-${args.namespace}${preview}`;
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -1197,30 +1200,16 @@ export async function main(argv: string[]): Promise<void> {
             // TODO: generate a binding name stripping non alphanumeric chars
 
             console.log(`🌀 Creating namespace with title "${title}"`);
-
-            const response = await cfetch<{ id: string }>(
-              `/accounts/${config.account_id}/storage/kv/namespaces`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  title,
-                }),
-              }
-            );
+            const namespaceId = await createNamespace(config.account_id, title);
 
             console.log("✨ Success!");
+            const envString = args.env ? ` under [env.${args.env}]` : "";
+            const previewString = args.preview ? "preview_" : "";
             console.log(
-              `Add the following to your configuration file in your kv_namespaces array${
-                args.env ? ` under [env.${args.env}]` : ""
-              }:`
+              `Add the following to your configuration file in your kv_namespaces array${envString}:`
             );
             console.log(
-              `{ binding = "${args.namespace}", ${
-                args.preview ? "preview_" : ""
-              }id = "${response.id}" }`
+              `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
             );
           }
         )
