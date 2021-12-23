@@ -10,10 +10,10 @@ import type { RequestInfo, RequestInit } from "undici";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
-import { buildWorker } from "../lib/functions/buildWorker";
-import type { Config } from "../lib/functions/routes";
-import { writeRoutesModule } from "../lib/functions/routes";
-import { generateConfigFromFileTree } from "../lib/functions/filepath-routing";
+import { buildWorker } from "./pages/functions/buildWorker";
+import type { Config } from "./pages/functions/routes";
+import { writeRoutesModule } from "./pages/functions/routes";
+import { generateConfigFromFileTree } from "./pages/functions/filepath-routing";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
 const EXIT = (message?: string) => {
@@ -26,18 +26,21 @@ const EXIT = (message?: string) => {
 process.on("SIGINT", () => EXIT());
 process.on("SIGTERM", () => EXIT());
 
-type Exit = (message?: string) => undefined;
-
-const isWindows = () => process.platform === "win32";
+function isWindows() {
+  return process.platform === "win32";
+}
 
 const SECONDS_TO_WAIT_FOR_PROXY = 5;
 
-const sleep = async (ms: number) =>
+async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-const touch = (path: string) => closeSync(openSync(path, "w"));
+function touch(path: string) {
+  closeSync(openSync(path, "w"));
+}
 
-const getPids = (pid: number) => {
+function getPids(pid: number) {
   const pids: number[] = [pid];
   let command: string, regExp: RegExp;
 
@@ -62,9 +65,9 @@ const getPids = (pid: number) => {
   } catch {}
 
   return pids;
-};
+}
 
-const getPort = (pid: number) => {
+function getPort(pid: number) {
   let command: string, regExp: RegExp;
 
   if (isWindows()) {
@@ -89,15 +92,15 @@ const getPort = (pid: number) => {
       `Error scanning for ports of process with PID ${pid}: ${thrown}`
     );
   }
-};
+}
 
-const spawnProxyProcess = async ({
+async function spawnProxyProcess({
   port,
   command,
 }: {
   port?: number;
   command: (string | number)[];
-}): Promise<undefined | number> => {
+}): Promise<undefined | number> {
   if (command.length === 0)
     return EXIT(
       "Must specify a directory of static assets to serve or a command to run."
@@ -152,25 +155,25 @@ const spawnProxyProcess = async ({
   }
 
   return port;
-};
+}
 
-const escapeRegex = (str: string) => {
+function escapeRegex(str: string) {
   return str.replace(/[-/\\^$*+?.()|[]{}]/g, "\\$&");
-};
+}
 
-export type Replacements = Record<string, string>;
+type Replacements = Record<string, string>;
 
-export const replacer = (str: string, replacements: Replacements) => {
+function replacer(str: string, replacements: Replacements) {
   for (const [replacement, value] of Object.entries(replacements)) {
     str = str.replace(`:${replacement}`, value);
   }
   return str;
-};
+}
 
-export const generateRulesMatcher = <T,>(
+function generateRulesMatcher<T>(
   rules?: Record<string, T>,
   replacer: (match: T, replacements: Replacements) => T = (match) => match
-) => {
+) {
   // TODO: How can you test cross-host rules?
   if (!rules) return () => [];
 
@@ -217,9 +220,9 @@ export const generateRulesMatcher = <T,>(
       })
       .filter((value) => value !== undefined) as T[];
   };
-};
+}
 
-const generateHeadersMatcher = (headersFile: string) => {
+function generateHeadersMatcher(headersFile: string) {
   if (existsSync(headersFile)) {
     const contents = readFileSync(headersFile).toString();
 
@@ -286,9 +289,9 @@ const generateHeadersMatcher = (headersFile: string) => {
   } else {
     return () => undefined;
   }
-};
+}
 
-const generateRedirectsMatcher = (redirectsFile: string) => {
+function generateRedirectsMatcher(redirectsFile: string) {
   if (existsSync(redirectsFile)) {
     const contents = readFileSync(redirectsFile).toString();
 
@@ -335,26 +338,26 @@ const generateRedirectsMatcher = (redirectsFile: string) => {
   } else {
     return () => undefined;
   }
-};
+}
 
-const extractPathname = (
+function extractPathname(
   path = "/",
   includeSearch: boolean,
   includeHash: boolean
-) => {
+) {
   if (!path.startsWith("/")) path = `/${path}`;
   const url = new URL(`//${path}`, "relative://");
   return `${url.pathname}${includeSearch ? url.search : ""}${
     includeHash ? url.hash : ""
   }`;
-};
+}
 
-const validateURL = (
+function validateURL(
   token: string,
   onlyRelative = false,
   includeSearch = false,
   includeHash = false
-) => {
+) {
   const host = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/.exec(token);
   if (host && host.groups && host.groups.host) {
     if (onlyRelative) return;
@@ -375,14 +378,13 @@ const validateURL = (
     }
   }
   return "";
-};
+}
 
-const hasFileExtension = (pathname: string) =>
-  /\/.+\.[a-z0-9]+$/i.test(pathname);
+function hasFileExtension(pathname: string) {
+  return /\/.+\.[a-z0-9]+$/i.test(pathname);
+}
 
-const generateAssetsFetch = async (
-  directory: string
-): Promise<typeof fetch> => {
+async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   const headersFile = join(directory, "_headers");
   const redirectsFile = join(directory, "_redirects");
   const workerFile = join(directory, "_worker.js");
@@ -625,7 +627,7 @@ const generateAssetsFetch = async (
       status: deconstructedResponse.status,
     });
   }) as any;
-};
+}
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs.command(
