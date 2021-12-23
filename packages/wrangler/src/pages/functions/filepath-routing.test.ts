@@ -1,45 +1,5 @@
 import { compareRoutes } from "./filepath-routing";
 
-// describe("generateConfigFromFileTree()", () => {
-//   beforeEach(() => {
-//     mock({
-//       "/functions": {
-//         api: {
-//           "hello.ts":
-//             'export const onRequestGet = () => new Response("Hello from an API!");',
-//         },
-//         "index.ts":
-//           'export const onRequest = () => new Response("Hello, world!");',
-//         "_middleware.ts":
-//           'export const onRequest = [async () => new Response("Hello from middleware!")];',
-//       },
-//       node_modules: mock.load(
-//         path.resolve(__dirname, "../../node_modules")
-//       ),
-//     });
-//   });
-
-//   afterEach(() => {
-//     mock.restore();
-//   });
-
-//   test("it merges and sorts route entries", async () => {
-//     const result = await generateConfigFromFileTree({
-//       baseURL: "/",
-//       baseDir: "/functions",
-//     });
-//     expect(result.routes).toEqual({
-//       "/": {
-//         middleware: ["_middleware.ts:onRequest"],
-//         module: ["index.ts:onRequest"],
-//       },
-//       "GET /api/hello": {
-//         module: ["api/hello.ts:onRequestGet"],
-//       },
-//     });
-//   });
-// });
-
 describe("compareRoutes()", () => {
   test("routes with fewer segments come after those with more segments", () => {
     expect(compareRoutes("/foo", "/foo/bar")).toBe(1);

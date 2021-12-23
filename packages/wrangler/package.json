@@ -45,6 +45,7 @@
     "fsevents": "~2.3.2"
   },
   "devDependencies": {
+    "@babel/types": "^7.16.0",
     "@iarna/toml": "^2.2.5",
     "@types/mime": "^2.0.3",
     "@types/estree": "^0.0.50",
@@ -54,6 +55,7 @@
     "@types/ws": "^8.2.1",
     "@types/yargs": "^17.0.7",
     "acorn": "^8.6.0",
+    "acorn-walk": "^8.2.0",
     "chokidar": "^3.5.2",
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
