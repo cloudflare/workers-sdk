@@ -11,10 +11,10 @@ import { URL } from "url";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
-import { buildWorker } from "./pages/functions/buildWorker";
-import type { Config } from "./pages/functions/routes";
-import { writeRoutesModule } from "./pages/functions/routes";
-import { generateConfigFromFileTree } from "./pages/functions/filepath-routing";
+import { buildWorker } from "../pages/functions/buildWorker";
+import type { Config } from "../pages/functions/routes";
+import { writeRoutesModule } from "../pages/functions/routes";
+import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
