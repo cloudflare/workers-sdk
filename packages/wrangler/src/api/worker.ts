@@ -86,6 +86,15 @@ interface CfDurableObject {
   script_name?: string;
 }
 
+/**
+ * A Service.
+ */
+interface CfService {
+  name: string;
+  script_name: string;
+  environment: string;
+}
+
 export interface CfDurableObjectMigrations {
   old_tag?: string;
   new_tag: string;
@@ -119,6 +128,7 @@ export interface CfWorkerInit {
     kv_namespaces?: CfKvNamespace[];
     durable_objects?: { bindings: CfDurableObject[] };
     vars?: CfVars;
+    services?: CfService[];
   };
   migrations: void | CfDurableObjectMigrations;
   compatibility_date: string | void;

@@ -79,7 +79,12 @@ async function readConfig(path?: string): Promise<Config> {
     });
   });
 
-  const mirroredFields = ["vars", "kv_namespaces", "durable_objects"];
+  const mirroredFields = [
+    "vars",
+    "kv_namespaces",
+    "durable_objects",
+    "experimental_services",
+  ];
   Object.keys(config.env || {}).forEach((env) => {
     mirroredFields.forEach((field) => {
       // if it exists on top level, it should exist on env defns
@@ -92,6 +97,12 @@ async function readConfig(path?: string): Promise<Config> {
       });
     });
   });
+
+  if ("experimental_services" in config) {
+    console.warn(
+      "The experimental_services field is only for cloudflare internal usage right now, and is subject to change. Please do not use this on production projects"
+    );
+  }
 
   // todo: validate, add defaults
   // let's just do some basics for now
@@ -528,6 +539,7 @@ export async function main(argv: string[]): Promise<void> {
             ),
             vars: envRootObj.vars,
             durable_objects: envRootObj.durable_objects,
+            services: envRootObj.experimental_services,
           }}
         />
       );
