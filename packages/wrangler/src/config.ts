@@ -35,7 +35,7 @@ type KVNamespace = {
   id: string;
 };
 
-export type DurableObject = {
+type DurableObject = {
   name: string;
   class_name: string;
   script_name?: string;
