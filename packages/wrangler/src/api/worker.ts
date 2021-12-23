@@ -63,21 +63,30 @@ export interface CfModule {
 }
 
 /**
- * A KV namespace.
+ * A map of variable names to values.
  */
-export interface CfKvNamespace {
-  /**
-   * The namespace ID.
-   */
-  namespaceId: string;
+interface CfVars {
+  [key: string]: string;
 }
 
-export interface CfDurableObject {
+/**
+ * A KV namespace.
+ */
+interface CfKvNamespace {
+  binding: string;
+  id: string;
+}
+
+/**
+ * A Durable Object.
+ */
+interface CfDurableObject {
+  name: string;
   class_name: string;
   script_name?: string;
 }
 
-interface CfDOMigrations {
+export interface CfDurableObjectMigrations {
   old_tag?: string;
   new_tag: string;
   steps: {
@@ -86,35 +95,6 @@ interface CfDOMigrations {
     deleted_classes?: string[];
   }[];
 }
-
-/**
- * A `WebCrypto` key.
- *
- * @link https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey
- */
-export interface CfCryptoKey {
-  /**
-   * The format.
-   */
-  format: string;
-  /**
-   * The algorithm.
-   */
-  algorithm: string;
-  /**
-   * The usages.
-   */
-  usages: string[];
-  /**
-   * The data.
-   */
-  data: BufferSource | JsonWebKey;
-}
-
-/**
- * A variable (aka. environment variable).
- */
-export type CfVariable = string | CfKvNamespace | CfCryptoKey | CfDurableObject;
 
 /**
  * Options for creating a `CfWorker`.
@@ -133,10 +113,14 @@ export interface CfWorkerInit {
    */
   modules: void | CfModule[];
   /**
-   * The map of names to variables. (aka. environment variables)
+   * All the bindings
    */
-  variables?: { [name: string]: CfVariable };
-  migrations: void | CfDOMigrations;
+  bindings: {
+    kv_namespaces?: CfKvNamespace[];
+    durable_objects?: { bindings: CfDurableObject[] };
+    vars?: CfVars;
+  };
+  migrations: void | CfDurableObjectMigrations;
   compatibility_date: string | void;
   compatibility_flags: void | string[];
   usage_model: void | "bundled" | "unbound";

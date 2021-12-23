@@ -504,27 +504,30 @@ export async function main(argv: string[]): Promise<void> {
           compatibilityDate={config.compatibility_date}
           compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
-          variables={{
-            ...(envRootObj?.vars || {}),
-            ...(envRootObj?.kv_namespaces || []).reduce(
-              (obj, { binding, preview_id }) => {
+          bindings={{
+            kv_namespaces: envRootObj.kv_namespaces?.map(
+              ({ binding, preview_id, id: _id }) => {
+                // In `dev`, we make folks use a separate kv namespace called
+                // `preview_id` instead of `id` so that they don't
+                // break production data. So here we check that a `preview_id`
+                // has actually been configured.
+                // This whole block of code will be obsolted in the future
+                // when we have copy-on-write for previews on edge workers.
                 if (!preview_id) {
                   // TODO: This error has to be a _lot_ better, ideally just asking
                   // to create a preview namespace for the user automatically
                   throw new Error(
-                    "kv namespaces need a preview id during dev mode"
-                  );
+                    `In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+                  ); // Ugh, I really don't like this message very much
                 }
-                return { ...obj, [binding]: { namespaceId: preview_id } };
-              },
-              {}
+                return {
+                  binding,
+                  id: preview_id,
+                };
+              }
             ),
-            ...(envRootObj?.durable_objects?.bindings || []).reduce(
-              (obj, { name, class_name, script_name }) => {
-                return { ...obj, [name]: { class_name, script_name } };
-              },
-              {}
-            ),
+            vars: envRootObj.vars,
+            durable_objects: envRootObj.durable_objects,
           }}
         />
       );
@@ -957,7 +960,11 @@ export async function main(argv: string[]): Promise<void> {
                         content: `export default { fetch() {} }`,
                         type: "esm",
                       },
-                      variables: {},
+                      bindings: {
+                        kv_namespaces: [],
+                        vars: {},
+                        durable_objects: { bindings: [] },
+                      },
                       modules: [],
                     }),
                   }

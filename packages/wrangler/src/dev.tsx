@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
 import { DtInspector } from "./api/inspect";
-import type { CfModule, CfVariable } from "./api/worker";
+import type { CfModule } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
 import { spawn } from "child_process";
@@ -38,7 +38,7 @@ type Props = {
   initialMode: "local" | "remote";
   jsxFactory: void | string;
   jsxFragment: void | string;
-  variables: { [name: string]: CfVariable };
+  bindings: CfWorkerInit["bindings"];
   public: void | string;
   site: void | string;
   compatibilityDate: void | string;
@@ -99,7 +99,7 @@ function Dev(props: Props): JSX.Element {
           name={props.name}
           bundle={bundle}
           format={props.format}
-          variables={props.variables}
+          bindings={props.bindings}
           site={props.site}
           public={props.public}
           port={props.port}
@@ -111,7 +111,7 @@ function Dev(props: Props): JSX.Element {
           format={props.format}
           accountId={props.accountId}
           apiToken={apiToken}
-          variables={props.variables}
+          bindings={props.bindings}
           site={props.site}
           public={props.public}
           port={props.port}
@@ -172,7 +172,7 @@ function Remote(props: {
   port: number;
   accountId: void | string;
   apiToken: void | string;
-  variables: { [name: string]: CfVariable };
+  bindings: CfWorkerInit["bindings"];
   compatibilityDate: string | void;
   compatibilityFlags: void | string[];
   usageModel: void | "bundled" | "unbound";
@@ -186,7 +186,7 @@ function Remote(props: {
     modules: props.bundle ? props.bundle.modules : [],
     accountId: props.accountId,
     apiToken: props.apiToken,
-    variables: props.variables,
+    bindings: props.bindings,
     sitesFolder: props.site,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
@@ -203,7 +203,7 @@ function Local(props: {
   name: void | string;
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
-  variables: { [name: string]: CfVariable };
+  bindings: CfWorkerInit["bindings"];
   public: void | string;
   site: void | string;
   port: number;
@@ -212,7 +212,7 @@ function Local(props: {
     name: props.name,
     bundle: props.bundle,
     format: props.format,
-    variables: props.variables,
+    bindings: props.bindings,
     port: props.port,
   });
   useInspector(inspectorUrl);
@@ -223,11 +223,11 @@ function useLocalWorker(props: {
   name: void | string;
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
-  variables: { [name: string]: CfVariable };
+  bindings: CfWorkerInit["bindings"];
   port: number;
 }) {
   // TODO: pass vars via command line
-  const { bundle, format, variables, port } = props;
+  const { bundle, format, bindings, port } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | void>();
@@ -264,20 +264,17 @@ function useLocalWorker(props: {
         "--kv-persist",
         "--cache-persist",
         "--do-persist",
-        ...Object.entries(variables)
-          .map(([varKey, varVal]) => {
-            if (typeof varVal === "string") {
-              return `--binding ${varKey}=${varVal}`;
-            } else if (
-              "namespaceId" in varVal &&
-              typeof varVal.namespaceId === "string"
-            ) {
-              return `--kv ${varKey}`;
-            } else if ("class_name" in varVal) {
-              return `--do ${varKey}=${varVal.class_name}`;
-            }
-          })
-          .filter(Boolean),
+        ...Object.entries(bindings.vars || {}).map(([key, value]) => {
+          return `--binding ${key}=${value}`;
+        }),
+        ...(bindings.kv_namespaces || []).map(({ binding }) => {
+          return `--kv ${binding}`;
+        }),
+        ...(bindings.durable_objects?.bindings || []).map(
+          ({ name, class_name }) => {
+            return `--do ${name}=${class_name}`;
+          }
+        ),
         "--modules",
         format ||
         (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
@@ -338,7 +335,14 @@ function useLocalWorker(props: {
         removeSignalExitListener.current = undefined;
       }
     };
-  }, [bundle, format, port]);
+  }, [
+    bundle,
+    format,
+    port,
+    bindings.durable_objects?.bindings,
+    bindings.kv_namespaces,
+    bindings.vars,
+  ]);
   return { inspectorUrl };
 }
 
@@ -372,8 +376,6 @@ function useTmpDir(): string | void {
   }, [handleError]);
   return directory?.path;
 }
-
-function runCommand() {}
 
 function useCustomBuild(
   expectedEntry: string,
@@ -528,7 +530,7 @@ function useWorker(props: {
   modules: CfModule[];
   accountId: string;
   apiToken: string;
-  variables: { [name: string]: CfVariable };
+  bindings: CfWorkerInit["bindings"];
   sitesFolder: void | string;
   port: number;
   compatibilityDate: string | void;
@@ -542,7 +544,7 @@ function useWorker(props: {
     modules,
     accountId,
     apiToken,
-    variables,
+    bindings,
     sitesFolder,
     compatibilityDate,
     compatibilityFlags,
@@ -591,19 +593,23 @@ function useWorker(props: {
           type: format || bundle.type === "esm" ? "esm" : "commonjs",
           content,
         },
-        modules: assets.manifest
-          ? modules.concat({
-              name: "__STATIC_CONTENT_MANIFEST",
-              content: JSON.stringify(assets.manifest),
-              type: "text",
-            })
-          : modules,
-        variables: assets.namespace
-          ? {
-              ...variables,
-              __STATIC_CONTENT: { namespaceId: assets.namespace },
-            }
-          : variables,
+        modules: modules.concat(
+          assets.manifest
+            ? {
+                name: "__STATIC_CONTENT_MANIFEST",
+                content: JSON.stringify(assets.manifest),
+                type: "text",
+              }
+            : []
+        ),
+        bindings: {
+          ...bindings,
+          kv_namespaces: (bindings.kv_namespaces || []).concat(
+            assets.namespace
+              ? { binding: "__STATIC_CONTENT", id: assets.namespace }
+              : []
+          ),
+        },
         migrations: undefined, // no migrations in dev
         compatibility_date: compatibilityDate,
         compatibility_flags: compatibilityFlags,
@@ -633,6 +639,8 @@ function useWorker(props: {
     compatibilityDate,
     compatibilityFlags,
     usageModel,
+    bindings,
+    modules,
   ]);
   return token;
 }
