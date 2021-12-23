@@ -36,11 +36,11 @@ interface WorkerMetadata {
   usage_model?: "bundled" | "unbound";
   migrations?: CfDurableObjectMigrations;
   bindings: (
-    | { type: "kv_namespace"; binding: string; namespace_id: string }
+    | { type: "kv_namespace"; name: string; namespace_id: string }
     | { type: "plain_text"; name: string; text: string }
     | {
-        name: string;
         type: "durable_object_namespace";
+        name: string;
         class_name: string;
         script_name?: string;
       }
@@ -67,7 +67,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
 
   bindings.kv_namespaces?.forEach(({ id, binding }) => {
     metadataBindings.push({
-      binding,
+      name: binding,
       type: "kv_namespace",
       namespace_id: id,
     });
