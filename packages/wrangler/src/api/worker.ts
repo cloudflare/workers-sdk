@@ -62,6 +62,9 @@ export interface CfModule {
   type?: CfModuleType;
 }
 
+/**
+ * A map of variable names to values.
+ */
 interface CfVars {
   [key: string]: string;
 }

@@ -29,13 +29,13 @@ export type Vars = { [key: string]: string };
 
 type Cron = string; // TODO: we should be able to parse a cron pattern with ts
 
-export type KVNamespace = {
+type KVNamespace = {
   binding: string;
   preview_id?: string;
   id: string;
 };
 
-export type DurableObject = {
+type DurableObject = {
   name: string;
   class_name: string;
   script_name?: string;

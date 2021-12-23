@@ -335,7 +335,14 @@ function useLocalWorker(props: {
         removeSignalExitListener.current = undefined;
       }
     };
-  }, [bundle, format, port]);
+  }, [
+    bundle,
+    format,
+    port,
+    bindings.durable_objects?.bindings,
+    bindings.kv_namespaces,
+    bindings.vars,
+  ]);
   return { inspectorUrl };
 }
 
@@ -632,6 +639,8 @@ function useWorker(props: {
     compatibilityDate,
     compatibilityFlags,
     usageModel,
+    bindings,
+    modules,
   ]);
   return token;
 }
