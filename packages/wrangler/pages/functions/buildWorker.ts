@@ -27,7 +27,7 @@ export function buildWorker({
   console.log(`Compiling worker to "${outfile}"`);
   return build({
     entryPoints: [
-      path.resolve(sanitizedDirname, "../lib/functions/template-worker.ts"),
+      path.resolve(sanitizedDirname, "../pages/functions/template-worker.ts"),
     ],
     inject: [routesModule],
     bundle: true,

@@ -10,10 +10,10 @@ import type { RequestInfo, RequestInit } from "undici";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
-import { buildWorker } from "./pages/functions/buildWorker";
-import type { Config } from "./pages/functions/routes";
-import { writeRoutesModule } from "./pages/functions/routes";
-import { generateConfigFromFileTree } from "./pages/functions/filepath-routing";
+import { buildWorker } from "../pages/functions/buildWorker";
+import type { Config } from "../pages/functions/routes";
+import { writeRoutesModule } from "../pages/functions/routes";
+import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
 const EXIT = (message?: string) => {
