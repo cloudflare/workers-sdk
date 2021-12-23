@@ -1,4 +1,4 @@
-name: Tests, Linter & Typecheck
+name: Tests, Linter, Typecheck & Build
 
 on: [push, pull_request]
 
@@ -31,3 +31,7 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Build
+        run: npm run build
+        working-directory: packages/wrangler
