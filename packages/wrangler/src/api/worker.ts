@@ -91,7 +91,7 @@ interface CfDurableObject {
  */
 interface CfService {
   name: string;
-  script_name: string;
+  service: string;
   environment: string;
 }
 

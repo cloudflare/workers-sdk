@@ -47,7 +47,7 @@ interface WorkerMetadata {
     | {
         type: "service";
         name: string;
-        script_name: string;
+        service: string;
         environment: string;
       }
   )[];
@@ -94,11 +94,11 @@ export function toFormData(worker: CfWorkerInit): FormData {
     metadataBindings.push({ name: key, type: "plain_text", text: value });
   });
 
-  bindings.services?.forEach(({ name, script_name, environment }) => {
+  bindings.services?.forEach(({ name, service, environment }) => {
     metadataBindings.push({
       name,
       type: "service",
-      script_name,
+      service,
       environment,
     });
   });

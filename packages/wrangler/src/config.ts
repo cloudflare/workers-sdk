@@ -43,7 +43,7 @@ type DurableObject = {
 
 type Service = {
   name: string;
-  script_name: string;
+  service: string;
   environment: string;
 };
 
