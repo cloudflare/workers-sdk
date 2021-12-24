@@ -209,6 +209,7 @@ export default async function publish(props: Props): Promise<void> {
     ),
     vars: envRootObj.vars,
     durable_objects: envRootObj.durable_objects,
+    services: envRootObj.experimental_services,
   };
 
   const worker: CfWorkerInit = {
