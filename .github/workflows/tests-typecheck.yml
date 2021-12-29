@@ -1,4 +1,4 @@
-name: Tests, Linter & Typecheck
+name: Tests, Linter, Typecheck & Build
 
 on: [push, pull_request]
 
@@ -26,7 +26,7 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
-      - name: Run Type Checking & ESLint
+      - name: Run Prettier, Type Checking, ESLint & Build
         run: npm run check
 
       - name: Test
