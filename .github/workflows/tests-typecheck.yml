@@ -26,12 +26,8 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
-      - name: Run Type Checking & ESLint
+      - name: Run Prettier, Type Checking, ESLint & Build
         run: npm run check
 
       - name: Test
         run: npm run test
-
-      - name: Build
-        run: npm run build
-        working-directory: packages/wrangler
