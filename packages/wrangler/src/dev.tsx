@@ -641,6 +641,7 @@ function useWorker(props: {
     usageModel,
     bindings,
     modules,
+    token,
   ]);
   return token;
 }
