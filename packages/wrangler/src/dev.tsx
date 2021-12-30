@@ -264,15 +264,15 @@ function useLocalWorker(props: {
         "--kv-persist",
         "--cache-persist",
         "--do-persist",
-        ...Object.entries(bindings.vars || {}).map(([key, value]) => {
-          return `--binding ${key}=${value}`;
+        ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
+          return ["--binding", `${key}=${value}`];
         }),
-        ...(bindings.kv_namespaces || []).map(({ binding }) => {
-          return `--kv ${binding}`;
+        ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
+          return ["--kv", binding];
         }),
-        ...(bindings.durable_objects?.bindings || []).map(
+        ...(bindings.durable_objects?.bindings || []).flatMap(
           ({ name, class_name }) => {
-            return `--do ${name}=${class_name}`;
+            return ["--do", `${name}=${class_name}`];
           }
         ),
         "--modules",
@@ -289,15 +289,15 @@ function useLocalWorker(props: {
         }
       });
 
-      local.current.stdout.on("data", (_data: string) => {
-        // console.log(`stdout: ${data}`);
+      local.current.stdout.on("data", (data: Buffer) => {
+        console.log(`${data.toString()}`);
       });
 
-      local.current.stderr.on("data", (data: string) => {
-        // console.error(`stderr: ${data}`);
+      local.current.stderr.on("data", (data: Buffer) => {
+        console.error(`${data.toString()}`);
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
-            data
+            data.toString()
           );
         if (matches) {
           setInspectorUrl(matches[1]);
