@@ -13,7 +13,7 @@ try {
     package.version = "0.0.0-" + stdout.trim();
     fs.writeFileSync(
       "./packages/wrangler/package.json",
-      JSON.stringify(package, null, 2)
+      JSON.stringify(package, null, 2) + "\n"
     );
   });
 } catch (error) {
