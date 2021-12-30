@@ -1,20 +1,20 @@
 name: Prerelease
 
 on:
-  workflow_run:
-    workflows: ["Tests, Linter & Typecheck"]
-    branches: ["main"]
-    types:
-      - completed
-
+  push:
+    branches:
+      - main
 jobs:
   build:
-    if: ${{ github.repository_owner == 'cloudflare' && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 16.7
         uses: actions/setup-node@v2
@@ -38,6 +38,9 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: packages/wrangler
+
+      - name: Check for errors
+        run: npm run check
 
       - name: Publish Alpha to NPM
         run: npm publish --tag alpha
