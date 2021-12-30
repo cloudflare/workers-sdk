@@ -1,14 +1,10 @@
-name: Release
+name: Pull Request
 
-on:
-  push:
-    branches:
-      - main
+on: pull_request
 
 jobs:
-  release:
-    if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Release
+  test:
+    name: "Pull Request" # todo: we should add a pull request number here
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -32,18 +28,5 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
-      - name: Build
-        run: npm run build
-        working-directory: packages/wrangler
-
       - name: Check for errors
         run: npm run check
-
-      - name: Create Version PR or Publish to NPM
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: npx changeset publish --tag beta
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
