@@ -28,7 +28,7 @@ export default function mockCfetch(
       return handler(uri, init); // TODO: should we have some kind of fallthrough system? we'll see.
     }
   }
-  throw new Error(`no mocks found for ${resource}`);
+  throw new Error(`no mocks found for ${init.method}: ${resource}`);
 }
 
 /**
