@@ -67,7 +67,6 @@ export function toFormData(worker: CfWorkerInit): FormData {
     compatibility_date,
     compatibility_flags,
   } = worker;
-  const { name, type: mainType } = main;
 
   const metadataBindings: WorkerMetadata["bindings"] = [];
 
@@ -104,7 +103,9 @@ export function toFormData(worker: CfWorkerInit): FormData {
   });
 
   const metadata: WorkerMetadata = {
-    ...(mainType !== "commonjs" ? { main_module: name } : { body_part: name }),
+    ...(main.type !== "commonjs"
+      ? { main_module: main.name }
+      : { body_part: main.name }),
     bindings: metadataBindings,
     ...(compatibility_date && { compatibility_date }),
     ...(compatibility_flags && { compatibility_flags }),
@@ -114,7 +115,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
 
   formData.set("metadata", JSON.stringify(metadata));
 
-  if (mainType === "commonjs" && modules && modules.length > 0) {
+  if (main.type === "commonjs" && modules && modules.length > 0) {
     throw new TypeError(
       "More than one module can only be specified when type = 'esm'"
     );
@@ -122,7 +123,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
 
   for (const module of [main].concat(modules || [])) {
     const { name } = module;
-    const blob = toModule(module, mainType ?? "esm");
+    const blob = toModule(module, main.type ?? "esm");
     formData.set(name, blob, name);
   }
 

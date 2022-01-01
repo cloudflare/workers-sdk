@@ -491,7 +491,10 @@ function useEsbuild(props: {
             else {
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
-              setBundle((bundle) => ({ ...bundle, id: bundle.id + 1 }));
+              setBundle((previousBundle) => ({
+                ...previousBundle,
+                id: previousBundle.id + 1,
+              }));
             }
           },
         },
@@ -655,6 +658,7 @@ function useProxy({
   publicRoot: void | string;
   port: number;
 }) {
+  // const tokenRef = useRef<void |{host:string, value:string}>(token);
   useEffect(() => {
     if (!token) return;
     // TODO(soon): since headers are added in callbacks, the server
@@ -818,31 +822,24 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
     ) => {
       switch (input) {
         case "b": // open browser
-          await open(
-            `http://localhost:${port}/`
-            // {
-            //   app: {
-            //     name: open.apps.chrome, // TODO: fallback on other browsers
-            //   },
-            // }
-          );
+          await open(`http://localhost:${port}/`);
           break;
         case "d": // toggle inspector
           await open(
             `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
-            // {
-            //   app: {
-            //     name: open.apps.chrome,
-            //     // todo - add firefox and edge fallbacks
-            //   },
-            // }
           );
           break;
         case "s": // toggle tunnel
-          setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));
+          setToggles((previousToggles) => ({
+            ...previousToggles,
+            tunnel: !previousToggles.tunnel,
+          }));
           break;
         case "l": // toggle local
-          setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
+          setToggles((previousToggles) => ({
+            ...previousToggles,
+            local: !previousToggles.local,
+          }));
           break;
         case "q": // shut down
         case "x": // shut down

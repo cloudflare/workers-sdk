@@ -67,9 +67,9 @@ export async function prompt(text: string, type: "text" | "password" = "text") {
       <Prompt
         text={text}
         type={type}
-        onSubmit={(text) => {
+        onSubmit={(inputText) => {
           unmount();
-          resolve(text);
+          resolve(inputText);
         }}
       />
     );

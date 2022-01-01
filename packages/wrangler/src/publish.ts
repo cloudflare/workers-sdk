@@ -158,7 +158,7 @@ export default async function publish(props: Props): Promise<void> {
     const scripts = await cfetch<{ id: string; migration_tag: string }[]>(
       `/accounts/${accountId}/workers/scripts`
     );
-    const script = scripts.find((script) => script.id === scriptName);
+    const script = scripts.find((scr) => scr.id === scriptName);
     if (script?.migration_tag) {
       // was already published once
       const foundIndex = config.migrations.findIndex(

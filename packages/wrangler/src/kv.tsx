@@ -190,9 +190,7 @@ export function getNamespaceId({
     );
   }
 
-  const namespace = config.kv_namespaces.find(
-    (namespace) => namespace.binding === binding
-  );
+  const namespace = config.kv_namespaces.find((ns) => ns.binding === binding);
 
   // we couldn't find a namespace with that binding
   if (!namespace) {
