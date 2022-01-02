@@ -3,7 +3,6 @@ import { render } from "ink";
 import Dev from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs";
-import { hideBin } from "yargs/helpers";
 import type Yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
