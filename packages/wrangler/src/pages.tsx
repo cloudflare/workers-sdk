@@ -1,3 +1,5 @@
+/* eslint-disable no-shadow */
+
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";

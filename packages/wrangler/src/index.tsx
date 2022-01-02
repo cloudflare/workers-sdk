@@ -3,7 +3,7 @@ import { render } from "ink";
 import Dev from "./dev";
 import { readFile } from "node:fs/promises";
 import makeCLI from "yargs";
-import type yargs from "yargs";
+import type Yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import type { Config } from "./config";
@@ -43,15 +43,15 @@ import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
 import { execa } from "execa";
 
-async function readConfig(path?: string): Promise<Config> {
+async function readConfig(configPath?: string): Promise<Config> {
   const config: Config = {};
-  if (!path) {
-    path = await findUp("wrangler.toml");
+  if (!configPath) {
+    configPath = await findUp("wrangler.toml");
     // TODO - terminate this early instead of going all the way to the root
   }
 
-  if (path) {
-    const tml: string = await readFile(path, "utf-8");
+  if (configPath) {
+    const tml: string = await readFile(configPath, "utf-8");
     const parsed = TOML.parse(tml) as Config;
     Object.assign(config, parsed);
   }
@@ -109,7 +109,7 @@ async function readConfig(path?: string): Promise<Config> {
   // let's just do some basics for now
 
   // @ts-expect-error we're being sneaky here for now
-  config.__path__ = path;
+  config.__path__ = configPath;
 
   return config;
 }
@@ -117,7 +117,7 @@ async function readConfig(path?: string): Promise<Config> {
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 function demandOneOfOption(...options: string[]) {
-  return function (argv: yargs.Arguments) {
+  return function (argv: Yargs.Arguments) {
     const count = options.filter((option) => argv[option]).length;
     const lastOption = options.pop();
 
@@ -144,7 +144,7 @@ class DeprecationError extends Error {}
 class NotImplementedError extends Error {}
 
 export async function main(argv: string[]): Promise<void> {
-  const yargs = makeCLI(argv)
+  const wrangler = makeCLI(argv)
     // We handle errors ourselves in a try-catch around `yargs.parse`.
     // If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
     // Otherwise we just log the error that was thrown without any "help info".
@@ -160,7 +160,7 @@ export async function main(argv: string[]): Promise<void> {
     .wrap(null);
 
   // the default is to simply print the help menu
-  yargs.command(
+  wrangler.command(
     ["*"],
     false,
     () => {},
@@ -168,7 +168,7 @@ export async function main(argv: string[]): Promise<void> {
       if (args._.length > 0) {
         throw new CommandLineArgsError(`Unknown command: ${args._}.`);
       } else {
-        yargs.showHelp("log");
+        wrangler.showHelp("log");
       }
     }
   );
@@ -181,7 +181,7 @@ export async function main(argv: string[]): Promise<void> {
   // (It's also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.)
 
   // [DEPRECATED] generate
-  yargs.command(
+  wrangler.command(
     // we definitely want to move away from us cloning github templates
     // we can do something better here, let's see
     "generate [name] [template]",
@@ -206,7 +206,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // init
-  yargs.command(
+  wrangler.command(
     "init [name]",
     "📥 Create a wrangler.toml configuration file",
     (yargs) => {
@@ -320,7 +320,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // build
-  yargs.command(
+  wrangler.command(
     "build",
     false,
     (yargs) => {
@@ -337,7 +337,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // login
-  yargs.command(
+  wrangler.command(
     // this needs scopes as an option?
     "login",
     false, // we don't need to show this in the menu
@@ -380,7 +380,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // logout
-  yargs.command(
+  wrangler.command(
     // this needs scopes as an option?
     "logout",
     false, // we don't need to show this in the menu
@@ -392,7 +392,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // whoami
-  yargs.command(
+  wrangler.command(
     "whoami",
     false, // we don't need to show this the menu
     // "🕵️  Retrieve your user info and test your auth config",
@@ -403,7 +403,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // config
-  yargs.command(
+  wrangler.command(
     "config",
     false,
     () => {},
@@ -416,7 +416,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // dev
-  yargs.command(
+  wrangler.command(
     "dev <filename>",
     "👂 Start a local server for developing your worker",
     (yargs) => {
@@ -562,7 +562,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // publish
-  yargs.command(
+  wrangler.command(
     "publish [script]",
     "🆙 Publish your Worker to Cloudflare.",
     (yargs) => {
@@ -654,7 +654,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // tail
-  yargs.command(
+  wrangler.command(
     "tail [name]",
     "🦚 Starts a log tailing session for a deployed Worker.",
     (yargs) => {
@@ -770,7 +770,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // preview
-  yargs.command(
+  wrangler.command(
     "preview [method] [body]",
     false,
     (yargs) => {
@@ -804,12 +804,12 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // route
-  yargs.command(
+  wrangler.command(
     "route",
     false, // I think we want to hide this command
     // "➡️  List or delete worker routes",
-    (yargs) => {
-      return yargs
+    (routeYargs) => {
+      return routeYargs
         .command(
           "list",
           "List a route associated with a zone",
@@ -876,7 +876,7 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // subdomain
-  yargs.command(
+  wrangler.command(
     "subdomain [name]",
     false,
     // "👷 Create or change your workers.dev subdomain.",
@@ -891,11 +891,11 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // secret
-  yargs.command(
+  wrangler.command(
     "secret",
     "🤫 Generate a secret that can be referenced in the worker script",
-    (yargs) => {
-      return yargs
+    (secretYargs) => {
+      return secretYargs
         .command(
           "put <key>",
           "Create or update a secret variable for a script",
@@ -1126,11 +1126,11 @@ export async function main(argv: string[]): Promise<void> {
 
   // kv
   // :namespace
-  yargs.command(
+  wrangler.command(
     "kv:namespace",
     "🗂️  Interact with your Workers KV Namespaces",
-    (yargs) => {
-      return yargs
+    (namespaceYargs) => {
+      return namespaceYargs
         .command(
           "create <namespace>",
           "Create a new namespace",
@@ -1361,11 +1361,11 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // :key
-  yargs.command(
+  wrangler.command(
     "kv:key",
     "🔑 Individually manage Workers KV key-value pairs",
-    (yargs) => {
-      return yargs
+    (kvKeyYargs) => {
+      return kvKeyYargs
         .command(
           "put <key> [value]",
           "Writes a single key/value pair to the given namespace.",
@@ -1684,11 +1684,11 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   // :bulk
-  yargs.command(
+  wrangler.command(
     "kv:bulk",
     "💪 Interact with multiple Workers KV key-value pairs at once",
-    (yargs) => {
-      return yargs
+    (kvBulkYargs) => {
+      return kvBulkYargs
         .command(
           "put <filename>",
           "Upload multiple key-value pairs to a namespace",
@@ -1864,9 +1864,9 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  yargs.command("pages", "⚡️ Configure Cloudflare Pages", pages);
+  wrangler.command("pages", "⚡️ Configure Cloudflare Pages", pages);
 
-  yargs
+  wrangler
     .option("config", {
       alias: "c",
       describe: "Path to .toml configuration file",
@@ -1882,18 +1882,18 @@ export async function main(argv: string[]): Promise<void> {
       default: false, // I bet this will a point of contention. We'll revisit it.
     });
 
-  yargs.group(["config", "help", "version"], "Flags:");
-  yargs.help().alias("h", "help");
-  yargs.version(wranglerVersion).alias("v", "version");
-  yargs.exitProcess(false);
+  wrangler.group(["config", "help", "version"], "Flags:");
+  wrangler.help().alias("h", "help");
+  wrangler.version(wranglerVersion).alias("v", "version");
+  wrangler.exitProcess(false);
 
   await initialiseUserConfig();
 
   try {
-    await yargs.parse();
+    await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
-      yargs.showHelp("error");
+      wrangler.showHelp("error");
       console.error(""); // Just adds a bit of space
     }
     console.error(e.message);

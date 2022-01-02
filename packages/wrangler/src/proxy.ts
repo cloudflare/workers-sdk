@@ -1,11 +1,6 @@
 import { connect } from "node:http2";
 import { createServer } from "node:http";
-import type {
-  Server,
-  IncomingHttpHeaders,
-  OutgoingHttpHeaders,
-  RequestListener,
-} from "node:http";
+import type { Server, IncomingHttpHeaders, RequestListener } from "node:http";
 import WebSocket from "faye-websocket";
 import serveStatic from "serve-static";
 
@@ -13,7 +8,7 @@ export interface HttpProxyInit {
   host: string;
   assetPath?: string | null;
   onRequest?: (headers: IncomingHttpHeaders) => void;
-  onResponse?: (headers: OutgoingHttpHeaders) => void;
+  onResponse?: (headers: IncomingHttpHeaders) => void;
 }
 
 /**
@@ -28,9 +23,9 @@ export function createHttpProxy(init: HttpProxyInit): Server {
     onRequest(headers);
     headers[":authority"] = host;
     const request = stream.pipe(remote.request(headers));
-    request.on("response", (headers: OutgoingHttpHeaders) => {
-      onResponse(headers);
-      stream.respond(headers);
+    request.on("response", (responseHeaders: IncomingHttpHeaders) => {
+      onResponse(responseHeaders);
+      stream.respond(responseHeaders);
       request.pipe(stream, { end: true });
     });
   });
@@ -51,15 +46,15 @@ export function createHttpProxy(init: HttpProxyInit): Server {
       }
     }
     const request = message.pipe(remote.request(headers));
-    request.on("response", (headers) => {
-      const status = headers[":status"];
-      onResponse(headers);
-      for (const name of Object.keys(headers)) {
+    request.on("response", (responseHeaders) => {
+      const status = responseHeaders[":status"];
+      onResponse(responseHeaders);
+      for (const name of Object.keys(responseHeaders)) {
         if (name.startsWith(":")) {
-          delete headers[name];
+          delete responseHeaders[name];
         }
       }
-      response.writeHead(status, headers);
+      response.writeHead(status, responseHeaders);
       request.pipe(response, { end: true });
     });
   };
@@ -82,10 +77,14 @@ export function createHttpProxy(init: HttpProxyInit): Server {
     const { headers, url } = message;
     onRequest(headers);
     headers["host"] = host;
-    const local = new WebSocket(message, socket, body);
+    const localWebsocket = new WebSocket(message, socket, body);
     // TODO(soon): Custom WebSocket protocol is not working?
-    const remote = new WebSocket.Client(`wss://${host}${url}`, [], { headers });
-    local.pipe(remote).pipe(local);
+    const remoteWebsocketClient = new WebSocket.Client(
+      `wss://${host}${url}`,
+      [],
+      { headers }
+    );
+    localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
   });
   remote.on("close", () => {
     local.close();
