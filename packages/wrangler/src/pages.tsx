@@ -781,7 +781,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 try {
                   let request = new Request(input, init);
                   const url = new URL(request.url);
-                  url.host = `127.0.0.1:${proxyPort}`;
+                  url.host = `localhost:${proxyPort}`;
                   request = new Request(url.toString(), request);
                   return await fetch(request.url, request);
                 } catch (thrown) {
@@ -820,10 +820,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       });
 
       const server = await miniflare.startServer();
-      console.log(`Serving at http://127.0.0.1:${port}/`);
+      console.log(`Serving at http://localhost:${port}/`);
 
       if (process.env.BROWSER !== "none") {
-        await open(`http://127.0.0.1:${port}/`);
+        await open(`http://localhost:${port}/`);
       }
 
       process.on("SIGINT", () => {
