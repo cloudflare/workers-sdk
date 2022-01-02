@@ -792,7 +792,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         .map(
           (durableObjectBinding) =>
             DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObjectBinding.toString())
-              ?.groups.scriptName
+              ?.groups.scriptName || ''
         )
         .filter((scriptName) => scriptName !== undefined);
       const mounts = Object.fromEntries(
@@ -803,7 +803,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       const durableObjects = Object.fromEntries(
         durableObjectBindings.map((durableObject) => {
           const {
-            groups: { binding, className, scriptName },
+            groups: { binding, className, scriptName = '' },
           } = DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString());
           return [binding, { className, scriptName: `./${scriptName}` }];
         })
