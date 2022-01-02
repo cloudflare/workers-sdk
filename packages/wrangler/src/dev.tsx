@@ -555,6 +555,12 @@ function useWorker(props: {
     port,
   } = props;
   const [token, setToken] = useState<CfPreviewToken>();
+
+  // This is the most reliable way to reliably detect whether
+  // something's "happened" in our system; We make a ref and
+  // mark it once we log our initial message. Refs are vars!
+  const startedRef = useRef(false);
+
   useEffect(() => {
     async function start() {
       if (!bundle) return;
@@ -569,10 +575,11 @@ function useWorker(props: {
         return;
       }
 
-      if (token) {
-        console.log("⎔ Detected changes, restarting server...");
-      } else {
+      if (!startedRef.current) {
         console.log("⎔ Starting server...");
+        startedRef.current = true;
+      } else {
+        console.log("⎔ Detected changes, restarting server...");
       }
 
       const assets = sitesFolder
@@ -624,7 +631,6 @@ function useWorker(props: {
           apiToken,
         })
       );
-      console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start().catch((err) => {
       // we want to log the error, but not end the process
@@ -644,7 +650,6 @@ function useWorker(props: {
     usageModel,
     bindings,
     modules,
-    token,
   ]);
   return token;
 }
@@ -680,6 +685,8 @@ function useProxy({
         }
       },
     });
+
+    console.log(`⬣ Listening at http://localhost:${port}`);
 
     const server = proxy.listen(port);
 
