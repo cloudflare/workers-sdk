@@ -38,7 +38,7 @@
   "dependencies": {
     "@cloudflare/pages-functions-compiler": "0.3.8",
     "esbuild": "0.14.1",
-    "miniflare": "2.0.0-rc.4",
+    "miniflare": "2.0.0-rc.5",
     "semiver": "^1.1.0"
   },
   "optionalDependencies": {

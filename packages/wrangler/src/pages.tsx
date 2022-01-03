@@ -1,16 +1,21 @@
 /* eslint-disable no-shadow */
 
+import assert from "assert";
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { existsSync, lstatSync, readFileSync } from "fs";
 import { execSync, spawn } from "child_process";
-import { Headers, Request, Response } from "undici";
-import type { MiniflareOptions } from "miniflare";
-import type { RequestInfo, RequestInit } from "undici";
+import { URL } from "url";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
+
+// Defer importing miniflare until we really need it. This takes ~0.5s
+// and also modifies some `stream/web` and `undici` prototypes, so we
+// don't want to do this if pages commands aren't being called.
+import type { Headers, Request, fetch } from "@miniflare/core";
+import type { MiniflareOptions } from "miniflare";
 
 type Exit = (message?: string) => undefined;
 
@@ -373,6 +378,9 @@ const hasFileExtension = (pathname: string) =>
 const generateAssetsFetch = async (
   directory: string
 ): Promise<typeof fetch> => {
+  // Defer importing miniflare until we really need it
+  const { Headers, Request, Response } = await import("@miniflare/core");
+
   const headersFile = join(directory, "_headers");
   const redirectsFile = join(directory, "_redirects");
   const workerFile = join(directory, "_worker.js");
@@ -599,7 +607,7 @@ const generateAssetsFetch = async (
     });
   };
 
-  return (async (input, init) => {
+  return async (input, init) => {
     const request = new Request(input, init);
     const deconstructedResponse = generateResponse(request);
     attachHeaders(request, deconstructedResponse);
@@ -614,7 +622,7 @@ const generateAssetsFetch = async (
       headers,
       status: deconstructedResponse.status,
     });
-  }) as any;
+  };
 };
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
@@ -740,22 +748,21 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         };
       }
 
+      // Defer importing miniflare until we really need it
       const { Miniflare, Log, LogLevel } = await import("miniflare");
-      const { fetch } = await import("@miniflare/core");
+      const { Response, fetch } = await import("@miniflare/core");
 
-      class MiniflareLogger extends Log {
-        log(message: string) {
-          message = message.replace("[mf:", "[pages:");
-          console.log(message);
-        }
-      }
-
+      // Should only be called if no proxyPort, using `assert.fail()` here
+      // means the type of `assetsFetch` is still `typeof fetch`
+      const assetsFetch = proxyPort
+        ? () => assert.fail()
+        : await generateAssetsFetch(directory);
       const miniflare = new Miniflare({
         port,
         watch: true,
         modules: true,
 
-        log: new MiniflareLogger(LogLevel.ERROR),
+        log: new Log(LogLevel.ERROR, { prefix: "pages" }),
         logUnhandledRejections: true,
         sourceMap: true,
 
@@ -767,50 +774,43 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           )
         ),
 
+        // User bindings
         bindings: {
-          // User bindings
           ...Object.fromEntries(
             bindings.map((binding) => binding.toString().split("="))
           ),
+        },
 
-          // env.ASSETS.fetch
-          ASSETS: {
-            fetch: async (
-              input: RequestInfo,
-              init?: RequestInit | undefined
-            ) => {
-              if (proxyPort) {
-                try {
-                  let request = new Request(input, init);
-                  const url = new URL(request.url);
-                  url.host = `127.0.0.1:${proxyPort}`;
-                  request = new Request(url.toString(), request);
-                  return await fetch(request.url, request);
-                } catch (thrown) {
-                  console.error(`Could not proxy request: ${thrown}`);
+        // env.ASSETS.fetch
+        serviceBindings: {
+          async ASSETS(request) {
+            if (proxyPort) {
+              try {
+                const url = new URL(request.url);
+                url.host = `127.0.0.1:${proxyPort}`;
+                return await fetch(url, request);
+              } catch (thrown) {
+                console.error(`Could not proxy request: ${thrown}`);
 
-                  // TODO: Pretty error page
-                  return new Response(
-                    `[wrangler] Could not proxy request: ${thrown}`,
-                    { status: 502 }
-                  );
-                }
-              } else {
-                try {
-                  return await (
-                    await generateAssetsFetch(directory)
-                  )(input as any, init as any);
-                } catch (thrown) {
-                  console.error(`Could not serve static asset: ${thrown}`);
-
-                  // TODO: Pretty error page
-                  return new Response(
-                    `[wrangler] Could not serve static asset: ${thrown}`,
-                    { status: 502 }
-                  );
-                }
+                // TODO: Pretty error page
+                return new Response(
+                  `[wrangler] Could not proxy request: ${thrown}`,
+                  { status: 502 }
+                );
               }
-            },
+            } else {
+              try {
+                return await assetsFetch(request);
+              } catch (thrown) {
+                console.error(`Could not serve static asset: ${thrown}`);
+
+                // TODO: Pretty error page
+                return new Response(
+                  `[wrangler] Could not serve static asset: ${thrown}`,
+                  { status: 502 }
+                );
+              }
+            }
           },
         },
 
@@ -821,25 +821,31 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         ...miniflareArgs,
       });
 
-      const server = await miniflare.startServer();
-      console.log(`Serving at http://127.0.0.1:${port}/`);
+      try {
+        // `startServer` might throw if user code contains errors
+        const server = await miniflare.startServer();
+        console.log(`Serving at http://127.0.0.1:${port}/`);
 
-      if (process.env.BROWSER !== "none") {
-        await open(`http://127.0.0.1:${port}/`);
+        if (process.env.BROWSER !== "none") {
+          await open(`http://127.0.0.1:${port}/`);
+        }
+
+        process.on("SIGINT", () => {
+          server.close();
+          miniflare.dispose().catch((err) => {
+            miniflare.log.error(err);
+          });
+        });
+        process.on("SIGTERM", () => {
+          server.close();
+          miniflare.dispose().catch((err) => {
+            miniflare.log.error(err);
+          });
+        });
+      } catch (e) {
+        miniflare.log.error(e);
+        process.exitCode = 1;
       }
-
-      process.on("SIGINT", () => {
-        server.close();
-        miniflare.dispose().catch((err) => {
-          console.error(err);
-        });
-      });
-      process.on("SIGTERM", () => {
-        server.close();
-        miniflare.dispose().catch((err) => {
-          console.error(err);
-        });
-      });
     }
   );
 };
