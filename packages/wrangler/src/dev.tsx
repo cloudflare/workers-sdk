@@ -556,7 +556,7 @@ function useWorker(props: {
   } = props;
   const [token, setToken] = useState<CfPreviewToken>();
 
-  // This is the most reliable way to reliably detect whether
+  // This is the most reliable way to detect whether
   // something's "happened" in our system; We make a ref and
   // mark it once we log our initial message. Refs are vars!
   const startedRef = useRef(false);
