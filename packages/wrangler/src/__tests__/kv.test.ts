@@ -1,7 +1,12 @@
-import { setMock, unsetAllMocks } from "./mock-cfetch";
+import { writeFileSync } from "fs";
+import {
+  setMockResponse,
+  setMockRawResponse,
+  unsetAllMocks,
+  createFetchResult,
+} from "./mock-cfetch";
 import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
-import { writeFileSync } from "fs";
 
 describe("wrangler", () => {
   runInTempDir();
@@ -13,12 +18,12 @@ describe("wrangler", () => {
   describe("kv:namespace", () => {
     describe("create", () => {
       function mockCreateRequest(expectedTitle: string) {
-        setMock(
+        setMockResponse(
           "/accounts/:accountId/storage/kv/namespaces",
           "POST",
           ([_url, accountId], { body }) => {
             expect(accountId).toEqual("some-account-id");
-            const title = JSON.parse(body).title;
+            const title = JSON.parse(body as string).title;
             expect(title).toEqual(expectedTitle);
             return { id: "some-namespace-id" };
           }
@@ -172,18 +177,18 @@ describe("wrangler", () => {
     describe("list", () => {
       function mockListRequest(namespaces: unknown[]) {
         const requests = { count: 0 };
-        setMock(
-          "/accounts/:accountId/storage/kv/namespaces\\?:qs",
-          ([_url, accountId, query], init) => {
+        setMockResponse(
+          "/accounts/:accountId/storage/kv/namespaces",
+          ([_url, accountId], init, query) => {
             requests.count++;
             expect(accountId).toEqual("some-account-id");
-            expect(query).toContain("per_page=100");
-            expect(query).toContain("order=title");
-            expect(query).toContain("direction=asc");
-            expect(query).toContain("page=");
-            expect(init).toBe(undefined);
-            const pageSize = Number(/\bper_page=(\d+)\b/.exec(query)[1]);
-            const page = Number(/\bpage=(\d+)/.exec(query)[1]);
+            expect(query.get("per_page")).toEqual("100");
+            expect(query.get("order")).toEqual("title");
+            expect(query.get("direction")).toEqual("asc");
+            expect(query.get("page")).toEqual(`${requests.count}`);
+            expect(init).toEqual({});
+            const pageSize = Number(query.get("per_page"));
+            const page = Number(query.get("page"));
             return namespaces.slice((page - 1) * pageSize, page * pageSize);
           }
         );
@@ -196,13 +201,17 @@ describe("wrangler", () => {
           { title: "title-2", id: "id-2" },
         ];
         mockListRequest(KVNamespaces);
-        const { stdout } = await runWrangler("kv:namespace list");
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:namespace list"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
         const namespaces = JSON.parse(stdout);
         expect(namespaces).toEqual(KVNamespaces);
       });
 
       it("should make multiple requests for paginated results", async () => {
-        // Create a lot of mock namespaces, so that the cfetch requests will be paginated
+        // Create a lot of mock namespaces, so that the fetch requests will be paginated
         const KVNamespaces = [];
         for (let i = 0; i < 550; i++) {
           KVNamespaces.push({ title: "title-" + i, id: "id-" + i });
@@ -218,7 +227,7 @@ describe("wrangler", () => {
     describe("delete", () => {
       function mockDeleteRequest(expectedNamespaceId: string) {
         const requests = { count: 0 };
-        setMock(
+        setMockResponse(
           "/accounts/:accountId/storage/kv/namespaces/:namespaceId",
           "DELETE",
           ([_url, accountId, namespaceId]) => {
@@ -242,7 +251,9 @@ describe("wrangler", () => {
       it("should delete a namespace specified by binding name", async () => {
         writeWranglerConfig();
         const requests = mockDeleteRequest("bound-id");
-        await runWrangler(`kv:namespace delete --binding someBinding`);
+        await runWrangler(
+          `kv:namespace delete --binding someBinding --preview false`
+        );
         expect(requests.count).toEqual(1);
       });
 
@@ -285,9 +296,12 @@ describe("wrangler", () => {
       it("should delete a namespace specified by binding name in a given environment", async () => {
         writeWranglerConfig();
         const requests = mockDeleteRequest("env-bound-id");
-        await runWrangler(
-          `kv:namespace delete --binding someBinding --env some-environment`
+        const { stdout, stderr, error } = await runWrangler(
+          `kv:namespace delete --binding someBinding --env some-environment --preview false`
         );
+        expect(stdout).toMatchInlineSnapshot(`""`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(error).toMatchInlineSnapshot(`undefined`);
         expect(requests.count).toEqual(1);
       });
 
@@ -312,17 +326,17 @@ describe("wrangler", () => {
         expirationTtl?: number
       ) {
         const requests = { count: 0 };
-        setMock(
-          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key\\?:query",
+        setMockResponse(
+          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
           "PUT",
-          ([_url, accountId, namespaceId, key, query], { body }) => {
+          ([_url, accountId, namespaceId, key], { body }, query) => {
             requests.count++;
             expect(accountId).toEqual("some-account-id");
             expect(namespaceId).toEqual(expectedNamespaceId);
             expect(key).toEqual(expectedKey);
             expect(body).toEqual(expectedValue);
-            expect(query).toContain(`expiration=${expiration ?? ""}`);
-            expect(query).toContain(`expiration_ttl=${expirationTtl ?? ""}`);
+            expect(query.get("expiration")).toEqual(`${expiration}`);
+            expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
             return null;
           }
         );
@@ -623,10 +637,10 @@ describe("wrangler", () => {
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
         expect(stderr).toMatchInlineSnapshot(
-          `"No KV Namespaces found with binding otherBinding!"`
+          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
         expect(error).toMatchInlineSnapshot(
-          `[Error: No KV Namespaces found with binding otherBinding!]`
+          `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
         );
       });
 
@@ -651,7 +665,148 @@ describe("wrangler", () => {
       });
     });
 
-    describe("list", () => {});
+    describe("list", () => {
+      function mockKeyListRequest(
+        expectedNamespaceId: string,
+        expectedKeys: string[],
+        keysPerRequest = 1000
+      ) {
+        const requests = { count: 0 };
+        setMockRawResponse(
+          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
+          ([_url, accountId, namespaceId], _init, query) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(namespaceId).toEqual(expectedNamespaceId);
+            if (expectedKeys.length <= keysPerRequest) {
+              return createFetchResult(expectedKeys);
+            } else {
+              const start = parseInt(query.get("cursor")) || 0;
+              const end = start + keysPerRequest;
+              const cursor = end < expectedKeys.length ? end : undefined;
+              return createFetchResult(
+                expectedKeys.slice(start, end),
+                true,
+                [],
+                [],
+                { cursor }
+              );
+            }
+          }
+        );
+        return requests;
+      }
+
+      it("should list the keys of a namespace specified by namespace-id", async () => {
+        const keys = ["key-1", "key-2", "key-3"];
+        mockKeyListRequest("some-namespace-id", keys);
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --namespace-id some-namespace-id"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toMatchInlineSnapshot(`
+          "key-1
+          key-2
+          key-3"
+        `);
+      });
+
+      it("should list the keys of a namespace specified by binding", async () => {
+        writeWranglerConfig();
+        const keys = ["key-1", "key-2", "key-3"];
+        mockKeyListRequest("bound-id", keys);
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --binding someBinding"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toMatchInlineSnapshot(`
+          "key-1
+          key-2
+          key-3"
+        `);
+      });
+
+      it("should list the keys of a preview namespace specified by binding", async () => {
+        writeWranglerConfig();
+        const keys = ["key-1", "key-2", "key-3"];
+        mockKeyListRequest("preview-bound-id", keys);
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --binding someBinding --preview"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toMatchInlineSnapshot(`
+          "key-1
+          key-2
+          key-3"
+        `);
+      });
+
+      it("should list the keys of a namespace specified by binding, in a given environment", async () => {
+        writeWranglerConfig();
+        const keys = ["key-1", "key-2", "key-3"];
+        mockKeyListRequest("env-bound-id", keys);
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --binding someBinding --env some-environment"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toMatchInlineSnapshot(`
+          "key-1
+          key-2
+          key-3"
+        `);
+      });
+
+      it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
+        writeWranglerConfig();
+        const keys = ["key-1", "key-2", "key-3"];
+        mockKeyListRequest("preview-env-bound-id", keys);
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --binding someBinding --preview --env some-environment"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toMatchInlineSnapshot(`
+          "key-1
+          key-2
+          key-3"
+        `);
+      });
+
+      it("should make multiple requests for paginated results", async () => {
+        // Create a lot of mock keys, so that the fetch requests will be paginated
+        const keys = [];
+        for (let i = 0; i < 550; i++) {
+          keys.push("key-" + i);
+        }
+        // Ask for the keys in pages of size 100.
+        const requests = mockKeyListRequest("some-namespace-id", keys, 100);
+        const { stdout, stderr, error } = await runWrangler(
+          "kv:key list --namespace-id some-namespace-id --limit 100"
+        );
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(stdout).toEqual(keys.join("\n"));
+        expect(requests.count).toEqual(6);
+      });
+
+      it("should error if a given binding name is not in the configured kv namespaces", async () => {
+        writeWranglerConfig();
+        const { error, stdout, stderr } = await runWrangler(
+          "kv:key list --binding otherBinding"
+        );
+        expect(error).toMatchInlineSnapshot(
+          `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
+        );
+        expect(stderr).toMatchInlineSnapshot(
+          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+        );
+        expect(stdout).toMatchInlineSnapshot(`""`);
+      });
+    });
 
     describe("get", () => {
       function mockKeyGetRequest(
@@ -660,7 +815,7 @@ describe("wrangler", () => {
         expectedValue: string
       ) {
         const requests = { count: 0 };
-        setMock(
+        setMockRawResponse(
           "/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
           ([_url, accountId, namespaceId, key]) => {
             requests.count++;
@@ -754,7 +909,7 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean]
+                --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Not enough non-option arguments: got 0, need at least 1"
         `);
@@ -785,7 +940,7 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean]
+                --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Exactly one of the arguments binding and namespace-id is required"
         `);
@@ -818,7 +973,7 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean]
+                --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Arguments binding and namespace-id are mutually exclusive"
         `);
@@ -834,29 +989,93 @@ describe("wrangler", () => {
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
         expect(stderr).toMatchInlineSnapshot(
-          `"No KV Namespaces found with binding otherBinding!"`
+          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
         expect(error).toMatchInlineSnapshot(
-          `[Error: No KV Namespaces found with binding otherBinding!]`
-        );
-      });
-
-      it("should error if a given binding has both preview and non-preview and --preview is not specified", async () => {
-        writeWranglerConfig();
-        const { error, stderr, stdout } = await runWrangler(
-          "kv:key get my-key --binding someBinding"
-        );
-        expect(stdout).toMatchInlineSnapshot(`""`);
-        expect(stderr).toMatchInlineSnapshot(
-          `"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
-        );
-        expect(error).toMatchInlineSnapshot(
-          `[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
+          `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
         );
       });
     });
 
-    describe("delete", () => {});
+    describe("delete", () => {
+      function mockDeleteRequest(
+        expectedNamespaceId: string,
+        expectedKey: string
+      ) {
+        const requests = { count: 0 };
+        setMockResponse(
+          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
+          "DELETE",
+          ([_url, accountId, namespaceId, key]) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(namespaceId).toEqual(expectedNamespaceId);
+            expect(key).toEqual(expectedKey);
+            return null;
+          }
+        );
+        return requests;
+      }
+
+      it("should delete a key in a namespace specified by id", async () => {
+        const requests = mockDeleteRequest("some-namespace-id", "someKey");
+        await runWrangler(
+          `kv:key delete --namespace-id some-namespace-id someKey`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a key in a namespace specified by binding name", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("bound-id", "someKey");
+        await runWrangler(
+          `kv:key delete --binding someBinding --preview false someKey`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a key in a preview namespace specified by binding name", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("preview-bound-id", "someKey");
+        await runWrangler(
+          `kv:key delete --binding someBinding --preview someKey`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should error if a given binding name is not in the configured kv namespaces", async () => {
+        writeWranglerConfig();
+        const { stderr } = await runWrangler(
+          `kv:key delete --binding otherBinding someKey`
+        );
+        expect(stderr).toMatchInlineSnapshot(
+          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+        );
+      });
+
+      it("should delete a key in a namespace specified by binding name in a given environment", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("env-bound-id", "someKey");
+        const { stdout, stderr, error } = await runWrangler(
+          `kv:key delete --binding someBinding --env some-environment --preview false someKey`
+        );
+        expect(stdout).toMatchInlineSnapshot(
+          `"deleting the key \\"someKey\\" on namespace env-bound-id"`
+        );
+        expect(stderr).toMatchInlineSnapshot(`""`);
+        expect(error).toMatchInlineSnapshot(`undefined`);
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should delete a key in a preview namespace specified by binding name in a given environment", async () => {
+        writeWranglerConfig();
+        const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
+        await runWrangler(
+          `kv:key delete --binding someBinding --env some-environment --preview someKey`
+        );
+        expect(requests.count).toEqual(1);
+      });
+    });
   });
 });
 

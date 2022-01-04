@@ -1,10 +1,9 @@
-import { readdir, readFile } from "node:fs/promises";
-import { createReadStream } from "node:fs";
-import cfetch from "./cfetch";
-import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
-
-import * as path from "path";
 import crypto from "node:crypto";
+import { createReadStream } from "node:fs";
+import * as path from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { fetchResult } from "./cfetch";
+import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
@@ -54,7 +53,7 @@ async function createKVNamespaceIfNotAlreadyExisting(
 
   // else we make the namespace
   // TODO: use an export from ./kv
-  const json = await cfetch<{ id: string }>(
+  const json = await fetchResult<{ id: string }>(
     `/accounts/${accountId}/storage/kv/namespaces`,
     {
       method: "POST",

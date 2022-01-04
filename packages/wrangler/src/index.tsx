@@ -30,7 +30,7 @@ import {
 
 import { pages } from "./pages";
 
-import cfetch from "./cfetch";
+import { fetchResult, fetchRaw } from "./cfetch";
 
 import publish from "./publish";
 import path from "path/posix";
@@ -537,7 +537,7 @@ export async function main(argv: string[]): Promise<void> {
                 // `preview_id` instead of `id` so that they don't
                 // break production data. So here we check that a `preview_id`
                 // has actually been configured.
-                // This whole block of code will be obsolted in the future
+                // This whole block of code will be obsoleted in the future
                 // when we have copy-on-write for previews on edge workers.
                 if (!preview_id) {
                   // TODO: This error has to be a _lot_ better, ideally just asking
@@ -836,7 +836,7 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("missing zone id");
             }
 
-            console.log(await cfetch(`/zones/${zone}/workers/routes`));
+            console.log(await fetchResult(`/zones/${zone}/workers/routes`));
           }
         )
         .command(
@@ -866,7 +866,7 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             console.log(
-              await cfetch(`/zones/${zone}/workers/routes/${args.id}`, {
+              await fetchResult(`/zones/${zone}/workers/routes/${args.id}`, {
                 method: "DELETE",
               })
             );
@@ -953,7 +953,7 @@ export async function main(argv: string[]): Promise<void> {
               "password"
             );
             async function submitSecret() {
-              return await cfetch(
+              return await fetchResult(
                 `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
                 {
                   method: "PUT",
@@ -972,7 +972,7 @@ export async function main(argv: string[]): Promise<void> {
             } catch (e) {
               if (e.code === 10007) {
                 // upload a draft worker
-                await cfetch(
+                await fetchResult(
                   `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
                   {
                     method: "PUT",
@@ -1058,7 +1058,7 @@ export async function main(argv: string[]): Promise<void> {
               );
 
               console.log(
-                await cfetch(
+                await fetchResult(
                   `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
                   { method: "DELETE" }
                 )
@@ -1115,7 +1115,7 @@ export async function main(argv: string[]): Promise<void> {
             // -- snip, end --
 
             console.log(
-              await cfetch(
+              await fetchResult(
                 `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
               )
             );
@@ -1298,18 +1298,12 @@ export async function main(argv: string[]): Promise<void> {
             }
             const config = args.config as Config;
 
-            const id =
-              args["namespace-id"] ||
-              (args.env
-                ? config.env[args.env] || {}
-                : config
-              ).kv_namespaces.find(
-                (namespace) => namespace.binding === args.binding
-              )?.[args.preview ? "preview_id" : "id"];
-            if (!id) {
+            let id;
+            try {
+              id = getNamespaceId(args);
+            } catch (e) {
               throw new CommandLineArgsError(
-                "Not able to delete namespace.\n" +
-                  `A namespace with binding name "${args.binding}" was not found in the configured "kv_namespaces".`
+                "Not able to delete namespace.\n" + e.message
               );
             }
 
@@ -1333,7 +1327,7 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            await cfetch<{ id: string }>(
+            await fetchResult<{ id: string }>(
               `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
               { method: "DELETE" }
             );
@@ -1483,6 +1477,12 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe: "Perform on a specific environment",
               })
+              .option("preview", {
+                type: "boolean",
+                // In the case of listing keys we will default to non-preview mode
+                default: false,
+                describe: "Interact with a preview namespace",
+              })
               .option("prefix", {
                 type: "string",
                 describe: "A prefix to filter listed keys",
@@ -1557,6 +1557,12 @@ export async function main(argv: string[]): Promise<void> {
               .option("preview", {
                 type: "boolean",
                 describe: "Interact with a preview namespace",
+              })
+              .option("preview", {
+                type: "boolean",
+                // In the case of getting key values we will default to non-preview mode
+                default: false,
+                describe: "Interact with a preview namespace",
               });
           },
           async ({ key, ...args }) => {
@@ -1595,12 +1601,8 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            // annoyingly, the API for this one doesn't return the
-            // data in the 'standard' format. goddammit.
-            // That's why we have the fallthrough response in cfetch.
-            // Oh well.
             console.log(
-              await cfetch(
+              await fetchRaw(
                 `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`
               )
             );
@@ -1674,7 +1676,7 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, end --
 
-            await cfetch(
+            await fetchResult(
               `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
               { method: "DELETE" }
             );

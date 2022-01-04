@@ -1,6 +1,6 @@
+import { URLSearchParams } from "node:url";
 import type { Config } from "./config";
-import cfetch from "./cfetch";
-import qs from "node:querystring";
+import { fetchListResult, fetchResult } from "./cfetch";
 
 type KvArgs = {
   binding?: string;
@@ -19,7 +19,7 @@ export async function createNamespace(
   accountId: string,
   title: string
 ): Promise<string> {
-  const response = await cfetch<{ id: string }>(
+  const response = await fetchResult<{ id: string }>(
     `/accounts/${accountId}/storage/kv/namespaces`,
     {
       method: "POST",
@@ -54,8 +54,15 @@ export async function listNamespaces(
   let page = 1;
   const results: KVNamespaceInfo[] = [];
   while (results.length % pageSize === 0) {
-    const json = await cfetch<KVNamespaceInfo[]>(
-      `/accounts/${accountId}/storage/kv/namespaces?per_page=${pageSize}&order=title&direction=asc&page=${page}`
+    const json = await fetchResult<KVNamespaceInfo[]>(
+      `/accounts/${accountId}/storage/kv/namespaces`,
+      {},
+      new URLSearchParams({
+        per_page: pageSize.toString(),
+        order: "title",
+        direction: "asc",
+        page: page.toString(),
+      })
     );
     page++;
     results.push(...json);
@@ -66,19 +73,21 @@ export async function listNamespaces(
   return results;
 }
 
+export interface NamespaceKeyInfo {
+  name: string;
+  expiration?: number;
+  metadata?: { [key: string]: unknown };
+}
+
 export async function listNamespaceKeys(
   accountId: string,
   namespaceId: string,
-  prefix?: string,
-  limit?: number
+  prefix?: string
 ) {
-  // TODO: this doesn't appear to do pagination
-  return await cfetch<
-    { name: string; expiration: number; metadata: { [key: string]: unknown } }[]
-  >(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
-      { prefix, limit }
-    )}`
+  return await fetchListResult<NamespaceKeyInfo>(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`,
+    {},
+    new URLSearchParams({ prefix })
   );
 }
 
@@ -89,16 +98,15 @@ export async function putKeyValue(
   value: string,
   args?: { expiration?: number; expiration_ttl?: number }
 ) {
-  return await cfetch(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
-      args
-        ? qs.stringify({
-            expiration: args.expiration,
-            expiration_ttl: args.expiration_ttl,
-          })
-        : ""
-    }`,
-    { method: "PUT", body: value }
+  return await fetchResult(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+    { method: "PUT", body: value },
+    args
+      ? new URLSearchParams({
+          expiration: args.expiration?.toString(),
+          expiration_ttl: args.expiration_ttl?.toString(),
+        })
+      : undefined
   );
 }
 
@@ -107,7 +115,7 @@ export async function putBulkKeyValue(
   namespaceId: string,
   keyvalueStr: string
 ) {
-  return await cfetch(
+  return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "PUT",
@@ -122,7 +130,7 @@ export async function deleteBulkKeyValue(
   namespaceId: string,
   keyStr: string
 ) {
-  return await cfetch(
+  return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "DELETE",
@@ -186,7 +194,7 @@ export function getNamespaceId({
   // there's no KV namespaces
   if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
     throw new Error(
-      "No KV Namespace to upload to! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
+      "No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
     );
   }
 
@@ -194,7 +202,9 @@ export function getNamespaceId({
 
   // we couldn't find a namespace with that binding
   if (!namespace) {
-    throw new Error(`No KV Namespaces found with binding ${binding}!`);
+    throw new Error(
+      `A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`
+    );
   }
 
   // end pre-flight checks
