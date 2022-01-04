@@ -1,7 +1,7 @@
-import cfetch from "../cfetch";
+import fetch from "node-fetch";
+import { fetchResult } from "../cfetch";
 import { toFormData } from "./form_data";
 import type { CfAccount, CfWorkerInit } from "./worker";
-import fetch from "node-fetch";
 
 /**
  * A preview mode.
@@ -60,7 +60,7 @@ async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
     ? `/zones/${zoneId}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url } = await cfetch<{ exchange_url: string }>(initUrl);
+  const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
   const { inspector_websocket, token } = (await (
     await fetch(exchange_url)
   ).json()) as { inspector_websocket: string; token: string };
@@ -106,7 +106,7 @@ export async function previewToken(
   const formData = toFormData(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
 
-  const { preview_token } = await cfetch<{ preview_token: string }>(url, {
+  const { preview_token } = await fetchResult<{ preview_token: string }>(url, {
     method: "POST",
     // @ts-expect-error TODO: fix this
     body: formData,

@@ -1,6 +1,10 @@
+import { mockFetchInternal } from "./mock-cfetch";
 import { confirm, prompt } from "../dialogs";
+import { fetchInternal } from "../cfetch/internal";
 
-jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
+jest.mock("../cfetch/internal");
+(fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
+
 jest.mock("../dialogs");
 
 // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.

@@ -1,6 +1,6 @@
 import WebSocket from "ws";
-import cfetch from "./cfetch";
 import { version as packageVersion } from "../package.json";
+import { fetchResult } from "./cfetch";
 
 export type TailApiResponse = {
   id: string;
@@ -27,7 +27,9 @@ async function createTailButDontConnect(
 ): Promise<TailApiResponse> {
   const createTailUrl = makeCreateTailUrl(accountId, workerName);
   /// https://api.cloudflare.com/#worker-tail-logs-start-tail
-  return await cfetch<TailApiResponse>(createTailUrl, { method: "POST" });
+  return await fetchResult<TailApiResponse>(createTailUrl, {
+    method: "POST",
+  });
 }
 
 export async function createTail(
@@ -48,7 +50,7 @@ export async function createTail(
 
   // deletes the tail
   async function deleteTail() {
-    await cfetch(deleteUrl, { method: "DELETE" });
+    await fetchResult(deleteUrl, { method: "DELETE" });
   }
 
   const tail = new WebSocket(websocketUrl, "trace-v1", {
