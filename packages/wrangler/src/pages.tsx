@@ -11,6 +11,7 @@ import { URL } from "url";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
+import type { BuildResult } from "esbuild";
 import { buildWorker } from "../pages/functions/buildWorker";
 import type { Config } from "../pages/functions/routes";
 import { writeRoutesModule } from "../pages/functions/routes";
@@ -23,12 +24,12 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { MiniflareOptions } from "miniflare";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
+let RUNNING_BUILDER: BuildResult | undefined;
 const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
   if (code) process.exitCode = code;
   RUNNING_PROCESSES.forEach((runningProcess) => runningProcess.kill());
-
-  return undefined;
+  if (RUNNING_BUILDER) RUNNING_BUILDER.stop();
 };
 
 process.on("SIGINT", () => EXIT());
@@ -104,7 +105,7 @@ async function spawnProxyProcess({
 }: {
   port?: number;
   command: (string | number)[];
-}): Promise<undefined | number> {
+}): Promise<void | number> {
   if (command.length === 0)
     return EXIT(
       "Must specify a directory of static assets to serve or a command to run.",
@@ -639,6 +640,38 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   };
 }
 
+async function buildFunctions({
+  scriptPath,
+  functionsDirectory,
+  onEnd,
+}: {
+  scriptPath: string;
+  functionsDirectory: string;
+  onEnd: () => void;
+}) {
+  const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
+
+  const config: Config = await generateConfigFromFileTree({
+    baseDir: functionsDirectory,
+    baseURL: "/",
+  });
+
+  await writeRoutesModule({
+    config,
+    srcDir: functionsDirectory,
+    outfile: routesModule,
+  });
+
+  return await buildWorker({
+    routesModule,
+    outfile: scriptPath,
+    minify: false, // TODO: Expose option to enable
+    sourcemap: true,
+    watch: true,
+    onEnd,
+  });
+}
+
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs.command(
     "dev [directory] [-- command]",
@@ -716,7 +749,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       const command = remaining as (string | number)[];
 
-      let proxyPort: number | undefined;
+      let proxyPort: number | void;
 
       if (directory === undefined) {
         proxyPort = await spawnProxyProcess({
@@ -732,28 +765,27 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
-        const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
 
-        const config: Config = await generateConfigFromFileTree({
-          baseDir: functionsDirectory,
-          baseURL: "/",
-        });
-
-        await writeRoutesModule({
-          config,
-          srcDir: functionsDirectory,
-          outfile: routesModule,
-        });
-
-        await buildWorker({
-          routesModule,
-          outfile: scriptPath,
-          minify: false, // TODO: Expose option to enable
-          sourcemap: true,
-          watch: true,
+        RUNNING_BUILDER = await buildFunctions({
+          scriptPath,
+          functionsDirectory,
           onEnd: () => {
             scriptReady = true;
           },
+        });
+
+        watch([functionsDirectory], {
+          persistent: true,
+        }).on("all", async () => {
+          RUNNING_BUILDER.stop();
+
+          RUNNING_BUILDER = await buildFunctions({
+            scriptPath,
+            functionsDirectory,
+            onEnd: () => {
+              scriptReady = true;
+            },
+          });
         });
 
         miniflareArgs = {

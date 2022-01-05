@@ -47,7 +47,6 @@ export function buildWorker({
               );
               onEnd();
             } else {
-              console.log(`Compiled worker successfully.`);
               onEnd();
             }
           });
