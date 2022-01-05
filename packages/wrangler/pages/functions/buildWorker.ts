@@ -1,13 +1,5 @@
 import path from "path";
 import { build } from "esbuild";
-import { fileURLToPath } from "url";
-
-let sanitizedDirname;
-try {
-  sanitizedDirname = path.dirname(fileURLToPath(import.meta.url));
-} catch {
-  sanitizedDirname = __dirname;
-}
 
 type Options = {
   routesModule: string;
@@ -27,7 +19,7 @@ export function buildWorker({
   console.log(`Compiling worker to "${outfile}"`);
   return build({
     entryPoints: [
-      path.resolve(sanitizedDirname, "../pages/functions/template-worker.ts"),
+      path.resolve(__dirname, "../pages/functions/template-worker.ts"),
     ],
     inject: [routesModule],
     bundle: true,
