@@ -10,6 +10,11 @@ import { URL } from "url";
 import { getType } from "mime";
 import open from "open";
 import { watch } from "chokidar";
+import type { BuildResult } from "esbuild";
+import { buildWorker } from "../pages/functions/buildWorker";
+import type { Config } from "../pages/functions/routes";
+import { writeRoutesModule } from "../pages/functions/routes";
+import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -17,16 +22,28 @@ import { watch } from "chokidar";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { MiniflareOptions } from "miniflare";
 
-type Exit = (message?: string) => undefined;
+const EXIT_CALLBACKS = [];
+const EXIT = (message?: string, code?: number) => {
+  if (message) console.log(message);
+  if (code) process.exitCode = code;
+  EXIT_CALLBACKS.forEach((callback) => callback());
+  process.exit(code);
+};
 
-const isWindows = () => process.platform === "win32";
+process.on("SIGINT", () => EXIT());
+process.on("SIGTERM", () => EXIT());
+
+function isWindows() {
+  return process.platform === "win32";
+}
 
 const SECONDS_TO_WAIT_FOR_PROXY = 5;
 
-const sleep = async (ms: number) =>
+async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-const getPids = (pid: number) => {
+function getPids(pid: number) {
   const pids: number[] = [pid];
   let command: string, regExp: RegExp;
 
@@ -51,9 +68,9 @@ const getPids = (pid: number) => {
   } catch {}
 
   return pids;
-};
+}
 
-const getPort = (pid: number) => {
+function getPort(pid: number) {
   let command: string, regExp: RegExp;
 
   if (isWindows()) {
@@ -78,24 +95,19 @@ const getPort = (pid: number) => {
       `Error scanning for ports of process with PID ${pid}: ${thrown}`
     );
   }
-};
+}
 
-const spawnProxyProcess = async ({
+async function spawnProxyProcess({
   port,
   command,
 }: {
   port?: number;
   command: (string | number)[];
-}) => {
-  const exit: Exit = (message) => {
-    if (message) console.error(message);
-    if (proxy) proxy.kill();
-    return undefined;
-  };
-
+}): Promise<void | number> {
   if (command.length === 0)
-    return exit(
-      "Must specify a directory of static assets to serve or a command to run."
+    return EXIT(
+      "Must specify a directory of static assets to serve or a command to run.",
+      1
     );
 
   console.log(`Running ${command.join(" ")}...`);
@@ -110,6 +122,7 @@ const spawnProxyProcess = async ({
       },
     }
   );
+  EXIT_CALLBACKS.push(() => proxy.kill());
 
   proxy.stdout.on("data", (data) => {
     console.log(`[proxy]: ${data}`);
@@ -138,34 +151,35 @@ const spawnProxyProcess = async ({
       .filter((port) => port !== undefined)[0];
 
     if (port === undefined) {
-      return exit(
-        "Could not automatically determine proxy port. Please specify the proxy port with --proxy."
+      return EXIT(
+        "Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
+        1
       );
     } else {
       console.log(`Automatically determined the proxy port to be ${port}.`);
     }
   }
 
-  return { port, exit };
-};
+  return port;
+}
 
-const escapeRegex = (str: string) => {
+function escapeRegex(str: string) {
   return str.replace(/[-/\\^$*+?.()|[]{}]/g, "\\$&");
-};
+}
 
-export type Replacements = Record<string, string>;
+type Replacements = Record<string, string>;
 
-export const replacer = (str: string, replacements: Replacements) => {
+function replacer(str: string, replacements: Replacements) {
   for (const [replacement, value] of Object.entries(replacements)) {
     str = str.replace(`:${replacement}`, value);
   }
   return str;
-};
+}
 
-export const generateRulesMatcher = <T,>(
+function generateRulesMatcher<T>(
   rules?: Record<string, T>,
   replacer: (match: T, replacements: Replacements) => T = (match) => match
-) => {
+) {
   // TODO: How can you test cross-host rules?
   if (!rules) return () => [];
 
@@ -212,9 +226,9 @@ export const generateRulesMatcher = <T,>(
       })
       .filter((value) => value !== undefined) as T[];
   };
-};
+}
 
-const generateHeadersMatcher = (headersFile: string) => {
+function generateHeadersMatcher(headersFile: string) {
   if (existsSync(headersFile)) {
     const contents = readFileSync(headersFile).toString();
 
@@ -281,9 +295,9 @@ const generateHeadersMatcher = (headersFile: string) => {
   } else {
     return () => undefined;
   }
-};
+}
 
-const generateRedirectsMatcher = (redirectsFile: string) => {
+function generateRedirectsMatcher(redirectsFile: string) {
   if (existsSync(redirectsFile)) {
     const contents = readFileSync(redirectsFile).toString();
 
@@ -330,26 +344,26 @@ const generateRedirectsMatcher = (redirectsFile: string) => {
   } else {
     return () => undefined;
   }
-};
+}
 
-const extractPathname = (
+function extractPathname(
   path = "/",
   includeSearch: boolean,
   includeHash: boolean
-) => {
+) {
   if (!path.startsWith("/")) path = `/${path}`;
   const url = new URL(`//${path}`, "relative://");
   return `${url.pathname}${includeSearch ? url.search : ""}${
     includeHash ? url.hash : ""
   }`;
-};
+}
 
-const validateURL = (
+function validateURL(
   token: string,
   onlyRelative = false,
   includeSearch = false,
   includeHash = false
-) => {
+) {
   const host = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/.exec(token);
   if (host && host.groups && host.groups.host) {
     if (onlyRelative) return;
@@ -370,14 +384,13 @@ const validateURL = (
     }
   }
   return "";
-};
+}
 
-const hasFileExtension = (pathname: string) =>
-  /\/.+\.[a-z0-9]+$/i.test(pathname);
+function hasFileExtension(pathname: string) {
+  return /\/.+\.[a-z0-9]+$/i.test(pathname);
+}
 
-const generateAssetsFetch = async (
-  directory: string
-): Promise<typeof fetch> => {
+async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   // Defer importing miniflare until we really need it
   const { Headers, Request, Response } = await import("@miniflare/core");
 
@@ -623,7 +636,47 @@ const generateAssetsFetch = async (
       status: deconstructedResponse.status,
     });
   };
-};
+}
+
+const RUNNING_BUILDERS: BuildResult[] = [];
+
+async function buildFunctions({
+  scriptPath,
+  functionsDirectory,
+  onEnd,
+}: {
+  scriptPath: string;
+  functionsDirectory: string;
+  onEnd?: () => void;
+}) {
+  RUNNING_BUILDERS.forEach(
+    (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
+  );
+
+  const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
+
+  const config: Config = await generateConfigFromFileTree({
+    baseDir: functionsDirectory,
+    baseURL: "/",
+  });
+
+  await writeRoutesModule({
+    config,
+    srcDir: functionsDirectory,
+    outfile: routesModule,
+  });
+
+  RUNNING_BUILDERS.push(
+    await buildWorker({
+      routesModule,
+      outfile: scriptPath,
+      minify: false, // TODO: Expose option to enable
+      sourcemap: true,
+      watch: true,
+      onEnd,
+    })
+  );
+}
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs.command(
@@ -702,34 +755,47 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       const command = remaining as (string | number)[];
 
-      let proxyPort: number | undefined;
-      let exit: Exit = (message) => {
-        console.error(message);
-        return undefined;
-      };
+      let proxyPort: number | void;
 
       if (directory === undefined) {
-        const proxy = await spawnProxyProcess({
+        proxyPort = await spawnProxyProcess({
           port: requestedProxyPort,
           command,
         });
-        if (proxy === undefined) return undefined;
-
-        exit = proxy.exit;
-        proxyPort = proxy.port;
-
-        process.on("SIGINT", () => exit());
-        process.on("SIGTERM", () => exit());
+        if (proxyPort === undefined) return undefined;
       }
 
       let miniflareArgs: MiniflareOptions = {};
 
+      let scriptReady = true;
+
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
+
+        console.log(`Compiling worker to "${scriptPath}"...`);
+
+        await buildFunctions({
+          scriptPath,
+          functionsDirectory,
+          onEnd: () => {
+            scriptReady = true;
+          },
+        });
+
+        watch([functionsDirectory], {
+          persistent: true,
+        }).on("all", async () => {
+          await buildFunctions({
+            scriptPath,
+            functionsDirectory,
+            onEnd: () => {
+              scriptReady = true;
+            },
+          });
+        });
+
         miniflareArgs = {
           scriptPath,
-          buildWatchPaths: [functionsDirectory],
-          buildCommand: `npx @cloudflare/pages-functions-compiler build ${functionsDirectory} --outfile ${scriptPath}`,
         };
       } else {
         const scriptPath =
@@ -737,15 +803,24 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ? join(directory, singleWorkerScriptPath)
             : singleWorkerScriptPath;
 
-        if (!existsSync(scriptPath)) {
-          return exit(
-            `No Worker script found at ${scriptPath}. Please either create a functions directory or create a single Worker at ${scriptPath}.`
-          );
+        if (existsSync(scriptPath)) {
+          miniflareArgs = {
+            scriptPath,
+          };
+        } else {
+          console.log("No functions. Shimming...");
+          miniflareArgs = {
+            // TODO: The fact that these request/response hacks are necessary is ridiculous.
+            // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
+            script: `
+            export default {
+              async fetch(request, env, context) {
+                const response = await env.ASSETS.fetch(request.url, request)
+                return new Response(response.body, response)
+              }
+            }`,
+          };
         }
-
-        miniflareArgs = {
-          scriptPath,
-        };
       }
 
       // Defer importing miniflare until we really need it
@@ -821,6 +896,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         ...miniflareArgs,
       });
 
+      // Wait for esbuild to finish building the script
+      while (!scriptReady) {}
+
       try {
         // `startServer` might throw if user code contains errors
         const server = await miniflare.startServer();
@@ -830,21 +908,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           await open(`http://127.0.0.1:${port}/`);
         }
 
-        process.on("SIGINT", () => {
+        EXIT_CALLBACKS.push(() => {
           server.close();
-          miniflare.dispose().catch((err) => {
-            miniflare.log.error(err);
-          });
-        });
-        process.on("SIGTERM", () => {
-          server.close();
-          miniflare.dispose().catch((err) => {
-            miniflare.log.error(err);
-          });
+          miniflare.dispose().catch((err) => miniflare.log.error(err));
         });
       } catch (e) {
         miniflare.log.error(e);
-        process.exitCode = 1;
+        EXIT("Could not start Miniflare.", 1);
       }
     }
   );

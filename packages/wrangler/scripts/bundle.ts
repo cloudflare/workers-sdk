@@ -1,11 +1,11 @@
-import esbuild from "esbuild";
+import { build } from "esbuild";
 import path from "path";
 
 // the expectation is that this is being run from the project root
 
 async function run() {
   // main cli
-  await esbuild.build({
+  await build({
     entryPoints: ["./src/cli.ts"],
     bundle: true,
     outdir: "./wrangler-dist",
