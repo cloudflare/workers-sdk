@@ -23,8 +23,9 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { MiniflareOptions } from "miniflare";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
-const EXIT = (message?: string) => {
+const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
+  if (code) process.exitCode = code;
   RUNNING_PROCESSES.forEach((runningProcess) => runningProcess.kill());
 
   return undefined;
@@ -106,7 +107,8 @@ async function spawnProxyProcess({
 }): Promise<undefined | number> {
   if (command.length === 0)
     return EXIT(
-      "Must specify a directory of static assets to serve or a command to run."
+      "Must specify a directory of static assets to serve or a command to run.",
+      1
     );
 
   console.log(`Running ${command.join(" ")}...`);
@@ -121,6 +123,7 @@ async function spawnProxyProcess({
       },
     }
   );
+  RUNNING_PROCESSES.push(proxy);
 
   proxy.stdout.on("data", (data) => {
     console.log(`[proxy]: ${data}`);
@@ -150,7 +153,8 @@ async function spawnProxyProcess({
 
     if (port === undefined) {
       return EXIT(
-        "Could not automatically determine proxy port. Please specify the proxy port with --proxy."
+        "Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
+        1
       );
     } else {
       console.log(`Automatically determined the proxy port to be ${port}.`);
