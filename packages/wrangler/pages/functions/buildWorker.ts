@@ -18,7 +18,6 @@ export function buildWorker({
   watch = false,
   onEnd = () => {},
 }: Options) {
-  console.log(`Compiling worker to "${outfile}"...`);
   return build({
     entryPoints: [
       path.resolve(__dirname, "../pages/functions/template-worker.ts"),
@@ -39,14 +38,15 @@ export function buildWorker({
           build.onEnd((result) => {
             if (result.errors.length > 0) {
               console.error(
-                `${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling worker.`
+                `${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
               );
             } else if (result.warnings.length > 0) {
               console.warn(
-                `${result.warnings.length} warning(s) when compiling worker.`
+                `${result.warnings.length} warning(s) when compiling Worker.`
               );
               onEnd();
             } else {
+              console.log("Compiled Worker successfully.");
               onEnd();
             }
           });

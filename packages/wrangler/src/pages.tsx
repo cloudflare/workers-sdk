@@ -5,7 +5,6 @@ import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { existsSync, lstatSync, readFileSync } from "fs";
-import type { ChildProcess } from "child_process";
 import { execSync, spawn } from "child_process";
 import { URL } from "url";
 import { getType } from "mime";
@@ -23,13 +22,12 @@ import { generateConfigFromFileTree } from "../pages/functions/filepath-routing"
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { MiniflareOptions } from "miniflare";
 
-const RUNNING_PROCESSES: ChildProcess[] = [];
-let RUNNING_BUILDER: BuildResult | undefined;
+const EXIT_CALLBACKS = [];
 const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
   if (code) process.exitCode = code;
-  RUNNING_PROCESSES.forEach((runningProcess) => runningProcess.kill());
-  if (RUNNING_BUILDER) RUNNING_BUILDER.stop();
+  EXIT_CALLBACKS.forEach((callback) => callback());
+  process.exit(code);
 };
 
 process.on("SIGINT", () => EXIT());
@@ -124,7 +122,7 @@ async function spawnProxyProcess({
       },
     }
   );
-  RUNNING_PROCESSES.push(proxy);
+  EXIT_CALLBACKS.push(() => proxy.kill());
 
   proxy.stdout.on("data", (data) => {
     console.log(`[proxy]: ${data}`);
@@ -640,6 +638,8 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   };
 }
 
+const RUNNING_BUILDERS: BuildResult[] = [];
+
 async function buildFunctions({
   scriptPath,
   functionsDirectory,
@@ -647,8 +647,12 @@ async function buildFunctions({
 }: {
   scriptPath: string;
   functionsDirectory: string;
-  onEnd: () => void;
+  onEnd?: () => void;
 }) {
+  RUNNING_BUILDERS.forEach(
+    (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
+  );
+
   const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
 
   const config: Config = await generateConfigFromFileTree({
@@ -662,14 +666,16 @@ async function buildFunctions({
     outfile: routesModule,
   });
 
-  return await buildWorker({
-    routesModule,
-    outfile: scriptPath,
-    minify: false, // TODO: Expose option to enable
-    sourcemap: true,
-    watch: true,
-    onEnd,
-  });
+  RUNNING_BUILDERS.push(
+    await buildWorker({
+      routesModule,
+      outfile: scriptPath,
+      minify: false, // TODO: Expose option to enable
+      sourcemap: true,
+      watch: true,
+      onEnd,
+    })
+  );
 }
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
@@ -761,12 +767,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       let miniflareArgs: MiniflareOptions = {};
 
-      let scriptReady = false;
+      let scriptReady = true;
 
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
 
-        RUNNING_BUILDER = await buildFunctions({
+        console.log(`Compiling worker to "${scriptPath}"...`);
+
+        await buildFunctions({
           scriptPath,
           functionsDirectory,
           onEnd: () => {
@@ -777,9 +785,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         watch([functionsDirectory], {
           persistent: true,
         }).on("all", async () => {
-          RUNNING_BUILDER.stop();
-
-          RUNNING_BUILDER = await buildFunctions({
+          await buildFunctions({
             scriptPath,
             functionsDirectory,
             onEnd: () => {
@@ -902,21 +908,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           await open(`http://127.0.0.1:${port}/`);
         }
 
-        process.on("SIGINT", () => {
+        EXIT_CALLBACKS.push(() => {
           server.close();
-          miniflare.dispose().catch((err) => {
-            miniflare.log.error(err);
-          });
-        });
-        process.on("SIGTERM", () => {
-          server.close();
-          miniflare.dispose().catch((err) => {
-            miniflare.log.error(err);
-          });
+          miniflare.dispose().catch((err) => miniflare.log.error(err));
         });
       } catch (e) {
         miniflare.log.error(e);
-        process.exitCode = 1;
+        EXIT("Could not start Miniflare.", 1);
       }
     }
   );
