@@ -34,8 +34,8 @@ export function buildWorker({
     plugins: [
       {
         name: "wrangler notifier and monitor",
-        setup(build) {
-          build.onEnd((result) => {
+        setup(pluginBuild) {
+          pluginBuild.onEnd((result) => {
             if (result.errors.length > 0) {
               console.error(
                 `${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`

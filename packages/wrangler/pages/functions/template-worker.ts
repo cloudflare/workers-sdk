@@ -15,9 +15,9 @@ type EventContext<Env, P extends string, Data> = {
 
 declare type PagesFunction<
   Env = unknown,
-  Params extends string = any,
+  P extends string = any,
   Data extends Record<string, unknown> = Record<string, unknown>
-> = (context: EventContext<Env, Params, Data>) => Response | Promise<Response>;
+> = (context: EventContext<Env, P, Data>) => Response | Promise<Response>;
 /* end @cloudflare/workers-types */
 
 type RouteHandler = {

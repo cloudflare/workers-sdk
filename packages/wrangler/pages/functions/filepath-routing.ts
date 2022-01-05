@@ -158,13 +158,13 @@ export async function generateConfigFromFileTree({
 // less specific routes appearing first in the route list.
 export function compareRoutes(a: string, b: string) {
   function parseRoutePath(routePath: string) {
-    let [method, path] = routePath.split(" ");
-    if (!path) {
-      path = method;
+    let [method, segmentedPath] = routePath.split(" ");
+    if (!segmentedPath) {
+      segmentedPath = method;
       method = null;
     }
 
-    const segments = path.slice(1).split("/");
+    const segments = segmentedPath.slice(1).split("/");
     return [method, segments];
   }
 
