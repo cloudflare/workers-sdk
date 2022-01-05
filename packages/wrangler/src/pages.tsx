@@ -724,6 +724,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
       let miniflareArgs: MiniflareOptions = {};
 
+      let scriptReady = false;
+
       if (usingFunctions) {
         const scriptPath = join(tmpdir(), "./functionsWorker.js");
         const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
@@ -745,6 +747,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           minify: false, // TODO: Expose option to enable
           sourcemap: true,
           watch: true,
+          onEnd: () => {
+            scriptReady = true;
+          },
         });
 
         miniflareArgs = {
@@ -848,6 +853,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
         ...miniflareArgs,
       });
+
+      // Wait for esbuild to finish building the script
+      while (!scriptReady) {}
 
       try {
         // `startServer` might throw if user code contains errors

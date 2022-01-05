@@ -7,6 +7,7 @@ type Options = {
   minify?: boolean;
   sourcemap?: boolean;
   watch?: boolean;
+  onEnd?: () => void;
 };
 
 export function buildWorker({
@@ -15,8 +16,9 @@ export function buildWorker({
   minify = false,
   sourcemap = false,
   watch = false,
+  onEnd = () => {},
 }: Options) {
-  console.log(`Compiling worker to "${outfile}"`);
+  console.log(`Compiling worker to "${outfile}"...`);
   return build({
     entryPoints: [
       path.resolve(__dirname, "../pages/functions/template-worker.ts"),
@@ -30,5 +32,27 @@ export function buildWorker({
     sourcemap,
     watch,
     allowOverwrite: true,
+    plugins: [
+      {
+        name: "wrangler notifier and monitor",
+        setup(build) {
+          build.onEnd((result) => {
+            if (result.errors.length > 0) {
+              console.error(
+                `${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling worker.`
+              );
+            } else if (result.warnings.length > 0) {
+              console.warn(
+                `${result.warnings.length} warning(s) when compiling worker.`
+              );
+              onEnd();
+            } else {
+              console.log(`Compiled worker successfully.`);
+              onEnd();
+            }
+          });
+        },
+      },
+    ],
   });
 }
