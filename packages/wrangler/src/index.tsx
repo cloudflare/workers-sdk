@@ -514,7 +514,7 @@ export async function main(argv: string[]): Promise<void> {
         // TODO: if not already published, publish a draft worker
       }
 
-      render(
+      const { waitUntilExit } = render(
         <Dev
           name={args.name || config.name}
           entry={path.relative(process.cwd(), filename)}
@@ -558,6 +558,7 @@ export async function main(argv: string[]): Promise<void> {
           }}
         />
       );
+      await waitUntilExit();
     }
   );
 
