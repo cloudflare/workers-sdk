@@ -29,7 +29,7 @@ import { watch } from "chokidar";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
-type Props = {
+export type DevProps = {
   name?: string;
   entry: string;
   port?: number;
@@ -51,7 +51,7 @@ type Props = {
   };
 };
 
-function Dev(props: Props): JSX.Element {
+function Dev(props: DevProps): JSX.Element {
   if (props.public && props.format === "service-worker") {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
@@ -860,19 +860,15 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
   return toggles;
 }
 
-function ErrorFallback(props: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
+function ErrorFallback(props: { error: Error }) {
   useEffect(() => {
-    console.error(props.error);
-    process.exit(1);
+    process.exitCode = 1;
   });
   return (
-    <Box>
+    <>
       <Text>Something went wrong:</Text>
       <Text>{props.error.message}</Text>
-    </Box>
+    </>
   );
 }
 
