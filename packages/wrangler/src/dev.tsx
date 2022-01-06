@@ -4,7 +4,7 @@ import { existsSync } from "fs";
 import type { DirectoryResult } from "tmp-promise";
 import tmp from "tmp-promise";
 import type { CfPreviewToken } from "./api/preview";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
@@ -861,9 +861,8 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
 }
 
 function ErrorFallback(props: { error: Error }) {
-  useEffect(() => {
-    process.exitCode = 1;
-  });
+  const { exit } = useApp();
+  useEffect(() => exit(new Error()));
   return (
     <>
       <Text>Something went wrong:</Text>
