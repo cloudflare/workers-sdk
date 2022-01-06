@@ -8,7 +8,7 @@ import { Box, Text, useApp, useInput } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
-import { DtInspector } from "./api/inspect";
+import useInspector from "./inspect";
 import type { CfModule } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
@@ -16,7 +16,6 @@ import { spawn } from "child_process";
 import onExit from "signal-exit";
 import { syncAssets } from "./sites";
 import clipboardy from "clipboardy";
-import http from "node:http";
 import commandExists from "command-exists";
 import assert from "assert";
 import { getAPIToken } from "./user";
@@ -79,9 +78,6 @@ function Dev(props: DevProps): JSX.Element {
     );
   }
 
-  // @ts-expect-error whack
-  useDevtoolsRefresh(bundle?.id ?? 0);
-
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
@@ -133,36 +129,6 @@ function Dev(props: DevProps): JSX.Element {
   );
 }
 
-function useDevtoolsRefresh(bundleId: number) {
-  // TODO: this is a hack while we figure out
-  // a better cleaner solution to get devtools to reconnect
-  // without having to do a full refresh
-  const ref = useRef();
-  // @ts-expect-error whack
-  ref.current = bundleId;
-
-  useEffect(() => {
-    const server = http.createServer((req, res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Request-Method", "*");
-      res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET");
-      res.setHeader("Access-Control-Allow-Headers", "*");
-      if (req.method === "OPTIONS") {
-        res.writeHead(200);
-        res.end();
-        return;
-      }
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ value: ref.current }));
-    });
-
-    server.listen(3142);
-    return () => {
-      server.close();
-    };
-  }, []);
-}
-
 function Remote(props: {
   name: void | string;
   bundle: EsbuildBundle | void;
@@ -196,7 +162,11 @@ function Remote(props: {
 
   useProxy({ token, publicRoot: props.public, port: props.port });
 
-  useInspector(token ? token.inspectorUrl.href : undefined);
+  useInspector({
+    inspectorUrl: token ? token.inspectorUrl.href : undefined,
+    port: 9229,
+    logToTerminal: true,
+  });
   return null;
 }
 function Local(props: {
@@ -215,7 +185,7 @@ function Local(props: {
     bindings: props.bindings,
     port: props.port,
   });
-  useInspector(inspectorUrl);
+  useInspector({ inspectorUrl, port: 9229, logToTerminal: false });
   return null;
 }
 
@@ -230,7 +200,7 @@ function useLocalWorker(props: {
   const { bundle, format, bindings, port } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
-  const [inspectorUrl, setInspectorUrl] = useState<string | void>();
+  const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
   useEffect(() => {
     async function startLocalWorker() {
       if (!bundle) return;
@@ -718,19 +688,6 @@ function useProxy({
       server.close();
     };
   }, [token, publicRoot, port]);
-}
-
-function useInspector(inspectorUrl: string | void) {
-  useEffect(() => {
-    if (!inspectorUrl) return;
-
-    const inspector = new DtInspector(inspectorUrl);
-    const abortController = inspector.proxyTo(9229);
-    return () => {
-      inspector.close();
-      abortController.abort();
-    };
-  }, [inspectorUrl]);
 }
 
 function sleep(period: number) {
