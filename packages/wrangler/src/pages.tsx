@@ -916,7 +916,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           console.log(`Serving at http://127.0.0.1:${port}/`);
 
           if (process.env.BROWSER !== "none") {
-            await open(`http://127.0.0.1:${port}/`);
+            try {
+              await open(`http://127.0.0.1:${port}/`);
+            } catch {}
           }
 
           EXIT_CALLBACKS.push(() => {
