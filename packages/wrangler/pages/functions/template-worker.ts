@@ -43,8 +43,8 @@ type WorkerContext = {
 function* executeRequest(request: Request, env: Env) {
   const requestPath = new URL(request.url).pathname;
 
-  // First, iterate through the routes and execute "middlewares" on partial route matches
-  for (const route of routes) {
+  // First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
+  for (const route of [...routes].reverse()) {
     if (
       route.methods.length &&
       !route.methods.includes(request.method as HTTPMethod)

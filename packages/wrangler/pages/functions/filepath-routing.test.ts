@@ -1,8 +1,15 @@
 import { compareRoutes } from "./filepath-routing";
 
 describe("compareRoutes()", () => {
+  test("routes / last", () => {
+    expect(compareRoutes("/", "/foo")).toBeGreaterThanOrEqual(1);
+    expect(compareRoutes("/", "/:foo")).toBeGreaterThanOrEqual(1);
+    expect(compareRoutes("/", "/:foo*")).toBeGreaterThanOrEqual(1);
+  });
+
   test("routes with fewer segments come after those with more segments", () => {
-    expect(compareRoutes("/foo", "/foo/bar")).toBe(1);
+    expect(compareRoutes("/foo", "/foo/bar")).toBeGreaterThanOrEqual(1);
+    expect(compareRoutes("/foo", "/foo/bar/cat")).toBeGreaterThanOrEqual(1);
   });
 
   test("routes with wildcard segments come after those without", () => {
