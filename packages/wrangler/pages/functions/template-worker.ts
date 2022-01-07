@@ -88,7 +88,7 @@ function* executeRequest(request: Request, env: Env) {
     }
   }
 
-  // Finally, yield to the asset-server
+  // Finally, yield to the fallback service (`env.ASSETS.fetch` in Pages' case)
   return {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
