@@ -643,10 +643,16 @@ const RUNNING_BUILDERS: BuildResult[] = [];
 async function buildFunctions({
   scriptPath,
   functionsDirectory,
+  minify = false,
+  sourcemap = false,
+  watch = false,
   onEnd,
 }: {
   scriptPath: string;
   functionsDirectory: string;
+  minify?: boolean;
+  sourcemap?: boolean;
+  watch?: boolean;
   onEnd?: () => void;
 }) {
   RUNNING_BUILDERS.forEach(
@@ -670,254 +676,293 @@ async function buildFunctions({
     await buildWorker({
       routesModule,
       outfile: scriptPath,
-      minify: false, // TODO: Expose option to enable
-      sourcemap: true,
-      watch: true,
+      minify,
+      sourcemap,
+      watch,
       onEnd,
     })
   );
 }
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
-  return yargs.command(
-    "dev [directory] [-- command]",
-    "🧑‍💻 Develop your full-stack Pages application locally",
-    (yargs) => {
-      return yargs
-        .positional("directory", {
-          type: "string",
-          demandOption: undefined,
-          description: "The directory of static assets to serve",
-        })
-        .positional("command", {
-          type: "string",
-          demandOption: undefined,
-          description: "The proxy command to run",
-        })
-        .options({
-          local: {
-            type: "boolean",
-            default: true,
-            description: "Run on my machine",
-          },
-          port: {
-            type: "number",
-            default: 8788,
-            description: "The port to listen on (serve from)",
-          },
-          proxy: {
-            type: "number",
-            description:
-              "The port to proxy (where the static assets are served)",
-          },
-          "script-path": {
+  return yargs
+    .command(
+      "dev [directory] [-- command]",
+      "🧑‍💻 Develop your full-stack Pages application locally",
+      (yargs) => {
+        return yargs
+          .positional("directory", {
             type: "string",
-            default: "_worker.js",
-            description:
-              "The location of the single Worker script if not using functions",
-          },
-          binding: {
-            type: "array",
-            description: "Bind variable/secret (KEY=VALUE)",
-            alias: "b",
-          },
-          kv: {
-            type: "array",
-            description: "KV namespace to bind",
-            alias: "k",
-          },
-          do: {
-            type: "array",
-            description: "Durable Object to bind (NAME=CLASS)",
-            alias: "o",
-          },
-          // TODO: Miniflare user options
-        });
-    },
-    async ({
-      local,
-      directory,
-      port,
-      proxy: requestedProxyPort,
-      "script-path": singleWorkerScriptPath,
-      binding: bindings = [],
-      kv: kvs = [],
-      do: durableObjects = [],
-      "--": remaining = [],
-    }) => {
-      if (!local) {
-        console.error("Only local mode is supported at the moment.");
-        return;
-      }
+            demandOption: undefined,
+            description: "The directory of static assets to serve",
+          })
+          .positional("command", {
+            type: "string",
+            demandOption: undefined,
+            description: "The proxy command to run",
+          })
+          .options({
+            local: {
+              type: "boolean",
+              default: true,
+              description: "Run on my machine",
+            },
+            port: {
+              type: "number",
+              default: 8788,
+              description: "The port to listen on (serve from)",
+            },
+            proxy: {
+              type: "number",
+              description:
+                "The port to proxy (where the static assets are served)",
+            },
+            "script-path": {
+              type: "string",
+              default: "_worker.js",
+              description:
+                "The location of the single Worker script if not using functions",
+            },
+            binding: {
+              type: "array",
+              description: "Bind variable/secret (KEY=VALUE)",
+              alias: "b",
+            },
+            kv: {
+              type: "array",
+              description: "KV namespace to bind",
+              alias: "k",
+            },
+            do: {
+              type: "array",
+              description: "Durable Object to bind (NAME=CLASS)",
+              alias: "o",
+            },
+            // TODO: Miniflare user options
+          });
+      },
+      async ({
+        local,
+        directory,
+        port,
+        proxy: requestedProxyPort,
+        "script-path": singleWorkerScriptPath,
+        binding: bindings = [],
+        kv: kvs = [],
+        do: durableObjects = [],
+        "--": remaining = [],
+      }) => {
+        if (!local) {
+          console.error("Only local mode is supported at the moment.");
+          return;
+        }
 
-      const functionsDirectory = "./functions";
-      const usingFunctions = existsSync(functionsDirectory);
+        const functionsDirectory = "./functions";
+        const usingFunctions = existsSync(functionsDirectory);
 
-      const command = remaining as (string | number)[];
+        const command = remaining as (string | number)[];
 
-      let proxyPort: number | void;
+        let proxyPort: number | void;
 
-      if (directory === undefined) {
-        proxyPort = await spawnProxyProcess({
-          port: requestedProxyPort,
-          command,
-        });
-        if (proxyPort === undefined) return undefined;
-      }
+        if (directory === undefined) {
+          proxyPort = await spawnProxyProcess({
+            port: requestedProxyPort,
+            command,
+          });
+          if (proxyPort === undefined) return undefined;
+        }
 
-      let miniflareArgs: MiniflareOptions = {};
+        let miniflareArgs: MiniflareOptions = {};
 
-      let scriptReady = true;
+        let scriptReady = true;
 
-      if (usingFunctions) {
-        const scriptPath = join(tmpdir(), "./functionsWorker.js");
+        if (usingFunctions) {
+          const scriptPath = join(tmpdir(), "./functionsWorker.js");
 
-        console.log(`Compiling worker to "${scriptPath}"...`);
+          console.log(`Compiling worker to "${scriptPath}"...`);
 
-        await buildFunctions({
-          scriptPath,
-          functionsDirectory,
-          onEnd: () => {
-            scriptReady = true;
-          },
-        });
-
-        watch([functionsDirectory], {
-          persistent: true,
-        }).on("all", async () => {
           await buildFunctions({
             scriptPath,
             functionsDirectory,
+            sourcemap: true,
+            watch: true,
             onEnd: () => {
               scriptReady = true;
             },
           });
-        });
 
-        miniflareArgs = {
-          scriptPath,
-        };
-      } else {
-        const scriptPath =
-          directory !== undefined
-            ? join(directory, singleWorkerScriptPath)
-            : singleWorkerScriptPath;
+          watch([functionsDirectory], {
+            persistent: true,
+          }).on("all", async () => {
+            await buildFunctions({
+              scriptPath,
+              functionsDirectory,
+              sourcemap: true,
+              watch: true,
+              onEnd: () => {
+                scriptReady = true;
+              },
+            });
+          });
 
-        if (existsSync(scriptPath)) {
           miniflareArgs = {
             scriptPath,
           };
         } else {
-          console.log("No functions. Shimming...");
-          miniflareArgs = {
-            // TODO: The fact that these request/response hacks are necessary is ridiculous.
-            // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
-            script: `
+          const scriptPath =
+            directory !== undefined
+              ? join(directory, singleWorkerScriptPath)
+              : singleWorkerScriptPath;
+
+          if (existsSync(scriptPath)) {
+            miniflareArgs = {
+              scriptPath,
+            };
+          } else {
+            console.log("No functions. Shimming...");
+            miniflareArgs = {
+              // TODO: The fact that these request/response hacks are necessary is ridiculous.
+              // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
+              script: `
             export default {
               async fetch(request, env, context) {
                 const response = await env.ASSETS.fetch(request.url, request)
                 return new Response(response.body, response)
               }
             }`,
-          };
+            };
+          }
         }
-      }
 
-      // Defer importing miniflare until we really need it
-      const { Miniflare, Log, LogLevel } = await import("miniflare");
-      const { Response, fetch } = await import("@miniflare/core");
+        // Defer importing miniflare until we really need it
+        const { Miniflare, Log, LogLevel } = await import("miniflare");
+        const { Response, fetch } = await import("@miniflare/core");
 
-      // Should only be called if no proxyPort, using `assert.fail()` here
-      // means the type of `assetsFetch` is still `typeof fetch`
-      const assetsFetch = proxyPort
-        ? () => assert.fail()
-        : await generateAssetsFetch(directory);
-      const miniflare = new Miniflare({
-        port,
-        watch: true,
-        modules: true,
+        // Should only be called if no proxyPort, using `assert.fail()` here
+        // means the type of `assetsFetch` is still `typeof fetch`
+        const assetsFetch = proxyPort
+          ? () => assert.fail()
+          : await generateAssetsFetch(directory);
+        const miniflare = new Miniflare({
+          port,
+          watch: true,
+          modules: true,
 
-        log: new Log(LogLevel.ERROR, { prefix: "pages" }),
-        logUnhandledRejections: true,
-        sourceMap: true,
+          log: new Log(LogLevel.ERROR, { prefix: "pages" }),
+          logUnhandledRejections: true,
+          sourceMap: true,
 
-        kvNamespaces: kvs.map((kv) => kv.toString()),
+          kvNamespaces: kvs.map((kv) => kv.toString()),
 
-        durableObjects: Object.fromEntries(
-          durableObjects.map((durableObject) =>
-            durableObject.toString().split("=")
-          )
-        ),
-
-        // User bindings
-        bindings: {
-          ...Object.fromEntries(
-            bindings.map((binding) => binding.toString().split("="))
+          durableObjects: Object.fromEntries(
+            durableObjects.map((durableObject) =>
+              durableObject.toString().split("=")
+            )
           ),
-        },
 
-        // env.ASSETS.fetch
-        serviceBindings: {
-          async ASSETS(request) {
-            if (proxyPort) {
-              try {
-                const url = new URL(request.url);
-                url.host = `127.0.0.1:${proxyPort}`;
-                return await fetch(url, request);
-              } catch (thrown) {
-                console.error(`Could not proxy request: ${thrown}`);
-
-                // TODO: Pretty error page
-                return new Response(
-                  `[wrangler] Could not proxy request: ${thrown}`,
-                  { status: 502 }
-                );
-              }
-            } else {
-              try {
-                return await assetsFetch(request);
-              } catch (thrown) {
-                console.error(`Could not serve static asset: ${thrown}`);
-
-                // TODO: Pretty error page
-                return new Response(
-                  `[wrangler] Could not serve static asset: ${thrown}`,
-                  { status: 502 }
-                );
-              }
-            }
+          // User bindings
+          bindings: {
+            ...Object.fromEntries(
+              bindings.map((binding) => binding.toString().split("="))
+            ),
           },
-        },
 
-        kvPersist: true,
-        durableObjectsPersist: true,
-        cachePersist: true,
+          // env.ASSETS.fetch
+          serviceBindings: {
+            async ASSETS(request) {
+              if (proxyPort) {
+                try {
+                  const url = new URL(request.url);
+                  url.host = `127.0.0.1:${proxyPort}`;
+                  return await fetch(url, request);
+                } catch (thrown) {
+                  console.error(`Could not proxy request: ${thrown}`);
 
-        ...miniflareArgs,
-      });
+                  // TODO: Pretty error page
+                  return new Response(
+                    `[wrangler] Could not proxy request: ${thrown}`,
+                    { status: 502 }
+                  );
+                }
+              } else {
+                try {
+                  return await assetsFetch(request);
+                } catch (thrown) {
+                  console.error(`Could not serve static asset: ${thrown}`);
 
-      // Wait for esbuild to finish building the script
-      while (!scriptReady) {}
+                  // TODO: Pretty error page
+                  return new Response(
+                    `[wrangler] Could not serve static asset: ${thrown}`,
+                    { status: 502 }
+                  );
+                }
+              }
+            },
+          },
 
-      try {
-        // `startServer` might throw if user code contains errors
-        const server = await miniflare.startServer();
-        console.log(`Serving at http://127.0.0.1:${port}/`);
+          kvPersist: true,
+          durableObjectsPersist: true,
+          cachePersist: true,
 
-        if (process.env.BROWSER !== "none") {
-          try {
-            await open(`http://127.0.0.1:${port}/`);
-          } catch {}
-        }
-
-        EXIT_CALLBACKS.push(() => {
-          server.close();
-          miniflare.dispose().catch((err) => miniflare.log.error(err));
+          ...miniflareArgs,
         });
-      } catch (e) {
-        miniflare.log.error(e);
-        EXIT("Could not start Miniflare.", 1);
+
+        // Wait for esbuild to finish building the script
+        while (!scriptReady) {}
+
+        try {
+          // `startServer` might throw if user code contains errors
+          const server = await miniflare.startServer();
+          console.log(`Serving at http://127.0.0.1:${port}/`);
+
+          if (process.env.BROWSER !== "none") {
+            try {
+              await open(`http://127.0.0.1:${port}/`);
+            } catch {}
+          }
+
+          EXIT_CALLBACKS.push(() => {
+            server.close();
+            miniflare.dispose().catch((err) => miniflare.log.error(err));
+          });
+        } catch (e) {
+          miniflare.log.error(e);
+          EXIT("Could not start Miniflare.", 1);
+        }
       }
-    }
-  );
+    )
+    .command("functions", "Cloudflare Pages Functions", (yargs) =>
+      yargs.command(
+        "build",
+        "Compile a folder of Cloudflare Pages Functions into a single Worker",
+        (yargs) =>
+          yargs.options({
+            "script-path": {
+              type: "string",
+              default: "_worker.js",
+              description: "The location of the output Worker script",
+            },
+            minify: {
+              type: "boolean",
+              default: false,
+              description: "Minify the output Worker script",
+            },
+            sourcemap: {
+              type: "boolean",
+              default: false,
+              description: "Generate a sourcemap for the output Worker script",
+            },
+          }),
+        async ({ "script-path": scriptPath, minify, sourcemap }) => {
+          const functionsDirectory = "./functions";
+
+          await buildFunctions({
+            scriptPath,
+            functionsDirectory,
+            minify,
+            sourcemap,
+          });
+        }
+      )
+    );
 };
