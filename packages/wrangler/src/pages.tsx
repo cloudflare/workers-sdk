@@ -945,14 +945,20 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               default: false,
               description: "Minify the output Worker script",
             },
+            sourcemap: {
+              type: "boolean",
+              default: false,
+              description: "Generate a sourcemap for the output Worker script",
+            },
           }),
-        async ({ "script-path": scriptPath, minify }) => {
+        async ({ "script-path": scriptPath, minify, sourcemap }) => {
           const functionsDirectory = "./functions";
 
           await buildFunctions({
             scriptPath,
             functionsDirectory,
             minify,
+            sourcemap,
           });
         }
       )
