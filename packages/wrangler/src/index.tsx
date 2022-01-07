@@ -455,7 +455,7 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Protocol to listen to requests on, defaults to http.",
           choices: ["http", "https"],
         })
-        .option("public", {
+        .option("experimental-public", {
           describe: "Static assets to be served",
           type: "string",
         })
@@ -481,6 +481,18 @@ export async function main(argv: string[]): Promise<void> {
     async (args) => {
       const { filename, format } = args;
       const config = args.config as Config;
+
+      if (args["experimental-public"]) {
+        console.warn(
+          "🚨  The --experimental-public field is experimental and will change in the future."
+        );
+      }
+
+      if (args.public) {
+        throw new Error(
+          "🚨  The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+        );
+      }
 
       // -- snip, extract --
 
@@ -526,7 +538,7 @@ export async function main(argv: string[]): Promise<void> {
           accountId={config.account_id}
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
-          public={args.public}
+          public={args["experimental-public"]}
           compatibilityDate={config.compatibility_date}
           compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
@@ -580,7 +592,7 @@ export async function main(argv: string[]): Promise<void> {
           describe: "name to use when uploading",
           type: "string",
         })
-        .option("public", {
+        .option("experimental-public", {
           describe: "Static assets to be served",
           type: "string",
         })
@@ -619,6 +631,18 @@ export async function main(argv: string[]): Promise<void> {
           "🚫  Local publishing is not yet supported"
         );
       }
+
+      if (args["experimental-public"]) {
+        console.warn(
+          "🚨  The --experimental-public field is experimental and will change in the future."
+        );
+      }
+      if (args.public) {
+        throw new Error(
+          "🚨  The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+        );
+      }
+
       const config = args.config as Config;
 
       // -- snip, extract --
@@ -648,7 +672,7 @@ export async function main(argv: string[]): Promise<void> {
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
         routes: args.routes,
-        public: args.public,
+        public: args["experimental-public"],
         site: args.site,
       });
     }
