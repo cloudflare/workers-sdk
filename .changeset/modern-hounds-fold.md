@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Disable @typescript-lint/noexplicit-any eslint rule in pages code
+Disable @typescript-lint/no-explicit-any eslint rule in pages code
