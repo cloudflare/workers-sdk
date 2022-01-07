@@ -33,7 +33,7 @@ export async function generateConfigFromFileTree({
 
   await forEachFile(baseDir, async (filepath) => {
     const ext = path.extname(filepath);
-    if (/\.(mjs|js|ts)/.test(ext)) {
+    if (/^\.(mjs|js|ts)$/.test(ext)) {
       // transform the code to ensure we're working with vanilla JS + ESM
       const { code } = await transform(await fs.readFile(filepath, "utf-8"), {
         loader: ext === ".ts" ? "ts" : "js",
