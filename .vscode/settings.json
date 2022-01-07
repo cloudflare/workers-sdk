@@ -2,10 +2,14 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "cSpell.words": [
     "cfetch",
+    "esbuild",
+    "estree",
     "execa",
     "iarna",
     "keyvalue",
+    "middlewares",
     "Miniflare",
+    "outfile",
     "Positionals"
   ]
 }

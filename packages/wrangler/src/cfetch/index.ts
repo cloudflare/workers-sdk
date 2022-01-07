@@ -98,6 +98,5 @@ function throwFetchError(
 }
 
 function hasCursor(result_info: unknown): result_info is { cursor: string } {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (result_info as any)?.cursor !== undefined;
+  return (result_info as { cursor } | undefined)?.cursor !== undefined;
 }

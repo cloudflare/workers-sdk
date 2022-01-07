@@ -68,7 +68,7 @@ export const validIdentifierRegex = new RegExp(
   "u"
 );
 
-export const isValidIdentifer = (identifier: string) =>
+export const isValidIdentifier = (identifier: string) =>
   validIdentifierRegex.test(identifier);
 
 export const normalizeIdentifier = (identifier: string) =>

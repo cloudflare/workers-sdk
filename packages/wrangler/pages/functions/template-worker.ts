@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { match } from "path-to-regexp";
 import type { HTTPMethod } from "./routes";
 
 /* TODO: Grab these from @cloudflare/workers-types instead */
-type Params<P extends string = any> = Record<P, string | string[]>;
+type Params<P extends string = string> = Record<P, string | string[]>;
 
 type EventContext<Env, P extends string, Data> = {
   request: Request;
-  waitUntil: (promise: Promise<any>) => void;
+  waitUntil: (promise: Promise<unknown>) => void;
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
   env: Env & { ASSETS: { fetch: typeof fetch } };
   params: Params<P>;
@@ -17,7 +15,7 @@ type EventContext<Env, P extends string, Data> = {
 
 declare type PagesFunction<
   Env = unknown,
-  P extends string = any,
+  P extends string = string,
   Data extends Record<string, unknown> = Record<string, unknown>
 > = (context: EventContext<Env, P, Data>) => Response | Promise<Response>;
 /* end @cloudflare/workers-types */
@@ -34,12 +32,12 @@ declare const routes: RouteHandler[];
 
 // expect an ASSETS fetcher binding pointing to the asset-server stage
 type Env = {
-  [name: string]: any;
+  [name: string]: unknown;
   ASSETS: { fetch(url: string, init: RequestInit): Promise<Response> };
 };
 
 type WorkerContext = {
-  waitUntil: (promise: Promise<any>) => void;
+  waitUntil: (promise: Promise<unknown>) => void;
 };
 
 function* executeRequest(request: Request, env: Env) {
@@ -107,7 +105,11 @@ export default {
       const { value } = handlerIterator.next();
       if (value) {
         const { handler, params } = value;
-        const context: EventContext<unknown, any, any> = {
+        const context: EventContext<
+          unknown,
+          string,
+          Record<string, unknown>
+        > = {
           request: new Request(request.clone()),
           next,
           params,

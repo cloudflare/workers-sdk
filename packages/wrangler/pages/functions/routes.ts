@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import path from "path";
 import fs from "fs/promises";
-import { isValidIdentifer, normalizeIdentifier } from "./identifiers";
+import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
 
 export const HTTP_METHODS = [
   "HEAD",
@@ -17,7 +15,7 @@ export type HTTPMethod = typeof HTTP_METHODS[number];
 export function isHTTPMethod(
   maybeHTTPMethod: string
 ): maybeHTTPMethod is HTTPMethod {
-  return HTTP_METHODS.includes(maybeHTTPMethod as any);
+  return (HTTP_METHODS as readonly string[]).includes(maybeHTTPMethod);
 }
 
 export type RoutesCollection = Array<{
@@ -29,14 +27,16 @@ export type RoutesCollection = Array<{
 
 export type Config = {
   routes?: RoutesConfig;
-  schedules?: any;
+  schedules?: unknown;
 };
 
 export type RoutesConfig = {
-  [route: string]: {
-    middleware?: string | string[];
-    module?: string | string[];
-  };
+  [route: string]: RouteConfig;
+};
+
+export type RouteConfig = {
+  middleware?: string | string[];
+  module?: string | string[];
 };
 
 type ImportMap = Map<
@@ -93,7 +93,7 @@ export function parseConfig(config: Config, baseDir: string) {
       }
 
       // ensure the module name (if provided) is a valid identifier to guard against injection attacks
-      if (name !== "default" && !isValidIdentifer(name)) {
+      if (name !== "default" && !isValidIdentifier(name)) {
         throw new Error(`Invalid module identifier "${name}"`);
       }
 
