@@ -90,7 +90,9 @@ function* executeRequest(request: Request, env: Env) {
 
   // Finally, yield to the asset-server
   return {
-    handler: () => env.ASSETS.fetch(request.url, request),
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    handler: () => __FALLBACK_SERVICE_FETCH__(request.url, request),
     params: {} as Params,
   };
 }
