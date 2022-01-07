@@ -42,6 +42,7 @@ type WorkerContext = {
   waitUntil: (promise: Promise<any>) => void;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- `env` can be used by __FALLBACK_SERVICE_FETCH__
 function* executeRequest(request: Request, env: Env) {
   const requestPath = new URL(request.url).pathname;
 
@@ -90,8 +91,7 @@ function* executeRequest(request: Request, env: Env) {
 
   // Finally, yield to the fallback service (`env.ASSETS.fetch` in Pages' case)
   return {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error we don't define a type for the special global __FALLBACK_SERVICE_FETCH__ since we replace it when we're building anyway
     handler: () => __FALLBACK_SERVICE_FETCH__(request.url, request),
     params: {} as Params,
   };
