@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { match } from "path-to-regexp";
 import type { HTTPMethod } from "./routes";
 

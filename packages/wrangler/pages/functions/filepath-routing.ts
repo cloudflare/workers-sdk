@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import path from "path";
 import fs from "fs/promises";
 import { transform } from "esbuild";
