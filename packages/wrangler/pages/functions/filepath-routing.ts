@@ -166,7 +166,7 @@ export function compareRoutes(a: string, b: string) {
       method = null;
     }
 
-    const segments = segmentedPath.slice(1).split("/");
+    const segments = segmentedPath.slice(1).split("/").filter(Boolean);
     return [method, segments];
   }
 
