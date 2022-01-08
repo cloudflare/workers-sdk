@@ -741,6 +741,11 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "Durable Object to bind (NAME=CLASS)",
               alias: "o",
             },
+            "live-reload": {
+              type: "boolean",
+              default: false,
+              description: "Auto reload HTML pages when change is detected",
+            },
             // TODO: Miniflare user options
           });
       },
@@ -753,6 +758,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         binding: bindings = [],
         kv: kvs = [],
         do: durableObjects = [],
+        "live-reload": liveReload,
         "--": remaining = [],
       }) => {
         if (!local) {
@@ -906,6 +912,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           kvPersist: true,
           durableObjectsPersist: true,
           cachePersist: true,
+          liveReload,
 
           ...miniflareArgs,
         });
@@ -922,6 +929,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             try {
               await open(`http://127.0.0.1:${port}/`);
             } catch {}
+          }
+
+          if (directory !== undefined && liveReload) {
+            watch([directory], { persistent: true }).on("all", async () => {
+              await miniflare.reload();
+            });
           }
 
           EXIT_CALLBACKS.push(() => {
