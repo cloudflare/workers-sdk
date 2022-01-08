@@ -802,6 +802,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           watch([functionsDirectory], {
             persistent: true,
+            ignoreInitial: true,
           }).on("all", async () => {
             await buildFunctions({
               scriptPath,
@@ -932,7 +933,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           }
 
           if (directory !== undefined && liveReload) {
-            watch([directory], { persistent: true }).on("all", async () => {
+            watch([directory], {
+              persistent: true,
+              ignoreInitial: true,
+            }).on("all", async () => {
               await miniflare.reload();
             });
           }
