@@ -29,6 +29,8 @@ type RouteHandler = {
 
 // inject `routes` via ESBuild
 declare const routes: RouteHandler[];
+// define `__FALLBACK_SERVICE__` via ESBuild
+declare const __FALLBACK_SERVICE__: string;
 
 // expect an ASSETS fetcher binding pointing to the asset-server stage
 type Env = {
@@ -89,8 +91,11 @@ function* executeRequest(request: Request, env: Env) {
 
   // Finally, yield to the fallback service (`env.ASSETS.fetch` in Pages' case)
   return {
-    // @ts-expect-error we don't define a type for the special global __FALLBACK_SERVICE_FETCH__ since we replace it when we're building anyway
-    handler: () => __FALLBACK_SERVICE_FETCH__(request.url, request),
+    handler: () =>
+      __FALLBACK_SERVICE__
+        ? // @ts-expect-error expecting __FALLBACK_SERVICE__ to be the name of a service binding, so fetch should be defined
+          env[__FALLBACK_SERVICE__].fetch(request)
+        : fetch(request),
     params: {} as Params,
   };
 }
