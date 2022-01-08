@@ -1,11 +1,13 @@
 import path from "path";
 import { build } from "esbuild";
+import { replace } from "esbuild-plugin-replace";
 
 type Options = {
   routesModule: string;
   outfile: string;
   minify?: boolean;
   sourcemap?: boolean;
+  fallbackService?: string;
   watch?: boolean;
   onEnd?: () => void;
 };
@@ -15,6 +17,7 @@ export function buildWorker({
   outfile = "bundle.js",
   minify = false,
   sourcemap = false,
+  fallbackService = "ASSETS",
   watch = false,
   onEnd = () => {},
 }: Options) {
@@ -32,6 +35,11 @@ export function buildWorker({
     watch,
     allowOverwrite: true,
     plugins: [
+      replace({
+        __FALLBACK_SERVICE_FETCH__: fallbackService
+          ? `env.${fallbackService}.fetch`
+          : "fetch",
+      }),
       {
         name: "wrangler notifier and monitor",
         setup(pluginBuild) {

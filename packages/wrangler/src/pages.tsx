@@ -645,6 +645,7 @@ async function buildFunctions({
   functionsDirectory,
   minify = false,
   sourcemap = false,
+  fallbackService = "ASSETS",
   watch = false,
   onEnd,
 }: {
@@ -652,6 +653,7 @@ async function buildFunctions({
   functionsDirectory: string;
   minify?: boolean;
   sourcemap?: boolean;
+  fallbackService?: string;
   watch?: boolean;
   onEnd?: () => void;
 }) {
@@ -678,6 +680,7 @@ async function buildFunctions({
       outfile: scriptPath,
       minify,
       sourcemap,
+      fallbackService,
       watch,
       onEnd,
     })
@@ -952,8 +955,25 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               default: false,
               description: "Generate a sourcemap for the output Worker script",
             },
+            "fallback-service": {
+              type: "string",
+              default: "ASSETS",
+              description:
+                "The service to fallback to at the end of the `next` chain. Setting to '' will fallback to the global `fetch`.",
+            },
+            watch: {
+              type: "boolean",
+              default: false,
+              description:
+                "Watch for changes to the functions and automatically rebuild the Worker script",
+            },
           }),
-        async ({ "script-path": scriptPath, minify, sourcemap }) => {
+        async ({
+          "script-path": scriptPath,
+          minify,
+          sourcemap,
+          fallbackService,
+        }) => {
           const functionsDirectory = "./functions";
 
           await buildFunctions({
@@ -961,6 +981,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             functionsDirectory,
             minify,
             sourcemap,
+            fallbackService,
           });
         }
       )
