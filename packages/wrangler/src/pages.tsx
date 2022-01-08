@@ -4,7 +4,7 @@ import assert from "assert";
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { existsSync, lstatSync, readFileSync } from "fs";
+import { existsSync, lstatSync, readFileSync, writeFileSync } from "fs";
 import { execSync, spawn } from "child_process";
 import { URL } from "url";
 import { getType } from "mime";
@@ -642,6 +642,7 @@ const RUNNING_BUILDERS: BuildResult[] = [];
 
 async function buildFunctions({
   scriptPath,
+  outputConfigPath,
   functionsDirectory,
   minify = false,
   sourcemap = false,
@@ -650,6 +651,7 @@ async function buildFunctions({
   onEnd,
 }: {
   scriptPath: string;
+  outputConfigPath?: string;
   functionsDirectory: string;
   minify?: boolean;
   sourcemap?: boolean;
@@ -667,6 +669,13 @@ async function buildFunctions({
     baseDir: functionsDirectory,
     baseURL: "/",
   });
+
+  if (outputConfigPath) {
+    writeFileSync(
+      outputConfigPath,
+      JSON.stringify({ ...config, baseURL: "/" }, null, 2)
+    );
+  }
 
   await writeRoutesModule({
     config,
@@ -958,6 +967,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               default: "_worker.js",
               description: "The location of the output Worker script",
             },
+            "output-config-path": {
+              type: "string",
+              description: "The location for the output config file",
+            },
             minify: {
               type: "boolean",
               default: false,
@@ -983,6 +996,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           }),
         async ({
           "script-path": scriptPath,
+          "output-config-path": outputConfigPath,
           minify,
           sourcemap,
           fallbackService,
@@ -991,6 +1005,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           await buildFunctions({
             scriptPath,
+            outputConfigPath,
             functionsDirectory,
             minify,
             sourcemap,
