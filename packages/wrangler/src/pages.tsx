@@ -986,6 +986,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           minify,
           sourcemap,
           fallbackService,
+          watch,
         }) => {
           const functionsDirectory = "./functions";
 
@@ -995,6 +996,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             minify,
             sourcemap,
             fallbackService,
+            watch,
           });
         }
       )
