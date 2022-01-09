@@ -29,11 +29,13 @@
     "typescript": "^4.5.2"
   },
   "scripts": {
+    "type-check": "tsc",
     "lint": "eslint packages/**",
-    "check": "prettier packages/** --check && tsc && npm run lint && npm run build && npm run test",
+    "format-check": "prettier packages/** --check",
+    "check": "npm run format-check && npm run type-check && npm run lint && npm run build && npm run test",
     "prettify": "prettier packages/** --write",
     "build": "npm run build --workspace=wrangler",
-    "test": "npm run test --workspace=wrangler"
+    "test": "npm run test --workspaces --if-present"
   },
   "engines": {
     "node": ">=16.0.0"
