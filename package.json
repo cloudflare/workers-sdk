@@ -33,7 +33,8 @@
     "check": "prettier packages/** --check && tsc && npm run lint && npm run build && npm run test",
     "prettify": "prettier packages/** --write",
     "build": "npm run build --workspace=wrangler",
-    "test": "npm run test --workspace=wrangler"
+    "test": "npm run test --workspace=wrangler",
+    "prepare": "husky install"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -96,5 +97,8 @@
   },
   "volta": {
     "node": "16.7.0"
+  },
+  "devDependencies": {
+    "husky": "^7.0.0"
   }
 }
