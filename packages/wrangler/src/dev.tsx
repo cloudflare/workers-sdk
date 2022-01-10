@@ -26,23 +26,23 @@ import { usePreviewServer } from "./proxy";
 import { execa } from "execa";
 import { watch } from "chokidar";
 
-type CfScriptFormat = void | "modules" | "service-worker";
+type CfScriptFormat = undefined | "modules" | "service-worker";
 
 export type DevProps = {
   name?: string;
   entry: string;
   port?: number;
   format: CfScriptFormat;
-  accountId: void | string;
+  accountId: undefined | string;
   initialMode: "local" | "remote";
-  jsxFactory: void | string;
-  jsxFragment: void | string;
+  jsxFactory: undefined | string;
+  jsxFragment: undefined | string;
   bindings: CfWorkerInit["bindings"];
   public: undefined | string;
-  site: void | string;
-  compatibilityDate: void | string;
-  compatibilityFlags: void | string[];
-  usageModel: void | "bundled" | "unbound";
+  site: undefined | string;
+  compatibilityDate: undefined | string;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
   buildCommand: {
     command?: undefined | string;
     cwd?: undefined | string;
@@ -130,18 +130,18 @@ function Dev(props: DevProps): JSX.Element {
 }
 
 function Remote(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   public: undefined | string;
-  site: void | string;
+  site: undefined | string;
   port: number;
-  accountId: void | string;
-  apiToken: void | string;
+  accountId: undefined | string;
+  apiToken: undefined | string;
   bindings: CfWorkerInit["bindings"];
-  compatibilityDate: string | void;
-  compatibilityFlags: void | string[];
-  usageModel: void | "bundled" | "unbound";
+  compatibilityDate: string | undefined;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -174,12 +174,12 @@ function Remote(props: {
   return null;
 }
 function Local(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
-  public: void | string;
-  site: void | string;
+  public: undefined | string;
+  site: undefined | string;
   port: number;
 }) {
   const { inspectorUrl } = useLocalWorker({
@@ -194,8 +194,8 @@ function Local(props: {
 }
 
 function useLocalWorker(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
   port: number;
@@ -320,7 +320,7 @@ function useLocalWorker(props: {
   return { inspectorUrl };
 }
 
-function useTmpDir(): string | void {
+function useTmpDir(): string | undefined {
   const [directory, setDirectory] = useState<DirectoryResult>();
   const handleError = useErrorHandler();
   useEffect(() => {
@@ -358,8 +358,8 @@ function useCustomBuild(
     cwd?: undefined | string;
     watch_dir?: undefined | string;
   }
-): void | string {
-  const [entry, setEntry] = useState<string | void>(
+): undefined | string {
+  const [entry, setEntry] = useState<string | undefined>(
     // if there's no build command, just return the expected entry
     props.command ? null : expectedEntry
   );
@@ -430,12 +430,12 @@ type EsbuildBundle = {
 };
 
 function useEsbuild(props: {
-  entry: void | string;
-  destination: string | void;
-  staticRoot: void | string;
-  jsxFactory: string | void;
-  jsxFragment: string | void;
-}): EsbuildBundle | void {
+  entry: undefined | string;
+  destination: string | undefined;
+  staticRoot: undefined | string;
+  jsxFactory: string | undefined;
+  jsxFragment: string | undefined;
+}): EsbuildBundle | undefined {
   const { entry, destination, staticRoot, jsxFactory, jsxFragment } = props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
@@ -501,18 +501,18 @@ function useEsbuild(props: {
 }
 
 function useWorker(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   modules: CfModule[];
   accountId: string;
   apiToken: string;
   bindings: CfWorkerInit["bindings"];
-  sitesFolder: void | string;
+  sitesFolder: undefined | string;
   port: number;
-  compatibilityDate: string | void;
-  compatibilityFlags: string[] | void;
-  usageModel: void | "bundled" | "unbound";
+  compatibilityDate: string | undefined;
+  compatibilityFlags: string[] | undefined;
+  usageModel: undefined | "bundled" | "unbound";
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -636,7 +636,7 @@ const SLEEP_DURATION = 2000;
 // really need a first class api for this
 const hostNameRegex = /userHostname="(.*)"/g;
 async function findTunnelHostname() {
-  let hostName: string;
+  let hostName: string | undefined;
   while (!hostName) {
     try {
       const resp = await fetch("http://localhost:8789/metrics");

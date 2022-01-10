@@ -11,7 +11,7 @@ import type { Config } from "./config";
 import makeModuleCollector from "./module-collection";
 import { syncAssets } from "./sites";
 
-type CfScriptFormat = void | "modules" | "service-worker";
+type CfScriptFormat = undefined | "modules" | "service-worker";
 
 type Props = {
   config: Config;
@@ -26,8 +26,8 @@ type Props = {
   triggers?: (string | number)[];
   routes?: (string | number)[];
   legacyEnv?: boolean;
-  jsxFactory: void | string;
-  jsxFragment: void | string;
+  jsxFactory: undefined | string;
+  jsxFragment: undefined | string;
 };
 
 function sleep(ms: number) {
