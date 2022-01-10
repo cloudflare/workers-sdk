@@ -112,7 +112,7 @@ export interface CfWorkerInit {
   /**
    * The name of the worker.
    */
-  name: string | void;
+  name: string | undefined;
   /**
    * The entrypoint module.
    */
@@ -120,7 +120,7 @@ export interface CfWorkerInit {
   /**
    * The list of additional modules.
    */
-  modules: void | CfModule[];
+  modules: undefined | CfModule[];
   /**
    * All the bindings
    */
@@ -130,10 +130,10 @@ export interface CfWorkerInit {
     vars?: CfVars;
     services?: CfService[];
   };
-  migrations: void | CfDurableObjectMigrations;
-  compatibility_date: string | void;
-  compatibility_flags: void | string[];
-  usage_model: void | "bundled" | "unbound";
+  migrations: undefined | CfDurableObjectMigrations;
+  compatibility_date: string | undefined;
+  compatibility_flags: undefined | string[];
+  usage_model: undefined | "bundled" | "unbound";
 }
 
 /**

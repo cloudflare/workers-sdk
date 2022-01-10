@@ -127,5 +127,5 @@ export type Config = {
   usage_model?: UsageModel; // inherited
   // top level
   build?: Build;
-  env?: { [envName: string]: void | Env };
+  env?: { [envName: string]: undefined | Env };
 };
