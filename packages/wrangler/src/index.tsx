@@ -40,6 +40,7 @@ import {
   validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
+import { sentryCapture } from "./sentry";
 
 import type { Config } from "./config";
 import type Yargs from "yargs";
@@ -2155,9 +2156,8 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.version(wranglerVersion).alias("v", "version");
   wrangler.exitProcess(false);
 
-  await initialiseUserConfig();
-
   try {
+    await initialiseUserConfig();
     await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
@@ -2172,6 +2172,7 @@ export async function main(argv: string[]): Promise<void> {
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );
     }
+    await sentryCapture(e, "indexCatch");
     throw e;
   }
 }

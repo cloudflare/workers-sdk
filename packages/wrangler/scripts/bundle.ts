@@ -1,6 +1,5 @@
 import path from "node:path";
 import { build } from "esbuild";
-
 // the expectation is that this is being run from the project root
 
 async function run() {

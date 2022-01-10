@@ -9,6 +9,11 @@ jest.mock("undici", () => {
     fetch: jest.requireActual("jest-fetch-mock"),
   };
 });
+// Outside of the Sentry tests themselves, we mock Sentry to ensure that it doesn't actually send any data and
+// that it doesn't interfere with the rest of the tests.
+jest.mock("../sentry");
+
+jest.mock("node-fetch", () => jest.requireActual("jest-fetch-mock"));
 fetchMock.doMock(() => {
   // Any un-mocked fetches should throw
   throw new Error("Unexpected fetch request");
