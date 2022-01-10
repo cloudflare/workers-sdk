@@ -958,55 +958,61 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
     )
     .command("functions", "Cloudflare Pages Functions", (yargs) =>
       yargs.command(
-        "build",
+        "build [directory]",
         "Compile a folder of Cloudflare Pages Functions into a single Worker",
         (yargs) =>
-          yargs.options({
-            "script-path": {
+          yargs
+            .positional("directory", {
               type: "string",
-              default: "_worker.js",
-              description: "The location of the output Worker script",
-            },
-            "output-config-path": {
-              type: "string",
-              description: "The location for the output config file",
-            },
-            minify: {
-              type: "boolean",
-              default: false,
-              description: "Minify the output Worker script",
-            },
-            sourcemap: {
-              type: "boolean",
-              default: false,
-              description: "Generate a sourcemap for the output Worker script",
-            },
-            "fallback-service": {
-              type: "string",
-              default: "ASSETS",
-              description:
-                "The service to fallback to at the end of the `next` chain. Setting to '' will fallback to the global `fetch`.",
-            },
-            watch: {
-              type: "boolean",
-              default: false,
-              description:
-                "Watch for changes to the functions and automatically rebuild the Worker script",
-            },
-          }),
+              default: "functions",
+              description: "The directory of Pages Functions",
+            })
+            .options({
+              "script-path": {
+                type: "string",
+                default: "_worker.js",
+                description: "The location of the output Worker script",
+              },
+              "output-config-path": {
+                type: "string",
+                description: "The location for the output config file",
+              },
+              minify: {
+                type: "boolean",
+                default: false,
+                description: "Minify the output Worker script",
+              },
+              sourcemap: {
+                type: "boolean",
+                default: false,
+                description:
+                  "Generate a sourcemap for the output Worker script",
+              },
+              "fallback-service": {
+                type: "string",
+                default: "ASSETS",
+                description:
+                  "The service to fallback to at the end of the `next` chain. Setting to '' will fallback to the global `fetch`.",
+              },
+              watch: {
+                type: "boolean",
+                default: false,
+                description:
+                  "Watch for changes to the functions and automatically rebuild the Worker script",
+              },
+            }),
         async ({
+          directory,
           "script-path": scriptPath,
           "output-config-path": outputConfigPath,
           minify,
           sourcemap,
           fallbackService,
         }) => {
-          const functionsDirectory = "./functions";
-
           await buildFunctions({
             scriptPath,
             outputConfigPath,
-            functionsDirectory,
+            functionsDirectory: directory,
             minify,
             sourcemap,
             fallbackService,
