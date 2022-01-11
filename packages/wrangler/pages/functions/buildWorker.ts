@@ -1,6 +1,5 @@
 import path from "path";
 import { build } from "esbuild";
-import { replace } from "esbuild-plugin-replace";
 
 type Options = {
   routesModule: string;
@@ -34,12 +33,10 @@ export function buildWorker({
     sourcemap,
     watch,
     allowOverwrite: true,
+    define: {
+      __FALLBACK_SERVICE__: JSON.stringify(fallbackService),
+    },
     plugins: [
-      replace({
-        __FALLBACK_SERVICE_FETCH__: fallbackService
-          ? `env.${fallbackService}.fetch`
-          : "fetch",
-      }),
       {
         name: "wrangler notifier and monitor",
         setup(pluginBuild) {

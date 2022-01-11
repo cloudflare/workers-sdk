@@ -792,7 +792,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
         let miniflareArgs: MiniflareOptions = {};
 
-        let scriptReady = true;
+        let scriptReadyResolve;
+        const scriptReadyPromise = new Promise(
+          (resolve) => (scriptReadyResolve = resolve)
+        );
 
         if (usingFunctions) {
           const scriptPath = join(tmpdir(), "./functionsWorker.js");
@@ -804,22 +807,19 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             functionsDirectory,
             sourcemap: true,
             watch: true,
-            onEnd: () => {
-              scriptReady = true;
-            },
+            onEnd: () => scriptReadyResolve(),
           });
 
           watch([functionsDirectory], {
             persistent: true,
+            ignoreInitial: true,
           }).on("all", async () => {
             await buildFunctions({
               scriptPath,
               functionsDirectory,
               sourcemap: true,
               watch: true,
-              onEnd: () => {
-                scriptReady = true;
-              },
+              onEnd: () => scriptReadyResolve(),
             });
           });
 
@@ -855,6 +855,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         // Defer importing miniflare until we really need it
         const { Miniflare, Log, LogLevel } = await import("miniflare");
         const { Response, fetch } = await import("@miniflare/core");
+
+        // Wait for esbuild to finish building before starting Miniflare.
+        // This must be before the call to `new Miniflare`, as that will
+        // asynchronously start loading the script. `await startServer()`
+        // internally just waits for that promise to resolve.
+        await scriptReadyPromise;
 
         // Should only be called if no proxyPort, using `assert.fail()` here
         // means the type of `assetsFetch` is still `typeof fetch`
@@ -926,9 +932,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           ...miniflareArgs,
         });
 
-        // Wait for esbuild to finish building the script
-        while (!scriptReady) {}
-
         try {
           // `startServer` might throw if user code contains errors
           const server = await miniflare.startServer();
@@ -941,7 +944,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           }
 
           if (directory !== undefined && liveReload) {
-            watch([directory], { persistent: true }).on("all", async () => {
+            watch([directory], {
+              persistent: true,
+              ignoreInitial: true,
+            }).on("all", async () => {
               await miniflare.reload();
             });
           }

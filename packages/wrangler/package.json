@@ -37,8 +37,7 @@
   ],
   "dependencies": {
     "esbuild": "0.14.1",
-    "esbuild-plugin-replace": "^1.1.0",
-    "miniflare": "2.0.0-rc.5",
+    "miniflare": "2.0.0",
     "path-to-regexp": "^6.2.0",
     "semiver": "^1.1.0"
   },
