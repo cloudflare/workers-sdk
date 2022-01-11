@@ -529,12 +529,6 @@ export async function main(argv: string[]): Promise<void> {
 
       const envRootObj = args.env ? config.env[args.env] || {} : config;
 
-      if (!envRootObj.compatibility_date && !args["compatibility-date"]) {
-        console.warn(
-          "⚠️  Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
-        );
-      }
-
       // TODO: this error shouldn't actually happen,
       // but we haven't fixed it internally yet
       if ("durable_objects" in envRootObj) {
