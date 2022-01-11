@@ -110,29 +110,23 @@ export default {
       }
 
       const { value } = handlerIterator.next();
-      if (value) {
-        const { handler, params } = value;
-        const context: EventContext<
-          unknown,
-          string,
-          Record<string, unknown>
-        > = {
-          request: new Request(request.clone()),
-          next,
-          params,
-          data,
-          env,
-          waitUntil: workerContext.waitUntil.bind(workerContext),
-        };
+      const { handler, params } = value;
+      const context: EventContext<unknown, string, Record<string, unknown>> = {
+        request: new Request(request.clone()),
+        next,
+        params,
+        data,
+        env,
+        waitUntil: workerContext.waitUntil.bind(workerContext),
+      };
 
-        const response = await handler(context);
+      const response = await handler(context);
 
-        // https://fetch.spec.whatwg.org/#null-body-status
-        return new Response(
-          [101, 204, 205, 304].includes(response.status) ? null : response.body,
-          response
-        );
-      }
+      // https://fetch.spec.whatwg.org/#null-body-status
+      return new Response(
+        [101, 204, 205, 304].includes(response.status) ? null : response.body,
+        response
+      );
     };
 
     try {

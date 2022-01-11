@@ -72,10 +72,14 @@ async function readConfig(configPath?: string): Promise<Config> {
     "usage_model",
   ];
 
-  Object.keys(config.env || {}).forEach((env) => {
+  const environments = config.env ?? {};
+  Object.values(environments).forEach((env) => {
+    if (env === undefined) {
+      return;
+    }
     inheritedFields.forEach((field) => {
-      if (config[field] !== undefined && config.env[env][field] === undefined) {
-        config.env[env][field] = config[field]; // TODO: - shallow copy?
+      if (config[field] !== undefined && env[field] === undefined) {
+        env[field] = config[field]; // TODO: - shallow copy?
       }
     });
   });
@@ -86,13 +90,16 @@ async function readConfig(configPath?: string): Promise<Config> {
     "durable_objects",
     "experimental_services",
   ];
-  Object.keys(config.env || {}).forEach((env) => {
+  Object.entries(environments).forEach(([envName, envValue]) => {
+    if (envValue === undefined) {
+      return;
+    }
     mirroredFields.forEach((field) => {
       // if it exists on top level, it should exist on env definitions
       Object.keys(config[field] || {}).forEach((fieldKey) => {
-        if (!(fieldKey in config.env[env][field])) {
+        if (!(fieldKey in envValue[field])) {
           console.warn(
-            `In your configuration, "${field}.${fieldKey}" exists at a top level, but not on "env.${env}". This is not what you probably want, since the field "${field}" is not inherited by environments. Please add "${field}.${fieldKey}" to "env.${env}".`
+            `In your configuration, "${field}.${fieldKey}" exists at a top level, but not on "env.${envName}". This is not what you probably want, since the field "${field}" is not inherited by environments. Please add "${field}.${fieldKey}" to "env.${envName}".`
           );
         }
       });
@@ -421,7 +428,11 @@ export async function main(argv: string[]): Promise<void> {
     "👂 Start a local server for developing your worker",
     (yargs) => {
       return yargs
-        .positional("filename", { describe: "entry point", type: "string" })
+        .positional("filename", {
+          describe: "entry point",
+          type: "string",
+          demandOption: true,
+        })
         .option("name", {
           describe: "name of the script",
           type: "string",
@@ -527,7 +538,8 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, end --
 
-      const envRootObj = args.env ? config.env[args.env] || {} : config;
+      const environments = config.env ?? {};
+      const envRootObj = args.env ? environments[args.env] || {} : config;
 
       // TODO: this error shouldn't actually happen,
       // but we haven't fixed it internally yet
@@ -768,6 +780,12 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: filter by client ip, which can be 'self' or an ip address
     },
     async (args) => {
+      if (args.local) {
+        throw new NotImplementedError(
+          `local mode is not yet supported for this command`
+        );
+      }
+
       const config = args.config as Config;
 
       if (!(args.name || config.name)) {
@@ -779,18 +797,16 @@ export async function main(argv: string[]): Promise<void> {
 
       // -- snip, extract --
 
-      if (!args.local) {
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
+      const loggedIn = await loginOrRefreshIfRequired();
+      if (!loggedIn) {
+        // didn't login, let's just quit
+        console.log("Did not login, quitting...");
+        return;
+      }
+      if (!config.account_id) {
+        config.account_id = await getAccountId();
         if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
+          throw new Error("No account id found, quitting...");
         }
       }
 
@@ -1259,18 +1275,16 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, extract --
 
-            if (!args.local) {
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
             }
 
@@ -1309,18 +1323,16 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, extract --
 
-            if (!args.local) {
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
             }
 
@@ -1379,19 +1391,17 @@ export async function main(argv: string[]): Promise<void> {
 
             // -- snip, extract --
 
-            if (!args.local) {
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
 
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
             }
 
@@ -1438,6 +1448,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 type: "string",
                 describe: "The key to write to.",
+                demandOption: true,
               })
               .positional("value", {
                 type: "string",
@@ -1477,9 +1488,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ttl, expiration, ...args }) => {
             const namespaceId = getNamespaceId(args);
+            // One of `args.path` and `args.value` must be defined
             const value = args.path
               ? await readFile(args.path, "utf-8")
-              : args.value;
+              : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                args.value!;
             const config = args.config as Config;
 
             if (args.path) {
@@ -1501,11 +1514,7 @@ export async function main(argv: string[]): Promise<void> {
               });
               const ns = await mf.getKVNamespace(namespaceId);
               await ns.put(key, value, { expiration, expirationTtl: ttl });
-              return;
-            }
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1519,14 +1528,12 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+
+              await putKeyValue(config.account_id, namespaceId, key, value, {
+                expiration,
+                expiration_ttl: ttl,
+              });
             }
-
-            // -- snip, end --
-
-            await putKeyValue(config.account_id, namespaceId, key, value, {
-              expiration,
-              expiration_ttl: ttl,
-            });
           }
         )
         .command(
@@ -1574,12 +1581,7 @@ export async function main(argv: string[]): Promise<void> {
               const ns = await mf.getKVNamespace(namespaceId);
               const listResponse = await ns.list({ prefix });
               console.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1593,13 +1595,10 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              console.log(
+                await listNamespaceKeys(config.account_id, namespaceId, prefix)
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await listNamespaceKeys(config.account_id, namespaceId, prefix)
-            );
           }
         )
         .command(
@@ -1610,6 +1609,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 describe: "The key value to get.",
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1686,6 +1686,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 describe: "The key value to delete",
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1769,6 +1770,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("filename", {
                 describe: `The JSON file of key-value pairs to upload, in form [{"key":..., "value":...}"...]`,
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1824,13 +1826,7 @@ export async function main(argv: string[]): Promise<void> {
                   expirationTtl: expiration_ttl,
                 });
               }
-
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1844,13 +1840,11 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+
+              console.log(
+                await putBulkKeyValue(config.account_id, namespaceId, content)
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await putBulkKeyValue(config.account_id, namespaceId, content)
-            );
           }
         )
         .command(
@@ -1861,6 +1855,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("filename", {
                 describe: `The JSON file of key-value pairs to upload, in form ["key1", "key2", ...]`,
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1904,13 +1899,7 @@ export async function main(argv: string[]): Promise<void> {
               for (const key of parsedContent) {
                 await ns.delete(key);
               }
-
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1924,13 +1913,15 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+
+              console.log(
+                await deleteBulkKeyValue(
+                  config.account_id,
+                  namespaceId,
+                  content
+                )
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await deleteBulkKeyValue(config.account_id, namespaceId, content)
-            );
           }
         );
     }

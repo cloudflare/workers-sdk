@@ -212,7 +212,7 @@ describe("wrangler", () => {
 
       it("should make multiple requests for paginated results", async () => {
         // Create a lot of mock namespaces, so that the fetch requests will be paginated
-        const KVNamespaces = [];
+        const KVNamespaces: { title: string; id: string }[] = [];
         for (let i = 0; i < 550; i++) {
           KVNamespaces.push({ title: "title-" + i, id: "id-" + i });
         }
@@ -335,8 +335,12 @@ describe("wrangler", () => {
             expect(namespaceId).toEqual(expectedNamespaceId);
             expect(key).toEqual(expectedKey);
             expect(body).toEqual(expectedValue);
-            expect(query.get("expiration")).toEqual(`${expiration}`);
-            expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            if (expiration) {
+              expect(query.get("expiration")).toEqual(`${expiration}`);
+            }
+            if (expirationTtl) {
+              expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            }
             return null;
           }
         );
@@ -681,7 +685,7 @@ describe("wrangler", () => {
             if (expectedKeys.length <= keysPerRequest) {
               return createFetchResult(expectedKeys);
             } else {
-              const start = parseInt(query.get("cursor")) || 0;
+              const start = parseInt(query.get("cursor") ?? "0") || 0;
               const end = start + keysPerRequest;
               const cursor = end < expectedKeys.length ? end : undefined;
               return createFetchResult(
@@ -778,7 +782,7 @@ describe("wrangler", () => {
 
       it("should make multiple requests for paginated results", async () => {
         // Create a lot of mock keys, so that the fetch requests will be paginated
-        const keys = [];
+        const keys: string[] = [];
         for (let i = 0; i < 550; i++) {
           keys.push("key-" + i);
         }

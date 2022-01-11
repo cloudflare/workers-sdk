@@ -60,7 +60,7 @@ export default function useInspector(props: InspectorProps) {
   const wsServerRef = useRef<WebSocketServer>();
 
   /** The websocket from the devtools instance. */
-  const [localWebSocket, setLocalWebSocket] = useState<WebSocket | undefined>();
+  const [localWebSocket, setLocalWebSocket] = useState<WebSocket>();
   /**  The websocket from the edge */
   const [remoteWebSocket, setRemoteWebSocket] = useState<
     WebSocket | undefined
@@ -78,7 +78,7 @@ export default function useInspector(props: InspectorProps) {
             res.end(
               JSON.stringify({
                 Browser: `wrangler/v${version}`,
-                // TODO: (someday): The DevTools protocol should match that of edgeworker.
+                // TODO: (someday): The DevTools protocol should match that of Edge Worker.
                 // This could be exposed by the preview API.
                 "Protocol-Version": "1.3",
               })
@@ -124,8 +124,8 @@ export default function useInspector(props: InspectorProps) {
       server: serverRef.current,
       clientTracking: true,
     });
-    wsServerRef.current.on("connection", (ws: WebSocket) => {
-      if (wsServerRef.current.clients.size > 1) {
+    wsServerRef.current.on("connection", function (ws: WebSocket) {
+      if (this.clients.size > 1) {
         /** We only want to have one active Devtools instance at a time. */
         console.error(
           "Tried to open a new devtools window when a previous one was already open."
@@ -148,13 +148,19 @@ export default function useInspector(props: InspectorProps) {
    * of the component lifecycle. Convenient.
    */
   useEffect(() => {
-    serverRef.current.listen(props.port);
-    return () => {
-      serverRef.current.close();
-      // Also disconnect any open websockets/devtools connections
-      wsServerRef.current.clients.forEach((ws) => ws.close());
-      wsServerRef.current.close();
-    };
+    if (serverRef.current) {
+      serverRef.current.listen(props.port);
+      return () => {
+        if (serverRef.current) {
+          serverRef.current.close();
+        }
+        // Also disconnect any open websockets/devtools connections
+        if (wsServerRef.current) {
+          wsServerRef.current.clients.forEach((ws) => ws.close());
+          wsServerRef.current.close();
+        }
+      };
+    }
   }, [props.port]);
 
   /**
@@ -238,7 +244,7 @@ export default function useInspector(props: InspectorProps) {
               "🚨", // cheesy, but it works
               // maybe we could use color here too.
               params.exceptionDetails.text,
-              params.exceptionDetails.exception.description
+              params.exceptionDetails.exception?.description ?? ""
             );
           }
           if (evt.method === "Runtime.consoleAPICalled") {
@@ -284,7 +290,7 @@ export default function useInspector(props: InspectorProps) {
       clearInterval(keepAliveInterval);
       // Then we'll send a message to the devtools instance to
       // tell it to clear the console.
-      wsServerRef.current.clients.forEach((client) => {
+      wsServerRef.current?.clients.forEach((client) => {
         // We could've used `localSocket` here, but
         // then we would have had to add it to the effect
         // change detection array, which would have made a
@@ -350,7 +356,7 @@ export default function useInspector(props: InspectorProps) {
     /** Send a message from the local websocket to the remote websocket */
     function sendMessageToRemoteWebSocket(event: MessageEvent) {
       try {
-        remoteWebSocket.send(event.data);
+        remoteWebSocket?.send(event.data);
       } catch (e) {
         if (e.message !== "WebSocket is not open: readyState 0 (CONNECTING)") {
           /**
@@ -367,7 +373,7 @@ export default function useInspector(props: InspectorProps) {
 
     /** Send a message from the local websocket to the remote websocket */
     function sendMessageToLocalWebSocket(event: MessageEvent) {
-      localWebSocket.send(event.data);
+      localWebSocket?.send(event.data);
     }
 
     if (localWebSocket && remoteWebSocket) {
@@ -420,7 +426,7 @@ function randomId(): string {
  * directly in the terminal.
  */
 function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
-  const args = [];
+  const args: string[] = [];
   for (const ro of evt.args) {
     switch (ro.type) {
       case "string":
@@ -432,13 +438,13 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
         args.push(ro.value);
         break;
       case "function":
-        args.push(`[Function: ${ro.description}]`);
+        args.push(`[Function: ${ro.description ?? "<no-description>"}]`);
         break;
       case "object":
         if (!ro.preview) {
-          args.push(ro.description);
+          args.push(ro.description ?? "<no-description>");
         } else {
-          args.push(ro.preview.description);
+          args.push(ro.preview.description ?? "<no-description>");
 
           switch (ro.preview.subtype) {
             case "array":
@@ -458,8 +464,10 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
               args.push(
                 "{\n" +
                   ro.preview.entries
-                    .map(({ key, value }) => {
-                      return `  ${key.description} => ${value.description}`;
+                    ?.map(({ key, value }) => {
+                      return `  ${key?.description ?? "<unknown>"} => ${
+                        value.description
+                      }`;
                     })
                     .join(",\n") +
                   (ro.preview.overflow ? "\n  ..." : "") +
@@ -471,7 +479,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
               args.push(
                 "{ " +
                   ro.preview.entries
-                    .map(({ value }) => {
+                    ?.map(({ value }) => {
                       return `${value.description}`;
                     })
                     .join(", ") +

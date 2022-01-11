@@ -7,12 +7,22 @@
     "esbuild",
     "estree",
     "execa",
+    "extensionless",
     "iarna",
     "keyvalue",
     "middlewares",
     "Miniflare",
     "outdir",
     "outfile",
-    "Positionals"
-  ]
+    "pgrep",
+    "PKCE",
+    "Positionals",
+    "undici",
+    "wasmvalue",
+    "weakmap",
+    "weakset",
+    "webassemblymemory",
+    "websockets"
+  ],
+  "cSpell.ignoreWords": ["yxxx"]
 }

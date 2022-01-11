@@ -70,6 +70,12 @@ async function createKVNamespaceIfNotAlreadyExisting(
   };
 }
 
+interface UploadEntry {
+  key: string;
+  value: string;
+  base64: boolean;
+}
+
 export async function syncAssets(
   accountId: string,
   scriptName: string,
@@ -89,7 +95,7 @@ export async function syncAssets(
   );
 
   const manifest = {};
-  const upload = [];
+  const upload: UploadEntry[] = [];
   // TODO: this can be more efficient by parallelising
   for await (const file of getFilesInFolder(dirPath)) {
     // TODO: "exclude:" config

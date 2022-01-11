@@ -82,7 +82,7 @@ export interface NamespaceKeyInfo {
 export async function listNamespaceKeys(
   accountId: string,
   namespaceId: string,
-  prefix?: string
+  prefix = ""
 ) {
   return await fetchListResult<NamespaceKeyInfo>(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`,
@@ -98,15 +98,20 @@ export async function putKeyValue(
   value: string,
   args?: { expiration?: number; expiration_ttl?: number }
 ) {
+  let searchParams: URLSearchParams | undefined;
+  if (args) {
+    searchParams = new URLSearchParams();
+    if (args.expiration) {
+      searchParams.set("expiration", `${args.expiration}`);
+    }
+    if (args.expiration_ttl) {
+      searchParams.set("expiration_ttl", `${args.expiration_ttl}`);
+    }
+  }
   return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
     { method: "PUT", body: value },
-    args
-      ? new URLSearchParams({
-          expiration: args.expiration?.toString(),
-          expiration_ttl: args.expiration_ttl?.toString(),
-        })
-      : undefined
+    searchParams
   );
 }
 
@@ -262,6 +267,10 @@ export function getNamespaceId({
 /**
  * KV namespace binding names must be valid JS identifiers.
  */
-export function isValidNamespaceBinding(binding: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding);
+export function isValidNamespaceBinding(
+  binding: string | undefined
+): binding is string {
+  return (
+    typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
+  );
 }

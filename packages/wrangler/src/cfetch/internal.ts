@@ -1,5 +1,5 @@
-import fetch from "node-fetch";
-import type { RequestInit, HeadersInit } from "node-fetch";
+import fetch, { Headers } from "node-fetch";
+import type { RequestInit } from "node-fetch";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 
 export const CF_API_BASE_URL =
@@ -21,7 +21,7 @@ export async function fetchInternal<ResponseType>(
 ): Promise<ResponseType> {
   await requireLoggedIn();
   const apiToken = requireApiToken();
-  const headers = cloneHeaders(init.headers);
+  const headers = new Headers(init.headers);
   addAuthorizationHeader(headers, apiToken);
 
   const queryString = queryParams ? `?${queryParams.toString()}` : "";
@@ -55,11 +55,7 @@ function requireApiToken(): string {
   return apiToken;
 }
 
-function cloneHeaders(headers: HeadersInit): HeadersInit {
-  return { ...headers };
-}
-
-function addAuthorizationHeader(headers: HeadersInit, apiToken: string): void {
+function addAuthorizationHeader(headers: Headers, apiToken: string): void {
   if (headers["Authorization"]) {
     throw new Error(
       "The request already specifies an authorisation header - cannot add a new one."
