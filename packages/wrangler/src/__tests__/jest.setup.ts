@@ -1,4 +1,9 @@
+import { mockFetchInternal } from "./mock-cfetch";
 import { confirm, prompt } from "../dialogs";
+import { fetchInternal } from "../cfetch/internal";
+
+jest.mock("../cfetch/internal");
+(fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 
 jest.mock("../dialogs");
 

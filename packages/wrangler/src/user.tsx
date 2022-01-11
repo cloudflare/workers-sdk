@@ -578,19 +578,16 @@ export async function getAuthURL(scopes?: string[]): Promise<string> {
  * Refresh an access token from the remote service.
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
-  const { refreshToken } = LocalState;
-
-  if (!refreshToken) {
+  if (!LocalState.refreshToken) {
     console.warn("No refresh token is present.");
   }
 
-  const url = TOKEN_URL;
   const body =
     `grant_type=refresh_token&` +
-    `refresh_token=${refreshToken?.value}&` +
+    `refresh_token=${LocalState.refreshToken?.value}&` +
     `client_id=${CLIENT_ID}`;
 
-  const response = await fetch(url, {
+  const response = await fetch(TOKEN_URL, {
     method: "POST",
     body,
     headers: {
@@ -617,10 +614,9 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       LocalState.accessToken = accessToken;
 
       if (refresh_token) {
-        const refreshToken: RefreshToken = {
+        LocalState.refreshToken = {
           value: refresh_token,
         };
-        LocalState.refreshToken = refreshToken;
       }
 
       if (scope) {
@@ -666,7 +662,6 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
     console.warn("No authorization grant code is being passed.");
   }
 
-  const url = TOKEN_URL;
   const body =
     `grant_type=authorization_code&` +
     `code=${encodeURIComponent(authorizationCode || "")}&` +
@@ -674,7 +669,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `code_verifier=${codeVerifier}`;
 
-  const response = await fetch(url, {
+  const response = await fetch(TOKEN_URL, {
     method: "POST",
     body,
     headers: {
@@ -709,10 +704,9 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
   LocalState.accessToken = accessToken;
 
   if (refresh_token) {
-    const refreshToken: RefreshToken = {
+    LocalState.refreshToken = {
       value: refresh_token,
     };
-    LocalState.refreshToken = refreshToken;
   }
 
   if (scope) {
@@ -921,15 +915,14 @@ export async function refreshToken(): Promise<boolean> {
 
 export async function logout(): Promise<void> {
   throwIfNotInitialised();
-  const { refreshToken } = LocalState;
-  if (!refreshToken) {
+  if (!LocalState.refreshToken) {
     console.log("Not logged in, exiting...");
     return;
   }
   const body =
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `token_type_hint=refresh_token&` +
-    `token=${encodeURIComponent(refreshToken?.value || "")}`;
+    `token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
 
   const response = await fetch(REVOKE_URL, {
     method: "POST",

@@ -12,6 +12,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "@changesets/changelog-github": "^0.4.2",
     "@changesets/cli": "^2.18.0",
     "@types/jest": "^27.0.3",
     "@types/node": "^16.11.11",
@@ -76,7 +77,9 @@
           "@typescript-eslint/consistent-type-imports": [
             "error"
           ],
+          "no-shadow": "error",
           "@typescript-eslint/no-floating-promises": "error",
+          "@typescript-eslint/no-explicit-any": "error",
           "no-empty": "off",
           "require-yield": "off",
           "no-empty-function": "off",

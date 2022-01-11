@@ -1,36 +1,16 @@
-import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
 import * as TOML from "@iarna/toml";
-import { main } from "../index";
-import { setMock, unsetAllMocks } from "./mock-cfetch";
 import { mockConfirm } from "./mock-dialogs";
-
-jest.mock("../cfetch", () => jest.requireActual("./mock-cfetch"));
-
-async function w(cmd?: string) {
-  const logSpy = jest.spyOn(console, "log").mockImplementation();
-  const errorSpy = jest.spyOn(console, "error").mockImplementation();
-  const warnSpy = jest.spyOn(console, "warn").mockImplementation();
-  try {
-    await main(cmd?.split(" ") ?? []);
-    return {
-      stdout: logSpy.mock.calls.flat(2).join("\n"),
-      stderr: errorSpy.mock.calls.flat(2).join("\n"),
-      warnings: warnSpy.mock.calls.flat(2).join("\n"),
-    };
-  } finally {
-    logSpy.mockRestore();
-    errorSpy.mockRestore();
-    warnSpy.mockRestore();
-  }
-}
+import { runWrangler } from "./run-wrangler";
+import { runInTempDir } from "./run-in-tmp";
+import * as fs from "node:fs";
 
 describe("wrangler", () => {
+  runInTempDir();
+
   describe("no command", () => {
     it("should display a list of available commands", async () => {
-      const { stdout, stderr } = await w();
+      const { stdout, stderr } = await runWrangler();
 
       expect(stdout).toMatchInlineSnapshot(`
         "wrangler
@@ -61,9 +41,10 @@ describe("wrangler", () => {
 
   describe("invalid command", () => {
     it("should display an error", async () => {
-      const { stdout, stderr } = await w("invalid-command");
+      const { error, stdout, stderr } = await runWrangler("invalid-command");
 
-      expect(stdout).toMatchInlineSnapshot(`
+      expect(stdout).toMatchInlineSnapshot(`""`);
+      expect(stderr).toMatchInlineSnapshot(`
         "wrangler
 
         Commands:
@@ -83,36 +64,23 @@ describe("wrangler", () => {
           -v, --version  Show version number  [boolean]
 
         Options:
-          -l, --local  Run on my machine  [boolean] [default: false]"
-      `);
+          -l, --local  Run on my machine  [boolean] [default: false]
 
-      expect(stderr).toMatchInlineSnapshot(`
-        "
         Unknown command: invalid-command."
       `);
+      expect(error).toMatchInlineSnapshot(
+        `[Error: Unknown command: invalid-command.]`
+      );
     });
   });
 
   describe("init", () => {
-    const ogcwd = process.cwd();
-    let tmpDir: string;
-
-    beforeEach(async () => {
-      tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), "init-"));
-      process.chdir(tmpDir);
-    });
-
-    afterEach(async () => {
-      process.chdir(ogcwd);
-      await fsp.rm(tmpDir, { recursive: true });
-    });
-
     it("should create a wrangler.toml", async () => {
       mockConfirm({
         text: "No package.json found. Would you like to create one?",
         result: false,
       });
-      await w("init");
+      await runWrangler("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
       expect(fs.existsSync("./package.json")).toBe(false);
@@ -120,19 +88,19 @@ describe("wrangler", () => {
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
-      fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      fs.writeFileSync("./wrangler.toml", "", "utf-8");
       mockConfirm({
         text: "Do you want to continue initializing this project?",
         result: false,
       });
-      const { stderr } = await w("init");
-      expect(stderr).toContain("wrangler.toml file already exists!");
+      const { warnings } = await runWrangler("init");
+      expect(warnings).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("undefined");
     });
 
     it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
-      fs.closeSync(fs.openSync("./wrangler.toml", "w"));
+      fs.writeFileSync("./wrangler.toml", "", "utf-8");
       mockConfirm(
         {
           text: "Do you want to continue initializing this project?",
@@ -143,8 +111,8 @@ describe("wrangler", () => {
           result: false,
         }
       );
-      const { stderr } = await w("init");
-      expect(stderr).toContain("wrangler.toml file already exists!");
+      const { warnings } = await runWrangler("init");
+      expect(warnings).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
     });
@@ -160,7 +128,7 @@ describe("wrangler", () => {
           result: false,
         }
       );
-      await w("init");
+      await runWrangler("init");
       expect(fs.existsSync("./package.json")).toBe(true);
       const packageJson = JSON.parse(
         fs.readFileSync("./package.json", "utf-8")
@@ -182,7 +150,7 @@ describe("wrangler", () => {
         "utf-8"
       );
 
-      await w("init");
+      await runWrangler("init");
       const packageJson = JSON.parse(
         fs.readFileSync("./package.json", "utf-8")
       );
@@ -205,7 +173,7 @@ describe("wrangler", () => {
       fs.mkdirSync("./sub-1/sub-2", { recursive: true });
       process.chdir("./sub-1/sub-2");
 
-      await w("init");
+      await runWrangler("init");
       expect(fs.existsSync("./package.json")).toBe(false);
       expect(fs.existsSync("../../package.json")).toBe(true);
 
@@ -227,7 +195,7 @@ describe("wrangler", () => {
           result: true,
         }
       );
-      await w("init");
+      await runWrangler("init");
       expect(fs.existsSync("./tsconfig.json")).toBe(true);
       const tsconfigJson = JSON.parse(
         fs.readFileSync("./tsconfig.json", "utf-8")
@@ -255,7 +223,7 @@ describe("wrangler", () => {
         "utf-8"
       );
 
-      await w("init");
+      await runWrangler("init");
       const tsconfigJson = JSON.parse(
         fs.readFileSync("./tsconfig.json", "utf-8")
       );
@@ -277,7 +245,7 @@ describe("wrangler", () => {
       fs.mkdirSync("./sub-1/sub-2", { recursive: true });
       process.chdir("./sub-1/sub-2");
 
-      await w("init");
+      await runWrangler("init");
       expect(fs.existsSync("./tsconfig.json")).toBe(false);
       expect(fs.existsSync("../../tsconfig.json")).toBe(true);
 
@@ -288,104 +256,32 @@ describe("wrangler", () => {
     });
 
     it("should error if `--type` is used", async () => {
-      const noValue = await w("init --type");
-      expect(noValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type javascript` is used", async () => {
-      const javascriptValue = await w("init --type javascript");
-      expect(javascriptValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type javascript");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type rust` is used", async () => {
-      const rustValue = await w("init --type rust");
-      expect(rustValue.stderr).toMatchInlineSnapshot(
-        `"The --type option is no longer supported."`
+      const { error } = await runWrangler("init --type rust");
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The --type option is no longer supported.]`
       );
     });
 
     it("should error if `--type webpack` is used", async () => {
-      const webpackValue = await w("init --type webpack");
-      expect(webpackValue.stderr).toMatchInlineSnapshot(`
-        "The --type option is no longer supported.
-        If you wish to use webpack then you will need to create a custom build."
+      const { error } = await runWrangler("init --type webpack");
+      expect(error).toMatchInlineSnapshot(`
+        [Error: The --type option is no longer supported.
+        If you wish to use webpack then you will need to create a custom build.]
       `);
-    });
-  });
-
-  describe("kv:namespace", () => {
-    afterEach(() => {
-      unsetAllMocks();
-    });
-
-    it("can create a namespace", async () => {
-      const KVNamespaces: { title: string; id: string }[] = [];
-      setMock("/accounts/:accountId/storage/kv/namespaces", (uri, init) => {
-        expect(init.method === "POST");
-        expect(uri[0]).toEqual(
-          "/accounts/some-account-id/storage/kv/namespaces"
-        );
-        const { title } = JSON.parse(init.body);
-        expect(title).toEqual("worker-UnitTestNamespace");
-        KVNamespaces.push({ title, id: "some-namespace-id" });
-        return { id: "some-namespace-id" };
-      });
-
-      await w("kv:namespace create UnitTestNamespace");
-
-      expect(KVNamespaces).toEqual([
-        {
-          title: "worker-UnitTestNamespace",
-          id: "some-namespace-id",
-        },
-      ]);
-    });
-
-    it("can list namespaces", async () => {
-      const KVNamespaces: { title: string; id: string }[] = [
-        { title: "title-1", id: "id-1" },
-        { title: "title-2", id: "id-2" },
-      ];
-      setMock(
-        "/accounts/:accountId/storage/kv/namespaces\\?:qs",
-        (uri, init) => {
-          expect(uri[0]).toContain(
-            "/accounts/some-account-id/storage/kv/namespaces"
-          );
-          expect(uri[2]).toContain("per_page=100");
-          expect(uri[2]).toContain("order=title");
-          expect(uri[2]).toContain("direction=asc");
-          expect(uri[2]).toContain("page=1");
-          expect(init).toBe(undefined);
-          return KVNamespaces;
-        }
-      );
-      const { stdout } = await w("kv:namespace list");
-      const namespaces = JSON.parse(stdout) as { id: string; title: string }[];
-      expect(namespaces).toEqual(KVNamespaces);
-    });
-
-    it("can delete a namespace", async () => {
-      let accountId = "";
-      let namespaceId = "";
-      setMock(
-        "/accounts/:accountId/storage/kv/namespaces/:namespaceId",
-        (uri, init) => {
-          accountId = uri[1];
-          namespaceId = uri[2];
-          expect(uri[0]).toEqual(
-            "/accounts/some-account-id/storage/kv/namespaces/some-namespace-id"
-          );
-          expect(init.method).toBe("DELETE");
-        }
-      );
-      await w(`kv:namespace delete --namespace-id some-namespace-id`);
-      expect(accountId).toEqual("some-account-id");
-      expect(namespaceId).toEqual("some-namespace-id");
     });
   });
 });

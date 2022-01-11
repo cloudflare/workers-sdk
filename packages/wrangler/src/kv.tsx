@@ -1,6 +1,6 @@
+import { URLSearchParams } from "node:url";
 import type { Config } from "./config";
-import cfetch from "./cfetch";
-import qs from "node:querystring";
+import { fetchListResult, fetchResult } from "./cfetch";
 
 type KvArgs = {
   binding?: string;
@@ -10,38 +10,84 @@ type KvArgs = {
   config?: Config;
 };
 
-export async function listNamespaces(accountId: string) {
-  let page = 1,
-    done = false,
-    results = [];
-  while (!(done || results.length % 100 !== 0)) {
-    const json = await cfetch<
-      { id: string; title: string; supports_url_encoding: boolean }[]
-    >(
-      `/accounts/${accountId}/storage/kv/namespaces?per_page=100&order=title&direction=asc&page=${page}`
+/**
+ * Create a new namespace under the given `accountId` with the given `title`.
+ *
+ * @returns the generated id of the created namespace.
+ */
+export async function createNamespace(
+  accountId: string,
+  title: string
+): Promise<string> {
+  const response = await fetchResult<{ id: string }>(
+    `/accounts/${accountId}/storage/kv/namespaces`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title,
+      }),
+    }
+  );
+
+  return response.id;
+}
+
+/**
+ * The information about a namespace that is returned from `listNamespaces()`.
+ */
+export interface KVNamespaceInfo {
+  id: string;
+  title: string;
+  supports_url_encoding?: boolean;
+}
+
+/**
+ * Fetch a list of all the namespaces under the given `accountId`.
+ */
+export async function listNamespaces(
+  accountId: string
+): Promise<KVNamespaceInfo[]> {
+  const pageSize = 100;
+  let page = 1;
+  const results: KVNamespaceInfo[] = [];
+  while (results.length % pageSize === 0) {
+    const json = await fetchResult<KVNamespaceInfo[]>(
+      `/accounts/${accountId}/storage/kv/namespaces`,
+      {},
+      new URLSearchParams({
+        per_page: pageSize.toString(),
+        order: "title",
+        direction: "asc",
+        page: page.toString(),
+      })
     );
     page++;
-    results = [...results, ...json];
-    if (json.length === 0) {
-      done = true;
+    results.push(...json);
+    if (json.length < pageSize) {
+      break;
     }
   }
   return results;
 }
 
+export interface NamespaceKeyInfo {
+  name: string;
+  expiration?: number;
+  metadata?: { [key: string]: unknown };
+}
+
 export async function listNamespaceKeys(
   accountId: string,
   namespaceId: string,
-  prefix?: string,
-  limit?: number
+  prefix?: string
 ) {
-  // TODO: this doesn't appear to do pagination
-  return await cfetch<
-    { name: string; expiration: number; metadata: { [key: string]: unknown } }[]
-  >(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys?${qs.stringify(
-      { prefix, limit }
-    )}`
+  return await fetchListResult<NamespaceKeyInfo>(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`,
+    {},
+    new URLSearchParams({ prefix })
   );
 }
 
@@ -52,16 +98,15 @@ export async function putKeyValue(
   value: string,
   args?: { expiration?: number; expiration_ttl?: number }
 ) {
-  return await cfetch(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${
-      args
-        ? qs.stringify({
-            expiration: args.expiration,
-            expiration_ttl: args.expiration_ttl,
-          })
-        : ""
-    }`,
-    { method: "PUT", body: value }
+  return await fetchResult(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+    { method: "PUT", body: value },
+    args
+      ? new URLSearchParams({
+          expiration: args.expiration?.toString(),
+          expiration_ttl: args.expiration_ttl?.toString(),
+        })
+      : undefined
   );
 }
 
@@ -70,7 +115,7 @@ export async function putBulkKeyValue(
   namespaceId: string,
   keyvalueStr: string
 ) {
-  return await cfetch(
+  return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "PUT",
@@ -85,7 +130,7 @@ export async function deleteBulkKeyValue(
   namespaceId: string,
   keyStr: string
 ) {
-  return await cfetch(
+  return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "DELETE",
@@ -130,7 +175,7 @@ export function getNamespaceId({
       );
     }
 
-    // TODO: either a bespoke arg type for this function to avoid undefineds or a EnvOrConfig type
+    // TODO: either a bespoke arg type for this function to avoid `undefined`s or an `EnvOrConfig` type
     return getNamespaceId({
       binding,
       "namespace-id": namespaceId,
@@ -149,17 +194,17 @@ export function getNamespaceId({
   // there's no KV namespaces
   if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
     throw new Error(
-      "No KV Namespace to upload to! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
+      "No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
     );
   }
 
-  const namespace = config.kv_namespaces.find(
-    (namespace) => namespace.binding === binding
-  );
+  const namespace = config.kv_namespaces.find((ns) => ns.binding === binding);
 
   // we couldn't find a namespace with that binding
   if (!namespace) {
-    throw new Error(`No KV Namespaces found with binding ${binding}!`);
+    throw new Error(
+      `A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`
+    );
   }
 
   // end pre-flight checks
@@ -212,4 +257,11 @@ export function getNamespaceId({
   }
 
   return namespaceId;
+}
+
+/**
+ * KV namespace binding names must be valid JS identifiers.
+ */
+export function isValidNamespaceBinding(binding: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding);
 }

@@ -1,6 +1,6 @@
 {
   "name": "wrangler",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
   "bin": {
@@ -36,22 +36,26 @@
     "cli"
   ],
   "dependencies": {
-    "@cloudflare/pages-functions-compiler": "0.3.8",
     "esbuild": "0.14.1",
-    "miniflare": "2.0.0-rc.4",
+    "miniflare": "2.0.0",
+    "path-to-regexp": "^6.2.0",
     "semiver": "^1.1.0"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"
   },
   "devDependencies": {
+    "@babel/types": "^7.16.0",
     "@iarna/toml": "^2.2.5",
+    "@types/estree": "^0.0.50",
     "@types/mime": "^2.0.3",
     "@types/react": "^17.0.37",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",
     "@types/ws": "^8.2.1",
     "@types/yargs": "^17.0.7",
+    "acorn": "^8.6.0",
+    "acorn-walk": "^8.2.0",
     "chokidar": "^3.5.2",
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
@@ -63,11 +67,11 @@
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.1",
     "ink-table": "^3.0.0",
+    "ink-testing-library": "^2.1.0",
     "ink-text-input": "^4.0.2",
     "mime": "^3.0.0",
     "node-fetch": "^3.1.0",
     "open": "^8.4.0",
-    "path-to-regexp": "^6.2.0",
     "react": "^17.0.2",
     "react-error-boundary": "^3.1.4",
     "serve-static": "^1.14.1",
@@ -80,6 +84,7 @@
   "files": [
     "src",
     "bin",
+    "pages",
     "miniflare-config-stubs",
     "wrangler-dist",
     "static-asset-facade.js",

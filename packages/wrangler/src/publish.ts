@@ -1,15 +1,15 @@
+import assert from "node:assert";
+import path from "node:path";
+import { readFile } from "node:fs/promises";
+import esbuild from "esbuild";
+import { execa } from "execa";
+import tmp from "tmp-promise";
 import type { CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
-import esbuild from "esbuild";
-import tmp from "tmp-promise";
+import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
-import path from "path";
-import { readFile } from "fs/promises";
-import cfetch from "./cfetch";
-import assert from "node:assert";
-import { syncAssets } from "./sites";
 import makeModuleCollector from "./module-collection";
-import { execa } from "execa";
+import { syncAssets } from "./sites";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
@@ -155,10 +155,10 @@ export default async function publish(props: Props): Promise<void> {
   // get current migration tag
   let migrations;
   if ("migrations" in config) {
-    const scripts = await cfetch<{ id: string; migration_tag: string }[]>(
+    const scripts = await fetchResult<{ id: string; migration_tag: string }[]>(
       `/accounts/${accountId}/workers/scripts`
     );
-    const script = scripts.find((script) => script.id === scriptName);
+    const script = scripts.find(({ id }) => id === scriptName);
     if (script?.migration_tag) {
       // was already published once
       const foundIndex = config.migrations.findIndex(
@@ -246,8 +246,8 @@ export default async function publish(props: Props): Promise<void> {
     ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
     : `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-  // Upload the script so it has time to propogate.
-  const { available_on_subdomain } = await cfetch(
+  // Upload the script so it has time to propagate.
+  const { available_on_subdomain } = await fetchResult(
     `${workerUrl}?available_on_subdomain=true`,
     {
       method: "PUT",
@@ -261,7 +261,7 @@ export default async function publish(props: Props): Promise<void> {
   const deployments: Promise<string[]>[] = [];
 
   const userSubdomain = (
-    await cfetch<{ subdomain: string }>(
+    await fetchResult<{ subdomain: string }>(
       `/accounts/${accountId}/workers/subdomain`
     )
   ).subdomain;
@@ -275,7 +275,7 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: Make this configurable.
   if (!available_on_subdomain) {
     deployments.push(
-      cfetch(`${workerUrl}/subdomain`, {
+      fetchResult(`${workerUrl}/subdomain`, {
         method: "POST",
         body: JSON.stringify({ enabled: true }),
         headers: {
@@ -299,7 +299,7 @@ export default async function publish(props: Props): Promise<void> {
   // Update routing table for the script.
   if (routes && routes.length) {
     deployments.push(
-      cfetch(`${workerUrl}/routes`, {
+      fetchResult(`${workerUrl}/routes`, {
         // TODO: PATCH will not delete previous routes on this script,
         // whereas PUT will. We need to decide on the default behaviour
         // and how to configure it.
@@ -324,7 +324,7 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: rename this to `schedules`?
   if (triggers && triggers.length) {
     deployments.push(
-      cfetch(`${workerUrl}/schedules`, {
+      fetchResult(`${workerUrl}/schedules`, {
         // TODO: Unlike routes, this endpoint does not support PATCH.
         // So technically, this will override any previous schedules.
         // We should change the endpoint to support PATCH.

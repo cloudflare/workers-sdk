@@ -4,7 +4,7 @@ import { existsSync } from "fs";
 import type { DirectoryResult } from "tmp-promise";
 import tmp from "tmp-promise";
 import type { CfPreviewToken } from "./api/preview";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import path from "path";
 import open from "open";
@@ -29,7 +29,7 @@ import { watch } from "chokidar";
 
 type CfScriptFormat = void | "modules" | "service-worker";
 
-type Props = {
+export type DevProps = {
   name?: string;
   entry: string;
   port?: number;
@@ -51,7 +51,7 @@ type Props = {
   };
 };
 
-function Dev(props: Props): JSX.Element {
+function Dev(props: DevProps): JSX.Element {
   if (props.public && props.format === "service-worker") {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
@@ -491,7 +491,10 @@ function useEsbuild(props: {
             else {
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
-              setBundle((bundle) => ({ ...bundle, id: bundle.id + 1 }));
+              setBundle((previousBundle) => ({
+                ...previousBundle,
+                id: previousBundle.id + 1,
+              }));
             }
           },
         },
@@ -552,6 +555,12 @@ function useWorker(props: {
     port,
   } = props;
   const [token, setToken] = useState<CfPreviewToken>();
+
+  // This is the most reliable way to detect whether
+  // something's "happened" in our system; We make a ref and
+  // mark it once we log our initial message. Refs are vars!
+  const startedRef = useRef(false);
+
   useEffect(() => {
     async function start() {
       if (!bundle) return;
@@ -566,10 +575,11 @@ function useWorker(props: {
         return;
       }
 
-      if (token) {
-        console.log("⎔ Detected changes, restarting server...");
-      } else {
+      if (!startedRef.current) {
         console.log("⎔ Starting server...");
+        startedRef.current = true;
+      } else {
+        console.log("⎔ Detected changes, restarting server...");
       }
 
       const assets = sitesFolder
@@ -621,7 +631,6 @@ function useWorker(props: {
           apiToken,
         })
       );
-      console.log(`⬣ Listening at http://localhost:${port}`);
     }
     start().catch((err) => {
       // we want to log the error, but not end the process
@@ -676,6 +685,8 @@ function useProxy({
         }
       },
     });
+
+    console.log(`⬣ Listening at http://localhost:${port}`);
 
     const server = proxy.listen(port);
 
@@ -817,31 +828,24 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
     ) => {
       switch (input) {
         case "b": // open browser
-          await open(
-            `http://localhost:${port}/`
-            // {
-            //   app: {
-            //     name: open.apps.chrome, // TODO: fallback on other browsers
-            //   },
-            // }
-          );
+          await open(`http://localhost:${port}/`);
           break;
         case "d": // toggle inspector
           await open(
             `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
-            // {
-            //   app: {
-            //     name: open.apps.chrome,
-            //     // todo - add firefox and edge fallbacks
-            //   },
-            // }
           );
           break;
         case "s": // toggle tunnel
-          setToggles((toggles) => ({ ...toggles, tunnel: !toggles.tunnel }));
+          setToggles((previousToggles) => ({
+            ...previousToggles,
+            tunnel: !previousToggles.tunnel,
+          }));
           break;
         case "l": // toggle local
-          setToggles((toggles) => ({ ...toggles, local: !toggles.local }));
+          setToggles((previousToggles) => ({
+            ...previousToggles,
+            local: !previousToggles.local,
+          }));
           break;
         case "q": // shut down
         case "x": // shut down
@@ -856,19 +860,14 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
   return toggles;
 }
 
-function ErrorFallback(props: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
-  useEffect(() => {
-    console.error(props.error);
-    process.exit(1);
-  });
+function ErrorFallback(props: { error: Error }) {
+  const { exit } = useApp();
+  useEffect(() => exit(new Error()));
   return (
-    <Box>
+    <>
       <Text>Something went wrong:</Text>
       <Text>{props.error.message}</Text>
-    </Box>
+    </>
   );
 }
 
