@@ -19,6 +19,8 @@ type Props = {
   script?: string;
   name?: string;
   env?: string;
+  compatibilityDate?: string;
+  compatibilityFlags?: string[];
   public?: string;
   site?: string;
   triggers?: (string | number)[];
@@ -47,6 +49,13 @@ export default async function publish(props: Props): Promise<void> {
     // @ts-expect-error hidden
     __path__,
   } = config;
+
+  const envRootObj = props.env ? config.env[props.env] || {} : config;
+
+  assert(
+    envRootObj.compatibility_date || props["compatibility-date"],
+    "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+  );
 
   const triggers = props.triggers || config.triggers?.crons;
   const routes = props.routes || config.routes;
@@ -200,7 +209,6 @@ export default async function publish(props: Props): Promise<void> {
         )
       : { manifest: undefined, namespace: undefined };
 
-  const envRootObj = props.env ? config.env[props.env] || {} : config;
   const bindings: CfWorkerInit["bindings"] = {
     kv_namespaces: envRootObj.kv_namespaces?.concat(
       assets.namespace
