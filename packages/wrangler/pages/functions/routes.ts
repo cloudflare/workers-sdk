@@ -147,7 +147,7 @@ export const routes = [
   ${routes
     .map(
       (route) => `  {
-      routePath: "${route.routePath}",
+      routePath: "${route.routePath.replace(/\\/g, '/')}",
       methods: ${JSON.stringify(route.methods)},
       middlewares: [${route.middlewares.join(", ")}],
       modules: [${route.modules.join(", ")}],
