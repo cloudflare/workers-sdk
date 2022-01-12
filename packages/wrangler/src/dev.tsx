@@ -22,7 +22,7 @@ import { getAPIToken } from "./user";
 import fetch from "node-fetch";
 import makeModuleCollector from "./module-collection";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
-import { createHttpProxy } from "./proxy";
+import { usePreviewServer } from "./proxy";
 import { execa } from "execa";
 import { watch } from "chokidar";
 
@@ -38,7 +38,7 @@ export type DevProps = {
   jsxFactory: void | string;
   jsxFragment: void | string;
   bindings: CfWorkerInit["bindings"];
-  public: void | string;
+  public: undefined | string;
   site: void | string;
   compatibilityDate: void | string;
   compatibilityFlags: void | string[];
@@ -133,7 +133,7 @@ function Remote(props: {
   name: void | string;
   bundle: EsbuildBundle | void;
   format: CfScriptFormat;
-  public: void | string;
+  public: undefined | string;
   site: void | string;
   port: number;
   accountId: void | string;
@@ -145,7 +145,7 @@ function Remote(props: {
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
-  const token = useWorker({
+  const previewToken = useWorker({
     name: props.name,
     bundle: props.bundle,
     format: props.format,
@@ -160,10 +160,14 @@ function Remote(props: {
     usageModel: props.usageModel,
   });
 
-  useProxy({ token, publicRoot: props.public, port: props.port });
+  usePreviewServer({
+    previewToken,
+    publicRoot: props.public,
+    port: props.port,
+  });
 
   useInspector({
-    inspectorUrl: token ? token.inspectorUrl.href : undefined,
+    inspectorUrl: previewToken ? previewToken.inspectorUrl.href : undefined,
     port: 9229,
     logToTerminal: true,
   });
@@ -509,7 +513,7 @@ function useWorker(props: {
   compatibilityDate: string | void;
   compatibilityFlags: string[] | void;
   usageModel: void | "bundled" | "unbound";
-}): CfPreviewToken | void {
+}): CfPreviewToken | undefined {
   const {
     name,
     bundle,
@@ -524,7 +528,7 @@ function useWorker(props: {
     usageModel,
     port,
   } = props;
-  const [token, setToken] = useState<CfPreviewToken>();
+  const [token, setToken] = useState<CfPreviewToken | undefined>();
 
   // This is the most reliable way to detect whether
   // something's "happened" in our system; We make a ref and
@@ -533,6 +537,8 @@ function useWorker(props: {
 
   useEffect(() => {
     async function start() {
+      setToken(undefined); // reset token in case we're re-running
+
       if (!bundle) return;
       if (format === "modules" && bundle.type === "commonjs") {
         console.error("⎔ Cannot use modules with a commonjs bundle.");
@@ -546,7 +552,6 @@ function useWorker(props: {
       }
 
       if (!startedRef.current) {
-        console.log("⎔ Starting server...");
         startedRef.current = true;
       } else {
         console.log("⎔ Detected changes, restarting server...");
@@ -622,72 +627,6 @@ function useWorker(props: {
     modules,
   ]);
   return token;
-}
-
-function useProxy({
-  token,
-  publicRoot,
-  port,
-}: {
-  token: CfPreviewToken | void;
-  publicRoot: void | string;
-  port: number;
-}) {
-  useEffect(() => {
-    if (!token) return;
-    // TODO(soon): since headers are added in callbacks, the server
-    // does not need to restart when changes are made.
-    const host = token.host;
-    const proxy = createHttpProxy({
-      host,
-      assetPath: typeof publicRoot === "string" ? publicRoot : null,
-      onRequest: (headers) => {
-        headers["cf-workers-preview-token"] = token.value;
-      },
-      onResponse: (headers) => {
-        for (const [name, value] of Object.entries(headers)) {
-          // Rewrite the remote host to the local host.
-          if (typeof value === "string" && value.includes(host)) {
-            headers[name] = value
-              .replaceAll(`https://${host}`, `http://localhost:${port}`)
-              .replaceAll(host, `localhost:${port}`);
-          }
-        }
-      },
-    });
-
-    console.log(`⬣ Listening at http://localhost:${port}`);
-
-    const server = proxy.listen(port);
-
-    // TODO(soon): refactor logging format into its own function
-    proxy.on("request", function (req, res) {
-      // log all requests
-      console.log(
-        new Date().toLocaleTimeString(),
-        req.method,
-        req.url,
-        res.statusCode
-      );
-    });
-    proxy.on("upgrade", (req) => {
-      console.log(
-        new Date().toLocaleTimeString(),
-        req.method,
-        req.url,
-        101,
-        "(WebSocket)"
-      );
-    });
-    proxy.on("error", (err) => {
-      console.error(new Date().toLocaleTimeString(), err);
-    });
-
-    return () => {
-      proxy.close();
-      server.close();
-    };
-  }, [token, publicRoot, port]);
 }
 
 function sleep(period: number) {
