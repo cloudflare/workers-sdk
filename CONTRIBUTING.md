@@ -24,7 +24,7 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - Clone your fork to your local machine
   ```sh
   > git clone https://github.com/<your-github-username>/wrangler2
-  > cd wrangler
+  > cd wrangler2
   ```
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
