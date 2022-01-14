@@ -206,7 +206,7 @@
   */
 
 import React from "react";
-import { render } from "ink";
+import { render, Text } from "ink";
 import Table from "ink-table";
 import SelectInput from "ink-select-input";
 import fetch from "node-fetch";
@@ -1010,13 +1010,16 @@ export function ChooseAccount(props: {
   onSelect: (item) => void;
 }) {
   return (
-    <SelectInput
-      items={props.accounts.map((item) => ({
-        key: item.id,
-        label: item.name,
-        value: item,
-      }))}
-      onSelect={props.onSelect}
-    />
+    <>
+      <Text bold>Select an account from below:</Text>
+      <SelectInput
+        items={props.accounts.map((item) => ({
+          key: item.id,
+          label: item.name,
+          value: item,
+        }))}
+        onSelect={props.onSelect}
+      />
+    </>
   );
 }
