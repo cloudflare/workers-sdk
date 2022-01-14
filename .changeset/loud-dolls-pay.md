@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-allow specifying only "index" without extension or nothing at all to launch "wrangler dev"
+allow specifying only "index" without extension or nothing at all for "wrangler dev" and "wrangler publish"
