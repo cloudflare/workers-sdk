@@ -475,7 +475,8 @@ function useEsbuild(props: {
       });
 
       const chunks = Object.entries(result.metafile.outputs).find(
-        ([_path, { entryPoint }]) => entryPoint === entry
+        ([_path, { entryPoint }]) =>
+          entryPoint === Object.keys(result.metafile.inputs)[0]
       ); // assumedly only one entry point
 
       setBundle({

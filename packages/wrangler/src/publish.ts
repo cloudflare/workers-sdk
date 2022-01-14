@@ -134,7 +134,7 @@ export default async function publish(props: Props): Promise<void> {
       entryPoint ===
       (props.public
         ? path.join(path.dirname(file), "static-asset-facade.js")
-        : file)
+        : Object.keys(result.metafile.inputs)[0])
   );
 
   const { format } = props;
