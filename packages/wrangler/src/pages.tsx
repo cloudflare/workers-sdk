@@ -1,6 +1,5 @@
 /* eslint-disable no-shadow */
 
-import assert from "assert";
 import type { BuilderCallback } from "yargs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -22,7 +21,7 @@ import { generateConfigFromFileTree } from "../pages/functions/filepath-routing"
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { MiniflareOptions } from "miniflare";
 
-const EXIT_CALLBACKS = [];
+const EXIT_CALLBACKS: (() => void)[] = [];
 const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
   if (code) process.exitCode = code;
@@ -122,7 +121,9 @@ async function spawnProxyProcess({
       },
     }
   );
-  EXIT_CALLBACKS.push(() => proxy.kill());
+  EXIT_CALLBACKS.push(() => {
+    proxy.kill();
+  });
 
   proxy.stdout.on("data", (data) => {
     console.log(`[proxy]: ${data}`);
@@ -862,11 +863,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         // internally just waits for that promise to resolve.
         await scriptReadyPromise;
 
-        // Should only be called if no proxyPort, using `assert.fail()` here
-        // means the type of `assetsFetch` is still `typeof fetch`
-        const assetsFetch = proxyPort
-          ? () => assert.fail()
-          : await generateAssetsFetch(directory);
+        // `assetsFetch()` will only be called if there is `proxyPort` defined.
+        // We only define `proxyPort`, above, when there is no `directory` defined.
+        const assetsFetch =
+          directory !== undefined
+            ? await generateAssetsFetch(directory)
+            : invalidAssetsFetch;
+
         const miniflare = new Miniflare({
           port,
           watch: true,
@@ -1028,4 +1031,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         }
       )
     );
+};
+
+const invalidAssetsFetch: typeof fetch = () => {
+  throw new Error(
+    "Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."
+  );
 };

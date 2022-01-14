@@ -52,7 +52,7 @@ export async function generateConfigFromFileTree({
             const declaration = node.declaration;
 
             // `export async function onRequest() {...}`
-            if (declaration.type === "FunctionDeclaration") {
+            if (declaration.type === "FunctionDeclaration" && declaration.id) {
               exportNames.push(declaration.id.name);
             }
 
@@ -155,12 +155,10 @@ export async function generateConfigFromFileTree({
 // more specific routes aren't occluded from matching due to
 // less specific routes appearing first in the route list.
 export function compareRoutes(a: string, b: string) {
-  function parseRoutePath(routePath: string) {
-    let [method, segmentedPath] = routePath.split(" ");
-    if (!segmentedPath) {
-      segmentedPath = method;
-      method = null;
-    }
+  function parseRoutePath(routePath: string): [string | null, string[]] {
+    const parts = routePath.split(" ", 2);
+    const segmentedPath = parts.pop();
+    const method = parts.pop() ?? null;
 
     const segments = segmentedPath.slice(1).split("/").filter(Boolean);
     return [method, segments];
@@ -204,7 +202,7 @@ async function forEachFile<T>(
   const searchPaths = [baseDir];
   const returnValues: T[] = [];
 
-  while (searchPaths.length) {
+  while (isNotEmpty(searchPaths)) {
     const cwd = searchPaths.shift();
     const dir = await fs.readdir(cwd, { withFileTypes: true });
     for (const entry of dir) {
@@ -218,4 +216,11 @@ async function forEachFile<T>(
   }
 
   return returnValues;
+}
+
+interface NonEmptyArray<T> extends Array<T> {
+  shift(): T;
+}
+function isNotEmpty<T>(array: T[]): array is NonEmptyArray<T> {
+  return array.length > 0;
 }
