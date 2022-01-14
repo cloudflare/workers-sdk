@@ -56,7 +56,7 @@ function Dev(props: DevProps): JSX.Element {
       "You cannot use the service worker format with a `public` directory."
     );
   }
-  const port = props.port || 8787;
+  const port = props.port ?? 8787;
   const apiToken = getAPIToken();
   const directory = useTmpDir();
 
@@ -98,7 +98,7 @@ function Dev(props: DevProps): JSX.Element {
           bindings={props.bindings}
           site={props.site}
           public={props.public}
-          port={props.port}
+          port={port}
         />
       ) : (
         <Remote
@@ -110,7 +110,7 @@ function Dev(props: DevProps): JSX.Element {
           bindings={props.bindings}
           site={props.site}
           public={props.public}
-          port={props.port}
+          port={port}
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
@@ -263,11 +263,11 @@ function useLocalWorker(props: {
         }
       });
 
-      local.current.stdout.on("data", (data: Buffer) => {
+      local.current.stdout?.on("data", (data: Buffer) => {
         console.log(`${data.toString()}`);
       });
 
-      local.current.stderr.on("data", (data: Buffer) => {
+      local.current.stderr?.on("data", (data: Buffer) => {
         console.error(`${data.toString()}`);
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
@@ -361,7 +361,7 @@ function useCustomBuild(
 ): undefined | string {
   const [entry, setEntry] = useState<string | undefined>(
     // if there's no build command, just return the expected entry
-    props.command ? null : expectedEntry
+    props.command || expectedEntry
   );
   const { command, cwd, watch_dir } = props;
   useEffect(() => {
@@ -465,26 +465,37 @@ function useEsbuild(props: {
             else {
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
-              setBundle((previousBundle) => ({
-                ...previousBundle,
-                id: previousBundle.id + 1,
-              }));
+              setBundle((previousBundle) => {
+                if (previousBundle === undefined) {
+                  assert.fail(
+                    "Rebuild triggered with no previous build available"
+                  );
+                }
+                return { ...previousBundle, id: previousBundle.id + 1 };
+              });
             }
           },
         },
       });
 
-      const chunks = Object.entries(result.metafile.outputs).find(
+      // result.metafile is defined because of the `metafile: true` option above.
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const metafile = result.metafile!;
+      const outputEntry = Object.entries(metafile.outputs).find(
         ([_path, { entryPoint }]) =>
-          entryPoint === Object.keys(result.metafile.inputs)[0]
+          entryPoint === Object.keys(metafile.inputs)[0]
       ); // assumedly only one entry point
-
+      if (outputEntry === undefined) {
+        throw new Error(
+          `Cannot find entry-point "${entry}" in generated bundle.`
+        );
+      }
       setBundle({
         id: 0,
         entry,
-        path: chunks[0],
-        type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
-        exports: chunks[1].exports,
+        path: outputEntry[0],
+        type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
+        exports: outputEntry[1].exports,
         modules: moduleCollector.modules,
       });
     }
@@ -495,7 +506,7 @@ function useEsbuild(props: {
       // so this is a no-op error handler
     });
     return () => {
-      result?.stop();
+      result.stop?.();
     };
   }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
   return bundle;
