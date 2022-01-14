@@ -114,7 +114,7 @@ export function parseConfig(config: Config, baseDir: string) {
     });
   }
 
-  for (const [route, props] of Object.entries(config.routes)) {
+  for (const [route, props] of Object.entries(config.routes ?? {})) {
     let [_methods, routePath] = route.split(" ");
     if (!routePath) {
       routePath = _methods;
