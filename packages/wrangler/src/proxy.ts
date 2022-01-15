@@ -1,5 +1,5 @@
 import { connect } from "node:http2";
-import type { ServerHttp2Stream } from "node:http2";
+import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import { createServer } from "node:http";
 import type {
   IncomingHttpHeaders,
@@ -64,32 +64,7 @@ export function usePreviewServer({
 }) {
   /** Creates an HTTP/1 proxy that sends requests over HTTP/2. */
   const proxyServer = useRef<Server>();
-  if (!proxyServer.current) {
-    proxyServer.current = createServer()
-      .on("request", function (req, res) {
-        // log all requests
-        console.log(
-          new Date().toLocaleTimeString(),
-          req.method,
-          req.url,
-          res.statusCode
-        );
-      })
-      .on("upgrade", (req) => {
-        // log all websocket connections
-        console.log(
-          new Date().toLocaleTimeString(),
-          req.method,
-          req.url,
-          101,
-          "(WebSocket)"
-        );
-      })
-      .on("error", (err) => {
-        // log all connection errors
-        console.error(new Date().toLocaleTimeString(), err);
-      });
-  }
+  const proxy = (proxyServer.current ??= createProxyServer());
 
   /**
    * When we're not connected / getting a fresh token on changes,
@@ -106,8 +81,6 @@ export function usePreviewServer({
   >([]);
 
   useEffect(() => {
-    const proxy = proxyServer.current;
-
     // If we don't have a token, that means either we're just starting up,
     // or we're refreshing the token.
     if (!previewToken) {
@@ -147,23 +120,7 @@ export function usePreviewServer({
     cleanupListeners.push(() => remote.destroy());
 
     /** HTTP/2 -> HTTP/2  */
-    function handleStream(
-      stream: ServerHttp2Stream,
-      headers: IncomingHttpHeaders
-    ) {
-      addCfPreviewTokenHeader(headers, previewToken.value);
-      headers[":authority"] = previewToken.host;
-      const request = stream.pipe(remote.request(headers));
-      request.on("response", (responseHeaders: IncomingHttpHeaders) => {
-        rewriteRemoteHostToLocalHostInHeaders(
-          responseHeaders,
-          previewToken.host,
-          port
-        );
-        stream.respond(responseHeaders);
-        request.pipe(stream, { end: true });
-      });
-    }
+    const handleStream = createStreamHandler(previewToken, remote, port);
     proxy.on("stream", handleStream);
     cleanupListeners.push(() => proxy.off("stream", handleStream));
 
@@ -194,7 +151,7 @@ export function usePreviewServer({
       }
       const request = message.pipe(remote.request(headers));
       request.on("response", (responseHeaders) => {
-        const status = responseHeaders[":status"];
+        const status = responseHeaders[":status"] ?? 500;
         rewriteRemoteHostToLocalHostInHeaders(
           responseHeaders,
           previewToken.host,
@@ -254,18 +211,18 @@ export function usePreviewServer({
     return () => {
       cleanupListeners.forEach((d) => d());
     };
-  }, [previewToken, publicRoot, port]);
+  }, [previewToken, publicRoot, port, proxy]);
 
   // Start/stop the server whenever the
   // containing component is mounted/unmounted.
   useEffect(() => {
-    proxyServer.current.listen(port);
+    proxy.listen(port);
     console.log(`⬣ Listening at http://localhost:${port}`);
 
     return () => {
-      proxyServer.current.close();
+      proxy.close();
     };
-  }, [port]);
+  }, [port, proxy]);
 }
 
 function createHandleAssetsRequest(
@@ -292,3 +249,54 @@ const HTTP1_HEADERS = new Set([
   "transfer-encoding",
   "http2-settings",
 ]);
+
+function createProxyServer() {
+  return createServer()
+    .on("request", function (req, res) {
+      // log all requests
+      console.log(
+        new Date().toLocaleTimeString(),
+        req.method,
+        req.url,
+        res.statusCode
+      );
+    })
+    .on("upgrade", (req) => {
+      // log all websocket connections
+      console.log(
+        new Date().toLocaleTimeString(),
+        req.method,
+        req.url,
+        101,
+        "(WebSocket)"
+      );
+    })
+    .on("error", (err) => {
+      // log all connection errors
+      console.error(new Date().toLocaleTimeString(), err);
+    });
+}
+
+function createStreamHandler(
+  previewToken: CfPreviewToken,
+  remote: ClientHttp2Session,
+  port: number
+) {
+  return function handleStream(
+    stream: ServerHttp2Stream,
+    headers: IncomingHttpHeaders
+  ) {
+    addCfPreviewTokenHeader(headers, previewToken.value);
+    headers[":authority"] = previewToken.host;
+    const request = stream.pipe(remote.request(headers));
+    request.on("response", (responseHeaders: IncomingHttpHeaders) => {
+      rewriteRemoteHostToLocalHostInHeaders(
+        responseHeaders,
+        previewToken.host,
+        port
+      );
+      stream.respond(responseHeaders);
+      request.pipe(stream, { end: true });
+    });
+  };
+}
