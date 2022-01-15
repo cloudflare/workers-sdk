@@ -97,7 +97,7 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
 
 - Type check all the code in the repository
   ```sh
-  > npm run type-check
+  > npm run check:type
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
 
@@ -107,7 +107,7 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
 
 - Run the linting checks
   ```sh
-  > npm run lint
+  > npm run check:lint
   ```
 - The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
 
@@ -117,7 +117,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 - Run the formatting checks
   ```sh
-  > npm run format-check
+  > npm run check:format
   ```
 - The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback.
 

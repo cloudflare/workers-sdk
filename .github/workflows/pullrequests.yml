@@ -3,8 +3,8 @@ name: Pull Request
 on: pull_request
 
 jobs:
-  test:
-    name: "Pull Request" # todo: we should add a pull request number here
+  check:
+    name: "Checks"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -16,6 +16,44 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 16.7
+          cache: "npm"
+
+      - uses: actions/cache@v2
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - uses: actions/cache@v2
+        id: eslint-cache
+        with:
+          path: |
+            .eslintcache
+            tsconfig.tsbuildinfo
+          key: ${{ runner.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Check for errors
+        run: npm run check
+
+  test:
+    name: "Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.7
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.7
+          cache: "npm"
 
       - uses: actions/cache@v2
         id: node-modules-cache
@@ -28,5 +66,5 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
-      - name: Check for errors
-        run: npm run check
+      - name: Run build and test
+        run: npm run build-and-test

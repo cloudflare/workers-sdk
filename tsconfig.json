@@ -10,7 +10,8 @@
     "noEmit": true,
     "lib": ["esnext"],
     "jsx": "react",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "incremental": true
   },
-  "exclude": ["node_modules/", "packages/wrangler/vendor"]
+  "exclude": ["node_modules/", "packages/*/vendor", "packages/*/*-dist"]
 }
