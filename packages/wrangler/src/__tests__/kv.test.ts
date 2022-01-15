@@ -335,8 +335,16 @@ describe("wrangler", () => {
             expect(namespaceId).toEqual(expectedNamespaceId);
             expect(key).toEqual(expectedKey);
             expect(body).toEqual(expectedValue);
-            expect(query.get("expiration")).toEqual(`${expiration}`);
-            expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            if (expiration !== undefined) {
+              expect(query.get("expiration")).toEqual(`${expiration}`);
+            } else {
+              expect(query.has("expiration")).toBe(false);
+            }
+            if (expirationTtl) {
+              expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            } else {
+              expect(query.has("expiration_ttl")).toBe(false);
+            }
             return null;
           }
         );
