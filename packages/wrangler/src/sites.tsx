@@ -89,7 +89,11 @@ export async function syncAssets(
   );
 
   const manifest = {};
-  const upload = [];
+  const upload: {
+    key: string;
+    value: string;
+    base64: boolean;
+  }[] = [];
   // TODO: this can be more efficient by parallelising
   for await (const file of getFilesInFolder(dirPath)) {
     // TODO: "exclude:" config

@@ -23,7 +23,7 @@ export function toMimeType(type: CfModuleType): string {
   }
 }
 
-function toModule(module: CfModule, entryType?: CfModuleType): Blob {
+function toModule(module: CfModule, entryType: CfModuleType): Blob {
   const { type: moduleType, content } = module;
   const type = toMimeType(moduleType ?? entryType);
 
