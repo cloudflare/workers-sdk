@@ -6,6 +6,7 @@ import makeCLI from "yargs";
 import type Yargs from "yargs";
 import { findUp } from "find-up";
 import TOML from "@iarna/toml";
+import { normaliseAndValidateEnvironmentsConfig } from "./config";
 import type { Config } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { version as wranglerVersion } from "../package.json";
@@ -56,48 +57,7 @@ async function readConfig(configPath?: string): Promise<Config> {
     Object.assign(config, parsed);
   }
 
-  const inheritedFields = [
-    "name",
-    "account_id",
-    "workers_dev",
-    "compatibility_date",
-    "compatibility_flags",
-    "zone_id",
-    "routes",
-    "route",
-    "jsx_factory",
-    "jsx_fragment",
-    "site",
-    "triggers",
-    "usage_model",
-  ];
-
-  Object.keys(config.env || {}).forEach((env) => {
-    inheritedFields.forEach((field) => {
-      if (config[field] !== undefined && config.env[env][field] === undefined) {
-        config.env[env][field] = config[field]; // TODO: - shallow copy?
-      }
-    });
-  });
-
-  const mirroredFields = [
-    "vars",
-    "kv_namespaces",
-    "durable_objects",
-    "experimental_services",
-  ];
-  Object.keys(config.env || {}).forEach((env) => {
-    mirroredFields.forEach((field) => {
-      // if it exists on top level, it should exist on env definitions
-      Object.keys(config[field] || {}).forEach((fieldKey) => {
-        if (!(fieldKey in config.env[env][field])) {
-          console.warn(
-            `In your configuration, "${field}.${fieldKey}" exists at a top level, but not on "env.${env}". This is not what you probably want, since the field "${field}" is not inherited by environments. Please add "${field}.${fieldKey}" to "env.${env}".`
-          );
-        }
-      });
-    });
-  });
+  normaliseAndValidateEnvironmentsConfig(config);
 
   if ("experimental_services" in config) {
     console.warn(
@@ -421,7 +381,11 @@ export async function main(argv: string[]): Promise<void> {
     "👂 Start a local server for developing your worker",
     (yargs) => {
       return yargs
-        .positional("filename", { describe: "entry point", type: "string" })
+        .positional("filename", {
+          describe: "entry point",
+          type: "string",
+          demandOption: true,
+        })
         .option("name", {
           describe: "name of the script",
           type: "string",
@@ -508,26 +472,26 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      // -- snip, extract --
-
       if (!args.local) {
+        // -- snip, extract --
         const loggedIn = await loginOrRefreshIfRequired();
         if (!loggedIn) {
           // didn't login, let's just quit
           console.log("Did not login, quitting...");
           return;
         }
+
         if (!config.account_id) {
           config.account_id = await getAccountId();
           if (!config.account_id) {
             throw new Error("No account id found, quitting...");
           }
         }
+        // -- snip, end --
       }
 
-      // -- snip, end --
-
-      const envRootObj = args.env ? config.env[args.env] || {} : config;
+      const environments = config.env ?? {};
+      const envRootObj = args.env ? environments[args.env] || {} : config;
 
       // TODO: this error shouldn't actually happen,
       // but we haven't fixed it internally yet
@@ -686,23 +650,23 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      // -- snip, extract --
       if (!args.local) {
+        // -- snip, extract --
         const loggedIn = await loginOrRefreshIfRequired();
         if (!loggedIn) {
           // didn't login, let's just quit
           console.log("Did not login, quitting...");
           return;
         }
+
         if (!config.account_id) {
           config.account_id = await getAccountId();
           if (!config.account_id) {
             throw new Error("No account id found, quitting...");
           }
         }
+        // -- snip, end --
       }
-
-      // -- snip, end --
 
       await publish({
         config: args.config as Config,
@@ -768,6 +732,12 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: filter by client ip, which can be 'self' or an ip address
     },
     async (args) => {
+      if (args.local) {
+        throw new NotImplementedError(
+          `local mode is not yet supported for this command`
+        );
+      }
+
       const config = args.config as Config;
 
       if (!(args.name || config.name)) {
@@ -778,22 +748,19 @@ export async function main(argv: string[]): Promise<void> {
       }`;
 
       // -- snip, extract --
-
-      if (!args.local) {
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
-        if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
-        }
+      const loggedIn = await loginOrRefreshIfRequired();
+      if (!loggedIn) {
+        // didn't login, let's just quit
+        console.log("Did not login, quitting...");
+        return;
       }
 
+      if (!config.account_id) {
+        config.account_id = await getAccountId();
+        if (!config.account_id) {
+          throw new Error("No account id found, quitting...");
+        }
+      }
       // -- snip, end --
 
       const accountId = config.account_id;
@@ -999,24 +966,23 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-
             if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
                 console.log("Did not login, quitting...");
                 return;
               }
+
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
             }
-
-            // -- snip, end --
 
             const secretValue = await prompt(
               "Enter a secret value:",
@@ -1103,24 +1069,23 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-
             if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
                 console.log("Did not login, quitting...");
                 return;
               }
+
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
             }
-
-            // -- snip, end --
 
             if (await confirm("Are you sure you want to delete this secret?")) {
               console.log(
@@ -1165,24 +1130,23 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-
             if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
                 console.log("Did not login, quitting...");
                 return;
               }
+
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
             }
-
-            // -- snip, end --
 
             console.log(
               await fetchResult(
@@ -1209,6 +1173,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("namespace", {
                 describe: "The name of the new namespace",
                 type: "string",
+                demandOption: true,
               })
               .option("env", {
                 type: "string",
@@ -1254,44 +1219,43 @@ export async function main(argv: string[]): Promise<void> {
               });
               await mf.getKVNamespace(title); // this should "create" the namespace
               console.log(`✨ Success! Created KV namespace ${title}`);
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
                 console.log("Did not login, quitting...");
                 return;
               }
+
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              // TODO: generate a binding name stripping non alphanumeric chars
+
+              console.log(`🌀 Creating namespace with title "${title}"`);
+              const namespaceId = await createNamespace(
+                config.account_id,
+                title
+              );
+
+              console.log("✨ Success!");
+              const envString = args.env ? ` under [env.${args.env}]` : "";
+              const previewString = args.preview ? "preview_" : "";
+              console.log(
+                `Add the following to your configuration file in your kv_namespaces array${envString}:`
+              );
+              console.log(
+                `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
+              );
+
+              // TODO: automatically write this block to the wrangler.toml config file??
             }
-
-            // -- snip, end --
-
-            // TODO: generate a binding name stripping non alphanumeric chars
-
-            console.log(`🌀 Creating namespace with title "${title}"`);
-            const namespaceId = await createNamespace(config.account_id, title);
-
-            console.log("✨ Success!");
-            const envString = args.env ? ` under [env.${args.env}]` : "";
-            const previewString = args.preview ? "preview_" : "";
-            console.log(
-              `Add the following to your configuration file in your kv_namespaces array${envString}:`
-            );
-            console.log(
-              `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
-            );
-
-            // TODO: automatically write this block to the wrangler.toml config file??
           }
         )
         .command(
@@ -1299,42 +1263,39 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
+            const config = args.config as Config;
+
             if (args.local) {
               throw new NotImplementedError(
                 `local mode is not yet supported for this command`
               );
-            }
-
-            const config = args.config as Config;
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
                 console.log("Did not login, quitting...");
                 return;
               }
+
               if (!config.account_id) {
                 config.account_id = await getAccountId();
                 if (!config.account_id) {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              // TODO: we should show bindings if they exist for given ids
+
+              console.log(
+                JSON.stringify(
+                  await listNamespaces(config.account_id),
+                  null,
+                  "  "
+                )
+              );
             }
-
-            // -- snip, end --
-
-            // TODO: we should show bindings if they exist for given ids
-
-            console.log(
-              JSON.stringify(
-                await listNamespaces(config.account_id),
-                null,
-                "  "
-              )
-            );
           }
         )
         .command(
@@ -1361,25 +1322,23 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
+            const config = args.config as Config;
+
             if (args.local) {
               throw new NotImplementedError(
                 `local mode is not yet supported for this command`
               );
-            }
-            const config = args.config as Config;
+            } else {
+              let id;
+              try {
+                id = getNamespaceId(args);
+              } catch (e) {
+                throw new CommandLineArgsError(
+                  "Not able to delete namespace.\n" + e.message
+                );
+              }
 
-            let id;
-            try {
-              id = getNamespaceId(args);
-            } catch (e) {
-              throw new CommandLineArgsError(
-                "Not able to delete namespace.\n" + e.message
-              );
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1393,32 +1352,31 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              await fetchResult<{ id: string }>(
+                `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
+                { method: "DELETE" }
+              );
+
+              // TODO: recommend they remove it from wrangler.toml
+
+              // test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+              // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+              // n
+              // 💁  Not deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+              // ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+              // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+              // y
+              // 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+              // ✨  Success
+              // ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
+              // ➜  test-mf
+
+              // TODO: do it automatically
+
+              // TODO: delete the preview namespace as well?
             }
-
-            // -- snip, end --
-
-            await fetchResult<{ id: string }>(
-              `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
-              { method: "DELETE" }
-            );
-
-            // TODO: recommend they remove it from wrangler.toml
-
-            // test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
-            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
-            // n
-            // 💁  Not deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
-            // ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
-            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
-            // y
-            // 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
-            // ✨  Success
-            // ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
-            // ➜  test-mf
-
-            // TODO: do it automatically
-
-            // TODO: delete the preview namespace as well?
           }
         );
     }
@@ -1438,6 +1396,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 type: "string",
                 describe: "The key to write to.",
+                demandOption: true,
               })
               .positional("value", {
                 type: "string",
@@ -1477,9 +1436,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ttl, expiration, ...args }) => {
             const namespaceId = getNamespaceId(args);
+            // One of `args.path` and `args.value` must be defined
             const value = args.path
               ? await readFile(args.path, "utf-8")
-              : args.value;
+              : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                args.value!;
             const config = args.config as Config;
 
             if (args.path) {
@@ -1501,11 +1462,8 @@ export async function main(argv: string[]): Promise<void> {
               });
               const ns = await mf.getKVNamespace(namespaceId);
               await ns.put(key, value, { expiration, expirationTtl: ttl });
-              return;
-            }
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1519,14 +1477,13 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              await putKeyValue(config.account_id, namespaceId, key, value, {
+                expiration,
+                expiration_ttl: ttl,
+              });
             }
-
-            // -- snip, end --
-
-            await putKeyValue(config.account_id, namespaceId, key, value, {
-              expiration,
-              expiration_ttl: ttl,
-            });
           }
         )
         .command(
@@ -1574,12 +1531,8 @@ export async function main(argv: string[]): Promise<void> {
               const ns = await mf.getKVNamespace(namespaceId);
               const listResponse = await ns.list({ prefix });
               console.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1593,13 +1546,12 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              console.log(
+                await listNamespaceKeys(config.account_id, namespaceId, prefix)
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await listNamespaceKeys(config.account_id, namespaceId, prefix)
-            );
           }
         )
         .command(
@@ -1610,6 +1562,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 describe: "The key value to get.",
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1651,9 +1604,8 @@ export async function main(argv: string[]): Promise<void> {
               return;
             }
 
-            // -- snip, extract --
-
             if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1667,9 +1619,8 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
             }
-
-            // -- snip, end --
 
             console.log(
               await fetchRaw(
@@ -1686,6 +1637,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("key", {
                 describe: "The key value to delete",
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1726,9 +1678,8 @@ export async function main(argv: string[]): Promise<void> {
 
             const config = args.config as Config;
 
-            // -- snip, extract --
-
             if (!args.local) {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1742,9 +1693,8 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
             }
-
-            // -- snip, end --
 
             await fetchResult(
               `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
@@ -1769,6 +1719,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("filename", {
                 describe: `The JSON file of key-value pairs to upload, in form [{"key":..., "value":...}"...]`,
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1824,13 +1775,8 @@ export async function main(argv: string[]): Promise<void> {
                   expirationTtl: expiration_ttl,
                 });
               }
-
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1844,13 +1790,12 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              console.log(
+                await putBulkKeyValue(config.account_id, namespaceId, content)
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await putBulkKeyValue(config.account_id, namespaceId, content)
-            );
           }
         )
         .command(
@@ -1861,6 +1806,7 @@ export async function main(argv: string[]): Promise<void> {
               .positional("filename", {
                 describe: `The JSON file of keys to delete, in the form ["key1", "key2", ...]`,
                 type: "string",
+                demandOption: true,
               })
               .option("binding", {
                 type: "string",
@@ -1904,13 +1850,8 @@ export async function main(argv: string[]): Promise<void> {
               for (const key of parsedContent) {
                 await ns.delete(key);
               }
-
-              return;
-            }
-
-            // -- snip, extract --
-
-            if (!args.local) {
+            } else {
+              // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
@@ -1924,13 +1865,16 @@ export async function main(argv: string[]): Promise<void> {
                   throw new Error("No account id found, quitting...");
                 }
               }
+              // -- snip, end --
+
+              console.log(
+                await deleteBulkKeyValue(
+                  config.account_id,
+                  namespaceId,
+                  content
+                )
+              );
             }
-
-            // -- snip, end --
-
-            console.log(
-              await deleteBulkKeyValue(config.account_id, namespaceId, content)
-            );
           }
         );
     }
