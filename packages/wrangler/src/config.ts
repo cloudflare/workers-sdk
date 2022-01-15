@@ -1,3 +1,5 @@
+import assert from "node:assert";
+
 /**
  * This is the static type definition for the configuration object.
  * It reflects the configuration that you can write in wrangler.toml,
@@ -484,4 +486,161 @@ export async function validateConfig(
   const results: ValidationResults = [];
 
   return results;
+}
+
+/**
+ * Process the environments (`env`) specified in the `config`.
+ *
+ * The environments configuration is complicated since each environment is a customized version of the main config.
+ * Some of the configuration can be inherited from the main config, while other configuration must replace what is in the main config.
+ *
+ * This function ensures that each environment is set up correctly with inherited configuration, as necessary.
+ * It will log a warning if an environment is missing required configuration.
+ */
+export function normaliseAndValidateEnvironmentsConfig(config: Config) {
+  if (config.env == undefined) {
+    // There are no environments specified so there is nothing to do here.
+    return;
+  }
+
+  const environments = config.env;
+
+  for (const envKey of Object.keys(environments)) {
+    const environment = environments[envKey];
+
+    // Given how TOML works, there should never be an environment containing nothing.
+    // I.e. if there is a section in a TOML file, then the parser will create an object for it.
+    // But it may be possible in the future if we change how the configuration is stored.
+    assert(
+      environment,
+      `Environment ${envKey} is specified in the config but not defined.`
+    );
+
+    // Fall back on "inherited fields" from the config, if not specified in the environment.
+    const inheritedFields = [
+      "name",
+      "account_id",
+      "workers_dev",
+      "compatibility_date",
+      "compatibility_flags",
+      "zone_id",
+      "routes",
+      "route",
+      "jsx_factory",
+      "jsx_fragment",
+      "site",
+      "triggers",
+      "usage_model",
+    ];
+    for (const inheritedField of inheritedFields) {
+      if (config[inheritedField] !== undefined) {
+        if (environment[inheritedField] === undefined) {
+          environment[inheritedField] = config[inheritedField]; // TODO: - shallow or deep copy?
+        }
+      }
+    }
+
+    // Warn if there is a "required" field in the top level config that has not been specified specified in the environment.
+    // These required fields are `vars`, `durable_objects`, `kv_namespaces` and `experimental_services`.
+    // Each of them has different characteristics that need to be checked.
+
+    // `vars` is just an object
+    if (config.vars !== undefined) {
+      if (environment.vars === undefined) {
+        console.warn(
+          `In your configuration, "vars" exists at the top level, but not on "env.${envKey}".\n` +
+            `This is not what you probably want, since "vars" is not inherited by environments.\n` +
+            `Please add "vars" to "env.${envKey}".`
+        );
+      } else {
+        for (const varField of Object.keys(config.vars)) {
+          if (!(varField in environment.vars)) {
+            console.warn(
+              `In your configuration, "vars.${varField}" exists at the top level, but not on "env.${envKey}".\n` +
+                `This is not what you probably want, since "vars" is not inherited by environments.\n` +
+                `Please add "vars.${varField}" to "env.${envKey}".`
+            );
+          }
+        }
+      }
+    }
+
+    // `durable_objects` is an object containing a `bindings` array
+    if (config.durable_objects !== undefined) {
+      if (environment.durable_objects === undefined) {
+        console.warn(
+          `In your configuration, "durable_objects.bindings" exists at the top level, but not on "env.${envKey}".\n` +
+            `This is not what you probably want, since "durable_objects" is not inherited by environments.\n` +
+            `Please add "durable_objects.bindings" to "env.${envKey}".`
+        );
+      } else {
+        const envBindingNames = new Set(
+          environment.durable_objects.bindings.map((b) => b.name)
+        );
+        for (const bindingName of config.durable_objects.bindings.map(
+          (b) => b.name
+        )) {
+          if (!envBindingNames.has(bindingName)) {
+            console.warn(
+              `In your configuration, there is a durable_objects binding with name "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
+                `This is not what you probably want, since "durable_objects" is not inherited by environments.\n` +
+                `Please add a binding for "${bindingName}" to "env.${envKey}.durable_objects.bindings".`
+            );
+          }
+        }
+      }
+    }
+
+    // `kv_namespaces` contains an array of namespace bindings
+    if (config.kv_namespaces !== undefined) {
+      if (environment.kv_namespaces === undefined) {
+        console.warn(
+          `In your configuration, "kv_namespaces" exists at the top level, but not on "env.${envKey}".\n` +
+            `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
+            `Please add "kv_namespaces" to "env.${envKey}".`
+        );
+      } else {
+        const envBindings = new Set(
+          environment.kv_namespaces.map((kvNamespace) => kvNamespace.binding)
+        );
+        for (const bindingName of config.kv_namespaces.map(
+          (kvNamespace) => kvNamespace.binding
+        )) {
+          if (!envBindings.has(bindingName)) {
+            console.warn(
+              `In your configuration, there is a kv_namespaces with binding "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
+                `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
+                `Please add a binding for "${bindingName}" to "env.${envKey}.kv_namespaces".`
+            );
+          }
+        }
+      }
+    }
+
+    // `experimental_services` contains an array of namespace bindings
+    if (config.experimental_services !== undefined) {
+      if (environment.experimental_services === undefined) {
+        console.warn(
+          `In your configuration, "experimental_services" exists at the top level, but not on "env.${envKey}".\n` +
+            `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
+            `Please add "experimental_services" to "env.${envKey}".`
+        );
+      } else {
+        const envBindingNames = new Set(
+          environment.experimental_services.map((service) => service.name)
+        );
+        for (const bindingName of config.experimental_services.map(
+          (service) => service.name
+        )) {
+          if (!envBindingNames.has(bindingName)) {
+            console.warn(
+              `In your configuration, there is a experimental_services with binding name "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
+                `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
+                `Please add a service for "${bindingName}" to "env.${envKey}.experimental_services".`
+            );
+          }
+        }
+      }
+    }
+  }
 }
