@@ -1,30 +1,32 @@
 import esbuild from "esbuild";
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import type { DirectoryResult } from "tmp-promise";
-import tmp from "tmp-promise";
-import type { CfPreviewToken } from "./api/preview";
+import assert from "node:assert";
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
-import React, { useState, useEffect, useRef } from "react";
-import path from "path";
+import { watch } from "chokidar";
+import clipboardy from "clipboardy";
+import commandExists from "command-exists";
+import { execa } from "execa";
+import fetch from "node-fetch";
 import open from "open";
-import useInspector from "./inspect";
+import React, { useState, useEffect, useRef } from "react";
+import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import onExit from "signal-exit";
+import tmp from "tmp-promise";
+import type { DirectoryResult } from "tmp-promise";
+
+import type { CfPreviewToken } from "./api/preview";
 import type { CfModule } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
-import { spawn } from "child_process";
-import onExit from "signal-exit";
-import { syncAssets } from "./sites";
-import clipboardy from "clipboardy";
-import commandExists from "command-exists";
-import assert from "assert";
-import { getAPIToken } from "./user";
-import fetch from "node-fetch";
+
+import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import { usePreviewServer } from "./proxy";
-import { execa } from "execa";
-import { watch } from "chokidar";
+import { syncAssets } from "./sites";
+import { getAPIToken } from "./user";
 
 type CfScriptFormat = undefined | "modules" | "service-worker";
 
