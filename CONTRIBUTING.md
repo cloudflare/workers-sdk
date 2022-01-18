@@ -135,8 +135,9 @@ Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is confi
   ```
 - Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
   ```sh
-  > npm run test -w wrangler -- --watch
+  > npm run test-watch -w wrangler
   ```
+  This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
 ## Steps For Making Changes
 
