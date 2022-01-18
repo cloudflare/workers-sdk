@@ -935,7 +935,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         try {
           // `startServer` might throw if user code contains errors
           const server = await miniflare.startServer();
-          console.log(`Serving at http://127.0.0.1:${port}/`, { wait: true });
+          console.log(`Serving at http://127.0.0.1:${port}/`);
 
           if (process.env.BROWSER !== "none") {
             const childProcess = await open(`http://127.0.0.1:${port}/`);
