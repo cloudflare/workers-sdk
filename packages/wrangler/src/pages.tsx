@@ -940,7 +940,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           if (process.env.BROWSER !== "none") {
             const childProcess = await open(`http://127.0.0.1:${port}/`);
             // fail silently if the open command doesn't work (e.g. in GitHub Codespaces)
-            childProcess.on("error", (err) => {});
+            childProcess.on("error", (_err) => {});
           }
 
           if (directory !== undefined && liveReload) {
