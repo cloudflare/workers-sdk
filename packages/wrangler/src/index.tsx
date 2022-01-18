@@ -1855,11 +1855,11 @@ export async function main(argv: string[]): Promise<void> {
         )
         .command(
           "delete <filename>",
-          "Upload multiple key-value pairs to a namespace",
+          "Delete multiple key-value pairs from a namespace",
           (yargs) => {
             return yargs
               .positional("filename", {
-                describe: `The JSON file of key-value pairs to upload, in form ["key1", "key2", ...]`,
+                describe: `The JSON file of keys to delete, in the form ["key1", "key2", ...]`,
                 type: "string",
               })
               .option("binding", {
