@@ -54,7 +54,7 @@ export default async function publish(props: Props): Promise<void> {
     props.env && config.env ? config.env[props.env] || {} : config;
 
   assert(
-    envRootObj.compatibility_date || props["compatibility-date"],
+    envRootObj.compatibility_date || props.compatibilityDate,
     "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
@@ -139,7 +139,7 @@ export default async function publish(props: Props): Promise<void> {
   const metafile = result.metafile!;
   const expectedEntryPoint = props.public
     ? path.join(path.dirname(file), "static-asset-facade.js")
-    : Object.keys(metafile.inputs)[0];
+    : file;
   const outputEntry = Object.entries(metafile.outputs).find(
     ([, { entryPoint }]) => entryPoint === expectedEntryPoint
   );
