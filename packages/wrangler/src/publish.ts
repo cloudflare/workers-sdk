@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import esbuild from "esbuild";
+import * as esbuild from "esbuild";
+import type { Metafile } from "esbuild";
 import { execa } from "execa";
 import tmp from "tmp-promise";
 import type { CfWorkerInit } from "./api/worker";
@@ -78,10 +79,12 @@ export default async function publish(props: Props): Promise<void> {
 
   let file: string;
   if (props.script) {
-    file = props.script;
+    // If the script name comes from the command line it is relative to the current working directory.
+    file = path.resolve(props.script);
   } else {
+    // If the script name comes from the config, then it is relative to the wrangler.toml file.
     assert(build?.upload?.main, "missing main file");
-    file = path.join(path.dirname(__path__), build.upload.main);
+    file = path.resolve(path.dirname(__path__), build.upload.main);
   }
 
   if (props.legacyEnv) {
@@ -90,7 +93,6 @@ export default async function publish(props: Props): Promise<void> {
   const envName = props.env ?? "production";
 
   const destination = await tmp.dir({ unsafeCleanup: true });
-
   if (props.config.build?.command) {
     // TODO: add a deprecation message here?
     console.log("running:", props.config.build.command);
@@ -112,7 +114,7 @@ export default async function publish(props: Props): Promise<void> {
                 path.join(__dirname, "../static-asset-facade.js"),
                 "utf8"
               )
-            ).replace("__ENTRY_POINT__", path.join(process.cwd(), file)),
+            ).replace("__ENTRY_POINT__", file),
             sourcefile: "static-asset-facade.js",
             resolveDir: path.dirname(file),
           },
@@ -137,21 +139,28 @@ export default async function publish(props: Props): Promise<void> {
   // result.metafile is defined because of the `metafile: true` option above.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const metafile = result.metafile!;
-  const expectedEntryPoint = props.public
-    ? path.join(path.dirname(file), "static-asset-facade.js")
-    : file;
-  const outputEntry = Object.entries(metafile.outputs).find(
-    ([, { entryPoint }]) => entryPoint === expectedEntryPoint
+  const entryPoints = Object.values(metafile.outputs).filter(
+    (output) => output.entryPoint !== undefined
   );
-  if (outputEntry === undefined) {
-    throw new Error(
-      `Cannot find entry-point "${expectedEntryPoint}" in generated bundle.`
-    );
-  }
+  assert(
+    entryPoints.length > 0,
+    `Cannot find entry-point "${file}" in generated bundle.` +
+      listEntryPoints(entryPoints)
+  );
+  assert(
+    entryPoints.length < 2,
+    "More than one entry-point found for generated bundle." +
+      listEntryPoints(entryPoints)
+  );
+  const entryPointExports = entryPoints[0].exports;
+  const resolvedEntryPointPath = path.resolve(
+    destination.path,
+    entryPoints[0].entryPoint
+  );
   const { format } = props;
   const bundle = {
-    type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
-    exports: outputEntry[1].exports,
+    type: entryPointExports.length > 0 ? "esm" : "commonjs",
+    exports: entryPointExports,
   };
 
   // TODO: instead of bundling the facade with the worker, we should just bundle the worker and expose it as a module.
@@ -168,7 +177,7 @@ export default async function publish(props: Props): Promise<void> {
     return;
   }
 
-  const content = await readFile(outputEntry[0], { encoding: "utf-8" });
+  const content = await readFile(resolvedEntryPointPath, { encoding: "utf-8" });
   await destination.cleanup();
 
   // if config.migrations
@@ -229,7 +238,7 @@ export default async function publish(props: Props): Promise<void> {
   const worker: CfWorkerInit = {
     name: scriptName,
     main: {
-      name: path.basename(outputEntry[0]),
+      name: path.basename(resolvedEntryPointPath),
       content: content,
       type: bundle.type === "esm" ? "esm" : "commonjs",
     },
@@ -262,12 +271,13 @@ export default async function publish(props: Props): Promise<void> {
 
   // Upload the script so it has time to propagate.
   const { available_on_subdomain } = await fetchResult(
-    `${workerUrl}?available_on_subdomain=true`,
+    workerUrl,
     {
       method: "PUT",
       // @ts-expect-error: TODO: fix this type error!
       body: toFormData(worker),
-    }
+    },
+    new URLSearchParams({ available_on_subdomains: "true" })
   );
 
   const uploadMs = Date.now() - start;
@@ -362,3 +372,9 @@ export default async function publish(props: Props): Promise<void> {
     console.log(" ", target);
   }
 }
+
+function listEntryPoints(outputs: ValueOf<Metafile["outputs"]>[]): string {
+  return outputs.map((output) => output.entryPoint).join("\n");
+}
+
+type ValueOf<T> = T[keyof T];
