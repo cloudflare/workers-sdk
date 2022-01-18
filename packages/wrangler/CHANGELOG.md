@@ -1,5 +1,11 @@
 # wrangler
 
+## 0.0.10
+
+### Patch Changes
+
+- [#264](https://github.com/cloudflare/wrangler2/pull/264) [`de73fa2`](https://github.com/cloudflare/wrangler2/commit/de73fa2346737fb159910ac7a2d121671f9c4ea8) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.2.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.2.0)
+
 ## 0.0.9
 
 ### Patch Changes
