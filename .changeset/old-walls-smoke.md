@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Add common words to the cSpell config to prevent unwanted warnings
+chore: add common words to the cSpell config to prevent unwanted warnings

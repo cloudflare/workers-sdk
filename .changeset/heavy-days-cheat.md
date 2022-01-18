@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Refactor miscellaneous source files to pass strict-null checks
+refactor: update miscellaneous source files to pass strict-null checks

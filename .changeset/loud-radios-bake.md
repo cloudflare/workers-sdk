@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Refactor proxy code to pass strict-null checks
+refactor: update proxy code to pass strict-null checks
