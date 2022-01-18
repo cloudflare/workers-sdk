@@ -77,7 +77,7 @@ Each wrangler workspace in this project is written in [TypeScript](https://www.t
   ```
 - Build a distributable for a specific workspace(e.g. wrangler)
   ```sh
-  > npm run build -w wrangler
+  > npm run build
   ```
 
 ## Checking the code
