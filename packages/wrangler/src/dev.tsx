@@ -484,9 +484,9 @@ function useEsbuild(props: {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const metafile = result.metafile!;
       const outputEntry = Object.entries(metafile.outputs).find(
-        ([_path, { entryPoint }]) =>
-          entryPoint === Object.keys(metafile.inputs)[0]
+        ([_path, { entryPoint }]) => entryPoint === entry
       ); // assumedly only one entry point
+
       if (outputEntry === undefined) {
         throw new Error(
           `Cannot find entry-point "${entry}" in generated bundle.`
@@ -508,7 +508,9 @@ function useEsbuild(props: {
       // so this is a no-op error handler
     });
     return () => {
-      result.stop?.();
+      if (result && result.stop) {
+        result.stop();
+      }
     };
   }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
   return bundle;
@@ -776,7 +778,7 @@ function ErrorFallback(props: { error: Error }) {
   return (
     <>
       <Text>Something went wrong:</Text>
-      <Text>{props.error.message}</Text>
+      <Text>{props.error.stack}</Text>
     </>
   );
 }
