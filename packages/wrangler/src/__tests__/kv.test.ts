@@ -1,4 +1,5 @@
 import { writeFileSync } from "fs";
+import type { KVNamespaceInfo } from "../kv";
 import {
   setMockResponse,
   setMockRawResponse,
@@ -7,11 +8,6 @@ import {
 } from "./mock-cfetch";
 import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
-
-interface KVNamespaceInfo {
-  title: string;
-  id: string;
-}
 
 describe("wrangler", () => {
   runInTempDir();
