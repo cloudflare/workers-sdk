@@ -441,7 +441,7 @@ function useEsbuild(props: {
   const { entry, destination, staticRoot, jsxFactory, jsxFragment } = props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
-    let result: esbuild.BuildResult;
+    let result: esbuild.BuildResult | undefined;
     async function build() {
       if (!destination || !entry) return;
       const moduleCollector = makeModuleCollector();
@@ -508,9 +508,7 @@ function useEsbuild(props: {
       // so this is a no-op error handler
     });
     return () => {
-      if (result && result.stop) {
-        result.stop();
-      }
+      result?.stop?.();
     };
   }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
   return bundle;
