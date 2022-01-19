@@ -1,5 +1,5 @@
 import type { RequestInit } from "node-fetch";
-import type { URLSearchParams } from "node:url";
+import { URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
 import { CF_API_BASE_URL } from "../cfetch";
 import type { FetchResult } from "../cfetch";
@@ -9,8 +9,8 @@ import type { FetchResult } from "../cfetch";
  */
 export type MockHandler<ResponseType> = (
   uri: RegExpExecArray,
-  init?: RequestInit,
-  queryParams?: URLSearchParams
+  init: RequestInit,
+  queryParams: URLSearchParams
 ) => ResponseType;
 
 type RemoveMockFn = () => void;
@@ -32,7 +32,7 @@ const mocks: MockFetch<unknown>[] = [];
 export async function mockFetchInternal(
   resource: string,
   init: RequestInit = {},
-  queryParams?: URLSearchParams
+  queryParams: URLSearchParams = new URLSearchParams()
 ) {
   for (const { regexp, method, handler } of mocks) {
     const resourcePath = new URL(resource, CF_API_BASE_URL).pathname;

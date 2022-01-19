@@ -1,49 +1,50 @@
 import esbuild from "esbuild";
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import type { DirectoryResult } from "tmp-promise";
-import tmp from "tmp-promise";
-import type { CfPreviewToken } from "./api/preview";
+import assert from "node:assert";
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { Box, Text, useApp, useInput } from "ink";
-import React, { useState, useEffect, useRef } from "react";
-import path from "path";
+import { watch } from "chokidar";
+import clipboardy from "clipboardy";
+import commandExists from "command-exists";
+import { execa } from "execa";
+import fetch from "node-fetch";
 import open from "open";
-import { DtInspector } from "./api/inspect";
+import React, { useState, useEffect, useRef } from "react";
+import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import onExit from "signal-exit";
+import tmp from "tmp-promise";
+import type { DirectoryResult } from "tmp-promise";
+
+import type { CfPreviewToken } from "./api/preview";
 import type { CfModule } from "./api/worker";
 import { createWorker } from "./api/worker";
 import type { CfWorkerInit } from "./api/worker";
-import { spawn } from "child_process";
-import onExit from "signal-exit";
-import { syncAssets } from "./sites";
-import clipboardy from "clipboardy";
-import http from "node:http";
-import commandExists from "command-exists";
-import assert from "assert";
-import { getAPIToken } from "./user";
-import fetch from "node-fetch";
-import makeModuleCollector from "./module-collection";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
-import { createHttpProxy } from "./proxy";
-import { execa } from "execa";
-import { watch } from "chokidar";
 
-type CfScriptFormat = void | "modules" | "service-worker";
+import useInspector from "./inspect";
+import makeModuleCollector from "./module-collection";
+import { usePreviewServer } from "./proxy";
+import { syncAssets } from "./sites";
+import { getAPIToken } from "./user";
+
+type CfScriptFormat = undefined | "modules" | "service-worker";
 
 export type DevProps = {
   name?: string;
   entry: string;
   port?: number;
   format: CfScriptFormat;
-  accountId: void | string;
+  accountId: undefined | string;
   initialMode: "local" | "remote";
-  jsxFactory: void | string;
-  jsxFragment: void | string;
+  jsxFactory: undefined | string;
+  jsxFragment: undefined | string;
   bindings: CfWorkerInit["bindings"];
-  public: void | string;
-  site: void | string;
-  compatibilityDate: void | string;
-  compatibilityFlags: void | string[];
-  usageModel: void | "bundled" | "unbound";
+  public: undefined | string;
+  site: undefined | string;
+  compatibilityDate: undefined | string;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
   buildCommand: {
     command?: undefined | string;
     cwd?: undefined | string;
@@ -57,7 +58,7 @@ function Dev(props: DevProps): JSX.Element {
       "You cannot use the service worker format with a `public` directory."
     );
   }
-  const port = props.port || 8787;
+  const port = props.port ?? 8787;
   const apiToken = getAPIToken();
   const directory = useTmpDir();
 
@@ -79,9 +80,6 @@ function Dev(props: DevProps): JSX.Element {
     );
   }
 
-  // @ts-expect-error whack
-  useDevtoolsRefresh(bundle?.id ?? 0);
-
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
@@ -102,7 +100,7 @@ function Dev(props: DevProps): JSX.Element {
           bindings={props.bindings}
           site={props.site}
           public={props.public}
-          port={props.port}
+          port={port}
         />
       ) : (
         <Remote
@@ -114,7 +112,7 @@ function Dev(props: DevProps): JSX.Element {
           bindings={props.bindings}
           site={props.site}
           public={props.public}
-          port={props.port}
+          port={port}
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
@@ -133,53 +131,23 @@ function Dev(props: DevProps): JSX.Element {
   );
 }
 
-function useDevtoolsRefresh(bundleId: number) {
-  // TODO: this is a hack while we figure out
-  // a better cleaner solution to get devtools to reconnect
-  // without having to do a full refresh
-  const ref = useRef();
-  // @ts-expect-error whack
-  ref.current = bundleId;
-
-  useEffect(() => {
-    const server = http.createServer((req, res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Request-Method", "*");
-      res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET");
-      res.setHeader("Access-Control-Allow-Headers", "*");
-      if (req.method === "OPTIONS") {
-        res.writeHead(200);
-        res.end();
-        return;
-      }
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ value: ref.current }));
-    });
-
-    server.listen(3142);
-    return () => {
-      server.close();
-    };
-  }, []);
-}
-
 function Remote(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
-  public: void | string;
-  site: void | string;
+  public: undefined | string;
+  site: undefined | string;
   port: number;
-  accountId: void | string;
-  apiToken: void | string;
+  accountId: undefined | string;
+  apiToken: undefined | string;
   bindings: CfWorkerInit["bindings"];
-  compatibilityDate: string | void;
-  compatibilityFlags: void | string[];
-  usageModel: void | "bundled" | "unbound";
+  compatibilityDate: string | undefined;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
-  const token = useWorker({
+  const previewToken = useWorker({
     name: props.name,
     bundle: props.bundle,
     format: props.format,
@@ -194,18 +162,26 @@ function Remote(props: {
     usageModel: props.usageModel,
   });
 
-  useProxy({ token, publicRoot: props.public, port: props.port });
+  usePreviewServer({
+    previewToken,
+    publicRoot: props.public,
+    port: props.port,
+  });
 
-  useInspector(token ? token.inspectorUrl.href : undefined);
+  useInspector({
+    inspectorUrl: previewToken ? previewToken.inspectorUrl.href : undefined,
+    port: 9229,
+    logToTerminal: true,
+  });
   return null;
 }
 function Local(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
-  public: void | string;
-  site: void | string;
+  public: undefined | string;
+  site: undefined | string;
   port: number;
 }) {
   const { inspectorUrl } = useLocalWorker({
@@ -215,13 +191,13 @@ function Local(props: {
     bindings: props.bindings,
     port: props.port,
   });
-  useInspector(inspectorUrl);
+  useInspector({ inspectorUrl, port: 9229, logToTerminal: false });
   return null;
 }
 
 function useLocalWorker(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
   port: number;
@@ -230,7 +206,7 @@ function useLocalWorker(props: {
   const { bundle, format, bindings, port } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
-  const [inspectorUrl, setInspectorUrl] = useState<string | void>();
+  const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
   useEffect(() => {
     async function startLocalWorker() {
       if (!bundle) return;
@@ -289,11 +265,11 @@ function useLocalWorker(props: {
         }
       });
 
-      local.current.stdout.on("data", (data: Buffer) => {
+      local.current.stdout?.on("data", (data: Buffer) => {
         console.log(`${data.toString()}`);
       });
 
-      local.current.stderr.on("data", (data: Buffer) => {
+      local.current.stderr?.on("data", (data: Buffer) => {
         console.error(`${data.toString()}`);
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
@@ -346,7 +322,7 @@ function useLocalWorker(props: {
   return { inspectorUrl };
 }
 
-function useTmpDir(): string | void {
+function useTmpDir(): string | undefined {
   const [directory, setDirectory] = useState<DirectoryResult>();
   const handleError = useErrorHandler();
   useEffect(() => {
@@ -384,10 +360,10 @@ function useCustomBuild(
     cwd?: undefined | string;
     watch_dir?: undefined | string;
   }
-): void | string {
-  const [entry, setEntry] = useState<string | void>(
+): undefined | string {
+  const [entry, setEntry] = useState<string | undefined>(
     // if there's no build command, just return the expected entry
-    props.command ? null : expectedEntry
+    props.command || expectedEntry
   );
   const { command, cwd, watch_dir } = props;
   useEffect(() => {
@@ -456,16 +432,16 @@ type EsbuildBundle = {
 };
 
 function useEsbuild(props: {
-  entry: void | string;
-  destination: string | void;
-  staticRoot: void | string;
-  jsxFactory: string | void;
-  jsxFragment: string | void;
-}): EsbuildBundle | void {
+  entry: undefined | string;
+  destination: string | undefined;
+  staticRoot: undefined | string;
+  jsxFactory: string | undefined;
+  jsxFragment: string | undefined;
+}): EsbuildBundle | undefined {
   const { entry, destination, staticRoot, jsxFactory, jsxFragment } = props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
-    let result: esbuild.BuildResult;
+    let result: esbuild.BuildResult | undefined;
     async function build() {
       if (!destination || !entry) return;
       const moduleCollector = makeModuleCollector();
@@ -491,25 +467,37 @@ function useEsbuild(props: {
             else {
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
-              setBundle((previousBundle) => ({
-                ...previousBundle,
-                id: previousBundle.id + 1,
-              }));
+              setBundle((previousBundle) => {
+                if (previousBundle === undefined) {
+                  assert.fail(
+                    "Rebuild triggered with no previous build available"
+                  );
+                }
+                return { ...previousBundle, id: previousBundle.id + 1 };
+              });
             }
           },
         },
       });
 
-      const chunks = Object.entries(result.metafile.outputs).find(
+      // result.metafile is defined because of the `metafile: true` option above.
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const metafile = result.metafile!;
+      const outputEntry = Object.entries(metafile.outputs).find(
         ([_path, { entryPoint }]) => entryPoint === entry
       ); // assumedly only one entry point
 
+      if (outputEntry === undefined) {
+        throw new Error(
+          `Cannot find entry-point "${entry}" in generated bundle.`
+        );
+      }
       setBundle({
         id: 0,
         entry,
-        path: chunks[0],
-        type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
-        exports: chunks[1].exports,
+        path: outputEntry[0],
+        type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
+        exports: outputEntry[1].exports,
         modules: moduleCollector.modules,
       });
     }
@@ -520,26 +508,26 @@ function useEsbuild(props: {
       // so this is a no-op error handler
     });
     return () => {
-      result?.stop();
+      result?.stop?.();
     };
   }, [entry, destination, staticRoot, jsxFactory, jsxFragment]);
   return bundle;
 }
 
 function useWorker(props: {
-  name: void | string;
-  bundle: EsbuildBundle | void;
+  name: undefined | string;
+  bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   modules: CfModule[];
   accountId: string;
   apiToken: string;
   bindings: CfWorkerInit["bindings"];
-  sitesFolder: void | string;
+  sitesFolder: undefined | string;
   port: number;
-  compatibilityDate: string | void;
-  compatibilityFlags: string[] | void;
-  usageModel: void | "bundled" | "unbound";
-}): CfPreviewToken | void {
+  compatibilityDate: string | undefined;
+  compatibilityFlags: string[] | undefined;
+  usageModel: undefined | "bundled" | "unbound";
+}): CfPreviewToken | undefined {
   const {
     name,
     bundle,
@@ -554,7 +542,7 @@ function useWorker(props: {
     usageModel,
     port,
   } = props;
-  const [token, setToken] = useState<CfPreviewToken>();
+  const [token, setToken] = useState<CfPreviewToken | undefined>();
 
   // This is the most reliable way to detect whether
   // something's "happened" in our system; We make a ref and
@@ -563,6 +551,8 @@ function useWorker(props: {
 
   useEffect(() => {
     async function start() {
+      setToken(undefined); // reset token in case we're re-running
+
       if (!bundle) return;
       if (format === "modules" && bundle.type === "commonjs") {
         console.error("⎔ Cannot use modules with a commonjs bundle.");
@@ -576,7 +566,6 @@ function useWorker(props: {
       }
 
       if (!startedRef.current) {
-        console.log("⎔ Starting server...");
         startedRef.current = true;
       } else {
         console.log("⎔ Detected changes, restarting server...");
@@ -654,85 +643,6 @@ function useWorker(props: {
   return token;
 }
 
-function useProxy({
-  token,
-  publicRoot,
-  port,
-}: {
-  token: CfPreviewToken | void;
-  publicRoot: void | string;
-  port: number;
-}) {
-  useEffect(() => {
-    if (!token) return;
-    // TODO(soon): since headers are added in callbacks, the server
-    // does not need to restart when changes are made.
-    const host = token.host;
-    const proxy = createHttpProxy({
-      host,
-      assetPath: typeof publicRoot === "string" ? publicRoot : null,
-      onRequest: (headers) => {
-        headers["cf-workers-preview-token"] = token.value;
-      },
-      onResponse: (headers) => {
-        for (const [name, value] of Object.entries(headers)) {
-          // Rewrite the remote host to the local host.
-          if (typeof value === "string" && value.includes(host)) {
-            headers[name] = value
-              .replaceAll(`https://${host}`, `http://localhost:${port}`)
-              .replaceAll(host, `localhost:${port}`);
-          }
-        }
-      },
-    });
-
-    console.log(`⬣ Listening at http://localhost:${port}`);
-
-    const server = proxy.listen(port);
-
-    // TODO(soon): refactor logging format into its own function
-    proxy.on("request", function (req, res) {
-      // log all requests
-      console.log(
-        new Date().toLocaleTimeString(),
-        req.method,
-        req.url,
-        res.statusCode
-      );
-    });
-    proxy.on("upgrade", (req) => {
-      console.log(
-        new Date().toLocaleTimeString(),
-        req.method,
-        req.url,
-        101,
-        "(WebSocket)"
-      );
-    });
-    proxy.on("error", (err) => {
-      console.error(new Date().toLocaleTimeString(), err);
-    });
-
-    return () => {
-      proxy.close();
-      server.close();
-    };
-  }, [token, publicRoot, port]);
-}
-
-function useInspector(inspectorUrl: string | void) {
-  useEffect(() => {
-    if (!inspectorUrl) return;
-
-    const inspector = new DtInspector(inspectorUrl);
-    const abortController = inspector.proxyTo(9229);
-    return () => {
-      inspector.close();
-      abortController.abort();
-    };
-  }, [inspectorUrl]);
-}
-
 function sleep(period: number) {
   return new Promise((resolve) => setTimeout(resolve, period));
 }
@@ -740,7 +650,7 @@ const SLEEP_DURATION = 2000;
 // really need a first class api for this
 const hostNameRegex = /userHostname="(.*)"/g;
 async function findTunnelHostname() {
-  let hostName: string;
+  let hostName: string | undefined;
   while (!hostName) {
     try {
       const resp = await fetch("http://localhost:8789/metrics");
@@ -866,7 +776,7 @@ function ErrorFallback(props: { error: Error }) {
   return (
     <>
       <Text>Something went wrong:</Text>
-      <Text>{props.error.message}</Text>
+      <Text>{props.error.stack}</Text>
     </>
   );
 }

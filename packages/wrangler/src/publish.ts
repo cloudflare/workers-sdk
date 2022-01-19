@@ -11,7 +11,7 @@ import type { Config } from "./config";
 import makeModuleCollector from "./module-collection";
 import { syncAssets } from "./sites";
 
-type CfScriptFormat = void | "modules" | "service-worker";
+type CfScriptFormat = undefined | "modules" | "service-worker";
 
 type Props = {
   config: Config;
@@ -19,13 +19,15 @@ type Props = {
   script?: string;
   name?: string;
   env?: string;
+  compatibilityDate?: string;
+  compatibilityFlags?: string[];
   public?: string;
   site?: string;
   triggers?: (string | number)[];
   routes?: (string | number)[];
   legacyEnv?: boolean;
-  jsxFactory: void | string;
-  jsxFragment: void | string;
+  jsxFactory: undefined | string;
+  jsxFragment: undefined | string;
 };
 
 function sleep(ms: number) {
@@ -47,6 +49,18 @@ export default async function publish(props: Props): Promise<void> {
     // @ts-expect-error hidden
     __path__,
   } = config;
+
+  const envRootObj =
+    props.env && config.env ? config.env[props.env] || {} : config;
+
+  assert(
+    envRootObj.compatibility_date || props.compatibilityDate,
+    "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+  );
+
+  if (accountId === undefined) {
+    throw new Error("No account_id provided.");
+  }
 
   const triggers = props.triggers || config.triggers?.crons;
   const routes = props.routes || config.routes;
@@ -120,18 +134,24 @@ export default async function publish(props: Props): Promise<void> {
     ...(jsxFragment && { jsxFragment }),
   });
 
-  const chunks = Object.entries(result.metafile.outputs).find(
-    ([_path, { entryPoint }]) =>
-      entryPoint ===
-      (props.public
-        ? path.join(path.dirname(file), "static-asset-facade.js")
-        : file)
+  // result.metafile is defined because of the `metafile: true` option above.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const metafile = result.metafile!;
+  const expectedEntryPoint = props.public
+    ? path.join(path.dirname(file), "static-asset-facade.js")
+    : file;
+  const outputEntry = Object.entries(metafile.outputs).find(
+    ([, { entryPoint }]) => entryPoint === expectedEntryPoint
   );
-
+  if (outputEntry === undefined) {
+    throw new Error(
+      `Cannot find entry-point "${expectedEntryPoint}" in generated bundle.`
+    );
+  }
   const { format } = props;
   const bundle = {
-    type: chunks[1].exports.length > 0 ? "esm" : "commonjs",
-    exports: chunks[1].exports,
+    type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
+    exports: outputEntry[1].exports,
   };
 
   // TODO: instead of bundling the facade with the worker, we should just bundle the worker and expose it as a module.
@@ -148,13 +168,13 @@ export default async function publish(props: Props): Promise<void> {
     return;
   }
 
-  const content = await readFile(chunks[0], { encoding: "utf-8" });
+  const content = await readFile(outputEntry[0], { encoding: "utf-8" });
   await destination.cleanup();
 
   // if config.migrations
   // get current migration tag
   let migrations;
-  if ("migrations" in config) {
+  if (config.migrations !== undefined) {
     const scripts = await fetchResult<{ id: string; migration_tag: string }[]>(
       `/accounts/${accountId}/workers/scripts`
     );
@@ -190,17 +210,11 @@ export default async function publish(props: Props): Promise<void> {
     }
   }
 
-  const assets =
-    props.public || props.site || props.config.site?.bucket // TODO: allow both
-      ? await syncAssets(
-          accountId,
-          scriptName,
-          props.public || props.site || props.config.site?.bucket,
-          false
-        )
-      : { manifest: undefined, namespace: undefined };
+  const assetPath = props.public || props.site || props.config.site?.bucket; // TODO: allow both
+  const assets = assetPath
+    ? await syncAssets(accountId, scriptName, assetPath, false)
+    : { manifest: undefined, namespace: undefined };
 
-  const envRootObj = props.env ? config.env[props.env] || {} : config;
   const bindings: CfWorkerInit["bindings"] = {
     kv_namespaces: envRootObj.kv_namespaces?.concat(
       assets.namespace
@@ -215,7 +229,7 @@ export default async function publish(props: Props): Promise<void> {
   const worker: CfWorkerInit = {
     name: scriptName,
     main: {
-      name: path.basename(chunks[0]),
+      name: path.basename(outputEntry[0]),
       content: content,
       type: bundle.type === "esm" ? "esm" : "commonjs",
     },

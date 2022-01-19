@@ -1,6 +1,6 @@
 {
   "name": "wrangler",
-  "version": "0.0.7",
+  "version": "0.0.10",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
   "bin": {
@@ -37,7 +37,7 @@
   ],
   "dependencies": {
     "esbuild": "0.14.1",
-    "miniflare": "2.0.0",
+    "miniflare": "2.2.0",
     "path-to-regexp": "^6.2.0",
     "semiver": "^1.1.0"
   },
@@ -59,6 +59,7 @@
     "chokidar": "^3.5.2",
     "clipboardy": "^3.0.0",
     "command-exists": "^1.2.9",
+    "devtools-protocol": "^0.0.955664",
     "execa": "^6.0.0",
     "faye-websocket": "^0.11.4",
     "finalhandler": "^1.1.2",

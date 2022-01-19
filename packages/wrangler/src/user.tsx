@@ -206,7 +206,7 @@
   */
 
 import React from "react";
-import { render } from "ink";
+import { render, Text } from "ink";
 import Table from "ink-table";
 import SelectInput from "ink-select-input";
 import fetch from "node-fetch";
@@ -298,9 +298,9 @@ let initialised = false;
 
 // we do this because we have some async stuff
 // TODO: this should just happen in the top level
-// abd we should fiure out how to do top level await
+// and we should figure out how to do top level await
 export async function initialise(): Promise<void> {
-  // get refreshtoken/accesstoken from fs if exists
+  // get refreshToken/accessToken from fs if exists
   try {
     // if CF_API_TOKEN available, use that
     if (process.env.CF_API_TOKEN) {
@@ -350,7 +350,9 @@ export function getAPIToken(): string {
   }
 
   throwIfNotInitialised();
-  return LocalState.accessToken?.value;
+  // `throwIfNotInitialised()` ensures that the accessToken is guaranteed to be defined.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return LocalState.accessToken!.value;
 }
 
 interface AccessContext {
@@ -971,14 +973,14 @@ export async function getAccountId() {
     });
   } catch (err) {
     // probably offline
+    return;
   }
-  if (!response) return;
-  let accountId: string;
-  // @ts-expect-error need to type this response
-  const responseJSON: {
+
+  let accountId: string | undefined;
+  const responseJSON = (await response.json()) as {
     success: boolean;
     result: { id: string; account: { id: string; name: string } }[];
-  } = await response.json();
+  };
 
   if (responseJSON.success === true) {
     if (responseJSON.result.length === 1) {
@@ -1010,13 +1012,16 @@ export function ChooseAccount(props: {
   onSelect: (item) => void;
 }) {
   return (
-    <SelectInput
-      items={props.accounts.map((item) => ({
-        key: item.id,
-        label: item.name,
-        value: item,
-      }))}
-      onSelect={props.onSelect}
-    />
+    <>
+      <Text bold>Select an account from below:</Text>
+      <SelectInput
+        items={props.accounts.map((item) => ({
+          key: item.id,
+          label: item.name,
+          value: item,
+        }))}
+        onSelect={props.onSelect}
+      />
+    </>
   );
 }

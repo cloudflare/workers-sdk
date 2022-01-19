@@ -40,6 +40,10 @@ export async function fetchInternal<ResponseType>(
   }
 }
 
+function cloneHeaders(headers: HeadersInit): HeadersInit {
+  return { ...headers };
+}
+
 async function requireLoggedIn(): Promise<void> {
   const loggedIn = await loginOrRefreshIfRequired();
   if (!loggedIn) {
@@ -53,10 +57,6 @@ function requireApiToken(): string {
     throw new Error("No API token found.");
   }
   return apiToken;
-}
-
-function cloneHeaders(headers: HeadersInit): HeadersInit {
-  return { ...headers };
 }
 
 function addAuthorizationHeader(headers: HeadersInit, apiToken: string): void {

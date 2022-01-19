@@ -938,9 +938,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           console.log(`Serving at http://localhost:${port}/`);
 
           if (process.env.BROWSER !== "none") {
-            try {
-              await open(`http://localhost:${port}/`);
-            } catch {}
+            const childProcess = await open(`http://localhost:${port}/`);
+            // fail silently if the open command doesn't work (e.g. in GitHub Codespaces)
+            childProcess.on("error", (_err) => {});
           }
 
           if (directory !== undefined && liveReload) {

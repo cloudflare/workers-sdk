@@ -25,15 +25,19 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "ioredis": "^4.28.2",
     "jest": "^27.4.2",
+    "npm-run-all": "^4.1.5",
     "prettier": "^2.5.1",
     "typescript": "^4.5.2"
   },
   "scripts": {
-    "lint": "eslint packages/**",
-    "check": "prettier packages/** --check && tsc && npm run lint && npm run build && npm run test",
-    "prettify": "prettier packages/** --write",
+    "check": "run-p check:* --aggregate-output -l",
+    "check:type": "tsc -p tsconfig.json",
+    "check:lint": "eslint packages/** --cache --cache-strategy content",
+    "check:format": "prettier packages/** --check",
+    "build-and-test": "run-p build test --aggregate-output -l",
     "build": "npm run build --workspace=wrangler",
-    "test": "npm run test --workspace=wrangler"
+    "test": "npm run test --workspaces --if-present",
+    "prettify": "prettier packages/** --write"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -41,7 +45,8 @@
   "eslintConfig": {
     "root": true,
     "ignorePatterns": [
-      "packages/wrangler/vendor"
+      "packages/*/vendor",
+      "packages/*/*-dist"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {

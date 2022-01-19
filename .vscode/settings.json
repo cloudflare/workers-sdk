@@ -2,14 +2,28 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "cSpell.words": [
     "cfetch",
+    "clipboardy",
+    "cloudflared",
     "esbuild",
+    "eslintcache",
     "estree",
     "execa",
     "iarna",
     "keyvalue",
     "middlewares",
     "Miniflare",
+    "outdir",
     "outfile",
-    "Positionals"
-  ]
+    "pgrep",
+    "PKCE",
+    "Positionals",
+    "tsbuildinfo",
+    "undici",
+    "wasmvalue",
+    "weakmap",
+    "weakset",
+    "webassemblymemory",
+    "websockets"
+  ],
+  "cSpell.ignoreWords": ["yxxx"]
 }

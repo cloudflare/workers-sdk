@@ -435,6 +435,20 @@ export async function main(argv: string[]): Promise<void> {
           type: "string",
           // TODO: get choices for the toml file?
         })
+        .option("compatibility-date", {
+          describe: "Date to use for compatibility checks",
+          type: "string",
+        })
+        .option("compatibility-flags", {
+          describe: "Flags to use for compatibility checks",
+          type: "array",
+          alias: "compatibility-flag",
+        })
+        .option("latest", {
+          describe: "Use the latest version of the worker runtime",
+          type: "boolean",
+          default: true,
+        })
         .option("ip", {
           describe: "IP address to listen on",
           type: "string",
@@ -520,7 +534,7 @@ export async function main(argv: string[]): Promise<void> {
       if ("durable_objects" in envRootObj) {
         if (!(args.name || config.name)) {
           console.warn(
-            'A worker with durable objects need to be named, or it may not work as expected. Add a "name" into wrangler.toml, or pass it in the command line with --name.'
+            'A worker with durable objects needs to be named, or it may not work as expected. Add a "name" into wrangler.toml, or pass it in the command line with --name.'
           );
         }
         // TODO: if not already published, publish a draft worker
@@ -539,8 +553,15 @@ export async function main(argv: string[]): Promise<void> {
           site={args.site || config.site?.bucket}
           port={args.port || config.dev?.port}
           public={args["experimental-public"]}
-          compatibilityDate={config.compatibility_date}
-          compatibilityFlags={config.compatibility_flags}
+          compatibilityDate={
+            args["compatibility-date"] ||
+            config.compatibility_date ||
+            new Date().toISOString().substring(0, 10)
+          }
+          compatibilityFlags={
+            (args["compatibility-flags"] as string[]) ||
+            config.compatibility_flags
+          }
           usageModel={config.usage_model}
           bindings={{
             kv_namespaces: envRootObj.kv_namespaces?.map(
@@ -591,6 +612,20 @@ export async function main(argv: string[]): Promise<void> {
         .option("name", {
           describe: "name to use when uploading",
           type: "string",
+        })
+        .option("compatibility-date", {
+          describe: "Date to use for compatibility checks",
+          type: "string",
+        })
+        .option("compatibility-flags", {
+          describe: "Flags to use for compatibility checks",
+          type: "array",
+          alias: "compatibility-flag",
+        })
+        .option("latest", {
+          describe: "Use the latest version of the worker runtime",
+          type: "boolean",
+          default: false,
         })
         .option("experimental-public", {
           describe: "Static assets to be served",
@@ -645,6 +680,12 @@ export async function main(argv: string[]): Promise<void> {
 
       const config = args.config as Config;
 
+      if (args.latest) {
+        console.warn(
+          "⚠️  Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+        );
+      }
+
       // -- snip, extract --
       if (!args.local) {
         const loggedIn = await loginOrRefreshIfRequired();
@@ -668,6 +709,10 @@ export async function main(argv: string[]): Promise<void> {
         name: args.name,
         script: args.script,
         env: args.env,
+        compatibilityDate: args.latest
+          ? new Date().toISOString().substring(0, 10)
+          : args["compatibility-date"],
+        compatibilityFlags: args["compatibility-flags"] as string[],
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
@@ -1810,11 +1855,11 @@ export async function main(argv: string[]): Promise<void> {
         )
         .command(
           "delete <filename>",
-          "Upload multiple key-value pairs to a namespace",
+          "Delete multiple key-value pairs from a namespace",
           (yargs) => {
             return yargs
               .positional("filename", {
-                describe: `The JSON file of key-value pairs to upload, in form ["key1", "key2", ...]`,
+                describe: `The JSON file of keys to delete, in the form ["key1", "key2", ...]`,
                 type: "string",
               })
               .option("binding", {

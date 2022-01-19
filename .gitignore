@@ -2,3 +2,5 @@
 node_modules/
 wrangler-dist/
 packages/wrangler/wrangler.toml
+tsconfig.tsbuildinfo
+.eslintcache

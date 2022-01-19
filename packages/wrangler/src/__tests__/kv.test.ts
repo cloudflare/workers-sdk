@@ -8,6 +8,11 @@ import {
 import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
 
+interface KVNamespaceInfo {
+  title: string;
+  id: string;
+}
+
 describe("wrangler", () => {
   runInTempDir();
 
@@ -196,30 +201,30 @@ describe("wrangler", () => {
       }
 
       it("should list namespaces", async () => {
-        const KVNamespaces = [
+        const kvNamespaces: KVNamespaceInfo[] = [
           { title: "title-1", id: "id-1" },
           { title: "title-2", id: "id-2" },
         ];
-        mockListRequest(KVNamespaces);
+        mockListRequest(kvNamespaces);
         const { error, stdout, stderr } = await runWrangler(
           "kv:namespace list"
         );
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         const namespaces = JSON.parse(stdout);
-        expect(namespaces).toEqual(KVNamespaces);
+        expect(namespaces).toEqual(kvNamespaces);
       });
 
       it("should make multiple requests for paginated results", async () => {
         // Create a lot of mock namespaces, so that the fetch requests will be paginated
-        const KVNamespaces = [];
+        const kvNamespaces: KVNamespaceInfo[] = [];
         for (let i = 0; i < 550; i++) {
-          KVNamespaces.push({ title: "title-" + i, id: "id-" + i });
+          kvNamespaces.push({ title: "title-" + i, id: "id-" + i });
         }
-        const requests = mockListRequest(KVNamespaces);
+        const requests = mockListRequest(kvNamespaces);
         const { stdout } = await runWrangler("kv:namespace list");
         const namespaces = JSON.parse(stdout);
-        expect(namespaces).toEqual(KVNamespaces);
+        expect(namespaces).toEqual(kvNamespaces);
         expect(requests.count).toEqual(6);
       });
     });
@@ -335,8 +340,16 @@ describe("wrangler", () => {
             expect(namespaceId).toEqual(expectedNamespaceId);
             expect(key).toEqual(expectedKey);
             expect(body).toEqual(expectedValue);
-            expect(query.get("expiration")).toEqual(`${expiration}`);
-            expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            if (expiration !== undefined) {
+              expect(query.get("expiration")).toEqual(`${expiration}`);
+            } else {
+              expect(query.has("expiration")).toBe(false);
+            }
+            if (expirationTtl) {
+              expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            } else {
+              expect(query.has("expiration_ttl")).toBe(false);
+            }
             return null;
           }
         );
@@ -681,7 +694,7 @@ describe("wrangler", () => {
             if (expectedKeys.length <= keysPerRequest) {
               return createFetchResult(expectedKeys);
             } else {
-              const start = parseInt(query.get("cursor")) || 0;
+              const start = parseInt(query.get("cursor") ?? "0") || 0;
               const end = start + keysPerRequest;
               const cursor = end < expectedKeys.length ? end : undefined;
               return createFetchResult(
@@ -778,7 +791,7 @@ describe("wrangler", () => {
 
       it("should make multiple requests for paginated results", async () => {
         // Create a lot of mock keys, so that the fetch requests will be paginated
-        const keys = [];
+        const keys: string[] = [];
         for (let i = 0; i < 550; i++) {
           keys.push("key-" + i);
         }
