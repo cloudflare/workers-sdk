@@ -687,20 +687,26 @@ describe("wrangler", () => {
         keysPerRequest = 1000
       ) {
         const requests = { count: 0 };
+        // See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
+        const expectedKeyObjects = expectedKeys.map((name) => ({
+          name,
+          expiration: 123456789,
+          metadata: {},
+        }));
         setMockRawResponse(
           "/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
           ([_url, accountId, namespaceId], _init, query) => {
             requests.count++;
             expect(accountId).toEqual("some-account-id");
             expect(namespaceId).toEqual(expectedNamespaceId);
-            if (expectedKeys.length <= keysPerRequest) {
-              return createFetchResult(expectedKeys);
+            if (expectedKeyObjects.length <= keysPerRequest) {
+              return createFetchResult(expectedKeyObjects);
             } else {
               const start = parseInt(query.get("cursor") ?? "0") || 0;
               const end = start + keysPerRequest;
-              const cursor = end < expectedKeys.length ? end : undefined;
+              const cursor = end < expectedKeyObjects.length ? end : undefined;
               return createFetchResult(
-                expectedKeys.slice(start, end),
+                expectedKeyObjects.slice(start, end),
                 true,
                 [],
                 [],
@@ -721,9 +727,23 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         expect(stdout).toMatchInlineSnapshot(`
-          "key-1
-          key-2
-          key-3"
+          "[
+            {
+              \\"name\\": \\"key-1\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-2\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-3\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            }
+          ]"
         `);
       });
 
@@ -737,9 +757,23 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         expect(stdout).toMatchInlineSnapshot(`
-          "key-1
-          key-2
-          key-3"
+          "[
+            {
+              \\"name\\": \\"key-1\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-2\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-3\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            }
+          ]"
         `);
       });
 
@@ -753,9 +787,23 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         expect(stdout).toMatchInlineSnapshot(`
-          "key-1
-          key-2
-          key-3"
+          "[
+            {
+              \\"name\\": \\"key-1\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-2\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-3\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            }
+          ]"
         `);
       });
 
@@ -769,9 +817,23 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         expect(stdout).toMatchInlineSnapshot(`
-          "key-1
-          key-2
-          key-3"
+          "[
+            {
+              \\"name\\": \\"key-1\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-2\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-3\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            }
+          ]"
         `);
       });
 
@@ -785,9 +847,23 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
         expect(stdout).toMatchInlineSnapshot(`
-          "key-1
-          key-2
-          key-3"
+          "[
+            {
+              \\"name\\": \\"key-1\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-2\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            },
+            {
+              \\"name\\": \\"key-3\\",
+              \\"expiration\\": 123456789,
+              \\"metadata\\": {}
+            }
+          ]"
         `);
       });
 
@@ -804,7 +880,7 @@ describe("wrangler", () => {
         );
         expect(error).toMatchInlineSnapshot(`undefined`);
         expect(stderr).toMatchInlineSnapshot(`""`);
-        expect(stdout).toEqual(keys.join("\n"));
+        expect(JSON.parse(stdout).map((k) => k.name)).toEqual(keys);
         expect(requests.count).toEqual(6);
       });
 
