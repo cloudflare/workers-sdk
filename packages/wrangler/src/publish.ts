@@ -222,9 +222,7 @@ export default async function publish(props: Props): Promise<void> {
   }
 
   const assetPath = props.public || props.site || props.config.site?.bucket; // TODO: allow both
-  const assets = assetPath
-    ? await syncAssets(accountId, scriptName, assetPath, false)
-    : { manifest: undefined, namespace: undefined };
+  const assets = await syncAssets(accountId, scriptName, assetPath, false);
 
   const bindings: CfWorkerInit["bindings"] = {
     kv_namespaces: envRootObj.kv_namespaces?.concat(

@@ -70,13 +70,32 @@ async function createKVNamespaceIfNotAlreadyExisting(
   };
 }
 
+/**
+ * Upload the assets found within the `dirPath` directory to the sites assets KV namespace for
+ * the worker given by `scriptName`.
+ *
+ * @param accountId the account to upload to.
+ * @param scriptName the name of the worker whose assets we are uploading.
+ * @param dirPath the path to the directory of assets to upload, or undefined if there are no assets to upload.
+ * @param preview if true then upload to a "preview" KV namespace.
+ * @param _env (not implemented).
+ * @returns a promise for an object mapping the relative paths of the assets to the key of that
+ * asset in the KV namespace.
+ */
 export async function syncAssets(
   accountId: string,
   scriptName: string,
-  dirPath: string,
+  dirPath: string | undefined,
   preview: boolean,
   _env?: string
-) {
+): Promise<{
+  manifest: { [filePath: string]: string } | undefined;
+  namespace: string | undefined;
+}> {
+  if (dirPath === undefined) {
+    return { manifest: undefined, namespace: undefined };
+  }
+
   const title = `__${scriptName}_sites_assets${preview ? "_preview" : ""}`;
   const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
     title,

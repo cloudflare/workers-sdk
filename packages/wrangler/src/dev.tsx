@@ -571,18 +571,13 @@ function useWorker(props: {
         console.log("⎔ Detected changes, restarting server...");
       }
 
-      const assets = sitesFolder
-        ? await syncAssets(
-            accountId,
-            path.basename(bundle.path),
-            sitesFolder,
-            true,
-            undefined // TODO: env
-          )
-        : {
-            manifest: undefined,
-            namespace: undefined,
-          }; // TODO: cancellable?
+      const assets = await syncAssets(
+        accountId,
+        path.basename(bundle.path),
+        sitesFolder,
+        true,
+        undefined // TODO: env
+      ); // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");
       const init: CfWorkerInit = {
