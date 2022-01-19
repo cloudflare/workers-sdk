@@ -1551,9 +1551,12 @@ export async function main(argv: string[]): Promise<void> {
               }
               // -- snip, end --
 
-              console.log(
-                await listNamespaceKeys(config.account_id, namespaceId, prefix)
+              const results = await listNamespaceKeys(
+                config.account_id,
+                namespaceId,
+                prefix
               );
+              console.log(JSON.stringify(results, undefined, 2));
             }
           }
         )
