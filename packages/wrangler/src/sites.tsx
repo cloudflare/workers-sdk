@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import { createReadStream } from "node:fs";
 import * as path from "node:path";
 import { readdir, readFile } from "node:fs/promises";
+import ignore from "ignore";
 import { fetchResult } from "./cfetch";
+import type { Config } from "./config";
 import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
@@ -26,15 +28,15 @@ async function hashFileContent(filePath: string): Promise<string> {
   });
 }
 
-async function hashFile(filePath: string): Promise<{
-  filePath: string;
+async function hashAsset(filePath: string): Promise<{
+  assetKey: string;
   hash: string;
 }> {
   const extName = path.extname(filePath);
   const baseName = path.basename(filePath, extName);
   const hash = await hashFileContent(filePath);
   return {
-    filePath: `${baseName}.${hash}${extName || ""}`,
+    assetKey: `${baseName}.${hash}${extName || ""}`,
     hash,
   };
 }
@@ -76,7 +78,7 @@ async function createKVNamespaceIfNotAlreadyExisting(
  *
  * @param accountId the account to upload to.
  * @param scriptName the name of the worker whose assets we are uploading.
- * @param dirPath the path to the directory of assets to upload, or undefined if there are no assets to upload.
+ * @param siteAssets an objects describing what assets to upload, or undefined if there are no assets to upload.
  * @param preview if true then upload to a "preview" KV namespace.
  * @param _env (not implemented).
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
@@ -85,14 +87,14 @@ async function createKVNamespaceIfNotAlreadyExisting(
 export async function syncAssets(
   accountId: string,
   scriptName: string,
-  dirPath: string | undefined,
+  siteAssets: AssetPaths | undefined,
   preview: boolean,
   _env?: string
 ): Promise<{
   manifest: { [filePath: string]: string } | undefined;
   namespace: string | undefined;
 }> {
-  if (dirPath === undefined) {
+  if (siteAssets === undefined) {
     return { manifest: undefined, namespace: undefined };
   }
 
@@ -103,9 +105,8 @@ export async function syncAssets(
   );
 
   // let's get all the keys in this namespace
-  const keys = new Set(
-    (await listNamespaceKeys(accountId, namespace)).map((x) => x.name)
-  );
+  const result = await listNamespaceKeys(accountId, namespace);
+  const keys = new Set(result.map((x) => x.name));
 
   const manifest = {};
   const upload: {
@@ -113,25 +114,79 @@ export async function syncAssets(
     value: string;
     base64: boolean;
   }[] = [];
+
+  const include = createPatternMatcher(siteAssets.includePatterns, false);
+  const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
+
   // TODO: this can be more efficient by parallelising
-  for await (const file of getFilesInFolder(dirPath)) {
-    // TODO: "exclude:" config
-    const { filePath } = await hashFile(file);
+  for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
+    const relativePath = path.relative(siteAssets.baseDirectory, file);
+    if (!include(relativePath)) {
+      continue;
+    }
+    if (exclude(relativePath)) {
+      continue;
+    }
+    const { assetKey } = await hashAsset(file);
     // now put each of the files into kv
-    if (!keys.has(filePath)) {
+    if (!keys.has(assetKey)) {
       console.log(`uploading ${file}...`);
       const content = await readFile(file, "base64");
       if (content.length > 25 * 1024 * 1024) {
         throw new Error(`File ${file} is too big, it should be under 25 mb.`);
       }
       upload.push({
-        key: filePath,
+        key: assetKey,
         value: content,
         base64: true,
       });
     }
-    manifest[path.relative(dirPath, file)] = filePath;
+    manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }
   await putBulkKeyValue(accountId, namespace, JSON.stringify(upload));
   return { manifest, namespace };
+}
+
+function createPatternMatcher(
+  patterns: string[],
+  exclude: boolean
+): (filePath: string) => boolean {
+  if (patterns.length === 0) {
+    return (_filePath) => !exclude;
+  } else {
+    const ignorer = ignore().add(patterns);
+    return (filePath) => ignorer.test(filePath).ignored;
+  }
+}
+
+/**
+ * Information about the assets that should be uploaded
+ */
+export interface AssetPaths {
+  baseDirectory: string;
+  includePatterns: string[];
+  excludePatterns: string[];
+}
+
+/**
+ * Get an object that describes what assets to upload, if any.
+ *
+ * Uses the args (passed from the command line) if available,
+ * falling back to those defined in the config.
+ *
+ * // TODO: Support for environments
+ */
+export function getAssetPaths(
+  config: Config,
+  baseDirectory = config.site?.bucket,
+  includePatterns = config.site?.include ?? [],
+  excludePatterns = config.site?.exclude ?? []
+): undefined | AssetPaths {
+  return baseDirectory
+    ? {
+        baseDirectory,
+        includePatterns,
+        excludePatterns,
+      }
+    : undefined;
 }

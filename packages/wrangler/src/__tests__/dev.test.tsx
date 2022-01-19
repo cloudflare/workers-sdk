@@ -39,7 +39,7 @@ function renderDev({
   jsxFragment,
   bindings = {},
   public: publicDir,
-  site,
+  assetPaths,
   compatibilityDate,
   compatibilityFlags,
   usageModel,
@@ -56,7 +56,7 @@ function renderDev({
       jsxFactory={jsxFactory}
       jsxFragment={jsxFragment}
       accountId={accountId}
-      site={site}
+      assetPaths={assetPaths}
       public={publicDir}
       compatibilityDate={compatibilityDate}
       compatibilityFlags={compatibilityFlags}
