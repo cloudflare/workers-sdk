@@ -38,13 +38,15 @@ export async function mockFetchInternal(
     const resourcePath = new URL(resource, CF_API_BASE_URL).pathname;
     const uri = regexp.exec(resourcePath);
     // Do the resource path and (if specified) the HTTP method match?
-    if (uri !== null && (!method || method === init.method)) {
+    if (uri !== null && (!method || method === (init.method ?? "GET"))) {
       // The `resource` regular expression will extract the labelled groups from the URL.
       // These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
       return handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
     }
   }
-  throw new Error(`no mocks found for ${init.method}: ${resource}`);
+  throw new Error(
+    `no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
+  );
 }
 
 /**
