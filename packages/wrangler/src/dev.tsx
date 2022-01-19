@@ -25,6 +25,7 @@ import type { CfWorkerInit } from "./api/worker";
 import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
 import { usePreviewServer } from "./proxy";
+import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
 
@@ -41,7 +42,7 @@ export type DevProps = {
   jsxFragment: undefined | string;
   bindings: CfWorkerInit["bindings"];
   public: undefined | string;
-  site: undefined | string;
+  assetPaths: undefined | AssetPaths;
   compatibilityDate: undefined | string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
@@ -98,7 +99,7 @@ function Dev(props: DevProps): JSX.Element {
           bundle={bundle}
           format={props.format}
           bindings={props.bindings}
-          site={props.site}
+          site={props.assetPaths}
           public={props.public}
           port={port}
         />
@@ -110,7 +111,7 @@ function Dev(props: DevProps): JSX.Element {
           accountId={props.accountId}
           apiToken={apiToken}
           bindings={props.bindings}
-          site={props.site}
+          assetPaths={props.assetPaths}
           public={props.public}
           port={port}
           compatibilityDate={props.compatibilityDate}
@@ -136,7 +137,7 @@ function Remote(props: {
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   public: undefined | string;
-  site: undefined | string;
+  assetPaths: undefined | AssetPaths;
   port: number;
   accountId: undefined | string;
   apiToken: undefined | string;
@@ -155,7 +156,7 @@ function Remote(props: {
     accountId: props.accountId,
     apiToken: props.apiToken,
     bindings: props.bindings,
-    sitesFolder: props.site,
+    assetPaths: props.assetPaths,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
     compatibilityFlags: props.compatibilityFlags,
@@ -181,7 +182,7 @@ function Local(props: {
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
   public: undefined | string;
-  site: undefined | string;
+  site: undefined | AssetPaths;
   port: number;
 }) {
   const { inspectorUrl } = useLocalWorker({
@@ -522,7 +523,7 @@ function useWorker(props: {
   accountId: string;
   apiToken: string;
   bindings: CfWorkerInit["bindings"];
-  sitesFolder: undefined | string;
+  assetPaths: undefined | AssetPaths;
   port: number;
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
@@ -536,7 +537,7 @@ function useWorker(props: {
     accountId,
     apiToken,
     bindings,
-    sitesFolder,
+    assetPaths,
     compatibilityDate,
     compatibilityFlags,
     usageModel,
@@ -574,9 +575,8 @@ function useWorker(props: {
       const assets = await syncAssets(
         accountId,
         path.basename(bundle.path),
-        sitesFolder,
-        true,
-        undefined // TODO: env
+        assetPaths,
+        true
       ); // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");
@@ -628,7 +628,7 @@ function useWorker(props: {
     accountId,
     apiToken,
     port,
-    sitesFolder,
+    assetPaths,
     compatibilityDate,
     compatibilityFlags,
     usageModel,

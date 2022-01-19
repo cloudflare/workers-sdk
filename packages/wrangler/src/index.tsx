@@ -8,6 +8,7 @@ import { findUp } from "find-up";
 import TOML from "@iarna/toml";
 import { normaliseAndValidateEnvironmentsConfig } from "./config";
 import type { Config } from "./config";
+import { getAssetPaths } from "./sites";
 import { confirm, prompt } from "./dialogs";
 import { version as wranglerVersion } from "../package.json";
 import {
@@ -444,6 +445,18 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
         })
+        .option("site-include", {
+          describe:
+            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
+          type: "string",
+          array: true,
+        })
+        .option("site-exclude", {
+          describe:
+            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
+          type: "string",
+          array: true,
+        })
         .option("upstream-protocol", {
           default: "https",
           describe:
@@ -517,7 +530,12 @@ export async function main(argv: string[]): Promise<void> {
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
           accountId={config.account_id}
-          site={args.site || config.site?.bucket}
+          assetPaths={getAssetPaths(
+            config,
+            args.site,
+            args.siteInclude,
+            args.siteExclude
+          )}
           port={args.port || config.dev?.port}
           public={args["experimental-public"]}
           compatibilityDate={
@@ -602,6 +620,18 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
         })
+        .option("site-include", {
+          describe:
+            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
+          type: "string",
+          array: true,
+        })
+        .option("site-exclude", {
+          describe:
+            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
+          type: "string",
+          array: true,
+        })
         .option("triggers", {
           describe: "cron schedules to attach",
           alias: ["schedule", "schedules"],
@@ -671,6 +701,12 @@ export async function main(argv: string[]): Promise<void> {
         // -- snip, end --
       }
 
+      const assetPaths = getAssetPaths(
+        config,
+        args["experimental-public"] || args.site,
+        args.siteInclude,
+        args.siteExclude
+      );
       await publish({
         config: args.config as Config,
         name: args.name,
@@ -684,8 +720,10 @@ export async function main(argv: string[]): Promise<void> {
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
         routes: args.routes,
-        public: args["experimental-public"],
-        site: args.site,
+        assetPaths,
+        format: undefined, // TODO: add args for this
+        legacyEnv: undefined, // TODO: get this from somewhere... config?
+        experimentalPublic: args["experimental-public"] !== undefined,
       });
     }
   );

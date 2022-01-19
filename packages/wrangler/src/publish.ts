@@ -10,25 +10,26 @@ import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
 import makeModuleCollector from "./module-collection";
+import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
 
 type CfScriptFormat = undefined | "modules" | "service-worker";
 
 type Props = {
   config: Config;
-  format?: CfScriptFormat;
-  script?: string;
-  name?: string;
-  env?: string;
-  compatibilityDate?: string;
-  compatibilityFlags?: string[];
-  public?: string;
-  site?: string;
-  triggers?: (string | number)[];
-  routes?: (string | number)[];
-  legacyEnv?: boolean;
+  format: CfScriptFormat | undefined;
+  script: string | undefined;
+  name: string | undefined;
+  env: string | undefined;
+  compatibilityDate: string | undefined;
+  compatibilityFlags: string[] | undefined;
+  assetPaths: AssetPaths | undefined;
+  triggers: (string | number)[] | undefined;
+  routes: (string | number)[] | undefined;
+  legacyEnv: boolean | undefined;
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  experimentalPublic: boolean;
 };
 
 function sleep(ms: number) {
@@ -36,10 +37,10 @@ function sleep(ms: number) {
 }
 
 export default async function publish(props: Props): Promise<void> {
-  if (props.public && props.format === "service-worker") {
+  if (props.experimentalPublic && props.format === "service-worker") {
     // TODO: check config too
     throw new Error(
-      "You cannot use the service worker format with a public directory."
+      "You cannot publish in the service worker format with a public directory."
     );
   }
   // TODO: warn if git/hg has uncommitted changes
@@ -106,7 +107,7 @@ export default async function publish(props: Props): Promise<void> {
 
   const moduleCollector = makeModuleCollector();
   const result = await esbuild.build({
-    ...(props.public
+    ...(props.experimentalPublic
       ? {
           stdin: {
             contents: (
@@ -118,10 +119,10 @@ export default async function publish(props: Props): Promise<void> {
             sourcefile: "static-asset-facade.js",
             resolveDir: path.dirname(file),
           },
+          nodePaths: [path.join(__dirname, "../vendor")],
         }
       : { entryPoints: [file] }),
     bundle: true,
-    nodePaths: props.public ? [path.join(__dirname, "../vendor")] : undefined,
     outdir: destination.path,
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
@@ -221,8 +222,12 @@ export default async function publish(props: Props): Promise<void> {
     }
   }
 
-  const assetPath = props.public || props.site || props.config.site?.bucket; // TODO: allow both
-  const assets = await syncAssets(accountId, scriptName, assetPath, false);
+  const assets = await syncAssets(
+    accountId,
+    scriptName,
+    props.assetPaths,
+    false
+  );
 
   const bindings: CfWorkerInit["bindings"] = {
     kv_namespaces: envRootObj.kv_namespaces?.concat(
