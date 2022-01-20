@@ -39,7 +39,8 @@
     "esbuild": "0.14.1",
     "miniflare": "2.2.0",
     "path-to-regexp": "^6.2.0",
-    "semiver": "^1.1.0"
+    "semiver": "^1.1.0",
+    "xxhash-addon": "^1.4.0"
   },
   "optionalDependencies": {
     "fsevents": "~2.3.2"

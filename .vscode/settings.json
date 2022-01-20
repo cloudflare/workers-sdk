@@ -23,7 +23,8 @@
     "weakmap",
     "weakset",
     "webassemblymemory",
-    "websockets"
+    "websockets",
+    "xxhash"
   ],
   "cSpell.ignoreWords": ["yxxx"]
 }

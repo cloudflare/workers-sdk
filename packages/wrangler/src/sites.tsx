@@ -1,8 +1,7 @@
-import crypto from "node:crypto";
-import { createReadStream } from "node:fs";
 import * as path from "node:path";
 import { readdir, readFile, stat } from "node:fs/promises";
 import ignore from "ignore";
+import { XXHash64 } from "xxhash-addon";
 import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
 import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
@@ -10,6 +9,9 @@ import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
   for (const file of files) {
+    // TODO: always ignore `node_modules`
+    // TODO: ignore hidden files (starting with .) but not .well-known??
+    // TODO: follow symlinks??
     if (file.isDirectory()) {
       yield* await getFilesInFolder(path.join(dirPath, file.name));
     } else {
@@ -18,27 +20,32 @@ async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   }
 }
 
-async function hashFileContent(filePath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash("sha1");
-    const rs = createReadStream(filePath);
-    rs.on("error", reject);
-    rs.on("data", (chunk) => hash.update(chunk));
-    rs.on("end", () => resolve(hash.digest("hex")));
-  });
+/**
+ * Create a hash key for the given content using the xxhash algorithm.
+ *
+ * Note we only return the first 10 characters, since we will also include the file name in the asset manifest key
+ * the most important thing here is to detect changes of a single file to invalidate the cache and
+ * it's impossible to serve two different files with the same name
+ */
+function hashFileContent(content: string): string {
+  const hasher = new XXHash64();
+  hasher.update(Buffer.from(content));
+  const hash = hasher.digest();
+  return hash.toString("hex").substring(0, 10);
 }
 
-async function hashAsset(filePath: string): Promise<{
-  assetKey: string;
-  hash: string;
-}> {
-  const extName = path.extname(filePath);
+/**
+ * Create a hashed asset key for the given asset.
+ *
+ * The key will change if the file path or content of the asset changes.
+ * The algorithm used here matches that of Wrangler 1.
+ */
+function hashAsset(filePath: string, content: string): string {
+  const extName = path.extname(filePath) || "";
   const baseName = path.basename(filePath, extName);
-  const hash = await hashFileContent(filePath);
-  return {
-    assetKey: `${baseName}.${hash}${extName || ""}`,
-    hash,
-  };
+  const directory = path.dirname(filePath);
+  const hash = hashFileContent(content);
+  return urlSafe(path.join(directory, `${baseName}.${hash}${extName}`));
 }
 
 async function createKVNamespaceIfNotAlreadyExisting(
@@ -117,29 +124,32 @@ export async function syncAssets(
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
-
   // TODO: this can be more efficient by parallelising
   for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
-    const relativePath = path.relative(siteAssets.baseDirectory, file);
-    if (!include(relativePath)) {
+    if (!include(file)) {
       continue;
     }
-    if (exclude(relativePath)) {
+    if (exclude(file)) {
       continue;
     }
 
     await validateAssetSize(file);
+    console.log(`reading ${file}...`);
+    const content = await readFile(file, "base64");
 
-    const { assetKey } = await hashAsset(file);
+    const assetKey = hashAsset(file, content);
+    validateAssetKey(assetKey);
+
     // now put each of the files into kv
     if (!keys.has(assetKey)) {
-      console.log(`uploading ${file}...`);
-      const content = await readFile(file, "base64");
+      console.log(`uploading as ${assetKey}...`);
       upload.push({
         key: assetKey,
         value: content,
         base64: true,
       });
+    } else {
+      console.log(`skipping - already uploaded`);
     }
     manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }
@@ -166,6 +176,23 @@ async function validateAssetSize(filePath: string) {
       `File ${filePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
     );
   }
+}
+
+function validateAssetKey(assetKey: string) {
+  if (assetKey.length > 512) {
+    throw new Error(
+      `The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
+    );
+  }
+}
+
+/**
+ * Convert a filePath to be safe to use as a relative URL.
+ *
+ * Primarily this involves converting Windows backslashes to forward slashes.
+ */
+function urlSafe(filePath: string): string {
+  return filePath.replace(/\\/g, "/");
 }
 
 /**
