@@ -40,7 +40,7 @@
     "prettify": "prettier packages/** --write"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.7.0"
   },
   "eslintConfig": {
     "root": true,
