@@ -157,7 +157,9 @@ export async function generateConfigFromFileTree({
 export function compareRoutes(a: string, b: string) {
   function parseRoutePath(routePath: string): [string | null, string[]] {
     const parts = routePath.split(" ", 2);
-    const segmentedPath = parts.pop();
+    // split() will guarantee at least one element.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const segmentedPath = parts.pop()!;
     const method = parts.pop() ?? null;
 
     const segments = segmentedPath.slice(1).split("/").filter(Boolean);

@@ -40,7 +40,7 @@ export async function fetchInternal<ResponseType>(
   }
 }
 
-function cloneHeaders(headers: HeadersInit): HeadersInit {
+function cloneHeaders(headers: HeadersInit | undefined): HeadersInit {
   return { ...headers };
 }
 

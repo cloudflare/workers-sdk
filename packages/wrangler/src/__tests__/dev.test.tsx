@@ -15,7 +15,7 @@ describe("Dev component", () => {
       accountId: "some-account-id",
       public: "some/public/path",
     });
-    expect(lastFrame().split("\n").slice(0, 2).join("\n"))
+    expect(lastFrame()?.split("\n").slice(0, 2).join("\n"))
       .toMatchInlineSnapshot(`
       "Something went wrong:
       Error: You cannot use the service worker format with a \`public\` directory."
