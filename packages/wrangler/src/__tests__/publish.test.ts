@@ -62,16 +62,16 @@ describe("publish", () => {
   describe("asset upload", () => {
     it("should upload all the files in the directory specified by `config.site.bucket`", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets");
+      writeWranglerToml("./index.js", "assets");
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -80,8 +80,10 @@ describe("publish", () => {
       const { stdout, stderr, error } = await runWrangler("publish");
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-        "uploading assets/file-1.txt...
-        uploading assets/file-2.txt...
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
         Uploaded
         test-name
         (TIMINGS)
@@ -97,57 +99,58 @@ describe("publish", () => {
 
     it("should only upload files that are not already in the KV namespace", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets");
+      writeWranglerToml("./index.js", "assets");
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
       // Put file-1 in the KV namespace
-      mockKeyListRequest(kvNamespace.id, [
-        "file-1.c514defbb343fb04ad55183d8336ae0a5988616b.txt",
-      ]);
+      mockKeyListRequest(kvNamespace.id, ["assets/file-1.2ca234f380.txt"]);
       // Check we do not upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath !== "file-1.txt")
+        assets.filter((a) => a.filePath !== "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler("publish");
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-2.txt...
-              Uploaded
-              test-name
-              (TIMINGS)
-              Deployed
-              test-name
-              (TIMINGS)
-               
-              test-name.test-sub-domain.workers.dev"
-          `);
+        "reading assets/file-1.txt...
+        skipping - already uploaded
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
       expect(stderr).toMatchInlineSnapshot(`""`);
       expect(error).toMatchInlineSnapshot(`undefined`);
     });
 
     it("should only upload files that match the `site-include` arg", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets");
+      writeWranglerToml("./index.js", "assets");
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -155,14 +158,15 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler(
         "publish --site-include file-1.txt"
       );
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -178,16 +182,16 @@ describe("publish", () => {
 
     it("should not upload files that match the `site-exclude` arg", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets");
+      writeWranglerToml("./index.js", "assets");
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -195,14 +199,15 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler(
         "publish --site-exclude file-2.txt"
       );
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -218,16 +223,16 @@ describe("publish", () => {
 
     it("should only upload files that match the `site.include` config", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets", ["file-1.txt"]);
+      writeWranglerToml("./index.js", "assets", ["file-1.txt"]);
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -235,12 +240,13 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler("publish");
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -256,16 +262,16 @@ describe("publish", () => {
 
     it("should not upload files that match the `site.exclude` config", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets", undefined, ["file-2.txt"]);
+      writeWranglerToml("./index.js", "assets", undefined, ["file-2.txt"]);
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -273,12 +279,13 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler("publish");
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -294,16 +301,16 @@ describe("publish", () => {
 
     it("should use `site-include` arg over `site.include` config", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets", ["file-2.txt"]);
+      writeWranglerToml("./index.js", "assets", ["file-2.txt"]);
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -311,14 +318,15 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
       const { stdout, stderr, error } = await runWrangler(
         "publish --site-include file-1.txt"
       );
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -334,16 +342,18 @@ describe("publish", () => {
 
     it("should use `site-exclude` arg over `site.exclude` config", async () => {
       const assets = [
-        { filePath: "file-1.txt", content: "Content of file-1" },
-        { filePath: "file-2.txt", content: "Content of file-2" },
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets", undefined, ["file-1.txt"]);
+      writeWranglerToml("./index.js", "assets", undefined, [
+        "assets/file-1.txt",
+      ]);
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -351,14 +361,15 @@ describe("publish", () => {
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "file-1.txt")
+        assets.filter((a) => a.filePath.endsWith("assets/file-1.txt"))
       );
       const { stdout, stderr, error } = await runWrangler(
         "publish --site-exclude file-2.txt"
       );
 
       expect(stripTimings(stdout)).toMatchInlineSnapshot(`
-              "uploading assets/file-1.txt...
+              "reading assets/file-1.txt...
+              uploading as assets/file-1.2ca234f380.txt...
               Uploaded
               test-name
               (TIMINGS)
@@ -375,12 +386,12 @@ describe("publish", () => {
     it("should error if the asset is over 25Mb", async () => {
       const assets = [
         {
-          filePath: "large-file.txt",
+          filePath: "assets/large-file.txt",
           // This file is greater than 25MiB when base64 encoded but small enough to be uploaded.
           content: "X".repeat(25 * 1024 * 1024 * 0.8 + 1),
         },
         {
-          filePath: "too-large-file.txt",
+          filePath: "assets/too-large-file.txt",
           content: "X".repeat(25 * 1024 * 1024 + 1),
         },
       ];
@@ -388,9 +399,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "./assets", undefined, ["file-1.txt"]);
+      writeWranglerToml("./index.js", "assets", undefined, [
+        "assets/file-1.txt",
+      ]);
       writeEsmWorkerSource();
-      writeAssets("./assets", assets);
+      writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -398,9 +411,10 @@ describe("publish", () => {
 
       const { stdout, stderr, error } = await runWrangler("publish");
 
-      expect(stdout).toMatchInlineSnapshot(
-        `"uploading assets/large-file.txt..."`
-      );
+      expect(stdout).toMatchInlineSnapshot(`
+        "reading assets/large-file.txt...
+        uploading as assets/large-file.0ea0637a45.txt..."
+      `);
       expect(stderr).toMatchInlineSnapshot(`
         "File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
 
@@ -409,6 +423,39 @@ describe("publish", () => {
       `);
       expect(error).toMatchInlineSnapshot(
         `[Error: File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits]`
+      );
+    });
+
+    it("should error if the asset key is over 512 characters", async () => {
+      const longFilePathAsset = {
+        filePath: "assets/" + "folder/".repeat(100) + "file.txt",
+        content: "content of file",
+      };
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml("./index.js", "assets");
+      writeEsmWorkerSource();
+      writeAssets([longFilePathAsset]);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+
+      const { stdout, stderr, error } = await runWrangler("publish");
+
+      expect(stdout).toMatchInlineSnapshot(
+        `"reading assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt..."`
+      );
+      expect(stderr).toMatchInlineSnapshot(`
+        "The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(error).toMatchInlineSnapshot(
+        `[Error: The asset path key "assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",]`
       );
     });
   });
@@ -453,14 +500,10 @@ function writeEsmWorkerSource() {
 }
 
 /** Write mock assets to the file system so they can be uploaded. */
-function writeAssets(
-  assetDir: string,
-  assets: { filePath: string; content: string }[]
-) {
+function writeAssets(assets: { filePath: string; content: string }[]) {
   for (const asset of assets) {
-    const filePath = path.join(assetDir, asset.filePath);
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, asset.content);
+    fs.mkdirSync(path.dirname(asset.filePath), { recursive: true });
+    fs.writeFileSync(asset.filePath, asset.content);
   }
 }
 
