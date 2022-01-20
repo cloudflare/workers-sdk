@@ -649,9 +649,12 @@ describe("wrangler", () => {
           `kv:key put key value --binding otherBinding`
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
-        expect(stderr).toMatchInlineSnapshot(
-          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
-        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
+
+          [32m%s[0m
+          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
         expect(error).toMatchInlineSnapshot(
           `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
         );
@@ -668,9 +671,12 @@ describe("wrangler", () => {
           "kv:key put my-key my-value --binding someBinding"
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
-        expect(stderr).toMatchInlineSnapshot(
-          `"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
-        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.
+
+          [32m%s[0m
+          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
         expect(error).toMatchInlineSnapshot(
           `[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
         );
@@ -814,9 +820,12 @@ describe("wrangler", () => {
         expect(error).toMatchInlineSnapshot(
           `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
         );
-        expect(stderr).toMatchInlineSnapshot(
-          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
-        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
+
+          [32m%s[0m
+          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
         expect(stdout).toMatchInlineSnapshot(`""`);
       });
     });
@@ -1001,9 +1010,12 @@ describe("wrangler", () => {
           `kv:key get key --binding otherBinding`
         );
         expect(stdout).toMatchInlineSnapshot(`""`);
-        expect(stderr).toMatchInlineSnapshot(
-          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
-        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
+
+          [32m%s[0m
+          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
         expect(error).toMatchInlineSnapshot(
           `[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
         );
@@ -1061,9 +1073,12 @@ describe("wrangler", () => {
         const { stderr } = await runWrangler(
           `kv:key delete --binding otherBinding someKey`
         );
-        expect(stderr).toMatchInlineSnapshot(
-          `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
-        );
+        expect(stderr).toMatchInlineSnapshot(`
+          "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
+
+          [32m%s[0m
+          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
       });
 
       it("should delete a key in a namespace specified by binding name in a given environment", async () => {
