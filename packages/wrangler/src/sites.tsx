@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { createReadStream } from "node:fs";
 import * as path from "node:path";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import ignore from "ignore";
 import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
@@ -127,14 +127,14 @@ export async function syncAssets(
     if (exclude(relativePath)) {
       continue;
     }
+
+    await validateAssetSize(file);
+
     const { assetKey } = await hashAsset(file);
     // now put each of the files into kv
     if (!keys.has(assetKey)) {
       console.log(`uploading ${file}...`);
       const content = await readFile(file, "base64");
-      if (content.length > 25 * 1024 * 1024) {
-        throw new Error(`File ${file} is too big, it should be under 25 mb.`);
-      }
       upload.push({
         key: assetKey,
         value: content,
@@ -156,6 +156,15 @@ function createPatternMatcher(
   } else {
     const ignorer = ignore().add(patterns);
     return (filePath) => ignorer.test(filePath).ignored;
+  }
+}
+
+async function validateAssetSize(filePath: string) {
+  const { size } = await stat(filePath);
+  if (size > 25 * 1024 * 1024) {
+    throw new Error(
+      `File ${filePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+    );
   }
 }
 
