@@ -371,6 +371,36 @@ describe("publish", () => {
       expect(stderr).toMatchInlineSnapshot(`""`);
       expect(error).toMatchInlineSnapshot(`undefined`);
     });
+
+    it("should error if the asset is over 25Mb", async () => {
+      const veryLargeAsset = {
+        filePath: "large-file.txt",
+        content: "X".repeat(25 * 1024 * 1024 + 1),
+      };
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml("./index.js", "./assets", undefined, ["file-1.txt"]);
+      writeEsmWorkerSource();
+      writeAssets("./assets", [veryLargeAsset]);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+
+      const { stdout, stderr, error } = await runWrangler("publish");
+
+      expect(stdout).toMatchInlineSnapshot(
+        `"uploading assets/large-file.txt..."`
+      );
+      expect(stderr).toMatchInlineSnapshot(
+        `"File assets/large-file.txt is too big, it should be under 25 mb."`
+      );
+      expect(error).toMatchInlineSnapshot(
+        `[Error: File assets/large-file.txt is too big, it should be under 25 mb.]`
+      );
+    });
   });
 });
 
