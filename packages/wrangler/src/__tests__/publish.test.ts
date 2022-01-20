@@ -373,17 +373,24 @@ describe("publish", () => {
     });
 
     it("should error if the asset is over 25Mb", async () => {
-      const veryLargeAsset = {
-        filePath: "large-file.txt",
-        content: "X".repeat(25 * 1024 * 1024 + 1),
-      };
+      const assets = [
+        {
+          filePath: "large-file.txt",
+          // This file is greater than 25MiB when base64 encoded but small enough to be uploaded.
+          content: "X".repeat(25 * 1024 * 1024 * 0.8 + 1),
+        },
+        {
+          filePath: "too-large-file.txt",
+          content: "X".repeat(25 * 1024 * 1024 + 1),
+        },
+      ];
       const kvNamespace = {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml("./index.js", "./assets", undefined, ["file-1.txt"]);
       writeEsmWorkerSource();
-      writeAssets("./assets", [veryLargeAsset]);
+      writeAssets("./assets", assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
@@ -394,11 +401,14 @@ describe("publish", () => {
       expect(stdout).toMatchInlineSnapshot(
         `"uploading assets/large-file.txt..."`
       );
-      expect(stderr).toMatchInlineSnapshot(
-        `"File assets/large-file.txt is too big, it should be under 25 mb."`
-      );
+      expect(stderr).toMatchInlineSnapshot(`
+        "File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
       expect(error).toMatchInlineSnapshot(
-        `[Error: File assets/large-file.txt is too big, it should be under 25 mb.]`
+        `[Error: File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits]`
       );
     });
   });
