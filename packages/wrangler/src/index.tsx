@@ -44,6 +44,9 @@ import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
 import { execa } from "execa";
 
+const resetColor = "\x1b[0m";
+const fgGreenColor = "\x1b[32m";
+
 async function readConfig(configPath?: string): Promise<Config> {
   const config: Config = {};
   if (!configPath) {
@@ -1911,8 +1914,15 @@ export async function main(argv: string[]): Promise<void> {
     if (e instanceof CommandLineArgsError) {
       wrangler.showHelp("error");
       console.error(""); // Just adds a bit of space
+      console.error(e.message);
+    } else {
+      console.error(e.message);
+      console.error(""); // Just adds a bit of space
+      console.error(
+        `${fgGreenColor}%s${resetColor}`,
+        "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      );
     }
-    console.error(e.message);
     throw e;
   }
 }
