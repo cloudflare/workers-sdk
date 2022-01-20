@@ -470,8 +470,10 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
             case "map":
               args.push(
                 "{\n" +
-                  ro.preview.entries
-                    .map(({ key, value }) => {
+                  // Maps always have entries
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                  ro.preview
+                    .entries!.map(({ key, value }) => {
                       return `  ${key?.description ?? "<unknown>"} => ${
                         value.description
                       }`;
@@ -485,8 +487,10 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
             case "set":
               args.push(
                 "{ " +
-                  ro.preview.entries
-                    .map(({ value }) => {
+                  // Sets always have entries
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                  ro.preview
+                    .entries!.map(({ value }) => {
                       return `${value.description}`;
                     })
                     .join(", ") +

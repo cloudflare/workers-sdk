@@ -155,7 +155,9 @@ export default async function publish(props: Props): Promise<void> {
   const entryPointExports = entryPoints[0].exports;
   const resolvedEntryPointPath = path.resolve(
     destination.path,
-    entryPoints[0].entryPoint
+    // We know that entryPoint is not null because we filtered out those without above.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    entryPoints[0].entryPoint!
   );
   const { format } = props;
   const bundle = {

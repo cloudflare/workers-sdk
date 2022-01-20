@@ -11,7 +11,8 @@
     "lib": ["esnext"],
     "jsx": "react",
     "resolveJsonModule": true,
-    "incremental": true
+    "incremental": true,
+    "strictNullChecks": true
   },
   "exclude": ["node_modules/", "packages/*/vendor", "packages/*/*-dist"]
 }
