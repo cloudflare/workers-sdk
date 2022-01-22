@@ -6,11 +6,26 @@ import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
 import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
 
+/** Paths to always ignore. */
+const ALWAYS_IGNORE = ["node_modules"];
+const HIDDEN_FILES_TO_INCLUDE = [
+  ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
+];
+
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
   for (const file of files) {
-    // TODO: always ignore `node_modules`
-    // TODO: ignore hidden files (starting with .) but not .well-known??
+    // Skip files that we never want to process.
+    if (ALWAYS_IGNORE.some((p) => file.name === p)) {
+      continue;
+    }
+    // Skip hidden files (starting with .) except for some special ones
+    if (
+      file.name.startsWith(".") &&
+      !HIDDEN_FILES_TO_INCLUDE.some((p) => file.name === p)
+    ) {
+      continue;
+    }
     // TODO: follow symlinks??
     if (file.isDirectory()) {
       yield* await getFilesInFolder(path.join(dirPath, file.name));
