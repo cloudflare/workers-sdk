@@ -383,6 +383,94 @@ describe("publish", () => {
       expect(error).toMatchInlineSnapshot(`undefined`);
     });
 
+    it("should walk directories except node_modules", async () => {
+      const assets = [
+        {
+          filePath: "assets/directory-1/file-1.txt",
+          content: "Content of file-1",
+        },
+        {
+          filePath: "assets/node_modules/file-2.txt",
+          content: "Content of file-2",
+        },
+      ];
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml("./index.js", "assets");
+      writeEsmWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      // Only expect file-1 to be uploaded
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(0, 1));
+      const { stdout, stderr, error } = await runWrangler("publish");
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+        "reading assets/directory-1/file-1.txt...
+        uploading as assets/directory-1/file-1.2ca234f380.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(stderr).toMatchInlineSnapshot(`""`);
+      expect(error).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it("should skip hidden files and directories except `.well-known`", async () => {
+      const assets = [
+        {
+          filePath: "assets/.hidden-file.txt",
+          content: "Content of hidden-file",
+        },
+        {
+          filePath: "assets/.hidden/file-1.txt",
+          content: "Content of file-1",
+        },
+        {
+          filePath: "assets/.well-known/file-2.txt",
+          content: "Content of file-2",
+        },
+      ];
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml("./index.js", "assets");
+      writeEsmWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      // Only expect file-2 to be uploaded
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(2));
+      const { stdout, stderr, error } = await runWrangler("publish");
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+        "reading assets/.well-known/file-2.txt...
+        uploading as assets/.well-known/file-2.5938485188.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(stderr).toMatchInlineSnapshot(`""`);
+      expect(error).toMatchInlineSnapshot(`undefined`);
+    });
+
     it("should error if the asset is over 25Mb", async () => {
       const assets = [
         {
