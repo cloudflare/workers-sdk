@@ -45,6 +45,7 @@ import onExit from "signal-exit";
 import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
 import { execa } from "execa";
+import { whoami } from "./whoami";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -364,11 +365,10 @@ export async function main(argv: string[]): Promise<void> {
   // whoami
   wrangler.command(
     "whoami",
-    false, // we don't need to show this the menu
-    // "🕵️  Retrieve your user info and test your auth config",
+    "🕵️  Retrieve your user info and test your auth config",
     () => {},
-    (args) => {
-      console.log(":whoami", args);
+    async () => {
+      await whoami();
     }
   );
 
