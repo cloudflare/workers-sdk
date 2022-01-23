@@ -254,38 +254,37 @@ interface AccessToken {
   expiry: string;
 }
 
-type Scope =
-  | "account:read"
-  | "user:read"
-  | "workers:write"
-  | "workers_kv:write"
-  | "workers_routes:write"
-  | "workers_scripts:write"
-  | "workers_tail:read"
-  | "zone:read"
-  | "offline_access"; // this should be included by default
+const Scopes = {
+  "account:read":
+    "See your account info such as account details, analytics, and memberships.",
+  "user:read":
+    "See your user info such as name, email address, and account memberships.",
+  "workers:write":
+    "See and change Cloudflare Workers data such as zones, KV storage, namespaces, scripts, and routes.",
+  "workers_kv:write":
+    "See and change Cloudflare Workers KV Storage data such as keys and namespaces.",
+  "workers_routes:write":
+    "See and change Cloudflare Workers data such as filters and routes.",
+  "workers_scripts:write":
+    "See and change Cloudflare Workers scripts, durable objects, subdomains, triggers, and tail data.",
+  "workers_tail:read": "See Cloudflare Workers tail and script data.",
+  "zone:read": "Grants read level access to account zone.",
+} as const;
 
-const Scopes: Scope[] = [
-  "account:read",
-  "user:read",
-  "workers:write",
-  "workers_kv:write",
-  "workers_routes:write",
-  "workers_scripts:write",
-  "workers_tail:read",
-  "zone:read",
-];
+/**
+ * The possible keys for a Scope.
+ *
+ * "offline_access" is automatically included.
+ */
+type Scope = keyof typeof Scopes | "offline_access";
 
-const ScopeDescriptions = [
-  "See your account info such as account details, analytics, and memberships.",
-  "See your user info such as name, email address, and account memberships.",
-  "See and change Cloudflare Workers data such as zones, KV storage, namespaces, scripts, and routes.",
-  "See and change Cloudflare Workers KV Storage data such as keys and namespaces.",
-  "See and change Cloudflare Workers data such as filters and routes.",
-  "See and change Cloudflare Workers scripts, durable objects, subdomains, triggers, and tail data.",
-  "See Cloudflare Workers tail and script data.",
-  "Grants read level access to account zone.",
-];
+const ScopeKeys = Object.keys(Scopes) as Scope[];
+
+export function validateScopeKeys(
+  scopes: string[]
+): scopes is typeof ScopeKeys {
+  return scopes.every((scope) => Scopes[scope]);
+}
 
 const CLIENT_ID = "54d11594-84e4-41aa-b438-e81b8fa78ee7";
 const AUTH_URL = "https://dash.cloudflare.com/oauth2/auth";
@@ -344,15 +343,12 @@ function throwIfNotInitialised() {
   }
 }
 
-export function getAPIToken(): string {
+export function getAPIToken(): string | undefined {
   if (process.env.CF_API_TOKEN) {
     return process.env.CF_API_TOKEN;
   }
-
   throwIfNotInitialised();
-  // `throwIfNotInitialised()` ensures that the accessToken is guaranteed to be defined.
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return LocalState.accessToken!.value;
+  return LocalState.accessToken?.value;
 }
 
 interface AccessContext {
@@ -550,7 +546,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
   return true;
 }
 
-export async function getAuthURL(scopes?: string[]): Promise<string> {
+export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
   const { codeChallenge, codeVerifier } = await generatePKCECodes();
   const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -560,16 +556,12 @@ export async function getAuthURL(scopes?: string[]): Promise<string> {
     stateQueryParam,
   });
 
-  // TODO: verify that the scopes passed are legit
-
   return (
     AUTH_URL +
     `?response_type=code&` +
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    `scope=${encodeURIComponent(
-      (scopes || Scopes).concat("offline_access").join(" ")
-    )}&` +
+    `scope=${encodeURIComponent(scopes.concat("offline_access").join(" "))}&` +
     `state=${stateQueryParam}&` +
     `code_challenge=${encodeURIComponent(codeChallenge)}&` +
     `code_challenge_method=S256`
@@ -794,7 +786,7 @@ expiration_time = "${tokenData.token?.expiry}"
 }
 
 type LoginProps = {
-  scopes?: string[];
+  scopes?: Scope[];
 };
 
 export async function loginOrRefreshIfRequired(): Promise<boolean> {
@@ -947,9 +939,9 @@ export async function logout(): Promise<void> {
 export function listScopes(): void {
   throwIfNotInitialised();
   console.log("💁 Available scopes:");
-  const data = Scopes.map((scope, index) => ({
+  const data = ScopeKeys.map((scope) => ({
     Scope: scope,
-    Description: ScopeDescriptions[index],
+    Description: Scopes[scope],
   }));
   render(<Table data={data} />);
   // TODO: maybe a good idea to show usage here
