@@ -18,6 +18,7 @@ import {
   initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
   getAccountId,
+  validateScopeKeys,
 } from "./user";
 import {
   getNamespaceId,
@@ -331,6 +332,11 @@ export async function main(argv: string[]): Promise<void> {
           // don't allow no scopes to be passed, that would be weird
           listScopes();
           return;
+        }
+        if (!validateScopeKeys(args.scopes)) {
+          throw new CommandLineArgsError(
+            `One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+          );
         }
         await login({ scopes: args.scopes });
         return;
