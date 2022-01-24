@@ -37,7 +37,7 @@ describe("publish", () => {
     });
 
     it("should be able to use the `build.upload.main` config as the entry-point for ESM sources", async () => {
-      writeWranglerToml("./index.js");
+      writeWranglerToml({ main: "./index.js" });
       writeEsmWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -105,6 +105,57 @@ describe("publish", () => {
       expect(stderr).toMatchInlineSnapshot(`""`);
       expect(error).toMatchInlineSnapshot(`undefined`);
     });
+
+    it("should warn if there is a `site.entry-point` configuration", async () => {
+      writeWranglerToml({
+        entryPoint: "./index.js",
+      });
+      writeEsmWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+
+      const { stdout, stderr, error, warnings } = await runWrangler(
+        "publish ./index.js"
+      );
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(stderr).toMatchInlineSnapshot(`""`);
+      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(warnings).toMatchInlineSnapshot(`
+        "Deprecation notice: The \`site.entry-point\` config field is no longer used.
+        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+        Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
+      `);
+    });
+
+    it("should error if there is no entry-point specified", async () => {
+      writeWranglerToml();
+      writeEsmWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+
+      const { stdout, stderr, error } = await runWrangler("publish");
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`""`);
+      expect(stderr).toMatchInlineSnapshot(`
+        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(error).toMatchInlineSnapshot(
+        `[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.]`
+      );
+    });
   });
 
   describe("asset upload", () => {
@@ -117,7 +168,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -154,7 +205,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -196,7 +247,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -237,7 +288,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -278,7 +329,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets", ["file-1.txt"]);
+      writeWranglerToml({
+        main: "./index.js",
+        bucket: "assets",
+        include: ["file-1.txt"],
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -317,7 +372,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets", undefined, ["file-2.txt"]);
+      writeWranglerToml({
+        main: "./index.js",
+        bucket: "assets",
+        exclude: ["file-2.txt"],
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -356,7 +415,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets", ["file-2.txt"]);
+      writeWranglerToml({
+        main: "./index.js",
+        bucket: "assets",
+        include: ["file-2.txt"],
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -397,9 +460,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets", undefined, [
-        "assets/file-1.txt",
-      ]);
+      writeWranglerToml({
+        main: "./index.js",
+        bucket: "assets",
+        exclude: ["assets/file-1.txt"],
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -446,7 +511,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -492,7 +557,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -535,9 +600,11 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets", undefined, [
-        "assets/file-1.txt",
-      ]);
+      writeWranglerToml({
+        main: "./index.js",
+        bucket: "assets",
+        exclude: ["assets/file-1.txt"],
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -571,7 +638,7 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml("./index.js", "assets");
+      writeWranglerToml({ main: "./index.js", bucket: "assets" });
       writeEsmWorkerSource();
       writeAssets([longFilePathAsset]);
       mockUploadWorkerRequest();
@@ -598,22 +665,30 @@ describe("publish", () => {
 });
 
 /** Write a mock wrangler.toml file to disk. */
-function writeWranglerToml(
-  main?: string,
-  bucket?: string,
-  include?: string[],
-  exclude?: string[]
-) {
+function writeWranglerToml({
+  main,
+  bucket,
+  include,
+  exclude,
+  entryPoint,
+}: {
+  main?: string;
+  bucket?: string;
+  include?: string[];
+  exclude?: string[];
+  entryPoint?: string;
+} = {}) {
   fs.writeFileSync(
     "./wrangler.toml",
     [
       `compatibility_date = "2022-01-12"`,
       `name = "test-name"`,
       main !== undefined ? `[build.upload]\nmain = "${main}"` : "",
-      bucket || include || exclude ? "[site]" : "",
+      bucket || include || exclude || entryPoint ? "[site]" : "",
       bucket !== undefined ? `bucket = "${bucket}"` : "",
       include !== undefined ? `include = ${JSON.stringify(include)}` : "",
       exclude !== undefined ? `exclude = ${JSON.stringify(exclude)}` : "",
+      entryPoint !== undefined ? `entry-point = "${entryPoint}"` : "",
     ].join("\n"),
     "utf-8"
   );

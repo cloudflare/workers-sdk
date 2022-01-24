@@ -78,13 +78,25 @@ export default async function publish(props: Props): Promise<void> {
     'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
   );
 
+  if (config.site?.["entry-point"]) {
+    console.warn(
+      "Deprecation notice: The `site.entry-point` config field is no longer used.\n" +
+        "The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `build.upload.main` config field.\n" +
+        "Please remove the `site.entry-point` field from the `wrangler.toml` file."
+    );
+  }
+
   let file: string;
   if (props.script) {
     // If the script name comes from the command line it is relative to the current working directory.
     file = path.resolve(props.script);
   } else {
     // If the script name comes from the config, then it is relative to the wrangler.toml file.
-    assert(build?.upload?.main, "missing main file");
+    if (build?.upload?.main === undefined) {
+      throw new Error(
+        "Missing entry-point: The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `build.upload.main` config field."
+      );
+    }
     file = path.resolve(path.dirname(__path__), build.upload.main);
   }
 
