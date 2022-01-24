@@ -140,8 +140,8 @@ export default async function publish(props: Props): Promise<void> {
   // result.metafile is defined because of the `metafile: true` option above.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const metafile = result.metafile!;
-  const entryPoints = Object.values(metafile.outputs).filter(
-    (output) => output.entryPoint !== undefined
+  const entryPoints = Object.entries(metafile.outputs).filter(
+    ([_path, output]) => output.entryPoint !== undefined
   );
   assert(
     entryPoints.length > 0,
@@ -153,13 +153,8 @@ export default async function publish(props: Props): Promise<void> {
     "More than one entry-point found for generated bundle." +
       listEntryPoints(entryPoints)
   );
-  const entryPointExports = entryPoints[0].exports;
-  const resolvedEntryPointPath = path.resolve(
-    destination.path,
-    // We know that entryPoint is not null because we filtered out those without above.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    entryPoints[0].entryPoint!
-  );
+  const entryPointExports = entryPoints[0][1].exports;
+  const resolvedEntryPointPath = entryPoints[0][0];
   const { format } = props;
   const bundle = {
     type: entryPointExports.length > 0 ? "esm" : "commonjs",
@@ -378,8 +373,10 @@ export default async function publish(props: Props): Promise<void> {
   }
 }
 
-function listEntryPoints(outputs: ValueOf<Metafile["outputs"]>[]): string {
-  return outputs.map((output) => output.entryPoint).join("\n");
+function listEntryPoints(
+  outputs: [string, ValueOf<Metafile["outputs"]>][]
+): string {
+  return outputs.map(([_input, output]) => output.entryPoint).join("\n");
 }
 
 type ValueOf<T> = T[keyof T];
