@@ -31,11 +31,13 @@ export async function fetchInternal<ResponseType>(
     headers,
   });
 
-  if (response.ok) {
-    return (await response.json()) as ResponseType;
-  } else {
+  const jsonText = await response.text();
+  try {
+    const json = JSON.parse(jsonText);
+    return json as ResponseType;
+  } catch (e) {
     throw new Error(
-      `Failed to fetch ${resource} - ${response.status}: ${response.statusText}`
+      `Failed to fetch ${resource} - ${response.status}: ${response.statusText}\nInvalid JSON response:\n${jsonText}`
     );
   }
 }
