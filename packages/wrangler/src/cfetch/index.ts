@@ -94,9 +94,17 @@ function throwFetchError(
   const errors = response.errors
     .map((error) => `${error.code}: ${error.message}`)
     .join("\n");
-  throw new Error(`Failed to fetch ${resource} - ${errors}`);
+  const error = new Error(`Failed to fetch ${resource} - \n${errors}`);
+  // add the first error code directly to this error
+  // so consumers can use it for specific behaviour
+  const code = response.errors[0]?.code;
+  if (code) {
+    //@ts-expect-error non-standard property on Error
+    error.code = code;
+  }
+  throw error;
 }
 
 function hasCursor(result_info: unknown): result_info is { cursor: string } {
-  return (result_info as { cursor } | undefined)?.cursor !== undefined;
+  return (result_info as { cursor: string } | undefined)?.cursor !== undefined;
 }
