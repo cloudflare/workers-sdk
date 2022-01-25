@@ -57,6 +57,54 @@ describe("publish", () => {
       expect(stderr).toMatchInlineSnapshot(`""`);
       expect(error).toMatchInlineSnapshot(`undefined`);
     });
+
+    it("should be able to transpile TypeScript", async () => {
+      writeWranglerToml();
+      writeEsmWorkerSource({ format: "ts" });
+      mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
+      mockSubDomainRequest();
+
+      const { stdout, stderr, error } = await runWrangler(
+        "publish " + fs.realpathSync("./index.ts")
+      );
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(stderr).toMatchInlineSnapshot(`""`);
+      expect(error).toMatchInlineSnapshot(`undefined`);
+    });
+
+    it("should be able to transpile entry-points in sub-directories", async () => {
+      writeWranglerToml();
+      writeEsmWorkerSource({ basePath: "./src" });
+      mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
+      mockSubDomainRequest();
+
+      const { stdout, stderr, error } = await runWrangler(
+        "publish ./src/index.js"
+      );
+
+      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(stderr).toMatchInlineSnapshot(`""`);
+      expect(error).toMatchInlineSnapshot(`undefined`);
+    });
   });
 
   describe("asset upload", () => {
@@ -572,9 +620,15 @@ function writeWranglerToml(
 }
 
 /** Write a mock Worker script to disk. */
-function writeEsmWorkerSource() {
+function writeEsmWorkerSource({
+  basePath = ".",
+  format = "js",
+}: { basePath?: string; format?: "js" | "ts" } = {}) {
+  if (basePath !== ".") {
+    fs.mkdirSync(basePath, { recursive: true });
+  }
   fs.writeFileSync(
-    "index.js",
+    `${basePath}/index.${format}`,
     [
       `import { foo } from "./another";`,
       `export default {`,
@@ -584,7 +638,7 @@ function writeEsmWorkerSource() {
       `};`,
     ].join("\n")
   );
-  fs.writeFileSync("another.js", `export const foo = 100;`);
+  fs.writeFileSync(`${basePath}/another.${format}`, `export const foo = 100;`);
 }
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -596,14 +650,25 @@ function writeAssets(assets: { filePath: string; content: string }[]) {
 }
 
 /** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest(available_on_subdomain = true) {
+function mockUploadWorkerRequest({
+  available_on_subdomain = true,
+  expectedBody,
+}: {
+  available_on_subdomain?: boolean;
+  expectedBody?: string;
+} = {}) {
   setMockResponse(
     "/accounts/:accountId/workers/scripts/:scriptName",
     "PUT",
-    ([_url, accountId, scriptName], _init, queryParams) => {
+    async ([_url, accountId, scriptName], { body }, queryParams) => {
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual("test-name");
       expect(queryParams.get("available_on_subdomains")).toEqual("true");
+      if (expectedBody !== undefined) {
+        expect(
+          await ((body as FormData).get("index.js") as File).text()
+        ).toMatch(expectedBody);
+      }
       return { available_on_subdomain };
     }
   );
