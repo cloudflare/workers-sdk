@@ -67,4 +67,4 @@ jobs:
         run: npm install
 
       - name: Run build and test
-        run: npm run build-and-test
+        run: npm run build-and-test:ci

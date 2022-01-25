@@ -35,8 +35,10 @@
     "check:lint": "eslint packages/** --cache --cache-strategy content",
     "check:format": "prettier packages/** --check",
     "build-and-test": "run-p build test --aggregate-output -l",
+    "build-and-test:ci": "run-p build test:ci --aggregate-output -l",
     "build": "npm run build --workspace=wrangler",
     "test": "npm run test --workspaces --if-present",
+    "test:ci": "npm run test:ci --workspaces --if-present",
     "prettify": "prettier packages/** --write"
   },
   "engines": {
