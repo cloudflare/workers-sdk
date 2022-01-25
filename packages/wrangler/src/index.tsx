@@ -195,58 +195,94 @@ export async function main(argv: string[]): Promise<void> {
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
         console.warn(`${destination} file already exists!`);
-        const result = await confirm(
+        const shouldContinue = await confirm(
           "Do you want to continue initializing this project?"
         );
-        if (!result) {
+        if (!shouldContinue) {
           return;
+        }
+      } else {
+        const compatibilityDate = new Date().toISOString().substring(0, 10);
+        try {
+          await writeFile(
+            destination,
+            `compatibility_date = "${compatibilityDate}"` + "\n"
+          );
+          console.log(`✨ Successfully created wrangler.toml`);
+          // TODO: suggest next steps?
+        } catch (err) {
+          throw new Error(
+            `Failed to create wrangler.toml.\n${err.message ?? err}`
+          );
         }
       }
 
-      const compatibilityDate = new Date().toISOString().substring(0, 10);
-      try {
-        await writeFile(
-          destination,
-          `compatibility_date = "${compatibilityDate}"` + "\n"
-        );
-        console.log(`✨ Successfully created wrangler.toml`);
-        // TODO: suggest next steps?
-      } catch (err) {
-        throw new Error(
-          `Failed to create wrangler.toml.\n${err.message ?? err}`
-        );
-      }
-
-      // if no package.json, ask, and if yes, create one
       let pathToPackageJson = await findUp("package.json");
-
       if (!pathToPackageJson) {
-        if (
-          await confirm("No package.json found. Would you like to create one?")
-        ) {
+        // If no package.json exists, ask to create one
+        const shouldCreatePackageJson = await confirm(
+          "No package.json found. Would you like to create one?"
+        );
+        if (shouldCreatePackageJson) {
           await writeFile(
             path.join(process.cwd(), "package.json"),
             JSON.stringify(
               {
                 name: "worker",
                 version: "0.0.1",
+                devDependencies: {
+                  wrangler: wranglerVersion,
+                },
               },
               null,
               "  "
             ) + "\n"
           );
+          await execa("npm", ["install", "--prefer-offline"], {
+            stdio: "inherit",
+          });
           console.log(`✨ Created package.json`);
           pathToPackageJson = path.join(process.cwd(), "package.json");
         } else {
           return;
         }
+      } else {
+        // If package.json exists and wrangler isn't installed,
+        // then ask to add wrangler to devDependencies
+        const packageJson = JSON.parse(
+          await readFile(pathToPackageJson, "utf-8")
+        );
+        if (
+          !(
+            packageJson.devDependencies?.wrangler ||
+            packageJson.dependencies?.wrangler
+          )
+        ) {
+          const shouldInstall = await confirm(
+            "Would you like to install wrangler into your package.json?"
+          );
+          if (shouldInstall) {
+            await execa(
+              "npm",
+              [
+                "install",
+                `wrangler@${wranglerVersion}`,
+                "--save-dev",
+                "--prefer-offline",
+              ],
+              {
+                stdio: "inherit",
+              }
+            );
+            console.log(`✨ Installed wrangler`);
+          }
+        }
       }
 
-      // if workers-types doesn't exist as a dependency
-      // offer to install it
-      // and make a tsconfig?
       let pathToTSConfig = await findUp("tsconfig.json");
       if (!pathToTSConfig) {
+        // If there's no tsconfig, offer to create one
+        // and install @cloudflare/workers-types
         if (await confirm("Would you like to use typescript?")) {
           await writeFile(
             path.join(process.cwd(), "tsconfig.json"),
@@ -271,15 +307,59 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
-          await execa("npm", [
-            "install",
-            "@cloudflare/workers-types",
-            "--save-dev",
-          ]);
+          await execa(
+            "npm",
+            [
+              "install",
+              "@cloudflare/workers-types",
+              "--save-dev",
+              "--prefer-offline",
+            ],
+            { stdio: "inherit" }
+          );
           console.log(
             `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
           );
           pathToTSConfig = path.join(process.cwd(), "tsconfig.json");
+        }
+      } else {
+        // If there's a tsconfig, check if @cloudflare/workers-types
+        // is already installed, and offer to install it if not
+        const packageJson = JSON.parse(
+          await readFile(pathToPackageJson, "utf-8")
+        );
+        if (
+          !(
+            packageJson.devDependencies?.["@cloudflare/workers-types"] ||
+            packageJson.dependencies?.["@cloudflare/workers-types"]
+          )
+        ) {
+          const shouldInstall = await confirm(
+            "Would you like to install the type definitions for Workers into your package.json?"
+          );
+          if (shouldInstall) {
+            await execa(
+              "npm",
+              [
+                "install",
+                "@cloudflare/workers-types",
+                "--save-dev",
+                "--prefer-offline",
+              ],
+              {
+                stdio: "inherit",
+              }
+            );
+            // We don't update the tsconfig.json because
+            // it could be complicated in existing projects
+            // and we don't want to break them. Instead, we simply
+            // tell the user that they need to update their tsconfig.json
+            console.log(
+              `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in your tsconfig.json`
+            );
+          } else {
+            return;
+          }
         }
       }
     }

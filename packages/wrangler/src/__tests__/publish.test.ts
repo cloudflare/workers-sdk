@@ -5,9 +5,11 @@ import { mockKeyListRequest } from "./kv.test";
 import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
 import { runInTempDir } from "./run-in-tmp";
 import { runWrangler } from "./run-wrangler";
+import { mockConsoleMethods } from "./mock-console";
 
 describe("publish", () => {
   runInTempDir();
+  const std = mockConsoleMethods();
 
   afterEach(() => {
     unsetAllMocks();
@@ -20,9 +22,9 @@ describe("publish", () => {
       mockUploadWorkerRequest();
       mockSubDomainRequest();
 
-      const { stdout, stderr, error } = await runWrangler("publish ./index");
+      await runWrangler("publish ./index");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "Uploaded
               test-name
               (TIMINGS)
@@ -32,8 +34,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should be able to use the `build.upload.main` config as the entry-point for ESM sources", async () => {
@@ -42,9 +43,9 @@ describe("publish", () => {
       mockUploadWorkerRequest();
       mockSubDomainRequest();
 
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "Uploaded
               test-name
               (TIMINGS)
@@ -54,8 +55,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should be able to transpile TypeScript", async () => {
@@ -63,12 +63,9 @@ describe("publish", () => {
       writeEsmWorkerSource({ format: "ts" });
       mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
       mockSubDomainRequest();
+      await runWrangler("publish index.ts");
 
-      const { stdout, stderr, error } = await runWrangler(
-        "publish " + fs.realpathSync("./index.ts")
-      );
-
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "Uploaded
               test-name
               (TIMINGS)
@@ -78,8 +75,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should be able to transpile entry-points in sub-directories", async () => {
@@ -88,11 +84,9 @@ describe("publish", () => {
       mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
       mockSubDomainRequest();
 
-      const { stdout, stderr, error } = await runWrangler(
-        "publish ./src/index.js"
-      );
+      await runWrangler("publish ./src/index.js");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "Uploaded
               test-name
               (TIMINGS)
@@ -102,8 +96,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should warn if there is a `site.entry-point` configuration", async () => {
@@ -114,11 +107,9 @@ describe("publish", () => {
       mockUploadWorkerRequest();
       mockSubDomainRequest();
 
-      const { stdout, stderr, error, warnings } = await runWrangler(
-        "publish ./index.js"
-      );
+      await runWrangler("publish ./index.js");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "Uploaded
               test-name
               (TIMINGS)
@@ -128,9 +119,8 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
-      expect(warnings).toMatchInlineSnapshot(`
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
         "Deprecation notice: The \`site.entry-point\` config field is no longer used.
         The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
         Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
@@ -142,11 +132,15 @@ describe("publish", () => {
       writeEsmWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
+      let error: Error | undefined;
+      try {
+        await runWrangler("publish");
+      } catch (e) {
+        error = e;
+      }
 
-      const { stdout, stderr, error } = await runWrangler("publish");
-
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`""`);
-      expect(stderr).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
         "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
 
         [32m%s[0m
@@ -176,9 +170,9 @@ describe("publish", () => {
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
@@ -192,8 +186,7 @@ describe("publish", () => {
          
         test-name.test-sub-domain.workers.dev"
       `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should only upload files that are not already in the KV namespace", async () => {
@@ -218,9 +211,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath !== "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         skipping - already uploaded
         reading assets/file-2.txt...
@@ -234,8 +227,7 @@ describe("publish", () => {
          
         test-name.test-sub-domain.workers.dev"
       `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should only upload files that match the `site-include` arg", async () => {
@@ -259,11 +251,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler(
-        "publish --site-include file-1.txt"
-      );
+      await runWrangler("publish --site-include file-1.txt");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -275,8 +265,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should not upload files that match the `site-exclude` arg", async () => {
@@ -300,11 +289,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler(
-        "publish --site-exclude file-2.txt"
-      );
+      await runWrangler("publish --site-exclude file-2.txt");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -316,8 +303,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should only upload files that match the `site.include` config", async () => {
@@ -345,9 +331,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -359,8 +345,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should not upload files that match the `site.exclude` config", async () => {
@@ -388,9 +373,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -402,8 +387,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should use `site-include` arg over `site.include` config", async () => {
@@ -431,11 +415,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath === "assets/file-1.txt")
       );
-      const { stdout, stderr, error } = await runWrangler(
-        "publish --site-include file-1.txt"
-      );
+      await runWrangler("publish --site-include file-1.txt");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -447,8 +429,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should use `site-exclude` arg over `site.exclude` config", async () => {
@@ -476,11 +457,9 @@ describe("publish", () => {
         kvNamespace.id,
         assets.filter((a) => a.filePath.endsWith("assets/file-1.txt"))
       );
-      const { stdout, stderr, error } = await runWrangler(
-        "publish --site-exclude file-2.txt"
-      );
+      await runWrangler("publish --site-exclude file-2.txt");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
               "reading assets/file-1.txt...
               uploading as assets/file-1.2ca234f380.txt...
               Uploaded
@@ -492,8 +471,7 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should walk directories except node_modules", async () => {
@@ -520,9 +498,9 @@ describe("publish", () => {
       mockKeyListRequest(kvNamespace.id, []);
       // Only expect file-1 to be uploaded
       mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(0, 1));
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
         "reading assets/directory-1/file-1.txt...
         uploading as assets/directory-1/file-1.2ca234f380.txt...
         Uploaded
@@ -534,8 +512,7 @@ describe("publish", () => {
          
         test-name.test-sub-domain.workers.dev"
       `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should skip hidden files and directories except `.well-known`", async () => {
@@ -566,9 +543,9 @@ describe("publish", () => {
       mockKeyListRequest(kvNamespace.id, []);
       // Only expect file-2 to be uploaded
       mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(2));
-      const { stdout, stderr, error } = await runWrangler("publish");
+      await runWrangler("publish");
 
-      expect(stripTimings(stdout)).toMatchInlineSnapshot(`
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
         "reading assets/.well-known/file-2.txt...
         uploading as assets/.well-known/file-2.5938485188.txt...
         Uploaded
@@ -580,8 +557,7 @@ describe("publish", () => {
          
         test-name.test-sub-domain.workers.dev"
       `);
-      expect(stderr).toMatchInlineSnapshot(`""`);
-      expect(error).toMatchInlineSnapshot(`undefined`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
     it("should error if the asset is over 25Mb", async () => {
@@ -612,13 +588,17 @@ describe("publish", () => {
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
 
-      const { stdout, stderr, error } = await runWrangler("publish");
-
-      expect(stdout).toMatchInlineSnapshot(`
+      let error: Error | undefined;
+      try {
+        await runWrangler("publish");
+      } catch (e) {
+        error = e;
+      }
+      expect(std.out).toMatchInlineSnapshot(`
         "reading assets/large-file.txt...
         uploading as assets/large-file.0ea0637a45.txt..."
       `);
-      expect(stderr).toMatchInlineSnapshot(`
+      expect(std.err).toMatchInlineSnapshot(`
         "File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
 
         [32m%s[0m
@@ -646,12 +626,17 @@ describe("publish", () => {
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
 
-      const { stdout, stderr, error } = await runWrangler("publish");
+      let error: Error | undefined;
+      try {
+        await runWrangler("publish");
+      } catch (e) {
+        error = e;
+      }
 
-      expect(stdout).toMatchInlineSnapshot(
+      expect(std.out).toMatchInlineSnapshot(
         `"reading assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt..."`
       );
-      expect(stderr).toMatchInlineSnapshot(`
+      expect(std.err).toMatchInlineSnapshot(`
         "The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",
 
         [32m%s[0m
