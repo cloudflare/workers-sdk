@@ -238,7 +238,7 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
-          await execa("npm", ["install", "--prefer-offline"], {
+          await execa("npm", ["install"], {
             stdio: "inherit",
           });
           console.log(`✨ Created package.json`);
@@ -264,12 +264,7 @@ export async function main(argv: string[]): Promise<void> {
           if (shouldInstall) {
             await execa(
               "npm",
-              [
-                "install",
-                `wrangler@${wranglerVersion}`,
-                "--save-dev",
-                "--prefer-offline",
-              ],
+              ["install", `wrangler@${wranglerVersion}`, "--save-dev"],
               {
                 stdio: "inherit",
               }
@@ -309,12 +304,7 @@ export async function main(argv: string[]): Promise<void> {
           );
           await execa(
             "npm",
-            [
-              "install",
-              "@cloudflare/workers-types",
-              "--save-dev",
-              "--prefer-offline",
-            ],
+            ["install", "@cloudflare/workers-types", "--save-dev"],
             { stdio: "inherit" }
           );
           console.log(
@@ -340,12 +330,7 @@ export async function main(argv: string[]): Promise<void> {
           if (shouldInstall) {
             await execa(
               "npm",
-              [
-                "install",
-                "@cloudflare/workers-types",
-                "--save-dev",
-                "--prefer-offline",
-              ],
+              ["install", "@cloudflare/workers-types", "--save-dev"],
               {
                 stdio: "inherit",
               }
