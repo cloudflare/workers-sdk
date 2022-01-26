@@ -1,13 +1,14 @@
-import { Text, render } from "ink";
+import { Text } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetchListResult, fetchResult } from "./cfetch";
+import { renderToString } from "./render-helpers";
 import { getAPIToken } from "./user";
 
 export async function whoami() {
   console.log("Getting User settings...");
   const user = await getUserInfo();
-  render(<WhoAmI user={user}></WhoAmI>);
+  console.log(renderToString(<WhoAmI user={user}></WhoAmI>));
 }
 
 export function WhoAmI({ user }: { user: UserInfo | undefined }) {
