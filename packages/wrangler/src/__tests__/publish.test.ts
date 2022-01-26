@@ -6,6 +6,8 @@ import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
 import { runInTempDir } from "./run-in-tmp";
 import { runWrangler } from "./run-wrangler";
 import { mockConsoleMethods } from "./mock-console";
+import type { Config } from "../config";
+import * as TOML from "@iarna/toml";
 
 describe("publish", () => {
   runInTempDir();
@@ -38,7 +40,7 @@ describe("publish", () => {
     });
 
     it("should be able to use the `build.upload.main` config as the entry-point for ESM sources", async () => {
-      writeWranglerToml({ main: "./index.js" });
+      writeWranglerToml({ build: { upload: { main: "./index.js" } } });
       writeEsmWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -99,26 +101,80 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should warn if there is a `site.entry-point` configuration", async () => {
+    it('should error if a site definition doesn\'t have a "bucket" field', async () => {
       writeWranglerToml({
-        entryPoint: "./index.js",
+        // @ts-expect-error we're purposely missing the required `site.bucket` field
+        site: {
+          "entry-point": "./index.js",
+        },
       });
       writeEsmWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
+      let error: Error | undefined;
+      try {
+        await runWrangler("publish ./index.js");
+      } catch (e) {
+        error = e;
+      }
+
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "A [site] definition requires a \`bucket\` field with a path to the site's public directory.
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Deprecation notice: The \`site.entry-point\` config field is no longer used.
+        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+        Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
+      `);
+      expect(error).toMatchInlineSnapshot(
+        `[AssertionError: A [site] definition requires a \`bucket\` field with a path to the site's public directory.]`
+      );
+    });
+
+    it("should warn if there is a `site.entry-point` configuration", async () => {
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+
+      writeWranglerToml({
+        site: {
+          "entry-point": "./index.js",
+          bucket: "assets",
+        },
+      });
+      writeEsmWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
       await runWrangler("publish ./index.js");
 
       expect(stripTimings(std.out)).toMatchInlineSnapshot(`
-              "Uploaded
-              test-name
-              (TIMINGS)
-              Deployed
-              test-name
-              (TIMINGS)
-               
-              test-name.test-sub-domain.workers.dev"
-          `);
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Deprecation notice: The \`site.entry-point\` config field is no longer used.
@@ -162,7 +218,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -198,7 +259,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -239,7 +305,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -277,7 +348,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -316,9 +392,11 @@ describe("publish", () => {
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml({
-        main: "./index.js",
-        bucket: "assets",
-        include: ["file-1.txt"],
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+          include: ["file-1.txt"],
+        },
       });
       writeEsmWorkerSource();
       writeAssets(assets);
@@ -358,9 +436,11 @@ describe("publish", () => {
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml({
-        main: "./index.js",
-        bucket: "assets",
-        exclude: ["file-2.txt"],
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+          exclude: ["file-2.txt"],
+        },
       });
       writeEsmWorkerSource();
       writeAssets(assets);
@@ -400,9 +480,11 @@ describe("publish", () => {
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml({
-        main: "./index.js",
-        bucket: "assets",
-        include: ["file-2.txt"],
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+          include: ["file-2.txt"],
+        },
       });
       writeEsmWorkerSource();
       writeAssets(assets);
@@ -442,9 +524,11 @@ describe("publish", () => {
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml({
-        main: "./index.js",
-        bucket: "assets",
-        exclude: ["assets/file-1.txt"],
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+          exclude: ["assets/file-1.txt"],
+        },
       });
       writeEsmWorkerSource();
       writeAssets(assets);
@@ -489,7 +573,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -534,7 +623,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
@@ -577,9 +671,11 @@ describe("publish", () => {
         id: "__test-name_sites_assets-id",
       };
       writeWranglerToml({
-        main: "./index.js",
-        bucket: "assets",
-        exclude: ["assets/file-1.txt"],
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+          exclude: ["assets/file-1.txt"],
+        },
       });
       writeEsmWorkerSource();
       writeAssets(assets);
@@ -618,7 +714,12 @@ describe("publish", () => {
         title: "__test-name_sites_assets",
         id: "__test-name_sites_assets-id",
       };
-      writeWranglerToml({ main: "./index.js", bucket: "assets" });
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
       writeEsmWorkerSource();
       writeAssets([longFilePathAsset]);
       mockUploadWorkerRequest();
@@ -650,31 +751,18 @@ describe("publish", () => {
 });
 
 /** Write a mock wrangler.toml file to disk. */
-function writeWranglerToml({
-  main,
-  bucket,
-  include,
-  exclude,
-  entryPoint,
-}: {
-  main?: string;
-  bucket?: string;
-  include?: string[];
-  exclude?: string[];
-  entryPoint?: string;
-} = {}) {
+function writeWranglerToml(config: Omit<Config, "env"> = {}) {
+  // We Omit `env` from config because TOML.stringify() appears to
+  // have a weird type signature that appears to fail. We'll revisit this
+  // when we write tests for publishing environments
   fs.writeFileSync(
     "./wrangler.toml",
-    [
-      `compatibility_date = "2022-01-12"`,
-      `name = "test-name"`,
-      main !== undefined ? `[build.upload]\nmain = "${main}"` : "",
-      bucket || include || exclude || entryPoint ? "[site]" : "",
-      bucket !== undefined ? `bucket = "${bucket}"` : "",
-      include !== undefined ? `include = ${JSON.stringify(include)}` : "",
-      exclude !== undefined ? `exclude = ${JSON.stringify(exclude)}` : "",
-      entryPoint !== undefined ? `entry-point = "${entryPoint}"` : "",
-    ].join("\n"),
+    TOML.stringify({
+      compatibility_date: "2022-01-12",
+      name: "test-name",
+      ...config,
+    }),
+
     "utf-8"
   );
 }
@@ -683,7 +771,7 @@ function writeWranglerToml({
 function writeEsmWorkerSource({
   basePath = ".",
   format = "js",
-}: { basePath?: string; format?: "js" | "ts" } = {}) {
+}: { basePath?: string; format?: "js" | "ts" | "jsx" | "tsx" | "mjs" } = {}) {
   if (basePath !== ".") {
     fs.mkdirSync(basePath, { recursive: true });
   }
