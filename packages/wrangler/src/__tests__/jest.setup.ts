@@ -1,6 +1,13 @@
 import { mockFetchInternal } from "./mock-cfetch";
 import { confirm, prompt } from "../dialogs";
 import { fetchInternal } from "../cfetch/internal";
+import fetchMock from "jest-fetch-mock";
+
+jest.mock("node-fetch", () => jest.requireActual("jest-fetch-mock"));
+fetchMock.doMock(() => {
+  // Any un-mocked fetches should throw
+  throw new Error("Unexpected fetch request");
+});
 
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
