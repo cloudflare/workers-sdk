@@ -13,15 +13,12 @@ const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 
 describe("getUserInfo()", () => {
-  runInTempDir();
+  runInTempDir({ homedir: "./home" });
 
   beforeEach(() => {
     // Clear the environment variables, so we can control them in the tests
     delete process.env.CF_API_TOKEN;
     delete process.env.CF_ACCOUNT_ID;
-    // Override where the home directory is so that we can specify a user config
-    mkdirSync("./home");
-    jest.spyOn(os, "homedir").mockReturnValue("./home");
   });
 
   afterEach(() => {
