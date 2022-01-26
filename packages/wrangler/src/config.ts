@@ -81,7 +81,6 @@ export type Config = {
    *
    * @optional
    * @inherited
-   * @todo This could be an enum!
    */
   compatibility_flags?: string[];
 
@@ -270,10 +269,9 @@ export type Config = {
      * The location of your Worker script.
      *
      * @deprecated DO NOT use this (it's a holdover from wrangler 1.x). Either use the top level `entry` field, or pass the path to your entry file as a command line argument.
-     * @todo we should use a top level "entry" property instead
      * @breaking
      */
-    "entry-point": string;
+    "entry-point"?: string;
 
     /**
      * An exclusive list of .gitignore-style patterns that match file
@@ -282,7 +280,6 @@ export type Config = {
      *
      * @optional
      * @default `[]`
-     * @todo this needs to be implemented!
      */
     include?: string[];
 
@@ -293,7 +290,6 @@ export type Config = {
      *
      * @optional
      * @default `[]`
-     * @todo this needs to be implemented!
      */
     exclude?: string[];
   };
@@ -306,7 +302,6 @@ export type Config = {
    * @inherited
    * @default `{ crons: [] }`
    * @optional
-   * @todo can we use typescript for cron patterns?
    */
   triggers?: { crons: string[] };
 
@@ -391,7 +386,7 @@ export type Config = {
            *
            * @deprecated We infer the format automatically now.
            */
-          format: "service-worker";
+          format?: "service-worker";
 
           /**
            * The path to the Worker script. This should be replaced
@@ -414,7 +409,7 @@ export type Config = {
            *
            * @deprecated We infer the format automatically now.
            */
-          format: "modules";
+          format?: "modules";
 
           /**
            * The directory you wish to upload your modules from,

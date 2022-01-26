@@ -574,7 +574,7 @@ function useWorker(props: {
 
       const assets = await syncAssets(
         accountId,
-        path.basename(bundle.path),
+        name || path.basename(bundle.path),
         assetPaths,
         true
       ); // TODO: cancellable?

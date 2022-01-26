@@ -86,6 +86,11 @@ export default async function publish(props: Props): Promise<void> {
     );
   }
 
+  assert(
+    !config.site || config.site.bucket,
+    "A [site] definition requires a `bucket` field with a path to the site's public directory."
+  );
+
   let file: string;
   if (props.script) {
     // If the script name comes from the command line it is relative to the current working directory.
