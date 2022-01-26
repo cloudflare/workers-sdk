@@ -1,15 +1,25 @@
-import * as os from "node:os";
+import os from "node:os";
 import * as path from "node:path";
 import * as fs from "fs";
 
 const originalCwd = process.cwd();
 
-export function runInTempDir() {
+export function runInTempDir({ homedir }: { homedir?: string } = {}) {
   let tmpDir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-tests"));
     process.chdir(tmpDir);
+    if (homedir !== undefined) {
+      // Override where the home directory is so that we can write our own user config,
+      // without destroying the real thing.
+      fs.mkdirSync(homedir);
+      // Note it is very important that we use the "default" value from "node:os" (e.g. `import os from "node:os";`)
+      // rather than an alias to the module (e.g. `import * as os from "node:os";`).
+      // This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
+      // getter that is not configurable (and so cannot be spied upon).
+      jest.spyOn(os, "homedir").mockReturnValue(homedir);
+    }
   });
 
   afterEach(() => {
