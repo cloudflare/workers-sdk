@@ -8,7 +8,7 @@ import { Box, Text, useApp, useInput } from "ink";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
-import { execa } from "execa";
+import { execaCommand } from "execa";
 import fetch from "node-fetch";
 import open from "open";
 import React, { useState, useEffect, useRef } from "react";
@@ -371,20 +371,21 @@ function useCustomBuild(
     if (!command) return;
     let cmd, interval;
     console.log("running:", command);
-    const commandPieces = command.split(" ");
-    cmd = execa(commandPieces[0], commandPieces.slice(1), {
+    cmd = execaCommand(command, {
       ...(cwd && { cwd }),
+      shell: true,
       stderr: "inherit",
       stdout: "inherit",
     });
     if (watch_dir) {
       watch(watch_dir, { persistent: true, ignoreInitial: true }).on(
         "all",
-        (_event, _path) => {
-          console.log(`The file ${path} changed, restarting build...`);
+        (_event, filePath) => {
+          console.log(`The file ${filePath} changed, restarting build...`);
           cmd.kill();
-          cmd = execa(commandPieces[0], commandPieces.slice(1), {
+          cmd = execaCommand(command, {
             ...(cwd && { cwd }),
+            shell: true,
             stderr: "inherit",
             stdout: "inherit",
           });

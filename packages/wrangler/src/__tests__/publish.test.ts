@@ -748,6 +748,37 @@ describe("publish", () => {
       );
     });
   });
+
+  describe("custom builds", () => {
+    it("should run a custom build before publishing", async () => {
+      writeWranglerToml({
+        build: {
+          command: `echo "custom build" && echo "export default { fetch(){ return new Response(123)} }" > index.js`,
+        },
+      });
+
+      mockUploadWorkerRequest({
+        expectedBody: "return new Response(123)",
+      });
+      mockSubDomainRequest();
+
+      await runWrangler("publish index.js");
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+        "running:
+        echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123)} }\\" > index.js
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
 });
 
 /** Write a mock wrangler.toml file to disk. */
