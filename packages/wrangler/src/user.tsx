@@ -224,6 +224,7 @@ import assert from "node:assert";
 import type { ParsedUrlQuery } from "node:querystring";
 import { CF_API_BASE_URL } from "./cfetch";
 import type { Response } from "node-fetch";
+import { renderToString } from "./render-helpers";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -943,7 +944,7 @@ export function listScopes(): void {
     Scope: scope,
     Description: Scopes[scope],
   }));
-  render(<Table data={data} />);
+  console.log(renderToString(<Table data={data} />));
   // TODO: maybe a good idea to show usage here
 }
 
