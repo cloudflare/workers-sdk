@@ -103,7 +103,7 @@ describe("publish", () => {
 
     it('should error if a site definition doesn\'t have a "bucket" field', async () => {
       writeWranglerToml({
-        // @ts-expect-error we're purposely setting this to an invalid value
+        // @ts-expect-error we're purposely missing the required `site.bucket` field
         site: {
           "entry-point": "./index.js",
         },
