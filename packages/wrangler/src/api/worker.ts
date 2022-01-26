@@ -149,7 +149,7 @@ export async function createWorker(
   const token = await previewToken(account, init);
   const response = await fetch(token.prewarmUrl.href, { method: "POST" });
   if (!response.ok) {
-    // console.error("worker failed to prewarm: ", response.statusText);
+    // TODO: logger.error("worker failed to prewarm: ", response.statusText);
   }
   return token;
 }

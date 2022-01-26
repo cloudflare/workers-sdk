@@ -46,6 +46,7 @@ import { setTimeout } from "node:timers/promises";
 import * as fs from "node:fs";
 import { execa } from "execa";
 import { whoami } from "./whoami";
+import { logger } from "./logger";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -66,7 +67,7 @@ async function readConfig(configPath?: string): Promise<Config> {
   normaliseAndValidateEnvironmentsConfig(config);
 
   if ("experimental_services" in config) {
-    console.warn(
+    logger.warn(
       "The experimental_services field is only for cloudflare internal usage right now, and is subject to change. Please do not use this on production projects"
     );
   }
@@ -134,7 +135,7 @@ export async function main(argv: string[]): Promise<void> {
       if (args._.length > 0) {
         throw new CommandLineArgsError(`Unknown command: ${args._}.`);
       } else {
-        wrangler.showHelp("log");
+        wrangler.showHelp((str) => logger.log(str));
       }
     }
   );
@@ -194,7 +195,7 @@ export async function main(argv: string[]): Promise<void> {
 
       const destination = path.join(process.cwd(), "wrangler.toml");
       if (fs.existsSync(destination)) {
-        console.warn(`${destination} file already exists!`);
+        logger.warn(`${destination} file already exists!`);
         const shouldContinue = await confirm(
           "Do you want to continue initializing this project?"
         );
@@ -208,7 +209,7 @@ export async function main(argv: string[]): Promise<void> {
             destination,
             `compatibility_date = "${compatibilityDate}"` + "\n"
           );
-          console.log(`✨ Successfully created wrangler.toml`);
+          logger.log(`✨ Successfully created wrangler.toml`);
           // TODO: suggest next steps?
         } catch (err) {
           throw new Error(
@@ -241,7 +242,7 @@ export async function main(argv: string[]): Promise<void> {
           await execa("npm", ["install"], {
             stdio: "inherit",
           });
-          console.log(`✨ Created package.json`);
+          logger.log(`✨ Created package.json`);
           pathToPackageJson = path.join(process.cwd(), "package.json");
         } else {
           return;
@@ -269,7 +270,7 @@ export async function main(argv: string[]): Promise<void> {
                 stdio: "inherit",
               }
             );
-            console.log(`✨ Installed wrangler`);
+            logger.log(`✨ Installed wrangler`);
           }
         }
       }
@@ -307,7 +308,7 @@ export async function main(argv: string[]): Promise<void> {
             ["install", "@cloudflare/workers-types", "--save-dev"],
             { stdio: "inherit" }
           );
-          console.log(
+          logger.log(
             `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
           );
           pathToTSConfig = path.join(process.cwd(), "tsconfig.json");
@@ -339,7 +340,7 @@ export async function main(argv: string[]): Promise<void> {
             // it could be complicated in existing projects
             // and we don't want to break them. Instead, we simply
             // tell the user that they need to update their tsconfig.json
-            console.log(
+            logger.log(
               `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in your tsconfig.json`
             );
           } else {
@@ -548,7 +549,7 @@ export async function main(argv: string[]): Promise<void> {
       const config = args.config as Config;
 
       if (args["experimental-public"]) {
-        console.warn(
+        logger.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
         );
       }
@@ -560,7 +561,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       if (config.site?.["entry-point"]) {
-        console.warn(
+        logger.warn(
           "Deprecation notice: The `site.entry-point` config field is no longer used.\n" +
             "The entry-point is specified via the command line (e.g. `wrangler dev path/to/script`).\n" +
             "Please remove the `site.entry-point` field from the `wrangler.toml` file."
@@ -572,7 +573,7 @@ export async function main(argv: string[]): Promise<void> {
         const loggedIn = await loginOrRefreshIfRequired();
         if (!loggedIn) {
           // didn't login, let's just quit
-          console.log("Did not login, quitting...");
+          logger.log("Did not login, quitting...");
           return;
         }
 
@@ -592,7 +593,7 @@ export async function main(argv: string[]): Promise<void> {
       // but we haven't fixed it internally yet
       if ("durable_objects" in envRootObj) {
         if (!(args.name || config.name)) {
-          console.warn(
+          logger.warn(
             'A worker with durable objects needs to be named, or it may not work as expected. Add a "name" into wrangler.toml, or pass it in the command line with --name.'
           );
         }
@@ -744,7 +745,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       if (args["experimental-public"]) {
-        console.warn(
+        logger.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
         );
       }
@@ -757,7 +758,7 @@ export async function main(argv: string[]): Promise<void> {
       const config = args.config as Config;
 
       if (args.latest) {
-        console.warn(
+        logger.warn(
           "⚠️  Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
         );
       }
@@ -767,7 +768,7 @@ export async function main(argv: string[]): Promise<void> {
         const loggedIn = await loginOrRefreshIfRequired();
         if (!loggedIn) {
           // didn't login, let's just quit
-          console.log("Did not login, quitting...");
+          logger.log("Did not login, quitting...");
           return;
         }
 
@@ -871,7 +872,7 @@ export async function main(argv: string[]): Promise<void> {
       const loggedIn = await loginOrRefreshIfRequired();
       if (!loggedIn) {
         // didn't login, let's just quit
-        console.log("Did not login, quitting...");
+        logger.log("Did not login, quitting...");
         return;
       }
 
@@ -896,7 +897,7 @@ export async function main(argv: string[]): Promise<void> {
       const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
         await createTail(accountId, scriptName, filters);
 
-      console.log(
+      logger.log(
         `successfully created tail, expires at ${expiration.toLocaleString()}`
       );
 
@@ -906,7 +907,7 @@ export async function main(argv: string[]): Promise<void> {
       });
 
       tail.on("message", (data) => {
-        console.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
+        logger.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
       });
 
       while (tail.readyState !== tail.OPEN) {
@@ -922,7 +923,7 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      console.log(`Connected to ${scriptName}, waiting for logs...`);
+      logger.log(`Connected to ${scriptName}, waiting for logs...`);
     }
   );
 
@@ -986,14 +987,14 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            console.log(":route list", args);
+            logger.log(":route list", args);
             // TODO: use environment (current wrangler doesn't do so?)
             const zone = args.zone || (args.config as Config).zone_id;
             if (!zone) {
               throw new Error("missing zone id");
             }
 
-            console.log(await fetchResult(`/zones/${zone}/workers/routes`));
+            logger.log(await fetchResult(`/zones/${zone}/workers/routes`));
           }
         )
         .command(
@@ -1015,14 +1016,14 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            console.log(":route delete", args);
+            logger.log(":route delete", args);
             // TODO: use environment (current wrangler doesn't do so?)
             const zone = args.zone || (args.config as Config).zone_id;
             if (!zone) {
               throw new Error("missing zone id");
             }
 
-            console.log(
+            logger.log(
               await fetchResult(`/zones/${zone}/workers/routes/${args.id}`, {
                 method: "DELETE",
               })
@@ -1091,7 +1092,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1124,7 +1125,7 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             try {
-              console.log(await submitSecret());
+              logger.log(await submitSecret());
             } catch (e) {
               if (e.code === 10007) {
                 // upload a draft worker
@@ -1150,7 +1151,7 @@ export async function main(argv: string[]): Promise<void> {
                 );
 
                 // and then try again
-                console.log(await submitSecret());
+                logger.log(await submitSecret());
                 // TODO: delete the draft worker if this failed too?
               }
             }
@@ -1194,7 +1195,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1208,11 +1209,11 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             if (await confirm("Are you sure you want to delete this secret?")) {
-              console.log(
+              logger.log(
                 `Deleting the secret ${args.key} on script ${scriptName}.`
               );
 
-              console.log(
+              logger.log(
                 await fetchResult(
                   `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
                   { method: "DELETE" }
@@ -1255,7 +1256,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1268,7 +1269,7 @@ export async function main(argv: string[]): Promise<void> {
               // -- snip, end --
             }
 
-            console.log(
+            logger.log(
               await fetchResult(
                 `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
               )
@@ -1320,7 +1321,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const config = args.config as Config;
             if (!config.name) {
-              console.warn(
+              logger.warn(
                 "No configured name present, using `worker` as a prefix for the title"
               );
             }
@@ -1338,13 +1339,13 @@ export async function main(argv: string[]): Promise<void> {
                 script: ` `, // has to be a string with at least one char
               });
               await mf.getKVNamespace(title); // this should "create" the namespace
-              console.log(`✨ Success! Created KV namespace ${title}`);
+              logger.log(`✨ Success! Created KV namespace ${title}`);
             } else {
               // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1358,19 +1359,19 @@ export async function main(argv: string[]): Promise<void> {
 
               // TODO: generate a binding name stripping non alphanumeric chars
 
-              console.log(`🌀 Creating namespace with title "${title}"`);
+              logger.log(`🌀 Creating namespace with title "${title}"`);
               const namespaceId = await createNamespace(
                 config.account_id,
                 title
               );
 
-              console.log("✨ Success!");
+              logger.log("✨ Success!");
               const envString = args.env ? ` under [env.${args.env}]` : "";
               const previewString = args.preview ? "preview_" : "";
-              console.log(
+              logger.log(
                 `Add the following to your configuration file in your kv_namespaces array${envString}:`
               );
-              console.log(
+              logger.log(
                 `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
               );
 
@@ -1394,7 +1395,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1408,7 +1409,7 @@ export async function main(argv: string[]): Promise<void> {
 
               // TODO: we should show bindings if they exist for given ids
 
-              console.log(
+              logger.log(
                 JSON.stringify(
                   await listNamespaces(config.account_id),
                   null,
@@ -1462,7 +1463,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1564,11 +1565,11 @@ export async function main(argv: string[]): Promise<void> {
             const config = args.config as Config;
 
             if (args.path) {
-              console.log(
+              logger.log(
                 `writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}`
               );
             } else {
-              console.log(
+              logger.log(
                 `writing the value "${value}" to key "${key}" on namespace ${namespaceId}`
               );
             }
@@ -1587,7 +1588,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1650,13 +1651,13 @@ export async function main(argv: string[]): Promise<void> {
               });
               const ns = await mf.getKVNamespace(namespaceId);
               const listResponse = await ns.list({ prefix });
-              console.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
+              logger.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
             } else {
               // -- snip, extract --
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1673,7 +1674,7 @@ export async function main(argv: string[]): Promise<void> {
                 namespaceId,
                 prefix
               );
-              console.log(JSON.stringify(results, undefined, 2));
+              logger.log(JSON.stringify(results, undefined, 2));
             }
           }
         )
@@ -1723,7 +1724,7 @@ export async function main(argv: string[]): Promise<void> {
                 script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
-              console.log(await ns.get(key));
+              logger.log(await ns.get(key));
               return;
             }
 
@@ -1732,7 +1733,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1745,7 +1746,7 @@ export async function main(argv: string[]): Promise<void> {
               // -- snip, end --
             }
 
-            console.log(
+            logger.log(
               await fetchRaw(
                 `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`
               )
@@ -1783,9 +1784,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ key, ...args }) => {
             const namespaceId = getNamespaceId(args);
 
-            console.log(
-              `deleting the key "${key}" on namespace ${namespaceId}`
-            );
+            logger.log(`deleting the key "${key}" on namespace ${namespaceId}`);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -1795,7 +1794,7 @@ export async function main(argv: string[]): Promise<void> {
                 script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
-              console.log(await ns.delete(key));
+              logger.log(await ns.delete(key));
               return;
             }
 
@@ -1806,7 +1805,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1903,7 +1902,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1915,7 +1914,7 @@ export async function main(argv: string[]): Promise<void> {
               }
               // -- snip, end --
 
-              console.log(
+              logger.log(
                 await putBulkKeyValue(config.account_id, namespaceId, content)
               );
             }
@@ -1978,7 +1977,7 @@ export async function main(argv: string[]): Promise<void> {
               const loggedIn = await loginOrRefreshIfRequired();
               if (!loggedIn) {
                 // didn't login, let's just quit
-                console.log("Did not login, quitting...");
+                logger.log("Did not login, quitting...");
                 return;
               }
 
@@ -1990,7 +1989,7 @@ export async function main(argv: string[]): Promise<void> {
               }
               // -- snip, end --
 
-              console.log(
+              logger.log(
                 await deleteBulkKeyValue(
                   config.account_id,
                   namespaceId,
@@ -2032,13 +2031,13 @@ export async function main(argv: string[]): Promise<void> {
     await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
-      wrangler.showHelp("error");
-      console.error(""); // Just adds a bit of space
-      console.error(e.message);
+      wrangler.showHelp((str) => logger.error(str));
+      logger.error(""); // Just adds a bit of space
+      logger.error(e.message);
     } else {
-      console.error(e.message);
-      console.error(""); // Just adds a bit of space
-      console.error(
+      logger.error(e.message);
+      logger.error(""); // Just adds a bit of space
+      logger.error(
         `${fgGreenColor}%s${resetColor}`,
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );

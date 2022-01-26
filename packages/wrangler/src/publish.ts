@@ -9,6 +9,7 @@ import type { CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
+import { logger } from "./logger";
 import makeModuleCollector from "./module-collection";
 import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
@@ -79,7 +80,7 @@ export default async function publish(props: Props): Promise<void> {
   );
 
   if (config.site?.["entry-point"]) {
-    console.warn(
+    logger.warn(
       "Deprecation notice: The `site.entry-point` config field is no longer used.\n" +
         "The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `build.upload.main` config field.\n" +
         "Please remove the `site.entry-point` field from the `wrangler.toml` file."
@@ -113,7 +114,7 @@ export default async function publish(props: Props): Promise<void> {
   const destination = await tmp.dir({ unsafeCleanup: true });
   if (props.config.build?.command) {
     // TODO: add a deprecation message here?
-    console.log("running:", props.config.build.command);
+    logger.log("running:", props.config.build.command);
     await execaCommand(props.config.build.command, {
       shell: true,
       stdout: "inherit",
@@ -182,12 +183,12 @@ export default async function publish(props: Props): Promise<void> {
   // That way we'll be able to accurately tell if this is a service worker or not.
 
   if (format === "modules" && bundle.type === "commonjs") {
-    console.error("⎔ Cannot use modules with a commonjs bundle.");
+    logger.error("⎔ Cannot use modules with a commonjs bundle.");
     // TODO: a much better error message here, with what to do next
     return;
   }
   if (format === "service-worker" && bundle.type !== "esm") {
-    console.error("⎔ Cannot use service-worker with a esm bundle.");
+    logger.error("⎔ Cannot use service-worker with a esm bundle.");
     // TODO: a much better error message here, with what to do next
     return;
   }
@@ -209,7 +210,7 @@ export default async function publish(props: Props): Promise<void> {
         (migration) => migration.tag === script.migration_tag
       );
       if (foundIndex === -1) {
-        console.warn(
+        logger.warn(
           `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already deleted it. Applying all available migrations to the script...`
         );
         migrations = {
@@ -298,7 +299,7 @@ export default async function publish(props: Props): Promise<void> {
   );
 
   const uploadMs = Date.now() - start;
-  console.log("Uploaded", workerName, formatTime(uploadMs));
+  logger.log("Uploaded", workerName, formatTime(uploadMs));
   const deployments: Promise<string[]>[] = [];
 
   const userSubdomain = (
@@ -384,9 +385,9 @@ export default async function publish(props: Props): Promise<void> {
 
   const targets = await Promise.all(deployments);
   const deployMs = Date.now() - start - uploadMs;
-  console.log("Deployed", workerName, formatTime(deployMs));
+  logger.log("Deployed", workerName, formatTime(deployMs));
   for (const target of targets.flat()) {
-    console.log(" ", target);
+    logger.log(" ", target);
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "overrides": [
+    {
+      // Do not allow console.xxx in Wrangler source files
+      "files": "src/*.ts",
+      "rules": {
+        "no-console": "error"
+      }
+    }
+  ]
+}

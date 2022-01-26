@@ -97,7 +97,8 @@
           ]
         }
       }
-    ]
+    ],
+    "reportUnusedDisableDirectives": true
   },
   "volta": {
     "node": "16.7.0"

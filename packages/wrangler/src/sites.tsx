@@ -5,6 +5,7 @@ import { XXHash64 } from "xxhash-addon";
 import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
 import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
+import { logger } from "./logger";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = ["node_modules"];
@@ -149,7 +150,7 @@ export async function syncAssets(
     }
 
     await validateAssetSize(file);
-    console.log(`reading ${file}...`);
+    logger.log(`reading ${file}...`);
     const content = await readFile(file, "base64");
 
     const assetKey = hashAsset(file, content);
@@ -157,14 +158,14 @@ export async function syncAssets(
 
     // now put each of the files into kv
     if (!keys.has(assetKey)) {
-      console.log(`uploading as ${assetKey}...`);
+      logger.log(`uploading as ${assetKey}...`);
       upload.push({
         key: assetKey,
         value: content,
         base64: true,
       });
     } else {
-      console.log(`skipping - already uploaded`);
+      logger.log(`skipping - already uploaded`);
     }
     manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }

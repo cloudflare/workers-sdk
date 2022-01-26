@@ -3,13 +3,13 @@ import * as TOML from "@iarna/toml";
 import { mockConfirm } from "./mock-dialogs";
 import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
-import { mockConsoleMethods } from "./mock-console";
+import { mockLogger } from "./mock-logger";
 import * as fs from "node:fs";
 
 describe("wrangler", () => {
   runInTempDir();
 
-  const std = mockConsoleMethods();
+  const std = mockLogger();
 
   describe("no command", () => {
     it("should display a list of available commands", async () => {

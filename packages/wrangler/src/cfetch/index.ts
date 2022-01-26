@@ -1,5 +1,6 @@
 import type { RequestInit } from "node-fetch";
 import { URLSearchParams } from "url";
+import { logger } from "../logger";
 import { fetchInternal } from "./internal";
 
 // Check out https://api.cloudflare.com/ for API docs.
@@ -90,7 +91,7 @@ function throwFetchError(
   resource: string,
   response: FetchResult<unknown>
 ): never {
-  response.messages.forEach((message) => console.warn(message));
+  response.messages.forEach((message) => logger.warn(message));
   const errors = response.errors
     .map((error) => `${error.code}: ${error.message}`)
     .join("\n");

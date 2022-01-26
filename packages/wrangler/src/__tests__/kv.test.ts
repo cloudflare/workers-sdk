@@ -8,11 +8,11 @@ import {
 } from "./mock-cfetch";
 import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
-import { mockConsoleMethods } from "./mock-console";
+import { mockLogger } from "./mock-logger";
 
 describe("wrangler", () => {
   runInTempDir();
-  const std = mockConsoleMethods();
+  const std = mockLogger();
 
   afterEach(() => {
     unsetAllMocks();

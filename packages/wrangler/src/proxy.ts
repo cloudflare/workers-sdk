@@ -12,6 +12,7 @@ import WebSocket from "faye-websocket";
 import serveStatic from "serve-static";
 import type { CfPreviewToken } from "./api/preview";
 import { useEffect, useRef } from "react";
+import { logger } from "./logger";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -217,7 +218,7 @@ export function usePreviewServer({
   // containing component is mounted/unmounted.
   useEffect(() => {
     proxy.listen(port);
-    console.log(`⬣ Listening at http://localhost:${port}`);
+    logger.log(`⬣ Listening at http://localhost:${port}`);
 
     return () => {
       proxy.close();
@@ -254,7 +255,7 @@ function createProxyServer() {
   return createServer()
     .on("request", function (req, res) {
       // log all requests
-      console.log(
+      logger.log(
         new Date().toLocaleTimeString(),
         req.method,
         req.url,
@@ -263,7 +264,7 @@ function createProxyServer() {
     })
     .on("upgrade", (req) => {
       // log all websocket connections
-      console.log(
+      logger.log(
         new Date().toLocaleTimeString(),
         req.method,
         req.url,
@@ -273,7 +274,7 @@ function createProxyServer() {
     })
     .on("error", (err) => {
       // log all connection errors
-      console.error(new Date().toLocaleTimeString(), err);
+      logger.error(new Date().toLocaleTimeString(), err);
     });
 }
 

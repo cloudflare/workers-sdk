@@ -5,13 +5,13 @@ import { mockKeyListRequest } from "./kv.test";
 import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
 import { runInTempDir } from "./run-in-tmp";
 import { runWrangler } from "./run-wrangler";
-import { mockConsoleMethods } from "./mock-console";
+import { mockLogger } from "./mock-logger";
 import type { Config } from "../config";
 import * as TOML from "@iarna/toml";
 
 describe("publish", () => {
   runInTempDir();
-  const std = mockConsoleMethods();
+  const std = mockLogger();
 
   afterEach(() => {
     unsetAllMocks();

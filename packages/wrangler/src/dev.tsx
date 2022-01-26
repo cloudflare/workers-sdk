@@ -28,6 +28,7 @@ import { usePreviewServer } from "./proxy";
 import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
+import { logger } from "./logger";
 
 type CfScriptFormat = undefined | "modules" | "service-worker";
 
@@ -212,17 +213,17 @@ function useLocalWorker(props: {
     async function startLocalWorker() {
       if (!bundle) return;
       if (format === "modules" && bundle.type === "commonjs") {
-        console.error("⎔ Cannot use modules with a commonjs bundle.");
+        logger.error("⎔ Cannot use modules with a commonjs bundle.");
         // TODO: a much better error message here, with what to do next
         return;
       }
       if (format === "service-worker" && bundle.type !== "esm") {
-        console.error("⎔ Cannot use service-worker with a esm bundle.");
+        logger.error("⎔ Cannot use service-worker with a esm bundle.");
         // TODO: a much better error message here, with what to do next
         return;
       }
 
-      console.log("⎔ Starting a local server...");
+      logger.log("⎔ Starting a local server...");
       // TODO: just use execa for this
       local.current = spawn("node", [
         "--experimental-vm-modules",
@@ -258,20 +259,20 @@ function useLocalWorker(props: {
           ? "true"
           : "false",
       ]);
-      console.log(`⬣ Listening at http://localhost:${port}`);
+      logger.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {
         if (code !== null) {
-          console.log(`miniflare process exited with code ${code}`);
+          logger.log(`miniflare process exited with code ${code}`);
         }
       });
 
       local.current.stdout?.on("data", (data: Buffer) => {
-        console.log(`${data.toString()}`);
+        logger.log(`${data.toString()}`);
       });
 
       local.current.stderr?.on("data", (data: Buffer) => {
-        console.error(`${data.toString()}`);
+        logger.error(`${data.toString()}`);
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
             data.toString()
@@ -283,29 +284,29 @@ function useLocalWorker(props: {
 
       local.current.on("exit", (code) => {
         if (code !== 0) {
-          console.error(`miniflare process exited with code ${code}`);
+          logger.error(`miniflare process exited with code ${code}`);
         }
       });
 
       local.current.on("error", (error: Error) => {
-        console.error(`miniflare process failed to spawn`);
-        console.error(error);
+        logger.error(`miniflare process failed to spawn`);
+        logger.error(error);
       });
 
       removeSignalExitListener.current = onExit((_code, _signal) => {
-        console.log("⎔ Shutting down local server.");
+        logger.log("⎔ Shutting down local server.");
         local.current?.kill();
         local.current = undefined;
       });
     }
 
     startLocalWorker().catch((err) => {
-      console.error("local worker:", err);
+      logger.error("local worker:", err);
     });
 
     return () => {
       if (local.current) {
-        console.log("⎔ Shutting down local server.");
+        logger.log("⎔ Shutting down local server.");
         local.current?.kill();
         local.current = undefined;
         removeSignalExitListener.current && removeSignalExitListener.current();
@@ -334,7 +335,7 @@ function useTmpDir(): string | undefined {
         setDirectory(dir);
         return;
       } catch (err) {
-        console.error("failed to create tmp dir");
+        logger.error("failed to create tmp dir");
         throw err;
       }
     }
@@ -347,7 +348,7 @@ function useTmpDir(): string | undefined {
       dir.cleanup().catch(() => {
         // extremely unlikely,
         // but it's 2021 after all
-        console.error("failed to cleanup tmp dir");
+        logger.error("failed to cleanup tmp dir");
       });
     };
   }, [handleError]);
@@ -370,7 +371,7 @@ function useCustomBuild(
   useEffect(() => {
     if (!command) return;
     let cmd, interval;
-    console.log("running:", command);
+    logger.log("running:", command);
     cmd = execaCommand(command, {
       ...(cwd && { cwd }),
       shell: true,
@@ -381,7 +382,7 @@ function useCustomBuild(
       watch(watch_dir, { persistent: true, ignoreInitial: true }).on(
         "all",
         (_event, filePath) => {
-          console.log(`The file ${filePath} changed, restarting build...`);
+          logger.log(`The file ${filePath} changed, restarting build...`);
           cmd.kill();
           cmd = execaCommand(command, {
             ...(cwd && { cwd }),
@@ -404,7 +405,7 @@ function useCustomBuild(
         const elapsed = Date.now() - startedAt;
         // timeout after 30 seconds of waiting
         if (elapsed > 1000 * 60 * 30) {
-          console.error("⎔ Build timed out.");
+          logger.error("⎔ Build timed out.");
           clearInterval(interval);
           cmd.kill();
         }
@@ -465,7 +466,7 @@ function useEsbuild(props: {
         // TODO: import.meta.url
         watch: {
           async onRebuild(error) {
-            if (error) console.error("watch build failed:", error);
+            if (error) logger.error("watch build failed:", error);
             else {
               // nothing really changes here, so let's increment the id
               // to change the return object's identity
@@ -557,12 +558,12 @@ function useWorker(props: {
 
       if (!bundle) return;
       if (format === "modules" && bundle.type === "commonjs") {
-        console.error("⎔ Cannot use modules with a commonjs bundle.");
+        logger.error("⎔ Cannot use modules with a commonjs bundle.");
         // TODO: a much better error message here, with what to do next
         return;
       }
       if (format === "service-worker" && bundle.type !== "esm") {
-        console.error("⎔ Cannot use service-worker with a esm bundle.");
+        logger.error("⎔ Cannot use service-worker with a esm bundle.");
         // TODO: a much better error message here, with what to do next
         return;
       }
@@ -570,7 +571,7 @@ function useWorker(props: {
       if (!startedRef.current) {
         startedRef.current = true;
       } else {
-        console.log("⎔ Detected changes, restarted server.");
+        logger.log("⎔ Detected changes, restarted server.");
       }
 
       const assets = await syncAssets(
@@ -620,7 +621,7 @@ function useWorker(props: {
     start().catch((err) => {
       // we want to log the error, but not end the process
       // since it could recover after the developer fixes whatever's wrong
-      console.error("remote worker:", err);
+      logger.error("remote worker:", err);
     });
   }, [
     name,
@@ -671,12 +672,12 @@ function useTunnel(toggle: boolean) {
         try {
           await commandExists("cloudflared");
         } catch (e) {
-          console.error(
+          logger.error(
             "To share your worker on the internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
           );
           return;
         }
-        console.log("⎔ Starting a tunnel...");
+        logger.log("⎔ Starting a tunnel...");
         tunnel.current = spawn("cloudflared", [
           "tunnel",
           "--url",
@@ -687,29 +688,29 @@ function useTunnel(toggle: boolean) {
 
         tunnel.current.on("close", (code) => {
           if (code !== 0) {
-            console.log(`Tunnel process exited with code ${code}`);
+            logger.log(`Tunnel process exited with code ${code}`);
           }
         });
 
         removeSignalExitListener.current = onExit((_code, _signal) => {
-          console.log("⎔ Shutting down local tunnel.");
+          logger.log("⎔ Shutting down local tunnel.");
           tunnel.current?.kill();
           tunnel.current = undefined;
         });
 
         const hostName = await findTunnelHostname();
         await clipboardy.write(hostName);
-        console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
+        logger.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
       }
     }
 
     startTunnel().catch((err) => {
-      console.error("tunnel:", err);
+      logger.error("tunnel:", err);
     });
 
     return () => {
       if (tunnel.current) {
-        console.log("⎔ Shutting down tunnel.");
+        logger.log("⎔ Shutting down tunnel.");
         tunnel.current?.kill();
         tunnel.current = undefined;
         removeSignalExitListener.current && removeSignalExitListener.current();

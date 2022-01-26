@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { version } from "../package.json";
 
 import type Protocol from "devtools-protocol";
+import { logger } from "./logger";
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -132,7 +133,7 @@ export default function useInspector(props: InspectorProps) {
   wsServer.on("connection", (ws: WebSocket) => {
     if (wsServer.clients.size > 1) {
       /** We only want to have one active Devtools instance at a time. */
-      console.error(
+      logger.error(
         "Tried to open a new devtools window when a previous one was already open."
       );
       ws.close(1013, "Too many clients; only one can be connected at a time");
@@ -238,7 +239,7 @@ export default function useInspector(props: InspectorProps) {
           const evt = JSON.parse(event.data);
           if (evt.method === "Runtime.exceptionThrown") {
             const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
-            console.error(
+            logger.error(
               "🚨", // cheesy, but it works
               // maybe we could use color here too.
               params.exceptionDetails.text,
@@ -252,7 +253,7 @@ export default function useInspector(props: InspectorProps) {
           }
         } else {
           // We should never get here, but who know is 2022...
-          console.error("unrecognised devtools event:", event);
+          logger.error("unrecognised devtools event:", event);
         }
       });
     }
@@ -271,7 +272,7 @@ export default function useInspector(props: InspectorProps) {
     });
 
     ws.on("unexpected-response", () => {
-      console.log("waiting for connection...");
+      logger.log("waiting for connection...");
       /**
        * This usually means the worker is not "ready" yet
        * so we'll just retry the connection process
@@ -369,7 +370,7 @@ export default function useInspector(props: InspectorProps) {
            * happens on the first request. Maybe we should buffer
            * these messages too?
            */
-          console.error(e);
+          logger.error(e);
         }
       }
     }
@@ -580,11 +581,11 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 
   const method = mapConsoleAPIMessageTypeToConsoleMethod[evt.type];
 
-  if (method in console) {
+  if (method in logger) {
     // eslint-disable-next-line prefer-spread
-    console[method].apply(console, args);
+    logger[method].apply(logger, args);
   } else {
-    console.warn(`Unsupported console method: ${method}`);
-    console.log("console event:", evt);
+    logger.warn(`Unsupported console method: ${method}`);
+    logger.log("console event:", evt);
   }
 }

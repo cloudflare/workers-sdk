@@ -224,6 +224,8 @@ import assert from "node:assert";
 import type { ParsedUrlQuery } from "node:querystring";
 import { CF_API_BASE_URL } from "./cfetch";
 import type { Response } from "node-fetch";
+import { logger } from "./logger";
+import { renderToString } from "./render-helpers";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -329,7 +331,7 @@ export async function initialise(): Promise<void> {
     }
   } catch (err) {
     // no config yet, let's chill
-    // console.error(err);
+    // logger.error(err);
   }
   initialised = true;
 }
@@ -535,7 +537,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 
   const stateQueryParam = query.state;
   if (stateQueryParam !== state.stateQueryParam) {
-    console.warn(
+    logger.warn(
       "state query string parameter doesn't match the one sent! Possible malicious activity somewhere."
     );
     throw new ErrorInvalidReturnedStateParam();
@@ -573,7 +575,7 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
   if (!LocalState.refreshToken) {
-    console.warn("No refresh token is present.");
+    logger.warn("No refresh token is present.");
   }
 
   const body =
@@ -630,7 +632,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       const error = err?.error || "There was a network error.";
       switch (error) {
         case "invalid_grant":
-          console.log(
+          logger.log(
             "Expired! Auth code or refresh token needs to be renewed."
           );
           // alert("Redirecting to auth server to obtain a new auth grant code.");
@@ -651,9 +653,9 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
   const { authorizationCode, codeVerifier = "" } = LocalState;
 
   if (!codeVerifier) {
-    console.warn("No code verifier is being sent.");
+    logger.warn("No code verifier is being sent.");
   } else if (!authorizationCode) {
-    console.warn("No authorization grant code is being passed.");
+    logger.warn("No authorization grant code is being passed.");
   }
 
   const body =
@@ -674,7 +676,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
     const { error } = (await response.json()) as { error: string };
     // .catch((_) => ({ error: "invalid_json" }));
     if (error === "invalid_grant") {
-      console.log("Expired! Auth code or refresh token needs to be renewed.");
+      logger.log("Expired! Auth code or refresh token needs to be renewed.");
       // alert("Redirecting to auth server to obtain a new auth grant code.");
       // TODO: return refreshAuthCodeOrRefreshToken();
     }
@@ -806,12 +808,12 @@ export async function login(props?: LoginProps): Promise<boolean> {
   const urlToOpen = await getAuthURL(props?.scopes);
   await open(urlToOpen);
   // TODO: log url only if on system where it's unreliable/unavailable
-  // console.log(`💁 Opened ${urlToOpen}`);
+  // logger.log(`💁 Opened ${urlToOpen}`);
   let server;
   let loginTimeoutHandle;
   const timerPromise = new Promise<boolean>((resolve) => {
     loginTimeoutHandle = setTimeout(() => {
-      console.error("Timed out waiting for authorization code.");
+      logger.error("Timed out waiting for authorization code.");
       server.close();
       clearTimeout(loginTimeoutHandle);
       resolve(false);
@@ -845,7 +847,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
               res.end(() => {
                 finish(false);
               });
-              console.log(
+              logger.log(
                 "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider passing an API token with CF_API_TOKEN variable"
               ); // TODO: implement wrangler config lol
 
@@ -869,7 +871,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
             res.end(() => {
               finish(true);
             });
-            console.log(
+            logger.log(
               `Successfully configured. You can find your configuration file at: ${os.homedir()}/.wrangler/config/default.toml`
             );
 
@@ -902,7 +904,7 @@ export async function refreshToken(): Promise<boolean> {
     await writeToConfigFile(refreshed);
     return true;
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return false;
   }
 }
@@ -910,7 +912,7 @@ export async function refreshToken(): Promise<boolean> {
 export async function logout(): Promise<void> {
   throwIfNotInitialised();
   if (!LocalState.refreshToken) {
-    console.log("Not logged in, exiting...");
+    logger.log("Not logged in, exiting...");
     return;
   }
   const body =
@@ -926,24 +928,24 @@ export async function logout(): Promise<void> {
     },
   });
   await response.text(); // blank text? would be nice if it was something meaningful
-  console.log(
+  logger.log(
     "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
   );
   // delete the file
   await rm(path.join(os.homedir(), ".wrangler/config/default.toml"));
-  console.log(
+  logger.log(
     `Removing ${os.homedir()}/.wrangler/config/default.toml.. success!`
   );
 }
 
 export function listScopes(): void {
   throwIfNotInitialised();
-  console.log("💁 Available scopes:");
+  logger.log("💁 Available scopes:");
   const data = ScopeKeys.map((scope) => ({
     Scope: scope,
     Description: Scopes[scope],
   }));
-  render(<Table data={data} />);
+  logger.log(renderToString(<Table data={data} />));
   // TODO: maybe a good idea to show usage here
 }
 

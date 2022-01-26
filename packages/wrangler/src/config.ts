@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { logger } from "./logger";
 
 /**
  * This is the static type definition for the configuration object.
@@ -542,7 +543,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     // `vars` is just an object
     if (config.vars !== undefined) {
       if (environment.vars === undefined) {
-        console.warn(
+        logger.warn(
           `In your configuration, "vars" exists at the top level, but not on "env.${envKey}".\n` +
             `This is not what you probably want, since "vars" is not inherited by environments.\n` +
             `Please add "vars" to "env.${envKey}".`
@@ -550,7 +551,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
       } else {
         for (const varField of Object.keys(config.vars)) {
           if (!(varField in environment.vars)) {
-            console.warn(
+            logger.warn(
               `In your configuration, "vars.${varField}" exists at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "vars" is not inherited by environments.\n` +
                 `Please add "vars.${varField}" to "env.${envKey}".`
@@ -563,7 +564,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     // `durable_objects` is an object containing a `bindings` array
     if (config.durable_objects !== undefined) {
       if (environment.durable_objects === undefined) {
-        console.warn(
+        logger.warn(
           `In your configuration, "durable_objects.bindings" exists at the top level, but not on "env.${envKey}".\n` +
             `This is not what you probably want, since "durable_objects" is not inherited by environments.\n` +
             `Please add "durable_objects.bindings" to "env.${envKey}".`
@@ -576,7 +577,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
           (b) => b.name
         )) {
           if (!envBindingNames.has(bindingName)) {
-            console.warn(
+            logger.warn(
               `In your configuration, there is a durable_objects binding with name "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "durable_objects" is not inherited by environments.\n` +
                 `Please add a binding for "${bindingName}" to "env.${envKey}.durable_objects.bindings".`
@@ -589,7 +590,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     // `kv_namespaces` contains an array of namespace bindings
     if (config.kv_namespaces !== undefined) {
       if (environment.kv_namespaces === undefined) {
-        console.warn(
+        logger.warn(
           `In your configuration, "kv_namespaces" exists at the top level, but not on "env.${envKey}".\n` +
             `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
             `Please add "kv_namespaces" to "env.${envKey}".`
@@ -602,7 +603,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
           (kvNamespace) => kvNamespace.binding
         )) {
           if (!envBindings.has(bindingName)) {
-            console.warn(
+            logger.warn(
               `In your configuration, there is a kv_namespaces with binding "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
                 `Please add a binding for "${bindingName}" to "env.${envKey}.kv_namespaces".`
@@ -615,7 +616,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     // `experimental_services` contains an array of namespace bindings
     if (config.experimental_services !== undefined) {
       if (environment.experimental_services === undefined) {
-        console.warn(
+        logger.warn(
           `In your configuration, "experimental_services" exists at the top level, but not on "env.${envKey}".\n` +
             `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
             `Please add "experimental_services" to "env.${envKey}".`
@@ -628,7 +629,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
           (service) => service.name
         )) {
           if (!envBindingNames.has(bindingName)) {
-            console.warn(
+            logger.warn(
               `In your configuration, there is a experimental_services with binding name "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
                 `Please add a service for "${bindingName}" to "env.${envKey}.experimental_services".`

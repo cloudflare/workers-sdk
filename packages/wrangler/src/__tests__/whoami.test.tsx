@@ -1,19 +1,18 @@
-import React from "react";
 import os from "node:os";
 import path from "node:path";
-import { render } from "ink-testing-library";
-import type { UserInfo } from "../whoami";
-import { getUserInfo, WhoAmI } from "../whoami";
 import { runInTempDir } from "./run-in-tmp";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { setMockResponse } from "./mock-cfetch";
 import { initialise } from "../user";
+import { mockLogger } from "./mock-logger";
+import { runWrangler } from "./run-wrangler";
 
 const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 
-describe("getUserInfo()", () => {
+describe("whoami", () => {
   runInTempDir({ homedir: "./home" });
+  const std = mockLogger();
 
   beforeEach(() => {
     // Clear the environment variables, so we can control them in the tests
@@ -27,17 +26,27 @@ describe("getUserInfo()", () => {
     process.env.CF_ACCOUNT_ID = ORIGINAL_CF_ACCOUNT_ID;
   });
 
-  it("should return undefined if there is no config file", async () => {
+  it("should log a 'not authenticated' message if there is no config file", async () => {
     await initialise();
-    const userInfo = await getUserInfo();
-    expect(userInfo).toBeUndefined();
+    await runWrangler("whoami");
+    expect(std.out).toMatchInlineSnapshot(`
+      "Getting User settings...
+      You are not authenticated. Please run \`wrangler login\`.
+      "
+    `);
+    expect(std.err).toMatchInlineSnapshot(`""`);
   });
 
-  it("should return undefined if there is an empty config file", async () => {
+  it("should log a 'not authenticated' message if there is an empty config file", async () => {
     writeUserConfig();
     await initialise();
-    const userInfo = await getUserInfo();
-    expect(userInfo).toBeUndefined();
+    await runWrangler("whoami");
+    expect(std.out).toMatchInlineSnapshot(`
+      "Getting User settings...
+      You are not authenticated. Please run \`wrangler login\`.
+      "
+    `);
+    expect(std.err).toMatchInlineSnapshot(`""`);
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {
@@ -54,51 +63,16 @@ describe("getUserInfo()", () => {
     });
 
     await initialise();
-    const userInfo = await getUserInfo();
-
-    expect(userInfo).toEqual({
-      authType: "OAuth",
-      apiToken: "some-oauth-token",
-      email: "user@example.com",
-      accounts: [
-        { name: "Account One", id: "account-1" },
-        { name: "Account Two", id: "account-2" },
-        { name: "Account Three", id: "account-3" },
-      ],
-    });
-  });
-});
-
-describe("WhoAmI component", () => {
-  it("should return undefined if there is no user", async () => {
-    const { lastFrame } = render(<WhoAmI user={undefined}></WhoAmI>);
-
-    expect(lastFrame()).toMatchInlineSnapshot(
-      `"You are not authenticated. Please run \`wrangler login\`."`
-    );
-  });
-
-  it("should display the user's email and accounts", async () => {
-    const user: UserInfo = {
-      authType: "OAuth",
-      apiToken: "some-oauth-token",
-      email: "user@example.com",
-      accounts: [
-        { name: "Account One", id: "account-1" },
-        { name: "Account Two", id: "account-2" },
-        { name: "Account Three", id: "account-3" },
-      ],
-    };
-
-    const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
-
-    expect(lastFrame()).toContain(
+    await runWrangler("whoami");
+    expect(std.out).toContain("Getting User settings...");
+    expect(std.out).toContain(
       "You are logged in with an OAuth Token, associated with the email 'user@example.com'!"
     );
-    expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
-    expect(lastFrame()).toMatch(/Account One .+ account-1/);
-    expect(lastFrame()).toMatch(/Account Two .+ account-2/);
-    expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+    expect(std.out).toMatch(/Account Name .+ Account ID/);
+    expect(std.out).toMatch(/Account One .+ account-1/);
+    expect(std.out).toMatch(/Account Two .+ account-2/);
+    expect(std.out).toMatch(/Account Three .+ account-3/);
+    expect(std.err).toMatchInlineSnapshot(`""`);
   });
 });
 
