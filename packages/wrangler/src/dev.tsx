@@ -22,6 +22,7 @@ import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
+import { wrapIfWasmEntrypoint } from "./wasi";
 import type { CfPreviewToken } from "./api/preview";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { AssetPaths } from "./sites";
@@ -514,9 +515,12 @@ function useEsbuild(props: {
     let result: esbuild.BuildResult | undefined;
     async function build() {
       if (!destination || !entry) return;
+
+      const wrappedEntry = await wrapIfWasmEntrypoint(entry);
+
       const moduleCollector = makeModuleCollector();
       result = await esbuild.build({
-        entryPoints: [entry],
+        entryPoints: [wrappedEntry],
         bundle: true,
         outdir: destination,
         metafile: true,
@@ -557,17 +561,17 @@ function useEsbuild(props: {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const metafile = result.metafile!;
       const outputEntry = Object.entries(metafile.outputs).find(
-        ([_path, { entryPoint }]) => entryPoint === entry
+        ([_path, { entryPoint }]) => entryPoint === wrappedEntry
       ); // assumedly only one entry point
 
       if (outputEntry === undefined) {
         throw new Error(
-          `Cannot find entry-point "${entry}" in generated bundle.`
+          `Cannot find entry-point "${wrappedEntry}" in generated bundle.`
         );
       }
       setBundle({
         id: 0,
-        entry,
+        entry: wrappedEntry,
         path: outputEntry[0],
         type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
         exports: outputEntry[1].exports,

@@ -15,6 +15,10 @@ export default async function guessWorkerFormat(
   filePath: string,
   hint: CfScriptFormat | undefined
 ): Promise<CfScriptFormat> {
+  if (filePath.endsWith(".wasm")) {
+    return "modules";
+  }
+
   const result = await build({
     entryPoints: [filePath],
     metafile: true,

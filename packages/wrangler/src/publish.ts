@@ -10,6 +10,7 @@ import { fetchResult } from "./cfetch";
 import guessWorkerFormat from "./guess-worker-format";
 import makeModuleCollector from "./module-collection";
 import { syncAssets } from "./sites";
+import { wrapIfWasmEntrypoint } from "./wasi";
 import type { CfScriptFormat, CfWorkerInit } from "./api/worker";
 import type { Config } from "./config";
 import type { AssetPaths } from "./sites";
@@ -136,6 +137,8 @@ export default async function publish(props: Props): Promise<void> {
         "You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code"
       );
     }
+
+    file = await wrapIfWasmEntrypoint(file);
 
     const moduleCollector = makeModuleCollector();
     const result = await esbuild.build({
