@@ -569,7 +569,7 @@ function useWorker(props: {
       if (!startedRef.current) {
         startedRef.current = true;
       } else {
-        console.log("⎔ Detected changes, restarting server...");
+        console.log("⎔ Detected changes, restarted server.");
       }
 
       const assets = await syncAssets(

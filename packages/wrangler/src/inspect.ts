@@ -432,6 +432,33 @@ function randomId(): string {
  * we're just doing a little bit of the work of the devtools console,
  * directly in the terminal.
  */
+
+export const mapConsoleAPIMessageTypeToConsoleMethod: {
+  [key in Protocol.Runtime.ConsoleAPICalledEvent["type"]]: Exclude<
+    keyof Console,
+    "Console"
+  >;
+} = {
+  log: "log",
+  debug: "debug",
+  info: "info",
+  warning: "warn",
+  error: "error",
+  dir: "dir",
+  dirxml: "dirxml",
+  table: "table",
+  trace: "trace",
+  clear: "clear",
+  count: "count",
+  assert: "assert",
+  profile: "profile",
+  profileEnd: "profileEnd",
+  timeEnd: "timeEnd",
+  startGroup: "group",
+  startGroupCollapsed: "groupCollapsed",
+  endGroup: "groupEnd",
+};
+
 function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
   const args: string[] = [];
   for (const ro of evt.args) {
@@ -449,7 +476,11 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
         break;
       case "object":
         if (!ro.preview) {
-          args.push(ro.description ?? "<no-description>");
+          args.push(
+            ro.subtype === "null"
+              ? "null"
+              : ro.description ?? "<no-description>"
+          );
         } else {
           args.push(ro.preview.description ?? "<no-description>");
 
@@ -467,6 +498,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
               );
 
               break;
+            case "weakmap":
             case "map":
               args.push(
                 "{\n" +
@@ -484,6 +516,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
               );
 
               break;
+            case "weakset":
             case "set":
               args.push(
                 "{ " +
@@ -497,27 +530,33 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
                   (ro.preview.overflow ? ", ..." : "") +
                   " }"
               );
-
               break;
-            case "null":
-              args.push("null");
+            case "regexp":
+              break;
+            case "date":
+              break;
+            case "generator":
+              args.push(ro.preview.properties[0].value || "");
+              break;
+            case "promise":
+              if (ro.preview.properties[0].value === "pending") {
+                args.push(`{<${ro.preview.properties[0].value}>}`);
+              } else {
+                args.push(
+                  `{<${ro.preview.properties[0].value}>: ${ro.preview.properties[1].value}}`
+                );
+              }
               break;
             case "node":
-            case "regexp":
-            case "date":
-            case "weakmap":
-            case "weakset":
             case "iterator":
-            case "generator":
-            case "error":
             case "proxy":
-            case "promise":
             case "typedarray":
             case "arraybuffer":
             case "dataview":
             case "webassemblymemory":
             case "wasmvalue":
               break;
+            case "error":
             default:
               // just a pojo
               args.push(
@@ -539,5 +578,13 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
     }
   }
 
-  console[evt.type](...args);
+  const method = mapConsoleAPIMessageTypeToConsoleMethod[evt.type];
+
+  if (method in console) {
+    // eslint-disable-next-line prefer-spread
+    console[method].apply(console, args);
+  } else {
+    console.warn(`Unsupported console method: ${method}`);
+    console.log("console event:", evt);
+  }
 }
