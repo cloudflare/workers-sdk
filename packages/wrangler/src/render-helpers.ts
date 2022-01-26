@@ -12,6 +12,7 @@ export function renderToString(Component: ReactElement) {
   const stdout = new CaptureStd();
   render(Component, {
     stdout: stdout as unknown as NodeJS.WriteStream,
+    patchConsole: false,
   });
 
   return stdout.output;
@@ -27,6 +28,7 @@ class CaptureStd extends EventEmitter {
   columns = logger.columns;
 
   write(str: string) {
+    console.log(str);
     this.output = str;
   }
 }
