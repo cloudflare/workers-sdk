@@ -38,6 +38,7 @@
   "dependencies": {
     "esbuild": "0.14.14",
     "miniflare": "2.3.0",
+    "@cloudflare/workers-wasi": "0.0.5",
     "path-to-regexp": "^6.2.0",
     "semiver": "^1.1.0",
     "xxhash-wasm": "^1.0.1"

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
+import { wrapIfWasmEntrypoint } from "./wasi";
 import makeModuleCollector from "./module-collection";
 import type { CfModule, CfScriptFormat } from "./api/worker";
 
@@ -30,9 +31,11 @@ export async function bundleWorker(
   format: CfScriptFormat,
   watch?: esbuild.WatchMode
 ): Promise<BundleResult> {
+  const file = await wrapIfWasmEntrypoint(entry.file);
+
   const moduleCollector = makeModuleCollector({ format });
   const result = await esbuild.build({
-    ...getEntryPoint(entry.file, serveAssetsFromWorker),
+    ...getEntryPoint(file, serveAssetsFromWorker),
     bundle: true,
     absWorkingDir: entry.directory,
     outdir: destination,
@@ -58,7 +61,7 @@ export async function bundleWorker(
   );
   assert(
     entryPointOutputs.length > 0,
-    `Cannot find entry-point "${entry.file}" in generated bundle.` +
+    `Cannot find entry-point "${file}" in generated bundle.` +
       listEntryPoints(entryPointOutputs)
   );
   assert(
