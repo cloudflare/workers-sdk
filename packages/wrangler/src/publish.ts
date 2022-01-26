@@ -3,7 +3,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import * as esbuild from "esbuild";
 import type { Metafile } from "esbuild";
-import { execa } from "execa";
+import { execaCommand } from "execa";
 import tmp from "tmp-promise";
 import type { CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
@@ -114,8 +114,8 @@ export default async function publish(props: Props): Promise<void> {
   if (props.config.build?.command) {
     // TODO: add a deprecation message here?
     console.log("running:", props.config.build.command);
-    const buildCommandPieces = props.config.build.command.split(" ");
-    await execa(buildCommandPieces[0], buildCommandPieces.slice(1), {
+    await execaCommand(props.config.build.command, {
+      shell: true,
       stdout: "inherit",
       stderr: "inherit",
       ...(props.config.build?.cwd && { cwd: props.config.build.cwd }),
