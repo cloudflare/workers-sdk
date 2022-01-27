@@ -1073,17 +1073,16 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            if (args.local) {
-              throw new NotImplementedError(
-                "--local not implemented for this command yet"
-              );
-            }
             const config = args.config as Config;
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
+            }
+
+            if (args.local) {
+              console.warn("`wrangler secret put` is a no-op in --local mode");
             }
 
             if (!args.local) {
@@ -1108,6 +1107,13 @@ export async function main(argv: string[]): Promise<void> {
               "Enter a secret value:",
               "password"
             );
+
+            if (args.local) {
+              return;
+            }
+
+            console.log(`🌀 Creating the secret for script ${scriptName}`);
+
             async function submitSecret() {
               return await fetchResult(
                 `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
@@ -1124,7 +1130,7 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             try {
-              console.log(await submitSecret());
+              await submitSecret();
             } catch (e) {
               if (e.code === 10007) {
                 // upload a draft worker
@@ -1150,10 +1156,11 @@ export async function main(argv: string[]): Promise<void> {
                 );
 
                 // and then try again
-                console.log(await submitSecret());
+                await submitSecret();
                 // TODO: delete the draft worker if this failed too?
               }
             }
+            console.log(`✨ Success! Uploaded secret ${args.key}`);
           }
         )
         .command(
@@ -1176,17 +1183,18 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            if (args.local) {
-              throw new NotImplementedError(
-                "--local not implemented for this command yet"
-              );
-            }
             const config = args.config as Config;
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
+            }
+
+            if (args.local) {
+              console.warn(
+                "`wrangler secret delete` is a no-op in --local mode"
+              );
             }
 
             if (!args.local) {
@@ -1207,17 +1215,24 @@ export async function main(argv: string[]): Promise<void> {
               // -- snip, end --
             }
 
-            if (await confirm("Are you sure you want to delete this secret?")) {
+            if (
+              await confirm(
+                `Are you sure you want to permanently delete the variable ${args.key} on the script ${scriptName}?`
+              )
+            ) {
               console.log(
-                `Deleting the secret ${args.key} on script ${scriptName}.`
+                `🌀 Deleting the secret ${args.key} on script ${scriptName}.`
               );
 
-              console.log(
-                await fetchResult(
-                  `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
-                  { method: "DELETE" }
-                )
+              if (args.local) {
+                return;
+              }
+
+              await fetchResult(
+                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
+                { method: "DELETE" }
               );
+              console.log(`✨ Success! Deleted secret ${args.key}`);
             }
           }
         )
@@ -1237,17 +1252,16 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            if (args.local) {
-              throw new NotImplementedError(
-                "--local not implemented for this command yet"
-              );
-            }
             const config = args.config as Config;
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
             if (!scriptName) {
               throw new Error("Missing script name");
+            }
+
+            if (args.local) {
+              console.warn("`wrangler secret list` is a no-op in --local mode");
             }
 
             if (!args.local) {
@@ -1268,9 +1282,17 @@ export async function main(argv: string[]): Promise<void> {
               // -- snip, end --
             }
 
+            if (args.local) {
+              return;
+            }
+
             console.log(
-              await fetchResult(
-                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
+              JSON.stringify(
+                await fetchResult(
+                  `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
+                ),
+                null,
+                "  "
               )
             );
           }
