@@ -102,7 +102,7 @@ describe("WhoAmI component", () => {
   });
 });
 
-function writeUserConfig(
+export function writeUserConfig(
   oauth_token?: string,
   refresh_token?: string,
   expiration_time?: string
