@@ -40,6 +40,7 @@ export type DevProps = {
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
@@ -102,6 +103,7 @@ function Dev(props: DevProps): JSX.Element {
           site={props.assetPaths}
           public={props.public}
           port={port}
+          enableLocalPersistence={props.enableLocalPersistence}
         />
       ) : (
         <Remote
@@ -184,6 +186,7 @@ function Local(props: {
   public: undefined | string;
   site: undefined | AssetPaths;
   port: number;
+  enableLocalPersistence: boolean;
 }) {
   const { inspectorUrl } = useLocalWorker({
     name: props.name,
@@ -191,6 +194,7 @@ function Local(props: {
     format: props.format,
     bindings: props.bindings,
     port: props.port,
+    enableLocalPersistence: props.enableLocalPersistence,
   });
   useInspector({ inspectorUrl, port: 9229, logToTerminal: false });
   return null;
@@ -202,6 +206,7 @@ function useLocalWorker(props: {
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
   port: number;
+  enableLocalPersistence: boolean;
 }) {
   // TODO: pass vars via command line
   const { bundle, format, bindings, port } = props;
@@ -238,9 +243,9 @@ function useLocalWorker(props: {
         path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
         "--port",
         port.toString(),
-        "--kv-persist",
-        "--cache-persist",
-        "--do-persist",
+        ...(props.enableLocalPersistence
+          ? ["--kv-persist", "--cache-persist", "--do-persist"]
+          : []),
         ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
           return ["--binding", `${key}=${value}`];
         }),
