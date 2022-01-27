@@ -541,6 +541,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
+        })
+        .option("experimental-enable-local-persistence", {
+          describe: "Enable persistence for this session (only for local mode)",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -608,6 +612,9 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
+          enableLocalPersistence={
+            args["experimental-enable-local-persistence"] || false
+          }
           accountId={config.account_id}
           assetPaths={getAssetPaths(
             config,
