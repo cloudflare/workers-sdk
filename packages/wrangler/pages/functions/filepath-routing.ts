@@ -103,7 +103,7 @@ export async function generateConfigFromFileTree({
                 routePath = "";
               }
 
-              routePath = `${baseURL}/${routePath}`;
+              routePath = `${baseURL}/${routePath}`.replace(/\\/g, "/");
 
               routePath = routePath.replace(/\[\[(.+)]]/g, ":$1*"); // transform [[id]] => :id*
               routePath = routePath.replace(/\[(.+)]/g, ":$1"); // transform [id] => :id
