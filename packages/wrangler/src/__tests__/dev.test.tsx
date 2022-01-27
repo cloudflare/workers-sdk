@@ -44,6 +44,7 @@ function renderDev({
   compatibilityFlags,
   usageModel,
   buildCommand = {},
+  enableLocalPersistence = false,
 }: Partial<DevProps>) {
   return render(
     <Dev
@@ -62,6 +63,7 @@ function renderDev({
       compatibilityFlags={compatibilityFlags}
       usageModel={usageModel}
       bindings={bindings}
+      enableLocalPersistence={enableLocalPersistence}
     />
   );
 }
