@@ -850,6 +850,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               }
             }`,
             };
+            scriptReadyResolve();
           }
         }
 
