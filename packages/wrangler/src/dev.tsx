@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { Box, Text, useApp, useInput } from "ink";
+import { Box, Text, useApp, useInput, useStdin } from "ink";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
@@ -82,45 +82,93 @@ function Dev(props: DevProps): JSX.Element {
     );
   }
 
+  const { isRawModeSupported } = useStdin();
+
+  if (isRawModeSupported) {
+    return (
+      <InteractiveDev
+        bundle={bundle}
+        local={props.initialMode === "local"}
+        port={port}
+        apiToken={apiToken}
+        name={props.name}
+        format={props.format}
+        bindings={props.bindings}
+        public={props.public}
+        assetPaths={props.assetPaths}
+        enableLocalPersistence={props.enableLocalPersistence}
+        accountId={props.accountId}
+        compatibilityDate={props.compatibilityDate}
+        compatibilityFlags={props.compatibilityFlags}
+        usageModel={props.usageModel}
+      />
+    );
+  } else {
+    return (
+      <DevSession
+        bundle={bundle}
+        local={props.initialMode === "local"}
+        port={port}
+        apiToken={apiToken}
+        name={props.name}
+        format={props.format}
+        bindings={props.bindings}
+        public={props.public}
+        assetPaths={props.assetPaths}
+        enableLocalPersistence={props.enableLocalPersistence}
+        accountId={props.accountId}
+        compatibilityDate={props.compatibilityDate}
+        compatibilityFlags={props.compatibilityFlags}
+        usageModel={props.usageModel}
+      />
+    );
+  }
+}
+
+function InteractiveDev(props: {
+  name: string | undefined;
+  bundle: EsbuildBundle | undefined;
+  local: boolean;
+  port: number;
+  format: CfScriptFormat;
+  bindings: CfWorkerInit["bindings"];
+  public: undefined | string;
+  assetPaths: undefined | AssetPaths;
+  enableLocalPersistence: boolean;
+  accountId: undefined | string;
+  apiToken: undefined | string;
+  compatibilityDate: string | undefined;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
+}) {
   const toggles = useHotkeys(
     {
-      local: props.initialMode === "local",
+      local: props.local,
       tunnel: false,
     },
-    port
+    props.port
   );
 
   useTunnel(toggles.tunnel);
 
   return (
     <>
-      {toggles.local ? (
-        <Local
-          name={props.name}
-          bundle={bundle}
-          format={props.format}
-          bindings={props.bindings}
-          site={props.assetPaths}
-          public={props.public}
-          port={port}
-          enableLocalPersistence={props.enableLocalPersistence}
-        />
-      ) : (
-        <Remote
-          name={props.name}
-          bundle={bundle}
-          format={props.format}
-          accountId={props.accountId}
-          apiToken={apiToken}
-          bindings={props.bindings}
-          assetPaths={props.assetPaths}
-          public={props.public}
-          port={port}
-          compatibilityDate={props.compatibilityDate}
-          compatibilityFlags={props.compatibilityFlags}
-          usageModel={props.usageModel}
-        />
-      )}
+      <DevSession
+        name={props.name}
+        format={props.format}
+        bindings={props.bindings}
+        public={props.public}
+        assetPaths={props.assetPaths}
+        enableLocalPersistence={props.enableLocalPersistence}
+        accountId={props.accountId}
+        compatibilityDate={props.compatibilityDate}
+        compatibilityFlags={props.compatibilityFlags}
+        usageModel={props.usageModel}
+        apiToken={props.apiToken}
+        port={props.port}
+        bundle={props.bundle}
+        local={props.local}
+      />
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text>
           {`B to open a browser, D to open Devtools, S to ${
@@ -131,6 +179,51 @@ function Dev(props: DevProps): JSX.Element {
         </Text>
       </Box>
     </>
+  );
+}
+
+function DevSession(props: {
+  name: string | undefined;
+  bundle: EsbuildBundle | undefined;
+  local: boolean;
+  port: number;
+  format: CfScriptFormat;
+  bindings: CfWorkerInit["bindings"];
+  public: undefined | string;
+  assetPaths: undefined | AssetPaths;
+  enableLocalPersistence: boolean;
+  accountId: undefined | string;
+  apiToken: undefined | string;
+  compatibilityDate: string | undefined;
+  compatibilityFlags: undefined | string[];
+  usageModel: undefined | "bundled" | "unbound";
+}) {
+  return props.local ? (
+    <Local
+      name={props.name}
+      bundle={props.bundle}
+      format={props.format}
+      bindings={props.bindings}
+      site={props.assetPaths}
+      public={props.public}
+      port={props.port}
+      enableLocalPersistence={props.enableLocalPersistence}
+    />
+  ) : (
+    <Remote
+      name={props.name}
+      bundle={props.bundle}
+      format={props.format}
+      accountId={props.accountId}
+      apiToken={props.apiToken}
+      bindings={props.bindings}
+      assetPaths={props.assetPaths}
+      public={props.public}
+      port={props.port}
+      compatibilityDate={props.compatibilityDate}
+      compatibilityFlags={props.compatibilityFlags}
+      usageModel={props.usageModel}
+    />
   );
 }
 
