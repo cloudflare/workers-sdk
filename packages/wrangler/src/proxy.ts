@@ -11,7 +11,7 @@ import type {
 import WebSocket from "faye-websocket";
 import serveStatic from "serve-static";
 import type { CfPreviewToken } from "./api/preview";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -80,6 +80,17 @@ export function usePreviewServer({
     { request: IncomingMessage; response: ServerResponse }[]
   >([]);
 
+  /**
+   * The session doesn't last forever, and will evetually drop
+   * (usually within 5-15 minutes). When that happens, we simply
+   * restart the effect, effectively restarting the server. We use
+   * a state sigil as an effect dependency to do so.
+   */
+  const [retryServerSetupSigil, setRetryServerSetupSigil] = useState<number>(0);
+  function retryServerSetup() {
+    setRetryServerSetupSigil((x) => x + 1);
+  }
+
   useEffect(() => {
     // If we don't have a token, that means either we're just starting up,
     // or we're refreshing the token.
@@ -118,6 +129,11 @@ export function usePreviewServer({
     // create a ClientHttp2Session
     const remote = connect(`https://${previewToken.host}`);
     cleanupListeners.push(() => remote.destroy());
+
+    // As mentioned above, the session may die at any point,
+    // so we need to restart the effect.
+    remote.on("close", retryServerSetup);
+    cleanupListeners.push(() => remote.off("close", retryServerSetup));
 
     /** HTTP/2 -> HTTP/2  */
     const handleStream = createStreamHandler(previewToken, remote, port);
@@ -209,9 +225,19 @@ export function usePreviewServer({
     cleanupListeners.push(() => proxy.off("upgrade", handleUpgrade));
 
     return () => {
-      cleanupListeners.forEach((d) => d());
+      cleanupListeners.forEach((cleanup) => cleanup());
     };
-  }, [previewToken, publicRoot, port, proxy]);
+  }, [
+    previewToken,
+    publicRoot,
+    port,
+    proxy,
+    // We use a state value as a sigil to trigger reconnecting the server.
+    // It's not used inside the effect, so react-hooks/exhaustive-deps
+    // doesn't complain if it's not included in the dependency array.
+    // But its presence is critical, so Do NOT remove it from the dependency list.
+    retryServerSetupSigil,
+  ]);
 
   // Start/stop the server whenever the
   // containing component is mounted/unmounted.

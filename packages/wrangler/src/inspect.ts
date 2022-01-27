@@ -315,9 +315,14 @@ export default function useInspector(props: InspectorProps) {
     };
   }, [
     props.inspectorUrl,
-    retryRemoteWebSocketConnectionSigil,
     props.logToTerminal,
     wsServer,
+    // We use a state value as a sigil to trigger a retry of the
+    // remote websocket connection. It's not used inside the effect,
+    // so react-hooks/exhaustive-deps doesn't complain if it's not
+    // included in the dependency array. But its presence is critical,
+    // so do NOT remove it from the dependency list.
+    retryRemoteWebSocketConnectionSigil,
   ]);
 
   /**
