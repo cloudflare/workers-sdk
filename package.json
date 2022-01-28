@@ -33,12 +33,12 @@
   "scripts": {
     "check": "run-p check:* --aggregate-output -l",
     "check:type": "tsc -p tsconfig.json",
-    "check:lint": "eslint packages/** --cache --cache-strategy content",
-    "check:format": "prettier packages/** --check",
+    "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content",
+    "check:format": "prettier packages/** --check --ignore-unknown",
     "build-and-test": "run-p build test --aggregate-output -l",
     "build": "npm run build --workspace=wrangler",
     "test": "npm run test --workspaces --if-present",
-    "prettify": "prettier packages/** --write"
+    "prettify": "prettier packages/** --write --ignore-unknown"
   },
   "engines": {
     "node": ">=16.7.0"
