@@ -324,6 +324,7 @@ function useLocalWorker(props: {
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,
+    props.enableLocalPersistence,
   ]);
   return { inspectorUrl };
 }
@@ -580,7 +581,7 @@ function useWorker(props: {
 
       const assets = await syncAssets(
         accountId,
-        path.basename(bundle.path),
+        name || path.basename(bundle.path),
         assetPaths,
         true
       ); // TODO: cancellable?
