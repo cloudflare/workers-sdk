@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
-import { mockConsoleMethods } from "./mock-console";
-import { mockConfirm } from "./mock-dialogs";
-import { runInTempDir } from "./run-in-tmp";
-import { runWrangler } from "./run-wrangler";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler", () => {
   runInTempDir();
@@ -45,14 +45,11 @@ describe("wrangler", () => {
 
   describe("invalid command", () => {
     it("should display an error", async () => {
-      let err: Error | undefined;
-      try {
-        await runWrangler("invalid-command");
-      } catch (e) {
-        err = e;
-      } finally {
-        expect(err?.message).toBe(`Unknown command: invalid-command.`);
-      }
+      await expect(
+        runWrangler("invalid-command")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Unknown command: invalid-command."`
+      );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
@@ -375,50 +372,35 @@ describe("wrangler", () => {
     });
 
     it("should error if `--type` is used", async () => {
-      let err: undefined | Error;
-      try {
-        await runWrangler("init --type");
-      } catch (e) {
-        err = e;
-      } finally {
-        expect(err?.message).toBe(`The --type option is no longer supported.`);
-      }
+      await expect(
+        runWrangler("init --type")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
     });
 
     it("should error if `--type javascript` is used", async () => {
-      let err: undefined | Error;
-      try {
-        await runWrangler("init --type javascript");
-      } catch (e) {
-        err = e;
-      } finally {
-        expect(err?.message).toBe(`The --type option is no longer supported.`);
-      }
+      await expect(
+        runWrangler("init --type javascript")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
     });
 
     it("should error if `--type rust` is used", async () => {
-      let err: undefined | Error;
-      try {
-        await runWrangler("init --type rust");
-      } catch (e) {
-        err = e;
-      } finally {
-        expect(err?.message).toBe(`The --type option is no longer supported.`);
-      }
+      await expect(
+        runWrangler("init --type rust")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"The --type option is no longer supported."`
+      );
     });
 
     it("should error if `--type webpack` is used", async () => {
-      let err: undefined | Error;
-      try {
-        await runWrangler("init --type webpack");
-      } catch (e) {
-        err = e;
-      } finally {
-        expect(err?.message).toBe(
-          `The --type option is no longer supported.
-If you wish to use webpack then you will need to create a custom build.`
-        );
-      }
+      await expect(runWrangler("init --type webpack")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "The --type option is no longer supported.
+              If you wish to use webpack then you will need to create a custom build."
+            `);
     });
   });
 });

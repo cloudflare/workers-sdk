@@ -3,28 +3,14 @@ import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
 import { initialise } from "../user";
-import { mockConsoleMethods } from "./mock-console";
-import { writeUserConfig } from "./mock-user";
-import { runInTempDir } from "./run-in-tmp";
-import { runWrangler } from "./run-wrangler";
-
-const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
-const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { writeUserConfig } from "./helpers/mock-user";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler", () => {
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
-
-  beforeEach(() => {
-    delete process.env.CF_API_TOKEN;
-    delete process.env.CF_ACCOUNT_ID;
-  });
-
-  afterEach(() => {
-    // Reset any changes to the environment variables
-    process.env.CF_API_TOKEN = ORIGINAL_CF_API_TOKEN;
-    process.env.CF_ACCOUNT_ID = ORIGINAL_CF_ACCOUNT_ID;
-  });
 
   describe("logout", () => {
     it("should exit with a message stating the user is not logged in", async () => {
