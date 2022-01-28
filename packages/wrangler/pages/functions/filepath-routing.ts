@@ -93,7 +93,8 @@ export async function generateConfigFromFileTree({
 
               let routePath = path
                 .relative(baseDir, filepath)
-                .slice(0, -ext.length);
+                .slice(0, -ext.length)
+                .replaceAll(path.win32.sep, "/");
 
               if (isIndexFile || isMiddlewareFile) {
                 routePath = path.dirname(routePath);
