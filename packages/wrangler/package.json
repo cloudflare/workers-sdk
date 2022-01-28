@@ -1,6 +1,6 @@
 {
   "name": "wrangler",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
   "bin": {
