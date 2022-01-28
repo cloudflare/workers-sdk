@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { toUrlPath } from "../../src/paths";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
+import type { UrlPath } from "../../src/paths";
 
 export const HTTP_METHODS = [
   "HEAD",
@@ -19,7 +21,7 @@ export function isHTTPMethod(
 }
 
 export type RoutesCollection = Array<{
-  routePath: string;
+  routePath: UrlPath;
   methods: HTTPMethod[];
   modules: string[];
   middlewares: string[];
@@ -31,7 +33,7 @@ export type Config = {
 };
 
 export type RoutesConfig = {
-  [route: string]: RouteConfig;
+  [route: UrlPath]: RouteConfig;
 };
 
 export type RouteConfig = {
@@ -122,7 +124,7 @@ export function parseConfig(config: Config, baseDir: string) {
     }
 
     routes.push({
-      routePath,
+      routePath: toUrlPath(routePath),
       methods: _methods.split("|").filter(isHTTPMethod),
       middlewares: parseModuleIdentifiers(props.middleware),
       modules: parseModuleIdentifiers(props.module),
