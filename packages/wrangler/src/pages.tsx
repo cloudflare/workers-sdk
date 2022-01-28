@@ -11,6 +11,7 @@ import open from "open";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
+import { toUrlPath } from "./paths";
 import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
@@ -665,16 +666,17 @@ async function buildFunctions({
   );
 
   const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
+  const baseURL = toUrlPath("/");
 
   const config: Config = await generateConfigFromFileTree({
     baseDir: functionsDirectory,
-    baseURL: "/",
+    baseURL,
   });
 
   if (outputConfigPath) {
     writeFileSync(
       outputConfigPath,
-      JSON.stringify({ ...config, baseURL: "/" }, null, 2)
+      JSON.stringify({ ...config, baseURL }, null, 2)
     );
   }
 

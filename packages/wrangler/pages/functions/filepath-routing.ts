@@ -3,26 +3,31 @@ import path from "node:path";
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 import { transform } from "esbuild";
+import { toUrlPath } from "../../src/paths";
+import type { UrlPath } from "../../src/paths";
 import type { Config, RouteConfig } from "./routes";
 import type { ExportNamedDeclaration, Identifier } from "estree";
 
 type Arguments = {
   baseDir: string;
-  baseURL: string;
+  baseURL: UrlPath;
 };
+
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
+type RouteKey = [UrlPath, Method] | [UrlPath, undefined] | [UrlPath];
 
 export async function generateConfigFromFileTree({
   baseDir,
   baseURL,
 }: Arguments) {
-  let routeEntries: [string, RouteConfig][] = [];
+  let routeEntries: [RouteKey, RouteConfig][] = [];
 
   if (!baseURL.startsWith("/")) {
-    baseURL = `/${baseURL}`;
+    baseURL = `/${baseURL}` as UrlPath;
   }
 
   if (baseURL.endsWith("/")) {
-    baseURL = baseURL.slice(0, -1);
+    baseURL = baseURL.slice(0, -1) as UrlPath;
   }
 
   await forEachFile(baseDir, async (filepath) => {
@@ -108,12 +113,14 @@ export async function generateConfigFromFileTree({
               routePath = routePath.replace(/\[\[(.+)]]/g, ":$1*"); // transform [[id]] => :id*
               routePath = routePath.replace(/\[(.+)]/g, ":$1"); // transform [id] => :id
 
-              if (method) {
-                routePath = `${method.toUpperCase()} ${routePath}`;
-              }
+              const routeUrlPath = toUrlPath(routePath);
+              const routeKey: RouteKey = [
+                routeUrlPath,
+                method ? (method.toUpperCase() as Method) : undefined,
+              ];
 
               routeEntries.push([
-                routePath,
+                routeKey,
                 {
                   [isMiddlewareFile ? "middleware" : "module"]: [
                     `${path.relative(baseDir, filepath)}:${exportName}`,
@@ -146,7 +153,7 @@ export async function generateConfigFromFileTree({
     []
   );
 
-  routeEntries.sort(([pathA], [pathB]) => compareRoutes(pathA, pathB));
+  routeEntries.sort(([a], [b]) => compareRoutes(a, b));
 
   return { routes: Object.fromEntries(routeEntries) } as Config;
 }
@@ -154,20 +161,16 @@ export async function generateConfigFromFileTree({
 // Ensure routes are produced in order of precedence so that
 // more specific routes aren't occluded from matching due to
 // less specific routes appearing first in the route list.
-export function compareRoutes(a: string, b: string) {
-  function parseRoutePath(routePath: string): [string | null, string[]] {
-    const parts = routePath.split(" ", 2);
-    // split() will guarantee at least one element.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const segmentedPath = parts.pop()!;
-    const method = parts.pop() ?? null;
-
-    const segments = segmentedPath.slice(1).split("/").filter(Boolean);
-    return [method, segments];
+export function compareRoutes(
+  [routePathA, methodA]: RouteKey,
+  [routePathB, methodB]: RouteKey
+) {
+  function parseRoutePath(routePath: UrlPath): string[] {
+    return routePath.slice(1).split("/").filter(Boolean);
   }
 
-  const [methodA, segmentsA] = parseRoutePath(a);
-  const [methodB, segmentsB] = parseRoutePath(b);
+  const segmentsA = parseRoutePath(routePathA);
+  const segmentsB = parseRoutePath(routePathB);
 
   // sort routes with fewer segments after those with more segments
   if (segmentsA.length !== segmentsB.length) {
@@ -193,8 +196,8 @@ export function compareRoutes(a: string, b: string) {
   if (methodA && !methodB) return -1;
   if (!methodA && methodB) return 1;
 
-  // all else equal, just sort them lexicographically
-  return a.localeCompare(b);
+  // all else equal, just sort the paths lexicographically
+  return routePathA.localeCompare(routePathB);
 }
 
 async function forEachFile<T>(
