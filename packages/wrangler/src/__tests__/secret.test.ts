@@ -1,12 +1,16 @@
-import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
-import { mockConsoleMethods } from "./mock-console";
-import { mockConfirm, mockPrompt } from "./mock-dialogs";
-import { runInTempDir } from "./run-in-tmp";
-import { runWrangler } from "./run-wrangler";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler secret", () => {
   const std = mockConsoleMethods();
   runInTempDir();
+  mockAccountId();
+  mockApiToken();
+
   afterEach(() => {
     unsetAllMocks();
   });

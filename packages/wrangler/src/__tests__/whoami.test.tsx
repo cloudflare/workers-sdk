@@ -2,28 +2,13 @@ import { render } from "ink-testing-library";
 import React from "react";
 import { initialise } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
-import { setMockResponse } from "./mock-cfetch";
-import { writeUserConfig } from "./mock-user";
-import { runInTempDir } from "./run-in-tmp";
+import { setMockResponse } from "./helpers/mock-cfetch";
+import { writeUserConfig } from "./helpers/mock-user";
+import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
-
-const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
-const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 
 describe("getUserInfo()", () => {
   runInTempDir({ homedir: "./home" });
-
-  beforeEach(() => {
-    // Clear the environment variables, so we can control them in the tests
-    delete process.env.CF_API_TOKEN;
-    delete process.env.CF_ACCOUNT_ID;
-  });
-
-  afterEach(() => {
-    // Reset any changes to the environment variables
-    process.env.CF_API_TOKEN = ORIGINAL_CF_API_TOKEN;
-    process.env.CF_ACCOUNT_ID = ORIGINAL_CF_ACCOUNT_ID;
-  });
 
   it("should return undefined if there is no config file", async () => {
     await initialise();

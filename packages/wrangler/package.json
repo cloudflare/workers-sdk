@@ -98,7 +98,7 @@
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
     "start": "npm run bundle && NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-    "test": "CF_API_TOKEN=some-api-token CF_ACCOUNT_ID=some-account-id jest --silent=false --verbose=true",
+    "test": "jest --silent=false --verbose=true",
     "test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch"
   },
   "engines": {
@@ -112,7 +112,7 @@
       "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
     ],
     "moduleNameMapper": {
-      "clipboardy": "<rootDir>/src/__tests__/clipboardy-mock.js"
+      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js"
     },
     "transform": {
       "^.+\\.c?(t|j)sx?$": [

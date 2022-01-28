@@ -1,4 +1,4 @@
-import { confirm, prompt } from "../dialogs";
+import { confirm, prompt } from "../../dialogs";
 
 /**
  * The expected values for a confirmation request.
