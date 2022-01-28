@@ -24,7 +24,7 @@ import type { CfWorkerInit } from "./api/worker";
 
 import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
-import { usePreviewServer } from "./proxy";
+import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
@@ -226,6 +226,8 @@ function useLocalWorker(props: {
         // TODO: a much better error message here, with what to do next
         return;
       }
+
+      await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
 
       console.log("⎔ Starting a local server...");
       // TODO: just use execa for this
