@@ -1,13 +1,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { KVNamespaceInfo } from "../kv";
-import { mockKeyListRequest } from "./kv.test";
+import { mockKeyListRequest } from "./mock-kv";
 import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
 import { runInTempDir } from "./run-in-tmp";
 import { runWrangler } from "./run-wrangler";
 import { mockConsoleMethods } from "./mock-console";
 import type { Config } from "../config";
 import * as TOML from "@iarna/toml";
+import type { WorkerMetadata } from "../api/form_data";
 
 describe("publish", () => {
   runInTempDir();
@@ -18,10 +19,30 @@ describe("publish", () => {
   });
 
   describe("entry-points", () => {
-    it("should be able to use `index` with no extension as the entry-point", async () => {
+    it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
       writeWranglerToml();
-      writeEsmWorkerSource();
-      mockUploadWorkerRequest();
+      writeWorkerSource();
+      mockUploadWorkerRequest({ expectedType: "esm" });
+      mockSubDomainRequest();
+
+      await runWrangler("publish ./index");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+    it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
+      writeWranglerToml();
+      writeWorkerSource({ type: "sw" });
+      mockUploadWorkerRequest({ expectedType: "sw" });
       mockSubDomainRequest();
 
       await runWrangler("publish ./index");
@@ -41,7 +62,7 @@ describe("publish", () => {
 
     it("should be able to use the `build.upload.main` config as the entry-point for ESM sources", async () => {
       writeWranglerToml({ build: { upload: { main: "./index.js" } } });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
 
@@ -60,10 +81,10 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should be able to transpile TypeScript", async () => {
+    it("should be able to transpile TypeScript (esm)", async () => {
       writeWranglerToml();
-      writeEsmWorkerSource({ format: "ts" });
-      mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
+      writeWorkerSource({ format: "ts" });
+      mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
       mockSubDomainRequest();
       await runWrangler("publish index.ts");
 
@@ -80,10 +101,87 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should be able to transpile entry-points in sub-directories", async () => {
+    it("should be able to transpile TypeScript (sw)", async () => {
       writeWranglerToml();
-      writeEsmWorkerSource({ basePath: "./src" });
-      mockUploadWorkerRequest({ expectedBody: "var foo = 100;" });
+      writeWorkerSource({ format: "ts", type: "sw" });
+      mockUploadWorkerRequest({
+        expectedEntry: "var foo = 100;",
+        expectedType: "sw",
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.ts");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should inline referenced text modules into the worker", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "./index.js",
+        `
+import txt from './textfile.txt';
+export default{
+  fetch(){
+    return new Response(txt);
+  }
+}
+`
+      );
+      fs.writeFileSync("./textfile.txt", "Hello, World!");
+      mockUploadWorkerRequest({ expectedEntry: "Hello, World!" });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js");
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should be able to transpile entry-points in sub-directories (esm)", async () => {
+      writeWranglerToml();
+      writeWorkerSource({ basePath: "./src" });
+      mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
+      mockSubDomainRequest();
+
+      await runWrangler("publish ./src/index.js");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+              "Uploaded
+              test-name
+              (TIMINGS)
+              Deployed
+              test-name
+              (TIMINGS)
+               
+              test-name.test-sub-domain.workers.dev"
+          `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should be able to transpile entry-points in sub-directories (sw)", async () => {
+      writeWranglerToml();
+      writeWorkerSource({ basePath: "./src", type: "sw" });
+      mockUploadWorkerRequest({
+        expectedEntry: "var foo = 100;",
+        expectedType: "sw",
+      });
       mockSubDomainRequest();
 
       await runWrangler("publish ./src/index.js");
@@ -108,7 +206,7 @@ describe("publish", () => {
           "entry-point": "./index.js",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       let error: Error | undefined;
@@ -151,7 +249,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -185,7 +283,7 @@ describe("publish", () => {
 
     it("should error if there is no entry-point specified", async () => {
       writeWranglerToml();
-      writeEsmWorkerSource();
+      writeWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
       let error: Error | undefined;
@@ -224,7 +322,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -250,6 +348,112 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
+    it("when using a service worker type, it should inline an asset manifest, and bind to a namespace", async () => {
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource({ type: "sw" });
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedEntry: `const __STATIC_CONTENT_MANIFEST = {"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"};`,
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(stripTimings(std.err)).toMatchInlineSnapshot(`""`);
+    });
+
+    it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async () => {
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name_sites_assets",
+        id: "__test-name_sites_assets-id",
+      };
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource({ type: "esm" });
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+        expectedModules: {
+          __STATIC_CONTENT_MANIFEST:
+            '{"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"}',
+        },
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(stripTimings(std.err)).toMatchInlineSnapshot(`""`);
+    });
+
     it("should only upload files that are not already in the KV namespace", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
@@ -265,7 +469,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -311,7 +515,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -354,7 +558,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -398,7 +602,7 @@ describe("publish", () => {
           include: ["file-1.txt"],
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -442,7 +646,7 @@ describe("publish", () => {
           exclude: ["file-2.txt"],
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -486,7 +690,7 @@ describe("publish", () => {
           include: ["file-2.txt"],
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -530,7 +734,7 @@ describe("publish", () => {
           exclude: ["assets/file-1.txt"],
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -579,7 +783,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -629,7 +833,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -677,7 +881,7 @@ describe("publish", () => {
           exclude: ["assets/file-1.txt"],
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets(assets);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -720,7 +924,7 @@ describe("publish", () => {
           bucket: "assets",
         },
       });
-      writeEsmWorkerSource();
+      writeWorkerSource();
       writeAssets([longFilePathAsset]);
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -758,7 +962,7 @@ describe("publish", () => {
       });
 
       mockUploadWorkerRequest({
-        expectedBody: "return new Response(123)",
+        expectedEntry: "return new Response(123)",
       });
       mockSubDomainRequest();
 
@@ -799,23 +1003,31 @@ function writeWranglerToml(config: Omit<Config, "env"> = {}) {
 }
 
 /** Write a mock Worker script to disk. */
-function writeEsmWorkerSource({
+function writeWorkerSource({
   basePath = ".",
   format = "js",
-}: { basePath?: string; format?: "js" | "ts" | "jsx" | "tsx" | "mjs" } = {}) {
+  type = "esm",
+}: {
+  basePath?: string;
+  format?: "js" | "ts" | "jsx" | "tsx" | "mjs";
+  type?: "esm" | "sw";
+} = {}) {
   if (basePath !== ".") {
     fs.mkdirSync(basePath, { recursive: true });
   }
   fs.writeFileSync(
     `${basePath}/index.${format}`,
-    [
-      `import { foo } from "./another";`,
-      `export default {`,
-      `  async fetch(request) {`,
-      `    return new Response('Hello' + foo);`,
-      `  },`,
-      `};`,
-    ].join("\n")
+    type === "esm"
+      ? `import { foo } from "./another";
+      export default {
+        async fetch(request) {
+          return new Response('Hello' + foo);
+        },
+      };`
+      : `import { foo } from "./another";
+      addEventListener('fetch', event => {
+        event.respondWith(new Response('Hello' + foo));
+      })`
   );
   fs.writeFileSync(`${basePath}/another.${format}`, `export const foo = 100;`);
 }
@@ -831,10 +1043,16 @@ function writeAssets(assets: { filePath: string; content: string }[]) {
 /** Create a mock handler for the request to upload a worker script. */
 function mockUploadWorkerRequest({
   available_on_subdomain = true,
-  expectedBody,
+  expectedEntry,
+  expectedType = "esm",
+  expectedBindings,
+  expectedModules = {},
 }: {
   available_on_subdomain?: boolean;
-  expectedBody?: string;
+  expectedEntry?: string;
+  expectedType?: "esm" | "sw";
+  expectedBindings?: unknown;
+  expectedModules?: Record<string, string>;
 } = {}) {
   setMockResponse(
     "/accounts/:accountId/workers/scripts/:scriptName",
@@ -843,11 +1061,28 @@ function mockUploadWorkerRequest({
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual("test-name");
       expect(queryParams.get("available_on_subdomains")).toEqual("true");
-      if (expectedBody !== undefined) {
-        expect(
-          await ((body as FormData).get("index.js") as File).text()
-        ).toMatch(expectedBody);
+      const formBody = body as FormData;
+      if (expectedEntry !== undefined) {
+        expect(await (formBody.get("index.js") as File).text()).toMatch(
+          expectedEntry
+        );
       }
+
+      const metadata = JSON.parse(
+        formBody.get("metadata") as string
+      ) as WorkerMetadata;
+      if (expectedType === "esm") {
+        expect(metadata.main_module).toEqual("index.js");
+      } else {
+        expect(metadata.body_part).toEqual("index.js");
+      }
+      if (expectedBindings !== undefined) {
+        expect(metadata.bindings).toEqual(expectedBindings);
+      }
+      for (const [name, content] of Object.entries(expectedModules)) {
+        expect(await (formBody.get(name) as File).text()).toMatch(content);
+      }
+
       return { available_on_subdomain };
     }
   );

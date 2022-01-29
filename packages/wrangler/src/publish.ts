@@ -195,7 +195,7 @@ export default async function publish(props: Props): Promise<void> {
     return;
   }
 
-  const content = await readFile(resolvedEntryPointPath, { encoding: "utf-8" });
+  let content = await readFile(resolvedEntryPointPath, { encoding: "utf-8" });
   await destination.cleanup();
 
   // if config.migrations
@@ -245,7 +245,7 @@ export default async function publish(props: Props): Promise<void> {
   );
 
   const bindings: CfWorkerInit["bindings"] = {
-    kv_namespaces: envRootObj.kv_namespaces?.concat(
+    kv_namespaces: (envRootObj.kv_namespaces || []).concat(
       assets.namespace
         ? { binding: "__STATIC_CONTENT", id: assets.namespace }
         : []
@@ -255,17 +255,24 @@ export default async function publish(props: Props): Promise<void> {
     services: envRootObj.experimental_services,
   };
 
+  const workerType = bundle.type === "esm" ? "esm" : "commonjs";
+  if (workerType !== "esm" && assets.manifest) {
+    content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
+      assets.manifest
+    )};\n${content}`;
+  }
+
   const worker: CfWorkerInit = {
     name: scriptName,
     main: {
       name: path.basename(resolvedEntryPointPath),
       content: content,
-      type: bundle.type === "esm" ? "esm" : "commonjs",
+      type: workerType,
     },
     bindings,
     ...(migrations && { migrations }),
     modules: moduleCollector.modules.concat(
-      assets.manifest
+      assets.manifest && workerType === "esm"
         ? {
             name: "__STATIC_CONTENT_MANIFEST",
             content: JSON.stringify(assets.manifest),

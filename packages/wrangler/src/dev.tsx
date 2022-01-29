@@ -100,7 +100,7 @@ function Dev(props: DevProps): JSX.Element {
           bundle={bundle}
           format={props.format}
           bindings={props.bindings}
-          site={props.assetPaths}
+          assetPaths={props.assetPaths}
           public={props.public}
           port={port}
           enableLocalPersistence={props.enableLocalPersistence}
@@ -183,8 +183,8 @@ function Local(props: {
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
+  assetPaths: undefined | AssetPaths;
   public: undefined | string;
-  site: undefined | AssetPaths;
   port: number;
   enableLocalPersistence: boolean;
 }) {
@@ -193,6 +193,8 @@ function Local(props: {
     bundle: props.bundle,
     format: props.format,
     bindings: props.bindings,
+    assetPaths: props.assetPaths,
+    public: props.public,
     port: props.port,
     enableLocalPersistence: props.enableLocalPersistence,
   });
@@ -205,11 +207,13 @@ function useLocalWorker(props: {
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat;
   bindings: CfWorkerInit["bindings"];
+  assetPaths: undefined | AssetPaths;
+  public: undefined | string;
   port: number;
   enableLocalPersistence: boolean;
 }) {
   // TODO: pass vars via command line
-  const { bundle, format, bindings, port } = props;
+  const { bundle, format, bindings, port, assetPaths } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
@@ -228,6 +232,11 @@ function useLocalWorker(props: {
       }
 
       await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
+      if (props.public) {
+        throw new Error(
+          '⎔ A "public" folder is not yet supported in local mode.'
+        );
+      }
 
       console.log("⎔ Starting a local server...");
       // TODO: just use execa for this
@@ -245,6 +254,20 @@ function useLocalWorker(props: {
         path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
         "--port",
         port.toString(),
+        ...(assetPaths
+          ? [
+              "--site",
+              assetPaths.baseDirectory,
+              ...assetPaths.includePatterns.map((pattern) => [
+                "--site-include",
+                pattern,
+              ]),
+              ...assetPaths.excludePatterns.map((pattern) => [
+                "--site-exclude",
+                pattern,
+              ]),
+            ].flatMap((x) => x)
+          : []),
         ...(props.enableLocalPersistence
           ? ["--kv-persist", "--cache-persist", "--do-persist"]
           : []),
@@ -327,6 +350,8 @@ function useLocalWorker(props: {
     bindings.kv_namespaces,
     bindings.vars,
     props.enableLocalPersistence,
+    assetPaths,
+    props.public,
   ]);
   return { inspectorUrl };
 }
@@ -354,7 +379,7 @@ function useTmpDir(): string | undefined {
     return () => {
       dir.cleanup().catch(() => {
         // extremely unlikely,
-        // but it's 2021 after all
+        // but it's 2022 after all
         console.error("failed to cleanup tmp dir");
       });
     };
@@ -591,16 +616,23 @@ function useWorker(props: {
         true
       ); // TODO: cancellable?
 
-      const content = await readFile(bundle.path, "utf-8");
+      const workerType = format || bundle.type === "esm" ? "esm" : "commonjs";
+      let content = await readFile(bundle.path, "utf-8");
+      if (workerType !== "esm" && assets.manifest) {
+        content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
+          assets.manifest
+        )};\n${content}`;
+      }
+
       const init: CfWorkerInit = {
         name,
         main: {
           name: path.basename(bundle.path),
-          type: format || bundle.type === "esm" ? "esm" : "commonjs",
+          type: workerType,
           content,
         },
         modules: modules.concat(
-          assets.manifest
+          assets.manifest && workerType === "esm"
             ? {
                 name: "__STATIC_CONTENT_MANIFEST",
                 content: JSON.stringify(assets.manifest),
