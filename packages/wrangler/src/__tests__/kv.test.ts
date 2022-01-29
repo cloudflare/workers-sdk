@@ -863,21 +863,37 @@ describe("wrangler", () => {
         `);
       });
 
-      it("should make multiple requests for paginated results", async () => {
-        // Create a lot of mock keys, so that the fetch requests will be paginated
-        const keys: string[] = [];
-        for (let i = 0; i < 550; i++) {
-          keys.push("key-" + i);
-        }
-        // Ask for the keys in pages of size 100.
-        const requests = mockKeyListRequest("some-namespace-id", keys, 100);
-        await runWrangler(
-          "kv:key list --namespace-id some-namespace-id --limit 100"
-        );
-        expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(JSON.parse(std.out).map((k) => k.name)).toEqual(keys);
-        expect(requests.count).toEqual(6);
-      });
+      // We'll run the next test with variations on the cursor
+      // that's returned on cloudflare's API after all results
+      // have been drained.
+      for (const blankCursorValue of [undefined, null, ""] as [
+        undefined,
+        null,
+        ""
+      ]) {
+        describe(`cursor - ${blankCursorValue}`, () => {
+          it("should make multiple requests for paginated results", async () => {
+            // Create a lot of mock keys, so that the fetch requests will be paginated
+            const keys: string[] = [];
+            for (let i = 0; i < 550; i++) {
+              keys.push("key-" + i);
+            }
+            // Ask for the keys in pages of size 100.
+            const requests = mockKeyListRequest(
+              "some-namespace-id",
+              keys,
+              100,
+              blankCursorValue
+            );
+            await runWrangler(
+              "kv:key list --namespace-id some-namespace-id --limit 100"
+            );
+            expect(std.err).toMatchInlineSnapshot(`""`);
+            expect(JSON.parse(std.out).map((k) => k.name)).toEqual(keys);
+            expect(requests.count).toEqual(6);
+          });
+        });
+      }
 
       it("should error if a given binding name is not in the configured kv namespaces", async () => {
         writeWranglerConfig();
@@ -1210,7 +1226,8 @@ function writeWranglerConfig() {
 export function mockKeyListRequest(
   expectedNamespaceId: string,
   expectedKeys: string[],
-  keysPerRequest = 1000
+  keysPerRequest = 1000,
+  blankCursorValue: "" | undefined | null = undefined
 ) {
   const requests = { count: 0 };
   // See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
@@ -1231,7 +1248,7 @@ export function mockKeyListRequest(
       } else {
         const start = parseInt(query.get("cursor") ?? "0") || 0;
         const end = start + keysPerRequest;
-        const cursor = end < expectedKeyObjects.length ? end : undefined;
+        const cursor = end < expectedKeyObjects.length ? end : blankCursorValue;
         return createFetchResult(
           expectedKeyObjects.slice(start, end),
           true,
