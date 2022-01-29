@@ -44,13 +44,13 @@ export default function makeModuleCollector(): {
 
             // add the module to the array
             modules.push({
-              name: fileName,
+              name: "./" + fileName,
               content: fileContent,
               type: "compiled-wasm",
             });
 
             return {
-              path: fileName, // change the reference to the changed module
+              path: "./" + fileName, // change the reference to the changed module
               external: true, // mark it as external in the bundle
               namespace: "wrangler-module-collector-ns", // just a tag, this isn't strictly necessary
               watchFiles: [filePath], // we also add the file to esbuild's watch list
