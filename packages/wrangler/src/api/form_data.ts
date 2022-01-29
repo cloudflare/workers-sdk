@@ -30,7 +30,11 @@ function toModule(module: CfModule, entryType: CfModuleType): Blob {
   return new Blob([content], { type });
 }
 
-interface WorkerMetadata {
+export interface WorkerMetadata {
+  /** The name of the entry point module. Only exists when the worker is in the ES module format */
+  main_module?: string;
+  /** The name of the entry point module. Only exists when the worker is in the Service Worker format */
+  body_part?: string;
   compatibility_date?: string;
   compatibility_flags?: string[];
   usage_model?: "bundled" | "unbound";

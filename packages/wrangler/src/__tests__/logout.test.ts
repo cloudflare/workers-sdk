@@ -6,7 +6,7 @@ import { runWrangler } from "./run-wrangler";
 import { runInTempDir } from "./run-in-tmp";
 import { initialise } from "../user";
 import { mockConsoleMethods } from "./mock-console";
-import { writeUserConfig } from "./whoami.test";
+import { writeUserConfig } from "./mock-user";
 
 const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;

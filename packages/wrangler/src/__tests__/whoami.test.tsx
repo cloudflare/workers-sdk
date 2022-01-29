@@ -1,13 +1,11 @@
 import React from "react";
-import os from "node:os";
-import path from "node:path";
 import { render } from "ink-testing-library";
 import type { UserInfo } from "../whoami";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { runInTempDir } from "./run-in-tmp";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { setMockResponse } from "./mock-cfetch";
 import { initialise } from "../user";
+import { writeUserConfig } from "./mock-user";
 
 const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
@@ -101,27 +99,3 @@ describe("WhoAmI component", () => {
     expect(lastFrame()).toMatch(/Account Three .+ account-3/);
   });
 });
-
-export function writeUserConfig(
-  oauth_token?: string,
-  refresh_token?: string,
-  expiration_time?: string
-) {
-  const lines: string[] = [];
-  if (oauth_token) {
-    lines.push(`oauth_token = "${oauth_token}"`);
-  }
-  if (refresh_token) {
-    lines.push(`refresh_token = "${refresh_token}"`);
-  }
-  if (expiration_time) {
-    lines.push(`expiration_time = "${expiration_time}"`);
-  }
-  const configPath = path.join(os.homedir(), ".wrangler/config");
-  mkdirSync(configPath, { recursive: true });
-  writeFileSync(
-    path.join(configPath, "default.toml"),
-    lines.join("\n"),
-    "utf-8"
-  );
-}
