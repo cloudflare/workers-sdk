@@ -106,5 +106,6 @@ function throwFetchError(
 }
 
 function hasCursor(result_info: unknown): result_info is { cursor: string } {
-  return (result_info as { cursor: string } | undefined)?.cursor !== undefined;
+  const cursor = (result_info as { cursor: string } | undefined)?.cursor;
+  return cursor !== undefined && cursor !== null && cursor !== "";
 }
