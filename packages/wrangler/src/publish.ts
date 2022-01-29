@@ -241,7 +241,8 @@ export default async function publish(props: Props): Promise<void> {
     accountId,
     scriptName,
     props.assetPaths,
-    false
+    false,
+    props.env
   );
 
   const bindings: CfWorkerInit["bindings"] = {

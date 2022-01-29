@@ -45,11 +45,13 @@ function renderDev({
   usageModel,
   buildCommand = {},
   enableLocalPersistence = false,
+  env = undefined,
 }: Partial<DevProps>) {
   return render(
     <Dev
       name={name}
       entry={entry}
+      env={env}
       port={port}
       buildCommand={buildCommand}
       format={format}
