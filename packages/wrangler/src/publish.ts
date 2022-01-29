@@ -148,6 +148,9 @@ export default async function publish(props: Props): Promise<void> {
     conditions: ["worker", "browser"],
     loader: {
       ".js": "jsx",
+      ".html": "text",
+      ".pem": "text",
+      ".txt": "text",
     },
     plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),

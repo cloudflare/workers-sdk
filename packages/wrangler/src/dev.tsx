@@ -464,6 +464,9 @@ function useEsbuild(props: {
         sourcemap: true,
         loader: {
           ".js": "jsx",
+          ".html": "text",
+          ".pem": "text",
+          ".txt": "text",
         },
         ...(jsxFactory && { jsxFactory }),
         ...(jsxFragment && { jsxFragment }),
