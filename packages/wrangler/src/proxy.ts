@@ -242,8 +242,14 @@ export function usePreviewServer({
   // Start/stop the server whenever the
   // containing component is mounted/unmounted.
   useEffect(() => {
-    proxy.listen(port);
-    console.log(`⬣ Listening at http://localhost:${port}`);
+    waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 })
+      .then(() => {
+        proxy.listen(port);
+        console.log(`⬣ Listening at http://localhost:${port}`);
+      })
+      .catch((err) => {
+        console.error(`⬣ Failed to start server: ${err}`);
+      });
 
     return () => {
       proxy.close();
@@ -325,4 +331,40 @@ function createStreamHandler(
       request.pipe(stream, { end: true });
     });
   };
+}
+
+/**
+ * A helper function that waits for a port to be available.
+ */
+export async function waitForPortToBeAvailable(
+  port: number,
+  options: { retryPeriod: number; timeout: number }
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Timed out waiting for port ${port}`));
+    }, options.timeout);
+
+    function checkPort() {
+      // Testing whether a port is 'available' involves simply
+      // trying to make a server listen on that port, and retrying
+      // until it succeeds.
+      const server = createServer();
+      server.on("error", (err) => {
+        // @ts-expect-error non standard property on Error
+        if (err.code === "EADDRINUSE") {
+          setTimeout(checkPort, options.retryPeriod);
+        } else {
+          reject(err);
+        }
+      });
+      server.listen(port, () => {
+        server.close();
+        clearTimeout(timeout);
+        resolve();
+      });
+    }
+
+    checkPort();
+  });
 }
