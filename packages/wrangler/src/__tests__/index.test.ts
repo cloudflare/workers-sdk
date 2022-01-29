@@ -1,6 +1,8 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
+import { version as wranglerVersion } from "../../package.json";
+import { npm } from "../npm-installer";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -8,6 +10,11 @@ import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler", () => {
   runInTempDir();
+
+  beforeEach(() => {
+    jest.spyOn(npm, "addDevDep").mockResolvedValue();
+    jest.spyOn(npm, "install").mockResolvedValue();
+  });
 
   const std = mockConsoleMethods();
 
@@ -153,6 +160,7 @@ describe("wrangler", () => {
         wrangler: expect.any(String),
       });
       expect(fs.existsSync("./tsconfig.json")).toBe(false);
+      expect(npm.install).toHaveBeenCalled();
     });
 
     it("should not touch an existing package.json in the same directory", async () => {
@@ -205,9 +213,7 @@ describe("wrangler", () => {
       );
       expect(packageJson.name).toEqual("test");
       expect(packageJson.version).toEqual("1.0.0");
-      expect(packageJson.devDependencies).toEqual({
-        wrangler: expect.any(String),
-      });
+      expect(npm.addDevDep).toHaveBeenCalledWith("wrangler", wranglerVersion);
     });
 
     it("should not touch an existing package.json in an ancestor directory", async () => {
@@ -265,13 +271,7 @@ describe("wrangler", () => {
       expect(tsconfigJson.compilerOptions.types).toEqual([
         "@cloudflare/workers-types",
       ]);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-      expect(packageJson.devDependencies).toEqual({
-        "@cloudflare/workers-types": expect.any(String),
-        wrangler: expect.any(String),
-      });
+      expect(npm.addDevDep).toHaveBeenCalledWith("@cloudflare/workers-types");
     });
 
     it("should not touch an existing tsconfig.json in the same directory", async () => {
@@ -331,12 +331,7 @@ describe("wrangler", () => {
       );
       // unchanged tsconfig
       expect(tsconfigJson.compilerOptions).toEqual({});
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-      expect(packageJson.devDependencies).toEqual({
-        "@cloudflare/workers-types": expect.any(String),
-      });
+      expect(npm.addDevDep).toHaveBeenCalledWith("@cloudflare/workers-types");
     });
 
     it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
