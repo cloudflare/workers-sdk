@@ -3,7 +3,6 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path/posix";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
-import { execa } from "execa";
 import { findUp } from "find-up";
 import { render } from "ink";
 import React from "react";
@@ -25,6 +24,7 @@ import {
   createNamespace,
   isValidNamespaceBinding,
 } from "./kv";
+import { npm } from "./npm-installer";
 import { pages } from "./pages";
 import publish from "./publish";
 import { getAssetPaths } from "./sites";
@@ -38,8 +38,8 @@ import {
   getAccountId,
   validateScopeKeys,
 } from "./user";
-
 import { whoami } from "./whoami";
+
 import type { Config } from "./config";
 import type Yargs from "yargs";
 
@@ -234,9 +234,7 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
-          await execa("npm", ["install"], {
-            stdio: "inherit",
-          });
+          await npm.install();
           console.log(`✨ Created package.json`);
           pathToPackageJson = path.join(process.cwd(), "package.json");
         } else {
@@ -258,13 +256,7 @@ export async function main(argv: string[]): Promise<void> {
             "Would you like to install wrangler into your package.json?"
           );
           if (shouldInstall) {
-            await execa(
-              "npm",
-              ["install", `wrangler@${wranglerVersion}`, "--save-dev"],
-              {
-                stdio: "inherit",
-              }
-            );
+            await npm.addDevDep("wrangler", wranglerVersion);
             console.log(`✨ Installed wrangler`);
           }
         }
@@ -298,11 +290,7 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
-          await execa(
-            "npm",
-            ["install", "@cloudflare/workers-types", "--save-dev"],
-            { stdio: "inherit" }
-          );
+          await npm.addDevDep("@cloudflare/workers-types");
           console.log(
             `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
           );
@@ -324,13 +312,7 @@ export async function main(argv: string[]): Promise<void> {
             "Would you like to install the type definitions for Workers into your package.json?"
           );
           if (shouldInstall) {
-            await execa(
-              "npm",
-              ["install", "@cloudflare/workers-types", "--save-dev"],
-              {
-                stdio: "inherit",
-              }
-            );
+            await npm.addDevDep("@cloudflare/workers-types");
             // We don't update the tsconfig.json because
             // it could be complicated in existing projects
             // and we don't want to break them. Instead, we simply
