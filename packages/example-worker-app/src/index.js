@@ -1,6 +1,6 @@
 import { now } from "./dep";
 export default {
-  fetch(request) {
+  async fetch(request) {
     console.log(
       request.method,
       request.url,
@@ -8,7 +8,15 @@ export default {
       request.cf
     );
 
-    return new Response(`${request.url} ${now()}`);
+    const catFacts = await fetch("https://cat-fact.herokuapp.com/facts");
+
+    return new Response(
+      `${request.url} ${now()}\n ${JSON.stringify(
+        await catFacts.json(),
+        null,
+        "  "
+      )}`
+    );
   },
 };
 

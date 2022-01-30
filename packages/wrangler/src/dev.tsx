@@ -243,7 +243,7 @@ function useLocalWorker(props: {
       local.current = spawn("node", [
         "--experimental-vm-modules",
         "--inspect",
-        require.resolve("miniflare/cli"),
+        path.join(__dirname, "../miniflare-dist/cli.js"),
         bundle.path,
         "--watch",
         "--wrangler-config",

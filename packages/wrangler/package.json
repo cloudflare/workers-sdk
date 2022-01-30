@@ -37,7 +37,7 @@
   ],
   "dependencies": {
     "esbuild": "0.14.14",
-    "miniflare": "2.2.0",
+    "html-rewriter-wasm": "0.4.0",
     "path-to-regexp": "^6.2.0",
     "semiver": "^1.1.0",
     "xxhash-addon": "^1.4.0"
@@ -74,6 +74,7 @@
     "ink-text-input": "^4.0.2",
     "jest-fetch-mock": "^3.0.3",
     "mime": "^3.0.0",
+    "miniflare": "2.2.0",
     "node-fetch": "3.1.1",
     "open": "^8.4.0",
     "react": "^17.0.2",
@@ -91,6 +92,7 @@
     "pages",
     "miniflare-config-stubs",
     "wrangler-dist",
+    "miniflare-dist",
     "static-asset-facade.js",
     "vendor",
     "import_meta_url.js"
