@@ -1,4 +1,4 @@
-import esbuild from "esbuild";
+import * as esbuild from "esbuild";
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
