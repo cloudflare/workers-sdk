@@ -966,7 +966,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         }
       }
     )
-    .command("functions", "Cloudflare Pages Functions", (yargs) =>
+    .command("functions", false, (yargs) =>
+      // we hide this command from help output because
+      // it's not meant to be used directly right now
       yargs.command(
         "build [directory]",
         "Compile a folder of Cloudflare Pages Functions into a single Worker",
