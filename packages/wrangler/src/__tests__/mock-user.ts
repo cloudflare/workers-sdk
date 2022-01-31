@@ -1,6 +1,6 @@
-import path from "path";
-import os from "os";
 import { mkdirSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 export function writeUserConfig(
   oauth_token?: string,

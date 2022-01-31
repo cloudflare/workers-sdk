@@ -205,24 +205,24 @@
    limitations under the License.
   */
 
-import React from "react";
-import { render, Text } from "ink";
-import Table from "ink-table";
-import SelectInput from "ink-select-input";
-import { fetch } from "undici";
+import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { TextEncoder } from "node:util";
-import open from "open";
-import url from "node:url";
-import http from "node:http";
 import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
+import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import os from "node:os";
+import url from "node:url";
+import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
-import assert from "node:assert";
-import type { ParsedUrlQuery } from "node:querystring";
+import { render, Text } from "ink";
+import SelectInput from "ink-select-input";
+import Table from "ink-table";
+import open from "open";
+import React from "react";
+import { fetch } from "undici";
 import { CF_API_BASE_URL } from "./cfetch";
+import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
 /**

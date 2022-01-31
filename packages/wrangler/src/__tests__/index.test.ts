@@ -1,10 +1,10 @@
+import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
-import { mockConfirm } from "./mock-dialogs";
-import { runWrangler } from "./run-wrangler";
-import { runInTempDir } from "./run-in-tmp";
 import { mockConsoleMethods } from "./mock-console";
-import * as fs from "node:fs";
+import { mockConfirm } from "./mock-dialogs";
+import { runInTempDir } from "./run-in-tmp";
+import { runWrangler } from "./run-wrangler";
 
 describe("wrangler", () => {
   runInTempDir();

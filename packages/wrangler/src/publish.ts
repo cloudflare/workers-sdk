@@ -1,18 +1,18 @@
 import assert from "node:assert";
-import path from "node:path";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { URLSearchParams } from "node:url";
 import * as esbuild from "esbuild";
-import type { Metafile } from "esbuild";
 import { execaCommand } from "execa";
 import tmp from "tmp-promise";
-import type { CfWorkerInit } from "./api/worker";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
-import type { Config } from "./config";
 import makeModuleCollector from "./module-collection";
-import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
-import { URLSearchParams } from "node:url";
+import type { CfWorkerInit } from "./api/worker";
+import type { Config } from "./config";
+import type { AssetPaths } from "./sites";
+import type { Metafile } from "esbuild";
 
 type CfScriptFormat = undefined | "modules" | "service-worker";
 

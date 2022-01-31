@@ -1,5 +1,5 @@
-import path from "path";
-import fs from "fs/promises";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
 
 export const HTTP_METHODS = [

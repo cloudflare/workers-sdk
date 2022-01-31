@@ -1,25 +1,20 @@
-import React from "react";
-import { render } from "ink";
-import Dev from "./dev";
-import { readFile } from "node:fs/promises";
-import makeCLI from "yargs";
-import type Yargs from "yargs";
-import { findUp } from "find-up";
+import * as fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path/posix";
+import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
-import { normaliseAndValidateEnvironmentsConfig } from "./config";
-import type { Config } from "./config";
-import { getAssetPaths } from "./sites";
-import { confirm, prompt } from "./dialogs";
+import { execa } from "execa";
+import { findUp } from "find-up";
+import { render } from "ink";
+import React from "react";
+import onExit from "signal-exit";
+import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import {
-  login,
-  logout,
-  listScopes,
-  initialise as initialiseUserConfig,
-  loginOrRefreshIfRequired,
-  getAccountId,
-  validateScopeKeys,
-} from "./user";
+import { toFormData } from "./api/form_data";
+import { fetchResult, fetchRaw } from "./cfetch";
+import { normaliseAndValidateEnvironmentsConfig } from "./config";
+import Dev from "./dev";
+import { confirm, prompt } from "./dialogs";
 import {
   getNamespaceId,
   listNamespaces,
@@ -30,22 +25,23 @@ import {
   createNamespace,
   isValidNamespaceBinding,
 } from "./kv";
-
 import { pages } from "./pages";
-
-import { fetchResult, fetchRaw } from "./cfetch";
-
 import publish from "./publish";
-import path from "path/posix";
-import { writeFile } from "node:fs/promises";
-import { toFormData } from "./api/form_data";
-
+import { getAssetPaths } from "./sites";
 import { createTail } from "./tail";
-import onExit from "signal-exit";
-import { setTimeout } from "node:timers/promises";
-import * as fs from "node:fs";
-import { execa } from "execa";
+import {
+  login,
+  logout,
+  listScopes,
+  initialise as initialiseUserConfig,
+  loginOrRefreshIfRequired,
+  getAccountId,
+  validateScopeKeys,
+} from "./user";
+
 import { whoami } from "./whoami";
+import type { Config } from "./config";
+import type Yargs from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";

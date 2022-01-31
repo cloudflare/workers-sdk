@@ -1,7 +1,7 @@
-import * as React from "react";
-import { useState } from "react";
 import { Box, Text, useInput, render } from "ink";
 import TextInput from "ink-text-input";
+import * as React from "react";
+import { useState } from "react";
 type ConfirmProps = {
   text: string;
   onConfirm: (answer: boolean) => void;

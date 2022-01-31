@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
-import type { Config } from "./config";
 import { fetchListResult, fetchResult } from "./cfetch";
+import type { Config } from "./config";
 
 type KvArgs = {
   binding?: string;

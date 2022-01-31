@@ -1,25 +1,25 @@
 /* eslint-disable no-shadow */
 
-import type { BuilderCallback } from "yargs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { existsSync, lstatSync, readFileSync, writeFileSync } from "fs";
-import { execSync, spawn } from "child_process";
-import { URL } from "url";
+import { execSync, spawn } from "node:child_process";
+import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { URL } from "node:url";
+import { watch } from "chokidar";
 import { getType } from "mime";
 import open from "open";
-import { watch } from "chokidar";
-import type { BuildResult } from "esbuild";
 import { buildWorker } from "../pages/functions/buildWorker";
-import type { Config } from "../pages/functions/routes";
-import { writeRoutesModule } from "../pages/functions/routes";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
+import { writeRoutesModule } from "../pages/functions/routes";
+import type { Config } from "../pages/functions/routes";
+import type { Headers, Request, fetch } from "@miniflare/core";
+import type { BuildResult } from "esbuild";
+import type { MiniflareOptions } from "miniflare";
+import type { BuilderCallback } from "yargs";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
-import type { Headers, Request, fetch } from "@miniflare/core";
-import type { MiniflareOptions } from "miniflare";
 
 const EXIT_CALLBACKS: (() => void)[] = [];
 const EXIT = (message?: string, code?: number) => {

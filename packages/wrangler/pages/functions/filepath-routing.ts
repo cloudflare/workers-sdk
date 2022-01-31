@@ -1,8 +1,8 @@
-import path from "path";
-import fs from "fs/promises";
-import { transform } from "esbuild";
+import fs from "node:fs/promises";
+import path from "node:path";
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
+import { transform } from "esbuild";
 import type { Config, RouteConfig } from "./routes";
 import type { ExportNamedDeclaration, Identifier } from "estree";
 

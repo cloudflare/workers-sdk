@@ -1,6 +1,6 @@
-import type { CfPreviewToken } from "./preview";
-import { previewToken } from "./preview";
 import { fetch } from "undici";
+import { previewToken } from "./preview";
+import type { CfPreviewToken } from "./preview";
 
 /**
  * A Cloudflare account.

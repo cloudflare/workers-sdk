@@ -1,8 +1,8 @@
 import { setMockResponse, unsetAllMocks } from "./mock-cfetch";
-import { runWrangler } from "./run-wrangler";
-import { runInTempDir } from "./run-in-tmp";
-import { mockConfirm, mockPrompt } from "./mock-dialogs";
 import { mockConsoleMethods } from "./mock-console";
+import { mockConfirm, mockPrompt } from "./mock-dialogs";
+import { runInTempDir } from "./run-in-tmp";
+import { runWrangler } from "./run-wrangler";
 
 describe("wrangler secret", () => {
   const std = mockConsoleMethods();

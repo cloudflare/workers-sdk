@@ -1,14 +1,14 @@
-import * as path from "node:path";
 import { readdir, readFile, stat } from "node:fs/promises";
+import * as path from "node:path";
 import ignore from "ignore";
 import { XXHash64 } from "xxhash-addon";
-import type { Config } from "./config";
 import {
   createNamespace,
   listNamespaceKeys,
   listNamespaces,
   putBulkKeyValue,
 } from "./kv";
+import type { Config } from "./config";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = ["node_modules"];

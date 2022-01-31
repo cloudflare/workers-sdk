@@ -1,10 +1,10 @@
+import { FormData, File } from "undici";
 import type {
   CfWorkerInit,
   CfModuleType,
   CfModule,
   CfDurableObjectMigrations,
 } from "./worker.js";
-import { FormData, File } from "undici";
 
 export function toMimeType(type: CfModuleType): string {
   switch (type) {
