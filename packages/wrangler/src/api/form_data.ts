@@ -4,7 +4,7 @@ import type {
   CfModule,
   CfDurableObjectMigrations,
 } from "./worker.js";
-import { FormData, Blob } from "formdata-node";
+import { FormData, File } from "undici";
 
 export function toMimeType(type: CfModuleType): string {
   switch (type) {
@@ -23,11 +23,10 @@ export function toMimeType(type: CfModuleType): string {
   }
 }
 
-function toModule(module: CfModule, entryType: CfModuleType): Blob {
+function toModule(module: CfModule, entryType: CfModuleType): File {
   const { type: moduleType, content } = module;
   const type = toMimeType(moduleType ?? entryType);
-
-  return new Blob([content], { type });
+  return new File([content], module.name, { type });
 }
 
 export interface WorkerMetadata {
@@ -127,8 +126,8 @@ export function toFormData(worker: CfWorkerInit): FormData {
 
   for (const module of [main].concat(modules || [])) {
     const { name } = module;
-    const blob = toModule(module, main.type ?? "esm");
-    formData.set(name, blob, name);
+    const file = toModule(module, main.type ?? "esm");
+    formData.set(name, file);
   }
 
   return formData;

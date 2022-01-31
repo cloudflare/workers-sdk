@@ -9,7 +9,7 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { execaCommand } from "execa";
-import fetch from "node-fetch";
+import { fetch } from "undici";
 import open from "open";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";

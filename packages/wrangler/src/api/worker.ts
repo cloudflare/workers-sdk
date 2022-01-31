@@ -1,6 +1,6 @@
 import type { CfPreviewToken } from "./preview";
 import { previewToken } from "./preview";
-import fetch from "node-fetch";
+import { fetch } from "undici";
 
 /**
  * A Cloudflare account.
@@ -53,7 +53,7 @@ export interface CfModule {
    *   }
    * }
    */
-  content: string | BufferSource;
+  content: string | Buffer;
   /**
    * The module type.
    *

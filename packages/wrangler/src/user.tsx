@@ -209,7 +209,7 @@ import React from "react";
 import { render, Text } from "ink";
 import Table from "ink-table";
 import SelectInput from "ink-select-input";
-import fetch from "node-fetch";
+import { fetch } from "undici";
 import { webcrypto as crypto } from "node:crypto";
 import { TextEncoder } from "node:util";
 import open from "open";
@@ -223,7 +223,7 @@ import TOML from "@iarna/toml";
 import assert from "node:assert";
 import type { ParsedUrlQuery } from "node:querystring";
 import { CF_API_BASE_URL } from "./cfetch";
-import type { Response } from "node-fetch";
+import type { Response } from "undici";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.

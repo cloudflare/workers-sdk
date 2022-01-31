@@ -9,6 +9,7 @@ import { mockConsoleMethods } from "./mock-console";
 import type { Config } from "../config";
 import * as TOML from "@iarna/toml";
 import type { WorkerMetadata } from "../api/form_data";
+import type { FormData, File } from "undici";
 
 describe("publish", () => {
   runInTempDir();

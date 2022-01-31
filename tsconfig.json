@@ -12,7 +12,13 @@
     "jsx": "react",
     "resolveJsonModule": true,
     "incremental": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "skipLibCheck": true
   },
-  "exclude": ["node_modules/", "packages/*/vendor", "packages/*/*-dist"]
+  "exclude": [
+    "node_modules/",
+    "packages/*/vendor",
+    "packages/*/*-dist",
+    "packages/wrangler/pages/functions/template-worker.ts"
+  ]
 }

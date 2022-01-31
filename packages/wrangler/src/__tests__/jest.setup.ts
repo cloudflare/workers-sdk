@@ -3,7 +3,12 @@ import { confirm, prompt } from "../dialogs";
 import { fetchInternal } from "../cfetch/internal";
 import fetchMock from "jest-fetch-mock";
 
-jest.mock("node-fetch", () => jest.requireActual("jest-fetch-mock"));
+jest.mock("undici", () => {
+  return {
+    ...jest.requireActual("undici"),
+    fetch: jest.requireActual("jest-fetch-mock"),
+  };
+});
 fetchMock.doMock(() => {
   // Any un-mocked fetches should throw
   throw new Error("Unexpected fetch request");

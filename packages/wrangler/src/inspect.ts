@@ -5,6 +5,7 @@ import type { IncomingMessage, Server, ServerResponse } from "http";
 import { createServer } from "http";
 import { useEffect, useRef, useState } from "react";
 import { version } from "../package.json";
+import { URL } from "node:url";
 
 import type Protocol from "devtools-protocol";
 
