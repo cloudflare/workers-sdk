@@ -1,4 +1,5 @@
-import fetch from "node-fetch";
+import { URL } from "node:url";
+import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { toFormData } from "./form_data";
 import type { CfAccount, CfWorkerInit } from "./worker";
@@ -108,7 +109,6 @@ export async function previewToken(
 
   const { preview_token } = await fetchResult<{ preview_token: string }>(url, {
     method: "POST",
-    // @ts-expect-error TODO: fix this
     body: formData,
     headers: {
       "cf-preview-upload-config-token": value,

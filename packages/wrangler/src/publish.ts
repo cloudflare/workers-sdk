@@ -12,6 +12,7 @@ import type { Config } from "./config";
 import makeModuleCollector from "./module-collection";
 import type { AssetPaths } from "./sites";
 import { syncAssets } from "./sites";
+import { URLSearchParams } from "node:url";
 
 type CfScriptFormat = undefined | "modules" | "service-worker";
 
@@ -302,7 +303,6 @@ export default async function publish(props: Props): Promise<void> {
     workerUrl,
     {
       method: "PUT",
-      // @ts-expect-error: TODO: fix this type error!
       body: toFormData(worker),
     },
     new URLSearchParams({ available_on_subdomains: "true" })

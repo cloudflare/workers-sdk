@@ -1146,8 +1146,8 @@ export async function main(argv: string[]): Promise<void> {
                   `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
                   {
                     method: "PUT",
-                    // @ts-expect-error TODO: fix this error!
                     body: toFormData({
+                      name: scriptName,
                       main: {
                         name: scriptName,
                         content: `export default { fetch() {} }`,
@@ -1159,6 +1159,10 @@ export async function main(argv: string[]): Promise<void> {
                         durable_objects: { bindings: [] },
                       },
                       modules: [],
+                      migrations: undefined,
+                      compatibility_date: undefined,
+                      compatibility_flags: undefined,
+                      usage_model: undefined,
                     }),
                   }
                 );

@@ -1,5 +1,5 @@
-import type { RequestInit } from "node-fetch";
-import { URLSearchParams } from "url";
+import type { RequestInit } from "undici";
+import { URLSearchParams } from "node:url";
 import { fetchInternal } from "./internal";
 
 // Check out https://api.cloudflare.com/ for API docs.

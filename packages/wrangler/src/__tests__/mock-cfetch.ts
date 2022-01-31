@@ -1,5 +1,5 @@
-import type { RequestInit } from "node-fetch";
-import { URLSearchParams } from "node:url";
+import type { RequestInit } from "undici";
+import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
 import { CF_API_BASE_URL } from "../cfetch";
 import type { FetchResult } from "../cfetch";
