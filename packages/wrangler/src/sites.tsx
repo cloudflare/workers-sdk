@@ -2,9 +2,13 @@ import * as path from "node:path";
 import { readdir, readFile, stat } from "node:fs/promises";
 import ignore from "ignore";
 import { XXHash64 } from "xxhash-addon";
-import { fetchResult } from "./cfetch";
 import type { Config } from "./config";
-import { listNamespaceKeys, listNamespaces, putBulkKeyValue } from "./kv";
+import {
+  createNamespace,
+  listNamespaceKeys,
+  listNamespaces,
+  putBulkKeyValue,
+} from "./kv";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = ["node_modules"];
@@ -76,21 +80,12 @@ async function createKVNamespaceIfNotAlreadyExisting(
   }
 
   // else we make the namespace
-  // TODO: use an export from ./kv
-  const json = await fetchResult<{ id: string }>(
-    `/accounts/${accountId}/storage/kv/namespaces`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title }),
-    }
-  );
+  const id = await createNamespace(accountId, title);
+  console.log(`🌀 Created namespace for Workers Site "${title}"`);
 
   return {
     created: true,
-    id: json.id,
+    id,
   };
 }
 
@@ -111,7 +106,7 @@ export async function syncAssets(
   scriptName: string,
   siteAssets: AssetPaths | undefined,
   preview: boolean,
-  _env?: string
+  env: string | undefined
 ): Promise<{
   manifest: { [filePath: string]: string } | undefined;
   namespace: string | undefined;
@@ -120,7 +115,9 @@ export async function syncAssets(
     return { manifest: undefined, namespace: undefined };
   }
 
-  const title = `__${scriptName}_sites_assets${preview ? "_preview" : ""}`;
+  const title = `__${scriptName}${env ? `-${env}` : ""}-workers_sites_assets${
+    preview ? "_preview" : ""
+  }`;
   const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
     title,
     accountId

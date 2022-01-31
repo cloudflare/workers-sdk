@@ -52,6 +52,7 @@ export type DevProps = {
     cwd?: undefined | string;
     watch_dir?: undefined | string;
   };
+  env: string | undefined;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -119,6 +120,7 @@ function Dev(props: DevProps): JSX.Element {
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
+          env={props.env}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -147,6 +149,7 @@ function Remote(props: {
   compatibilityDate: string | undefined;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
+  env: string | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -163,6 +166,7 @@ function Remote(props: {
     compatibilityDate: props.compatibilityDate,
     compatibilityFlags: props.compatibilityFlags,
     usageModel: props.usageModel,
+    env: props.env,
   });
 
   usePreviewServer({
@@ -565,6 +569,7 @@ function useWorker(props: {
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
   usageModel: undefined | "bundled" | "unbound";
+  env: string | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -613,7 +618,8 @@ function useWorker(props: {
         accountId,
         name || path.basename(bundle.path),
         assetPaths,
-        true
+        true,
+        props.env
       ); // TODO: cancellable?
 
       const workerType = format || bundle.type === "esm" ? "esm" : "commonjs";
@@ -678,6 +684,7 @@ function useWorker(props: {
     usageModel,
     bindings,
     modules,
+    props.env,
   ]);
   return token;
 }

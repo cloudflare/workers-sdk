@@ -607,6 +607,7 @@ export async function main(argv: string[]): Promise<void> {
         <Dev
           name={args.name || config.name}
           entry={path.relative(process.cwd(), filename)}
+          env={args.env}
           buildCommand={config.build || {}}
           format={format}
           initialMode={args.local ? "local" : "remote"}

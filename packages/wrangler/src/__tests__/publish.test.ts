@@ -239,8 +239,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
 
       writeWranglerToml({
@@ -313,8 +313,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -354,8 +354,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -371,7 +371,7 @@ export default{
         expectedBindings: [
           {
             name: "__STATIC_CONTENT",
-            namespace_id: "__test-name_sites_assets-id",
+            namespace_id: "__test-name-workers_sites_assets-id",
             type: "kv_namespace",
           },
         ],
@@ -406,8 +406,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -421,7 +421,7 @@ export default{
         expectedBindings: [
           {
             name: "__STATIC_CONTENT",
-            namespace_id: "__test-name_sites_assets-id",
+            namespace_id: "__test-name-workers_sites_assets-id",
             type: "kv_namespace",
           },
         ],
@@ -454,14 +454,65 @@ export default{
       expect(stripTimings(std.err)).toMatchInlineSnapshot(`""`);
     });
 
+    it("should make environment specific kv namespace for assets", async () => {
+      // This is the same test as the one before this, but with an env arg
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-some-env-workers_sites_assets",
+        id: "__test-name-some-env-workers_sites_assets-id",
+      };
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        env: "some-env",
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name-some-env-workers_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      await runWrangler("publish --env some-env");
+
+      expect(stripTimings(std.out)).toMatchInlineSnapshot(`
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name (some-env)
+        (TIMINGS)
+        Deployed
+        test-name (some-env)
+        (TIMINGS)
+         
+        some-env.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
     it("should only upload files that are not already in the KV namespace", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -506,8 +557,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -549,8 +600,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -592,8 +643,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -636,8 +687,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -680,8 +731,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -724,8 +775,8 @@ export default{
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -774,8 +825,8 @@ export default{
         },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -824,8 +875,8 @@ export default{
         },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -871,8 +922,8 @@ export default{
         },
       ];
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -915,8 +966,8 @@ export default{
         content: "content of file",
       };
       const kvNamespace = {
-        title: "__test-name_sites_assets",
-        id: "__test-name_sites_assets-id",
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
         build: { upload: { main: "./index.js" } },
@@ -957,7 +1008,7 @@ export default{
     it("should run a custom build before publishing", async () => {
       writeWranglerToml({
         build: {
-          command: `echo "custom build" && echo "export default { fetch(){ return new Response(123)} }" > index.js`,
+          command: `echo "custom build" && echo "export default { fetch(){ return new Response(123) } }" > index.js`,
         },
       });
 
@@ -969,7 +1020,7 @@ export default{
       await runWrangler("publish index.js");
       expect(stripTimings(std.out)).toMatchInlineSnapshot(`
         "running:
-        echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123)} }\\" > index.js
+        echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
         Uploaded
         test-name
         (TIMINGS)
@@ -1047,15 +1098,19 @@ function mockUploadWorkerRequest({
   expectedType = "esm",
   expectedBindings,
   expectedModules = {},
+  env = undefined,
 }: {
   available_on_subdomain?: boolean;
   expectedEntry?: string;
   expectedType?: "esm" | "sw";
   expectedBindings?: unknown;
   expectedModules?: Record<string, string>;
+  env?: string | undefined;
 } = {}) {
   setMockResponse(
-    "/accounts/:accountId/workers/scripts/:scriptName",
+    env
+      ? `/accounts/:accountId/workers/services/:scriptName/environments/:envName`
+      : "/accounts/:accountId/workers/scripts/:scriptName",
     "PUT",
     async ([_url, accountId, scriptName], { body }, queryParams) => {
       expect(accountId).toEqual("some-account-id");
