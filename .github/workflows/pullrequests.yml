@@ -22,14 +22,6 @@ jobs:
           cache: "npm"
 
       - uses: actions/cache@v2
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ matrix.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
-      - uses: actions/cache@v2
         id: eslint-cache
         with:
           path: |
@@ -38,7 +30,7 @@ jobs:
           key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
       - name: Install NPM Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Check for errors
         run: npm run check
@@ -61,16 +53,8 @@ jobs:
           node-version: 16.7
           cache: "npm"
 
-      - uses: actions/cache@v2
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ matrix.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
       - name: Install NPM Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run build and test
         run: npm run build-and-test
