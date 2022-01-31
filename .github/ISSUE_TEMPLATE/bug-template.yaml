@@ -25,12 +25,6 @@ body:
   - type: textarea
     attributes:
       label: Describe the Bug
-      description: A clear and concise description of the bug & steps to reproduce.
+      description: Steps to reproduce
     validations:
       required: true
-  - type: input
-    attributes:
-      label: Link to Minimal Reproducible Example (optional)
-      placeholder: "https://..."
-    validations:
-      required: false
