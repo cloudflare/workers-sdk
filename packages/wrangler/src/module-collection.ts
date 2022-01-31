@@ -1,8 +1,8 @@
+import crypto from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { CfModule } from "./api/worker";
 import type esbuild from "esbuild";
-import path from "node:path";
-import { readFile } from "node:fs/promises";
-import crypto from "node:crypto";
 
 // This is a combination of an esbuild plugin and a mutable array
 // that we use to collect module references from source code.

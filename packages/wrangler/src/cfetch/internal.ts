@@ -1,7 +1,7 @@
 import { fetch } from "undici";
-import type { RequestInit, HeadersInit } from "undici";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
+import type { RequestInit, HeadersInit } from "undici";
 
 export const CF_API_BASE_URL =
   process.env.CF_API_BASE_URL || "https://api.cloudflare.com/client/v4";

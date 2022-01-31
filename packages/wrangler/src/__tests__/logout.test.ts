@@ -1,12 +1,12 @@
+import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { existsSync } from "node:fs";
 import fetchMock from "jest-fetch-mock";
-import { runWrangler } from "./run-wrangler";
-import { runInTempDir } from "./run-in-tmp";
 import { initialise } from "../user";
 import { mockConsoleMethods } from "./mock-console";
 import { writeUserConfig } from "./mock-user";
+import { runInTempDir } from "./run-in-tmp";
+import { runWrangler } from "./run-wrangler";
 
 const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;

@@ -1,11 +1,11 @@
-import React from "react";
 import { render } from "ink-testing-library";
-import type { UserInfo } from "../whoami";
-import { getUserInfo, WhoAmI } from "../whoami";
-import { runInTempDir } from "./run-in-tmp";
-import { setMockResponse } from "./mock-cfetch";
+import React from "react";
 import { initialise } from "../user";
+import { getUserInfo, WhoAmI } from "../whoami";
+import { setMockResponse } from "./mock-cfetch";
 import { writeUserConfig } from "./mock-user";
+import { runInTempDir } from "./run-in-tmp";
+import type { UserInfo } from "../whoami";
 
 const ORIGINAL_CF_API_TOKEN = process.env.CF_API_TOKEN;
 const ORIGINAL_CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;

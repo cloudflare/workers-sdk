@@ -26,5 +26,6 @@
     "websockets",
     "xxhash"
   ],
-  "cSpell.ignoreWords": ["yxxx"]
+  "cSpell.ignoreWords": ["yxxx"],
+  "eslint.runtime": "node"
 }

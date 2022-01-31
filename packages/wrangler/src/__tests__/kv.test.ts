@@ -1,14 +1,14 @@
-import { writeFileSync } from "fs";
-import type { KVNamespaceInfo } from "../kv";
+import { writeFileSync } from "node:fs";
 import {
   setMockResponse,
   setMockRawResponse,
   unsetAllMocks,
 } from "./mock-cfetch";
-import { runWrangler } from "./run-wrangler";
-import { runInTempDir } from "./run-in-tmp";
 import { mockConsoleMethods } from "./mock-console";
 import { mockKeyListRequest } from "./mock-kv";
+import { runInTempDir } from "./run-in-tmp";
+import { runWrangler } from "./run-wrangler";
+import type { KVNamespaceInfo } from "../kv";
 
 describe("wrangler", () => {
   runInTempDir();

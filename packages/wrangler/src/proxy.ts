@@ -1,6 +1,9 @@
-import { connect } from "node:http2";
-import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import { createServer } from "node:http";
+import { connect } from "node:http2";
+import WebSocket from "faye-websocket";
+import { useEffect, useRef, useState } from "react";
+import serveStatic from "serve-static";
+import type { CfPreviewToken } from "./api/preview";
 import type {
   IncomingHttpHeaders,
   RequestListener,
@@ -8,10 +11,7 @@ import type {
   ServerResponse,
   Server,
 } from "node:http";
-import WebSocket from "faye-websocket";
-import serveStatic from "serve-static";
-import type { CfPreviewToken } from "./api/preview";
-import { useEffect, useRef, useState } from "react";
+import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development

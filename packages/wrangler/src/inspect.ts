@@ -1,13 +1,13 @@
-import assert from "assert";
-import type { MessageEvent } from "ws";
-import WebSocket, { WebSocketServer } from "ws";
-import type { IncomingMessage, Server, ServerResponse } from "http";
-import { createServer } from "http";
-import { useEffect, useRef, useState } from "react";
-import { version } from "../package.json";
+import assert from "node:assert";
+import { createServer } from "node:http";
 import { URL } from "node:url";
 
+import { useEffect, useRef, useState } from "react";
+import WebSocket, { WebSocketServer } from "ws";
+import { version } from "../package.json";
 import type Protocol from "devtools-protocol";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { MessageEvent } from "ws";
 
 /**
  * `useInspector` is a hook for debugging Workers applications
