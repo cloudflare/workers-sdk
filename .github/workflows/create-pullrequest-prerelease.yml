@@ -54,5 +54,5 @@ jobs:
             Wrangler prerelease is available for testing:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.gregbrimble.workers.dev/download/${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}/${{ github.sha }}/wrangler.tgz
+            npm install --save-dev https://prerelease-registry.developers.workers.dev/download/${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}/${{ github.sha }}/wrangler.tgz
             ```
