@@ -781,29 +781,34 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       key
     ) => {
-      switch (input) {
-        case "b": // open browser
+      switch (input.toLowerCase()) {
+        // open browser
+        case "b":
           await open(`http://localhost:${port}/`);
           break;
-        case "d": // toggle inspector
+        // toggle inspector
+        case "d":
           await open(
             `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
           );
           break;
-        case "s": // toggle tunnel
+        // toggle tunnel
+        case "s":
           setToggles((previousToggles) => ({
             ...previousToggles,
             tunnel: !previousToggles.tunnel,
           }));
           break;
-        case "l": // toggle local
+        // toggle local
+        case "l":
           setToggles((previousToggles) => ({
             ...previousToggles,
             local: !previousToggles.local,
           }));
           break;
-        case "q": // shut down
-        case "x": // shut down
+        // shut down
+        case "q":
+        case "x":
           process.exit(0);
           break;
         default:
