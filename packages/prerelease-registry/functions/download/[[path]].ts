@@ -1,3 +1,5 @@
+import { generateAliasKey, generateKey } from "../utils/keys";
+
 export const onRequestGet: PagesFunction<{ KV: KVNamespace }, "path"> = async ({
   params,
   env,
@@ -6,7 +8,11 @@ export const onRequestGet: PagesFunction<{ KV: KVNamespace }, "path"> = async ({
 
   let tag: string, version: string, fileName: string;
 
-  if (Array.isArray(path) && path.length === 3) {
+  if (Array.isArray(path)) {
+    return new Response(null, { status: 404 });
+  }
+
+  if (path.length === 3) {
     [tag, version, fileName] = path;
   } else {
     [tag, fileName] = path;
@@ -15,10 +21,7 @@ export const onRequestGet: PagesFunction<{ KV: KVNamespace }, "path"> = async ({
   const packageName = fileName.split(".tgz")[0];
 
   if (version === undefined) {
-    version = await env.KV.get(
-      `wrangler:tag:${tag}:package:${packageName}`,
-      "text"
-    );
+    version = await env.KV.get(generateAliasKey({ tag, packageName }), "text");
 
     if (version === null) {
       return new Response(null, { status: 404 });
@@ -26,7 +29,7 @@ export const onRequestGet: PagesFunction<{ KV: KVNamespace }, "path"> = async ({
   }
 
   const fileStream = await env.KV.get(
-    `wrangler:tag:${tag}:package:${packageName}:version:${version}`,
+    generateKey({ tag, version, packageName }),
     "stream"
   );
 

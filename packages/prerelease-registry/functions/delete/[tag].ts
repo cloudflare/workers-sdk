@@ -1,10 +1,14 @@
+import { generateListKey } from "../utils/keys";
+
 export const onRequestDelete: PagesFunction<
   { KV: KVNamespace },
   "tag"
 > = async ({ params, env }) => {
   const { tag } = params;
 
-  const { keys } = await env.KV.list({ prefix: `wrangler:tag:${tag}` });
+  const { keys } = await env.KV.list({
+    prefix: generateListKey({ tag: tag as string }),
+  });
 
   if (keys.length === 0) {
     return new Response(null, { status: 404 });

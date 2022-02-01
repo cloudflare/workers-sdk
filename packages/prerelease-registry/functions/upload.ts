@@ -1,3 +1,5 @@
+import { generateAliasKey, generateKey } from "./utils/keys";
+
 export const onRequestPost: PagesFunction<{ KV: KVNamespace }> = async ({
   request,
   env,
@@ -9,11 +11,8 @@ export const onRequestPost: PagesFunction<{ KV: KVNamespace }> = async ({
   const file = formData.get("file") as File;
 
   try {
-    await env.KV.put(`wrangler:tag:${tag}:package:${packageName}`, version);
-    await env.KV.put(
-      `wrangler:tag:${tag}:package:${packageName}:version:${version}`,
-      file.stream()
-    );
+    await env.KV.put(generateAliasKey({ tag, packageName }), version);
+    await env.KV.put(generateKey({ tag, version, packageName }), file.stream());
 
     return new Response("Successfully uploaded.");
   } catch (thrown) {
