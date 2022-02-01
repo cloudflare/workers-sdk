@@ -1,5 +1,5 @@
 const { argv, exit } = require("process");
-const { fetch } = require("cross-fetch");
+const { fetch } = require("undici");
 
 const [pullRequestNumber, pullRequestHeadRef] = argv.slice(2);
 

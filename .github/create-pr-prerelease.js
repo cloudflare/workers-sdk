@@ -1,8 +1,7 @@
 const { argv, exit } = require("process");
 const { createReadStream } = require("fs");
 const { resolve } = require("path");
-const FormData = require("form-data");
-const { fetch } = require("cross-fetch");
+const { FormData, fetch } = require("undici");
 
 const [pullRequestNumber, pullRequestHeadRef, sha, packageName, filePath] =
   argv.slice(2);
