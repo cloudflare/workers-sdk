@@ -175,4 +175,4 @@ dist
 
 wrangler-dist/
 packages/wrangler/wrangler.toml
-_worker.js
+packages/prerelease-registry/_worker.js
