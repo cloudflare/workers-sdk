@@ -7,8 +7,9 @@ export const onRequestPost: PagesFunction<{ KV: KVNamespace }> = async ({
   const formData = await request.formData();
   const tag = formData.get("tag") as string;
   const version = formData.get("version") as string;
-  const packageName = formData.get("packageName") as string;
   const file = formData.get("file") as File;
+
+  const packageName = file.name.split(".tgz")[0];
 
   try {
     await env.KV.put(generateAliasKey({ tag, packageName }), version);

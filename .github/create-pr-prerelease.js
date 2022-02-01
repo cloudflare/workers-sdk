@@ -1,7 +1,7 @@
 const { argv, exit } = require("process");
-const { createReadStream } = require("fs");
+const { readFileSync } = require("fs");
 const { resolve } = require("path");
-const { FormData, fetch } = require("undici");
+const { FormData, File, fetch } = require("undici");
 
 const [pullRequestNumber, pullRequestHeadRef, sha, packageName, filePath] =
   argv.slice(2);
@@ -17,8 +17,10 @@ const version = sha;
 const formData = new FormData();
 formData.append("tag", tag);
 formData.append("version", version);
-formData.append("packageName", packageName);
-formData.append("file", createReadStream(resolve(filePath)));
+formData.append(
+  "file",
+  new File(readFileSync(resolve(filePath)), `${packageName}.tgz`)
+);
 
 (async () => {
   try {
