@@ -1,25 +1,15 @@
 {
   "compilerOptions": {
-    "module": "esnext",
     "target": "esnext",
-    "moduleResolution": "node",
     "esModuleInterop": true,
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,
     "lib": ["esnext"],
-    "jsx": "react",
-    "resolveJsonModule": true,
     "incremental": true,
     "strictNullChecks": true,
     "skipLibCheck": true
   },
-  "exclude": [
-    "node_modules/",
-    "packages/wrangler/vendor",
-    "packages/wrangler/*-dist",
-    "packages/wrangler/pages/functions/template-worker.ts",
-    "packages/wrangler/templates"
-  ]
+  "exclude": ["node_modules/"]
 }
