@@ -1,4 +1,4 @@
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/example-worker-app/dist/
-_worker.js
+packages/prerelease-registry/_worker.js
