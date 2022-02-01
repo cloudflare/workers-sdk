@@ -25,7 +25,7 @@ formData.append(
 (async () => {
   try {
     const response = await fetch(
-      `https://prerelease-registry.gregbrimble.workers.dev/upload`,
+      `https://prerelease-registry.developers.workers.dev/upload`,
       {
         method: "POST",
         body: formData,
@@ -35,7 +35,7 @@ formData.append(
       console.log("Successfully uploaded.");
       console.log("");
       console.log(
-        `npm install https://prerelease-registry.gregbrimble.workers.dev/download/${tag}/${version}/${packageName}.tgz`
+        `npm install https://prerelease-registry.developers.workers.dev/download/${tag}/${version}/${packageName}.tgz`
       );
       console.log("");
       return;

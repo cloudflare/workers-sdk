@@ -13,7 +13,7 @@ const tag = `${pullRequestNumber}-${pullRequestHeadRef}`;
 (async () => {
   try {
     const response = await fetch(
-      `https://prerelease-registry.gregbrimble.workers.dev/delete/${tag}`,
+      `https://prerelease-registry.developers.workers.dev/delete/${tag}`,
       {
         method: "DELETE",
       }

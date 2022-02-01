@@ -1,5 +1,5 @@
 name = "prerelease-registry"
 compatibility_date = "2022-01-31"
-account_id = "5a883b414d4090a1442b20361f3c43a9" # Greg's personal account
+account_id = "95e065d2e3f97a1e50bae58aea71df6d"
 
-kv_namespaces = [{ binding = "KV", id = "4c7f44fe117441df8d5fdab6b2efecb2", preview_id = "4c7f44fe117441df8d5fdab6b2efecb2" }]
+kv_namespaces = [{ binding = "KV", id = "9c6807e96ea24d97b47f40202e6ec687", preview_id = "9c6807e96ea24d97b47f40202e6ec687" }]
