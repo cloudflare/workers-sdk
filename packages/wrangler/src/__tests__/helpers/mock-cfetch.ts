@@ -140,23 +140,23 @@ export function setMockResponse<ResponseType>(
 /**
  * A helper to make it easier to create `FetchResult` objects in tests.
  */
-export function createFetchResult<ResponseType>(
-  result: ResponseType,
+export async function createFetchResult<ResponseType>(
+  result: ResponseType | Promise<ResponseType>,
   success = true,
   errors = [],
   messages = [],
   result_info?: unknown
-): FetchResult<ResponseType> {
+): Promise<FetchResult<ResponseType>> {
   return result_info
     ? {
-        result,
+        result: await result,
         success,
         errors,
         messages,
         result_info,
       }
     : {
-        result,
+        result: await result,
         success,
         errors,
         messages,
@@ -170,4 +170,38 @@ export function createFetchResult<ResponseType>(
  */
 export function unsetAllMocks() {
   mocks.length = 0;
+}
+
+/**
+ * We special-case fetching the request for `kv:key get`, because it's
+ * the only cloudflare API endpoint that returns a plain string as the
+ * value, and not as the "standard" FetchResult-style json. Hence, we also
+ * special-case mocking it here.
+ */
+
+const kvGetMocks = new Map<string, string>();
+
+export function mockFetchKVGetValue(
+  accountId: string,
+  namespaceId: string,
+  key: string
+) {
+  const mapKey = `${accountId}/${namespaceId}/${key}`;
+  if (kvGetMocks.has(mapKey)) {
+    return kvGetMocks.get(mapKey);
+  }
+  throw new Error(`no mock value found for \`kv:key get\` - ${mapKey}`);
+}
+
+export function setMockFetchKVGetValue(
+  accountId: string,
+  namespaceId: string,
+  key: string,
+  value: string
+) {
+  kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
+}
+
+export function unsetMockFetchKVGetValues() {
+  kvGetMocks.clear();
 }

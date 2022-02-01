@@ -1,7 +1,7 @@
 import fetchMock from "jest-fetch-mock";
-import { fetchInternal } from "../cfetch/internal";
+import { fetchInternal, fetchKVGetValue } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
-import { mockFetchInternal } from "./helpers/mock-cfetch";
+import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
 
 jest.mock("undici", () => {
   return {
@@ -16,6 +16,7 @@ fetchMock.doMock(() => {
 
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
+(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
 
 jest.mock("../dialogs");
 

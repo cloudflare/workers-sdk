@@ -18,16 +18,7 @@ export interface FetchResult<ResponseType = unknown> {
   result_info?: unknown;
 }
 
-/**
- * Make a fetch request for a raw JSON value.
- */
-export async function fetchRaw<ResponseType>(
-  resource: string,
-  init: RequestInit = {},
-  queryParams?: URLSearchParams
-): Promise<ResponseType> {
-  return fetchInternal<ResponseType>(resource, init, queryParams);
-}
+export { fetchKVGetValue } from "./internal";
 
 /**
  * Make a fetch request, and extract the `result` from the JSON response.
