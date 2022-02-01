@@ -5,14 +5,10 @@ import { execa } from "execa";
  */
 export const npm = {
   /** Add and install a new devDependency into the local package.json. */
-  async addDevDep(packageName: string, versionRange = "latest"): Promise<void> {
-    await execa(
-      "npm",
-      ["install", `${packageName}@${versionRange}`, "--save-dev"],
-      {
-        stdio: "inherit",
-      }
-    );
+  async addDevDeps(...packages: string[]): Promise<void> {
+    await execa("npm", ["install", ...packages, "--save-dev"], {
+      stdio: "inherit",
+    });
   },
 
   /** Install all the dependencies in the local package.json. */

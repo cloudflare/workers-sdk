@@ -225,10 +225,11 @@ export async function main(argv: string[]): Promise<void> {
             JSON.stringify(
               {
                 name: "worker",
-                version: "0.0.1",
+                version: "0.0.0",
                 devDependencies: {
                   wrangler: wranglerVersion,
                 },
+                private: true,
               },
               null,
               "  "
@@ -256,7 +257,7 @@ export async function main(argv: string[]): Promise<void> {
             "Would you like to install wrangler into your package.json?"
           );
           if (shouldInstall) {
-            await npm.addDevDep("wrangler", wranglerVersion);
+            await npm.addDevDeps(`wrangler@${wranglerVersion}`);
             console.log(`✨ Installed wrangler`);
           }
         }
@@ -272,16 +273,14 @@ export async function main(argv: string[]): Promise<void> {
             JSON.stringify(
               {
                 compilerOptions: {
-                  target: "esnext",
-                  module: "esnext",
+                  target: "es2021",
+                  module: "es2022",
                   moduleResolution: "node",
-                  esModuleInterop: true,
                   allowJs: true,
                   allowSyntheticDefaultImports: true,
                   isolatedModules: true,
                   noEmit: true,
-                  lib: ["esnext"],
-                  jsx: "react",
+                  lib: ["es2021"],
                   resolveJsonModule: true,
                   types: ["@cloudflare/workers-types"],
                 },
@@ -290,7 +289,8 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
-          await npm.addDevDep("@cloudflare/workers-types");
+          await npm.addDevDeps("@cloudflare/workers-types", "typescript");
+
           console.log(
             `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
           );
@@ -312,7 +312,7 @@ export async function main(argv: string[]): Promise<void> {
             "Would you like to install the type definitions for Workers into your package.json?"
           );
           if (shouldInstall) {
-            await npm.addDevDep("@cloudflare/workers-types");
+            await npm.addDevDeps("@cloudflare/workers-types");
             // We don't update the tsconfig.json because
             // it could be complicated in existing projects
             // and we don't want to break them. Instead, we simply

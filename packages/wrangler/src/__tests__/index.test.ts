@@ -12,7 +12,7 @@ describe("wrangler", () => {
   runInTempDir();
 
   beforeEach(() => {
-    jest.spyOn(npm, "addDevDep").mockResolvedValue();
+    jest.spyOn(npm, "addDevDeps").mockResolvedValue();
     jest.spyOn(npm, "install").mockResolvedValue();
   });
 
@@ -155,7 +155,7 @@ describe("wrangler", () => {
         fs.readFileSync("./package.json", "utf-8")
       );
       expect(packageJson.name).toEqual("worker"); // TODO: should we infer the name from the directory?
-      expect(packageJson.version).toEqual("0.0.1");
+      expect(packageJson.version).toEqual("0.0.0");
       expect(packageJson.devDependencies).toEqual({
         wrangler: expect.any(String),
       });
@@ -213,7 +213,9 @@ describe("wrangler", () => {
       );
       expect(packageJson.name).toEqual("test");
       expect(packageJson.version).toEqual("1.0.0");
-      expect(npm.addDevDep).toHaveBeenCalledWith("wrangler", wranglerVersion);
+      expect(npm.addDevDeps).toHaveBeenCalledWith(
+        `wrangler@${wranglerVersion}`
+      );
     });
 
     it("should not touch an existing package.json in an ancestor directory", async () => {
@@ -271,7 +273,10 @@ describe("wrangler", () => {
       expect(tsconfigJson.compilerOptions.types).toEqual([
         "@cloudflare/workers-types",
       ]);
-      expect(npm.addDevDep).toHaveBeenCalledWith("@cloudflare/workers-types");
+      expect(npm.addDevDeps).toHaveBeenCalledWith(
+        "@cloudflare/workers-types",
+        "typescript"
+      );
     });
 
     it("should not touch an existing tsconfig.json in the same directory", async () => {
@@ -331,7 +336,7 @@ describe("wrangler", () => {
       );
       // unchanged tsconfig
       expect(tsconfigJson.compilerOptions).toEqual({});
-      expect(npm.addDevDep).toHaveBeenCalledWith("@cloudflare/workers-types");
+      expect(npm.addDevDeps).toHaveBeenCalledWith("@cloudflare/workers-types");
     });
 
     it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
