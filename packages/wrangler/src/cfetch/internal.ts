@@ -31,7 +31,6 @@ export async function fetchInternal<ResponseType>(
     ...init,
     headers,
   });
-
   const jsonText = await response.text();
   try {
     const json = JSON.parse(jsonText);
@@ -69,4 +68,34 @@ function addAuthorizationHeader(headers: HeadersInit, apiToken: string): void {
     );
   }
   headers["Authorization"] = `Bearer ${apiToken}`;
+}
+
+/**
+ * The implementation for fetching a kv value from the cloudflare API.
+ * We special-case this one call, because it's the only API call that
+ * doesn't return json. We inline the implementation and try not to share
+ * any code with the other calls. We should push back on any new APIs that
+ * try to introduce non-"standard" response structures.
+ */
+
+export async function fetchKVGetValue(
+  accountId: string,
+  namespaceId: string,
+  key: string
+): Promise<string> {
+  await requireLoggedIn();
+  const apiToken = requireApiToken();
+  const headers = { Authorization: `Bearer ${apiToken}` };
+  const resource = `${CF_API_BASE_URL}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+  const response = await fetch(resource, {
+    method: "GET",
+    headers,
+  });
+  if (response.ok) {
+    return await response.text();
+  } else {
+    throw new Error(
+      `Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
+    );
+  }
 }

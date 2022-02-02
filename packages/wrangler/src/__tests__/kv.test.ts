@@ -2,8 +2,9 @@ import { writeFileSync } from "node:fs";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
   setMockResponse,
-  setMockRawResponse,
   unsetAllMocks,
+  unsetMockFetchKVGetValues,
+  setMockFetchKVGetValue,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
@@ -862,27 +863,13 @@ describe("wrangler", () => {
     });
 
     describe("get", () => {
-      function mockKeyGetRequest(
-        expectedNamespaceId: string,
-        expectedKey: string,
-        expectedValue: string
-      ) {
-        const requests = { count: 0 };
-        setMockRawResponse(
-          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-          ([_url, accountId, namespaceId, key]) => {
-            requests.count++;
-            expect(accountId).toEqual("some-account-id");
-            expect(namespaceId).toEqual(expectedNamespaceId);
-            expect(key).toEqual(expectedKey);
-            return expectedValue;
-          }
-        );
-        return requests;
-      }
+      afterEach(() => {
+        unsetMockFetchKVGetValues();
+      });
 
       it("should get a key in a given namespace specified by namespace-id", async () => {
-        const requests = mockKeyGetRequest(
+        setMockFetchKVGetValue(
+          "some-account-id",
           "some-namespace-id",
           "my-key",
           "my-value"
@@ -890,23 +877,27 @@ describe("wrangler", () => {
         await runWrangler("kv:key get my-key --namespace-id some-namespace-id");
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(requests.count).toEqual(1);
       });
 
       it("should get a key in a given namespace specified by binding", async () => {
         writeWranglerConfig();
-        const requests = mockKeyGetRequest("bound-id", "my-key", "my-value");
+        setMockFetchKVGetValue(
+          "some-account-id",
+          "bound-id",
+          "my-key",
+          "my-value"
+        );
         await runWrangler(
           "kv:key get my-key --binding someBinding --preview false"
         );
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(requests.count).toEqual(1);
       });
 
       it("should get a key in a given preview namespace specified by binding", async () => {
         writeWranglerConfig();
-        const requests = mockKeyGetRequest(
+        setMockFetchKVGetValue(
+          "some-account-id",
           "preview-bound-id",
           "my-key",
           "my-value"
@@ -914,12 +905,12 @@ describe("wrangler", () => {
         await runWrangler("kv:key get my-key --binding someBinding --preview");
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(requests.count).toEqual(1);
       });
 
       it("should get a key for the specified environment in a given namespace", async () => {
         writeWranglerConfig();
-        const requests = mockKeyGetRequest(
+        setMockFetchKVGetValue(
+          "some-account-id",
           "env-bound-id",
           "my-key",
           "my-value"
@@ -929,7 +920,6 @@ describe("wrangler", () => {
         );
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(requests.count).toEqual(1);
       });
 
       it("should error if no key is provided", async () => {

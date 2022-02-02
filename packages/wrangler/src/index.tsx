@@ -10,7 +10,7 @@ import onExit from "signal-exit";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { toFormData } from "./api/form_data";
-import { fetchResult, fetchRaw } from "./cfetch";
+import { fetchResult } from "./cfetch";
 import { normaliseAndValidateEnvironmentsConfig } from "./config";
 import Dev from "./dev";
 import { confirm, prompt } from "./dialogs";
@@ -23,6 +23,7 @@ import {
   deleteBulkKeyValue,
   createNamespace,
   isValidNamespaceBinding,
+  getKeyValue,
 } from "./kv";
 import { npm } from "./npm-installer";
 import { pages } from "./pages";
@@ -1755,13 +1756,11 @@ export async function main(argv: string[]): Promise<void> {
                 }
               }
               // -- snip, end --
-            }
 
-            console.log(
-              await fetchRaw(
-                `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`
-              )
-            );
+              console.log(
+                await getKeyValue(config.account_id, namespaceId, key)
+              );
+            }
           }
         )
         .command(
