@@ -830,6 +830,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             scriptPath,
           };
         } else {
+          scriptReadyResolve();
+
           const scriptPath =
             directory !== undefined
               ? join(directory, singleWorkerScriptPath)
@@ -852,7 +854,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               }
             }`,
             };
-            scriptReadyResolve();
           }
         }
 
