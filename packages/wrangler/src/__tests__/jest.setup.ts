@@ -14,6 +14,8 @@ fetchMock.doMock(() => {
   throw new Error("Unexpected fetch request");
 });
 
+jest.mock("../package-manager");
+
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
