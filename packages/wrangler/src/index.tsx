@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import path from "node:path/posix";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import { findUp } from "find-up";
@@ -266,11 +266,13 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
+      let isTypescriptProject = false;
       let pathToTSConfig = await findUp("tsconfig.json");
       if (!pathToTSConfig) {
         // If there's no tsconfig, offer to create one
         // and install @cloudflare/workers-types
-        if (await confirm("Would you like to use typescript?")) {
+        if (await confirm("Would you like to use TypeScript?")) {
+          isTypescriptProject = true;
           await writeFile(
             path.join(process.cwd(), "tsconfig.json"),
             JSON.stringify(
@@ -303,6 +305,7 @@ export async function main(argv: string[]): Promise<void> {
           pathToTSConfig = path.join(process.cwd(), "tsconfig.json");
         }
       } else {
+        isTypescriptProject = true;
         // If there's a tsconfig, check if @cloudflare/workers-types
         // is already installed, and offer to install it if not
         const packageJson = JSON.parse(
@@ -326,8 +329,44 @@ export async function main(argv: string[]): Promise<void> {
             console.log(
               `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in your tsconfig.json`
             );
-          } else {
-            return;
+          }
+        }
+      }
+
+      if (isTypescriptProject) {
+        if (!fs.existsSync(path.join(process.cwd(), "src/index.ts"))) {
+          const shouldCreateSource = await confirm(
+            `Would you like to create a Worker at src/index.ts?`
+          );
+          if (shouldCreateSource) {
+            const targetDir = path.join(process.cwd(), "src");
+            await mkdir(targetDir, { recursive: true });
+            await writeFile(
+              path.join(targetDir, "index.ts"),
+              await readFile(
+                path.join(__dirname, "../templates/new-worker.ts"),
+                "utf-8"
+              )
+            );
+            console.log(`✨ Created src/index.ts`);
+          }
+        }
+      } else {
+        if (!fs.existsSync(path.join(process.cwd(), "src/index.js"))) {
+          const shouldCreateSource = await confirm(
+            `Would you like to create a Worker at src/index.js?`
+          );
+          if (shouldCreateSource) {
+            const targetDir = path.join(process.cwd(), "src");
+            await mkdir(targetDir, { recursive: true });
+            await writeFile(
+              path.join(targetDir, "index.js"),
+              await readFile(
+                path.join(__dirname, "../templates/new-worker.js"),
+                "utf-8"
+              )
+            );
+            console.log(`✨ Created src/index.js`);
           }
         }
       }

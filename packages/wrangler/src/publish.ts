@@ -130,7 +130,7 @@ export default async function publish(props: Props): Promise<void> {
           stdin: {
             contents: (
               await readFile(
-                path.join(__dirname, "../static-asset-facade.js"),
+                path.join(__dirname, "../templates/static-asset-facade.js"),
                 "utf8"
               )
             ).replace("__ENTRY_POINT__", file),
