@@ -1,0 +1,52 @@
+{
+  "private": true,
+  "name": "remix-app-template",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev": "cross-env NODE_ENV=development run-p dev:*",
+    "postinstall": "remix setup cloudflare-pages",
+    "dev:remix": "remix watch",
+    "dev:wrangler": "wrangler pages dev ./public",
+    "start": "npm run dev:wrangler"
+  },
+  "dependencies": {
+    "@remix-run/react": "^1.1.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "^1.1.3",
+    "@remix-run/cloudflare-pages": "^1.1.3"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^1.1.3",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "typescript": "^4.1.2",
+    "@cloudflare/workers-types": "^3.2.0",
+    "cross-env": "^7.0.3",
+    "esbuild": "0.13.14",
+    "npm-run-all": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false,
+  "main": "dist/worker.js",
+  "jest": {
+    "restoreMocks": true,
+    "testTimeout": 30000,
+    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
+    "transformIgnorePatterns": [
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+    ],
+    "transform": {
+      "^.+\\.c?(t|j)sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true
+        }
+      ]
+    }
+  }
+}
