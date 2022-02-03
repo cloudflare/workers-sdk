@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import { resolve } from "path";
 import { fetch } from "undici";
 import type { Response } from "undici";
@@ -21,15 +21,9 @@ const isWindows = process.platform === "win32";
 
 describe("Remix", () => {
   beforeAll(async () => {
-    const remixProcess = spawn("npm", ["run", "dev:remix"], {
+    spawnSync("npm", ["run", "build"], {
       shell: isWindows,
       cwd: resolve(__dirname, "../"),
-    });
-    remixProcess.stdout.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
-    remixProcess.stderr.on("data", (chunk) => {
-      console.log(chunk.toString());
     });
     const wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
       shell: isWindows,
