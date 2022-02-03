@@ -191,7 +191,7 @@ export async function main(argv: string[]): Promise<void> {
 
       const packageManager = await getPackageManager(process.cwd());
 
-      const destination = path.join(process.cwd(), "wrangler.toml");
+      const destination = "./wrangler.toml";
       if (fs.existsSync(destination)) {
         console.warn(`${destination} file already exists!`);
         const shouldContinue = await confirm(
@@ -224,7 +224,7 @@ export async function main(argv: string[]): Promise<void> {
         );
         if (shouldCreatePackageJson) {
           await writeFile(
-            path.join(process.cwd(), "package.json"),
+            "./package.json",
             JSON.stringify(
               {
                 name: "worker",
@@ -274,7 +274,7 @@ export async function main(argv: string[]): Promise<void> {
         if (await confirm("Would you like to use TypeScript?")) {
           isTypescriptProject = true;
           await writeFile(
-            path.join(process.cwd(), "tsconfig.json"),
+            "./tsconfig.json",
             JSON.stringify(
               {
                 compilerOptions: {
@@ -334,15 +334,14 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       if (isTypescriptProject) {
-        if (!fs.existsSync(path.join(process.cwd(), "src/index.ts"))) {
+        if (!fs.existsSync("./src/index.ts")) {
           const shouldCreateSource = await confirm(
             `Would you like to create a Worker at src/index.ts?`
           );
           if (shouldCreateSource) {
-            const targetDir = path.join(process.cwd(), "src");
-            await mkdir(targetDir, { recursive: true });
+            await mkdir("./src", { recursive: true });
             await writeFile(
-              path.join(targetDir, "index.ts"),
+              "./src/index.ts",
               await readFile(
                 path.join(__dirname, "../templates/new-worker.ts"),
                 "utf-8"
@@ -352,15 +351,14 @@ export async function main(argv: string[]): Promise<void> {
           }
         }
       } else {
-        if (!fs.existsSync(path.join(process.cwd(), "src/index.js"))) {
+        if (!fs.existsSync("./src/index.js")) {
           const shouldCreateSource = await confirm(
             `Would you like to create a Worker at src/index.js?`
           );
           if (shouldCreateSource) {
-            const targetDir = path.join(process.cwd(), "src");
-            await mkdir(targetDir, { recursive: true });
+            await mkdir("./src", { recursive: true });
             await writeFile(
-              path.join(targetDir, "index.js"),
+              path.join("./src/index.js"),
               await readFile(
                 path.join(__dirname, "../templates/new-worker.js"),
                 "utf-8"
