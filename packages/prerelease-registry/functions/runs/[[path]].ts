@@ -14,7 +14,7 @@ interface Artifact {
 }
 
 export const onRequestGet: PagesFunction<
-  { GITHUB_API_TOKEN: string },
+  { GITHUB_API_TOKEN: string; GITHUB_USER: string },
   "path"
 > = async ({ request, params, env, waitUntil }) => {
   const cache = caches.default;
@@ -38,11 +38,11 @@ export const onRequestGet: PagesFunction<
     init?: RequestInit | Request
   ) => {
     let gitHubRequest = new Request(resource, init);
-    gitHubRequest = new Request(gitHubRequest.clone());
+    gitHubRequest = gitHubRequest.clone();
 
     gitHubRequest.headers.set(
       "Authorization",
-      `Basic ${btoa(`gregbrimble:${env.GITHUB_API_TOKEN}`)}`
+      `Basic ${btoa(`${env.GITHUB_USER}:${env.GITHUB_API_TOKEN}`)}`
     );
     gitHubRequest.headers.set(
       "User-Agent",
@@ -52,43 +52,56 @@ export const onRequestGet: PagesFunction<
     return fetch(gitHubRequest);
   };
 
-  const artifactsResponse = await gitHubFetch(
-    `https://api.github.com/repos/cloudflare/wrangler2/actions/runs/${runID}/artifacts`,
-    {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-      },
+  try {
+    const artifactsResponse = await gitHubFetch(
+      `https://api.github.com/repos/cloudflare/wrangler2/actions/runs/${runID}/artifacts`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    );
+    if (!artifactsResponse.ok) {
+      if (artifactsResponse.status >= 500) {
+        return new Response(null, { status: 502 });
+      }
+
+      return new Response(null, { status: 404 });
     }
-  );
-  if (!artifactsResponse.ok) {
-    if (artifactsResponse.status >= 500)
-      return new Response(null, { status: 502 });
 
-    return new Response(null, { status: 404 });
+    const { artifacts } = (await artifactsResponse.json()) as {
+      artifacts: Artifact[];
+    };
+
+    const artifact = artifacts.find(
+      (artifactCandidate) => artifactCandidate.name === name
+    );
+    if (artifact === undefined) return new Response(null, { status: 404 });
+
+    const zipResponse = await gitHubFetch(artifact.archive_download_url);
+    if (!zipResponse.ok) {
+      if (zipResponse.status >= 500) {
+        return new Response(null, { status: 502 });
+      }
+
+      return new Response(null, { status: 404 });
+    }
+
+    const zip = new JSZip();
+    await zip.loadAsync(await zipResponse.arrayBuffer());
+
+    const files = zip.files;
+    const fileNames = Object.keys(files);
+    const tgzFileName = fileNames.find((fileName) => fileName.endsWith(".tgz"));
+    if (tgzFileName === undefined) return new Response(null, { status: 404 });
+
+    const tgzBlob = await files[tgzFileName].async("blob");
+    const response = new Response(tgzBlob);
+
+    waitUntil(cache.put(request, response.clone()));
+
+    return response;
+  } catch (thrown) {
+    return new Response(null, { status: 500 });
   }
-  const { artifacts } = (await artifactsResponse.json()) as {
-    artifacts: Artifact[];
-  };
-
-  const artifact = artifacts.find(
-    (artifactCandidate) => artifactCandidate.name === name
-  );
-  if (artifact === undefined) return new Response(null, { status: 404 });
-
-  const zipResponse = await gitHubFetch(artifact.archive_download_url);
-
-  const zip = new JSZip();
-  await zip.loadAsync(await zipResponse.arrayBuffer());
-
-  const files = zip.files;
-  const fileNames = Object.keys(files);
-  const tgzFileName = fileNames.find((fileName) => fileName.endsWith(".tgz"));
-  if (tgzFileName === undefined) return new Response(null, { status: 404 });
-
-  const tgzBlob = await files[tgzFileName].async("blob");
-  const response = new Response(tgzBlob);
-
-  waitUntil(cache.put(request, response.clone()));
-
-  return response;
 };
