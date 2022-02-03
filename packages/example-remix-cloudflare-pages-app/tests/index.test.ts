@@ -1,5 +1,6 @@
-import { ChildProcess, spawn } from "child_process";
+import { spawn } from "child_process";
 import { fetch } from "undici";
+import type { ChildProcess } from "child_process";
 
 const RUNNING_PROCESSES: ChildProcess[] = [];
 
