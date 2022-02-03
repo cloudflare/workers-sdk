@@ -1,27 +1,29 @@
 import { spawn } from "child_process";
 import { fetch } from "undici";
-import type { ChildProcess } from "child_process";
+import type { Response } from "undici";
 
-const RUNNING_PROCESSES: ChildProcess[] = [];
+const waitUntilReady = async (url: string): Promise<Response> => {
+  let response: Response | undefined = undefined;
+
+  while (response === undefined) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    try {
+      response = await fetch(url);
+    } catch {}
+  }
+
+  return response as Response;
+};
 
 describe("Remix", () => {
   beforeAll(async () => {
-    RUNNING_PROCESSES.push(spawn("npm run dev:remix", { shell: true }));
-    RUNNING_PROCESSES.push(
-      spawn("BROWSER=none npm run dev:wrangler", { shell: true })
-    );
-  });
-
-  afterAll(() => {
-    console.log("Called");
-    RUNNING_PROCESSES.forEach((runningProcess) => {
-      runningProcess.kill();
-    });
+    spawn("npm run dev:remix", { shell: true });
+    spawn("BROWSER=none npm run dev:wrangler", { shell: true });
   });
 
   it("renders", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const response = await fetch("http://localhost:8788/");
+    const response = await waitUntilReady("http://localhost:8788/");
     const text = await response.text();
     expect(text).toContain("Welcome to Remix");
   });
