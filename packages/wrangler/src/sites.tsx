@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import ignore from "ignore";
-import { XXHash64 } from "xxhash-addon";
+import xxhash from "xxhash-wasm";
 import {
   createNamespace,
   listNamespaceKeys,
@@ -9,6 +9,7 @@ import {
   putBulkKeyValue,
 } from "./kv";
 import type { Config } from "./config";
+import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = ["node_modules"];
@@ -46,11 +47,8 @@ async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
  * the most important thing here is to detect changes of a single file to invalidate the cache and
  * it's impossible to serve two different files with the same name
  */
-function hashFileContent(content: string): string {
-  const hasher = new XXHash64();
-  hasher.update(Buffer.from(content));
-  const hash = hasher.digest();
-  return hash.toString("hex").substring(0, 10);
+function hashFileContent(hasher: XXHashAPI, content: string): string {
+  return hasher.h64ToString(content).substring(0, 10);
 }
 
 /**
@@ -59,11 +57,15 @@ function hashFileContent(content: string): string {
  * The key will change if the file path or content of the asset changes.
  * The algorithm used here matches that of Wrangler 1.
  */
-function hashAsset(filePath: string, content: string): string {
+function hashAsset(
+  hasher: XXHashAPI,
+  filePath: string,
+  content: string
+): string {
   const extName = path.extname(filePath) || "";
   const baseName = path.basename(filePath, extName);
   const directory = path.dirname(filePath);
-  const hash = hashFileContent(content);
+  const hash = hashFileContent(hasher, content);
   return urlSafe(path.join(directory, `${baseName}.${hash}${extName}`));
 }
 
@@ -136,6 +138,8 @@ export async function syncAssets(
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
+  const hasher = await xxhash();
+
   // TODO: this can be more efficient by parallelising
   for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
     if (!include(file)) {
@@ -149,7 +153,7 @@ export async function syncAssets(
     console.log(`reading ${file}...`);
     const content = await readFile(file, "base64");
 
-    const assetKey = hashAsset(file, content);
+    const assetKey = await hashAsset(hasher, file, content);
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
