@@ -155,7 +155,14 @@ export async function generateConfigFromFileTree({
 
   routeEntries.sort(([a], [b]) => compareRoutes(a, b));
 
-  return { routes: Object.fromEntries(routeEntries) } as Config;
+  return {
+    routes: Object.fromEntries(
+      routeEntries.map(([routeKey, routeConfig]) => [
+        stringifyRouteKey(routeKey),
+        routeConfig,
+      ])
+    ),
+  } as Config;
 }
 
 // Ensure routes are produced in order of precedence so that
@@ -228,4 +235,8 @@ interface NonEmptyArray<T> extends Array<T> {
 }
 function isNotEmpty<T>(array: T[]): array is NonEmptyArray<T> {
   return array.length > 0;
+}
+
+function stringifyRouteKey(routeKey: RouteKey): string {
+  return (routeKey[1] ? `${routeKey[1]} ` : "") + routeKey[0];
 }
