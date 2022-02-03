@@ -42,17 +42,18 @@ jobs:
         run: npm pack
         working-directory: packages/wrangler
 
-      - name: Publish Prerelease
-        run: node .github/create-pr-prerelease.js ${{ github.event.pull_request.number }} ${{ github.event.pull_request.head.ref }} ${{ github.sha }} wrangler ./packages/wrangler/wrangler-*.tgz
-        env:
-          TODO_SECRET_TOKEN: ${{ secrets.TODO_SECRET_TOKEN }}
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: wrangler
+          path: packages/wrangler/wrangler-*.tgz
 
       - name: Comment on PR with Link
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           message: |
-            Wrangler prerelease is available for testing:
+            wrangler prerelease is available for testing:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.developers.workers.dev/download/${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}/${{ github.sha }}/wrangler.tgz
+            npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler
             ```

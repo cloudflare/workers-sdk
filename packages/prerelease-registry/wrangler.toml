@@ -1,5 +1,3 @@
 name = "prerelease-registry"
 compatibility_date = "2022-01-31"
 account_id = "95e065d2e3f97a1e50bae58aea71df6d"
-
-kv_namespaces = [{ binding = "KV", id = "9c6807e96ea24d97b47f40202e6ec687", preview_id = "9c6807e96ea24d97b47f40202e6ec687" }]
