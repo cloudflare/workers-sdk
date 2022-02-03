@@ -1,13 +1,11 @@
-name: Pages
+name: Create Pull Request Prerelease
 
-on:
-  push:
-    branches:
-      - pages
+on: pull_request
 
 jobs:
   build:
-    name: Build & Publish an alpha release to NPM
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build & Publish a Prerelease to the Adhoc Registry
     runs-on: ubuntu-latest
 
     steps:
@@ -40,11 +38,22 @@ jobs:
         run: npm run build
         working-directory: packages/wrangler
 
-      - name: Check for errors
-        run: npm run check
-
-      - name: Publish Alpha to NPM
-        run: npm publish --tag pages
-        env:
-          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      - name: Pack
+        run: npm pack
         working-directory: packages/wrangler
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: wrangler
+          path: packages/wrangler/wrangler-*.tgz
+
+      - name: Comment on PR with Link
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            wrangler prerelease is available for testing:
+
+            ```sh
+            npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler
+            ```

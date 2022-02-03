@@ -1,0 +1,21 @@
+{
+  "name": "prerelease-registry",
+  "private": true,
+  "version": "0.0.1",
+  "main": "_worker.js",
+  "scripts": {
+    "build": "npx wrangler pages functions build --fallback-service=''",
+    "check:type": "tsc",
+    "prestart": "npm run build",
+    "start": "npx wrangler dev _worker.js",
+    "prepublish": "npm run build",
+    "publish": "npx wrangler publish _worker.js"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.3.1",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "jszip": "^3.7.1"
+  }
+}
