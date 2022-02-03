@@ -6,5 +6,10 @@
     "resolveJsonModule": true,
     "jsx": "react"
   },
-  "exclude": ["vendor", "*-dist", "pages/functions/template-worker.ts"]
+  "exclude": [
+    "vendor",
+    "*-dist",
+    "pages/functions/template-worker.ts",
+    "templates"
+  ]
 }
