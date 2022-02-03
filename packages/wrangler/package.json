@@ -90,7 +90,7 @@
     "pages",
     "miniflare-config-stubs",
     "wrangler-dist",
-    "static-asset-facade.js",
+    "templates",
     "vendor",
     "import_meta_url.js"
   ],

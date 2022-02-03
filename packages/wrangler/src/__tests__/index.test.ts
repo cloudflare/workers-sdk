@@ -150,7 +150,11 @@ describe("wrangler", () => {
           result: true,
         },
         {
-          text: "Would you like to use typescript?",
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
           result: false,
         }
       );
@@ -175,7 +179,11 @@ describe("wrangler", () => {
           result: false,
         },
         {
-          text: "Would you like to use typescript?",
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
           result: false,
         }
       );
@@ -201,7 +209,11 @@ describe("wrangler", () => {
           result: true,
         },
         {
-          text: "Would you like to use typescript?",
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
           result: false,
         }
       );
@@ -230,7 +242,11 @@ describe("wrangler", () => {
           result: false,
         },
         {
-          text: "Would you like to use typescript?",
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
           result: false,
         }
       );
@@ -259,6 +275,112 @@ describe("wrangler", () => {
       `);
     });
 
+    it("should offer to create a worker in a non-typescript project", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
+          result: true,
+        }
+      );
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      await runWrangler("init");
+      expect(fs.existsSync("./src/index.js")).toBe(true);
+      expect(fs.existsSync("./src/index.ts")).toBe(false);
+    });
+
+    it("should offer to create a worker in a typescript project", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.ts?",
+          result: true,
+        }
+      );
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      await runWrangler("init");
+      expect(fs.existsSync("./src/index.js")).toBe(false);
+      expect(fs.existsSync("./src/index.ts")).toBe(true);
+    });
+
+    it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: false,
+        }
+      );
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+      fs.mkdirSync("./src", { recursive: true });
+      const PLACEHOLDER = "/* placeholder text */";
+      fs.writeFileSync("./src/index.js", PLACEHOLDER, "utf-8");
+
+      await runWrangler("init");
+      expect(fs.readFileSync("./src/index.js", "utf-8")).toBe(PLACEHOLDER);
+      expect(fs.existsSync("./src/index.ts")).toBe(false);
+    });
+
+    it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        }
+      );
+
+      fs.writeFileSync(
+        "./package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+      fs.mkdirSync("./src", { recursive: true });
+      const PLACEHOLDER = "/* placeholder text */";
+      fs.writeFileSync("./src/index.ts", PLACEHOLDER, "utf-8");
+
+      await runWrangler("init");
+      expect(fs.existsSync("./src/index.js")).toBe(false);
+      expect(fs.readFileSync("./src/index.ts", "utf-8")).toBe(PLACEHOLDER);
+    });
+
     it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
       mockConfirm(
         {
@@ -266,8 +388,12 @@ describe("wrangler", () => {
           result: true,
         },
         {
-          text: "Would you like to use typescript?",
+          text: "Would you like to use TypeScript?",
           result: true,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.ts?",
+          result: false,
         }
       );
       await runWrangler("init");
@@ -319,6 +445,10 @@ describe("wrangler", () => {
         {
           text: "Would you like to install the type definitions for Workers into your package.json?",
           result: true,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.ts?",
+          result: false,
         }
       );
       fs.writeFileSync(

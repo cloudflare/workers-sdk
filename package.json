@@ -46,9 +46,10 @@
   "eslintConfig": {
     "root": true,
     "ignorePatterns": [
-      "packages/*/vendor",
-      "packages/*/*-dist",
-      "packages/wrangler/pages/functions/template-worker.ts"
+      "packages/wrangler/vendor",
+      "packages/wrangler/*-dist",
+      "packages/wrangler/pages/functions/template-worker.ts",
+      "packages/wrangler/templates"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
