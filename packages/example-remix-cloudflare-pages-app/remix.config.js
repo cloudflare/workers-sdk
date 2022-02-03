@@ -9,5 +9,5 @@ module.exports = {
   serverPlatform: "neutral",
   serverBuildDirectory: "build",
   devServerBroadcastDelay: 1000,
-  ignoredRouteFiles: [".*"]
+  ignoredRouteFiles: [".*"],
 };
