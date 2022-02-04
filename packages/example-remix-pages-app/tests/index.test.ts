@@ -41,6 +41,6 @@ describe("Remix", () => {
   it("renders", async () => {
     const response = await waitUntilReady("http://localhost:8788/");
     const text = await response.text();
-    expect(text).toContain("Welcome to Remix");
+    expect(text).toContain("Welcome to not Remix");
   });
 });
