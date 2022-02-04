@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
@@ -241,56 +241,73 @@ function useLocalWorker(props: {
         );
       }
 
+      // In local mode, we want to copy all referenced modules into
+      // the output bundle directory before starting up
+      for (const module of bundle.modules) {
+        await writeFile(
+          path.join(path.dirname(bundle.path), module.name),
+          module.content
+        );
+      }
+
       console.log("⎔ Starting a local server...");
       // TODO: just use execa for this
-      local.current = spawn("node", [
-        "--experimental-vm-modules",
-        "--inspect",
-        require.resolve("miniflare/cli"),
-        bundle.path,
-        "--watch",
-        "--wrangler-config",
-        path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
-        "--env",
-        path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
-        "--package",
-        path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
-        "--port",
-        port.toString(),
-        ...(assetPaths
-          ? [
-              "--site",
-              assetPaths.baseDirectory,
-              ...assetPaths.includePatterns.map((pattern) => [
-                "--site-include",
-                pattern,
-              ]),
-              ...assetPaths.excludePatterns.map((pattern) => [
-                "--site-exclude",
-                pattern,
-              ]),
-            ].flatMap((x) => x)
-          : []),
-        ...(props.enableLocalPersistence
-          ? ["--kv-persist", "--cache-persist", "--do-persist"]
-          : []),
-        ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
-          return ["--binding", `${key}=${value}`];
-        }),
-        ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
-          return ["--kv", binding];
-        }),
-        ...(bindings.durable_objects?.bindings || []).flatMap(
-          ({ name, class_name }) => {
-            return ["--do", `${name}=${class_name}`];
-          }
-        ),
-        "--modules",
-        format ||
-        (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
-          ? "true"
-          : "false",
-      ]);
+      local.current = spawn(
+        "node",
+        [
+          "--experimental-vm-modules",
+          "--inspect",
+          require.resolve("miniflare/cli"),
+          bundle.path,
+          "--watch",
+          "--wrangler-config",
+          path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
+          "--env",
+          path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
+          "--package",
+          path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
+          "--port",
+          port.toString(),
+          ...(assetPaths
+            ? [
+                "--site",
+                path.join(process.cwd(), assetPaths.baseDirectory),
+                ...assetPaths.includePatterns.map((pattern) => [
+                  "--site-include",
+                  pattern,
+                ]),
+                ...assetPaths.excludePatterns.map((pattern) => [
+                  "--site-exclude",
+                  pattern,
+                ]),
+              ].flatMap((x) => x)
+            : []),
+          ...(props.enableLocalPersistence
+            ? ["--kv-persist", "--cache-persist", "--do-persist"]
+            : []),
+          ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
+            return ["--binding", `${key}=${value}`];
+          }),
+          ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
+            return ["--kv", binding];
+          }),
+          ...(bindings.durable_objects?.bindings || []).flatMap(
+            ({ name, class_name }) => {
+              return ["--do", `${name}=${class_name}`];
+            }
+          ),
+          "--modules",
+          format ||
+          (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
+            ? "true"
+            : "false",
+          "--modules-rule",
+          "CompiledWasm=**/*.wasm",
+        ],
+        {
+          cwd: path.dirname(bundle.path),
+        }
+      );
       console.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {

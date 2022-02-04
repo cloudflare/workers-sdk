@@ -1,0 +1,5 @@
+{
+  "name": "example-wasm-app",
+  "version": "1.0.0",
+  "module": "worker/shim.js"
+}
