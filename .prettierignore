@@ -1,4 +1,6 @@
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/example-worker-app/dist/
+packages/example-remix-pages-app/build
+packages/example-remix-pages-app/public/
 packages/prerelease-registry/_worker.js
