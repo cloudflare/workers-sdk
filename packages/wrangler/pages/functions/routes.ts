@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { toUrlPath } from "../../src/paths";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
 import type { UrlPath } from "../../src/paths";
 
@@ -22,21 +21,19 @@ export function isHTTPMethod(
 
 export type RoutesCollection = Array<{
   routePath: UrlPath;
-  methods: HTTPMethod[];
+  method?: HTTPMethod;
   modules: string[];
   middlewares: string[];
 }>;
 
 export type Config = {
-  routes?: RoutesConfig;
+  routes?: RouteConfig[];
   schedules?: unknown;
 };
 
-export type RoutesConfig = {
-  [route: UrlPath]: RouteConfig;
-};
-
 export type RouteConfig = {
+  routePath: UrlPath;
+  method?: HTTPMethod;
   middleware?: string | string[];
   module?: string | string[];
 };
@@ -116,16 +113,10 @@ export function parseConfig(config: Config, baseDir: string) {
     });
   }
 
-  for (const [route, props] of Object.entries(config.routes ?? {})) {
-    let [_methods, routePath] = route.split(" ");
-    if (!routePath) {
-      routePath = _methods;
-      _methods = "";
-    }
-
+  for (const { routePath, method, ...props } of config.routes ?? []) {
     routes.push({
-      routePath: toUrlPath(routePath),
-      methods: _methods.split("|").filter(isHTTPMethod),
+      routePath,
+      method,
       middlewares: parseModuleIdentifiers(props.middleware),
       modules: parseModuleIdentifiers(props.module),
     });
@@ -150,7 +141,7 @@ export const routes = [
     .map(
       (route) => `  {
       routePath: "${route.routePath}",
-      methods: ${JSON.stringify(route.methods)},
+      method: "${route.method}",
       middlewares: [${route.middlewares.join(", ")}],
       modules: [${route.modules.join(", ")}],
     },`

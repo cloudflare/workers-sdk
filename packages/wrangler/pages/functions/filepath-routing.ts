@@ -5,22 +5,17 @@ import * as acornWalk from "acorn-walk";
 import { transform } from "esbuild";
 import { toUrlPath } from "../../src/paths";
 import type { UrlPath } from "../../src/paths";
-import type { Config, RouteConfig } from "./routes";
+import type { HTTPMethod, RouteConfig } from "./routes";
 import type { ExportNamedDeclaration, Identifier } from "estree";
-
-type Arguments = {
-  baseDir: string;
-  baseURL: UrlPath;
-};
-
-type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
-type RouteKey = [UrlPath, Method] | [UrlPath, undefined] | [UrlPath];
 
 export async function generateConfigFromFileTree({
   baseDir,
   baseURL,
-}: Arguments) {
-  let routeEntries: [RouteKey, RouteConfig][] = [];
+}: {
+  baseDir: string;
+  baseURL: UrlPath;
+}) {
+  let routeEntries: RouteConfig[] = [];
 
   if (!baseURL.startsWith("/")) {
     baseURL = `/${baseURL}` as UrlPath;
@@ -83,10 +78,9 @@ export async function generateConfigFromFileTree({
           }
 
           for (const exportName of exportNames) {
-            const [match, method] =
-              exportName.match(
-                /^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?$/
-              ) ?? [];
+            const [match, method = ""] = (exportName.match(
+              /^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?$/
+            ) ?? []) as (string | undefined)[];
 
             if (match) {
               const basename = path.basename(filepath).slice(0, -ext.length);
@@ -113,20 +107,15 @@ export async function generateConfigFromFileTree({
               routePath = routePath.replace(/\[\[(.+)]]/g, ":$1*"); // transform [[id]] => :id*
               routePath = routePath.replace(/\[(.+)]/g, ":$1"); // transform [id] => :id
 
-              const routeUrlPath = toUrlPath(routePath);
-              const routeKey: RouteKey = [
-                routeUrlPath,
-                method ? (method.toUpperCase() as Method) : undefined,
-              ];
+              const routeEntry: RouteConfig = {
+                routePath: toUrlPath(routePath),
+                method: method.toUpperCase() as HTTPMethod,
+                [isMiddlewareFile ? "middleware" : "module"]: [
+                  `${path.relative(baseDir, filepath)}:${exportName}`,
+                ],
+              };
 
-              routeEntries.push([
-                routeKey,
-                {
-                  [isMiddlewareFile ? "middleware" : "module"]: [
-                    `${path.relative(baseDir, filepath)}:${exportName}`,
-                  ],
-                },
-              ]);
+              routeEntries.push(routeEntry);
             }
           }
         },
@@ -136,34 +125,33 @@ export async function generateConfigFromFileTree({
 
   // Combine together any routes (index routes) which contain both a module and a middleware
   routeEntries = routeEntries.reduce(
-    (acc: typeof routeEntries, [routePath, routeHandler]) => {
+    (acc: typeof routeEntries, { routePath, ...rest }) => {
       const existingRouteEntry = acc.find(
-        (routeEntry) => routeEntry[0] === routePath
+        (routeEntry) => routeEntry.routePath === routePath
       );
       if (existingRouteEntry !== undefined) {
-        existingRouteEntry[1] = {
-          ...existingRouteEntry[1],
-          ...routeHandler,
-        };
+        Object.assign(existingRouteEntry, rest);
       } else {
-        acc.push([routePath, routeHandler]);
+        acc.push({ routePath, ...rest });
       }
       return acc;
     },
     []
   );
 
-  routeEntries.sort(([a], [b]) => compareRoutes(a, b));
+  routeEntries.sort((a, b) => compareRoutes(a, b));
 
-  return { routes: Object.fromEntries(routeEntries) } as Config;
+  return {
+    routes: routeEntries,
+  };
 }
 
 // Ensure routes are produced in order of precedence so that
 // more specific routes aren't occluded from matching due to
 // less specific routes appearing first in the route list.
 export function compareRoutes(
-  [routePathA, methodA]: RouteKey,
-  [routePathB, methodB]: RouteKey
+  { routePath: routePathA, method: methodA }: RouteConfig,
+  { routePath: routePathB, method: methodB }: RouteConfig
 ) {
   function parseRoutePath(routePath: UrlPath): string[] {
     return routePath.slice(1).split("/").filter(Boolean);

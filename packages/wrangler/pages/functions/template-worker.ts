@@ -22,7 +22,7 @@ declare type PagesFunction<
 
 type RouteHandler = {
   routePath: string;
-  methods: HTTPMethod[];
+  method?: HTTPMethod;
   modules: PagesFunction[];
   middlewares: PagesFunction[];
 };
@@ -47,10 +47,7 @@ function* executeRequest(request: Request, _env: FetchEnv) {
 
   // First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
   for (const route of [...routes].reverse()) {
-    if (
-      route.methods.length &&
-      !route.methods.includes(request.method as HTTPMethod)
-    ) {
+    if (route.method && route.method !== request.method) {
       continue;
     }
 
@@ -68,10 +65,7 @@ function* executeRequest(request: Request, _env: FetchEnv) {
 
   // Then look for the first exact route match and execute its "modules"
   for (const route of routes) {
-    if (
-      route.methods.length &&
-      !route.methods.includes(request.method as HTTPMethod)
-    ) {
+    if (route.method && route.method !== request.method) {
       continue;
     }
 
