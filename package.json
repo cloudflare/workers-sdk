@@ -35,7 +35,8 @@
     "check:type": "npm run check:test --workspaces --if-present",
     "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content",
     "check:format": "prettier packages/** --check --ignore-unknown",
-    "build-and-test": "run-p build test --aggregate-output -l",
+    "prebuild-and-test": "npm run build",
+    "build-and-test": "npm test",
     "build": "npm run build --workspace=wrangler",
     "test": "npm run test --workspaces --if-present",
     "prettify": "prettier packages/** --write --ignore-unknown"
