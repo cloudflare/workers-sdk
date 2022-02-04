@@ -1,5 +1,163 @@
 # wrangler
 
+## 0.0.16
+
+### Patch Changes
+
+- [#364](https://github.com/cloudflare/wrangler2/pull/364) [`3575892`](https://github.com/cloudflare/wrangler2/commit/3575892f99d7a77031d566a12b4a383c886cc64f) Thanks [@threepointone](https://github.com/threepointone)! - enhance: small tweaks to `wrangler init`
+
+  - A slightly better `package.json`
+  - A slightly better `tsconfig.json`
+  - installing `typescript` as a dev dependency
+
+* [#380](https://github.com/cloudflare/wrangler2/pull/380) [`aacd1c2`](https://github.com/cloudflare/wrangler2/commit/aacd1c2a4badb273878cda13fda56e4b21bdd9cd) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: ensure pages routes are defined correctly
+
+  In e151223 we introduced a bug where the RouteKey was now an array rather than a simple URL string. When it got stringified into the routing object these were invalid.
+  E.g. `[':page*', undefined]` got stringified to `":page*,"` rather than `":page*"`.
+
+  Fixes #379
+
+- [#329](https://github.com/cloudflare/wrangler2/pull/329) [`27a1f3b`](https://github.com/cloudflare/wrangler2/commit/27a1f3b303fab855592f9ca980c770a4a0d85ec6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: run PR jobs on both Ubuntu, MacOS and Windows
+
+  - update .gitattributes to be consistent on Windows
+  - update Prettier command to ignore unknown files
+    Windows seems to be more brittle here.
+  - tighten up eslint config
+    Windows seems to be more brittle here as well.
+  - use the matrix.os value in the cache key
+    Previously we were using `running.os` but this appeared not to be working.
+
+* [#347](https://github.com/cloudflare/wrangler2/pull/347) [`ede5b22`](https://github.com/cloudflare/wrangler2/commit/ede5b2219fe636e376ae8a0e56978a33df448215) Thanks [@threepointone](https://github.com/threepointone)! - fix: hide `wrangler pages functions` in the main help menu
+
+  This hides `wrangler pages functions` in the main help menu, since it's only intended for internal usage right now. It still "works", so nothing changes in that regard. We'll bring this back when we have a broader story in wrangler for functions.
+
+- [#360](https://github.com/cloudflare/wrangler2/pull/360) [`f590943`](https://github.com/cloudflare/wrangler2/commit/f5909437a17954b4182823a14dfbc51b0433d971) Thanks [@threepointone](https://github.com/threepointone)! - fix: `kv:key get`
+
+  The api for fetching a kv value, unlike every other cloudflare api, returns just the raw value as a string (as opposed to the `FetchResult`-style json). However, our fetch utility tries to convert every api response to json before parsing it further. This leads to bugs like https://github.com/cloudflare/wrangler2/issues/359. The fix is to special case for `kv:key get`.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/359.
+
+* [#373](https://github.com/cloudflare/wrangler2/pull/373) [`6e7baf2`](https://github.com/cloudflare/wrangler2/commit/6e7baf2afd7bdda3e15484086279d298a63abaa2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use the appropriate package manager when initializing a wrangler project
+
+  Previously, when we initialized a project using `wrangler init`, we always used npm as the package manager.
+
+  Now we check to see whether npm and yarn are actually installed, and also whether there is already a lock file in place before choosing which package manager to use.
+
+  Fixes #353
+
+- [#363](https://github.com/cloudflare/wrangler2/pull/363) [`0add2a6`](https://github.com/cloudflare/wrangler2/commit/0add2a6a6d7d861e5a6047873a473d5156e8ca89) Thanks [@threepointone](https://github.com/threepointone)! - fix: support uppercase hotkeys in `wrangler dev`
+
+  Just a quick fix to accept uppercase hotkeys during `dev`.
+
+* [#331](https://github.com/cloudflare/wrangler2/pull/331) [`e151223`](https://github.com/cloudflare/wrangler2/commit/e1512230e8109afe905dd9bea46f638652906921) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: generate valid URL route paths for pages on Windows
+
+  Previously route paths were manipulated by file-system path utilities.
+  On Windows this resulted in URLs that had backslashes, which are invalid for such URLs.
+
+  Fixes #51
+  Closes #235
+  Closes #330
+  Closes #327
+
+- [#338](https://github.com/cloudflare/wrangler2/pull/338) [`e0d2f35`](https://github.com/cloudflare/wrangler2/commit/e0d2f35542bc37636098a30469e93702dd7a0d35) Thanks [@threepointone](https://github.com/threepointone)! - feat: environments for Worker Sites
+
+  This adds environments support for Workers Sites. Very simply, it uses a separate kv namespace that's indexed by the environment name. This PR also changes the name of the kv namespace generated to match wrangler 1's implementation.
+
+* [#329](https://github.com/cloudflare/wrangler2/pull/329) [`e1d2198`](https://github.com/cloudflare/wrangler2/commit/e1d2198b6454fead8a0115c2ed92a37b9def6dba) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - test: support testing in CI on Windows
+
+  - Don't rely on bash variables to configure tests
+    The use of bash variables in the `npm test` script is not supported in Windows Powershell, causing CI on Windows to fail.
+    These bash variables are used to override the API token and the Account ID.
+
+    This change moves the control of mocking these two concepts into the test code, by adding `mockAccountId()` and `mockApiToken()` helpers.
+
+    - The result is slightly more boilerplate in tests that need to avoid hitting the auth APIs.
+    - But there are other tests that had to revert these environment variables. So the boilerplate is reduced there.
+
+  - Sanitize command line for snapshot tests
+    This change applies `normalizeSlashes()` and `trimTimings()` to command line outputs and error messages to avoid inconsistencies in snapshots.
+    The benefit here is that authors do not need to keep adding them to all their snapshot tests.
+
+  - Move all the helper functions into their own directory to keep the test directory cleaner.
+
+- [#380](https://github.com/cloudflare/wrangler2/pull/380) [`aacd1c2`](https://github.com/cloudflare/wrangler2/commit/aacd1c2a4badb273878cda13fda56e4b21bdd9cd) Thanks [@GregBrimble](https://github.com/GregBrimble)! - refactor: clean up pages routing
+
+* [#343](https://github.com/cloudflare/wrangler2/pull/343) [`cfd8ba5`](https://github.com/cloudflare/wrangler2/commit/cfd8ba5fa6b82968e5f8c5cce657e7c9eb468fc6) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild
+
+  Update esbuild to 0.14.14. Also had to change `import esbuild from "esbuild";` to `import * as esbuild from "esbuild";` in `dev.tsx`.
+
+- [#371](https://github.com/cloudflare/wrangler2/pull/371) [`85ceb84`](https://github.com/cloudflare/wrangler2/commit/85ceb84c474a20b191a475719196eed9674a8e77) Thanks [@nrgnrg](https://github.com/nrgnrg)! - fix: pages advanced mode usage
+
+  Previously in pages projects using advanced mode (a single `_worker.js` or `--script-path` file rather than a `./functions` folder), calling `pages dev` would quit without an error and not launch miniflare.
+
+  This change fixes that and enables `pages dev` to be used with pages projects in advanced mode.
+
+* [#383](https://github.com/cloudflare/wrangler2/pull/383) [`969c887`](https://github.com/cloudflare/wrangler2/commit/969c887bfc371dc16d0827589ad21a68ea0b3a89) Thanks [@threepointone](https://github.com/threepointone)! - fix: remove redundant process.cwd() calls in `wrangler init`
+
+  Followup from https://github.com/cloudflare/wrangler2/pull/372#discussion_r798854509, just removing some unnecessary calls to `process.cwd()`/`path.join()`, since they're already relative to where they're called from.
+
+- [#329](https://github.com/cloudflare/wrangler2/pull/329) [`ac168f4`](https://github.com/cloudflare/wrangler2/commit/ac168f4f62851ad3fe2e2705655baf8229c421ea) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: use helpers to manage npm commands
+
+  This change speeds up tests and avoids us checking that npm did what it is supposed to do.
+
+* [#348](https://github.com/cloudflare/wrangler2/pull/348) [`b8e3b01`](https://github.com/cloudflare/wrangler2/commit/b8e3b0124656ae3eb82fdebf1fcaaa056612ff1e) Thanks [@threepointone](https://github.com/threepointone)! - chore: replace `node-fetch` with `undici`
+
+  There are several reasons to replace `node-fetch` with `undici`:
+
+  - `undici`'s `fetch()` implementation is set to become node's standard `fetch()` implementation, which means we can just remove the dependency in the future (or optionally load it depending on which version of node is being used)
+  - `node-fetch` pollutes the global type space with a number of standard types
+  - we already bundle `undici` via `miniflare`/pages, so this means our bundle size could ostensibly become smaller.
+
+  This replaces `node-fetch` with `undici`.
+
+  - All instances of `import fetch from "node-fetch"` are replaced with `import {fetch} from "undici"`
+  - `undici` also comes with spec compliant forms of `FormData` and `File`, so we could also remove `formdata-node` in `form_data.ts`
+  - All the global types that were injected by `node-fetch` are now imported from `undici` (as well as some mistaken ones from `node:url`)
+  - NOTE: this also turns on `skipLibCheck` in `tsconfig.json`. Some dependencies oddly depend on browser globals like `Request`, `Response` (like `@miniflare/core`, `jest-fetch-mock`, etc), which now fail because `node-fetch` isn't injecting those globals anymore. So we enable `skipLibCheck` to bypass them. (I'd thought `skipLibCheck` completely ignores 'third party' types, but that's not true - it still uses the module graph to scan types. So we're still typesafe. We should enable `strict` sometime to avoid `any`s, but that's for later.)
+  - The bundle size isn't smaller because we're bundling 2 different versions of `undici`, but we'll fix that by separately upping the version of `undici` that miniflare bundles.
+
+- [#357](https://github.com/cloudflare/wrangler2/pull/357) [`41cfbc3`](https://github.com/cloudflare/wrangler2/commit/41cfbc3b20fa79313c0a7236530c519876a05fc9) Thanks [@threepointone](https://github.com/threepointone)! - chore: add eslint-plugin-import
+
+  - This adds `eslint-plugin-import` to enforce ordering of imports, and configuration for the same in `package.json`.
+  - I also run `npm run check:lint -- --fix` to apply the configured order in our whole codebase.
+  - This also needs a setting in `.vscode/settings.json` to prevent spurious warnings inside vscode. You'll probably have to restart your IDE for this to take effect. (re: https://github.com/import-js/eslint-plugin-import/issues/2377#issuecomment-1024800026)
+
+  (I'd also like to enforce using `node:` prefixes for node builtin modules, but that can happen later. For now I manually added the prefixes wherever they were missing. It's not functionally any different, but imo it helps the visual grouping.)
+
+* [#372](https://github.com/cloudflare/wrangler2/pull/372) [`05dbb0d`](https://github.com/cloudflare/wrangler2/commit/05dbb0d6f5d838b414ee84824f0f87571d18790f) Thanks [@threepointone](https://github.com/threepointone)! - feat: `wrangler init` offers to create a starter worker
+
+  We got feedback that `wrangler init` felt incomplete, because the immediate next thing folks need is a starter source file. So this adds another step to `wrangler init` where we offer to create that file for you.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/355
+
+- [#384](https://github.com/cloudflare/wrangler2/pull/384) [`8452485`](https://github.com/cloudflare/wrangler2/commit/84524850582dc25c99a76c314997eea37666ceb3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: use xxhash-wasm for better compatibility with Windows
+
+  The previous xxhash package we were using required a build step, which relied upon tooling that was not always available on Window.
+
+  This version is a portable WASM package.
+
+* [#334](https://github.com/cloudflare/wrangler2/pull/334) [`536c7e5`](https://github.com/cloudflare/wrangler2/commit/536c7e5e9472d876053d0d2405d045a2faf8e074) Thanks [@threepointone](https://github.com/threepointone)! - feat: wasm support for local mode in `wrangler dev`
+
+  This adds support for `*.wasm` modules into local mode for `wrangler dev`.
+
+  In 'edge' mode, we create a javascript bundle, but wasm modules are uploaded to the preview server directly when making the worker definition form upload. However, in 'local' mode, we need to have the actual modules available to the bundle. So we copy the files over to the bundle path. We also pass appropriate `--modules-rule` directive to `miniflare`.
+
+  I also added a sample wasm app to use for testing, created from a default `workers-rs` project.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/299
+
+- [#329](https://github.com/cloudflare/wrangler2/pull/329) [`b8a3e78`](https://github.com/cloudflare/wrangler2/commit/b8a3e785e4e4c348ff3495f2d0f9896e23a2b045) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: use `npm ci` and do not cache workspace packages in node_modules
+
+  Previously we were caching all the `node_modules` files in the CI jobs and then running `npm install`. While this resulted in slightly improved install times on Ubuntu, it breaks on Windows because the npm workspace setup adds symlinks into node_modules, which the Github cache action cannot cope with.
+
+  This change removes the `node_modules` caches (saving some time by not needing to restore them) and replaces `npm install` with `npm ci`.
+
+  The `npm ci` command is actually designed to be used in CI jobs as it only installs the exact versions specified in the `package-lock.json` file, guaranteeing that for any commit we always have exactly the same CI job run, deterministically.
+
+  It turns out that, on Ubuntu, using `npm ci` makes very little difference to the installation time (~30 secs), especially if there is no `node_modules` there in the first place.
+
+  Unfortunately, MacOS is slower (~1 min), and Windows even worse (~2 mins)! But it is worth this longer CI run to be sure we have things working on all OSes.
+
 ## 0.0.15
 
 ### Patch Changes
