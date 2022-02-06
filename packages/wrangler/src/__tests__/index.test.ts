@@ -101,6 +101,20 @@ describe("wrangler", () => {
       await runWrangler("init");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toContain("wrangler-tests");
+      expect(fs.existsSync("./package.json")).toBe(false);
+      expect(fs.existsSync("./tsconfig.json")).toBe(false);
+    });
+
+    it("should create a named Worker wrangler.toml", async () => {
+      mockConfirm({
+        text: "No package.json found. Would you like to create one?",
+        result: false,
+      });
+      await runWrangler("init my-worker");
+      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toBe("my-worker");
       expect(fs.existsSync("./package.json")).toBe(false);
       expect(fs.existsSync("./tsconfig.json")).toBe(false);
     });
