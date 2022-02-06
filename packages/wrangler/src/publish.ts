@@ -7,14 +7,13 @@ import { execaCommand } from "execa";
 import tmp from "tmp-promise";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
+import guessWorkerFormat from "./guess-worker-format";
 import makeModuleCollector from "./module-collection";
 import { syncAssets } from "./sites";
-import type { CfWorkerInit } from "./api/worker";
+import type { CfScriptFormat, CfWorkerInit } from "./api/worker";
 import type { Config } from "./config";
 import type { AssetPaths } from "./sites";
 import type { Metafile } from "esbuild";
-
-type CfScriptFormat = undefined | "modules" | "service-worker";
 
 type Props = {
   config: Config;
@@ -38,12 +37,6 @@ function sleep(ms: number) {
 }
 
 export default async function publish(props: Props): Promise<void> {
-  if (props.experimentalPublic && props.format === "service-worker") {
-    // TODO: check config too
-    throw new Error(
-      "You cannot publish in the service worker format with a public directory."
-    );
-  }
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
   const {
@@ -123,6 +116,15 @@ export default async function publish(props: Props): Promise<void> {
     });
   }
 
+  const format = await guessWorkerFormat(file, props.format);
+
+  if (props.experimentalPublic && format === "service-worker") {
+    // TODO: check config too
+    throw new Error(
+      "You cannot publish in the service worker format with a public directory."
+    );
+  }
+
   const moduleCollector = makeModuleCollector();
   const result = await esbuild.build({
     ...(props.experimentalPublic
@@ -176,25 +178,10 @@ export default async function publish(props: Props): Promise<void> {
   );
   const entryPointExports = entryPoints[0][1].exports;
   const resolvedEntryPointPath = entryPoints[0][0];
-  const { format } = props;
   const bundle = {
     type: entryPointExports.length > 0 ? "esm" : "commonjs",
     exports: entryPointExports,
   };
-
-  // TODO: instead of bundling the facade with the worker, we should just bundle the worker and expose it as a module.
-  // That way we'll be able to accurately tell if this is a service worker or not.
-
-  if (format === "modules" && bundle.type === "commonjs") {
-    console.error("⎔ Cannot use modules with a commonjs bundle.");
-    // TODO: a much better error message here, with what to do next
-    return;
-  }
-  if (format === "service-worker" && bundle.type !== "esm") {
-    console.error("⎔ Cannot use service-worker with a esm bundle.");
-    // TODO: a much better error message here, with what to do next
-    return;
-  }
 
   let content = await readFile(resolvedEntryPointPath, { encoding: "utf-8" });
   await destination.cleanup();
