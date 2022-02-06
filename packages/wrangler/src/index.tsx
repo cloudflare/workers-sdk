@@ -217,7 +217,10 @@ export async function main(argv: string[]): Promise<void> {
         try {
           await writeFile(
             destination,
-            `compatibility_date = "${compatibilityDate}"` + "\n"
+            TOML.stringify({
+              name: args.name || path.basename(path.resolve(process.cwd())),
+              compatibility_date: compatibilityDate,
+            }) + "\n"
           );
           console.log(`✨ Successfully created wrangler.toml`);
           // TODO: suggest next steps?
