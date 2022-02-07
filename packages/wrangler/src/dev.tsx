@@ -52,13 +52,8 @@ export type DevProps = {
 };
 
 function Dev(props: DevProps): JSX.Element {
-  if (props.public && props.format === "service-worker") {
-    throw new Error(
-      "You cannot use the service worker format with a `public` directory."
-    );
-  }
   const port = props.port ?? 8787;
-  const apiToken = getAPIToken();
+  const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
 
   // if there isn't a build command, we just return the entry immediately
@@ -75,6 +70,17 @@ function Dev(props: DevProps): JSX.Element {
   });
 
   const format = useWorkerFormat({ file: entry, format: props.format });
+  if (format && props.public && format === "service-worker") {
+    throw new Error(
+      "You cannot use the service worker format with a `public` directory."
+    );
+  }
+
+  if (props.bindings.wasm_modules && format === "modules") {
+    throw new Error(
+      "You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code"
+    );
+  }
 
   const toggles = useHotkeys(
     {
@@ -299,6 +305,14 @@ function useLocalWorker(props: {
               return ["--do", `${name}=${class_name}`];
             }
           ),
+          ...Object.entries(bindings.wasm_modules || {}).flatMap(
+            ([name, filePath]) => {
+              return [
+                "--wasm",
+                `${name}=${path.join(process.cwd(), filePath)}`,
+              ];
+            }
+          ),
           "--modules",
           String(format === "modules"),
           "--modules-rule",
@@ -372,6 +386,7 @@ function useLocalWorker(props: {
     props.enableLocalPersistence,
     assetPaths,
     props.public,
+    bindings.wasm_modules,
   ]);
   return { inspectorUrl };
 }

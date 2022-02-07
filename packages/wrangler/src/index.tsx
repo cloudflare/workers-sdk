@@ -68,10 +68,22 @@ async function readConfig(configPath?: string): Promise<Config> {
     );
   }
 
+  if (configPath && "wasm_modules" in config) {
+    // rewrite wasm_module paths to be absolute
+    const modules = {};
+    for (const [name, filePath] of Object.entries(config.wasm_modules || {})) {
+      modules[name] = path.relative(
+        process.cwd(),
+        path.join(path.dirname(configPath), filePath)
+      );
+    }
+    config.wasm_modules = modules;
+  }
+
   // todo: validate, add defaults
   // let's just do some basics for now
 
-  // @ts-expect-error we're being sneaky here for now
+  // @ts-expect-error we're being sneaky here
   config.__path__ = configPath;
 
   return config;
@@ -679,6 +691,7 @@ export async function main(argv: string[]): Promise<void> {
               }
             ),
             vars: envRootObj.vars,
+            wasm_modules: config.wasm_modules,
             durable_objects: envRootObj.durable_objects,
             services: envRootObj.experimental_services,
           }}
