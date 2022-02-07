@@ -28,6 +28,7 @@ import {
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
 import publish from "./publish";
+import { reportError } from "./reporting";
 import { getAssetPaths } from "./sites";
 import { createTail } from "./tail";
 import {
@@ -40,7 +41,6 @@ import {
   validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
-import { sentryCapture } from "./sentry";
 
 import type { Config } from "./config";
 import type Yargs from "yargs";
@@ -2172,7 +2172,7 @@ export async function main(argv: string[]): Promise<void> {
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );
     }
-    await sentryCapture(e, "indexCatch");
+    await reportError(e, "indexCatch");
     throw e;
   }
 }

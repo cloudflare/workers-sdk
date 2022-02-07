@@ -21,7 +21,7 @@ Sourcemaps:
 Prompt for Opt-In:
 
 - When Error is thrown user will be prompted with yes (only sends this time), Always, and No (default). Always and No
-  will be added to deafult.toml with a datetime property for future update checks.
+  will be added to default.toml with a datetime property for future update checks.
 - If the property already exists it will skip the prompt.
 
 Sentry Tests:

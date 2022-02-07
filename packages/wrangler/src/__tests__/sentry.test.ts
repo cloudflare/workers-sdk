@@ -9,9 +9,9 @@ import prompts from "prompts";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-const sentryCapture = jest.requireActual("../sentry").sentryCapture;
+const { reportError } = jest.requireActual("../reporting");
 
-describe("Sentry", () => {
+describe("Error Reporting", () => {
   runInTempDir({ homedir: "./home" });
   mockConsoleMethods();
 
@@ -21,15 +21,17 @@ describe("Sentry", () => {
     jest.spyOn(Sentry, "captureException");
     process.stdout.isTTY = true;
   });
+
   afterEach(() => {
     jest.unmock("@sentry/node");
     jest.clearAllMocks();
     process.stdout.isTTY = originalTTY;
   });
-  test("should confirm user will allow Sentry usage", async () => {
+
+  it("should confirm user will allow error reporting usage", async () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
 
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
       await fsp.readFile(
@@ -45,9 +47,10 @@ describe("Sentry", () => {
       new Error("test error")
     );
   });
-  test("should confirm user will disallow Sentry usage", async () => {
+
+  it("should confirm user will disallow error reporting usage", async () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
       await fsp.readFile(
@@ -64,10 +67,11 @@ describe("Sentry", () => {
       "testFalse"
     );
   });
-  test("should confirm user will allow 'once' Sentry usage", async () => {
+
+  it("should confirm user will allow 'once' error reporting usage", async () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: "once" });
     await runWrangler();
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     expect(
       fs.existsSync(path.join(os.homedir(), ".wrangler/config/default.toml"))
@@ -79,49 +83,72 @@ describe("Sentry", () => {
     );
   });
 
-  test("should not prompt w/ subsequent Errors after user disallows Sentry use", async () => {
+  it("should not prompt w/ subsequent Errors after user disallows error reporting", async () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     expect(Sentry.captureException).not.toHaveBeenCalledWith(
       new Error("test error"),
       "testFalse"
     );
 
-    await sentryCapture(new Error("second test error"), "testFalse");
+    await reportError(new Error("second test error"), "testFalse");
     expect(Sentry.captureException).not.toHaveBeenCalledWith(
       new Error("second test error"),
       "testFalse"
     );
   });
-  test("should not prompt w/ subsequent Errors after user Always allows Sentry use", async () => {
+
+  it("should not prompt w/ subsequent Errors after user Always allows error reporting", async () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     expect(Sentry.captureException).toHaveBeenCalledWith(
       new Error("test error")
     );
 
-    await sentryCapture(new Error("second test error"), "testFalse");
+    await reportError(new Error("second test error"), "testFalse");
     expect(Sentry.captureException).toHaveBeenCalledWith(
       new Error("second test error")
     );
   });
-  test("should prompt w/ subsequent Errors after user allows Sentry use once", async () => {
+
+  it("should prompt w/ subsequent Errors after user allows error reporting once", async () => {
     const promptSpy = jest
       .spyOn(prompts, "prompt")
       .mockResolvedValue({ sentryDecision: "once" });
-    await sentryCapture(new Error("test error"), "testFalse");
+    await reportError(new Error("test error"), "testFalse");
 
     expect(Sentry.captureException).toHaveBeenCalledWith(
       new Error("test error")
     );
 
-    await sentryCapture(new Error("second test error"), "testFalse");
+    await reportError(new Error("second test error"), "testFalse");
     expect(Sentry.captureException).toHaveBeenCalledWith(
       new Error("second test error")
     );
 
     expect(promptSpy).toBeCalledTimes(2);
+  });
+
+  it("should not prompt in non-TTY environment", async () => {
+    process.stdout.isTTY = false;
+
+    await reportError(new Error("test error"), "testFalse");
+
+    const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
+      await fsp.readFile(
+        path.join(os.homedir(), ".wrangler/config/default.toml"),
+        "utf-8"
+      )
+    );
+
+    expect(error_tracking_opt).toBe(false);
+    expect(error_tracking_opt_date).toBeTruthy();
+
+    expect(Sentry.captureException).not.toHaveBeenCalledWith(
+      new Error("test error")
+    );
+    process.stdout.isTTY = originalTTY;
   });
 });

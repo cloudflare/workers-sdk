@@ -55,7 +55,7 @@ jobs:
         working-directory: packages/wrangler
       # The Sourcemap rewrite script is necessary due to how Sentry handles Events, Sourcemaps and sourcemapping URLs, all of which need to reference each other.
       # The script will rewrite the sourcemap URLs to point to the correct location of the sourcemap and what the Event is being processed (with RewriteFrames)
-      # In the Sentry project their is a concept of a filesystem which if they are all referencing root can be used to determine the correct location of the sourcemap.z
+      # In the Sentry project there is a concept of a filesystem which if they are all referencing root can be used to determine the correct location of the sourcemap.z
       # The unmodified released version of the sourcemap is done in the Create Version PR or Publish to NPM two steps above.
       - name: SourceMapping Rewrite & Sentry Upload
         run: node .github/sentry-upload.js
