@@ -1,6 +1,6 @@
 import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
 
-// @ts-ignore
+// @ts-expect-error this points to generated assets
 import * as build from "../build";
 
 const handleRequest = createPagesFunctionHandler({

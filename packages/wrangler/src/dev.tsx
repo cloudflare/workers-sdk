@@ -15,26 +15,23 @@ import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
-
 import { createWorker } from "./api/worker";
-
+import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
 import type { CfPreviewToken } from "./api/preview";
-import type { CfModule, CfWorkerInit } from "./api/worker";
+import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { AssetPaths } from "./sites";
 import type { DirectoryResult } from "tmp-promise";
-
-type CfScriptFormat = undefined | "modules" | "service-worker";
 
 export type DevProps = {
   name?: string;
   entry: string;
   port?: number;
-  format: CfScriptFormat;
+  format: CfScriptFormat | undefined;
   accountId: undefined | string;
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
@@ -76,11 +73,8 @@ function Dev(props: DevProps): JSX.Element {
     jsxFactory: props.jsxFactory,
     jsxFragment: props.jsxFragment,
   });
-  if (bundle && bundle.type === "commonjs" && !props.format && props.public) {
-    throw new Error(
-      "You cannot use the service worker format with a `public` directory."
-    );
-  }
+
+  const format = useWorkerFormat({ file: entry, format: props.format });
 
   const toggles = useHotkeys(
     {
@@ -98,7 +92,7 @@ function Dev(props: DevProps): JSX.Element {
         <Local
           name={props.name}
           bundle={bundle}
-          format={props.format}
+          format={format}
           bindings={props.bindings}
           assetPaths={props.assetPaths}
           public={props.public}
@@ -109,7 +103,7 @@ function Dev(props: DevProps): JSX.Element {
         <Remote
           name={props.name}
           bundle={bundle}
-          format={props.format}
+          format={format}
           accountId={props.accountId}
           apiToken={apiToken}
           bindings={props.bindings}
@@ -135,10 +129,29 @@ function Dev(props: DevProps): JSX.Element {
   );
 }
 
+function useWorkerFormat(props: {
+  file: string | undefined;
+  format: undefined | CfScriptFormat;
+}): CfScriptFormat | undefined {
+  const [format, setFormat] = useState<CfScriptFormat | undefined>();
+  useEffect(() => {
+    async function validateFormat() {
+      if (!props.file || format) {
+        return;
+      }
+      setFormat(await guessWorkerFormat(props.file, props.format));
+    }
+    validateFormat().catch((err) => {
+      console.error("Failed to validate worker format:", err);
+    });
+  }, [props.file, props.format, format]);
+  return format;
+}
+
 function Remote(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
-  format: CfScriptFormat;
+  format: CfScriptFormat | undefined;
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
   port: number;
@@ -184,7 +197,7 @@ function Remote(props: {
 function Local(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
-  format: CfScriptFormat;
+  format: CfScriptFormat | undefined;
   bindings: CfWorkerInit["bindings"];
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
@@ -208,7 +221,7 @@ function Local(props: {
 function useLocalWorker(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
-  format: CfScriptFormat;
+  format: CfScriptFormat | undefined;
   bindings: CfWorkerInit["bindings"];
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
@@ -222,17 +235,7 @@ function useLocalWorker(props: {
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
   useEffect(() => {
     async function startLocalWorker() {
-      if (!bundle) return;
-      if (format === "modules" && bundle.type === "commonjs") {
-        console.error("⎔ Cannot use modules with a commonjs bundle.");
-        // TODO: a much better error message here, with what to do next
-        return;
-      }
-      if (format === "service-worker" && bundle.type !== "esm") {
-        console.error("⎔ Cannot use service-worker with a esm bundle.");
-        // TODO: a much better error message here, with what to do next
-        return;
-      }
+      if (!bundle || !format) return;
 
       await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
       if (props.public) {
@@ -297,10 +300,7 @@ function useLocalWorker(props: {
             }
           ),
           "--modules",
-          format ||
-          (bundle.type === "esm" ? "modules" : "service-worker") === "modules"
-            ? "true"
-            : "false",
+          String(format === "modules"),
           "--modules-rule",
           "CompiledWasm=**/*.wasm",
         ],
@@ -575,7 +575,7 @@ function useEsbuild(props: {
 function useWorker(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
-  format: CfScriptFormat;
+  format: CfScriptFormat | undefined;
   modules: CfModule[];
   accountId: string;
   apiToken: string;
@@ -612,17 +612,7 @@ function useWorker(props: {
     async function start() {
       setToken(undefined); // reset token in case we're re-running
 
-      if (!bundle) return;
-      if (format === "modules" && bundle.type === "commonjs") {
-        console.error("⎔ Cannot use modules with a commonjs bundle.");
-        // TODO: a much better error message here, with what to do next
-        return;
-      }
-      if (format === "service-worker" && bundle.type !== "esm") {
-        console.error("⎔ Cannot use service-worker with a esm bundle.");
-        // TODO: a much better error message here, with what to do next
-        return;
-      }
+      if (!bundle || !format) return;
 
       if (!startedRef.current) {
         startedRef.current = true;
@@ -638,9 +628,8 @@ function useWorker(props: {
         props.env
       ); // TODO: cancellable?
 
-      const workerType = format || bundle.type === "esm" ? "esm" : "commonjs";
       let content = await readFile(bundle.path, "utf-8");
-      if (workerType !== "esm" && assets.manifest) {
+      if (format === "service-worker" && assets.manifest) {
         content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
           assets.manifest
         )};\n${content}`;
@@ -650,11 +639,11 @@ function useWorker(props: {
         name,
         main: {
           name: path.basename(bundle.path),
-          type: workerType,
+          type: format === "modules" ? "esm" : "commonjs",
           content,
         },
         modules: modules.concat(
-          assets.manifest && workerType === "esm"
+          assets.manifest && format === "modules"
             ? {
                 name: "__STATIC_CONTENT_MANIFEST",
                 content: JSON.stringify(assets.manifest),

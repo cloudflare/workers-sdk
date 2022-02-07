@@ -569,7 +569,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      const { filename, format } = args;
+      const { filename } = args;
       const config = args.config as Config;
 
       if (args["experimental-public"]) {
@@ -630,7 +630,7 @@ export async function main(argv: string[]): Promise<void> {
           entry={path.relative(process.cwd(), filename)}
           env={args.env}
           buildCommand={config.build || {}}
-          format={format}
+          format={args.format || config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
@@ -705,6 +705,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("name", {
           describe: "name to use when uploading",
           type: "string",
+        })
+        .option("format", {
+          choices: ["modules", "service-worker"] as const,
+          describe: "Choose an entry type",
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -816,8 +820,9 @@ export async function main(argv: string[]): Promise<void> {
         args.siteExclude
       );
       await publish({
-        config: args.config as Config,
+        config,
         name: args.name,
+        format: args.format || config.build?.upload?.format,
         script: args.script,
         env: args.env,
         compatibilityDate: args.latest
@@ -829,7 +834,6 @@ export async function main(argv: string[]): Promise<void> {
         jsxFragment: args["jsx-fragment"],
         routes: args.routes,
         assetPaths,
-        format: undefined, // TODO: add args for this
         legacyEnv: undefined, // TODO: get this from somewhere... config?
         experimentalPublic: args["experimental-public"] !== undefined,
       });
