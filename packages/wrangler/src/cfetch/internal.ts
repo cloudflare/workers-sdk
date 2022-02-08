@@ -3,6 +3,7 @@ import { getEnvironmentVariableFactory } from "../environment-variables";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
+import { ParseError, parseJSON } from "../parse";
 
 /**
  * Get the URL to use to access the Cloudflare API.
@@ -33,23 +34,39 @@ export async function fetchInternal<ResponseType>(
   addAuthorizationHeader(headers, apiToken);
 
   const queryString = queryParams ? `?${queryParams.toString()}` : "";
+  const method = init.method ?? "GET";
   const response = await fetch(
     `${getCloudflareAPIBaseURL()}${resource}${queryString}`,
     {
-      method: "GET",
+      method,
       ...init,
       headers,
     }
   );
   const jsonText = await response.text();
   try {
-    const json = JSON.parse(jsonText);
-    return json as ResponseType;
-  } catch (e) {
-    throw new Error(
-      `Failed to fetch ${resource} - ${response.status}: ${response.statusText}\nInvalid JSON response:\n${jsonText}`
-    );
+    return parseJSON(jsonText) as ResponseType;
+  } catch (err) {
+    throw new ParseError({
+      text: "Received a malformed response from the API",
+      notes: [
+        {
+          text: truncate(jsonText, 100),
+        },
+        {
+          text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
+        },
+      ],
+    });
   }
+}
+
+function truncate(text: string, maxLength: number): string {
+  const { length } = text;
+  if (length <= maxLength) {
+    return text;
+  }
+  return `${text.substring(0, maxLength)}... (length = ${length})`;
 }
 
 function cloneHeaders(
