@@ -413,7 +413,9 @@ export type Config = {
 
           /**
            * The directory you wish to upload your modules from,
-           * defaults to the dist relative to the project root directory.
+           * relative to the wrangler.toml file.
+           *
+           * Defaults to the directory containing the wrangler.toml file.
            *
            * @deprecated
            * @breaking
@@ -421,10 +423,9 @@ export type Config = {
           dir?: string;
 
           /**
-           * The path to the Worker script. This should be replaced
-           * by the top level `entry' property.
+           * The path to the Worker script, relative to `upload.dir`.
            *
-           * @deprecated This will be replaced by the top level `entry' property.
+           * @deprecated This will be replaced by a command line argument.
            */
           main?: string;
 

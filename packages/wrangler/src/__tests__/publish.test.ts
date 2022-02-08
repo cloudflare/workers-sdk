@@ -43,6 +43,7 @@ describe("publish", () => {
           `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
+
     it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
       writeWranglerToml();
       writeWorkerSource({ type: "sw" });
@@ -82,6 +83,62 @@ describe("publish", () => {
                
               test-name.test-sub-domain.workers.dev"
           `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `build.upload.main` relative to the wrangler.toml not cwd", async () => {
+      writeWranglerToml({
+        build: {
+          upload: {
+            main: "./foo/index.js",
+          },
+        },
+      });
+      writeWorkerSource({ basePath: "foo" });
+      mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
+      mockSubDomainRequest();
+      process.chdir("foo");
+      await runWrangler("publish");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `build.upload.main` relative to `build.upload.dir` if format is `modules`", async () => {
+      writeWranglerToml({
+        build: {
+          upload: {
+            format: "modules",
+            main: "./index.js",
+            dir: "./foo",
+          },
+        },
+      });
+      writeWorkerSource({ basePath: "./foo" });
+      mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
+      mockSubDomainRequest();
+      process.chdir("foo");
+      await runWrangler("publish");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
