@@ -43,7 +43,7 @@ export default async function publish(props: Props): Promise<void> {
     account_id: accountId,
     build,
     // @ts-expect-error hidden
-    __path__,
+    __path__: wranglerTomlPath,
   } = config;
 
   const envRootObj =
@@ -86,6 +86,7 @@ export default async function publish(props: Props): Promise<void> {
   );
 
   let file: string;
+  let dir = process.cwd();
   if (props.script) {
     // If the script name comes from the command line it is relative to the current working directory.
     file = path.resolve(props.script);
@@ -96,7 +97,11 @@ export default async function publish(props: Props): Promise<void> {
         "Missing entry-point: The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `build.upload.main` config field."
       );
     }
-    file = path.resolve(path.dirname(__path__), build.upload.main);
+    dir = path.resolve(
+      path.dirname(wranglerTomlPath),
+      (build.upload.format === "modules" && build.upload.dir) || ""
+    );
+    file = path.resolve(dir, build.upload.main);
   }
 
   if (props.legacyEnv) {
@@ -143,6 +148,7 @@ export default async function publish(props: Props): Promise<void> {
         }
       : { entryPoints: [file] }),
     bundle: true,
+    absWorkingDir: dir,
     outdir: destination.path,
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
