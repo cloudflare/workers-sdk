@@ -9,7 +9,6 @@ import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
 import { Box, Text, useApp, useInput } from "ink";
-import open from "open";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
@@ -19,6 +18,7 @@ import { createWorker } from "./api/worker";
 import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
+import openInBrowser from "./open-in-brower";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
@@ -804,15 +804,17 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
     ) => {
       switch (input.toLowerCase()) {
         // open browser
-        case "b":
-          await open(`http://localhost:${port}/`);
+        case "b": {
+          await openInBrowser(`http://localhost:${port}`);
           break;
+        }
         // toggle inspector
-        case "d":
-          await open(
+        case "d": {
+          await openInBrowser(
             `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
           );
           break;
+        }
         // toggle tunnel
         case "s":
           setToggles((previousToggles) => ({

@@ -7,10 +7,10 @@ import { join } from "node:path";
 import { URL } from "node:url";
 import { watch } from "chokidar";
 import { getType } from "mime";
-import open from "open";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
+import openInBrowser from "./open-in-brower";
 import { toUrlPath } from "./paths";
 import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
@@ -945,9 +945,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           console.log(`Serving at http://localhost:${port}/`);
 
           if (process.env.BROWSER !== "none") {
-            const childProcess = await open(`http://localhost:${port}/`);
-            // fail silently if the open command doesn't work (e.g. in GitHub Codespaces)
-            childProcess.on("error", (_err) => {});
+            await openInBrowser(`http://localhost:${port}/`);
           }
 
           if (directory !== undefined && liveReload) {

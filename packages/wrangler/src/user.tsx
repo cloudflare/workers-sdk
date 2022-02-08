@@ -218,10 +218,10 @@ import TOML from "@iarna/toml";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import Table from "ink-table";
-import open from "open";
 import React from "react";
 import { fetch } from "undici";
 import { CF_API_BASE_URL } from "./cfetch";
+import openInBrowser from "./open-in-brower";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
@@ -804,18 +804,18 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 
 export async function login(props?: LoginProps): Promise<boolean> {
   const urlToOpen = await getAuthURL(props?.scopes);
-  await open(urlToOpen);
-  // TODO: log url only if on system where it's unreliable/unavailable
-  // console.log(`💁 Opened ${urlToOpen}`);
+  await openInBrowser(urlToOpen);
   let server;
   let loginTimeoutHandle;
   const timerPromise = new Promise<boolean>((resolve) => {
     loginTimeoutHandle = setTimeout(() => {
-      console.error("Timed out waiting for authorization code.");
+      console.error(
+        "Timed out waiting for authorization code, please try again."
+      );
       server.close();
       clearTimeout(loginTimeoutHandle);
       resolve(false);
-    }, 60000); // wait for 30 seconds for the user to authorize
+    }, 60000); // wait for 60 seconds for the user to authorize
   });
 
   const loginPromise = new Promise<boolean>((resolve, reject) => {
