@@ -122,6 +122,11 @@ export function toFormData(worker: CfWorkerInit): FormData {
     });
   });
 
+  if (bindings.unsafe) {
+    // @ts-expect-error unsafe bindings don't need to match a specific type here
+    metadataBindings.push(...bindings.unsafe);
+  }
+
   const metadata: WorkerMetadata = {
     ...(main.type !== "commonjs"
       ? { main_module: main.name }

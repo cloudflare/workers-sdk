@@ -49,6 +49,13 @@ import type Yargs from "yargs";
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
 
+// a set of binding types that are known to be supported by wrangler
+const knownBindings = [
+  "plain_text",
+  "kv_namespace",
+  "durable_object_namespace",
+];
+
 async function readConfig(configPath?: string): Promise<Config> {
   const config: Config = {};
   if (!configPath) {
@@ -82,8 +89,24 @@ async function readConfig(configPath?: string): Promise<Config> {
     config.wasm_modules = modules;
   }
 
+  if ("unsafe" in config) {
+    console.warn(
+      "'unsafe' fields are experimental and may change or break at any time."
+    );
+  }
+
   // todo: validate, add defaults
   // let's just do some basics for now
+
+  for (const binding of config.unsafe?.bindings ?? []) {
+    if (knownBindings.includes(binding.type)) {
+      console.warn(
+        `Raw '${binding.type}' bindings are not directly supported by wrangler. Consider migrating to a ` +
+          `format for '${binding.type}' bindings that is supported by wrangler for optimal support: ` +
+          "https://developers.cloudflare.com/workers/cli-wrangler/configuration"
+      );
+    }
+  }
 
   // @ts-expect-error we're being sneaky here
   config.__path__ = configPath;
@@ -755,6 +778,7 @@ export async function main(argv: string[]): Promise<void> {
             wasm_modules: config.wasm_modules,
             durable_objects: envRootObj.durable_objects,
             services: envRootObj.experimental_services,
+            unsafe: envRootObj.unsafe?.bindings,
           }}
         />
       );
