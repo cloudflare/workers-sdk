@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { FormData, File } from "undici";
 import type {
   CfWorkerInit,
@@ -41,6 +42,7 @@ export interface WorkerMetadata {
   bindings: (
     | { type: "kv_namespace"; name: string; namespace_id: string }
     | { type: "plain_text"; name: string; text: string }
+    | { type: "wasm_module"; name: string; part: string }
     | {
         type: "durable_object_namespace";
         name: string;
@@ -95,6 +97,21 @@ export function toFormData(worker: CfWorkerInit): FormData {
   Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
     metadataBindings.push({ name: key, type: "plain_text", text: value });
   });
+
+  for (const [name, filePath] of Object.entries(bindings.wasm_modules || {})) {
+    metadataBindings.push({
+      name,
+      type: "wasm_module",
+      part: name,
+    });
+
+    formData.set(
+      name,
+      new File([readFileSync(filePath)], filePath, {
+        type: "application/wasm",
+      })
+    );
+  }
 
   bindings.services?.forEach(({ name, service, environment }) => {
     metadataBindings.push({

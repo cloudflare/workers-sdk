@@ -222,10 +222,20 @@ export type Config = {
   }[];
 
   /**
+   * A list of wasm modules that your worker should be bound to. This is
+   * the "legacy" way of binding to a wasm module. ES Module workers should
+   * do proper module imports.
+   * NB: these ARE NOT inherited, and SHOULD NOT be duplicated across all environments.
+   */
+  wasm_modules?: {
+    [key: string]: string;
+  };
+
+  /**
    * A list of migrations that should be uploaded with your Worker.
    * These define changes in your Durable Object declarations.
    * More details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations
-   * NB: these ARE inherited, and SHOULD NOT be duplicated across all environments.
+   * NB: these ARE NOT inherited, and SHOULD NOT be duplicated across all environments.
    *
    * @default `[]`
    * @optional
@@ -249,7 +259,7 @@ export type Config = {
    * The definition of a Worker Site, a feature that lets you upload
    * static assets with your Worker.
    * More details at https://developers.cloudflare.com/workers/platform/sites
-   * NB: This IS inherited, and SHOULD NOT be duplicated across all environments.
+   * NB: This IS NOT inherited, and SHOULD NOT be duplicated across all environments.
    *
    * @default `undefined`
    * @optional
@@ -457,7 +467,7 @@ export type Config = {
   env?: {
     [envName: string]:
       | undefined
-      | Omit<Config, "env" | "migrations" | "site" | "dev">;
+      | Omit<Config, "env" | "wasm_modules" | "migrations" | "site" | "dev">;
   };
 };
 
@@ -528,6 +538,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
       "triggers",
       "usage_model",
     ];
+
     for (const inheritedField of inheritedFields) {
       if (config[inheritedField] !== undefined) {
         if (environment[inheritedField] === undefined) {

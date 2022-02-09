@@ -1112,6 +1112,108 @@ export default{
       });
     }
   });
+
+  describe("[wasm_modules]", () => {
+    it("should be able to define wasm modules for service-worker format workers", async () => {
+      writeWranglerToml({
+        wasm_modules: {
+          TESTWASMNAME: "./path/to/test.wasm",
+        },
+      });
+      writeWorkerSource({ type: "sw" });
+      fs.mkdirSync("./path/to", { recursive: true });
+      fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
+        expectedBindings: [
+          { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
+        ],
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should error when defining wasm modules for modules format workers", async () => {
+      writeWranglerToml({
+        wasm_modules: {
+          TESTWASMNAME: "./path/to/test.wasm",
+        },
+      });
+      writeWorkerSource({ type: "esm" });
+      fs.mkdirSync("./path/to", { recursive: true });
+      fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
+
+      await expect(
+        runWrangler("publish index.js")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code"`
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should resolve wasm modules relative to the wrangler.toml file", async () => {
+      fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
+      fs.writeFileSync(
+        "./path/to/wrangler.toml",
+        TOML.stringify({
+          compatibility_date: "2022-01-12",
+          name: "test-name",
+          wasm_modules: {
+            TESTWASMNAME: "./and/the/path/to/test.wasm",
+          },
+        }),
+
+        "utf-8"
+      );
+
+      writeWorkerSource({ type: "sw" });
+      fs.writeFileSync(
+        "./path/to/and/the/path/to/test.wasm",
+        "SOME WASM CONTENT"
+      );
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
+        expectedBindings: [
+          { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
+        ],
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
 });
 
 /** Write a mock wrangler.toml file to disk. */

@@ -83,6 +83,14 @@ interface CfKvNamespace {
 }
 
 /**
+ * A binding to a wasm module (in service worker format)
+ */
+
+interface CfWasmModuleBindings {
+  [key: string]: string;
+}
+
+/**
  * A Durable Object.
  */
 interface CfDurableObject {
@@ -130,9 +138,10 @@ export interface CfWorkerInit {
    * All the bindings
    */
   bindings: {
-    kv_namespaces?: CfKvNamespace[];
-    durable_objects?: { bindings: CfDurableObject[] };
     vars?: CfVars;
+    kv_namespaces?: CfKvNamespace[];
+    wasm_modules?: CfWasmModuleBindings;
+    durable_objects?: { bindings: CfDurableObject[] };
     services?: CfService[];
   };
   migrations: undefined | CfDurableObjectMigrations;
