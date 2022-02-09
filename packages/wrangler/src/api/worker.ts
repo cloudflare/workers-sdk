@@ -158,10 +158,13 @@ export interface CfWorkerInit {
  */
 export async function createWorker(
   init: CfWorkerInit,
-  account: CfAccount
+  account: CfAccount,
+  host: string | undefined
 ): Promise<CfPreviewToken> {
-  const token = await previewToken(account, init);
-  const response = await fetch(token.prewarmUrl.href, { method: "POST" });
+  const token = await previewToken(account, init, host);
+  const response = await fetch(token.prewarmUrl.href, {
+    method: "POST",
+  });
   if (!response.ok) {
     // console.error("worker failed to prewarm: ", response.statusText);
   }

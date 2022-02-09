@@ -48,6 +48,7 @@ function renderDev({
   buildCommand = {},
   enableLocalPersistence = false,
   env = undefined,
+  host = undefined,
 }: Partial<DevProps>) {
   return render(
     <Dev
@@ -68,6 +69,7 @@ function renderDev({
       usageModel={usageModel}
       bindings={bindings}
       enableLocalPersistence={enableLocalPersistence}
+      host={host}
     />
   );
 }

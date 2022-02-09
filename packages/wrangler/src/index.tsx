@@ -717,6 +717,7 @@ export async function main(argv: string[]): Promise<void> {
             args.siteExclude
           )}
           port={args.port || config.dev?.port}
+          host={args.host || config.dev?.host}
           public={args["experimental-public"]}
           compatibilityDate={
             args["compatibility-date"] ||

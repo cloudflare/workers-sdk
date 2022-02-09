@@ -92,10 +92,16 @@ function randomId(): string {
  */
 export async function previewToken(
   account: CfAccount,
-  worker: CfWorkerInit
+  worker: CfWorkerInit,
+  flagHost: string | undefined
 ): Promise<CfPreviewToken> {
-  const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(account);
-
+  const {
+    value,
+    host: accountHost,
+    inspectorUrl,
+    prewarmUrl,
+  } = await sessionToken(account);
+  const host = flagHost ? flagHost : accountHost;
   const { accountId, zoneId } = account;
   const scriptId = zoneId ? randomId() : worker.name || host.split(".")[0];
   const url = `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;

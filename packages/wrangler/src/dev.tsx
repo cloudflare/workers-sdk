@@ -49,6 +49,7 @@ export type DevProps = {
     watch_dir?: undefined | string;
   };
   env: string | undefined;
+  host: string | undefined;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -120,6 +121,7 @@ function Dev(props: DevProps): JSX.Element {
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
           env={props.env}
+          host={props.host}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -168,6 +170,7 @@ function Remote(props: {
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  host: string | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -185,6 +188,7 @@ function Remote(props: {
     compatibilityFlags: props.compatibilityFlags,
     usageModel: props.usageModel,
     env: props.env,
+    host: props.host,
   });
 
   usePreviewServer({
@@ -601,6 +605,7 @@ function useWorker(props: {
   compatibilityFlags: string[] | undefined;
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  host: string | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -615,6 +620,7 @@ function useWorker(props: {
     compatibilityFlags,
     usageModel,
     port,
+    host,
   } = props;
   const [token, setToken] = useState<CfPreviewToken | undefined>();
 
@@ -680,10 +686,14 @@ function useWorker(props: {
         usage_model: usageModel,
       };
       setToken(
-        await createWorker(init, {
-          accountId,
-          apiToken,
-        })
+        await createWorker(
+          init,
+          {
+            accountId,
+            apiToken,
+          },
+          host
+        )
       );
     }
     start().catch((err) => {
@@ -705,6 +715,7 @@ function useWorker(props: {
     bindings,
     modules,
     props.env,
+    host,
   ]);
   return token;
 }
