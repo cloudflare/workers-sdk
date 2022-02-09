@@ -28,6 +28,7 @@ import {
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
 import publish from "./publish";
+import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { reportError } from "./reporting";
 import { getAssetPaths } from "./sites";
 import { createTail } from "./tail";
@@ -2134,6 +2135,139 @@ export async function main(argv: string[]): Promise<void> {
   );
 
   wrangler.command("pages", "⚡️ Configure Cloudflare Pages", pages);
+
+  wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
+    return r2Yargs.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
+      r2BucketYargs.command(
+        "create <name>",
+        "Create a new R2 bucket",
+        (yargs) => {
+          return yargs.positional("name", {
+            describe: "The name of the new bucket",
+            type: "string",
+            demandOption: true,
+          });
+        },
+        async (args) => {
+          // We expect three values in `_`: `r2`, `bucket`, `create`.
+          if (args._.length > 3) {
+            const extraArgs = args._.slice(3).join(" ");
+            throw new CommandLineArgsError(
+              `Unexpected additional positional arguments "${extraArgs}".`
+            );
+          }
+
+          const config = args.config as Config;
+
+          if (args.local) {
+            throw new NotImplementedError(
+              `local mode is not yet supported for this command`
+            );
+          } else {
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            console.log(`Creating bucket ${args.name}.`);
+            await createR2Bucket(config.account_id, args.name);
+            console.log(`Created bucket ${args.name}.`);
+          }
+        }
+      );
+
+      r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
+        const config = args.config as Config;
+
+        if (args.local) {
+          throw new NotImplementedError(
+            `local mode is not yet supported for this command`
+          );
+        } else {
+          // -- snip, extract --
+          const loggedIn = await loginOrRefreshIfRequired();
+          if (!loggedIn) {
+            // didn't login, let's just quit
+            console.log("Did not login, quitting...");
+            return;
+          }
+
+          if (!config.account_id) {
+            config.account_id = await getAccountId();
+            if (!config.account_id) {
+              throw new Error("No account id found, quitting...");
+            }
+          }
+          // -- snip, end --
+
+          console.log(
+            JSON.stringify(await listR2Buckets(config.account_id), null, 2)
+          );
+        }
+      });
+
+      r2BucketYargs.command(
+        "delete <name>",
+        "Delete an R2 bucket",
+        (yargs) => {
+          return yargs.positional("name", {
+            describe: "The name of the bucket to delete",
+            type: "string",
+            demandOption: true,
+          });
+        },
+        async (args) => {
+          // We expect three values in `_`: `r2`, `bucket`, `delete`.
+          if (args._.length > 3) {
+            const extraArgs = args._.slice(3).join(" ");
+            throw new CommandLineArgsError(
+              `Unexpected additional positional arguments "${extraArgs}".`
+            );
+          }
+
+          const config = args.config as Config;
+
+          if (args.local) {
+            throw new NotImplementedError(
+              `local mode is not yet supported for this command`
+            );
+          } else {
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            console.log(`Deleting bucket ${args.name}.`);
+            await deleteR2Bucket(config.account_id, args.name);
+            console.log(`Deleted bucket ${args.name}.`);
+          }
+        }
+      );
+      return r2BucketYargs;
+    });
+  });
 
   wrangler
     .option("config", {
