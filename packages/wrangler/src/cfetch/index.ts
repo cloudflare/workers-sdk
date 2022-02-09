@@ -83,9 +83,9 @@ function throwFetchError(
 ): never {
   response.messages.forEach((message) => console.warn(message));
   const errors = response.errors
-    .map((error) => `${error.code}: ${error.message}`)
+    .map((error) => `- ${error.code}: ${error.message}`)
     .join("\n");
-  const error = new Error(`Failed to fetch ${resource} - \n${errors}`);
+  const error = new Error(`Failed to fetch ${resource}:\n${errors}`);
   // add the first error code directly to this error
   // so consumers can use it for specific behaviour
   const code = response.errors[0]?.code;
