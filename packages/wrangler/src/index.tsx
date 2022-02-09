@@ -28,6 +28,7 @@ import {
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
 import publish from "./publish";
+import { reportError } from "./reporting";
 import { getAssetPaths } from "./sites";
 import { createTail } from "./tail";
 import {
@@ -2155,9 +2156,8 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.version(wranglerVersion).alias("v", "version");
   wrangler.exitProcess(false);
 
-  await initialiseUserConfig();
-
   try {
+    await initialiseUserConfig();
     await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
@@ -2172,6 +2172,7 @@ export async function main(argv: string[]): Promise<void> {
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );
     }
+    await reportError(e, "indexCatch");
     throw e;
   }
 }

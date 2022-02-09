@@ -36,6 +36,8 @@
     "cli"
   ],
   "dependencies": {
+    "@sentry/integrations": "^6.17.4",
+    "@sentry/node": "^6.17.4",
     "esbuild": "0.14.14",
     "miniflare": "2.3.0",
     "path-to-regexp": "^6.2.0",
@@ -48,8 +50,10 @@
   "devDependencies": {
     "@babel/types": "^7.16.0",
     "@iarna/toml": "^2.2.5",
+    "@sentry/cli": "^1.71.0",
     "@types/estree": "^0.0.50",
     "@types/mime": "^2.0.3",
+    "@types/prompts": "^2.0.14",
     "@types/react": "^17.0.37",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",
@@ -75,6 +79,7 @@
     "jest-fetch-mock": "^3.0.3",
     "mime": "^3.0.0",
     "open": "^8.4.0",
+    "prompts": "^2.4.2",
     "react": "^17.0.2",
     "react-error-boundary": "^3.1.4",
     "serve-static": "^1.14.1",
