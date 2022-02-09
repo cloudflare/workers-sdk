@@ -232,9 +232,10 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       let pathToPackageJson = await findUp("package.json");
+      let shouldCreatePackageJson = false;
       if (!pathToPackageJson) {
         // If no package.json exists, ask to create one
-        const shouldCreatePackageJson = await confirm(
+        shouldCreatePackageJson = await confirm(
           "No package.json found. Would you like to create one?"
         );
         if (shouldCreatePackageJson) {
@@ -242,7 +243,7 @@ export async function main(argv: string[]): Promise<void> {
             "./package.json",
             JSON.stringify(
               {
-                name: "worker",
+                name: args.name || path.basename(path.resolve(process.cwd())),
                 version: "0.0.0",
                 devDependencies: {
                   wrangler: wranglerVersion,
@@ -348,6 +349,47 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
+      const packageJsonContent = JSON.parse(
+        await readFile(pathToPackageJson, "utf-8")
+      );
+      const shouldWritePackageJsonScripts =
+        !packageJsonContent.scripts?.start &&
+        !packageJsonContent.scripts?.deploy &&
+        shouldCreatePackageJson;
+      async function writePackageJsonScripts(
+        isWritingScripts: boolean,
+        packagePath: string,
+        scriptPath: string
+      ) {
+        if (isWritingScripts) {
+          await writeFile(
+            packagePath,
+            JSON.stringify(
+              {
+                ...packageJsonContent,
+                scripts: {
+                  ...packageJsonContent.scripts,
+                  start: `wrangler dev ${scriptPath}`,
+                  deploy: `wrangler publish ${scriptPath}`,
+                },
+              },
+              null,
+              "  "
+            ) + "\n"
+          );
+          console.log(`To start developing on your worker, run npm start.`);
+          console.log(
+            `To publish your worker on to the internet, run npm run deploy.`
+          );
+        } else {
+          console.log(
+            `To start developing on your worker, npx wrangler dev ${scriptPath}`
+          );
+          console.log(
+            `To publish your worker on to the internet, npx wrangler publish ${scriptPath}`
+          );
+        }
+      }
       if (isTypescriptProject) {
         if (!fs.existsSync("./src/index.ts")) {
           const shouldCreateSource = await confirm(
@@ -362,6 +404,13 @@ export async function main(argv: string[]): Promise<void> {
                 "utf-8"
               )
             );
+
+            await writePackageJsonScripts(
+              shouldWritePackageJsonScripts,
+              pathToPackageJson,
+              "src/index.ts"
+            );
+
             console.log(`✨ Created src/index.ts`);
           }
         }
@@ -379,6 +428,13 @@ export async function main(argv: string[]): Promise<void> {
                 "utf-8"
               )
             );
+
+            await writePackageJsonScripts(
+              shouldWritePackageJsonScripts,
+              pathToPackageJson,
+              "src/index.js"
+            );
+
             console.log(`✨ Created src/index.js`);
           }
         }
