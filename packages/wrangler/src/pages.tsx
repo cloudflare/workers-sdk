@@ -10,7 +10,7 @@ import { getType } from "mime";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
-import openInBrowser from "./open-in-brower";
+import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";

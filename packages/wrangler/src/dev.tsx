@@ -18,7 +18,7 @@ import { createWorker } from "./api/worker";
 import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
 import makeModuleCollector from "./module-collection";
-import openInBrowser from "./open-in-brower";
+import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
