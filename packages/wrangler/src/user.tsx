@@ -221,7 +221,7 @@ import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
 import { CF_API_BASE_URL } from "./cfetch";
-import openInBrowser from "./open-in-brower";
+import openInBrowser from "./open-in-browser";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
