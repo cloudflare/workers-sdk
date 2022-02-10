@@ -1,0 +1,1 @@
+{"rustc":10368881109578526382,"features":"[]","target":12373217264945802750,"profile":2285152228202085614,"path":1036222786711178230,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"wasm32-wasi/release/.fingerprint/hello_wasm-43de2d3b02269a2c/dep-bin-hello_wasm"}}],"rustflags":[],"metadata":7797948686568424061,"config":0,"compile_kind":16489420942494921214}
