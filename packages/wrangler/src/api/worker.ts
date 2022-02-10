@@ -108,6 +108,11 @@ interface CfService {
   environment: string;
 }
 
+interface CfUnsafeBinding {
+  name: string;
+  type: string;
+}
+
 export interface CfDurableObjectMigrations {
   old_tag?: string;
   new_tag: string;
@@ -143,6 +148,7 @@ export interface CfWorkerInit {
     wasm_modules?: CfWasmModuleBindings;
     durable_objects?: { bindings: CfDurableObject[] };
     services?: CfService[];
+    unsafe?: CfUnsafeBinding[];
   };
   migrations: undefined | CfDurableObjectMigrations;
   compatibility_date: string | undefined;

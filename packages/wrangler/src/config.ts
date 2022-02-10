@@ -232,6 +232,28 @@ export type Config = {
   };
 
   /**
+   * "Unsafe" tables for features that aren't directly supported by wrangler.
+   * NB: these are not inherited, and HAVE to be duplicated across all environments.
+   *
+   * @default `[]`
+   * @optional
+   * @inherited false
+   */
+  unsafe?: {
+    /**
+     * A set of bindings that should be put into a Worker's upload metadata without changes. These
+     * can be used to implement bindings for features that haven't released and aren't supported
+     * directly by wrangler or miniflare.
+     */
+    bindings?: {
+      name: string;
+      type: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
+    }[];
+  };
+
+  /**
    * A list of migrations that should be uploaded with your Worker.
    * These define changes in your Durable Object declarations.
    * More details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations

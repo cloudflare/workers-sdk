@@ -255,6 +255,7 @@ export default async function publish(props: Props): Promise<void> {
       wasm_modules: config.wasm_modules,
       durable_objects: envRootObj.durable_objects,
       services: envRootObj.experimental_services,
+      unsafe: envRootObj.unsafe?.bindings,
     };
 
     const workerType = bundle.type === "esm" ? "esm" : "commonjs";

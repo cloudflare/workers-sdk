@@ -28,5 +28,6 @@
     "xxhash"
   ],
   "cSpell.ignoreWords": ["yxxx"],
-  "eslint.runtime": "node"
+  "eslint.runtime": "node",
+  "files.trimTrailingWhitespace": false
 }
