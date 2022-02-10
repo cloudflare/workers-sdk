@@ -1,0 +1,40 @@
+name: WASM Experimental builds
+on:
+  push:
+    branches:
+      - experimental-wasm
+jobs:
+  build:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build and release `wrangler@wasm` to NPM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.7
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.7
+          cache: "npm"
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
+      - name: Build
+        run: npm run build
+        working-directory: packages/wrangler
+
+      - name: Check for errors
+        run: npm run check
+
+      - name: Publish `wrangler@wasm` to NPM
+        run: npm publish --tag wasm
+        env:
+          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
