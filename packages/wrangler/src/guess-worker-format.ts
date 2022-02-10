@@ -45,7 +45,7 @@ export default async function guessWorkerFormat(
     if (hint !== guessedWorkerFormat) {
       if (hint === "service-worker") {
         throw new Error(
-          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have es module exports. Please pass `--format modules`, or simply remove the configuration."
+          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have ES module exports. Please pass `--format modules`, or simply remove the configuration."
         );
       } else {
         throw new Error(

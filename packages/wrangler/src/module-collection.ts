@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { CfModule } from "./api/worker";
+import type { CfModule, CfScriptFormat } from "./api/worker";
 import type esbuild from "esbuild";
 
 // This is a combination of an esbuild plugin and a mutable array
@@ -12,7 +12,9 @@ import type esbuild from "esbuild";
 // plugin+array is used to collect references to these modules, reference
 // them correctly in the bundle, and add them to the form upload.
 
-export default function makeModuleCollector(): {
+export default function makeModuleCollector(props: {
+  format: CfScriptFormat;
+}): {
   modules: CfModule[];
   plugin: esbuild.Plugin;
 } {
@@ -23,7 +25,7 @@ export default function makeModuleCollector(): {
       name: "wrangler-module-collector",
       setup(build) {
         build.onStart(() => {
-          // reset the moduels collection
+          // reset the module collection array
           modules.splice(0);
         });
 
@@ -51,12 +53,31 @@ export default function makeModuleCollector(): {
 
             return {
               path: "./" + fileName, // change the reference to the changed module
-              external: true, // mark it as external in the bundle
+              external: props.format === "modules", // mark it as external in the bundle
               namespace: "wrangler-module-collector-ns", // just a tag, this isn't strictly necessary
               watchFiles: [filePath], // we also add the file to esbuild's watch list
             };
           }
         );
+
+        if (props.format !== "modules") {
+          build.onLoad(
+            { filter: /.*\.(wasm)$/ },
+            async (args: esbuild.OnLoadArgs) => {
+              return {
+                // We replace the the wasm module with an identifier
+                // that we'll separately add to the form upload
+                // as part of [wasm_modules]. This identifier has to be a valid
+                // JS identifier, so we replace all non alphanumeric characters
+                // with an underscore.
+                contents: `export default ${args.path.replace(
+                  /[^a-zA-Z0-9_$]/g,
+                  "_"
+                )};`,
+              };
+            }
+          );
+        }
       },
     },
   };
