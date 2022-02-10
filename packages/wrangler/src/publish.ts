@@ -205,6 +205,7 @@ export default async function publish(props: Props): Promise<void> {
       vars: envRootObj.vars,
       wasm_modules: config.wasm_modules,
       durable_objects: envRootObj.durable_objects,
+      r2_buckets: envRootObj.r2_buckets,
       unsafe: envRootObj.unsafe?.bindings,
     };
 

@@ -1288,6 +1288,35 @@ export default{
     });
   });
 
+  describe("r2 bucket bindings", () => {
+    it("should support r2 bucket bindings", async () => {
+      writeWranglerToml({
+        r2_buckets: [{ binding: "FOO", bucket_name: "foo-bucket" }],
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          { bucket_name: "foo-bucket", name: "FOO", type: "r2_bucket" },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("unsafe bindings", () => {
     it("should warn if using unsafe bindings", async () => {
       writeWranglerToml({

@@ -99,6 +99,11 @@ interface CfDurableObject {
   script_name?: string;
 }
 
+interface CfR2Bucket {
+  binding: string;
+  bucket_name: string;
+}
+
 interface CfUnsafeBinding {
   name: string;
   type: string;
@@ -138,6 +143,7 @@ export interface CfWorkerInit {
     kv_namespaces?: CfKvNamespace[];
     wasm_modules?: CfWasmModuleBindings;
     durable_objects?: { bindings: CfDurableObject[] };
+    r2_buckets?: CfR2Bucket[];
     unsafe?: CfUnsafeBinding[];
   };
   migrations: undefined | CfDurableObjectMigrations;
