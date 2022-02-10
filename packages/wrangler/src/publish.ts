@@ -2,18 +2,16 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
 import tmp from "tmp-promise";
 import { toFormData } from "./api/form_data";
+import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
 import guessWorkerFormat from "./guess-worker-format";
-import makeModuleCollector from "./module-collection";
 import { syncAssets } from "./sites";
 import type { CfScriptFormat, CfWorkerInit } from "./api/worker";
 import type { Config } from "./config";
 import type { AssetPaths } from "./sites";
-import type { Metafile } from "esbuild";
 
 type Props = {
   config: Config;
@@ -137,62 +135,15 @@ export default async function publish(props: Props): Promise<void> {
       );
     }
 
-    const moduleCollector = makeModuleCollector({ format });
-    const result = await esbuild.build({
-      ...(props.experimentalPublic
-        ? {
-            stdin: {
-              contents: readFileSync(
-                path.join(__dirname, "../templates/static-asset-facade.js"),
-                "utf8"
-              ).replace("__ENTRY_POINT__", file),
-              sourcefile: "static-asset-facade.js",
-              resolveDir: path.dirname(file),
-            },
-            nodePaths: [path.join(__dirname, "../vendor")],
-          }
-        : { entryPoints: [file] }),
-      bundle: true,
-      absWorkingDir: dir,
-      outdir: destination.path,
-      external: ["__STATIC_CONTENT_MANIFEST"],
-      format: "esm",
-      sourcemap: true,
-      metafile: true,
-      conditions: ["worker", "browser"],
-      loader: {
-        ".js": "jsx",
-        ".html": "text",
-        ".pem": "text",
-        ".txt": "text",
-      },
-      plugins: [moduleCollector.plugin],
-      ...(jsxFactory && { jsxFactory }),
-      ...(jsxFragment && { jsxFragment }),
-    });
-
-    // result.metafile is defined because of the `metafile: true` option above.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const metafile = result.metafile!;
-    const entryPoints = Object.entries(metafile.outputs).filter(
-      ([_path, output]) => output.entryPoint !== undefined
+    const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
+      file,
+      props.experimentalPublic,
+      dir,
+      destination.path,
+      jsxFactory,
+      jsxFragment,
+      format
     );
-    assert(
-      entryPoints.length > 0,
-      `Cannot find entry-point "${file}" in generated bundle.` +
-        listEntryPoints(entryPoints)
-    );
-    assert(
-      entryPoints.length < 2,
-      "More than one entry-point found for generated bundle." +
-        listEntryPoints(entryPoints)
-    );
-    const entryPointExports = entryPoints[0][1].exports;
-    const resolvedEntryPointPath = path.resolve(dir, entryPoints[0][0]);
-    const bundle = {
-      type: entryPointExports.length > 0 ? "esm" : "commonjs",
-      exports: entryPointExports,
-    };
 
     let content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
@@ -257,11 +208,18 @@ export default async function publish(props: Props): Promise<void> {
       unsafe: envRootObj.unsafe?.bindings,
     };
 
-    const workerType = bundle.type === "esm" ? "esm" : "commonjs";
-    if (workerType !== "esm" && assets.manifest) {
-      content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
-        assets.manifest
-      )};\n${content}`;
+    if (assets.manifest) {
+      if (bundleType === "esm") {
+        modules.push({
+          name: "__STATIC_CONTENT_MANIFEST",
+          content: JSON.stringify(assets.manifest),
+          type: "text",
+        });
+      } else {
+        content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
+          assets.manifest
+        )};\n${content}`;
+      }
     }
 
     const worker: CfWorkerInit = {
@@ -269,19 +227,11 @@ export default async function publish(props: Props): Promise<void> {
       main: {
         name: path.basename(resolvedEntryPointPath),
         content: content,
-        type: workerType,
+        type: bundleType,
       },
       bindings,
       ...(migrations && { migrations }),
-      modules: moduleCollector.modules.concat(
-        assets.manifest && workerType === "esm"
-          ? {
-              name: "__STATIC_CONTENT_MANIFEST",
-              content: JSON.stringify(assets.manifest),
-              type: "text",
-            }
-          : []
-      ),
+      modules,
       compatibility_date: config.compatibility_date,
       compatibility_flags: config.compatibility_flags,
       usage_model: config.usage_model,
@@ -399,14 +349,6 @@ export default async function publish(props: Props): Promise<void> {
     await destination.cleanup();
   }
 }
-
-function listEntryPoints(
-  outputs: [string, ValueOf<Metafile["outputs"]>][]
-): string {
-  return outputs.map(([_input, output]) => output.entryPoint).join("\n");
-}
-
-type ValueOf<T> = T[keyof T];
 
 function formatTime(duration: number) {
   return `(${(duration / 1000).toFixed(2)} sec)`;

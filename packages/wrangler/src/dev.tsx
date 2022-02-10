@@ -6,7 +6,6 @@ import path from "node:path";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
-import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
 import { Box, Text, useApp, useInput } from "ink";
 import React, { useState, useEffect, useRef } from "react";
@@ -15,9 +14,9 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import { createWorker } from "./api/worker";
+import { bundleWorker } from "./bundle";
 import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
-import makeModuleCollector from "./module-collection";
 import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
@@ -25,6 +24,7 @@ import { getAPIToken } from "./user";
 import type { CfPreviewToken } from "./api/preview";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { AssetPaths } from "./sites";
+import type { WatchMode } from "esbuild";
 import type { DirectoryResult } from "tmp-promise";
 
 export type DevProps = {
@@ -81,6 +81,7 @@ function Dev(props: DevProps): JSX.Element {
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
     jsxFragment: props.jsxFragment,
+    serveAssetsFromWorker: !!props.public,
   });
 
   const toggles = useHotkeys(
@@ -512,95 +513,92 @@ type EsbuildBundle = {
   path: string;
   entry: string;
   type: "esm" | "commonjs";
-  exports: string[];
   modules: CfModule[];
+  serveAssetsFromWorker: boolean;
 };
 
-function useEsbuild(props: {
+function useEsbuild({
+  entry,
+  destination,
+  staticRoot,
+  jsxFactory,
+  jsxFragment,
+  format,
+  serveAssetsFromWorker,
+}: {
   entry: undefined | string;
   destination: string | undefined;
   format: CfScriptFormat | undefined;
   staticRoot: undefined | string;
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
+  serveAssetsFromWorker: boolean;
 }): EsbuildBundle | undefined {
-  const { entry, destination, staticRoot, jsxFactory, jsxFragment, format } =
-    props;
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
-    let result: esbuild.BuildResult | undefined;
+    let stopWatching: (() => void) | undefined = undefined;
+
+    const watchMode: WatchMode = {
+      async onRebuild(error) {
+        if (error) console.error("watch build failed:", error);
+        else {
+          // nothing really changes here, so let's increment the id
+          // to change the return object's identity
+          setBundle((previousBundle) => {
+            assert(
+              previousBundle,
+              "Rebuild triggered with no previous build available"
+            );
+            return { ...previousBundle, id: previousBundle.id + 1 };
+          });
+        }
+      },
+    };
+
     async function build() {
       if (!destination || !entry || !format) return;
-      const moduleCollector = makeModuleCollector({ format });
-      result = await esbuild.build({
-        entryPoints: [entry],
-        bundle: true,
-        outdir: destination,
-        metafile: true,
-        format: "esm",
-        sourcemap: true,
-        loader: {
-          ".js": "jsx",
-          ".html": "text",
-          ".pem": "text",
-          ".txt": "text",
-        },
-        ...(jsxFactory && { jsxFactory }),
-        ...(jsxFragment && { jsxFragment }),
-        external: ["__STATIC_CONTENT_MANIFEST"],
-        conditions: ["worker", "browser"],
-        plugins: [moduleCollector.plugin],
-        // TODO: import.meta.url
-        watch: {
-          async onRebuild(error) {
-            if (error) console.error("watch build failed:", error);
-            else {
-              // nothing really changes here, so let's increment the id
-              // to change the return object's identity
-              setBundle((previousBundle) => {
-                if (previousBundle === undefined) {
-                  assert.fail(
-                    "Rebuild triggered with no previous build available"
-                  );
-                }
-                return { ...previousBundle, id: previousBundle.id + 1 };
-              });
-            }
-          },
-        },
-      });
 
-      // result.metafile is defined because of the `metafile: true` option above.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const metafile = result.metafile!;
-      const outputEntry = Object.entries(metafile.outputs).find(
-        ([_path, { entryPoint }]) => entryPoint === entry
-      ); // assumedly only one entry point
-
-      if (outputEntry === undefined) {
-        throw new Error(
-          `Cannot find entry-point "${entry}" in generated bundle.`
+      const { resolvedEntryPointPath, bundleType, modules, stop } =
+        await bundleWorker(
+          entry,
+          // In dev, we server assets from the local proxy before we send the request to the worker.
+          /* serveAssetsFromWorker */ false,
+          process.cwd(),
+          destination,
+          jsxFactory,
+          jsxFragment,
+          format,
+          watchMode
         );
-      }
+
+      // Capture the `stop()` method to use as the `useEffect()` destructor.
+      stopWatching = stop;
+
       setBundle({
         id: 0,
         entry,
-        path: outputEntry[0],
-        type: outputEntry[1].exports.length > 0 ? "esm" : "commonjs",
-        exports: outputEntry[1].exports,
-        modules: moduleCollector.modules,
+        path: resolvedEntryPointPath,
+        type: bundleType,
+        modules,
+        serveAssetsFromWorker,
       });
     }
-    build().catch((_err) => {
-      // esbuild already logs errors to stderr
-      // and we don't want to end the process
-      // on build errors anyway
-      // so this is a no-op error handler
+
+    build().catch(() => {
+      // esbuild already logs errors to stderr and we don't want to end the process
+      // on build errors anyway so this is a no-op error handler
     });
-    return () => {
-      result?.stop?.();
-    };
-  }, [entry, destination, staticRoot, jsxFactory, jsxFragment, format]);
+
+    return stopWatching;
+  }, [
+    entry,
+    destination,
+    staticRoot,
+    jsxFactory,
+    jsxFragment,
+    format,
+    serveAssetsFromWorker,
+  ]);
   return bundle;
 }
 
