@@ -99,15 +99,6 @@ interface CfDurableObject {
   script_name?: string;
 }
 
-/**
- * A Service.
- */
-interface CfService {
-  name: string;
-  service: string;
-  environment: string;
-}
-
 interface CfUnsafeBinding {
   name: string;
   type: string;
@@ -147,7 +138,6 @@ export interface CfWorkerInit {
     kv_namespaces?: CfKvNamespace[];
     wasm_modules?: CfWasmModuleBindings;
     durable_objects?: { bindings: CfDurableObject[] };
-    services?: CfService[];
     unsafe?: CfUnsafeBinding[];
   };
   migrations: undefined | CfDurableObjectMigrations;
