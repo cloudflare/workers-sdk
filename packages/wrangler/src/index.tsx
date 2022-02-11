@@ -30,7 +30,7 @@ import { pages } from "./pages";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
-import { createTail } from "./tail";
+import { createTail, jsonPrintLogs, prettyPrintLogs } from "./tail";
 import {
   login,
   logout,
@@ -1043,6 +1043,7 @@ export async function main(argv: string[]): Promise<void> {
           .option("status", {
             choices: ["ok", "error", "canceled"],
             describe: "Filter by invocation status",
+            array: true,
           })
           .option("header", {
             type: "string",
@@ -1051,6 +1052,7 @@ export async function main(argv: string[]): Promise<void> {
           .option("method", {
             type: "string",
             describe: "Filter by HTTP method",
+            array: true,
           })
           .option("sampling-rate", {
             type: "number",
@@ -1060,12 +1062,18 @@ export async function main(argv: string[]): Promise<void> {
             type: "string",
             describe: "Filter by a text match in console.log messages",
           })
+          .option("ip", {
+            type: "string",
+            describe:
+              'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
+            array: true,
+          })
+          // TODO: is this deprecated now with services / environments / etc?
           .option("env", {
             type: "string",
             describe: "Perform on a specific environment",
           })
       );
-      // TODO: filter by client ip, which can be 'self' or an ip address
     },
     async (args) => {
       if (args.local) {
@@ -1076,12 +1084,11 @@ export async function main(argv: string[]): Promise<void> {
 
       const config = await readConfig(args.config as ConfigPath);
 
-      if (!(args.name || config.name)) {
+      const shortScriptName = args.name || config.name;
+      if (!shortScriptName) {
         throw new Error("Missing script name");
       }
-      const scriptName = `${args.name || config.name}${
-        args.env ? `-${args.env}` : ""
-      }`;
+      const scriptName = `${shortScriptName}${args.env ? `-${args.env}` : ""}`;
 
       // -- snip, extract --
       const loggedIn = await loginOrRefreshIfRequired();
@@ -1102,11 +1109,12 @@ export async function main(argv: string[]): Promise<void> {
       const accountId = config.account_id;
 
       const filters = {
-        status: args.status as "ok" | "error" | "canceled",
+        status: args.status as Array<"ok" | "error" | "canceled">,
         header: args.header,
         method: args.method,
-        "sampling-rate": args["sampling-rate"],
+        samplingRate: args["sampling-rate"],
         search: args.search,
+        ip: args.ip,
       };
 
       const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
@@ -1121,9 +1129,10 @@ export async function main(argv: string[]): Promise<void> {
         await deleteTail();
       });
 
-      tail.on("message", (data) => {
-        console.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
-      });
+      const printLog: (data: unknown) => void =
+        args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
+
+      tail.on("message", printLog);
 
       while (tail.readyState !== tail.OPEN) {
         switch (tail.readyState) {
