@@ -133,11 +133,11 @@ export default async function publish(props: Props): Promise<void> {
 
     if ("wasm_modules" in config && format === "modules") {
       throw new Error(
-        "You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code"
+        "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
       );
     }
 
-    const moduleCollector = makeModuleCollector();
+    const moduleCollector = makeModuleCollector({ format });
     const result = await esbuild.build({
       ...(props.experimentalPublic
         ? {

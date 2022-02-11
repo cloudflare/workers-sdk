@@ -1159,11 +1159,11 @@ export default{
       await expect(
         runWrangler("publish index.js")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code"`
+        `"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
       );
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "You cannot configure [wasm_modules] with an ES Module worker. Instead, import the .wasm module directly in your code
+        "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
 
         [32m%s[0m
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
@@ -1200,6 +1200,40 @@ export default{
       });
       mockSubDomainRequest();
       await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should be able to import .wasm modules from service-worker format workers", async () => {
+      writeWranglerToml();
+      fs.writeFileSync("./index.js", "import TESTWASMNAME from './test.wasm';");
+      fs.writeFileSync("./test.wasm", "SOME WASM CONTENT");
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedModules: {
+          __94b240d0d692281e6467aa42043986e5c7eea034_test_wasm:
+            "SOME WASM CONTENT",
+        },
+        expectedBindings: [
+          {
+            name: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
+            part: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
+            type: "wasm_module",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
         "Uploaded
         test-name

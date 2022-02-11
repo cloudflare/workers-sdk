@@ -3,7 +3,6 @@ import { FormData, File } from "undici";
 import type {
   CfWorkerInit,
   CfModuleType,
-  CfModule,
   CfDurableObjectMigrations,
 } from "./worker.js";
 
@@ -22,12 +21,6 @@ export function toMimeType(type: CfModuleType): string {
     default:
       throw new TypeError("Unsupported module: " + type);
   }
-}
-
-function toModule(module: CfModule, entryType: CfModuleType): File {
-  const { type: moduleType, content } = module;
-  const type = toMimeType(moduleType ?? entryType);
-  return new File([content], module.name, { type });
 }
 
 export interface WorkerMetadata {
@@ -118,6 +111,36 @@ export function toFormData(worker: CfWorkerInit): FormData {
     );
   }
 
+  if (main.type === "commonjs") {
+    // This is a service-worker format worker.
+    // So we convert all `.wasm` modules into `wasm_module` bindings.
+    for (const [index, module] of Object.entries(modules || [])) {
+      if (module.type === "compiled-wasm") {
+        // The "name" of the module is a file path. We use it
+        // to instead be a "part" of the body, and a reference
+        // that we can use inside our source. This identifier has to be a valid
+        // JS identifier, so we replace all non alphanumeric characters
+        // with an underscore.
+        const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
+        metadataBindings.push({
+          name,
+          type: "wasm_module",
+          part: name,
+        });
+
+        // Add the module to the form data.
+        formData.set(
+          name,
+          new File([module.content], module.name, {
+            type: "application/wasm",
+          })
+        );
+        // And then remove it from the modules collection
+        modules?.splice(parseInt(index, 10), 1);
+      }
+    }
+  }
+
   bindings.services?.forEach(({ name, service, environment }) => {
     metadataBindings.push({
       name,
@@ -152,9 +175,12 @@ export function toFormData(worker: CfWorkerInit): FormData {
   }
 
   for (const module of [main].concat(modules || [])) {
-    const { name } = module;
-    const file = toModule(module, main.type ?? "esm");
-    formData.set(name, file);
+    formData.set(
+      module.name,
+      new File([module.content], module.name, {
+        type: toMimeType(module.type ?? main.type ?? "esm"),
+      })
+    );
   }
 
   return formData;

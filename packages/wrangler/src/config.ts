@@ -222,7 +222,7 @@ export type Config = {
 
   /**
    * A list of wasm modules that your worker should be bound to. This is
-   * the "legacy" way of binding to a wasm module. ES Module workers should
+   * the "legacy" way of binding to a wasm module. ES module workers should
    * do proper module imports.
    * NB: these ARE NOT inherited, and SHOULD NOT be duplicated across all environments.
    */
