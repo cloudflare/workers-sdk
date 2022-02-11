@@ -716,6 +716,26 @@ describe("wrangler", () => {
       expect(tsconfigJson.compilerOptions).toEqual({});
     });
 
+    it("should initialize with no interactive prompts if `--yes` is used", async () => {
+      await runWrangler("init --yes");
+
+      expect(fs.existsSync("./src/index.js")).toBe(false);
+      expect(fs.existsSync("./src/index.ts")).toBe(true);
+      expect(fs.existsSync("./tsconfig.json")).toBe(true);
+      expect(fs.existsSync("./package.json")).toBe(true);
+      expect(fs.existsSync("./wrangler.toml")).toBe(true);
+    });
+
+    it("should initialize with no interactive prompts if `--y` is used", async () => {
+      await runWrangler("init -y");
+
+      expect(fs.existsSync("./src/index.js")).toBe(false);
+      expect(fs.existsSync("./src/index.ts")).toBe(true);
+      expect(fs.existsSync("./tsconfig.json")).toBe(true);
+      expect(fs.existsSync("./package.json")).toBe(true);
+      expect(fs.existsSync("./wrangler.toml")).toBe(true);
+    });
+
     it("should error if `--type` is used", async () => {
       await expect(
         runWrangler("init --type")

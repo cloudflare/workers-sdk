@@ -211,10 +211,16 @@ export async function main(argv: string[]): Promise<void> {
     "init [name]",
     "📥 Create a wrangler.toml configuration file",
     (yargs) => {
-      return yargs.positional("name", {
-        describe: "The name of your worker.",
-        type: "string",
-      });
+      return yargs
+        .positional("name", {
+          describe: "The name of your worker.",
+          type: "string",
+        })
+        .option("yes", {
+          describe: 'Answer "yes" to any prompts for new projects.',
+          type: "boolean",
+          alias: "y",
+        });
     },
     async (args) => {
       if ("type" in args) {
@@ -259,11 +265,15 @@ export async function main(argv: string[]): Promise<void> {
 
       let pathToPackageJson = await findUp("package.json");
       let shouldCreatePackageJson = false;
+      const yesFlag = args.yes ?? false;
       if (!pathToPackageJson) {
         // If no package.json exists, ask to create one
-        shouldCreatePackageJson = await confirm(
-          "No package.json found. Would you like to create one?"
-        );
+        shouldCreatePackageJson =
+          yesFlag ||
+          (await confirm(
+            "No package.json found. Would you like to create one?"
+          ));
+
         if (shouldCreatePackageJson) {
           await writeFile(
             "./package.json",
@@ -298,9 +308,11 @@ export async function main(argv: string[]): Promise<void> {
             packageJson.dependencies?.wrangler
           )
         ) {
-          const shouldInstall = await confirm(
-            "Would you like to install wrangler into your package.json?"
-          );
+          const shouldInstall =
+            yesFlag ||
+            (await confirm(
+              "Would you like to install wrangler into your package.json?"
+            ));
           if (shouldInstall) {
             await packageManager.addDevDeps(`wrangler@${wranglerVersion}`);
             console.log(`✨ Installed wrangler`);
@@ -313,7 +325,7 @@ export async function main(argv: string[]): Promise<void> {
       if (!pathToTSConfig) {
         // If there's no tsconfig, offer to create one
         // and install @cloudflare/workers-types
-        if (await confirm("Would you like to use TypeScript?")) {
+        if (yesFlag || (await confirm("Would you like to use TypeScript?"))) {
           isTypescriptProject = true;
           await writeFile(
             "./tsconfig.json",
@@ -418,9 +430,14 @@ export async function main(argv: string[]): Promise<void> {
       }
       if (isTypescriptProject) {
         if (!fs.existsSync("./src/index.ts")) {
-          const shouldCreateSource = await confirm(
-            `Would you like to create a Worker at src/index.ts?`
-          );
+          let shouldCreateSource = false;
+
+          shouldCreateSource =
+            yesFlag ||
+            (await confirm(
+              `Would you like to create a Worker at src/index.ts?`
+            ));
+
           if (shouldCreateSource) {
             await mkdir("./src", { recursive: true });
             await writeFile(
