@@ -7,7 +7,6 @@ type KvArgs = {
   "namespace-id"?: string;
   env?: string;
   preview?: boolean;
-  config?: Config;
 };
 
 /**
@@ -153,13 +152,10 @@ export async function deleteBulkKeyValue(
   );
 }
 
-export function getNamespaceId({
-  preview,
-  binding,
-  config,
-  "namespace-id": namespaceId,
-  env,
-}: KvArgs): string {
+export function getNamespaceId(
+  { preview, binding, "namespace-id": namespaceId, env }: KvArgs,
+  config: Config
+): string {
   // nice
   if (namespaceId) {
     return namespaceId;
@@ -189,19 +185,21 @@ export function getNamespaceId({
     }
 
     // TODO: either a bespoke arg type for this function to avoid `undefined`s or an `EnvOrConfig` type
-    return getNamespaceId({
-      binding,
-      "namespace-id": namespaceId,
-      env: undefined,
-      preview,
-      config: {
+    return getNamespaceId(
+      {
+        binding,
+        "namespace-id": namespaceId,
+        env: undefined,
+        preview,
+      },
+      {
         env: undefined,
         build: undefined,
         name: undefined,
         account_id: undefined,
         ...config.env[env],
-      },
-    });
+      }
+    );
   }
 
   // there's no KV namespaces

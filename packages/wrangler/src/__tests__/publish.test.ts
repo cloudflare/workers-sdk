@@ -22,6 +22,42 @@ describe("publish", () => {
     unsetAllMocks();
   });
 
+  it("should resolve wrangler.toml relative to the entrypoint", async () => {
+    fs.mkdirSync("./some-path/worker", { recursive: true });
+    fs.writeFileSync(
+      "./some-path/wrangler.toml",
+      TOML.stringify({
+        name: "test-name",
+        compatibility_date: "2022-01-12",
+        vars: { xyz: 123 },
+      }),
+      "utf-8"
+    );
+    writeWorkerSource({ basePath: "./some-path/worker" });
+    mockUploadWorkerRequest({
+      expectedBindings: [
+        {
+          json: 123,
+          name: "xyz",
+          type: "json",
+        },
+      ],
+    });
+    mockSubDomainRequest();
+    await runWrangler("publish ./some-path/worker/index.js");
+    expect(std.out).toMatchInlineSnapshot(`
+      "Uploaded
+      test-name
+      (TIMINGS)
+      Deployed
+      test-name
+      (TIMINGS)
+
+      test-name.test-sub-domain.workers.dev"
+    `);
+    expect(std.err).toMatchInlineSnapshot(`""`);
+  });
+
   describe("entry-points", () => {
     it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
       writeWranglerToml();
