@@ -52,6 +52,7 @@ const fgGreenColor = "\x1b[32m";
 // a set of binding types that are known to be supported by wrangler
 const knownBindings = [
   "plain_text",
+  "json",
   "kv_namespace",
   "durable_object_namespace",
 ];

@@ -1215,6 +1215,45 @@ export default{
     });
   });
 
+  describe("vars bindings", () => {
+    it("should support json bindings", async () => {
+      writeWranglerToml({
+        vars: {
+          text: "plain ol' string",
+          count: 1,
+          complex: { enabled: true, id: 123 },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          { name: "text", type: "plain_text", text: "plain ol' string" },
+          { name: "count", type: "json", json: 1 },
+          {
+            name: "complex",
+            type: "json",
+            json: { enabled: true, id: 123 },
+          },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+         
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("unsafe bindings", () => {
     it("should warn if using unsafe bindings", async () => {
       writeWranglerToml({
@@ -1310,7 +1349,7 @@ function writeWranglerToml(config: Omit<Config, "env"> = {}) {
     TOML.stringify({
       compatibility_date: "2022-01-12",
       name: "test-name",
-      ...config,
+      ...(config as TOML.JsonMap),
     }),
 
     "utf-8"
