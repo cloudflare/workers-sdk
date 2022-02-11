@@ -38,7 +38,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -59,7 +59,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -80,7 +80,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -107,7 +107,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -136,7 +136,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -156,7 +156,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -179,7 +179,7 @@ describe("publish", () => {
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -209,7 +209,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -230,7 +230,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -254,7 +254,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -328,7 +328,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -396,7 +396,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -448,7 +448,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -502,7 +502,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -553,7 +553,7 @@ export default{
         Deployed
         test-name (some-env)
         (TIMINGS)
-         
+
         some-env.test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -599,7 +599,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -642,7 +642,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -685,7 +685,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -729,7 +729,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -773,7 +773,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -817,7 +817,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -861,7 +861,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -907,7 +907,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -957,7 +957,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1074,7 +1074,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1104,7 +1104,7 @@ export default{
           Deployed
           test-name
           (TIMINGS)
-           
+
           test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1139,7 +1139,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1207,7 +1207,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1241,7 +1241,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1280,7 +1280,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1321,7 +1321,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1361,7 +1361,7 @@ export default{
         Deployed
         test-name
         (TIMINGS)
-         
+
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);

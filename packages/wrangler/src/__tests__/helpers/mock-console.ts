@@ -9,16 +9,18 @@ let logSpy: jest.SpyInstance,
 
 const std = {
   get out() {
-    return normalizeSlashes(stripTimings(logSpy.mock.calls.flat(2).join("\n")));
+    return stripTrailingWhitespace(
+      normalizeSlashes(stripTimings(logSpy.mock.calls.flat(2).join("\n")))
+    );
   },
   get err() {
-    return normalizeSlashes(
-      stripTimings(errorSpy.mock.calls.flat(2).join("\n"))
+    return stripTrailingWhitespace(
+      normalizeSlashes(stripTimings(errorSpy.mock.calls.flat(2).join("\n")))
     );
   },
   get warn() {
-    return normalizeSlashes(
-      stripTimings(warnSpy.mock.calls.flat(2).join("\n"))
+    return stripTrailingWhitespace(
+      normalizeSlashes(stripTimings(warnSpy.mock.calls.flat(2).join("\n")))
     );
   },
 };
@@ -53,4 +55,8 @@ export function normalizeSlashes(str: string): string {
  */
 export function stripTimings(stdout: string): string {
   return stdout.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)");
+}
+
+export function stripTrailingWhitespace(str: string): string {
+  return str.replace(/[^\S\n]+\n/g, "\n");
 }
