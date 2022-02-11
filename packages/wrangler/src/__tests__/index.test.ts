@@ -401,13 +401,13 @@ describe("wrangler", () => {
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
-      "✨ Successfully created wrangler.toml
-      ✨ Created package.json
-      ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
-      To start developing on your worker, run npm start.
-      To publish your worker on to the internet, run npm run deploy.
-      ✨ Created src/index.ts"
-      `);
+              "✨ Successfully created wrangler.toml
+              ✨ Created package.json
+              ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+              To start developing on your worker, run npm start.
+              To publish your worker on to the internet, run npm run deploy.
+              ✨ Created src/index.ts"
+            `);
     });
 
     it("should not overwrite package.json scripts for a typescript project", async () => {
@@ -445,12 +445,12 @@ describe("wrangler", () => {
       expect(packageJson.scripts.start).toBe("test-start");
       expect(packageJson.scripts.deploy).toBe("test-deploy");
       expect(std.out).toMatchInlineSnapshot(`
-      "✨ Successfully created wrangler.toml
-      ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
-      To start developing on your worker, npx wrangler dev src/index.ts
-      To publish your worker on to the internet, npx wrangler publish src/index.ts
-      ✨ Created src/index.ts"
-      `);
+              "✨ Successfully created wrangler.toml
+              ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+              To start developing on your worker, npx wrangler dev src/index.ts
+              To publish your worker on to the internet, npx wrangler publish src/index.ts
+              ✨ Created src/index.ts"
+            `);
     });
 
     it("should add missing scripts for a non-ts project with .js extension", async () => {
@@ -487,12 +487,12 @@ describe("wrangler", () => {
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
-      "✨ Successfully created wrangler.toml
-      ✨ Created package.json
-      To start developing on your worker, run npm start.
-      To publish your worker on to the internet, run npm run deploy.
-      ✨ Created src/index.js"
-      `);
+              "✨ Successfully created wrangler.toml
+              ✨ Created package.json
+              To start developing on your worker, run npm start.
+              To publish your worker on to the internet, run npm run deploy.
+              ✨ Created src/index.js"
+            `);
     });
 
     it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
@@ -530,11 +530,11 @@ describe("wrangler", () => {
       expect(packageJson.scripts.start).toBe("test-start");
       expect(packageJson.scripts.deploy).toBe("test-deploy");
       expect(std.out).toMatchInlineSnapshot(`
-      "✨ Successfully created wrangler.toml
-      To start developing on your worker, npx wrangler dev src/index.js
-      To publish your worker on to the internet, npx wrangler publish src/index.js
-      ✨ Created src/index.js"
-      `);
+              "✨ Successfully created wrangler.toml
+              To start developing on your worker, npx wrangler dev src/index.js
+              To publish your worker on to the internet, npx wrangler publish src/index.js
+              ✨ Created src/index.js"
+            `);
     });
 
     it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {

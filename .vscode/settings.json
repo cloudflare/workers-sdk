@@ -29,5 +29,5 @@
   ],
   "cSpell.ignoreWords": ["TESTWASMNAME", "yxxx"],
   "eslint.runtime": "node",
-  "files.trimTrailingWhitespace": false
+  "files.trimTrailingWhitespace": true
 }
