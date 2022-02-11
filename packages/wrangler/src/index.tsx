@@ -45,6 +45,7 @@ import { whoami } from "./whoami";
 import type { Entry } from "./bundle";
 import type { Config } from "./config";
 import type Yargs from "yargs";
+import type { RawData } from "ws";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -1129,7 +1130,7 @@ export async function main(argv: string[]): Promise<void> {
         await deleteTail();
       });
 
-      const printLog: (data: unknown) => void =
+      const printLog: (data: RawData) => void =
         args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
 
       tail.on("message", printLog);

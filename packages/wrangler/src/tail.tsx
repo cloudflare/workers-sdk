@@ -167,7 +167,7 @@ function parseSamplingRate(samplingRate: number): number {
 }
 
 function parseOutcome(statuses: Array<"ok" | "error" | "canceled">): string[] {
-  const outcomes = [];
+  const outcomes: string[] = [];
   for (const status in statuses) {
     switch (status) {
       case "ok":
@@ -215,10 +215,10 @@ function parseQuery(search: string): string {
   return search;
 }
 
-export function prettyPrintLogs(data: unknown): void {
+export function prettyPrintLogs(data: WebSocket.RawData): void {
   throw new Error("TODO!");
 }
 
-export function jsonPrintLogs(data: unknown): void {
+export function jsonPrintLogs(data: WebSocket.RawData): void {
   console.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
 }
