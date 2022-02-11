@@ -154,15 +154,14 @@ export type Config = {
 
   /**
    * A map of environment variables to set when deploying your worker.
-   * Of note, they can only be strings. Which is unfortunate, really.
-   * (TODO: verify that they can only be strings?)
+   *
    * NB: these are not inherited, and HAVE to  be duplicated across all environments.
    *
    * @default `{}`
    * @optional
    * @inherited false
    */
-  vars?: { [key: string]: string };
+  vars?: { [key: string]: unknown };
 
   /**
    * A list of durable objects that your worker should be bound to.
