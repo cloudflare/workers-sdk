@@ -43,12 +43,6 @@ export interface WorkerMetadata {
         class_name: string;
         script_name?: string;
       }
-    | {
-        type: "service";
-        name: string;
-        service: string;
-        environment: string;
-      }
   )[];
 }
 
@@ -140,15 +134,6 @@ export function toFormData(worker: CfWorkerInit): FormData {
       }
     }
   }
-
-  bindings.services?.forEach(({ name, service, environment }) => {
-    metadataBindings.push({
-      name,
-      type: "service",
-      service,
-      environment,
-    });
-  });
 
   if (bindings.unsafe) {
     // @ts-expect-error unsafe bindings don't need to match a specific type here

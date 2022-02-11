@@ -72,9 +72,25 @@ async function readConfig(configPath?: string): Promise<Config> {
 
   normaliseAndValidateEnvironmentsConfig(config);
 
+  // The field "experimental_services" doesn't exist anymore
+  // in the config, but we still want to error about any older usage.
+  // TODO: remove this error before GA.
   if ("experimental_services" in config) {
-    console.warn(
-      "The experimental_services field is only for cloudflare internal usage right now, and is subject to change. Please do not use this on production projects"
+    throw new Error(
+      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml: 
+      
+${TOML.stringify({
+  unsafe: {
+    bindings: (config.experimental_services || []).map((serviceDefinition) => {
+      return {
+        name: serviceDefinition.name,
+        type: "service",
+        service: serviceDefinition.service,
+        environment: serviceDefinition.environment,
+      };
+    }),
+  },
+})}`
     );
   }
 
@@ -795,7 +811,6 @@ export async function main(argv: string[]): Promise<void> {
             vars: envRootObj.vars,
             wasm_modules: config.wasm_modules,
             durable_objects: envRootObj.durable_objects,
-            services: envRootObj.experimental_services,
             unsafe: envRootObj.unsafe?.bindings,
           }}
         />
@@ -869,12 +884,6 @@ export async function main(argv: string[]): Promise<void> {
           describe: "routes to upload",
           alias: "route",
           type: "array",
-        })
-        .option("services", {
-          describe: "experimental support for services",
-          type: "boolean",
-          default: "false",
-          hidden: true,
         })
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",

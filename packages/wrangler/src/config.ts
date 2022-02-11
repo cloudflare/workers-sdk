@@ -209,6 +209,7 @@ export type Config = {
    *
    * @default `[]`
    * @optional
+   * @deprecated DO NOT USE. We'd added this to test the new service binding system, but the proper way to test experimental features is to use `unsafe.bindings` configuration.
    * @inherited false
    */
   experimental_services?: {
@@ -569,7 +570,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     }
 
     // Warn if there is a "required" field in the top level config that has not been specified specified in the environment.
-    // These required fields are `vars`, `durable_objects`, `kv_namespaces` and `experimental_services`.
+    // These required fields are `vars`, `durable_objects`, and `kv_namespaces`.
     // Each of them has different characteristics that need to be checked.
 
     // `vars` is just an object
@@ -639,32 +640,6 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
               `In your configuration, there is a kv_namespaces with binding "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
                 `Please add a binding for "${bindingName}" to "env.${envKey}.kv_namespaces".`
-            );
-          }
-        }
-      }
-    }
-
-    // `experimental_services` contains an array of namespace bindings
-    if (config.experimental_services !== undefined) {
-      if (environment.experimental_services === undefined) {
-        console.warn(
-          `In your configuration, "experimental_services" exists at the top level, but not on "env.${envKey}".\n` +
-            `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
-            `Please add "experimental_services" to "env.${envKey}".`
-        );
-      } else {
-        const envBindingNames = new Set(
-          environment.experimental_services.map((service) => service.name)
-        );
-        for (const bindingName of config.experimental_services.map(
-          (service) => service.name
-        )) {
-          if (!envBindingNames.has(bindingName)) {
-            console.warn(
-              `In your configuration, there is a experimental_services with binding name "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
-                `This is not what you probably want, since "experimental_services" is not inherited by environments.\n` +
-                `Please add a service for "${bindingName}" to "env.${envKey}.experimental_services".`
             );
           }
         }
