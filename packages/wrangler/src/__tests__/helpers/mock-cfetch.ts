@@ -1,6 +1,6 @@
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { CF_API_BASE_URL } from "../../cfetch";
+import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult } from "../../cfetch";
 import type { RequestInit } from "undici";
 
@@ -35,7 +35,7 @@ export async function mockFetchInternal(
   queryParams: URLSearchParams = new URLSearchParams()
 ) {
   for (const { regexp, method, handler } of mocks) {
-    const resourcePath = new URL(resource, CF_API_BASE_URL).pathname;
+    const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
     const uri = regexp.exec(resourcePath);
     // Do the resource path and (if specified) the HTTP method match?
     if (uri !== null && (!method || method === (init.method ?? "GET"))) {

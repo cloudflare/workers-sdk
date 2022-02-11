@@ -1,5 +1,9 @@
 import fetchMock from "jest-fetch-mock";
-import { fetchInternal, fetchKVGetValue } from "../cfetch/internal";
+import {
+  fetchInternal,
+  fetchKVGetValue,
+  getCloudflareAPIBaseURL,
+} from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
@@ -32,6 +36,9 @@ jest.mock("../package-manager");
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
+(getCloudflareAPIBaseURL as jest.Mock).mockReturnValue(
+  "https://api.cloudflare.com/client/v4"
+);
 
 jest.mock("../dialogs");
 
