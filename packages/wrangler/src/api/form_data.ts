@@ -42,6 +42,7 @@ export interface WorkerMetadata {
   bindings: (
     | { type: "kv_namespace"; name: string; namespace_id: string }
     | { type: "plain_text"; name: string; text: string }
+    | { type: "json"; name: string; json: unknown }
     | { type: "wasm_module"; name: string; part: string }
     | {
         type: "durable_object_namespace";
@@ -95,7 +96,11 @@ export function toFormData(worker: CfWorkerInit): FormData {
   );
 
   Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
-    metadataBindings.push({ name: key, type: "plain_text", text: value });
+    if (typeof value === "string") {
+      metadataBindings.push({ name: key, type: "plain_text", text: value });
+    } else {
+      metadataBindings.push({ name: key, type: "json", json: value });
+    }
   });
 
   for (const [name, filePath] of Object.entries(bindings.wasm_modules || {})) {
