@@ -10,7 +10,10 @@ describe("guess worker format", () => {
     // Note that this isn't actually a valid worker, because it's missing
     // a fetch handler. Regardless, our heuristic is simply to check for exports.
     const guess = await guessWorkerFormat(
-      path.join(process.cwd(), "./index.ts"),
+      {
+        file: path.join(process.cwd(), "./index.ts"),
+        directory: process.cwd(),
+      },
       undefined
     );
     expect(guess).toBe("modules");
@@ -22,7 +25,10 @@ describe("guess worker format", () => {
     // a fetch listener. Regardless, our heuristic is simply to check for
     // the lack of exports.
     const guess = await guessWorkerFormat(
-      path.join(process.cwd(), "./index.ts"),
+      {
+        file: path.join(process.cwd(), "./index.ts"),
+        directory: process.cwd(),
+      },
       undefined
     );
     expect(guess).toBe("service-worker");
@@ -32,7 +38,10 @@ describe("guess worker format", () => {
     await writeFile("./index.ts", "export default {};");
     await expect(
       guessWorkerFormat(
-        path.join(process.cwd(), "./index.ts"),
+        {
+          file: path.join(process.cwd(), "./index.ts"),
+          directory: process.cwd(),
+        },
         "service-worker"
       )
     ).rejects.toThrow(
@@ -43,7 +52,13 @@ describe("guess worker format", () => {
   it("should throw an error when the hint doesn't match the guess (service-worker - modules)", async () => {
     await writeFile("./index.ts", "");
     await expect(
-      guessWorkerFormat(path.join(process.cwd(), "./index.ts"), "modules")
+      guessWorkerFormat(
+        {
+          file: path.join(process.cwd(), "./index.ts"),
+          directory: process.cwd(),
+        },
+        "modules"
+      )
     ).rejects.toThrow(
       "You configured this worker to be 'modules', but the file you are trying to build doesn't export a handler. Please pass `--format service-worker`, or simply remove the configuration."
     );

@@ -33,7 +33,7 @@ describe("wrangler", () => {
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
-          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
           wrangler secret            🤫 Generate a secret that can be referenced in the worker script
@@ -71,7 +71,7 @@ describe("wrangler", () => {
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
-          wrangler dev <filename>    👂 Start a local server for developing your worker
+          wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
           wrangler secret            🤫 Generate a secret that can be referenced in the worker script

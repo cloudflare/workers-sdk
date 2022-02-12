@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { execaCommand } from "execa";
@@ -16,7 +16,7 @@ import type { AssetPaths } from "./sites";
 type Props = {
   config: Config;
   format: CfScriptFormat | undefined;
-  script: string | undefined;
+  entry: { file: string; directory: string };
   name: string | undefined;
   env: string | undefined;
   compatibilityDate: string | undefined;
@@ -37,12 +37,7 @@ function sleep(ms: number) {
 export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
-  const {
-    account_id: accountId,
-    build,
-    // @ts-expect-error hidden
-    __path__: wranglerTomlPath,
-  } = config;
+  const { account_id: accountId } = config;
 
   const envRootObj =
     props.env && config.env ? config.env[props.env] || {} : config;
@@ -85,25 +80,6 @@ export default async function publish(props: Props): Promise<void> {
 
   const destination = await tmp.dir({ unsafeCleanup: true });
   try {
-    let file: string;
-    let dir = process.cwd();
-    if (props.script) {
-      // If the script name comes from the command line it is relative to the current working directory.
-      file = path.resolve(props.script);
-    } else {
-      // If the script name comes from the config, then it is relative to the wrangler.toml file.
-      if (build?.upload?.main === undefined) {
-        throw new Error(
-          "Missing entry-point: The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `build.upload.main` config field."
-        );
-      }
-      dir = path.resolve(
-        path.dirname(wranglerTomlPath),
-        (build.upload.format === "modules" && build.upload.dir) || ""
-      );
-      file = path.resolve(dir, build.upload.main);
-    }
-
     if (props.legacyEnv) {
       scriptName += props.env ? `-${props.env}` : "";
     }
@@ -116,11 +92,26 @@ export default async function publish(props: Props): Promise<void> {
         shell: true,
         stdout: "inherit",
         stderr: "inherit",
+        timeout: 1000 * 30,
         ...(props.config.build?.cwd && { cwd: props.config.build.cwd }),
       });
+
+      let fileExists = false;
+      try {
+        // Use require.resolve to use node's resolution algorithm,
+        // this lets us use paths without explicit .js extension
+        // TODO: we should probably remove this, because it doesn't
+        // take into consideration other extensions like .tsx, .ts, .jsx, etc
+        fileExists = existsSync(require.resolve(props.entry.file));
+      } catch (e) {
+        // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
+      }
+      if (fileExists === false) {
+        throw new Error(`Could not resolve "${props.entry.file}".`);
+      }
     }
 
-    const format = await guessWorkerFormat(file, props.format);
+    const format = await guessWorkerFormat(props.entry, props.format);
 
     if (props.experimentalPublic && format === "service-worker") {
       // TODO: check config too
@@ -136,9 +127,8 @@ export default async function publish(props: Props): Promise<void> {
     }
 
     const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
-      file,
+      props.entry,
       props.experimentalPublic,
-      dir,
       destination.path,
       jsxFactory,
       jsxFragment,

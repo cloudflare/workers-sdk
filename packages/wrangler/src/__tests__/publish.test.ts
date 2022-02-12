@@ -7,8 +7,8 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { WorkerMetadata } from "../api/form_data";
-import type { Config } from "../config";
 import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
 
@@ -1372,23 +1372,6 @@ export default{
     });
   });
 });
-
-/** Write a mock wrangler.toml file to disk. */
-function writeWranglerToml(config: Omit<Config, "env"> = {}) {
-  // We Omit `env` from config because TOML.stringify() appears to
-  // have a weird type signature that appears to fail. We'll revisit this
-  // when we write tests for publishing environments
-  fs.writeFileSync(
-    "./wrangler.toml",
-    TOML.stringify({
-      compatibility_date: "2022-01-12",
-      name: "test-name",
-      ...(config as TOML.JsonMap),
-    }),
-
-    "utf-8"
-  );
-}
 
 /** Write a mock Worker script to disk. */
 function writeWorkerSource({

@@ -43,6 +43,7 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
+import type { Entry } from "./bundle";
 import type { Config } from "./config";
 import type Yargs from "yargs";
 
@@ -77,8 +78,8 @@ async function readConfig(configPath?: string): Promise<Config> {
   // TODO: remove this error before GA.
   if ("experimental_services" in config) {
     throw new Error(
-      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml: 
-      
+      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
+
 ${TOML.stringify({
   unsafe: {
     bindings: (config.experimental_services || []).map((serviceDefinition) => {
@@ -129,6 +130,49 @@ ${TOML.stringify({
   config.__path__ = configPath;
 
   return config;
+}
+
+function getEntry(
+  args: { _: (string | number)[]; script: string | undefined },
+  config: Config
+): Entry {
+  // @ts-expect-error a hidden field
+  const wranglerTomlPath = config.__path__;
+  let file: string;
+  let directory = process.cwd();
+  if (args.script) {
+    // If the script name comes from the command line it is relative to the current working directory.
+    file = path.resolve(args.script);
+  } else {
+    // If the script name comes from the config, then it is relative to the wrangler.toml file.
+    if (config.build?.upload?.main === undefined) {
+      throw new Error(
+        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${args._[0]} path/to/script\`) or the \`build.upload.main\` config field.`
+      );
+    }
+    directory = path.resolve(
+      path.dirname(wranglerTomlPath),
+      config.build.upload.dir || ""
+    );
+    file = path.resolve(directory, config.build.upload.main);
+  }
+
+  if (!config.build?.command) {
+    let fileExists = false;
+    try {
+      // Use require.resolve to use node's resolution algorithm,
+      // this lets us use paths without explicit .js extension
+      // TODO: we should probably remove this, because it doesn't
+      // take into consideration other extensions like .tsx, .ts, .jsx, etc
+      fileExists = fs.existsSync(require.resolve(file));
+    } catch (e) {
+      // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
+    }
+    if (fileExists === false) {
+      throw new Error(`Could not resolve "${file}".`);
+    }
+  }
+  return { file, directory };
 }
 
 // a helper to demand one of a set of options
@@ -603,14 +647,13 @@ export async function main(argv: string[]): Promise<void> {
 
   // dev
   wrangler.command(
-    "dev <filename>",
+    "dev [script]",
     "👂 Start a local server for developing your worker",
     (yargs) => {
       return yargs
-        .positional("filename", {
+        .positional("script", {
           describe: "entry point",
           type: "string",
-          demandOption: true,
         })
         .option("name", {
           describe: "name of the script",
@@ -699,8 +742,8 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      const { filename } = args;
       const config = args.config as Config;
+      const entry = getEntry(args, config);
 
       if (args["experimental-public"]) {
         console.warn(
@@ -757,7 +800,7 @@ export async function main(argv: string[]): Promise<void> {
       const { waitUntilExit } = render(
         <Dev
           name={args.name || config.name}
-          entry={path.relative(process.cwd(), filename)}
+          entry={entry}
           env={args.env}
           buildCommand={config.build || {}}
           format={args.format || config.build?.upload?.format}
@@ -913,6 +956,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       const config = args.config as Config;
+      const entry = getEntry(args, config);
 
       if (args.latest) {
         console.warn(
@@ -948,7 +992,7 @@ export async function main(argv: string[]): Promise<void> {
         config,
         name: args.name,
         format: args.format || config.build?.upload?.format,
-        script: args.script,
+        entry,
         env: args.env,
         compatibilityDate: args.latest
           ? new Date().toISOString().substring(0, 10)

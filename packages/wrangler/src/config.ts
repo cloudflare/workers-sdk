@@ -39,7 +39,7 @@ export type Config = {
    * @inherited
    * @todo this needs to be implemented!
    */
-  entry?: string;
+  main?: string;
 
   /**
    * This is the ID of the account associated with your zone.
@@ -300,7 +300,7 @@ export type Config = {
     /**
      * The location of your Worker script.
      *
-     * @deprecated DO NOT use this (it's a holdover from wrangler 1.x). Either use the top level `entry` field, or pass the path to your entry file as a command line argument.
+     * @deprecated DO NOT use this (it's a holdover from wrangler 1.x). Either use the top level `main` field, or pass the path to your entry file as a command line argument.
      * @breaking
      */
     "entry-point"?: string;
@@ -409,76 +409,57 @@ export type Config = {
    * Much of the rest of this configuration isn't necessary anymore
    * in wrangler2. We infer the format automatically, and we can pass
    * the path to the script either in the CLI (or, @todo, as the top level
-   * `entry` property).
-   */ (
-    | {
-        upload?: {
-          /**
-           * The format of the Worker script, must be "service-worker".
-           *
-           * @deprecated We infer the format automatically now.
-           */
-          format?: "service-worker";
+   * `main` property).
+   */ {
+    /**
+     * We only really need to specify the entry point.
+     * The format is deduced automatically in wrangler2.
+     *
+     * @deprecated Instead use top level main
+     */
+    upload?: {
+      /**
+       * The format of the Worker script.
+       *
+       * @deprecated We infer the format automatically now.
+       */
+      format?: "modules" | "service-worker";
 
-          /**
-           * The path to the Worker script. This should be replaced
-           * by the top level `entry' property.
-           *
-           * @deprecated This will be replaced by the top level `entry' property.
-           */
-          main: string;
-        };
-      }
-    | {
-        /**
-         * When we use the module format, we only really
-         * need to specify the entry point. The format is deduced
-         * automatically in wrangler2.
-         */
-        upload?: {
-          /**
-           * The format of the Worker script, must be "modules".
-           *
-           * @deprecated We infer the format automatically now.
-           */
-          format?: "modules";
+      /**
+       * The directory you wish to upload your worker from,
+       * relative to the wrangler.toml file.
+       *
+       * Defaults to the directory containing the wrangler.toml file.
+       *
+       * @deprecated
+       * @breaking In wrangler 1, this defaults to ./dist, whereas in wrangler 2 it defaults to ./
+       */
+      dir?: string;
 
-          /**
-           * The directory you wish to upload your modules from,
-           * relative to the wrangler.toml file.
-           *
-           * Defaults to the directory containing the wrangler.toml file.
-           *
-           * @deprecated
-           * @breaking
-           */
-          dir?: string;
+      /**
+       * The path to the Worker script, relative to `upload.dir`.
+       *
+       * @deprecated This will be replaced by a command line argument.
+       */
+      main?: string;
 
-          /**
-           * The path to the Worker script, relative to `upload.dir`.
-           *
-           * @deprecated This will be replaced by a command line argument.
-           */
-          main?: string;
-
-          /**
-           * An ordered list of rules that define which modules to import,
-           * and what type to import them as. You will need to specify rules
-           * to use Text, Data, and CompiledWasm modules, or when you wish to
-           * have a .js file be treated as an ESModule instead of CommonJS.
-           *
-           * @deprecated These are now inferred automatically for major file types, but you can still specify them manually.
-           * @todo this needs to be implemented!
-           * @breaking
-           */
-          rules?: {
-            type: "ESModule" | "CommonJS" | "Text" | "Data" | "CompiledWasm";
-            globs: string[];
-            fallthrough?: boolean;
-          };
-        };
-      }
-  );
+      /**
+       * An ordered list of rules that define which modules to import,
+       * and what type to import them as. You will need to specify rules
+       * to use Text, Data, and CompiledWasm modules, or when you wish to
+       * have a .js file be treated as an ESModule instead of CommonJS.
+       *
+       * @deprecated These are now inferred automatically for major file types, but you can still specify them manually.
+       * @todo this needs to be implemented!
+       * @breaking
+       */
+      rules?: {
+        type: "ESModule" | "CommonJS" | "Text" | "Data" | "CompiledWasm";
+        globs: string[];
+        fallthrough?: boolean;
+      };
+    };
+  };
 
   /**
    * The `env` section defines overrides for the configuration for

@@ -2,12 +2,16 @@ import { render } from "ink-testing-library";
 import patchConsole from "patch-console";
 import React from "react";
 import Dev from "../dev";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { runWrangler } from "./helpers/run-wrangler";
+import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { DevProps } from "../dev";
 
 describe("Dev component", () => {
   let restoreConsole: ReturnType<typeof patchConsole>;
   beforeEach(() => (restoreConsole = patchConsole(() => {})));
   afterEach(() => restoreConsole());
+  const std = mockConsoleMethods();
 
   // This test needs to be rewritten because the error now throws asynchronously
   // and the Ink framework does not yet have async testing support.
@@ -23,6 +27,26 @@ describe("Dev component", () => {
       Error: You cannot use the service worker format with a \`public\` directory."
     `);
   });
+
+  describe("entry-points", () => {
+    it("should error if there is no entry-point specified", async () => {
+      writeWranglerToml();
+
+      await expect(
+        runWrangler("dev")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`build.upload.main\` config field."`
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`build.upload.main\` config field.
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+    });
+  });
 });
 
 /**
@@ -32,7 +56,7 @@ describe("Dev component", () => {
  */
 function renderDev({
   name,
-  entry = "some/entry.ts",
+  entry = { file: "some/entry.ts", directory: process.cwd() },
   port,
   format,
   accountId,
