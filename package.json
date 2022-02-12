@@ -32,7 +32,7 @@
   },
   "scripts": {
     "check": "run-p check:* --aggregate-output -l",
-    "check:type": "npm run check:test --workspaces --if-present",
+    "check:type": "npm run check:type --workspaces --if-present",
     "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content",
     "check:format": "prettier packages/** --check --ignore-unknown",
     "prebuild-and-test": "npm run build",
