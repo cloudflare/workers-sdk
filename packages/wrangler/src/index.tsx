@@ -77,8 +77,8 @@ async function readConfig(configPath?: string): Promise<Config> {
   // TODO: remove this error before GA.
   if ("experimental_services" in config) {
     throw new Error(
-      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml: 
-      
+      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
+
 ${TOML.stringify({
   unsafe: {
     bindings: (config.experimental_services || []).map((serviceDefinition) => {
@@ -811,6 +811,7 @@ export async function main(argv: string[]): Promise<void> {
             vars: envRootObj.vars,
             wasm_modules: config.wasm_modules,
             durable_objects: envRootObj.durable_objects,
+            r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
           }}
         />
@@ -1307,6 +1308,9 @@ export async function main(argv: string[]): Promise<void> {
                         kv_namespaces: [],
                         vars: {},
                         durable_objects: { bindings: [] },
+                        r2_buckets: [],
+                        wasm_modules: {},
+                        unsafe: [],
                       },
                       modules: [],
                       migrations: undefined,

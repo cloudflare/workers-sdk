@@ -203,6 +203,15 @@ export type Config = {
     preview_id?: string;
   }[];
 
+  r2_buckets?: {
+    /** The binding name used to refer to the R2 bucket in the worker. */
+    binding: string;
+    /** The name of this R2 bucket at the edge. */
+    bucket_name: string;
+    /** The preview name of this R2 bucket at the edge. */
+    preview_bucket_name?: string;
+  }[];
+
   /**
    * A list of services that your worker should be bound to.
    * NB: these are not inherited, and HAVE to be duplicated across all environments.
@@ -570,7 +579,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     }
 
     // Warn if there is a "required" field in the top level config that has not been specified specified in the environment.
-    // These required fields are `vars`, `durable_objects`, and `kv_namespaces`.
+    // These required fields are `vars`, `durable_objects`, `kv_namespaces`, and "r2_buckets".
     // Each of them has different characteristics that need to be checked.
 
     // `vars` is just an object
@@ -640,6 +649,32 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
               `In your configuration, there is a kv_namespaces with binding "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
                 `This is not what you probably want, since "kv_namespaces" is not inherited by environments.\n` +
                 `Please add a binding for "${bindingName}" to "env.${envKey}.kv_namespaces".`
+            );
+          }
+        }
+      }
+    }
+
+    // `r2_buckets` contains an array of bucket bindings
+    if (config.r2_buckets !== undefined) {
+      if (environment.r2_buckets === undefined) {
+        console.warn(
+          `In your configuration, "r2_buckets" exists at the top level, but not on "env.${envKey}".\n` +
+            `This is not what you probably want, since "r2_buckets" is not inherited by environments.\n` +
+            `Please add "r2_buckets" to "env.${envKey}".`
+        );
+      } else {
+        const envBindings = new Set(
+          environment.r2_buckets.map((r2Bucket) => r2Bucket.binding)
+        );
+        for (const bindingName of config.r2_buckets.map(
+          (r2Bucket) => r2Bucket.binding
+        )) {
+          if (!envBindings.has(bindingName)) {
+            console.warn(
+              `In your configuration, there is a r2_buckets with binding "${bindingName}" at the top level, but not on "env.${envKey}".\n` +
+                `This is not what you probably want, since "r2_buckets" is not inherited by environments.\n` +
+                `Please add a binding for "${bindingName}" to "env.${envKey}.r2_buckets".`
             );
           }
         }

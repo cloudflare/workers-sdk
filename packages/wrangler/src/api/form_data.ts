@@ -43,6 +43,7 @@ export interface WorkerMetadata {
         class_name: string;
         script_name?: string;
       }
+    | { type: "r2_bucket"; name: string; bucket_name: string }
   )[];
 }
 
@@ -81,6 +82,14 @@ export function toFormData(worker: CfWorkerInit): FormData {
       });
     }
   );
+
+  bindings.r2_buckets?.forEach(({ binding, bucket_name }) => {
+    metadataBindings.push({
+      name: binding,
+      type: "r2_bucket",
+      bucket_name,
+    });
+  });
 
   Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
     if (typeof value === "string") {
