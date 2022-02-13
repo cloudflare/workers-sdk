@@ -5,6 +5,12 @@ import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
 import type { CfModule, CfScriptFormat } from "./api/worker";
 
+/**
+ * An entry point for the worker. It consists not just of a `file`,
+ * but also of a `directory` that is used to resolve relative paths.
+ */
+export type Entry = { file: string; directory: string };
+
 type BundleResult = {
   modules: CfModule[];
   resolvedEntryPointPath: string;
@@ -16,9 +22,8 @@ type BundleResult = {
  * Generate a bundle for the worker identified by the arguments passed in.
  */
 export async function bundleWorker(
-  entryFile: string,
+  entry: Entry,
   serveAssetsFromWorker: boolean,
-  workingDir: string,
   destination: string,
   jsxFactory: string | undefined,
   jsxFragment: string | undefined,
@@ -27,9 +32,9 @@ export async function bundleWorker(
 ): Promise<BundleResult> {
   const moduleCollector = makeModuleCollector({ format });
   const result = await esbuild.build({
-    ...getEntryPoint(entryFile, serveAssetsFromWorker),
+    ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,
-    absWorkingDir: workingDir,
+    absWorkingDir: entry.directory,
     outdir: destination,
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
@@ -53,7 +58,7 @@ export async function bundleWorker(
   );
   assert(
     entryPointOutputs.length > 0,
-    `Cannot find entry-point "${entryFile}" in generated bundle.` +
+    `Cannot find entry-point "${entry.file}" in generated bundle.` +
       listEntryPoints(entryPointOutputs)
   );
   assert(
@@ -67,7 +72,10 @@ export async function bundleWorker(
 
   return {
     modules: moduleCollector.modules,
-    resolvedEntryPointPath: path.resolve(workingDir, entryPointOutputs[0][0]),
+    resolvedEntryPointPath: path.resolve(
+      entry.directory,
+      entryPointOutputs[0][0]
+    ),
     bundleType,
     stop: result.stop,
   };

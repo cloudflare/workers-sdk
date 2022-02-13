@@ -23,13 +23,14 @@ import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
 import type { CfPreviewToken } from "./api/preview";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
+import type { Entry } from "./bundle";
 import type { AssetPaths } from "./sites";
 import type { WatchMode } from "esbuild";
 import type { DirectoryResult } from "tmp-promise";
 
 export type DevProps = {
   name?: string;
-  entry: string;
+  entry: Entry;
   port?: number;
   format: CfScriptFormat | undefined;
   accountId: undefined | string;
@@ -61,7 +62,7 @@ function Dev(props: DevProps): JSX.Element {
   // kinda forbid that, so we thread the entry through useCustomBuild
   const entry = useCustomBuild(props.entry, props.buildCommand);
 
-  const format = useWorkerFormat({ file: entry, format: props.format });
+  const format = useWorkerFormat({ entry: props.entry, format: props.format });
   if (format && props.public && format === "service-worker") {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
@@ -138,21 +139,21 @@ function Dev(props: DevProps): JSX.Element {
 }
 
 function useWorkerFormat(props: {
-  file: string | undefined;
+  entry: Entry | undefined;
   format: undefined | CfScriptFormat;
 }): CfScriptFormat | undefined {
   const [format, setFormat] = useState<CfScriptFormat | undefined>();
   useEffect(() => {
     async function validateFormat() {
-      if (!props.file || format) {
+      if (!props.entry || format) {
         return;
       }
-      setFormat(await guessWorkerFormat(props.file, props.format));
+      setFormat(await guessWorkerFormat(props.entry, props.format));
     }
     validateFormat().catch((err) => {
       console.error("Failed to validate worker format:", err);
     });
-  }, [props.file, props.format, format]);
+  }, [props.entry, props.format, format]);
   return format;
 }
 
@@ -439,16 +440,16 @@ function useTmpDir(): string | undefined {
 }
 
 function useCustomBuild(
-  expectedEntry: string,
+  expectedEntry: Entry,
   props: {
     command?: undefined | string;
     cwd?: undefined | string;
     watch_dir?: undefined | string;
   }
-): undefined | string {
-  const [entry, setEntry] = useState<string | undefined>(
+): undefined | Entry {
+  const [entry, setEntry] = useState<Entry | undefined>(
     // if there's no build command, just return the expected entry
-    props.command || expectedEntry
+    !props.command ? expectedEntry : undefined
   );
   const { command, cwd, watch_dir } = props;
   useEffect(() => {
@@ -481,20 +482,32 @@ function useCustomBuild(
     // if it does, we're done
     const startedAt = Date.now();
     interval = setInterval(() => {
-      if (existsSync(expectedEntry)) {
+      let fileExists = false;
+      try {
+        // Use require.resolve to use node's resolution algorithm,
+        // this lets us use paths without explicit .js extension
+        // TODO: we should probably remove this, because it doesn't
+        // take into consideration other extensions like .tsx, .ts, .jsx, etc
+        fileExists = existsSync(require.resolve(expectedEntry.file));
+      } catch (e) {
+        // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
+      }
+
+      if (fileExists === true) {
         clearInterval(interval);
         setEntry(expectedEntry);
       } else {
         const elapsed = Date.now() - startedAt;
         // timeout after 30 seconds of waiting
-        if (elapsed > 1000 * 60 * 30) {
-          console.error("⎔ Build timed out.");
+        if (elapsed > 1000 * 30) {
+          console.error(
+            `⎔ Build timed out, Could not resolve ${expectedEntry.file}`
+          );
           clearInterval(interval);
           cmd.kill();
         }
       }
     }, 200);
-    // TODO: we could probably timeout here after a while
 
     return () => {
       if (cmd) {
@@ -511,7 +524,7 @@ function useCustomBuild(
 type EsbuildBundle = {
   id: number;
   path: string;
-  entry: string;
+  entry: Entry;
   type: "esm" | "commonjs";
   modules: CfModule[];
   serveAssetsFromWorker: boolean;
@@ -526,7 +539,7 @@ function useEsbuild({
   format,
   serveAssetsFromWorker,
 }: {
-  entry: undefined | string;
+  entry: undefined | Entry;
   destination: string | undefined;
   format: CfScriptFormat | undefined;
   staticRoot: undefined | string;
@@ -563,7 +576,6 @@ function useEsbuild({
           entry,
           // In dev, we server assets from the local proxy before we send the request to the worker.
           /* serveAssetsFromWorker */ false,
-          process.cwd(),
           destination,
           jsxFactory,
           jsxFragment,

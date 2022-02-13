@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { build } from "esbuild";
 import type { CfScriptFormat } from "./api/worker";
+import type { Entry } from "./bundle";
 import type { Metafile } from "esbuild";
 
 /**
@@ -12,11 +13,12 @@ import type { Metafile } from "esbuild";
  * well in practice.
  */
 export default async function guessWorkerFormat(
-  filePath: string,
+  entry: Entry,
   hint: CfScriptFormat | undefined
 ): Promise<CfScriptFormat> {
   const result = await build({
-    entryPoints: [filePath],
+    entryPoints: [entry.file],
+    absWorkingDir: entry.directory,
     metafile: true,
     bundle: false,
     format: "esm",
@@ -30,7 +32,7 @@ export default async function guessWorkerFormat(
   );
   assert(
     entryPoints.length > 0,
-    `Cannot find entry-point "${filePath}" in generated bundle.` +
+    `Cannot find entry-point "${entry.file}" in generated bundle.` +
       listEntryPoints(entryPoints)
   );
   assert(
