@@ -1464,7 +1464,7 @@ function mockUploadWorkerRequest({
     async ([_url, accountId, scriptName], { body }, queryParams) => {
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual("test-name");
-      expect(queryParams.get("available_on_subdomains")).toEqual("true");
+      expect(queryParams.get("available_on_subdomain")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
         expect(await (formBody.get("index.js") as File).text()).toMatch(

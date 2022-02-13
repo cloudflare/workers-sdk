@@ -242,7 +242,7 @@ export default async function publish(props: Props): Promise<void> {
         method: "PUT",
         body: toFormData(worker),
       },
-      new URLSearchParams({ available_on_subdomains: "true" })
+      new URLSearchParams({ available_on_subdomain: "true" })
     );
 
     const uploadMs = Date.now() - start;
