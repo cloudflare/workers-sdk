@@ -139,12 +139,12 @@ export interface CfWorkerInit {
    * All the bindings
    */
   bindings: {
-    vars?: CfVars;
-    kv_namespaces?: CfKvNamespace[];
-    wasm_modules?: CfWasmModuleBindings;
-    durable_objects?: { bindings: CfDurableObject[] };
-    r2_buckets?: CfR2Bucket[];
-    unsafe?: CfUnsafeBinding[];
+    vars: CfVars | undefined;
+    kv_namespaces: CfKvNamespace[] | undefined;
+    wasm_modules: CfWasmModuleBindings | undefined;
+    durable_objects: { bindings: CfDurableObject[] } | undefined;
+    r2_buckets: CfR2Bucket[] | undefined;
+    unsafe: CfUnsafeBinding[] | undefined;
   };
   migrations: undefined | CfDurableObjectMigrations;
   compatibility_date: string | undefined;
