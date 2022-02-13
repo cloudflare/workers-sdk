@@ -367,7 +367,10 @@ export default function useInspector(props: InspectorProps) {
         );
         remoteWebSocket.send(event.data);
       } catch (e) {
-        if (e.message !== "WebSocket is not open: readyState 0 (CONNECTING)") {
+        if (
+          (e as Error).message !==
+          "WebSocket is not open: readyState 0 (CONNECTING)"
+        ) {
           /**
            * ^ this just means we haven't opened a websocket yet
            * usually happens until there's at least one request
@@ -587,6 +590,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
   const method = mapConsoleAPIMessageTypeToConsoleMethod[evt.type];
 
   if (method in console) {
+    // @ts-expect-error - we know this is a valid method
     // eslint-disable-next-line prefer-spread
     console[method].apply(console, args);
   } else {

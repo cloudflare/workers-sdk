@@ -222,6 +222,7 @@ import React from "react";
 import { fetch } from "undici";
 import { CF_API_BASE_URL } from "./cfetch";
 import openInBrowser from "./open-in-browser";
+import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
@@ -276,14 +277,14 @@ const Scopes = {
  *
  * "offline_access" is automatically included.
  */
-type Scope = keyof typeof Scopes | "offline_access";
+type Scope = keyof typeof Scopes;
 
 const ScopeKeys = Object.keys(Scopes) as Scope[];
 
 export function validateScopeKeys(
   scopes: string[]
 ): scopes is typeof ScopeKeys {
-  return scopes.every((scope) => Scopes[scope]);
+  return scopes.every((scope) => scope in Scopes);
 }
 
 const CLIENT_ID = "54d11594-84e4-41aa-b438-e81b8fa78ee7";
@@ -561,12 +562,24 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
     `?response_type=code&` +
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
+    // @ts-expect-error we add offline_access manually
     `scope=${encodeURIComponent(scopes.concat("offline_access").join(" "))}&` +
     `state=${stateQueryParam}&` +
     `code_challenge=${encodeURIComponent(codeChallenge)}&` +
     `code_challenge_method=S256`
   );
 }
+
+type TokenResponse =
+  | {
+      access_token: string;
+      expires_in: number;
+      refresh_token: string;
+      scope: string;
+    }
+  | {
+      error: string;
+    };
 
 /**
  * Refresh an access token from the remote service.
@@ -592,13 +605,12 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
     throw await response.json();
   } else {
     try {
-      const json = await response.json();
-      const { access_token, expires_in, refresh_token, scope } = json as {
-        access_token: string;
-        expires_in: number;
-        refresh_token: string;
-        scope: string;
-      };
+      const json = (await response.json()) as TokenResponse;
+      if ("error" in json) {
+        throw json.error;
+      }
+
+      const { access_token, expires_in, refresh_token, scope } = json;
       let scopes: Scope[] = [];
 
       const accessToken: AccessToken = {
@@ -626,20 +638,24 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
         refreshToken: LocalState.refreshToken,
       };
       return accessContext;
-    } catch (err) {
-      const error = err?.error || "There was a network error.";
+    } catch (error) {
       switch (error) {
         case "invalid_grant":
-          console.log(
+          console.warn(
             "Expired! Auth code or refresh token needs to be renewed."
           );
           // alert("Redirecting to auth server to obtain a new auth grant code.");
           // TODO: return refreshAuthCodeOrRefreshToken();
           break;
         default:
+          console.error(error);
           break;
       }
-      throw toErrorClass(error);
+      if (typeof error === "string") {
+        throw toErrorClass(error);
+      } else {
+        throw error;
+      }
     }
   }
 }
@@ -680,13 +696,11 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
     }
     throw toErrorClass(error);
   }
-  const json = await response.json();
-  const { access_token, expires_in, refresh_token, scope } = json as {
-    access_token: string;
-    expires_in: number;
-    refresh_token: string;
-    scope: string;
-  };
+  const json = (await response.json()) as TokenResponse;
+  if ("error" in json) {
+    throw new Error(json.error);
+  }
+  const { access_token, expires_in, refresh_token, scope } = json;
   let scopes: Scope[] = [];
   LocalState.hasAuthCodeBeenExchangedForAccessToken = true;
 
@@ -805,8 +819,8 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 export async function login(props?: LoginProps): Promise<boolean> {
   const urlToOpen = await getAuthURL(props?.scopes);
   await openInBrowser(urlToOpen);
-  let server;
-  let loginTimeoutHandle;
+  let server: http.Server;
+  let loginTimeoutHandle: NodeJS.Timeout;
   const timerPromise = new Promise<boolean>((resolve) => {
     loginTimeoutHandle = setTimeout(() => {
       console.error(
@@ -847,7 +861,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
               });
               console.log(
                 "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider passing an API token with CF_API_TOKEN variable"
-              ); // TODO: implement wrangler config lol
+              );
 
               return;
             } else {
@@ -939,7 +953,7 @@ export async function logout(): Promise<void> {
 export function listScopes(): void {
   throwIfNotInitialised();
   console.log("💁 Available scopes:");
-  const data = ScopeKeys.map((scope) => ({
+  const data = ScopeKeys.map((scope: keyof typeof Scopes) => ({
     Scope: scope,
     Description: Scopes[scope],
   }));
@@ -1001,7 +1015,7 @@ type ChooseAccountItem = {
 };
 export function ChooseAccount(props: {
   accounts: ChooseAccountItem[];
-  onSelect: (item) => void;
+  onSelect: (item: SelectInputItem<ChooseAccountItem>) => void;
 }) {
   return (
     <>

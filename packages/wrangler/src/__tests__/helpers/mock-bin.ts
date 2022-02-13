@@ -7,7 +7,10 @@ const nodeShebang = "#!/usr/bin/env node";
 /**
  * Create a binary file in a temp directory and make it available on the PATH.
  */
-export async function mockBinary(binaryName: string, code: string) {
+export async function mockBinary(
+  binaryName: string,
+  code: string
+): Promise<() => void> {
   // Ensure there is a directory to put the mock binary in.
   const tmpDir = resolve(mkdtempSync(".mock-binary-"));
 

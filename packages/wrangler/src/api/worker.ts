@@ -114,7 +114,10 @@ export interface CfDurableObjectMigrations {
   new_tag: string;
   steps: {
     new_classes?: string[];
-    renamed_classes?: string[];
+    renamed_classes?: {
+      from: string;
+      to: string;
+    }[];
     deleted_classes?: string[];
   }[];
 }

@@ -795,8 +795,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
         let miniflareArgs: MiniflareOptions = {};
 
-        let scriptReadyResolve;
-        const scriptReadyPromise = new Promise(
+        let scriptReadyResolve: () => void;
+        const scriptReadyPromise = new Promise<void>(
           (resolve) => (scriptReadyResolve = resolve)
         );
 
@@ -830,7 +830,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             scriptPath,
           };
         } else {
-          scriptReadyResolve();
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          scriptReadyResolve!();
 
           const scriptPath =
             directory !== undefined
@@ -900,7 +901,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           // env.ASSETS.fetch
           serviceBindings: {
-            async ASSETS(request) {
+            async ASSETS(request: Request) {
               if (proxyPort) {
                 try {
                   const url = new URL(request.url);
@@ -962,7 +963,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             miniflare.dispose().catch((err) => miniflare.log.error(err));
           });
         } catch (e) {
-          miniflare.log.error(e);
+          miniflare.log.error(e as Error);
           EXIT("Could not start Miniflare.", 1);
         }
       }

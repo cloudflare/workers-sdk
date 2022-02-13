@@ -42,7 +42,9 @@ export async function fetchInternal<ResponseType>(
   }
 }
 
-function cloneHeaders(headers: HeadersInit | undefined): HeadersInit {
+function cloneHeaders(
+  headers: HeadersInit | undefined
+): Record<string, string> {
   return { ...headers };
 }
 
@@ -61,8 +63,11 @@ function requireApiToken(): string {
   return apiToken;
 }
 
-function addAuthorizationHeader(headers: HeadersInit, apiToken: string): void {
-  if (headers["Authorization"]) {
+function addAuthorizationHeader(
+  headers: Record<string, string>,
+  apiToken: string
+): void {
+  if ("Authorization" in headers) {
     throw new Error(
       "The request already specifies an authorisation header - cannot add a new one."
     );

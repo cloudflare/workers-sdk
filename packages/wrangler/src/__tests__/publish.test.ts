@@ -321,7 +321,7 @@ export default{
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "A [site] definition requires a \`bucket\` field with a path to the site's public directory.
+        "AssertionError [ERR_ASSERTION]: A [site] definition requires a \`bucket\` field with a path to the site's public directory.
 
         [32m%s[0m
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
