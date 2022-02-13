@@ -29,7 +29,6 @@ import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
-import { reportError } from "./reporting";
 import { getAssetPaths } from "./sites";
 import { createTail } from "./tail";
 import {
@@ -2416,7 +2415,6 @@ export async function main(argv: string[]): Promise<void> {
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );
     }
-    await reportError(e, "indexCatch");
     throw e;
   }
 }
