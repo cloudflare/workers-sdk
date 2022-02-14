@@ -37,7 +37,8 @@ function sleep(ms: number) {
 export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
-  const { account_id: accountId } = config;
+  const { account_id: accountId, workers_dev: deployToWorkersDev = true } =
+    config;
 
   const envRootObj =
     props.env && config.env ? config.env[props.env] || {} : config;
@@ -255,34 +256,44 @@ export default async function publish(props: Props): Promise<void> {
       )
     ).subdomain;
 
-    const scriptURL =
-      props.legacyEnv || !props.env
-        ? `${scriptName}.${userSubdomain}.workers.dev`
-        : `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-
-    // Enable the `workers.dev` subdomain.
-    // TODO: Make this configurable.
-    if (!available_on_subdomain) {
-      deployments.push(
-        fetchResult(`${workerUrl}/subdomain`, {
-          method: "POST",
-          body: JSON.stringify({ enabled: true }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-          .then(() => [scriptURL])
-          // Add a delay when the subdomain is first created.
-          // This is to prevent an issue where a negative cache-hit
-          // causes the subdomain to be unavailable for 30 seconds.
-          // This is a temporary measure until we fix this on the edge.
-          .then(async (url) => {
-            await sleep(3000);
-            return url;
+    if (deployToWorkersDev) {
+      // Deploy to a subdomain of `workers.dev`
+      const scriptURL =
+        props.legacyEnv || !props.env
+          ? `${scriptName}.${userSubdomain}.workers.dev`
+          : `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
+      if (!available_on_subdomain) {
+        // Enable the `workers.dev` subdomain.
+        deployments.push(
+          fetchResult(`${workerUrl}/subdomain`, {
+            method: "POST",
+            body: JSON.stringify({ enabled: true }),
+            headers: {
+              "Content-Type": "application/json",
+            },
           })
-      );
+            .then(() => [scriptURL])
+            // Add a delay when the subdomain is first created.
+            // This is to prevent an issue where a negative cache-hit
+            // causes the subdomain to be unavailable for 30 seconds.
+            // This is a temporary measure until we fix this on the edge.
+            .then(async (url) => {
+              await sleep(3000);
+              return url;
+            })
+        );
+      } else {
+        deployments.push(Promise.resolve([scriptURL]));
+      }
     } else {
-      deployments.push(Promise.resolve([scriptURL]));
+      // Disable the workers.dev deployment
+      fetchResult(`${workerUrl}/subdomain`, {
+        method: "POST",
+        body: JSON.stringify({ enabled: false }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     // Update routing table for the script.
@@ -326,15 +337,20 @@ export default async function publish(props: Props): Promise<void> {
       );
     }
 
-    if (!deployments.length) {
-      return;
-    }
-
     const targets = await Promise.all(deployments);
     const deployMs = Date.now() - start - uploadMs;
-    console.log("Deployed", workerName, formatTime(deployMs));
-    for (const target of targets.flat()) {
-      console.log(" ", target);
+
+    if (deployments.length > 0) {
+      console.log("Deployed", workerName, formatTime(deployMs));
+      for (const target of targets.flat()) {
+        console.log(" ", target);
+      }
+    } else {
+      console.log(
+        "No deployment targets for",
+        workerName,
+        formatTime(deployMs)
+      );
     }
   } finally {
     await destination.cleanup();
