@@ -8,7 +8,7 @@ export type TailApiResponse = {
   expires_at: Date;
 };
 
-export type CliFilters = {
+export type TailCLIFilters = {
   status?: Array<"ok" | "error" | "canceled">;
   header?: string;
   method?: string[];
@@ -143,7 +143,7 @@ export async function createTail(
 
 // TODO: should this validation step happen before connecting to the tail?
 export function translateCliFiltersToApiFilters(
-  cliFilters: CliFilters
+  cliFilters: TailCLIFilters
 ): ApiFilter[] {
   const apiFilters: ApiFilter[] = [];
 

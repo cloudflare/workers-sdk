@@ -36,7 +36,7 @@ import {
   prettyPrintLogs,
   translateCliFiltersToApiFilters,
 } from "./tail";
-import type { CliFilters } from "./tail";
+import type { TailCLIFilters } from "./tail";
 import {
   login,
   logout,
@@ -1115,7 +1115,7 @@ export async function main(argv: string[]): Promise<void> {
 
       const accountId = config.account_id;
 
-      const cliFilters: CliFilters = {
+      const cliFilters: TailCLIFilters = {
         status: args.status as Array<"ok" | "error" | "canceled">,
         header: args.header,
         method: args.method,
