@@ -118,12 +118,12 @@ export async function createTail(
   // check if there's any filters to send
   const hasFilters =
     filters !== undefined &&
-    !Object.values(filters).every((value) => value === undefined);
+    Object.values(filters).some((value) => value !== undefined);
   if (hasFilters) {
     const message = translateCliFiltersToApiFilterMessage(filters);
 
-    tail.on("open", function (this) {
-      this.send(
+    tail.on("open", function () {
+      tail.send(
         JSON.stringify(message),
         { binary: false, compress: false, mask: false, fin: true },
         (err) => {
@@ -190,33 +190,28 @@ function parseSamplingRate(samplingRate: number): SamplingRateFilter {
 function parseOutcome(
   statuses: Array<"ok" | "error" | "canceled">
 ): OutcomeFilter {
-  const outcomes: string[] = [];
+  const outcomes = new Set<string>();
   for (const status in statuses) {
     switch (status) {
       case "ok":
-        outcomes.push("ok");
+        outcomes.add("ok");
         break;
       case "canceled":
-        outcomes.push("canceled");
+        outcomes.add("canceled");
         break;
       // there's more than one way to error
       case "error":
-        outcomes.push("exception");
-        outcomes.push("exceededCpu");
-        outcomes.push("unknown");
+        outcomes.add("exception");
+        outcomes.add("exceededCpu");
+        outcomes.add("unknown");
         break;
       default:
         break;
     }
   }
 
-  // filter for unique values
-  const uniqueOutcomes = outcomes.filter(
-    (value, i, arr) => arr.indexOf(value) === i
-  );
-
   return {
-    outcome: uniqueOutcomes,
+    outcome: Array.from(outcomes),
   };
 }
 
@@ -237,13 +232,12 @@ function parseHeader(header: string): HeaderFilter {
   };
 }
 
-// TODO: we _could_ validate this if we wanted to but seems extraneous
-function parseClientIp(ips: string[]): ClientIpFilter {
-  return { client_ip: ips };
+function parseClientIp(client_ip: string[]): ClientIpFilter {
+  return { client_ip };
 }
 
-function parseQuery(search: string): QueryFilter {
-  return { query: search };
+function parseQuery(query: string): QueryFilter {
+  return { query };
 }
 
 export function prettyPrintLogs(_data: WebSocket.RawData): void {
@@ -251,5 +245,5 @@ export function prettyPrintLogs(_data: WebSocket.RawData): void {
 }
 
 export function jsonPrintLogs(data: WebSocket.RawData): void {
-  console.log(JSON.stringify(JSON.parse(data.toString()), null, "  "));
+  console.log(JSON.stringify(JSON.parse(data.toString()), null, 2));
 }

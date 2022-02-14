@@ -2,7 +2,10 @@
 "wrangler": patch
 ---
 
-Add support for filtering in `wrangler tail`.
+Add filtering to wrangler tail, so you can now `wrangler tail <name> --status ok`, for example. Supported options:
 
-Still working on how to test this functionality as it's a long-running process
-with no way to exit other than Ctrl-C as far as I'm aware.
+- `--status cancelled --status error` --> you can filter on `ok`, `error`, and `cancelled` to only tail logs that have that status
+- `--header X-CUSTOM-HEADER:somevalue` --> you can filter on headers, including ones that have specific values (`"somevalue"`) or just that contain any header (e.g. `--header X-CUSTOM-HEADER` with no colon)
+- `--method POST --method PUT` --> filter on the HTTP method used to trigger the worker
+- `--search catch-this` --> only shows messages that contain the phrase `"catch-this"`. Does not (yet!) support regular expressions
+- `--ip self --ip 192.0.2.232` --> only show logs from requests that originate from the given IP addresses. `"self"` will be replaced with the IP address of the computer that sent the tail request.

@@ -30,7 +30,7 @@ import { pages } from "./pages";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
-import { createTail, jsonPrintLogs, prettyPrintLogs } from "./tail";
+import { CliFilters, createTail, jsonPrintLogs, prettyPrintLogs } from "./tail";
 import {
   login,
   logout,
@@ -1109,13 +1109,13 @@ export async function main(argv: string[]): Promise<void> {
 
       const accountId = config.account_id;
 
-      const filters = {
+      const filters: CliFilters = {
         status: args.status as Array<"ok" | "error" | "canceled">,
         header: args.header,
         method: args.method,
         samplingRate: args["sampling-rate"],
         search: args.search,
-        ip: args.ip,
+        clientIp: args.ip,
       };
 
       const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
