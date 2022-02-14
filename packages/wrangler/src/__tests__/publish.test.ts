@@ -13,6 +13,12 @@ import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
 
 describe("publish", () => {
+  beforeEach(() => {
+    // @ts-expect-error we're using a very simple setTimeout mock here
+    jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+      fn();
+    });
+  });
   mockAccountId();
   mockApiToken();
   runInTempDir();
@@ -1200,6 +1206,11 @@ export default{
   });
 
   describe("custom builds", () => {
+    beforeEach(() => {
+      // @ts-expect-error disable the mock we'd setup earlier
+      // or else custom builds will timeout immediately
+      global.setTimeout.mockRestore();
+    });
     it("should run a custom build before publishing", async () => {
       writeWranglerToml({
         build: {
