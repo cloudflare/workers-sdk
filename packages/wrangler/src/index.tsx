@@ -1149,6 +1149,11 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       console.log(`Connected to ${scriptName}, waiting for logs...`);
+
+      tail.on("close", async () => {
+        tail.terminate();
+        await deleteTail();
+      });
     }
   );
 

@@ -20,21 +20,44 @@ export type CliFilters = {
 // due to the trace worker being built around wrangler 1 and
 // some other stuff, the filters we send to the API are slightly
 // different than the ones we read from the CLI
-type ApiFilters = {
-  sampling_rate?: number;
-  // TODO: type this more strongly
-  outcome?: string[];
-  method?: string[];
-  header?: { key: string; query?: string };
-  client_ip?: string[];
-  query?: string;
+type SamplingRateFilter = {
+  sampling_rate: number;
 };
 
-type ApiFilterMessage = {
-  data: {
-    filters: ApiFilters;
-    debug: boolean;
+type OutcomeFilter = {
+  outcome: string[];
+};
+
+type MethodFilter = {
+  method: string[];
+};
+
+type HeaderFilter = {
+  header: {
+    key: string;
+    query?: string;
   };
+};
+
+type ClientIpFilter = {
+  client_ip: string[];
+};
+
+type QueryFilter = {
+  query: string;
+};
+
+type ApiFilter =
+  | SamplingRateFilter
+  | OutcomeFilter
+  | MethodFilter
+  | HeaderFilter
+  | ClientIpFilter
+  | QueryFilter;
+
+type ApiFilterMessage = {
+  filters: ApiFilter[];
+  debug: boolean;
 };
 
 // TODO: make this a real type if we wanna pretty-print
@@ -119,54 +142,54 @@ export async function createTail(
 function translateCliFiltersToApiFilterMessage(
   cliFilters: CliFilters
 ): ApiFilterMessage {
-  const apiFilters: ApiFilters = {};
+  const apiFilters: ApiFilter[] = [];
 
   // TODO: do these all need to be their own functions or should
   // they just be inlined
   if (cliFilters.samplingRate) {
-    apiFilters.sampling_rate = parseSamplingRate(cliFilters.samplingRate);
+    apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
   }
 
   if (cliFilters.status) {
-    apiFilters.outcome = parseOutcome(cliFilters.status);
+    apiFilters.push(parseOutcome(cliFilters.status));
   }
 
   if (cliFilters.method) {
-    apiFilters.method = parseMethod(cliFilters.method);
+    apiFilters.push(parseMethod(cliFilters.method));
   }
 
   if (cliFilters.header) {
-    apiFilters.header = parseHeader(cliFilters.header);
+    apiFilters.push(parseHeader(cliFilters.header));
   }
 
   if (cliFilters.clientIp) {
-    apiFilters.client_ip = parseClientIp(cliFilters.clientIp);
+    apiFilters.push(parseClientIp(cliFilters.clientIp));
   }
 
   if (cliFilters.search) {
-    apiFilters.query = parseQuery(cliFilters.search);
+    apiFilters.push(parseQuery(cliFilters.search));
   }
 
   return {
-    data: {
-      filters: apiFilters,
-      // if debug is set to true, then all logs will be sent through.
-      // logs that _would_ have been blocked will result with a message
-      // telling you what filter would have rejected it
-      debug: false,
-    },
+    filters: apiFilters,
+    // if debug is set to true, then all logs will be sent through.
+    // logs that _would_ have been blocked will result with a message
+    // telling you what filter would have rejected it
+    debug: false,
   };
 }
 
-function parseSamplingRate(samplingRate: number): number {
+function parseSamplingRate(samplingRate: number): SamplingRateFilter {
   if (samplingRate <= 0 || samplingRate >= 1) {
     throw new Error("A sampling rate must be between 0 and 1");
   }
 
-  return samplingRate;
+  return { sampling_rate: samplingRate };
 }
 
-function parseOutcome(statuses: Array<"ok" | "error" | "canceled">): string[] {
+function parseOutcome(
+  statuses: Array<"ok" | "error" | "canceled">
+): OutcomeFilter {
   const outcomes: string[] = [];
   for (const status in statuses) {
     switch (status) {
@@ -188,34 +211,42 @@ function parseOutcome(statuses: Array<"ok" | "error" | "canceled">): string[] {
   }
 
   // filter for unique values
-  return outcomes.filter((value, i, arr) => arr.indexOf(value) === i);
+  const uniqueOutcomes = outcomes.filter(
+    (value, i, arr) => arr.indexOf(value) === i
+  );
+
+  return {
+    outcome: uniqueOutcomes,
+  };
 }
 
 // we actually don't need to do anything here
-function parseMethod(methods: string[]): string[] {
-  return methods;
+function parseMethod(method: string[]): MethodFilter {
+  return { method };
 }
 
-function parseHeader(header: string): { key: string; query?: string } {
+function parseHeader(header: string): HeaderFilter {
   // headers of the form "HEADER-KEY: VALUE" get split.
   // the query is optional
   const [headerKey, headerQuery] = header.split(":", 2);
   return {
-    key: headerKey.trim(),
-    query: headerQuery?.trim(),
+    header: {
+      key: headerKey.trim(),
+      query: headerQuery?.trim(),
+    },
   };
 }
 
 // TODO: we _could_ validate this if we wanted to but seems extraneous
-function parseClientIp(ips: string[]): string[] {
-  return ips;
+function parseClientIp(ips: string[]): ClientIpFilter {
+  return { client_ip: ips };
 }
 
-function parseQuery(search: string): string {
-  return search;
+function parseQuery(search: string): QueryFilter {
+  return { query: search };
 }
 
-export function prettyPrintLogs(data: WebSocket.RawData): void {
+export function prettyPrintLogs(_data: WebSocket.RawData): void {
   throw new Error("TODO!");
 }
 
