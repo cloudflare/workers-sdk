@@ -56,7 +56,6 @@ function exceptionTransaction(error: Error, origin = "") {
     op: origin,
     name: error.name,
   });
-  console.warn(error);
   captureException(error);
   transaction.finish();
 }
