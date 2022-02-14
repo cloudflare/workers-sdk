@@ -90,7 +90,7 @@ async function createTailButDontConnect(
 export async function createTail(
   accountId: string,
   workerName: string,
-  filters: CliFilters
+  filters: ApiFilter[]
 ): Promise<{
   tail: WebSocket;
   expiration: Date;
@@ -116,11 +116,14 @@ export async function createTail(
   });
 
   // check if there's any filters to send
-  const hasFilters =
-    filters !== undefined &&
-    Object.values(filters).some((value) => value !== undefined);
-  if (hasFilters) {
-    const message = translateCliFiltersToApiFilterMessage(filters);
+  if (filters.length === 0) {
+    const message: ApiFilterMessage = {
+      filters,
+      // if debug is set to true, then all logs will be sent through.
+      // logs that _would_ have been blocked will result with a message
+      // telling you what filter would have rejected it
+      debug: false,
+    };
 
     tail.on("open", function () {
       tail.send(
@@ -139,9 +142,9 @@ export async function createTail(
 }
 
 // TODO: should this validation step happen before connecting to the tail?
-function translateCliFiltersToApiFilterMessage(
+export function translateCliFiltersToApiFilters(
   cliFilters: CliFilters
-): ApiFilterMessage {
+): ApiFilter[] {
   const apiFilters: ApiFilter[] = [];
 
   // TODO: do these all need to be their own functions or should
@@ -170,13 +173,7 @@ function translateCliFiltersToApiFilterMessage(
     apiFilters.push(parseQuery(cliFilters.search));
   }
 
-  return {
-    filters: apiFilters,
-    // if debug is set to true, then all logs will be sent through.
-    // logs that _would_ have been blocked will result with a message
-    // telling you what filter would have rejected it
-    debug: false,
-  };
+  return apiFilters;
 }
 
 function parseSamplingRate(samplingRate: number): SamplingRateFilter {

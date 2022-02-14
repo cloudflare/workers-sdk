@@ -30,7 +30,13 @@ import { pages } from "./pages";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
-import { CliFilters, createTail, jsonPrintLogs, prettyPrintLogs } from "./tail";
+import {
+  createTail,
+  jsonPrintLogs,
+  prettyPrintLogs,
+  translateCliFiltersToApiFilters,
+} from "./tail";
+import type { CliFilters } from "./tail";
 import {
   login,
   logout,
@@ -1109,7 +1115,7 @@ export async function main(argv: string[]): Promise<void> {
 
       const accountId = config.account_id;
 
-      const filters: CliFilters = {
+      const cliFilters: CliFilters = {
         status: args.status as Array<"ok" | "error" | "canceled">,
         header: args.header,
         method: args.method,
@@ -1117,6 +1123,8 @@ export async function main(argv: string[]): Promise<void> {
         search: args.search,
         clientIp: args.ip,
       };
+
+      const filters = translateCliFiltersToApiFilters(cliFilters);
 
       const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
         await createTail(accountId, scriptName, filters);
