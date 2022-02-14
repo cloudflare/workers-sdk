@@ -58,11 +58,19 @@ const knownBindings = [
   "durable_object_namespace",
 ];
 
+type ConfigPath = string | undefined;
+
+async function findWranglerToml(
+  referencePath: string = process.cwd()
+): Promise<ConfigPath> {
+  const configPath = await findUp("wrangler.toml", { cwd: referencePath });
+  return configPath;
+}
+
 async function readConfig(configPath?: string): Promise<Config> {
   const config: Config = {};
   if (!configPath) {
-    configPath = await findUp("wrangler.toml");
-    // TODO - terminate this early instead of going all the way to the root
+    configPath = await findWranglerToml();
   }
 
   if (configPath) {
@@ -742,7 +750,10 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      const config = args.config as Config;
+      const config = await readConfig(
+        (args.config as ConfigPath) ||
+          (args.script && (await findWranglerToml(path.dirname(args.script))))
+      );
       const entry = getEntry(args, config);
 
       if (args["experimental-public"]) {
@@ -956,7 +967,10 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const config = args.config as Config;
+      const config = await readConfig(
+        (args.config as ConfigPath) ||
+          (args.script && (await findWranglerToml(path.dirname(args.script))))
+      );
       const entry = getEntry(args, config);
 
       if (args.latest) {
@@ -1061,7 +1075,7 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const config = args.config as Config;
+      const config = await readConfig(args.config as ConfigPath);
 
       if (!(args.name || config.name)) {
         throw new Error("Missing script name");
@@ -1191,7 +1205,8 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             console.log(":route list", args);
             // TODO: use environment (current wrangler doesn't do so?)
-            const zone = args.zone || (args.config as Config).zone_id;
+            const config = await readConfig(args.config as ConfigPath);
+            const zone = args.zone || config.zone_id;
             if (!zone) {
               throw new Error("missing zone id");
             }
@@ -1220,7 +1235,8 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             console.log(":route delete", args);
             // TODO: use environment (current wrangler doesn't do so?)
-            const zone = args.zone || (args.config as Config).zone_id;
+            const config = await readConfig(args.config as ConfigPath);
+            const zone = args.zone || config.zone_id;
             if (!zone) {
               throw new Error("missing zone id");
             }
@@ -1276,7 +1292,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
@@ -1393,7 +1409,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
@@ -1462,7 +1478,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
 
             // TODO: use environment (how does current wrangler do it?)
             const scriptName = args.name || config.name;
@@ -1550,7 +1566,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
             if (!config.name) {
               console.warn(
                 "No configured name present, using `worker` as a prefix for the title"
@@ -1615,7 +1631,7 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
 
             if (args.local) {
               throw new NotImplementedError(
@@ -1674,7 +1690,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
 
             if (args.local) {
               throw new NotImplementedError(
@@ -1683,7 +1699,7 @@ export async function main(argv: string[]): Promise<void> {
             } else {
               let id;
               try {
-                id = getNamespaceId(args);
+                id = getNamespaceId(args, config);
               } catch (e) {
                 throw new CommandLineArgsError(
                   "Not able to delete namespace.\n" + e.message
@@ -1787,13 +1803,13 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
-            const namespaceId = getNamespaceId(args);
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
               ? await readFile(args.path, "utf-8")
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 args.value!;
-            const config = args.config as Config;
 
             if (args.path) {
               console.log(
@@ -1869,9 +1885,8 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
-
-            const namespaceId = getNamespaceId(args);
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -1944,8 +1959,8 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const namespaceId = getNamespaceId(args);
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -2011,7 +2026,8 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const namespaceId = getNamespaceId(args);
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
 
             console.log(
               `deleting the key "${key}" on namespace ${namespaceId}`
@@ -2028,8 +2044,6 @@ export async function main(argv: string[]): Promise<void> {
               console.log(await ns.delete(key));
               return;
             }
-
-            const config = args.config as Config;
 
             if (!args.local) {
               // -- snip, extract --
@@ -2096,9 +2110,8 @@ export async function main(argv: string[]): Promise<void> {
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
-
-            const namespaceId = getNamespaceId(args);
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
             const content = await readFile(filename, "utf-8");
             let parsedContent;
             try {
@@ -2180,8 +2193,9 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            const namespaceId = getNamespaceId(args);
-            const config = args.config as Config;
+            const config = await readConfig(args.config as ConfigPath);
+            const namespaceId = getNamespaceId(args, config);
+
             const content = await readFile(filename, "utf-8");
             let parsedContent;
             try {
@@ -2256,7 +2270,7 @@ export async function main(argv: string[]): Promise<void> {
             );
           }
 
-          const config = args.config as Config;
+          const config = await readConfig(args.config as ConfigPath);
 
           if (args.local) {
             throw new NotImplementedError(
@@ -2287,7 +2301,7 @@ export async function main(argv: string[]): Promise<void> {
       );
 
       r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-        const config = args.config as Config;
+        const config = await readConfig(args.config as ConfigPath);
 
         if (args.local) {
           throw new NotImplementedError(
@@ -2335,7 +2349,7 @@ export async function main(argv: string[]): Promise<void> {
             );
           }
 
-          const config = args.config as Config;
+          const config = await readConfig(args.config as ConfigPath);
 
           if (args.local) {
             throw new NotImplementedError(
@@ -2373,9 +2387,6 @@ export async function main(argv: string[]): Promise<void> {
       alias: "c",
       describe: "Path to .toml configuration file",
       type: "string",
-      async coerce(arg) {
-        return await readConfig(arg);
-      },
     })
     .option("local", {
       alias: "l",
