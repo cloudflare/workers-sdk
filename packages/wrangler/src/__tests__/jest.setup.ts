@@ -2,6 +2,14 @@ import fetchMock from "jest-fetch-mock";
 import { fetchInternal, fetchKVGetValue } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
+import { MockWebSocket } from "./helpers/mock-web-socket";
+
+jest.mock("ws", () => {
+  return {
+    __esModule: true,
+    default: MockWebSocket,
+  };
+});
 
 jest.mock("undici", () => {
   return {
@@ -9,6 +17,7 @@ jest.mock("undici", () => {
     fetch: jest.requireActual("jest-fetch-mock"),
   };
 });
+
 // Outside of the Sentry tests themselves, we mock Sentry to ensure that it doesn't actually send any data and
 // that it doesn't interfere with the rest of the tests.
 jest.mock("../reporting");
