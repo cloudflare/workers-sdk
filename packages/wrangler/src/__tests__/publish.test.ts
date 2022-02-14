@@ -1087,6 +1087,118 @@ export default{
     });
   });
 
+  describe("workers_dev setting", () => {
+    it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should disable the workers.dev domain if workers_dev is `false`", async () => {
+      writeWranglerToml({
+        workers_dev: false,
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: false });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        No deployment targets for
+        test-name
+        (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async () => {
+      writeWranglerToml({ workers_dev: true });
+      writeWorkerSource();
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Deployed
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("custom builds", () => {
     it("should run a custom build before publishing", async () => {
       writeWranglerToml({
@@ -1530,9 +1642,30 @@ function mockUploadWorkerRequest({
 
 /** Create a mock handler for the request to get the account's subdomain. */
 function mockSubDomainRequest(subdomain = "test-sub-domain") {
-  setMockResponse("/accounts/:accountId/workers/subdomain", () => {
+  setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
     return { subdomain };
   });
+}
+
+function mockUpdateWorkerRequest({
+  env,
+  enabled,
+}: {
+  env?: string | undefined;
+  enabled: boolean;
+}) {
+  const requests = { count: 0 };
+  const servicesOrScripts = env ? "services" : "scripts";
+  const environment = env ? "/environments/:envName" : "";
+  setMockResponse(
+    `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
+    "POST",
+    (_, { body }) => {
+      expect(JSON.parse(body as string)).toEqual({ enabled });
+      return null;
+    }
+  );
+  return requests;
 }
 
 /** Create a mock handler for the request to get a list of all KV namespaces. */
