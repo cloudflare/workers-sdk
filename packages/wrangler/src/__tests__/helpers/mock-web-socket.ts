@@ -1,5 +1,5 @@
-import { WebSocket } from "mock-socket";
 import { default as StockWS } from "jest-websocket-mock";
+import { WebSocket } from "mock-socket";
 
 /**
  * A version of the mock WebSocket that supports the methods that we use.
