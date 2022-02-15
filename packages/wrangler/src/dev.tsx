@@ -51,6 +51,7 @@ export type DevProps = {
     watch_dir?: undefined | string;
   };
   env: string | undefined;
+  zoneId: string | undefined;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -124,6 +125,7 @@ function Dev(props: DevProps): JSX.Element {
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
           env={props.env}
+          zoneId={props.zoneId}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -172,6 +174,7 @@ function Remote(props: {
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  zoneId: string | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -189,6 +192,7 @@ function Remote(props: {
     compatibilityFlags: props.compatibilityFlags,
     usageModel: props.usageModel,
     env: props.env,
+    zoneId: props.zoneId,
   });
 
   usePreviewServer({
@@ -630,6 +634,7 @@ function useWorker(props: {
   compatibilityFlags: string[] | undefined;
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  zoneId: string | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -644,6 +649,7 @@ function useWorker(props: {
     compatibilityFlags,
     usageModel,
     port,
+    zoneId,
   } = props;
   const [token, setToken] = useState<CfPreviewToken | undefined>();
 
@@ -712,6 +718,7 @@ function useWorker(props: {
         await createWorker(init, {
           accountId,
           apiToken,
+          zoneId,
         })
       );
     }
@@ -734,6 +741,7 @@ function useWorker(props: {
     bindings,
     modules,
     props.env,
+    zoneId,
   ]);
   return token;
 }

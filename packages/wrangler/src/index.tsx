@@ -874,6 +874,7 @@ export async function main(argv: string[]): Promise<void> {
             r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
           }}
+          zoneId={config?.zone_id}
         />
       );
       await waitUntilExit();

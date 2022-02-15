@@ -79,6 +79,7 @@ function renderDev({
   buildCommand = {},
   enableLocalPersistence = false,
   env = undefined,
+  zoneId = undefined,
 }: Partial<DevProps>) {
   return render(
     <Dev
@@ -99,6 +100,7 @@ function renderDev({
       usageModel={usageModel}
       bindings={bindings}
       enableLocalPersistence={enableLocalPersistence}
+      zoneId={zoneId}
     />
   );
 }
