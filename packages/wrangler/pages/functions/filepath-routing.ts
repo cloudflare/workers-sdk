@@ -127,7 +127,9 @@ export async function generateConfigFromFileTree({
   routeEntries = routeEntries.reduce(
     (acc: typeof routeEntries, { routePath, ...rest }) => {
       const existingRouteEntry = acc.find(
-        (routeEntry) => routeEntry.routePath === routePath
+        (routeEntry) =>
+          routeEntry.routePath === routePath &&
+          routeEntry.method === rest.method
       );
       if (existingRouteEntry !== undefined) {
         Object.assign(existingRouteEntry, rest);
