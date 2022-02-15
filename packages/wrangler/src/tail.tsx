@@ -60,9 +60,6 @@ type ApiFilterMessage = {
   debug: boolean;
 };
 
-// TODO: make this a real type if we wanna pretty-print
-type TailMessage = string;
-
 function makeCreateTailUrl(accountId: string, workerName: string): string {
   return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }

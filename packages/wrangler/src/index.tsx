@@ -36,7 +36,6 @@ import {
   prettyPrintLogs,
   translateCliFiltersToApiFilters,
 } from "./tail";
-import type { TailCLIFilters } from "./tail";
 import {
   login,
   logout,
@@ -50,8 +49,9 @@ import { whoami } from "./whoami";
 
 import type { Entry } from "./bundle";
 import type { Config } from "./config";
-import type Yargs from "yargs";
+import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
+import type Yargs from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
