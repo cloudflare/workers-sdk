@@ -45,7 +45,7 @@ async function appendReportingDecision(userInput: "true" | "false") {
   const homePath = path.join(os.homedir(), ".wrangler/config/");
   fs.mkdirSync(homePath, { recursive: true });
   await appendFile(
-    path.join(homePath, "default.toml"),
+    path.join(homePath, "reporting.toml"),
     `error_tracking_opt = ${userInput} # Sentry \nerror_tracking_opt_date = ${new Date().toISOString()} # Sentry Date Decision \n`,
     { encoding: "utf-8" }
   );
@@ -97,15 +97,17 @@ export async function reportError(err: Error, origin = "") {
 }
 
 async function reportingPermission() {
-  if (!fs.existsSync(path.join(os.homedir(), ".wrangler/config/default.toml")))
+  if (
+    !fs.existsSync(path.join(os.homedir(), ".wrangler/config/reporting.toml"))
+  )
     return undefined;
 
-  const defaultTOML = TOML.parse(
-    await readFile(path.join(os.homedir(), ".wrangler/config/default.toml"), {
+  const reportingTOML = TOML.parse(
+    await readFile(path.join(os.homedir(), ".wrangler/config/reporting.toml"), {
       encoding: "utf-8",
     })
   );
-  const { error_tracking_opt } = defaultTOML as {
+  const { error_tracking_opt } = reportingTOML as {
     error_tracking_opt: string | undefined;
   };
 
