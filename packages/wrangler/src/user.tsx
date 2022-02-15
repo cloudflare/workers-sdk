@@ -953,7 +953,7 @@ export async function logout(): Promise<void> {
 export function listScopes(): void {
   throwIfNotInitialised();
   console.log("💁 Available scopes:");
-  const data = ScopeKeys.map((scope: keyof typeof Scopes) => ({
+  const data = ScopeKeys.map((scope: Scope) => ({
     Scope: scope,
     Description: Scopes[scope],
   }));
