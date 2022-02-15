@@ -257,10 +257,8 @@ describe("tail", () => {
   /* Basic logging */
 
   it("logs incoming messages", async () => {
-    const websocketURL = "ws://localhost:1234";
-    const server = new WS(websocketURL);
-    mockCreateTailRequest(websocketURL);
-    mockDeleteTailRequest();
+    const { server } = setupWebsocketMocks();
+
     try {
       await runWrangler("tail test-worker");
       const greeting = serialize({ hello: "world!" });
