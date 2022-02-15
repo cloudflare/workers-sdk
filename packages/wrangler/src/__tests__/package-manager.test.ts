@@ -151,7 +151,7 @@ describe("getPackageManager()", () => {
  * Create a fake yarn binary
  */
 function mockYarn(succeed: boolean): void {
-  let unMock;
+  let unMock: () => void;
   beforeEach(async () => {
     unMock = await mockBinary("yarn", `process.exit(${succeed ? 0 : 1})`);
   });
@@ -162,7 +162,7 @@ function mockYarn(succeed: boolean): void {
  * Create a fake npm binary
  */
 function mockNpm(succeed: boolean): void {
-  let unMock;
+  let unMock: () => void;
   beforeEach(async () => {
     unMock = await mockBinary("npm", `process.exit(${succeed ? 0 : 1})`);
   });

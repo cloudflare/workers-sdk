@@ -26,6 +26,7 @@ import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { Entry } from "./bundle";
 import type { AssetPaths } from "./sites";
 import type { WatchMode } from "esbuild";
+import type { ExecaChildProcess } from "execa";
 import type { DirectoryResult } from "tmp-promise";
 
 export type DevProps = {
@@ -454,7 +455,8 @@ function useCustomBuild(
   const { command, cwd, watch_dir } = props;
   useEffect(() => {
     if (!command) return;
-    let cmd, interval;
+    let cmd: ExecaChildProcess<string> | undefined,
+      interval: NodeJS.Timeout | undefined;
     console.log("running:", command);
     cmd = execaCommand(command, {
       ...(cwd && { cwd }),
@@ -467,7 +469,7 @@ function useCustomBuild(
         "all",
         (_event, filePath) => {
           console.log(`The file ${filePath} changed, restarting build...`);
-          cmd.kill();
+          cmd?.kill();
           cmd = execaCommand(command, {
             ...(cwd && { cwd }),
             shell: true,
@@ -494,7 +496,7 @@ function useCustomBuild(
       }
 
       if (fileExists === true) {
-        clearInterval(interval);
+        interval && clearInterval(interval);
         setEntry(expectedEntry);
       } else {
         const elapsed = Date.now() - startedAt;
@@ -503,8 +505,8 @@ function useCustomBuild(
           console.error(
             `⎔ Build timed out, Could not resolve ${expectedEntry.file}`
           );
-          clearInterval(interval);
-          cmd.kill();
+          interval && clearInterval(interval);
+          cmd?.kill();
         }
       }
     }, 200);
@@ -514,7 +516,7 @@ function useCustomBuild(
         cmd.kill();
         cmd = undefined;
       }
-      clearInterval(interval);
+      interval && clearInterval(interval);
       interval = undefined;
     };
   }, [command, cwd, expectedEntry, watch_dir]);

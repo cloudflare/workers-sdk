@@ -222,7 +222,7 @@ export default async function publish(props: Props): Promise<void> {
         type: bundleType,
       },
       bindings,
-      ...(migrations && { migrations }),
+      migrations,
       modules,
       compatibility_date: config.compatibility_date,
       compatibility_flags: config.compatibility_flags,

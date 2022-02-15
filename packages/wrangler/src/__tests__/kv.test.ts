@@ -10,7 +10,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { KVNamespaceInfo } from "../kv";
+import type { KVNamespaceInfo, NamespaceKeyInfo } from "../kv";
 
 describe("wrangler", () => {
   mockAccountId();
@@ -839,7 +839,9 @@ describe("wrangler", () => {
               "kv:key list --namespace-id some-namespace-id --limit 100"
             );
             expect(std.err).toMatchInlineSnapshot(`""`);
-            expect(JSON.parse(std.out).map((k) => k.name)).toEqual(keys);
+            expect(
+              JSON.parse(std.out).map((k: NamespaceKeyInfo) => k.name)
+            ).toEqual(keys);
             expect(requests.count).toEqual(6);
           });
         });

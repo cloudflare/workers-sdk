@@ -129,7 +129,7 @@ export async function syncAssets(
   const result = await listNamespaceKeys(accountId, namespace);
   const keys = new Set(result.map((x) => x.name));
 
-  const manifest = {};
+  const manifest: Record<string, string> = {};
   const upload: {
     key: string;
     value: string;

@@ -54,7 +54,7 @@ describe("wrangler secret", () => {
       try {
         await runWrangler("secret put the-key");
       } catch (e) {
-        error = e;
+        error = e as Error;
       }
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
@@ -120,7 +120,7 @@ describe("wrangler secret", () => {
       try {
         await runWrangler("secret delete the-key");
       } catch (e) {
-        error = e;
+        error = e as Error;
       }
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
@@ -186,7 +186,7 @@ describe("wrangler secret", () => {
       try {
         await runWrangler("secret list");
       } catch (e) {
-        error = e;
+        error = e as Error;
       }
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`

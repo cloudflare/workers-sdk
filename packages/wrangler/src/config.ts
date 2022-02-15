@@ -535,7 +535,13 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     );
 
     // Fall back on "inherited fields" from the config, if not specified in the environment.
-    const inheritedFields = [
+
+    type InheritedField = keyof Omit<
+      Config,
+      "env" | "migrations" | "wasm_modules" | "site" | "dev"
+    >;
+
+    const inheritedFields: InheritedField[] = [
       "name",
       "account_id",
       "workers_dev",
@@ -546,7 +552,6 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
       "route",
       "jsx_factory",
       "jsx_fragment",
-      "site",
       "triggers",
       "usage_model",
     ];
@@ -554,7 +559,8 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
     for (const inheritedField of inheritedFields) {
       if (config[inheritedField] !== undefined) {
         if (environment[inheritedField] === undefined) {
-          environment[inheritedField] = config[inheritedField]; // TODO: - shallow or deep copy?
+          (environment[inheritedField] as typeof environment[InheritedField]) =
+            config[inheritedField]; // TODO: - shallow or deep copy?
         }
       }
     }

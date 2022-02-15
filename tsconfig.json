@@ -8,7 +8,7 @@
     "noEmit": true,
     "lib": ["esnext"],
     "incremental": true,
-    "strictNullChecks": true,
+    "strict": true,
     "skipLibCheck": true
   },
   "exclude": ["node_modules/"]

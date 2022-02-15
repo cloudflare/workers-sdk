@@ -7,8 +7,10 @@ import { normalizeSlashes, stripTimings } from "./mock-console";
 export async function runWrangler(cmd?: string) {
   try {
     await main(cmd?.split(" ") ?? []);
-  } catch (e) {
-    e.message = normalizeSlashes(stripTimings(e.message));
-    throw e;
+  } catch (err) {
+    if (err instanceof Error) {
+      err.message = normalizeSlashes(stripTimings(err.message));
+    }
+    throw err;
   }
 }
