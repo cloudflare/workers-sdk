@@ -234,7 +234,7 @@ describe("tail", () => {
 
     const expectedWebsocketMessage = {
       filters: [
-        { sampling_rate: sampling_rate },
+        { sampling_rate },
         { outcome: ["ok", "exception", "exceededCpu", "unknown"] },
         { method },
         { header: { key: "X-HELLO", query: "world" } },
