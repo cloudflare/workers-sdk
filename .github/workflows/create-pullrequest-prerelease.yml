@@ -58,7 +58,7 @@ jobs:
             npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler
             ```
 
-            Or you can try it out directly with:
+            Or you can try developing a worker directly with:
             ```sh
             npx https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler dev path/to/script.js
             ```
