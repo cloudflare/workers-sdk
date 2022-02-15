@@ -113,7 +113,7 @@ export async function createTail(
   });
 
   // check if there's any filters to send
-  if (filters.length === 0) {
+  if (filters.length !== 0) {
     const message: ApiFilterMessage = {
       filters,
       // if debug is set to true, then all logs will be sent through.
@@ -144,8 +144,6 @@ export function translateCliFiltersToApiFilters(
 ): ApiFilter[] {
   const apiFilters: ApiFilter[] = [];
 
-  // TODO: do these all need to be their own functions or should
-  // they just be inlined
   if (cliFilters.samplingRate) {
     apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
   }

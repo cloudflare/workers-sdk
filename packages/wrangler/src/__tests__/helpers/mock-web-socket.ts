@@ -7,7 +7,9 @@ export class MockWebSocket extends WebSocket {
   on(event: string | symbol, listener: (...args: unknown[]) => void): this {
     switch (event) {
       case "message":
-        this.onmessage = listener;
+        this.onmessage = ({ data }) => {
+          listener(data);
+        };
         break;
       case "open":
         this.onopen = listener;
