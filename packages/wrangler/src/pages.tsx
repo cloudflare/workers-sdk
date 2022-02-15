@@ -1023,6 +1023,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           fallbackService,
           watch,
         }) => {
+          console.log("LOOK AT ME!");
           await buildFunctions({
             scriptPath,
             outputConfigPath,
