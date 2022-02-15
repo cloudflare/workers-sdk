@@ -1,4 +1,5 @@
 import { WebSocket } from "mock-socket";
+import { default as StockWS } from "jest-websocket-mock";
 
 /**
  * A version of the mock WebSocket that supports the methods that we use.
@@ -25,5 +26,12 @@ export class MockWebSocket extends WebSocket {
 
   terminate() {
     this.close();
+  }
+}
+
+export class WS extends StockWS {
+  async nextMessageJson() {
+    const message = await this.nextMessage;
+    return JSON.parse(message as string);
   }
 }

@@ -1,7 +1,7 @@
-import WS from "jest-websocket-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type Websocket from "ws";
@@ -74,7 +74,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --sampling-rate 0.25");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ sampling_rate: 0.25 }]
       );
@@ -88,7 +88,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --status error");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ outcome: ["exception", "exceededCpu", "unknown"] }]
       );
@@ -102,7 +102,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --status error --status canceled");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ outcome: ["exception", "exceededCpu", "unknown", "canceled"] }]
       );
@@ -116,7 +116,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --method POST");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ method: ["POST"] }]
       );
@@ -130,7 +130,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --method POST --method GET");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ method: ["POST", "GET"] }]
       );
@@ -144,7 +144,7 @@ describe("tail", () => {
 
     try {
       await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ header: { key: "X-CUSTOM-HEADER" } }]
       );
@@ -160,7 +160,7 @@ describe("tail", () => {
       await runWrangler(
         "tail test-worker --header X-CUSTOM-HEADER:some-value "
       );
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ header: { key: "X-CUSTOM-HEADER", query: "some-value" } }]
       );
@@ -175,7 +175,7 @@ describe("tail", () => {
 
     try {
       await runWrangler(`tail test-worker --ip ${fakeIp}`);
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ client_ip: [fakeIp] }]
       );
@@ -190,7 +190,7 @@ describe("tail", () => {
 
     try {
       await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ client_ip: [fakeIp, "self"] }]
       );
@@ -205,7 +205,7 @@ describe("tail", () => {
 
     try {
       await runWrangler(`tail test-worker --search ${search}`);
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toHaveProperty(
+      await expect(server.nextMessageJson()).resolves.toHaveProperty(
         "filters",
         [{ query: search }]
       );
@@ -246,7 +246,7 @@ describe("tail", () => {
 
     try {
       await runWrangler(`tail test-worker ${cliFilters}`);
-      await expect(server.nextMessage.then(JSON.parse)).resolves.toEqual(
+      await expect(server.nextMessageJson()).resolves.toEqual(
         expectedWebsocketMessage
       );
     } finally {
