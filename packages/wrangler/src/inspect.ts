@@ -590,9 +590,18 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
   const method = mapConsoleAPIMessageTypeToConsoleMethod[evt.type];
 
   if (method in console) {
-    // @ts-expect-error - we know this is a valid method
-    // eslint-disable-next-line prefer-spread
-    console[method].apply(console, args);
+    switch (method) {
+      case "dir":
+        console.dir(args);
+        break;
+      case "table":
+        console.table(args);
+        break;
+      default:
+        // eslint-disable-next-line prefer-spread
+        console[method].apply(console, args);
+        break;
+    }
   } else {
     console.warn(`Unsupported console method: ${method}`);
     console.log("console event:", evt);
