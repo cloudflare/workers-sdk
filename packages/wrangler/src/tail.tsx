@@ -113,7 +113,7 @@ export async function createTail(
   });
 
   // check if there's any filters to send
-  if (filters.length === 0) {
+  if (filters.length !== 0) {
     const message: ApiFilterMessage = {
       filters,
       // if debug is set to true, then all logs will be sent through.
@@ -138,14 +138,11 @@ export async function createTail(
   return { tail, expiration, deleteTail };
 }
 
-// TODO: should this validation step happen before connecting to the tail?
 export function translateCliFiltersToApiFilters(
   cliFilters: TailCLIFilters
 ): ApiFilter[] {
   const apiFilters: ApiFilter[] = [];
 
-  // TODO: do these all need to be their own functions or should
-  // they just be inlined
   if (cliFilters.samplingRate) {
     apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
   }
@@ -173,19 +170,21 @@ export function translateCliFiltersToApiFilters(
   return apiFilters;
 }
 
-function parseSamplingRate(samplingRate: number): SamplingRateFilter {
-  if (samplingRate <= 0 || samplingRate >= 1) {
-    throw new Error("A sampling rate must be between 0 and 1");
+function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
+  if (sampling_rate <= 0 || sampling_rate >= 1) {
+    throw new Error(
+      "A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
+    );
   }
 
-  return { sampling_rate: samplingRate };
+  return { sampling_rate };
 }
 
 function parseOutcome(
   statuses: Array<"ok" | "error" | "canceled">
 ): OutcomeFilter {
   const outcomes = new Set<string>();
-  for (const status in statuses) {
+  for (const status of statuses) {
     switch (status) {
       case "ok":
         outcomes.add("ok");
