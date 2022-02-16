@@ -1,0 +1,6 @@
+{
+  "name": "edge-chat-demo",
+  "description": "An edge chat service that runs on Cloudflare Workers using Durable Objects",
+  "version": "1.0.0",
+  "private": true
+}
