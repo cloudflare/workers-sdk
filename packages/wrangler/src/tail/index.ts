@@ -1,6 +1,6 @@
 import WebSocket from "ws";
-import { version as packageVersion } from "../package.json";
-import { fetchResult } from "./cfetch";
+import { version as packageVersion } from "../../package.json";
+import { fetchResult } from "../cfetch";
 
 export type TailApiResponse = {
   id: string;
