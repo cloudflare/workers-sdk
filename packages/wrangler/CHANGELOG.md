@@ -1,5 +1,215 @@
 # wrangler
 
+## 0.0.17
+
+### Patch Changes
+
+- [#414](https://github.com/cloudflare/wrangler2/pull/414) [`f30426f`](https://github.com/cloudflare/wrangler2/commit/f30426fad5cd0be7f8a2e197a6ea279c0798bf15) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: support `build.upload.dir` when using `build.upload.main`
+
+  Although, `build.upload.dir` is deprecated, we should still support using it when the entry-point is being defined by the `build.upload.main` and the format is `modules`.
+
+  Fixes #413
+
+* [#447](https://github.com/cloudflare/wrangler2/pull/447) [`2c5c934`](https://github.com/cloudflare/wrangler2/commit/2c5c934ce3343bbda0430fe91e1ea3eb94757fa3) Thanks [@threepointone](https://github.com/threepointone)! - fix: Config should be resolved relative to the entrypoint
+
+  During `dev` and `publish`, we should resolve `wrangler.toml` starting from the entrypoint, and then working up from there. Currently, we start from the directory from which we call `wrangler`, this changes that behaviour to start from the entrypoint instead.
+
+  (To implement this, I made one big change: Inside commands, we now have to explicitly read configuration from a path, instead of expecting it to 'arrive' coerced into a configuration object.)
+
+- [#472](https://github.com/cloudflare/wrangler2/pull/472) [`804523a`](https://github.com/cloudflare/wrangler2/commit/804523aff70e7dd76aea25e22d4a7530da62b748) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: Replace `.destroy()` on `faye-websockets` with `.close()`
+  added: Interface to give faye same types as compliant `ws` with additional `.pipe()` implementation; `.on("message" => fn)`
+
+* [#462](https://github.com/cloudflare/wrangler2/pull/462) [`a173c80`](https://github.com/cloudflare/wrangler2/commit/a173c80a6acd07dcce8b4d8c11d3577b19efb1f9) Thanks [@caass](https://github.com/caass)! - Add filtering to wrangler tail, so you can now `wrangler tail <name> --status ok`, for example. Supported options:
+
+  - `--status cancelled --status error` --> you can filter on `ok`, `error`, and `cancelled` to only tail logs that have that status
+  - `--header X-CUSTOM-HEADER:somevalue` --> you can filter on headers, including ones that have specific values (`"somevalue"`) or just that contain any header (e.g. `--header X-CUSTOM-HEADER` with no colon)
+  - `--method POST --method PUT` --> filter on the HTTP method used to trigger the worker
+  - `--search catch-this` --> only shows messages that contain the phrase `"catch-this"`. Does not (yet!) support regular expressions
+  - `--ip self --ip 192.0.2.232` --> only show logs from requests that originate from the given IP addresses. `"self"` will be replaced with the IP address of the computer that sent the tail request.
+
+- [#471](https://github.com/cloudflare/wrangler2/pull/471) [`21cde50`](https://github.com/cloudflare/wrangler2/commit/21cde504de028e58af3dc4c0e0d3f2726c7f4c1d) Thanks [@caass](https://github.com/caass)! - Add tests for wrangler tail:
+
+  - ensure the correct API calls are made
+  - ensure that filters are sent
+  - ensure that the _correct_ filters are sent
+  - ensure that JSON gets spat out into the terminal
+
+* [#398](https://github.com/cloudflare/wrangler2/pull/398) [`40d9553`](https://github.com/cloudflare/wrangler2/commit/40d955341d6c14fde51ff622a9c7371e5c6049c1) Thanks [@threepointone](https://github.com/threepointone)! - feat: guess-worker-format
+
+  This formalises the logic we use to "guess"/infer what a worker's format is - either "modules" or "service worker". Previously we were using the output of the esbuild process metafile to infer this, we now explicitly do so in a separate step (esbuild's so fast that it doesn't have any apparent performance hit, but we also do a simpler form of the build to get this information).
+
+  This also adds `--format` as a command line arg for `publish`.
+
+- [#438](https://github.com/cloudflare/wrangler2/pull/438) [`64d62be`](https://github.com/cloudflare/wrangler2/commit/64d62bede0ccb4f66e4a474a2c7f100606c65042) Thanks [@Electroid](https://github.com/Electroid)! - feat: Add support for "json" bindings
+
+  Did you know? We have support for "json" bindings! Here are a few examples:
+
+  [vars]
+  text = "plain ol' string"
+  count = 1
+  complex = { enabled = true, id = 123 }
+
+* [#422](https://github.com/cloudflare/wrangler2/pull/422) [`ef13735`](https://github.com/cloudflare/wrangler2/commit/ef137352697e440a0007c5a099503ad2f4526eaf) Thanks [@threepointone](https://github.com/threepointone)! - chore: rename `open-in-brower.ts` to `open-in-browser.ts`
+
+- [#411](https://github.com/cloudflare/wrangler2/pull/411) [`a52f0e0`](https://github.com/cloudflare/wrangler2/commit/a52f0e00f85fa7602f30b9540b060b60968adf23) Thanks [@ObsidianMinor](https://github.com/ObsidianMinor)! - feat: unsafe-bindings
+
+  Adds support for "unsafe bindings", that is, bindings that aren't supported by wrangler, but are
+  desired when uploading a Worker to Cloudflare. This allows you to use beta features before
+  official support is added to wrangler, while also letting you migrate to proper support for the
+  feature when desired. Note: these bindings may not work everywhere, and may break at any time.
+
+* [#415](https://github.com/cloudflare/wrangler2/pull/415) [`d826f5a`](https://github.com/cloudflare/wrangler2/commit/d826f5aae2d05023728d8ee5e30ffb79c0d674a5) Thanks [@threepointone](https://github.com/threepointone)! - fix: don't crash when browser windows don't open
+
+  We open browser windows for a few things; during `wrangler dev`, and logging in. There are environments where this doesn't work as expected (like codespaces, stackblitz, etc). This fix simply logs an error instead of breaking the flow. This is the same fix as https://github.com/cloudflare/wrangler2/pull/263, now applied to the rest of wrangler.
+
+- [`91d8994`](https://github.com/cloudflare/wrangler2/commit/91d89943cda26a197cb7c8d752d7953a97fac338) Thanks [@Mexican-Man](https://github.com/Mexican-Man)! - fix: do not merge routes with different methods when computing pages routes
+
+  Fixes #92
+
+* [#474](https://github.com/cloudflare/wrangler2/pull/474) [`bfedc58`](https://github.com/cloudflare/wrangler2/commit/bfedc585f151898615b3546fc67d97055e32d6ed) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: create `reporting.toml` file in "wrangler/config" and move error reporting user decisions to new `reporting.toml`
+
+- [#445](https://github.com/cloudflare/wrangler2/pull/445) [`d5935e7`](https://github.com/cloudflare/wrangler2/commit/d5935e7c4fde9e3b900be7c08bca09e80e9fdc8a) Thanks [@threepointone](https://github.com/threepointone)! - chore: remove `experimental_services` from configuration
+
+  Now that we have `[[unsafe.bindings]]` (as of https://github.com/cloudflare/wrangler2/pull/411), we should use that for experimental features. This removes support for `[experimental_services]`, and adds a helpful message for how to rewrite their configuration.
+
+  This error is temporary, until the internal teams that were using this rewrite their configs. We'll remove it before GA.
+
+  What the error looks like -
+
+  ```
+  Error: The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
+
+  [[unsafe.bindings]]
+  name = "SomeService"
+  type = "service"
+  service = "some-service"
+  environment = "staging"
+
+  [[unsafe.bindings]]
+  name = "SomeOtherService"
+  type = "service"
+  service = "some-other-service"
+  environment = "qa"
+  ```
+
+* [#456](https://github.com/cloudflare/wrangler2/pull/456) [`b5f42c5`](https://github.com/cloudflare/wrangler2/commit/b5f42c587300c313bdebab4d364d0c7759e39752) Thanks [@threepointone](https://github.com/threepointone)! - chore: enable `strict` in `tsconfig.json`
+
+  In the march towards full strictness, this enables `strict` in `tsconfig.json` and fixes the errors it pops up. A changeset is included because there are some subtle code changes, and we should leave a trail for them.
+
+- [#408](https://github.com/cloudflare/wrangler2/pull/408) [`14098af`](https://github.com/cloudflare/wrangler2/commit/14098af0886b0cbdda90823527ca6037770375b3) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.3.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.3.0)
+
+* [#448](https://github.com/cloudflare/wrangler2/pull/448) [`b72a111`](https://github.com/cloudflare/wrangler2/commit/b72a111bbe92dc3b83a3d9e59ff3b5935bee7dbc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: add `--yes` with alias `--y` flag as automatic answer to all prompts and run `wrangler init` non-interactively.
+  generated during setup:
+
+  - package.json
+  - TypeScript, which includes tsconfig.json & `@cloudflare/workers-types`
+  - Template "hello world" Worker at src/index.ts
+
+- [#403](https://github.com/cloudflare/wrangler2/pull/403) [`f9fef8f`](https://github.com/cloudflare/wrangler2/commit/f9fef8fbfe74d6a591ca1640639a18798c5469e6) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: add scripts to package.json & autogenerate name value when initializing a project
+  To get wrangler init projects up and running with good ergonomics for deploying and development,
+  added default scripts "start" & "deploy" with assumed TS or JS files in generated ./src/index.
+  The name property is now derived from user input on `init <name>` or parent directory if no input is provided.
+
+* [#452](https://github.com/cloudflare/wrangler2/pull/452) [`1cf6701`](https://github.com/cloudflare/wrangler2/commit/1cf6701f372f77c45dc460de81979128d3efebc2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for publishing workers with r2 bucket bindings
+
+  This change adds the ability to define bindings in your `wrangler.toml` file
+  for R2 buckets. These buckets will then be available in the environment
+  passed to the worker at runtime.
+
+  Closes #365
+
+- [#458](https://github.com/cloudflare/wrangler2/pull/458) [`a8f97e5`](https://github.com/cloudflare/wrangler2/commit/a8f97e57a571df5acdd9512d5d992d65730c75fd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not publish to workers.dev if workers_dev is false
+
+  Previously we always published to the workers.dev subdomain, ignoring the `workers_dev` setting in the `wrangler.toml` configuration.
+
+  Now we respect this configuration setting, and also disable an current workers.dev subdomain worker when we publish and `workers_dev` is `false`.
+
+  Fixes #410
+
+* [#457](https://github.com/cloudflare/wrangler2/pull/457) [`b249e6f`](https://github.com/cloudflare/wrangler2/commit/b249e6fb34c616ff54edde830bbdf8f5279991fb) Thanks [@threepointone](https://github.com/threepointone)! - fix: don't report intentional errors
+
+  We shouldn't be reporting intentional errors, only exceptions. This removes reporting for all caught errors for now, until we filter all known errors, and then bring back reporting for unknown errors. We also remove a stray `console.warn()`.
+
+- [#402](https://github.com/cloudflare/wrangler2/pull/402) [`5a9bb1d`](https://github.com/cloudflare/wrangler2/commit/5a9bb1dd6510511607c268e1709e0caa95d68f92) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: Added Wrangler TOML fields
+  Additional field to get projects ready to publish as soon as possible.
+  It will check if the Worker is named, if not then it defaults to using the parent directory name.
+
+* [#227](https://github.com/cloudflare/wrangler2/pull/227) [`97e15f5`](https://github.com/cloudflare/wrangler2/commit/97e15f5372d298378e5bafd62798cddd6eeda27c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feature: Sentry Integration
+  Top level exception logging which will allow to Pre-empt issues, fix bugs faster,
+  Identify uncommon error scenarios, and better quality error information. Context includes of Error in addition to stacktrace
+  Environment:
+  OS/arch
+  node/npm versions
+  wrangler version
+  RewriteFrames relative pathing of stacktrace and will prevent user file system information
+  from being sent.
+
+  Sourcemaps:
+
+  - The sourcemap custom scripts for path matching in Artifact, Sentry Event and Build output is moved to be handled in GH Actions
+    Sentry upload moved after changeset version bump script and npm script to get current version into GH env variable
+  - Add org and project to secrets for increased obfuscation of Cloudflare internal ecosystem
+
+  Prompt for Opt-In:
+
+  - When Error is thrown user will be prompted with yes (only sends this time), Always, and No (default). Always and No
+    will be added to default.toml with a datetime property for future update checks.
+  - If the property already exists it will skip the prompt.
+
+  Sentry Tests:
+  The tests currently check that the decision flow works as currently set up then checks if Sentry is able
+  to send events or is disabled.
+
+- [#427](https://github.com/cloudflare/wrangler2/pull/427) [`bce731a`](https://github.com/cloudflare/wrangler2/commit/bce731a5cfccb1dc5a79fb15b31c7c15e3adcdb4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: share worker bundling between both `publish` and `dev` commands
+
+  This changes moves the code that does the esbuild bundling into a shared file
+  and updates the `publish` and `dev` to use it, rather than duplicating the
+  behaviour.
+
+  See #396
+  Resolves #401
+
+* [#458](https://github.com/cloudflare/wrangler2/pull/458) [`c0cfd60`](https://github.com/cloudflare/wrangler2/commit/c0cfd604b2f114f06416374cfadae08cdef15d3c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: pass correct query param when uploading a script
+
+  In f9c1423f0c5b6008f05b9657c9b84eb6f173563a the query param was incorrectly changed from
+  `available_on_subdomain` to `available_on_subdomains`.
+
+- [#432](https://github.com/cloudflare/wrangler2/pull/432) [`78acd24`](https://github.com/cloudflare/wrangler2/commit/78acd24f539942bf094a3a47aca995b0cfd3ef03) Thanks [@threepointone](https://github.com/threepointone)! - feat: import `.wasm` modules in service worker format workers
+
+  This allows importing `.wasm` modules in service worker format workers. We do this by hijacking imports to `.wasm` modules, and instead registering them under `[wasm_modules]` (building on the work from https://github.com/cloudflare/wrangler2/pull/409).
+
+* [#409](https://github.com/cloudflare/wrangler2/pull/409) [`f8bb523`](https://github.com/cloudflare/wrangler2/commit/f8bb523ed1a41f20391381e5d130b2685558002e) Thanks [@threepointone](https://github.com/threepointone)! - feat: support `[wasm_modules]` for service-worker format workers
+
+  This lands support for `[wasm_modules]` as defined by https://github.com/cloudflare/wrangler/pull/1677.
+
+  wasm modules can be defined in service-worker format with configuration in wrangler.toml as -
+
+  ```
+  [wasm_modules]
+  MYWASM = "./path/to/my-wasm.wasm"
+  ```
+
+  The module will then be available as the global `MYWASM` inside your code. Note that this ONLY makes sense in service-worker format workers (for now).
+
+  (In the future, we MAY enable wasm module imports in service-worker format (i.e. `import MYWASM from './path/to/my-wasm.wasm'`) and global imports inside modules format workers.)
+
+- [#423](https://github.com/cloudflare/wrangler2/pull/423) [`dd9058d`](https://github.com/cloudflare/wrangler2/commit/dd9058d134eead969841136279e57df8203e84d9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for managing R2 buckets
+
+  This change introduces three new commands, which manage buckets under the current account:
+
+  - `r2 buckets list`: list information about all the buckets.
+  - `r2 buckets create`: create a new bucket - will error if the bucket already exists.
+  - `r2 buckets delete`: delete a bucket.
+
+  This brings Wrangler 2 inline with the same features in Wrangler 1.
+
+* [#455](https://github.com/cloudflare/wrangler2/pull/455) [`80aa106`](https://github.com/cloudflare/wrangler2/commit/80aa10660ee0ef1e6e571b1312a2aa4c8562f543) Thanks [@threepointone](https://github.com/threepointone)! - fix: error when entry doesn't exist
+
+  This adds an error when we use an entry point that doesn't exist, either for `wrangler dev` or `wrangler publish`, and either via cli arg or `build.upload.main` in `wrangler.toml`. By using a common abstraction for `dev` and `publish`, This also adds support for using `build.config.main`/`build.config.dir` for `wrangler dev`.
+
+  - Fixes https://github.com/cloudflare/wrangler2/issues/418
+  - Fixes https://github.com/cloudflare/wrangler2/issues/390
+
 ## 0.0.16
 
 ### Patch Changes
