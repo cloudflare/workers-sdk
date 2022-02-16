@@ -12,6 +12,12 @@ import type {
   Server,
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
+import type ws from "ws";
+
+interface IWebsocket extends ws {
+  // Pipe implements .on("message", ...)
+  pipe<T>(fn: T): IWebsocket;
+}
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -207,18 +213,18 @@ export function usePreviewServer({
       const { headers, url } = message;
       addCfPreviewTokenHeader(headers, previewToken.value);
       headers["host"] = previewToken.host;
-      const localWebsocket = new WebSocket(message, socket, body);
+      const localWebsocket = new WebSocket(message, socket, body) as IWebsocket;
       // TODO(soon): Custom WebSocket protocol is not working?
       const remoteWebsocketClient = new WebSocket.Client(
         `wss://${previewToken.host}${url}`,
         [],
         { headers }
-      );
+      ) as IWebsocket;
       localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
       // We close down websockets whenever we refresh the token.
       cleanupListeners.push(() => {
-        localWebsocket.destroy();
-        remoteWebsocketClient.destroy();
+        localWebsocket.close();
+        remoteWebsocketClient.close();
       });
     };
     proxy.on("upgrade", handleUpgrade);
