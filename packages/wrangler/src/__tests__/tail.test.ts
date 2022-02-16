@@ -6,10 +6,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type Websocket from "ws";
 
-// change this if you're testing using debug mode
-// (sends all logs regardless of filters)
-const DEBUG = false;
-
 describe("tail", () => {
   runInTempDir();
   mockAccountId();
@@ -31,6 +27,20 @@ describe("tail", () => {
 
     api.ws.close();
     expect(api.requests.deletion.count).toStrictEqual(1);
+  });
+
+  it("errors when the websocket closes unexpectedly", async () => {
+    api.ws.close();
+
+    await expect(runWrangler("tail test-worker")).rejects.toThrow();
+  });
+
+  it("activates debug mode when the cli arg is passed in", async () => {
+    await runWrangler("tail test-worker --debug");
+    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty(
+      "debug",
+      true
+    );
   });
 
   /* filtering */
@@ -131,7 +141,8 @@ describe("tail", () => {
       method.map((m) => `--method ${m} `).join("") +
       `--header ${header} ` +
       client_ip.map((c) => `--ip ${c} `).join("") +
-      `--search ${query}`;
+      `--search ${query} ` +
+      `--debug`;
 
     const expectedWebsocketMessage = {
       filters: [
@@ -142,7 +153,7 @@ describe("tail", () => {
         { client_ip },
         { query },
       ],
-      debug: DEBUG,
+      debug: true,
     };
 
     await runWrangler(`tail test-worker ${cliFilters}`);
