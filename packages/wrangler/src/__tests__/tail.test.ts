@@ -1,5 +1,3 @@
-import { DEBUG_MODE_ENABLED } from "../tail";
-
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -7,6 +5,10 @@ import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type Websocket from "ws";
+
+// change this if you're testing using debug mode
+// (sends all logs regardless of filters)
+const DEBUG = false;
 
 describe("tail", () => {
   runInTempDir();
@@ -16,7 +18,7 @@ describe("tail", () => {
   const std = mockConsoleMethods();
   const api = mockWebsocketApis();
 
-  /* Core functionality */
+  /* API related functionality */
 
   it("creates and then delete tails", async () => {
     expect(api.requests.creation.count).toStrictEqual(0);
@@ -29,13 +31,6 @@ describe("tail", () => {
 
     api.ws.close();
     expect(api.requests.deletion.count).toStrictEqual(1);
-  });
-
-  it("errors if the connection is closed unexpectedly", async () => {
-    api.ws.close();
-    await expect(runWrangler("tail test-worker")).rejects.toThrowError(
-      "Websocket closed unexpectedly!"
-    );
   });
 
   /* filtering */
@@ -147,7 +142,7 @@ describe("tail", () => {
         { client_ip },
         { query },
       ],
-      debug: DEBUG_MODE_ENABLED,
+      debug: DEBUG,
     };
 
     await runWrangler(`tail test-worker ${cliFilters}`);

@@ -50,6 +50,7 @@ import { whoami } from "./whoami";
 import type { Entry } from "./bundle";
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
+import type { RawData } from "ws";
 import type Yargs from "yargs";
 
 const resetColor = "\x1b[0m";
@@ -1124,21 +1125,43 @@ export async function main(argv: string[]): Promise<void> {
       };
 
       const filters = translateCliFiltersToApiFilters(cliFilters);
-      const tail = await createTail(accountId, scriptName, filters);
+
+      const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
+        await createTail(accountId, scriptName, filters);
+
+      console.log(
+        `successfully created tail, expires at ${expiration.toLocaleString()}`
+      );
+
       onExit(async () => {
-        tail.ws.terminate();
-        await tail.deleteTail();
+        tail.terminate();
+        await deleteTail();
       });
 
-      switch (args.format) {
-        case "json":
-          await jsonPrintLogs(tail, scriptName);
-          break;
-        case "pretty":
-          throw new Error("unimplemented");
-        default:
-          throw new Error("Invalid formatting option");
+      const printLog: (data: RawData) => void =
+        args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
+
+      tail.on("message", printLog);
+
+      while (tail.readyState !== tail.OPEN) {
+        switch (tail.readyState) {
+          case tail.CONNECTING:
+            await setTimeout(1000);
+            break;
+          case tail.CLOSING:
+            await setTimeout(1000);
+            break;
+          case tail.CLOSED:
+            process.exit(1);
+        }
       }
+
+      console.log(`Connected to ${scriptName}, waiting for logs...`);
+
+      tail.on("close", async () => {
+        tail.terminate();
+        await deleteTail();
+      });
     }
   );
 

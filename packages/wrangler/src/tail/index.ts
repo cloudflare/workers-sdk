@@ -1,47 +1,98 @@
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import { createTailButDontConnect, makeDeleteTailUrl } from "./api";
-import { sendFilters } from "./filters";
-import type { ApiFilter, ApiFilterMessage } from "./filters";
 
-export type { TailCLIFilters } from "./filters";
-export { translateCliFiltersToApiFilters } from "./filters";
-export { jsonPrintLogs } from "./logging";
-
-// if debug mode is enabled, then all logs will be sent through.
-// logs that _would_ have been blocked will result with a message
-// telling you what filter would have rejected it
-export const DEBUG_MODE_ENABLED = false;
-
-export type Tail = {
-  ws: WebSocket;
-  expiration: Date;
-  deleteTail: () => Promise<void>;
-  setFilters: (filters: ApiFilterMessage) => void;
+export type TailApiResponse = {
+  id: string;
+  url: string;
+  expires_at: Date;
 };
 
-/**
- * Abstracts away all the API calls and websocket connections necessary to
- * create a tail and attach wrangler to it.
- *
- * Behind the scenes, this function:
- * - Sends an API request to create a new tail
- * - Creates but doesn't send the API request for tail deletion
- *   - This request should be sent when we're done with the tail!
- * - Creates a websocket connection with the tail
- * - (Optionally) sends filters so that we only receive a subset of logs
- *
- * @param accountId the user's account ID
- * @param workerName the worker to tail
- * @param filters any filters
- * @returns your new `Tail`
- */
+export type TailCLIFilters = {
+  status?: Array<"ok" | "error" | "canceled">;
+  header?: string;
+  method?: string[];
+  search?: string;
+  samplingRate?: number;
+  clientIp?: string[];
+};
+
+// due to the trace worker being built around wrangler 1 and
+// some other stuff, the filters we send to the API are slightly
+// different than the ones we read from the CLI
+type SamplingRateFilter = {
+  sampling_rate: number;
+};
+
+type OutcomeFilter = {
+  outcome: string[];
+};
+
+type MethodFilter = {
+  method: string[];
+};
+
+type HeaderFilter = {
+  header: {
+    key: string;
+    query?: string;
+  };
+};
+
+type ClientIpFilter = {
+  client_ip: string[];
+};
+
+type QueryFilter = {
+  query: string;
+};
+
+type ApiFilter =
+  | SamplingRateFilter
+  | OutcomeFilter
+  | MethodFilter
+  | HeaderFilter
+  | ClientIpFilter
+  | QueryFilter;
+
+type ApiFilterMessage = {
+  filters: ApiFilter[];
+  debug: boolean;
+};
+
+function makeCreateTailUrl(accountId: string, workerName: string): string {
+  return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
+}
+
+function makeDeleteTailUrl(
+  accountId: string,
+  workerName: string,
+  tailId: string
+): string {
+  return `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
+}
+
+/// Creates a tail, but doesn't connect to it.
+async function createTailButDontConnect(
+  accountId: string,
+  workerName: string
+): Promise<TailApiResponse> {
+  const createTailUrl = makeCreateTailUrl(accountId, workerName);
+  /// https://api.cloudflare.com/#worker-tail-logs-start-tail
+  return await fetchResult<TailApiResponse>(createTailUrl, {
+    method: "POST",
+  });
+}
+
 export async function createTail(
   accountId: string,
   workerName: string,
   filters: ApiFilter[]
-): Promise<Tail> {
+): Promise<{
+  tail: WebSocket;
+  expiration: Date;
+  deleteTail: () => Promise<void>;
+}> {
   const {
     id: tailId,
     url: websocketUrl,
@@ -49,11 +100,12 @@ export async function createTail(
   } = await createTailButDontConnect(accountId, workerName);
   const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
 
+  // deletes the tail
   async function deleteTail() {
     await fetchResult(deleteUrl, { method: "DELETE" });
   }
 
-  const ws = new WebSocket(websocketUrl, "trace-v1", {
+  const tail = new WebSocket(websocketUrl, "trace-v1", {
     headers: {
       "Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
       "User-Agent": `wrangler-js/${packageVersion}`,
@@ -64,29 +116,127 @@ export async function createTail(
   if (filters.length !== 0) {
     const message: ApiFilterMessage = {
       filters,
-      debug: DEBUG_MODE_ENABLED,
+      // if debug is set to true, then all logs will be sent through.
+      // logs that _would_ have been blocked will result with a message
+      // telling you what filter would have rejected it
+      debug: false,
     };
 
-    ws.on("open", function () {
-      sendFilters(ws, message);
+    tail.on("open", function () {
+      tail.send(
+        JSON.stringify(message),
+        { binary: false, compress: false, mask: false, fin: true },
+        (err) => {
+          if (err) {
+            throw err;
+          }
+        }
+      );
     });
   }
 
-  ws.on("close", async () => {
-    ws.terminate();
-    await deleteTail();
-  });
+  return { tail, expiration, deleteTail };
+}
+
+export function translateCliFiltersToApiFilters(
+  cliFilters: TailCLIFilters
+): ApiFilter[] {
+  const apiFilters: ApiFilter[] = [];
+
+  if (cliFilters.samplingRate) {
+    apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
+  }
+
+  if (cliFilters.status) {
+    apiFilters.push(parseOutcome(cliFilters.status));
+  }
+
+  if (cliFilters.method) {
+    apiFilters.push(parseMethod(cliFilters.method));
+  }
+
+  if (cliFilters.header) {
+    apiFilters.push(parseHeader(cliFilters.header));
+  }
+
+  if (cliFilters.clientIp) {
+    apiFilters.push(parseClientIp(cliFilters.clientIp));
+  }
+
+  if (cliFilters.search) {
+    apiFilters.push(parseQuery(cliFilters.search));
+  }
+
+  return apiFilters;
+}
+
+function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
+  if (sampling_rate <= 0 || sampling_rate >= 1) {
+    throw new Error(
+      "A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
+    );
+  }
+
+  return { sampling_rate };
+}
+
+function parseOutcome(
+  statuses: Array<"ok" | "error" | "canceled">
+): OutcomeFilter {
+  const outcomes = new Set<string>();
+  for (const status of statuses) {
+    switch (status) {
+      case "ok":
+        outcomes.add("ok");
+        break;
+      case "canceled":
+        outcomes.add("canceled");
+        break;
+      // there's more than one way to error
+      case "error":
+        outcomes.add("exception");
+        outcomes.add("exceededCpu");
+        outcomes.add("unknown");
+        break;
+      default:
+        break;
+    }
+  }
 
   return {
-    ws,
-    expiration,
-    deleteTail,
-    setFilters: (message) => {
-      sendFilters(ws, message);
+    outcome: Array.from(outcomes),
+  };
+}
+
+// we actually don't need to do anything here
+function parseMethod(method: string[]): MethodFilter {
+  return { method };
+}
+
+function parseHeader(header: string): HeaderFilter {
+  // headers of the form "HEADER-KEY: VALUE" get split.
+  // the query is optional
+  const [headerKey, headerQuery] = header.split(":", 2);
+  return {
+    header: {
+      key: headerKey.trim(),
+      query: headerQuery?.trim(),
     },
   };
 }
 
+function parseClientIp(client_ip: string[]): ClientIpFilter {
+  return { client_ip };
+}
+
+function parseQuery(query: string): QueryFilter {
+  return { query };
+}
+
 export function prettyPrintLogs(_data: WebSocket.RawData): void {
   throw new Error("TODO!");
+}
+
+export function jsonPrintLogs(data: WebSocket.RawData): void {
+  console.log(JSON.stringify(JSON.parse(data.toString()), null, 2));
 }
