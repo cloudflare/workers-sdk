@@ -301,7 +301,7 @@
         goPublicButton.disabled = true;
         event.currentTarget.disabled = true;
 
-        let response = await fetch("https://" + hostname + "/api/room", {
+        let response = await fetch("http://" + hostname + "/api/room", {
           method: "POST",
         });
         if (!response.ok) {
@@ -398,7 +398,7 @@
 
     function join() {
       let ws = new WebSocket(
-        "wss://" + hostname + "/api/room/" + roomname + "/websocket"
+        "ws://" + hostname + "/api/room/" + roomname + "/websocket"
       );
       let rejoined = false;
       let startTime = Date.now();
