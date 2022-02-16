@@ -144,6 +144,9 @@ export default async function guessWorkerFormat(
 	hint: CfScriptFormat | undefined,
 	tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
+	if (entryFile.endsWith(".wasm")) {
+		return "modules";
+	}
 	const result = await esbuild.build({
 		entryPoints: [entryFile],
 		absWorkingDir: entryWorkingDirectory,

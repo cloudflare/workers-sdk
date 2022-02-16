@@ -36,6 +36,7 @@ async function buildMain(flags: BuildFlags = {}) {
 			"selfsigned",
 			"@esbuild-plugins/node-globals-polyfill",
 			"@esbuild-plugins/node-modules-polyfill",
+			"@cloudflare/workers-wasi",
 		],
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],

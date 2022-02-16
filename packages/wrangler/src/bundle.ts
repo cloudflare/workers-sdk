@@ -6,6 +6,7 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import createModuleCollector from "./module-collection";
+import { wrapIfWasmEntrypoint } from "./wasi";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -74,7 +75,8 @@ export async function bundleWorker(
 		nodeCompat,
 		checkFetch,
 	} = options;
-	const entryDirectory = path.dirname(entry.file);
+	const entryFile = await wrapIfWasmEntrypoint(entry.file);
+	const entryDirectory = path.dirname(entryFile);
 	const moduleCollector = createModuleCollector({
 		wrangler1xlegacyModuleReferences: {
 			rootDirectory: entryDirectory,
@@ -83,7 +85,7 @@ export async function bundleWorker(
 					.readdirSync(entryDirectory, { withFileTypes: true })
 					.filter(
 						(dirEntry) =>
-							dirEntry.isFile() && dirEntry.name !== path.basename(entry.file)
+							dirEntry.isFile() && dirEntry.name !== path.basename(entryFile)
 					)
 					.map((dirEnt) => dirEnt.name)
 			),
@@ -93,7 +95,7 @@ export async function bundleWorker(
 	});
 
 	const result = await esbuild.build({
-		...getEntryPoint(entry.file, serveAssetsFromWorker),
+		...getEntryPoint(entryFile, serveAssetsFromWorker),
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
@@ -139,7 +141,7 @@ export async function bundleWorker(
 	);
 	assert(
 		entryPointOutputs.length > 0,
-		`Cannot find entry-point "${entry.file}" in generated bundle.` +
+		`Cannot find entry-point "${entryFile}" in generated bundle.` +
 			listEntryPoints(entryPointOutputs)
 	);
 	assert(
