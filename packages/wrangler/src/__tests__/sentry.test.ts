@@ -14,6 +14,7 @@ const { reportError } = jest.requireActual("../reporting");
 describe("Error Reporting", () => {
   runInTempDir({ homedir: "./home" });
   mockConsoleMethods();
+  const reportingTOMLPath = ".wrangler/config/reporting.toml";
 
   const originalTTY = process.stdout.isTTY;
   beforeEach(() => {
@@ -34,10 +35,7 @@ describe("Error Reporting", () => {
     await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
-      await fsp.readFile(
-        path.join(os.homedir(), ".wrangler/config/default.toml"),
-        "utf-8"
-      )
+      await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 
     expect(error_tracking_opt).toBe(true);
@@ -53,10 +51,7 @@ describe("Error Reporting", () => {
     await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
-      await fsp.readFile(
-        path.join(os.homedir(), ".wrangler/config/default.toml"),
-        "utf-8"
-      )
+      await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 
     expect(error_tracking_opt).toBe(false);
@@ -73,9 +68,9 @@ describe("Error Reporting", () => {
     await runWrangler();
     await reportError(new Error("test error"), "testFalse");
 
-    expect(
-      fs.existsSync(path.join(os.homedir(), ".wrangler/config/default.toml"))
-    ).toBe(false);
+    expect(fs.existsSync(path.join(os.homedir(), reportingTOMLPath))).toBe(
+      false
+    );
 
     expect(Sentry.captureException).not.toHaveBeenCalledWith(
       new Error("test error"),
@@ -137,10 +132,7 @@ describe("Error Reporting", () => {
     await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
-      await fsp.readFile(
-        path.join(os.homedir(), ".wrangler/config/default.toml"),
-        "utf-8"
-      )
+      await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 
     expect(error_tracking_opt).toBe(false);
