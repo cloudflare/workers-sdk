@@ -466,7 +466,7 @@ export async function main(argv: string[]): Promise<void> {
       );
       const shouldWritePackageJsonScripts =
         !packageJsonContent.scripts?.start &&
-        !packageJsonContent.scripts?.deploy &&
+        !packageJsonContent.scripts?.publish &&
         shouldCreatePackageJson;
       async function writePackageJsonScripts(
         isWritingScripts: boolean,
@@ -482,7 +482,7 @@ export async function main(argv: string[]): Promise<void> {
                 scripts: {
                   ...packageJsonContent.scripts,
                   start: `wrangler dev ${scriptPath}`,
-                  deploy: `wrangler publish ${scriptPath}`,
+                  publish: `wrangler publish ${scriptPath}`,
                 },
               },
               null,
@@ -491,7 +491,7 @@ export async function main(argv: string[]): Promise<void> {
           );
           console.log(`To start developing on your worker, run npm start.`);
           console.log(
-            `To publish your worker on to the internet, run npm run deploy.`
+            `To publish your worker on to the internet, run npm run publish.`
           );
         } else {
           console.log(
@@ -1033,7 +1033,7 @@ export async function main(argv: string[]): Promise<void> {
   // tail
   wrangler.command(
     "tail [name]",
-    "🦚 Starts a log tailing session for a deployed Worker.",
+    "🦚 Starts a log tailing session for a published Worker.",
     (yargs) => {
       return (
         yargs

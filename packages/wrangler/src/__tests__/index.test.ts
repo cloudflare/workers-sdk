@@ -35,7 +35,7 @@ describe("wrangler", () => {
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
           wrangler secret            🤫 Generate a secret that can be referenced in the worker script
           wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
           wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
@@ -73,7 +73,7 @@ describe("wrangler", () => {
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]       🦚 Starts a log tailing session for a deployed Worker.
+          wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
           wrangler secret            🤫 Generate a secret that can be referenced in the worker script
           wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
           wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
@@ -397,7 +397,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(true);
 
       expect(packageJson.scripts.start).toBe("wrangler dev src/index.ts");
-      expect(packageJson.scripts.deploy).toBe("wrangler publish src/index.ts");
+      expect(packageJson.scripts.publish).toBe("wrangler publish src/index.ts");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
@@ -405,7 +405,7 @@ describe("wrangler", () => {
               ✨ Created package.json
               ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
               To start developing on your worker, run npm start.
-              To publish your worker on to the internet, run npm run deploy.
+              To publish your worker on to the internet, run npm run publish.
               ✨ Created src/index.ts"
             `);
     });
@@ -430,7 +430,7 @@ describe("wrangler", () => {
         JSON.stringify({
           scripts: {
             start: "test-start",
-            deploy: "test-deploy",
+            publish: "test-publish",
           },
         })
       );
@@ -443,7 +443,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(true);
 
       expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.deploy).toBe("test-deploy");
+      expect(packageJson.scripts.publish).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
               "✨ Successfully created wrangler.toml
               ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
@@ -483,14 +483,14 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(false);
 
       expect(packageJson.scripts.start).toBe("wrangler dev src/index.js");
-      expect(packageJson.scripts.deploy).toBe("wrangler publish src/index.js");
+      expect(packageJson.scripts.publish).toBe("wrangler publish src/index.js");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
               "✨ Successfully created wrangler.toml
               ✨ Created package.json
               To start developing on your worker, run npm start.
-              To publish your worker on to the internet, run npm run deploy.
+              To publish your worker on to the internet, run npm run publish.
               ✨ Created src/index.js"
             `);
     });
@@ -515,7 +515,7 @@ describe("wrangler", () => {
         JSON.stringify({
           scripts: {
             start: "test-start",
-            deploy: "test-deploy",
+            publish: "test-publish",
           },
         })
       );
@@ -528,7 +528,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(false);
 
       expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.deploy).toBe("test-deploy");
+      expect(packageJson.scripts.publish).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
               "✨ Successfully created wrangler.toml
               To start developing on your worker, npx wrangler dev src/index.js
