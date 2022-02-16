@@ -11,6 +11,8 @@ This is the demo for durable objects originally published at https://github.com/
 
 - The `module` field is removed from `package.json`.
 
+- Change calls from `https://...` to `http://...`, and `wss://...` to `ws://...`.
+
 Also a reminder: you need to publish this worker (or even a plain worker named `edge-chat-demo`) before you can develop on it. That's a problem that we need to solve on our end, but this is a workaround for now.
 
 The original README follows -
