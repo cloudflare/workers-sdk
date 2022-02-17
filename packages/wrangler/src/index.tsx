@@ -34,7 +34,7 @@ import {
   createTail,
   jsonPrintLogs,
   prettyPrintLogs,
-  translateCliCommandToApiFilterMessage,
+  translateCLICommandToFilterMessage,
 } from "./tail";
 import {
   login,
@@ -49,7 +49,7 @@ import { whoami } from "./whoami";
 
 import type { Entry } from "./bundle";
 import type { Config } from "./config";
-import type { CliFilters as TailCLIFilters } from "./tail";
+import type { TailCLIFilters as TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
 import type Yargs from "yargs";
 
@@ -1123,7 +1123,7 @@ export async function main(argv: string[]): Promise<void> {
       const accountId = config.account_id;
 
       const cliFilters: TailCLIFilters = {
-        status: args.status as Array<"ok" | "error" | "canceled">,
+        status: args.status as ("ok" | "error" | "canceled")[],
         header: args.header,
         method: args.method,
         samplingRate: args["sampling-rate"],
@@ -1131,7 +1131,7 @@ export async function main(argv: string[]): Promise<void> {
         clientIp: args.ip,
       };
 
-      const filters = translateCliCommandToApiFilterMessage(
+      const filters = translateCLICommandToFilterMessage(
         cliFilters,
         args.debug
       );
@@ -1165,7 +1165,7 @@ export async function main(argv: string[]): Promise<void> {
             await setTimeout(1000);
             break;
           case tail.CLOSED:
-            throw new Error("Websocket closed unexpectedly!");
+            throw new Error(`Connection to ${scriptName} closed unexpectedly.`);
         }
       }
 

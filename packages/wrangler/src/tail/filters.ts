@@ -16,8 +16,8 @@
  * For a full description of each filter, either check the
  * CLI description or see the documentation for `ApiFilter`.
  */
-export type CliFilters = {
-  status?: Array<"ok" | "error" | "canceled">;
+export type TailCLIFilters = {
+  status?: ("ok" | "error" | "canceled")[];
   header?: string;
   method?: string[];
   search?: string;
@@ -32,12 +32,12 @@ export type CliFilters = {
  * each kind of filter gets its own type and we define
  * TailAPIFilter to be the union of those types.
  */
-export type ApiFilter =
+export type TailAPIFilter =
   | SamplingRateFilter
   | OutcomeFilter
   | MethodFilter
   | HeaderFilter
-  | ClientIpFilter
+  | ClientIPFilter
   | QueryFilter;
 
 /**
@@ -51,13 +51,15 @@ type SamplingRateFilter = {
 
 /**
  * Filters logs based on the outcome of the worker's event handler.
+ */
+type OutcomeFilter = {
+  outcome: Outcome[];
+};
+
+/**
  * There are five possible outcomes we can get, three of which
  * (exception, exceededCpu, and unknown) are considered errors
  */
-type OutcomeFilter = {
-  outcome: Array<Outcome>;
-};
-
 export type Outcome =
   | "ok"
   | "canceled"
@@ -100,7 +102,7 @@ type HeaderFilter = {
  * the worker. A value of "self" will be replaced with the IP
  * address that is running `wrangler tail`
  */
-type ClientIpFilter = {
+type ClientIPFilter = {
   client_ip: string[];
 };
 
@@ -117,8 +119,8 @@ type QueryFilter = {
  * The full message we send to the tail worker includes our
  * filters and a debug flag.
  */
-export type ApiFilterMessage = {
-  filters: ApiFilter[];
+export type TailFilterMessage = {
+  filters: TailAPIFilter[];
   debug: boolean;
 };
 
@@ -130,11 +132,11 @@ export type ApiFilterMessage = {
  * @param debug Whether or not we should be in debug mode
  * @returns A filter message ready to be sent to the tail worker
  */
-export function translateCliCommandToApiFilterMessage(
-  cliFilters: CliFilters,
+export function translateCLICommandToFilterMessage(
+  cliFilters: TailCLIFilters,
   debug: boolean
-): ApiFilterMessage {
-  const apiFilters: ApiFilter[] = [];
+): TailFilterMessage {
+  const apiFilters: TailAPIFilter[] = [];
 
   if (cliFilters.samplingRate) {
     apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
@@ -153,7 +155,7 @@ export function translateCliCommandToApiFilterMessage(
   }
 
   if (cliFilters.clientIp) {
-    apiFilters.push(parseClientIp(cliFilters.clientIp));
+    apiFilters.push(parseIP(cliFilters.clientIp));
   }
 
   if (cliFilters.search) {
@@ -166,6 +168,13 @@ export function translateCliCommandToApiFilterMessage(
   };
 }
 
+/**
+ * Parse the sampling rate passed in via command line
+ *
+ * @param sampling_rate the sampling rate passed in via CLI
+ * @throws an Error if the rate doesn't make sense
+ * @returns a SamplingRateFilter for use with the API
+ */
 function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
   if (sampling_rate <= 0 || sampling_rate >= 1) {
     throw new Error(
@@ -176,26 +185,34 @@ function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
   return { sampling_rate };
 }
 
+/**
+ * Translate from CLI "status"es to API "outcome"s, including
+ * broadening "error" into "exception", "exceededCpu", and "unknown".
+ *
+ * @param statuses statuses passed in via CLI
+ * @returns an OutcomeFilter for use with the API
+ */
 function parseOutcome(
-  statuses: Array<"ok" | "error" | "canceled">
+  statuses: ("ok" | "error" | "canceled")[]
 ): OutcomeFilter {
-  const outcomes = new Set<
-    "ok" | "canceled" | "exception" | "exceededCpu" | "unknown"
-  >();
+  const outcomes = new Set<Outcome>();
+
   for (const status of statuses) {
     switch (status) {
       case "ok":
         outcomes.add("ok");
         break;
+
       case "canceled":
         outcomes.add("canceled");
         break;
-      // there's more than one way to error
+
       case "error":
         outcomes.add("exception");
         outcomes.add("exceededCpu");
         outcomes.add("unknown");
         break;
+
       default:
         break;
     }
@@ -206,15 +223,28 @@ function parseOutcome(
   };
 }
 
+/**
+ * We just send silly methods through to the API anyway, since they don't
+ * cause any harm.
+ *
+ * @param method an array of HTTP request methods passed in via CLI
+ * @returns a MethodFilter for use with the API
+ */
 function parseMethod(method: string[]): MethodFilter {
-  // any nonsensical methods won't do anything, so just return
   return { method };
 }
 
+/**
+ * Header filters can contain either just a key ("X-HEADER-KEY") or both
+ * a key and a value ("X-HEADER-KEY:some-value"). This function parses
+ * a given string according to that pattern.
+ *
+ * @param header a header string, "X-HEADER-KEY" or "X-HEADER-KEY:some-value"
+ * @returns a HeaderFilter for use with the API
+ */
 function parseHeader(header: string): HeaderFilter {
-  // headers of the form "HEADER-KEY: VALUE" get split.
-  // the query is optional
   const [headerKey, headerQuery] = header.split(":", 2);
+
   return {
     header: {
       key: headerKey.trim(),
@@ -223,10 +253,27 @@ function parseHeader(header: string): HeaderFilter {
   };
 }
 
-function parseClientIp(client_ip: string[]): ClientIpFilter {
+/**
+ * A list of IPs can be passed in to filter for messages that come from
+ * a worker triggered by a request originating from one of those IPs.
+ * You can also pass in the string "self" to filter for the IP of the
+ * machine running `wrangler tail`.
+ *
+ * @param client_ip an array of IP addresses to filter
+ * @returns a ClientIPFilter for use with the API
+ */
+function parseIP(client_ip: string[]): ClientIPFilter {
   return { client_ip };
 }
 
+/**
+ * Users can filter for logs that contain a "search" or a "query string".
+ * For example, if `--search findme` is passed to then we will only
+ * receive logs that contain the string "findme".
+ *
+ * @param query a query string to search for
+ * @returns a QueryFilter for use with the API
+ */
 function parseQuery(query: string): QueryFilter {
   return { query };
 }

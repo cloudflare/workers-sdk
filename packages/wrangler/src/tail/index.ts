@@ -1,21 +1,46 @@
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import type { ApiFilterMessage, Outcome } from "./filters";
-export type { CliFilters } from "./filters";
-export { translateCliCommandToApiFilterMessage } from "./filters";
+import type { TailFilterMessage, Outcome } from "./filters";
+export type { TailCLIFilters } from "./filters";
+export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 
+/**
+ * When creating a Tail, the response from the API contains
+ * - an ID used for identifying the tail
+ * - a URL to a WebSocket connection available for the tail to connect to
+ * - an expiration date when the tail is no longer guaranteed to be valid
+ */
 type TailCreationApiResponse = {
   id: string;
   url: string;
   expires_at: Date;
 };
 
+/**
+ * Generate a URL that, when `cfetch`ed, creates a tail.
+ *
+ * https://api.cloudflare.com/#worker-tail-logs-start-tail
+ *
+ * @param accountId the account ID associated with the worker to tail
+ * @param workerName the name of the worker to tail
+ * @returns a `cfetch`-ready URL for creating a new tail
+ */
 function makeCreateTailUrl(accountId: string, workerName: string): string {
   return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }
 
+/**
+ * Generate a URL that, when `cfetch`ed, deletes a tail
+ *
+ * https://api.cloudflare.com/#worker-tail-logs-delete-tail
+ *
+ * @param accountId the account ID associated with the worker we're tailing
+ * @param workerName the name of the worker we're tailing
+ * @param tailId the ID of the tail we want to delete
+ * @returns a `cfetch`-ready URL for deleting a tail
+ */
 function makeDeleteTailUrl(
   accountId: string,
   workerName: string,
@@ -24,16 +49,29 @@ function makeDeleteTailUrl(
   return `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
+/**
+ * Create and connect to a tail.
+ *
+ * Under the hood, this function
+ * - Registers a new Tail with the API
+ * - Connects to the tail worker
+ * - Sends any filters over the connection
+ *
+ * @param accountId the account ID associated with the worker to tail
+ * @param workerName the name of the worker to tail
+ * @param message a `TailFilterMessage` to send up to the tail worker
+ * @returns a websocket connection, an expiration, and a function to call to delete the tail
+ */
 export async function createTail(
   accountId: string,
   workerName: string,
-  message: ApiFilterMessage
+  message: TailFilterMessage
 ): Promise<{
   tail: WebSocket;
   expiration: Date;
   deleteTail: () => Promise<void>;
 }> {
-  // https://api.cloudflare.com/#worker-tail-logs-start-tail
+  // create the tail
   const createTailUrl = makeCreateTailUrl(accountId, workerName);
   const {
     id: tailId,
@@ -42,13 +80,14 @@ export async function createTail(
   } = await fetchResult<TailCreationApiResponse>(createTailUrl, {
     method: "POST",
   });
-  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
 
-  // deletes the tail
+  // delete the tail (not yet!)
+  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
   async function deleteTail() {
     await fetchResult(deleteUrl, { method: "DELETE" });
   }
 
+  // connect to the tail
   const tail = new WebSocket(websocketUrl, "trace-v1", {
     headers: {
       "Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
@@ -56,6 +95,7 @@ export async function createTail(
     },
   });
 
+  // send filters when we open up
   tail.on("open", function () {
     tail.send(
       JSON.stringify(message),
