@@ -341,16 +341,12 @@ export default async function publish(props: Props): Promise<void> {
     const deployMs = Date.now() - start - uploadMs;
 
     if (deployments.length > 0) {
-      console.log("Deployed", workerName, formatTime(deployMs));
+      console.log("Published", workerName, formatTime(deployMs));
       for (const target of targets.flat()) {
         console.log(" ", target);
       }
     } else {
-      console.log(
-        "No deployment targets for",
-        workerName,
-        formatTime(deployMs)
-      );
+      console.log("No publish targets for", workerName, formatTime(deployMs));
     }
   } finally {
     await destination.cleanup();

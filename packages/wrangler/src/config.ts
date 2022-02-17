@@ -106,7 +106,7 @@ export type Config = {
   zone_id?: string;
 
   /**
-   * A list of routes that your worker should be deployed to.
+   * A list of routes that your worker should be published to.
    * Only one of `routes` or `route` is required.
    *
    * @optional false only when workers_dev is false, and there's no scheduled worker
@@ -115,7 +115,7 @@ export type Config = {
   routes?: string[];
 
   /**
-   * A route that your worker should be deployed to. Literally
+   * A route that your worker should be published to. Literally
    * the same as routes, but only one.
    * Only one of `routes` or `route` is required.
    *

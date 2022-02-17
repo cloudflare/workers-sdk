@@ -55,7 +55,7 @@ describe("publish", () => {
       "Uploaded
       test-name
       (TIMINGS)
-      Deployed
+      Published
       test-name
       (TIMINGS)
 
@@ -77,7 +77,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -98,7 +98,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -119,7 +119,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -146,7 +146,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -175,7 +175,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -195,7 +195,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -218,7 +218,7 @@ describe("publish", () => {
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -248,7 +248,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -269,7 +269,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -293,7 +293,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -367,7 +367,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -435,7 +435,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -487,7 +487,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -541,7 +541,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -592,7 +592,7 @@ export default{
         Uploaded
         test-name (some-env)
         (TIMINGS)
-        Deployed
+        Published
         test-name (some-env)
         (TIMINGS)
 
@@ -638,7 +638,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -681,7 +681,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -724,7 +724,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -768,7 +768,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -812,7 +812,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -856,7 +856,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -900,7 +900,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -946,7 +946,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -996,7 +996,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1094,7 +1094,7 @@ export default{
   });
 
   describe("workers_dev setting", () => {
-    it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
+    it("should publish to a workers.dev domain if workers_dev is undefined", async () => {
       writeWranglerToml();
       writeWorkerSource();
       mockUploadWorkerRequest();
@@ -1106,7 +1106,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1115,7 +1115,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
+    it("should publish to the workers.dev domain if workers_dev is `true`", async () => {
       writeWranglerToml({
         workers_dev: true,
       });
@@ -1129,7 +1129,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1153,7 +1153,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        No deployment targets for
+        No publish targets for
         test-name
         (TIMINGS)"
       `);
@@ -1173,7 +1173,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1195,7 +1195,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1230,7 +1230,7 @@ export default{
         Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1260,7 +1260,7 @@ export default{
           Uploaded
           test-name
           (TIMINGS)
-          Deployed
+          Published
           test-name
           (TIMINGS)
 
@@ -1295,7 +1295,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1363,7 +1363,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1397,7 +1397,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1436,7 +1436,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1465,7 +1465,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1506,7 +1506,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
@@ -1546,7 +1546,7 @@ export default{
         "Uploaded
         test-name
         (TIMINGS)
-        Deployed
+        Published
         test-name
         (TIMINGS)
 
