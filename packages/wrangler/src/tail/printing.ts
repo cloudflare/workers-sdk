@@ -12,7 +12,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
     ).toLocaleString();
     const outcome = prettifyOutcome(eventMessage.outcome);
 
-    console.log(`"${cronPattern}" ${datetime} - ${outcome}`);
+    console.log(`"${cronPattern}" @ ${datetime} - ${outcome}`);
   } else {
     const requestMethod = eventMessage.event.request.method.toUpperCase();
     const url = eventMessage.event.request.url;
