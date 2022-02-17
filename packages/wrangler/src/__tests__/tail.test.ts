@@ -4,13 +4,8 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
 import type Websocket from "ws";
-import {
-  TailEventMessage,
-  Outcome,
-  RequestEvent,
-  ScheduledEvent,
-} from "../tail";
 
 describe("tail", () => {
   runInTempDir();
@@ -168,7 +163,7 @@ describe("tail", () => {
     );
   });
 
-  /* Basic logging */
+  /* Logging */
 
   it("logs incoming messages", async () => {
     await runWrangler("tail test-worker");
