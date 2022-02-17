@@ -1,69 +1,46 @@
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
+import type { TailFilterMessage, Outcome } from "./filters";
+export type { TailCLIFilters } from "./filters";
+export { translateCLICommandToFilterMessage } from "./filters";
+export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 
-export type TailApiResponse = {
+/**
+ * When creating a Tail, the response from the API contains
+ * - an ID used for identifying the tail
+ * - a URL to a WebSocket connection available for the tail to connect to
+ * - an expiration date when the tail is no longer guaranteed to be valid
+ */
+type TailCreationApiResponse = {
   id: string;
   url: string;
   expires_at: Date;
 };
 
-export type TailCLIFilters = {
-  status?: Array<"ok" | "error" | "canceled">;
-  header?: string;
-  method?: string[];
-  search?: string;
-  samplingRate?: number;
-  clientIp?: string[];
-};
-
-// due to the trace worker being built around wrangler 1 and
-// some other stuff, the filters we send to the API are slightly
-// different than the ones we read from the CLI
-type SamplingRateFilter = {
-  sampling_rate: number;
-};
-
-type OutcomeFilter = {
-  outcome: string[];
-};
-
-type MethodFilter = {
-  method: string[];
-};
-
-type HeaderFilter = {
-  header: {
-    key: string;
-    query?: string;
-  };
-};
-
-type ClientIpFilter = {
-  client_ip: string[];
-};
-
-type QueryFilter = {
-  query: string;
-};
-
-type ApiFilter =
-  | SamplingRateFilter
-  | OutcomeFilter
-  | MethodFilter
-  | HeaderFilter
-  | ClientIpFilter
-  | QueryFilter;
-
-type ApiFilterMessage = {
-  filters: ApiFilter[];
-  debug: boolean;
-};
-
+/**
+ * Generate a URL that, when `cfetch`ed, creates a tail.
+ *
+ * https://api.cloudflare.com/#worker-tail-logs-start-tail
+ *
+ * @param accountId the account ID associated with the worker to tail
+ * @param workerName the name of the worker to tail
+ * @returns a `cfetch`-ready URL for creating a new tail
+ */
 function makeCreateTailUrl(accountId: string, workerName: string): string {
   return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }
 
+/**
+ * Generate a URL that, when `cfetch`ed, deletes a tail
+ *
+ * https://api.cloudflare.com/#worker-tail-logs-delete-tail
+ *
+ * @param accountId the account ID associated with the worker we're tailing
+ * @param workerName the name of the worker we're tailing
+ * @param tailId the ID of the tail we want to delete
+ * @returns a `cfetch`-ready URL for deleting a tail
+ */
 function makeDeleteTailUrl(
   accountId: string,
   workerName: string,
@@ -72,39 +49,45 @@ function makeDeleteTailUrl(
   return `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
-/// Creates a tail, but doesn't connect to it.
-async function createTailButDontConnect(
-  accountId: string,
-  workerName: string
-): Promise<TailApiResponse> {
-  const createTailUrl = makeCreateTailUrl(accountId, workerName);
-  /// https://api.cloudflare.com/#worker-tail-logs-start-tail
-  return await fetchResult<TailApiResponse>(createTailUrl, {
-    method: "POST",
-  });
-}
-
+/**
+ * Create and connect to a tail.
+ *
+ * Under the hood, this function
+ * - Registers a new Tail with the API
+ * - Connects to the tail worker
+ * - Sends any filters over the connection
+ *
+ * @param accountId the account ID associated with the worker to tail
+ * @param workerName the name of the worker to tail
+ * @param message a `TailFilterMessage` to send up to the tail worker
+ * @returns a websocket connection, an expiration, and a function to call to delete the tail
+ */
 export async function createTail(
   accountId: string,
   workerName: string,
-  filters: ApiFilter[]
+  message: TailFilterMessage
 ): Promise<{
   tail: WebSocket;
   expiration: Date;
   deleteTail: () => Promise<void>;
 }> {
+  // create the tail
+  const createTailUrl = makeCreateTailUrl(accountId, workerName);
   const {
     id: tailId,
     url: websocketUrl,
     expires_at: expiration,
-  } = await createTailButDontConnect(accountId, workerName);
-  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
+  } = await fetchResult<TailCreationApiResponse>(createTailUrl, {
+    method: "POST",
+  });
 
-  // deletes the tail
+  // delete the tail (not yet!)
+  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
   async function deleteTail() {
     await fetchResult(deleteUrl, { method: "DELETE" });
   }
 
+  // connect to the tail
   const tail = new WebSocket(websocketUrl, "trace-v1", {
     headers: {
       "Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
@@ -112,131 +95,213 @@ export async function createTail(
     },
   });
 
-  // check if there's any filters to send
-  if (filters.length !== 0) {
-    const message: ApiFilterMessage = {
-      filters,
-      // if debug is set to true, then all logs will be sent through.
-      // logs that _would_ have been blocked will result with a message
-      // telling you what filter would have rejected it
-      debug: false,
-    };
-
-    tail.on("open", function () {
-      tail.send(
-        JSON.stringify(message),
-        { binary: false, compress: false, mask: false, fin: true },
-        (err) => {
-          if (err) {
-            throw err;
-          }
+  // send filters when we open up
+  tail.on("open", function () {
+    tail.send(
+      JSON.stringify(message),
+      { binary: false, compress: false, mask: false, fin: true },
+      (err) => {
+        if (err) {
+          throw err;
         }
-      );
-    });
-  }
+      }
+    );
+  });
 
   return { tail, expiration, deleteTail };
 }
 
-export function translateCliFiltersToApiFilters(
-  cliFilters: TailCLIFilters
-): ApiFilter[] {
-  const apiFilters: ApiFilter[] = [];
+/**
+ * Everything captured by the trace worker and sent to us via
+ * `wrangler tail` is structured JSON that deserializes to this type.
+ */
+export type TailEventMessage = {
+  /**
+   * Whether the execution of this worker succeeded or failed
+   */
+  outcome: Outcome;
 
-  if (cliFilters.samplingRate) {
-    apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
-  }
+  /**
+   * The name of the script we're tailing
+   */
+  scriptName?: string;
 
-  if (cliFilters.status) {
-    apiFilters.push(parseOutcome(cliFilters.status));
-  }
+  /**
+   * Any exceptions raised by the worker
+   */
+  exceptions: {
+    /**
+     * The name of the exception. Usually "Error", but if you
+     * have custom error types could be e.g. "InvalidInputError"
+     */
+    name: string;
 
-  if (cliFilters.method) {
-    apiFilters.push(parseMethod(cliFilters.method));
-  }
+    /**
+     * The error message
+     */
+    message: string;
 
-  if (cliFilters.header) {
-    apiFilters.push(parseHeader(cliFilters.header));
-  }
+    /**
+     * When the exception was raised/thrown
+     */
+    timestamp: Date;
+  }[];
 
-  if (cliFilters.clientIp) {
-    apiFilters.push(parseClientIp(cliFilters.clientIp));
-  }
+  /**
+   * Any logs sent out by the worker
+   */
+  logs: {
+    message: string[];
+    level: string; // TODO: make this a union of possible values
+    timestamp: Date;
+  }[];
 
-  if (cliFilters.search) {
-    apiFilters.push(parseQuery(cliFilters.search));
-  }
+  /**
+   * When the event was triggered
+   */
+  eventTimestamp: Date;
 
-  return apiFilters;
-}
+  /**
+   * The event that triggered the worker. In the case of an HTTP request,
+   * this will be a RequestEvent. If it's a cron trigger, it'll be a
+   * ScheduledEvent.
+   *
+   * Until workers-types exposes individual types for export, we'll have
+   * to just re-define these types ourselves.
+   */
+  event: RequestEvent | ScheduledEvent;
+};
 
-function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
-  if (sampling_rate <= 0 || sampling_rate >= 1) {
-    throw new Error(
-      "A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
-    );
-  }
+/**
+ * A request that triggered worker execution
+ */
+export type RequestEvent = {
+  /**
+   * Copied mostly from https://developers.cloudflare.com/workers/runtime-apis/request#properties
+   * but with some properties omitted based on my own testing
+   */
+  request: {
+    /**
+     * The URL the request was sent to
+     */
+    url: string;
 
-  return { sampling_rate };
-}
+    /**
+     * The request method
+     */
+    method: string;
 
-function parseOutcome(
-  statuses: Array<"ok" | "error" | "canceled">
-): OutcomeFilter {
-  const outcomes = new Set<string>();
-  for (const status of statuses) {
-    switch (status) {
-      case "ok":
-        outcomes.add("ok");
-        break;
-      case "canceled":
-        outcomes.add("canceled");
-        break;
-      // there's more than one way to error
-      case "error":
-        outcomes.add("exception");
-        outcomes.add("exceededCpu");
-        outcomes.add("unknown");
-        break;
-      default:
-        break;
-    }
-  }
+    /**
+     * Headers sent with the request
+     */
+    headers: Record<string, string>;
 
-  return {
-    outcome: Array.from(outcomes),
+    /**
+     * Cloudflare-specific properties
+     * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties
+     */
+    cf: {
+      /**
+       * How long (in ms) it took for the client's TCP connection to make a
+       * round trip to the worker and back. For all my gamers out there,
+       * this is the request's ping
+       */
+      clientTcpRtt?: number;
+
+      /**
+       * Longitude and Latitude of where the request originated from
+       */
+      longitude?: string;
+      latitude?: string;
+
+      /**
+       * What cipher was used to establish the TLS connection
+       */
+      tlsCipher: string;
+
+      /**
+       * Which continent the request came from.
+       */
+      continent?: "NA";
+
+      /**
+       * ASN of the incoming request
+       */
+      asn: number;
+
+      /**
+       * The country the incoming request is coming from
+       */
+      country?: string;
+
+      /**
+       * The TLS version the connection used
+       */
+      tlsVersion: string;
+
+      /**
+       * The colo that processed the request (i.e. the airport code
+       * of the closest city to the server that spun up the worker)
+       */
+      colo: string;
+
+      /**
+       * The timezone where the request came from
+       */
+      timezone?: string;
+
+      /**
+       * The city where the request came from
+       */
+      city?: string;
+
+      /**
+       * The browser-requested prioritization information in the request object
+       */
+      requestPriority?: string;
+
+      /**
+       * Which version of HTTP the request came over e.g. "HTTP/2"
+       */
+      httpProtocol: string;
+
+      /**
+       * The region where the request originated from
+       */
+      region?: string;
+      regionCode?: string;
+
+      /**
+       * The organization which owns the ASN of the incoming request, for example, Google Cloud.
+       */
+      asOrganization: string;
+
+      /**
+       * Metro code (DMA) of the incoming request, for example, "635".
+       */
+      metroCode?: string;
+
+      /**
+       * Postal code of the incoming request, for example, "78701".
+       */
+      postalCode?: string;
+    };
   };
-}
+};
 
-// we actually don't need to do anything here
-function parseMethod(method: string[]): MethodFilter {
-  return { method };
-}
+/**
+ * An event that was triggered at a certain time
+ */
+export type ScheduledEvent = {
+  /**
+   * The cron pattern that matched when this event fired
+   */
+  cron: string;
 
-function parseHeader(header: string): HeaderFilter {
-  // headers of the form "HEADER-KEY: VALUE" get split.
-  // the query is optional
-  const [headerKey, headerQuery] = header.split(":", 2);
-  return {
-    header: {
-      key: headerKey.trim(),
-      query: headerQuery?.trim(),
-    },
-  };
-}
-
-function parseClientIp(client_ip: string[]): ClientIpFilter {
-  return { client_ip };
-}
-
-function parseQuery(query: string): QueryFilter {
-  return { query };
-}
-
-export function prettyPrintLogs(_data: WebSocket.RawData): void {
-  throw new Error("TODO!");
-}
-
-export function jsonPrintLogs(data: WebSocket.RawData): void {
-  console.log(JSON.stringify(JSON.parse(data.toString()), null, 2));
-}
+  /**
+   * The time this worker was scheduled to run.
+   * For some reason, this doesn't...work correctly when we
+   * do it directly as a Date. So parse it later on your own.
+   */
+  scheduledTime: number;
+};

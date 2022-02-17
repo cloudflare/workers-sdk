@@ -4,11 +4,8 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
 import type Websocket from "ws";
-
-// change this if you're testing using debug mode
-// (sends all logs regardless of filters)
-const DEBUG = false;
 
 describe("tail", () => {
   runInTempDir();
@@ -16,7 +13,7 @@ describe("tail", () => {
   mockApiToken();
 
   const std = mockConsoleMethods();
-  const api = mockWebsocketApis();
+  const api = mockWebsocketAPIs();
 
   /* API related functionality */
 
@@ -31,6 +28,20 @@ describe("tail", () => {
 
     api.ws.close();
     expect(api.requests.deletion.count).toStrictEqual(1);
+  });
+
+  it("errors when the websocket closes unexpectedly", async () => {
+    api.ws.close();
+
+    await expect(runWrangler("tail test-worker")).rejects.toThrow();
+  });
+
+  it("activates debug mode when the cli arg is passed in", async () => {
+    await runWrangler("tail test-worker --debug");
+    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty(
+      "debug",
+      true
+    );
   });
 
   /* filtering */
@@ -131,7 +142,8 @@ describe("tail", () => {
       method.map((m) => `--method ${m} `).join("") +
       `--header ${header} ` +
       client_ip.map((c) => `--ip ${c} `).join("") +
-      `--search ${query}`;
+      `--search ${query} ` +
+      `--debug`;
 
     const expectedWebsocketMessage = {
       filters: [
@@ -142,7 +154,7 @@ describe("tail", () => {
         { client_ip },
         { query },
       ],
-      debug: DEBUG,
+      debug: true,
     };
 
     await runWrangler(`tail test-worker ${cliFilters}`);
@@ -151,30 +163,69 @@ describe("tail", () => {
     );
   });
 
-  /* Basic logging */
+  /* Printing */
 
   it("logs incoming messages", async () => {
     await runWrangler("tail test-worker");
-    const greeting = serialize({ hello: "world!" });
-    api.ws.send(greeting);
-    expect(std.out).toMatch(deserializeToJson(greeting));
+    const message = serialize(generateMockEventMessage());
+    api.ws.send(message);
+    expect(std.out).toMatch(deserializeToJson(message));
   });
 });
 
 /* helpers */
 
+/**
+ * The built in serialize-to-JSON feature of our mock websocket doesn't work
+ * for our use-case since we actually expect a raw buffer,
+ * not a Javascript string.
+ *
+ * @param message an object to serialize to JSON
+ * @returns the same type we expect when deserializing in wrangler
+ */
 function serialize(message: unknown): Websocket.RawData {
   return Buffer.from(JSON.stringify(message), "utf-8");
 }
 
+/**
+ * Similarly, we need to deserialize from a raw buffer instead
+ * of just JSON.parsing a raw string. This deserializer also then
+ * re-stringifies with some spacing, the same way wrangler tail does.
+ *
+ * @param message a buffer of data received from the websocket
+ * @returns a string ready to be printed to the terminal or compared against
+ */
 function deserializeToJson(message: Websocket.RawData): string {
   return JSON.stringify(JSON.parse(message.toString()), null, 2);
 }
 
+/**
+ * A mock for all the different API resources wrangler accesses
+ * when running `wrangler tail`
+ */
+type MockAPI = {
+  requests: {
+    creation: RequestCounter;
+    deletion: RequestCounter;
+  };
+  ws: WS;
+};
+
+/**
+ * A counter used to check how many times a mock API has been hit.
+ * Useful as a helper in our testing to check if wrangler is making
+ * the correct API calls without actually sending any web traffic
+ */
 type RequestCounter = {
   count: number;
 };
 
+/**
+ * Mock out the API hit during Tail creation
+ *
+ * @param websocketURL a fake URL for wrangler to connect a websocket to
+ * @returns a `RequestCounter` for counting how many times the API is hit
+ */
 function mockCreateTailRequest(websocketURL: string): RequestCounter {
   const requests = { count: 0 };
   setMockResponse(
@@ -193,6 +244,11 @@ function mockCreateTailRequest(websocketURL: string): RequestCounter {
   return requests;
 }
 
+/**
+ * Mock out the API hit during Tail deletion
+ *
+ * @returns a `RequestCounter` for counting how many times the API is hit
+ */
 function mockDeleteTailRequest(): RequestCounter {
   const requests = { count: 0 };
   setMockResponse(
@@ -207,15 +263,14 @@ function mockDeleteTailRequest(): RequestCounter {
   return requests;
 }
 
-type MockAPI = {
-  requests: {
-    creation: RequestCounter;
-    deletion: RequestCounter;
-  };
-  ws: WS;
-};
-
-function mockWebsocketApis(websocketURL = "ws://localhost:1234"): MockAPI {
+/**
+ * All-in-one convenience method to mock the appropriate API calls before
+ * each test, and clean up afterwards.
+ *
+ * @param websocketURL a fake websocket URL for wrangler to connect to
+ * @returns a mocked-out version of the API
+ */
+function mockWebsocketAPIs(websocketURL = "ws://localhost:1234"): MockAPI {
   const api: MockAPI = {
     requests: {
       deletion: { count: 0 },
@@ -243,4 +298,65 @@ function mockWebsocketApis(websocketURL = "ws://localhost:1234"): MockAPI {
   });
 
   return api;
+}
+
+/**
+ * Generate a mock `TailEventMessage` of the same shape sent back by the
+ * tail worker.
+ *
+ * @param opts Any specific parts of the message to use instead of defaults
+ * @returns a `TailEventMessage` that wrangler can process and display
+ */
+function generateMockEventMessage(
+  opts?: Partial<TailEventMessage>
+): TailEventMessage {
+  return {
+    outcome: opts?.outcome || "ok",
+    exceptions: opts?.exceptions || [],
+    logs: opts?.logs || [],
+    eventTimestamp: opts?.eventTimestamp || new Date(),
+    event: opts?.event || generateMockRequestEvent(),
+  };
+}
+
+/**
+ * Generate a mock `RequestEvent` that, in an alternate timeline, was used
+ * to trigger a worker. You can't disprove this!
+ *
+ * @param opts Any specific parts of the event to use instead of defaults
+ * @returns a `RequestEvent` that can be used within an `EventMessage`
+ */
+function generateMockRequestEvent(
+  opts?: Partial<RequestEvent["request"]>
+): RequestEvent {
+  return {
+    request: {
+      url: opts?.url || "https://example.org/",
+      method: opts?.url || "GET",
+      headers: opts?.headers || { "X-EXAMPLE-HEADER": "some_value" },
+      cf: opts?.cf || {
+        tlsCipher: "AEAD-ENCRYPT-O-MATIC-SHA",
+        tlsVersion: "TLSv2.0", // when will they invent tls 2
+        asn: 42069,
+        colo: "ATL",
+        httpProtocol: "HTTP/4",
+        asOrganization: "Cloudflare",
+      },
+    },
+  };
+}
+
+/**
+ * Generate a mock `ScheduledEvent`
+ *
+ * @param opts Any part of the `ScheduledEvent` to use instead of defaults
+ * @returns a `ScheduledEvent` for use in a `TailEventMessage`
+ */
+function generateMockScheduledEvent(
+  opts?: Partial<ScheduledEvent>
+): ScheduledEvent {
+  return {
+    cron: opts?.cron || "* * * * *",
+    scheduledTime: opts?.scheduledTime || new Date().getTime(),
+  };
 }

@@ -34,7 +34,7 @@ import {
   createTail,
   jsonPrintLogs,
   prettyPrintLogs,
-  translateCliFiltersToApiFilters,
+  translateCLICommandToFilterMessage,
 } from "./tail";
 import {
   login,
@@ -1069,6 +1069,13 @@ export async function main(argv: string[]): Promise<void> {
             type: "string",
             describe: "Perform on a specific environment",
           })
+          .option("debug", {
+            type: "boolean",
+            hidden: true,
+            default: false,
+            describe:
+              "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
+          })
       );
     },
     async (args) => {
@@ -1105,7 +1112,7 @@ export async function main(argv: string[]): Promise<void> {
       const accountId = config.account_id;
 
       const cliFilters: TailCLIFilters = {
-        status: args.status as Array<"ok" | "error" | "canceled">,
+        status: args.status as ("ok" | "error" | "canceled")[],
         header: args.header,
         method: args.method,
         samplingRate: args["sampling-rate"],
@@ -1113,10 +1120,16 @@ export async function main(argv: string[]): Promise<void> {
         clientIp: args.ip,
       };
 
-      const filters = translateCliFiltersToApiFilters(cliFilters);
+      const filters = translateCLICommandToFilterMessage(
+        cliFilters,
+        args.debug
+      );
 
-      const { tail, expiration, /* sendHeartbeat, */ deleteTail } =
-        await createTail(accountId, scriptName, filters);
+      const { tail, expiration, deleteTail } = await createTail(
+        accountId,
+        scriptName,
+        filters
+      );
 
       console.log(
         `successfully created tail, expires at ${expiration.toLocaleString()}`
@@ -1141,7 +1154,7 @@ export async function main(argv: string[]): Promise<void> {
             await setTimeout(1000);
             break;
           case tail.CLOSED:
-            process.exit(1);
+            throw new Error(`Connection to ${scriptName} closed unexpectedly.`);
         }
       }
 
