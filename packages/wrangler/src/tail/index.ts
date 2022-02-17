@@ -259,7 +259,9 @@ export type ScheduledEvent = {
   cron: string;
 
   /**
-   * The time this worker was scheduled to run
+   * The time this worker was scheduled to run.
+   * For some reason, this doesn't...work correctly when we
+   * do it directly as a Date. So parse it later on your own.
    */
-  scheduledTime: Date;
+  scheduledTime: number;
 };

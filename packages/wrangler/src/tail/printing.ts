@@ -7,16 +7,18 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
   if (isScheduledEvent(eventMessage.event)) {
     const cronPattern = eventMessage.event.cron;
-    const datetime = eventMessage.event.scheduledTime.toLocaleDateString();
+    const datetime = new Date(
+      eventMessage.event.scheduledTime
+    ).toLocaleString();
     const outcome = prettifyOutcome(eventMessage.outcome);
 
-    console.log`("${cronPattern}") ${datetime}: ${outcome}`;
+    console.log(`"${cronPattern}" ${datetime} - ${outcome}`);
   } else {
     const requestMethod = eventMessage.event.request.method.toUpperCase();
     const url = eventMessage.event.request.url;
     const outcome = prettifyOutcome(eventMessage.outcome);
 
-    console.log`${requestMethod} ${url}: ${outcome}`;
+    console.log(`${requestMethod} ${url} - ${outcome}`);
   }
 
   if (eventMessage.logs.length > 0) {
