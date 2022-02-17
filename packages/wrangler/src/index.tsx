@@ -803,17 +803,6 @@ export async function main(argv: string[]): Promise<void> {
       const environments = config.env ?? {};
       const envRootObj = args.env ? environments[args.env] || {} : config;
 
-      // TODO: this error shouldn't actually happen,
-      // but we haven't fixed it internally yet
-      if ("durable_objects" in envRootObj) {
-        if (!(args.name || config.name)) {
-          console.warn(
-            'A worker with durable objects needs to be named, or it may not work as expected. Add a "name" into wrangler.toml, or pass it in the command line with --name.'
-          );
-        }
-        // TODO: if not already published, publish a draft worker
-      }
-
       const { waitUntilExit } = render(
         <Dev
           name={args.name || config.name}
