@@ -9,10 +9,12 @@
  * These are the filters we accept in the CLI. They
  * were copied directly from wrangler 1 in order to
  * maintain compatability, so they aren't actually the exact
- * filters we need to send up to the tail worker.
- *
- * They generally map 1:1 , but often require some transformation or
+ * filters we need to send up to the tail worker. They generally map 1:1,
+ * but often require some transformation or
  * renaming to match what it expects.
+ *
+ * For a full description of each filter, either check the
+ * CLI description or see the documentation for `ApiFilter`.
  */
 export type CliFilters = {
   status?: Array<"ok" | "error" | "canceled">;
@@ -53,8 +55,15 @@ type SamplingRateFilter = {
  * (exception, exceededCpu, and unknown) are considered errors
  */
 type OutcomeFilter = {
-  outcome: Array<"ok" | "canceled" | "exception" | "exceededCpu" | "unknown">;
+  outcome: Array<Outcome>;
 };
+
+export type Outcome =
+  | "ok"
+  | "canceled"
+  | "exception"
+  | "exceededCpu"
+  | "unknown";
 
 /**
  * Filters logs based on the HTTP method used for the request
@@ -113,6 +122,14 @@ export type ApiFilterMessage = {
   debug: boolean;
 };
 
+/**
+ * Translate the flags passed in via a CLI invokation of wrangler
+ * into a message that we can send to the tail worker.
+ *
+ * @param cliFilters An object containing all the filters passed in from the CLI
+ * @param debug Whether or not we should be in debug mode
+ * @returns A filter message ready to be sent to the tail worker
+ */
 export function translateCliCommandToApiFilterMessage(
   cliFilters: CliFilters,
   debug: boolean
@@ -189,8 +206,8 @@ function parseOutcome(
   };
 }
 
-// we actually don't need to do anything here
 function parseMethod(method: string[]): MethodFilter {
+  // any nonsensical methods won't do anything, so just return
   return { method };
 }
 

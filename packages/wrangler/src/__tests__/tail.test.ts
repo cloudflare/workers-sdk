@@ -5,6 +5,12 @@ import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type Websocket from "ws";
+import {
+  TailEventMessage,
+  Outcome,
+  RequestEvent,
+  ScheduledEvent,
+} from "../tail";
 
 describe("tail", () => {
   runInTempDir();
@@ -166,9 +172,9 @@ describe("tail", () => {
 
   it("logs incoming messages", async () => {
     await runWrangler("tail test-worker");
-    const greeting = serialize({ hello: "world!" });
-    api.ws.send(greeting);
-    expect(std.out).toMatch(deserializeToJson(greeting));
+    const message = serialize(generateMockEventMessage());
+    api.ws.send(message);
+    expect(std.out).toMatch(deserializeToJson(message));
   });
 });
 
@@ -254,4 +260,45 @@ function mockWebsocketApis(websocketURL = "ws://localhost:1234"): MockAPI {
   });
 
   return api;
+}
+
+function generateMockEventMessage(
+  opts?: Partial<TailEventMessage>
+): TailEventMessage {
+  return {
+    outcome: opts?.outcome || "ok",
+    exceptions: opts?.exceptions || [],
+    logs: opts?.logs || [],
+    eventTimestamp: opts?.eventTimestamp || new Date(),
+    event: opts?.event || generateMockRequestEvent(),
+  };
+}
+
+function generateMockRequestEvent(
+  opts?: Partial<RequestEvent["request"]>
+): RequestEvent {
+  return {
+    request: {
+      url: opts?.url || "https://example.org/",
+      method: opts?.url || "GET",
+      headers: opts?.headers || { "X-EXAMPLE-HEADER": "some_value" },
+      cf: opts?.cf || {
+        tlsCipher: "AEAD-ENCRYPT-O-MATIC-SHA",
+        tlsVersion: "TLSv2.0", // when will they invent tls 2
+        asn: 42069,
+        colo: "ATL",
+        httpProtocol: "HTTP/4",
+        asOrganization: "Cloudflare",
+      },
+    },
+  };
+}
+
+function generateMockScheduledEvent(
+  opts?: Partial<ScheduledEvent>
+): ScheduledEvent {
+  return {
+    cron: opts?.cron || "* * * * *",
+    scheduledTime: opts?.scheduledTime || new Date(),
+  };
 }
