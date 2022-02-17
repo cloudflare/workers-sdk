@@ -294,6 +294,6 @@ function generateMockScheduledEvent(
 ): ScheduledEvent {
   return {
     cron: opts?.cron || "* * * * *",
-    scheduledTime: opts?.scheduledTime || new Date(),
+    scheduledTime: opts?.scheduledTime || new Date().getTime(),
   };
 }
