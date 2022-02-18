@@ -42,7 +42,7 @@ jobs:
             let pr_number = Number(fs.readFileSync('./pr_number'));
             fs.appendFileSync(process.env.GITHUB_ENV, `WORKFLOW_RUN_PR=${pr_number}`);
 
-    - name: Comment on PR with Link
+      - name: "Comment on PR with Link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ env.WORKFLOW_RUN_PR }}
