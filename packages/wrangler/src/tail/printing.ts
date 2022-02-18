@@ -17,8 +17,9 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
     const requestMethod = eventMessage.event.request.method.toUpperCase();
     const url = eventMessage.event.request.url;
     const outcome = prettifyOutcome(eventMessage.outcome);
+    const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
 
-    console.log(`${requestMethod} ${url} - ${outcome}`);
+    console.log(`${requestMethod} ${url} - ${outcome} @ ${datetime}`);
   }
 
   if (eventMessage.logs.length > 0) {

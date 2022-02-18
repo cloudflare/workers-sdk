@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { TailEventMessage, RequestEvent } from "../tail";
+import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
 import type Websocket from "ws";
 
 describe("tail", () => {
@@ -167,10 +167,27 @@ describe("tail", () => {
   /* Printing */
 
   it("logs incoming messages", async () => {
-    await runWrangler("tail test-worker");
-    const message = serialize(generateMockEventMessage());
-    api.ws.send(message);
-    expect(std.out).toMatch(deserializeToJson(message));
+    await runWrangler("tail test-worker --format json");
+
+    const requestEvent = generateMockRequestEvent();
+    const requestMessage = serialize(
+      generateMockEventMessage({ event: requestEvent })
+    );
+    api.ws.send(requestMessage);
+    expect(std.out).toMatch(deserializeToJson(requestMessage));
+
+    const scheduledEvent = generateMockScheduledEvent();
+    const scheduledMessage = serialize(
+      generateMockEventMessage({
+        event: scheduledEvent,
+      })
+    );
+    api.ws.send(scheduledMessage);
+    expect(std.out).toMatch(deserializeToJson(scheduledMessage));
+  });
+
+  it("omits non-essential information when pretty-printing", async () => {
+    await runWrangler("tail test-worker --format pretty");
   });
 });
 
@@ -315,7 +332,7 @@ function generateMockEventMessage(
     outcome: opts?.outcome || "ok",
     exceptions: opts?.exceptions || [],
     logs: opts?.logs || [],
-    eventTimestamp: opts?.eventTimestamp || new Date(),
+    eventTimestamp: opts?.eventTimestamp || Date.now(),
     event: opts?.event || generateMockRequestEvent(),
   };
 }
@@ -348,5 +365,14 @@ function generateMockRequestEvent(
         },
       }
     ),
+  };
+}
+
+function generateMockScheduledEvent(
+  opts?: Partial<ScheduledEvent>
+): ScheduledEvent {
+  return {
+    cron: opts?.cron || "* * * * *",
+    scheduledTime: Date.now(),
   };
 }

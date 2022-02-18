@@ -132,35 +132,34 @@ export type TailEventMessage = {
    */
   exceptions: {
     /**
-     * The name of the exception. Usually "Error", but if you
-     * have custom error types could be e.g. "InvalidInputError"
+     * The name of the exception.
      */
     name: string;
 
     /**
      * The error message
      */
-    message: string;
+    message: unknown;
 
     /**
      * When the exception was raised/thrown
      */
-    timestamp: Date;
+    timestamp: number;
   }[];
 
   /**
    * Any logs sent out by the worker
    */
   logs: {
-    message: string[];
+    message: unknown;
     level: string; // TODO: make this a union of possible values
-    timestamp: Date;
+    timestamp: number;
   }[];
 
   /**
    * When the event was triggered
    */
-  eventTimestamp: Date;
+  eventTimestamp: number;
 
   /**
    * The event that triggered the worker. In the case of an HTTP request,
