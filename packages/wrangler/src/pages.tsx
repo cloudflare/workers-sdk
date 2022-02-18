@@ -792,26 +792,27 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         .map(
           (durableObjectBinding) =>
             DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObjectBinding.toString())
-              ?.groups.scriptName || ''
+              ?.groups.scriptName
         )
-        .filter((scriptName) => scriptName !== undefined);
+        .filter(Boolean);
       const mounts = Object.fromEntries(
-        // By prepending the mount with `./`, we intentionally break the automatic routing since this URL gets normalized before it hits Miniflare.
-        scriptNames.map((scriptName) => [`./${scriptName}`, scriptName])
+        scriptNames.map((scriptName) => [scriptName, scriptName])
       );
-      const kvNamespaces = kvBindings.map((kv) => kv.toString());
+      const kvNamespaces = kvBindings.map((kvBinding) => kvBinding.toString());
       const durableObjects = Object.fromEntries(
-        durableObjectBindings.map((durableObject) => {
+        durableObjectBindings.map((durableObjectBinding) => {
           const {
-            groups: { binding, className, scriptName = '' },
-          } = DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString());
-          return [binding, { className, scriptName: `./${scriptName}` }];
+            groups: { binding, className, scriptName },
+          } = DURABLE_OBJECTS_BINDING_REGEXP.exec(
+            durableObjectBinding.toString()
+          );
+          return [binding, { className, scriptName }];
         })
       );
 
       if (Object.keys(durableObjects).length > 0) {
         console.log(
-          "Caution! The interface for setting Durable Objects is currently very much still under active development. It is liable to change at any time."
+          "Caution! The interface for binding Durable Objects is currently under active development. It is liable to change at any time."
         );
       }
 
