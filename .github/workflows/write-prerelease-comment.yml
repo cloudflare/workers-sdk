@@ -12,19 +12,28 @@ jobs:
     runs-on: ubuntu-latest
     name: Write comment to the PR
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Use Node.js 16.7
-        uses: actions/setup-node@v2
-        with:
-          node-version: 16.7
-          cache: "npm"
-
       - name: "Put PR and workflow ID on the environment"
-        run: node .github/extract-pr-and-workflow-id.js
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+
+            for (const artifact of allArtifacts.data.artifacts) {
+              // Extract the PR number from the artifact name
+              const match = /^npm-package-wrangler-(\d+)$/.exec(artifact.name);
+              if (match) {
+                fs.appendFileSync(
+                  process.env.GITHUB_ENV,
+                  `\nWORKFLOW_RUN_PR=${match[1]}` +
+                    `\nWORKFLOW_RUN_ID=${context.payload.workflow_run.id}`
+                );
+                break;
+              }
+            }
 
       - name: "Comment on PR with Link"
         uses: marocchino/sticky-pull-request-comment@v2
