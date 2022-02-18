@@ -185,10 +185,6 @@ describe("tail", () => {
     api.ws.send(scheduledMessage);
     expect(std.out).toMatch(deserializeToJson(scheduledMessage));
   });
-
-  it("omits non-essential information when pretty-printing", async () => {
-    await runWrangler("tail test-worker --format pretty");
-  });
 });
 
 /* helpers */
