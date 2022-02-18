@@ -45,16 +45,5 @@ jobs:
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v2
         with:
-          name: wrangler
+          name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/wrangler/wrangler-*.tgz
-
-      - name: Save PR number
-        env:
-          PR_NUMBER: ${{ github.event.number }}
-        run: |
-          mkdir -p ./pr
-          echo $PR_NUMBER > ./pr/pr_number
-      - uses: actions/upload-artifact@v2
-        with:
-          name: pr_number
-          path: pr/
