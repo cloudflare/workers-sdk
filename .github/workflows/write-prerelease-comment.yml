@@ -26,7 +26,7 @@ jobs:
               // Extract the PR number from the artifact name
               const match = /^npm-package-wrangler-(\d+)$/.exec(artifact.name);
               if (match) {
-                fs.appendFileSync(
+                require("fs").appendFileSync(
                   process.env.GITHUB_ENV,
                   `\nWORKFLOW_RUN_PR=${match[1]}` +
                     `\nWORKFLOW_RUN_ID=${context.payload.workflow_run.id}`
