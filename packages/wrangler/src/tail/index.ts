@@ -5,6 +5,7 @@ import type { TailFilterMessage, Outcome } from "./filters";
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
+import type { Request } from "undici";
 
 /**
  * When creating a Tail, the response from the API contains
@@ -175,27 +176,9 @@ export type TailEventMessage = {
 /**
  * A request that triggered worker execution
  */
+
 export type RequestEvent = {
-  /**
-   * Copied mostly from https://developers.cloudflare.com/workers/runtime-apis/request#properties
-   * but with some properties omitted based on my own testing
-   */
-  request: {
-    /**
-     * The URL the request was sent to
-     */
-    url: string;
-
-    /**
-     * The request method
-     */
-    method: string;
-
-    /**
-     * Headers sent with the request
-     */
-    headers: Record<string, string>;
-
+  request: Pick<Request, "url" | "method" | "headers"> & {
     /**
      * Cloudflare-specific properties
      * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties

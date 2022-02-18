@@ -1,10 +1,11 @@
+import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
+import type { TailEventMessage, RequestEvent } from "../tail";
 import type Websocket from "ws";
 
 describe("tail", () => {
@@ -330,33 +331,22 @@ function generateMockRequestEvent(
   opts?: Partial<RequestEvent["request"]>
 ): RequestEvent {
   return {
-    request: {
-      url: opts?.url || "https://example.org/",
-      method: opts?.url || "GET",
-      headers: opts?.headers || { "X-EXAMPLE-HEADER": "some_value" },
-      cf: opts?.cf || {
-        tlsCipher: "AEAD-ENCRYPT-O-MATIC-SHA",
-        tlsVersion: "TLSv2.0", // when will they invent tls 2
-        asn: 42069,
-        colo: "ATL",
-        httpProtocol: "HTTP/4",
-        asOrganization: "Cloudflare",
-      },
-    },
-  };
-}
-
-/**
- * Generate a mock `ScheduledEvent`
- *
- * @param opts Any part of the `ScheduledEvent` to use instead of defaults
- * @returns a `ScheduledEvent` for use in a `TailEventMessage`
- */
-function generateMockScheduledEvent(
-  opts?: Partial<ScheduledEvent>
-): ScheduledEvent {
-  return {
-    cron: opts?.cron || "* * * * *",
-    scheduledTime: opts?.scheduledTime || new Date().getTime(),
+    request: Object.assign(
+      new Request(opts?.url || "https://example.org/", {
+        method: opts?.method || "GET",
+        headers:
+          opts?.headers || new Headers({ "X-EXAMPLE-HEADER": "some_value" }),
+      }),
+      {
+        cf: opts?.cf || {
+          tlsCipher: "AEAD-ENCRYPT-O-MATIC-SHA",
+          tlsVersion: "TLSv2.0", // when will they invent tls 2
+          asn: 42069,
+          colo: "ATL",
+          httpProtocol: "HTTP/4",
+          asOrganization: "Cloudflare",
+        },
+      }
+    ),
   };
 }
