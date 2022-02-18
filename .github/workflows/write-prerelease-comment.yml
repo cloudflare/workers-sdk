@@ -16,31 +16,23 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
                owner: context.repo.owner,
                repo: context.repo.repo,
                run_id: context.payload.workflow_run.id,
             });
-            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "pr_number"
-            })[0];
-            let download = await github.rest.actions.downloadArtifact({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
-               archive_format: 'zip',
-            });
-            let fs = require('fs');
-            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/pr_number.zip`, Buffer.from(download.data));
-      - name: "Unzip pr_number artifact"
-        run: unzip pr_number.zip
-      - name: "Write PR number to environment"
-        uses: actions/github-script@v5
-        with:
-          script: |
-            let fs = require('fs');
-            let pr_number = Number(fs.readFileSync('./pr_number'));
-            fs.appendFileSync(process.env.GITHUB_ENV, `WORKFLOW_RUN_PR=${pr_number}`);
+
+            for (const artifact of allArtifacts.data.artifacts) {
+              // Extract the PR number from the artifact name
+              const match = /^npm-package-wrangler-(\d+)$/artifact.name;
+              if (match) {
+                fs.appendFileSync(process.env.GITHUB_ENV,
+                    `\nWORKFLOW_RUN_PR=${match[1]}`+
+                    `\nWORKFLOW_RUN_ID=${context.payload.workflow_run.id}
+                  );
+                break;
+              }
+            }
 
       - name: "Comment on PR with Link"
         uses: marocchino/sticky-pull-request-comment@v2
@@ -50,10 +42,10 @@ jobs:
             A wrangler prerelease is available for testing. You can install it in your project with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler
+            npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/wrangler
             ```
 
             Or you can try developing a worker directly with:
             ```sh
-            npx https://prerelease-registry.developers.workers.dev/runs/${{ github.run_id }}/wrangler dev path/to/script.js
+            npx https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/wrangler dev path/to/script.js
             ```
