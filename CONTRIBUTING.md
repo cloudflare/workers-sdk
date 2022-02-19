@@ -200,3 +200,17 @@ To help maintain consistency in the changelog, changesets should have the follow
 - `TITLE` should be a single sentence containing an imperative description of the change.
 - `BODY` should be one or more paragraphs that go into more detail about the reason for the change and anything notable about the approach taken.
 - `BREAKING_CHANGE_NOTES` (optional) should be one or more paragraphs describing how this change breaks current usage and how to migrate to the new usage.
+
+### Changeset file example
+The generated changeset file will contain the package name and type of change (eg. `patch`, `minor`, or `major`), followed by our changeset format described above.
+
+Here's an example of a `patch` to the `wrangler` package, which provides a `fix`:
+```
+---
+"wrangler": patch
+---
+
+fix: replace the word "deploy" with "publish" everywhere.
+
+We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
+```
