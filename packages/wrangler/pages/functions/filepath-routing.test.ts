@@ -90,13 +90,13 @@ describe("filepath-routing", () => {
       expect(entries).toEqual({
         routes: [
           {
-            method: "PUT",
-            module: ["bar.ts:onRequestPut"],
+            method: "DELETE",
+            module: ["bar.ts:onRequestDelete"],
             routePath: "/base/bar",
           },
           {
-            method: "DELETE",
-            module: ["bar.ts:onRequestDelete"],
+            method: "PUT",
+            module: ["bar.ts:onRequestPut"],
             routePath: "/base/bar",
           },
           {
