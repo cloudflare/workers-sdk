@@ -768,4 +768,23 @@ describe("wrangler", () => {
             `);
     });
   });
+
+  describe("preview", () => {
+    it("should throw an error if the deprecated command is used with positional arguments", async () => {
+      await expect(runWrangler("preview GET")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "DEPRECATION WARNING:
+              The \`wrangler preview\` command has been deprecated.
+              Try using \`wrangler dev\` to to try out a worker during development.
+              "
+            `);
+      await expect(runWrangler("preview GET 'Some Body'")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "DEPRECATION WARNING:
+              The \`wrangler preview\` command has been deprecated.
+              Try using \`wrangler dev\` to to try out a worker during development.
+              "
+            `);
+    });
+  });
 });
