@@ -146,22 +146,19 @@ ${TOML.stringify({
   return config;
 }
 
-function getEntry(
-  args: { _: (string | number)[]; script: string | undefined },
-  config: Config
-): Entry {
+function getEntry(config: Config, command: string, script?: string): Entry {
   // @ts-expect-error a hidden field
   const wranglerTomlPath = config.__path__;
   let file: string;
   let directory = process.cwd();
-  if (args.script) {
+  if (script) {
     // If the script name comes from the command line it is relative to the current working directory.
-    file = path.resolve(args.script);
+    file = path.resolve(script);
   } else {
     // If the script name comes from the config, then it is relative to the wrangler.toml file.
     if (config.build?.upload?.main === undefined) {
       throw new Error(
-        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${args._[0]} path/to/script\`) or the \`build.upload.main\` config field.`
+        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`build.upload.main\` config field.`
       );
     }
     directory = path.resolve(
@@ -215,7 +212,11 @@ function demandOneOfOption(...options: string[]) {
 }
 
 class CommandLineArgsError extends Error {}
-class DeprecationError extends Error {}
+class DeprecationError extends Error {
+  constructor(message: string) {
+    super(`DEPRECATION WARNING:\n${message}`);
+  }
+}
 class NotImplementedError extends Error {}
 
 export async function main(argv: string[]): Promise<void> {
@@ -760,7 +761,7 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && (await findWranglerToml(path.dirname(args.script))))
       );
-      const entry = getEntry(args, config);
+      const entry = getEntry(config, "dev", args.script);
 
       if (args["experimental-public"]) {
         console.warn(
@@ -966,7 +967,7 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && (await findWranglerToml(path.dirname(args.script))))
       );
-      const entry = getEntry(args, config);
+      const entry = getEntry(config, "publish", args.script);
 
       if (args.latest) {
         console.warn(
@@ -1174,14 +1175,12 @@ export async function main(argv: string[]): Promise<void> {
     (yargs) => {
       return yargs
         .positional("method", {
+          type: "string",
           describe: "Type of request to preview your worker",
-          choices: ["GET", "POST"],
-          default: ["GET"],
         })
         .positional("body", {
           type: "string",
           describe: "Body string to post to your preview worker request.",
-          default: "Null",
         })
         .option("env", {
           type: "string",
@@ -1193,11 +1192,101 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
         });
     },
-    () => {
-      // "🔬 [DEPRECATED] Preview your code temporarily on https://cloudflareworkers.com"
-      throw new DeprecationError(
-        "`wrangler preview` has been deprecated, please refer to TODO://some/path for alternatives"
+    async (args) => {
+      if (args.method || args.body) {
+        throw new DeprecationError(
+          "The `wrangler preview` command has been deprecated.\n" +
+            "Try using `wrangler dev` to to try out a worker during development.\n"
+        );
+      }
+
+      // Delegate to `wrangler dev`
+      console.warn(
+        "***************************************************\n" +
+          "The `wrangler preview` command has been deprecated.\n" +
+          "Attempting to run `wrangler dev` instead.\n" +
+          "***************************************************\n"
       );
+
+      const config = await readConfig(args.config as ConfigPath);
+      const entry = getEntry(config, "dev");
+
+      if (!args.local) {
+        // -- snip, extract --
+        const loggedIn = await loginOrRefreshIfRequired();
+        if (!loggedIn) {
+          // didn't login, let's just quit
+          console.log("Did not login, quitting...");
+          return;
+        }
+
+        if (!config.account_id) {
+          config.account_id = await getAccountId();
+          if (!config.account_id) {
+            throw new Error("No account id found, quitting...");
+          }
+        }
+        // -- snip, end --
+      }
+
+      const environments = config.env ?? {};
+      const envRootObj = args.env ? environments[args.env] || {} : config;
+
+      const { waitUntilExit } = render(
+        <Dev
+          name={config.name}
+          entry={entry}
+          env={args.env}
+          buildCommand={config.build || {}}
+          format={config.build?.upload?.format}
+          initialMode={args.local ? "local" : "remote"}
+          jsxFactory={envRootObj?.jsx_factory}
+          jsxFragment={envRootObj?.jsx_fragment}
+          enableLocalPersistence={false}
+          accountId={config.account_id}
+          assetPaths={undefined}
+          port={config.dev?.port}
+          public={undefined}
+          compatibilityDate={
+            config.compatibility_date ||
+            new Date().toISOString().substring(0, 10)
+          }
+          compatibilityFlags={
+            (args["compatibility-flags"] as string[]) ||
+            config.compatibility_flags
+          }
+          usageModel={config.usage_model}
+          bindings={{
+            kv_namespaces: envRootObj.kv_namespaces?.map(
+              ({ binding, preview_id, id: _id }) => {
+                // In `dev`, we make folks use a separate kv namespace called
+                // `preview_id` instead of `id` so that they don't
+                // break production data. So here we check that a `preview_id`
+                // has actually been configured.
+                // This whole block of code will be obsoleted in the future
+                // when we have copy-on-write for previews on edge workers.
+                if (!preview_id) {
+                  // TODO: This error has to be a _lot_ better, ideally just asking
+                  // to create a preview namespace for the user automatically
+                  throw new Error(
+                    `In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+                  ); // Ugh, I really don't like this message very much
+                }
+                return {
+                  binding,
+                  id: preview_id,
+                };
+              }
+            ),
+            vars: envRootObj.vars,
+            wasm_modules: config.wasm_modules,
+            durable_objects: envRootObj.durable_objects,
+            r2_buckets: envRootObj.r2_buckets,
+            unsafe: envRootObj.unsafe?.bindings,
+          }}
+        />
+      );
+      await waitUntilExit();
     }
   );
 
