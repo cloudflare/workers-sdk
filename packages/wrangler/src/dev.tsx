@@ -828,7 +828,7 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
   useInput(
     async (
       input,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line unused-imports/no-unused-vars
       key
     ) => {
       switch (input.toLowerCase()) {
