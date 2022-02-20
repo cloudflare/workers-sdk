@@ -1148,10 +1148,10 @@ export async function main(argv: string[]): Promise<void> {
       while (tail.readyState !== tail.OPEN) {
         switch (tail.readyState) {
           case tail.CONNECTING:
-            await setTimeout(1000);
+            await setTimeout(100);
             break;
           case tail.CLOSING:
-            await setTimeout(1000);
+            await setTimeout(100);
             break;
           case tail.CLOSED:
             throw new Error(`Connection to ${scriptName} closed unexpectedly.`);
