@@ -1,5 +1,5 @@
-import { generateGitHubFetch } from "../gitHubFetch";
-import { getArtifactForWorkflowRun } from "../runs/[[path]]";
+import { generateGitHubFetch } from "../../utils/gitHubFetch";
+import { getArtifactForWorkflowRun } from "../../utils/getArtifactForWorkflowRun";
 
 interface PullRequest {
   head: { ref: string; sha: string };

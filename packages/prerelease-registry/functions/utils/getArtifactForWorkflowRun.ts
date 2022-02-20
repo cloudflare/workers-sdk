@@ -1,6 +1,5 @@
 import JSZip from "jszip";
-import { generateGitHubFetch } from "../gitHubFetch";
-
+import type { generateGitHubFetch } from "./gitHubFetch";
 interface Artifact {
   name: string;
   archive_download_url: string;
@@ -76,24 +75,4 @@ export const getArtifactForWorkflowRun = async ({
   } catch (thrown) {
     return new Response(null, { status: 500 });
   }
-};
-
-export const onRequestGet: PagesFunction<
-  { GITHUB_API_TOKEN: string; GITHUB_USER: string },
-  "path"
-> = async ({ params, env, waitUntil }) => {
-  const { path } = params;
-
-  if (!Array.isArray(path)) {
-    return new Response(null, { status: 404 });
-  }
-
-  const runID = parseInt(path[0]);
-  const name = path[1];
-  if (isNaN(runID) || name === undefined)
-    return new Response(null, { status: 404 });
-
-  const gitHubFetch = generateGitHubFetch(env);
-
-  return getArtifactForWorkflowRun({ runID, name, gitHubFetch, waitUntil });
 };
