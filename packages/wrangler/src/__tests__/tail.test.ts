@@ -166,24 +166,48 @@ describe("tail", () => {
 
   /* Printing */
 
-  it("logs incoming messages", async () => {
+  it("logs incoming messages in JSON format", async () => {
     await runWrangler("tail test-worker --format json");
 
+    /* request event */
     const requestEvent = generateMockRequestEvent();
-    const requestMessage = serialize(
-      generateMockEventMessage({ event: requestEvent })
-    );
-    api.ws.send(requestMessage);
-    expect(std.out).toMatch(deserializeToJson(requestMessage));
+    const requestMessage = generateMockEventMessage({ event: requestEvent });
+    const serializedRequestMessage = serialize(requestMessage);
 
+    api.ws.send(serializedRequestMessage);
+    expect(std.out).toMatch(deserializeToJson(serializedRequestMessage));
+
+    /* scheduled event */
     const scheduledEvent = generateMockScheduledEvent();
-    const scheduledMessage = serialize(
-      generateMockEventMessage({
-        event: scheduledEvent,
-      })
-    );
-    api.ws.send(scheduledMessage);
-    expect(std.out).toMatch(deserializeToJson(scheduledMessage));
+    const scheduledMessage = generateMockEventMessage({
+      event: scheduledEvent,
+    });
+    const serializedEventMessage = serialize(scheduledMessage);
+
+    api.ws.send(serializedEventMessage);
+    expect(std.out).toMatch(deserializeToJson(serializedEventMessage));
+  });
+
+  it("logs messages in pretty-printing format", async () => {
+    await runWrangler("tail test-worker --format pretty");
+
+    /* request event */
+    const requestEvent = generateMockRequestEvent();
+    const requestMessage = generateMockEventMessage({ event: requestEvent });
+    const serializedRequestMessage = serialize(requestMessage);
+
+    api.ws.send(serializedRequestMessage);
+    expect(std.out).not.toMatch(deserializeToJson(serializedRequestMessage));
+
+    /* scheduled event */
+    const scheduledEvent = generateMockScheduledEvent();
+    const scheduledMessage = generateMockEventMessage({
+      event: scheduledEvent,
+    });
+    const serializedEventMessage = serialize(scheduledMessage);
+
+    api.ws.send(serializedEventMessage);
+    expect(std.out).not.toMatch(deserializeToJson(serializedEventMessage));
   });
 });
 
@@ -192,13 +216,51 @@ describe("tail", () => {
 /**
  * The built in serialize-to-JSON feature of our mock websocket doesn't work
  * for our use-case since we actually expect a raw buffer,
- * not a Javascript string.
+ * not a Javascript string. Additionally, we have to do some fiddling
+ * with `RequestEvent`s to get them to serialize properly.
  *
- * @param message an object to serialize to JSON
+ * @param message a message to serialize to JSON
  * @returns the same type we expect when deserializing in wrangler
  */
-function serialize(message: unknown): Websocket.RawData {
-  return Buffer.from(JSON.stringify(message), "utf-8");
+function serialize(message: TailEventMessage): Websocket.RawData {
+  if (isScheduled(message.event)) {
+    // `ScheduledEvent`s work just fine
+    const stringified = JSON.stringify(message);
+    return Buffer.from(stringified, "utf-8");
+  } else {
+    // Since the "properties" of an `undici.Request` are actually getters,
+    // which don't serialize properly, we need to hydrate them manually.
+    // This isn't a problem outside of testing since deserialization
+    // works just fine and wrangler never _sends_ any event messages,
+    // it only receives them.
+    const request = (message.event as RequestEvent).request;
+    const stringified = JSON.stringify(message, (key, value) => {
+      if (key !== "request") {
+        return value;
+      }
+
+      return {
+        ...request,
+        url: request.url,
+        headers: request.headers,
+        method: request.method,
+      };
+    });
+
+    return Buffer.from(stringified, "utf-8");
+  }
+}
+
+/**
+ * Small helper to disambiguate the event types possible in a `TailEventMessage`
+ *
+ * @param event A TailEvent
+ * @returns whether event is a ScheduledEvent (true) or a RequestEvent
+ */
+function isScheduled(
+  event: ScheduledEvent | RequestEvent
+): event is ScheduledEvent {
+  return "cron" in event;
 }
 
 /**
@@ -294,7 +356,7 @@ function mockWebsocketAPIs(websocketURL = "ws://localhost:1234"): MockAPI {
   };
 
   // don't delete this line or else it breaks.
-  // we need to have api.ws be an instasnce of WS for
+  // we need to have api.ws be an instance of WS for
   // the type checker to be happy, but if we have
   // an actual open websocket then it causes problems
   // since we create a new websocket beforeEach test.
