@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "main": "_worker.js",
   "scripts": {
-    "build": "npx wrangler pages functions build --fallback-service=''",
+    "build": "npx wrangler pages functions build --fallback-service='' ./functions/routes",
     "check:type": "tsc",
     "prestart": "npm run build",
     "start": "npx wrangler dev _worker.js",
