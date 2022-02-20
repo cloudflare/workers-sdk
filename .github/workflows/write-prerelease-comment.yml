@@ -40,13 +40,20 @@ jobs:
         with:
           number: ${{ env.WORKFLOW_RUN_PR }}
           message: |
-            A wrangler prerelease is available for testing. You can install it in your project with:
+            A wrangler prerelease is available for testing. You can install this latest build in your project with:
 
             ```sh
             npm install --save-dev https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
             ```
 
-            Or you can try developing a worker directly with:
+            You can reference the automatically updated head of this PR with:
+
+            ```sh
+            npm install --save-dev https://prerelease-registry.developers.workers.dev/prs/${{ env.WORKFLOW_RUN_PR }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
+            ```
+
+            Or you can use `npx` with this latest build directly:
+
             ```sh
             npx https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }} dev path/to/script.js
             ```
