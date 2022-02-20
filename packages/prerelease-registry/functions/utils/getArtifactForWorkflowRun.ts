@@ -5,6 +5,8 @@ interface Artifact {
   archive_download_url: string;
 }
 
+const ONE_WEEK = 60 * 60 * 24 * 7;
+
 export const getArtifactForWorkflowRun = async ({
   runID,
   name,
@@ -67,7 +69,9 @@ export const getArtifactForWorkflowRun = async ({
     if (tgzFileName === undefined) return new Response(null, { status: 404 });
 
     const tgzBlob = await files[tgzFileName].async("blob");
-    const response = new Response(tgzBlob);
+    const response = new Response(tgzBlob, {
+      headers: { "Cache-Control": `public, s-maxage=${ONE_WEEK}` },
+    });
 
     waitUntil(cache.put(cacheKey, response.clone()));
 
