@@ -771,7 +771,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         kv: kvs = [],
         do: durableObjects = [],
         "live-reload": liveReload,
-        "--": remaining = [],
+        _: [_pages, _dev, ...remaining],
       }) => {
         if (!local) {
           console.error("Only local mode is supported at the moment.");
