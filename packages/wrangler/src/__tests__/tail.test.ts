@@ -1,12 +1,12 @@
+import MockWebSocket from "jest-websocket-mock";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { WS } from "./helpers/mock-web-socket";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { TailEventMessage, RequestEvent } from "../tail";
-import type Websocket from "ws";
+import type WebSocket from "ws";
 
 describe("tail", () => {
   runInTempDir();
@@ -39,10 +39,7 @@ describe("tail", () => {
 
   it("activates debug mode when the cli arg is passed in", async () => {
     await runWrangler("tail test-worker --debug");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty(
-      "debug",
-      true
-    );
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("debug", true);
   });
 
   /* filtering */
@@ -55,49 +52,49 @@ describe("tail", () => {
     await expect(tooLow).rejects.toThrow();
 
     await runWrangler("tail test-worker --sampling-rate 0.25");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { sampling_rate: 0.25 },
     ]);
   });
 
   it("sends single status filters", async () => {
     await runWrangler("tail test-worker --status error");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { outcome: ["exception", "exceededCpu", "unknown"] },
     ]);
   });
 
   it("sends multiple status filters", async () => {
     await runWrangler("tail test-worker --status error --status canceled");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { outcome: ["exception", "exceededCpu", "unknown", "canceled"] },
     ]);
   });
 
   it("sends single HTTP method filters", async () => {
     await runWrangler("tail test-worker --method POST");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { method: ["POST"] },
     ]);
   });
 
   it("sends multiple HTTP method filters", async () => {
     await runWrangler("tail test-worker --method POST --method GET");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { method: ["POST", "GET"] },
     ]);
   });
 
   it("sends header filters without a query", async () => {
     await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { header: { key: "X-CUSTOM-HEADER" } },
     ]);
   });
 
   it("sends header filters with a query", async () => {
     await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value ");
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
     ]);
   });
@@ -106,7 +103,7 @@ describe("tail", () => {
     const fakeIp = "192.0.2.1";
 
     await runWrangler(`tail test-worker --ip ${fakeIp}`);
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { client_ip: [fakeIp] },
     ]);
   });
@@ -115,7 +112,7 @@ describe("tail", () => {
     const fakeIp = "192.0.2.1";
 
     await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { client_ip: [fakeIp, "self"] },
     ]);
   });
@@ -124,7 +121,7 @@ describe("tail", () => {
     const search = "filterMe";
 
     await runWrangler(`tail test-worker --search ${search}`);
-    await expect(api.ws.nextMessageJson()).resolves.toHaveProperty("filters", [
+    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
       { query: search },
     ]);
   });
@@ -159,7 +156,7 @@ describe("tail", () => {
     };
 
     await runWrangler(`tail test-worker ${cliFilters}`);
-    await expect(api.ws.nextMessageJson()).resolves.toEqual(
+    await expect(api.nextMessageJson()).resolves.toEqual(
       expectedWebsocketMessage
     );
   });
@@ -184,7 +181,7 @@ describe("tail", () => {
  * @param message an object to serialize to JSON
  * @returns the same type we expect when deserializing in wrangler
  */
-function serialize(message: unknown): Websocket.RawData {
+function serialize(message: unknown): WebSocket.RawData {
   return Buffer.from(JSON.stringify(message), "utf-8");
 }
 
@@ -196,7 +193,7 @@ function serialize(message: unknown): Websocket.RawData {
  * @param message a buffer of data received from the websocket
  * @returns a string ready to be printed to the terminal or compared against
  */
-function deserializeToJson(message: Websocket.RawData): string {
+function deserializeToJson(message: WebSocket.RawData): string {
   return JSON.stringify(JSON.parse(message.toString()), null, 2);
 }
 
@@ -209,7 +206,8 @@ type MockAPI = {
     creation: RequestCounter;
     deletion: RequestCounter;
   };
-  ws: WS;
+  ws: MockWebSocket;
+  nextMessageJson(): Promise<unknown>;
 };
 
 /**
@@ -277,21 +275,18 @@ function mockWebsocketAPIs(websocketURL = "ws://localhost:1234"): MockAPI {
       deletion: { count: 0 },
       creation: { count: 0 },
     },
-    ws: new WS(websocketURL),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    ws: null!, // will be set in the `beforeEach()` below.
+    async nextMessageJson() {
+      const message = await api.ws.nextMessage;
+      return JSON.parse(message as string);
+    },
   };
-
-  // don't delete this line or else it breaks.
-  // we need to have api.ws be an instasnce of WS for
-  // the type checker to be happy, but if we have
-  // an actual open websocket then it causes problems
-  // since we create a new websocket beforeEach test.
-  // so we need to close it before we ever use it.
-  api.ws.close();
 
   beforeEach(() => {
     api.requests.creation = mockCreateTailRequest(websocketURL);
     api.requests.deletion = mockDeleteTailRequest();
-    api.ws = new WS(websocketURL);
+    api.ws = new MockWebSocket(websocketURL);
   });
 
   afterEach(() => {
