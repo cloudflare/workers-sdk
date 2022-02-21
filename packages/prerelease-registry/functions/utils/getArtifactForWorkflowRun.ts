@@ -1,56 +1,27 @@
 import JSZip from "jszip";
-
+import type { generateGitHubFetch } from "./gitHubFetch";
 interface Artifact {
-  id: number;
-  node_id: string;
   name: string;
-  size_in_bytes: number;
-  url: string;
   archive_download_url: string;
-  expired: boolean;
-  created_at: string;
-  updated_at: string;
-  expires_at: string;
 }
 
-export const onRequestGet: PagesFunction<
-  { GITHUB_API_TOKEN: string; GITHUB_USER: string },
-  "path"
-> = async ({ request, params, env, waitUntil }) => {
+export const getArtifactForWorkflowRun = async ({
+  runID,
+  name,
+  gitHubFetch,
+  waitUntil,
+}: {
+  runID: number;
+  name: string;
+  gitHubFetch: ReturnType<typeof generateGitHubFetch>;
+  waitUntil: (promise: Promise<unknown>) => void;
+}) => {
+  const cacheKey = `https://prerelease-registry.developers.workers.dev/runs/${runID}/${name}`;
+
   const cache = caches.default;
 
-  const cachedResponse = await cache.match(request);
+  const cachedResponse = await cache.match(cacheKey);
   if (cachedResponse) return cachedResponse;
-
-  const { path } = params;
-
-  if (!Array.isArray(path)) {
-    return new Response(null, { status: 404 });
-  }
-
-  const runID = parseInt(path[0]);
-  const name = path[1];
-  if (isNaN(runID) || name === undefined)
-    return new Response(null, { status: 404 });
-
-  const gitHubFetch = (
-    resource: Request | string,
-    init?: RequestInit | Request
-  ) => {
-    let gitHubRequest = new Request(resource, init);
-    gitHubRequest = gitHubRequest.clone();
-
-    gitHubRequest.headers.set(
-      "Authorization",
-      `Basic ${btoa(`${env.GITHUB_USER}:${env.GITHUB_API_TOKEN}`)}`
-    );
-    gitHubRequest.headers.set(
-      "User-Agent",
-      "@cloudflare/wrangler2/packages/prerelease-registry"
-    );
-
-    return fetch(gitHubRequest);
-  };
 
   try {
     const artifactsResponse = await gitHubFetch(
@@ -98,7 +69,7 @@ export const onRequestGet: PagesFunction<
     const tgzBlob = await files[tgzFileName].async("blob");
     const response = new Response(tgzBlob);
 
-    waitUntil(cache.put(request, response.clone()));
+    waitUntil(cache.put(cacheKey, response.clone()));
 
     return response;
   } catch (thrown) {

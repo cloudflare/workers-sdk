@@ -46,7 +46,7 @@ export type Config = {
    * You might have more than one account, so make sure to use
    * the ID of the account associated with the zone/route you
    * provide, if you provide one. It can also be specified through
-   * the CF_ACCOUNT_ID environment variable.
+   * the CLOUDFLARE_ACCOUNT_ID environment variable.
    *
    * @optional
    * @inherited

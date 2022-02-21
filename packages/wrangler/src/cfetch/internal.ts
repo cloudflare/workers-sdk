@@ -1,10 +1,17 @@
 import { fetch } from "undici";
+import { getEnvironmentVariableFactory } from "../environment-variables";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
 
-export const CF_API_BASE_URL =
-  process.env.CF_API_BASE_URL || "https://api.cloudflare.com/client/v4";
+/**
+ * Get the URL to use to access the Cloudflare API.
+ */
+export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
+  variableName: "CLOUDFLARE_API_BASE_URL",
+  deprecatedName: "CF_API_BASE_URL",
+  defaultValue: "https://api.cloudflare.com/client/v4",
+});
 
 /**
  * Make a fetch request to the Cloudflare API.
@@ -26,11 +33,14 @@ export async function fetchInternal<ResponseType>(
   addAuthorizationHeader(headers, apiToken);
 
   const queryString = queryParams ? `?${queryParams.toString()}` : "";
-  const response = await fetch(`${CF_API_BASE_URL}${resource}${queryString}`, {
-    method: "GET",
-    ...init,
-    headers,
-  });
+  const response = await fetch(
+    `${getCloudflareAPIBaseURL()}${resource}${queryString}`,
+    {
+      method: "GET",
+      ...init,
+      headers,
+    }
+  );
   const jsonText = await response.text();
   try {
     const json = JSON.parse(jsonText);
@@ -91,7 +101,7 @@ export async function fetchKVGetValue(
   await requireLoggedIn();
   const apiToken = requireApiToken();
   const headers = { Authorization: `Bearer ${apiToken}` };
-  const resource = `${CF_API_BASE_URL}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+  const resource = `${getCloudflareAPIBaseURL()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
   const response = await fetch(resource, {
     method: "GET",
     headers,

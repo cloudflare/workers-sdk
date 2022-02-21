@@ -211,7 +211,6 @@ import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import process from "node:process";
 import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
@@ -220,11 +219,28 @@ import SelectInput from "ink-select-input";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import { CF_API_BASE_URL } from "./cfetch";
+import { getCloudflareApiBaseUrl } from "./cfetch";
+import { getEnvironmentVariableFactory } from "./environment-variables";
 import openInBrowser from "./open-in-browser";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
+
+/**
+ * Try to read the API token from the environment.
+ */
+const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
+  variableName: "CLOUDFLARE_API_TOKEN",
+  deprecatedName: "CF_API_TOKEN",
+});
+
+/**
+ * Try to read the account ID from the environment.
+ */
+const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+  variableName: "CLOUDFLARE_ACCOUNT_ID",
+  deprecatedName: "CF_ACCOUNT_ID",
+});
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -302,10 +318,11 @@ let initialised = false;
 export async function initialise(): Promise<void> {
   // get refreshToken/accessToken from fs if exists
   try {
-    // if CF_API_TOKEN available, use that
-    if (process.env.CF_API_TOKEN) {
+    // if the environment variable is available, use that
+    const apiTokenFromEnv = getCloudflareAPITokenFromEnv();
+    if (apiTokenFromEnv) {
       LocalState.accessToken = {
-        value: process.env.CF_API_TOKEN,
+        value: apiTokenFromEnv,
         expiry: "3021-12-31T23:59:59+00:00",
       };
       initialised = true;
@@ -345,9 +362,6 @@ function throwIfNotInitialised() {
 }
 
 export function getAPIToken(): string | undefined {
-  if (process.env.CF_API_TOKEN) {
-    return process.env.CF_API_TOKEN;
-  }
   throwIfNotInitialised();
   return LocalState.accessToken?.value;
 }
@@ -860,7 +874,8 @@ export async function login(props?: LoginProps): Promise<boolean> {
                 finish(false);
               });
               console.log(
-                "Error: Consent denied. You must grant consent to Wrangler in order to login. If you don't want to do this consider passing an API token with CF_API_TOKEN variable"
+                "Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
+                  "If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable"
               );
 
               return;
@@ -965,13 +980,14 @@ export async function getAccountId() {
   const apiToken = getAPIToken();
   if (!apiToken) return;
 
-  if (process.env.CF_ACCOUNT_ID) {
-    return process.env.CF_ACCOUNT_ID;
+  const accountIdFromEnv = getCloudflareAccountIdFromEnv();
+  if (accountIdFromEnv) {
+    return accountIdFromEnv;
   }
 
   let response: Response;
   try {
-    response = await fetch(`${CF_API_BASE_URL}/memberships`, {
+    response = await fetch(`${getCloudflareApiBaseUrl()}/memberships`, {
       method: "GET",
       headers: {
         Authorization: "Bearer " + apiToken,
