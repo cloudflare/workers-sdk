@@ -181,10 +181,13 @@ export default async function publish(props: Props): Promise<void> {
 
     const assets = await syncAssets(
       accountId,
-      scriptName,
+      // When we're using the newer service environments, we wouldn't
+      // have added the env name on to the script name. However, we must
+      // include it in the kv namespace name regardless (since there's no
+      // concept of service environments for kv namespaces yet).
+      scriptName + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
       props.assetPaths,
-      false,
-      props.env
+      false
     );
 
     const bindings: CfWorkerInit["bindings"] = {

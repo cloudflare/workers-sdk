@@ -1,5 +1,5 @@
-import { generateGitHubFetch } from "../../utils/gitHubFetch";
 import { getArtifactForWorkflowRun } from "../../utils/getArtifactForWorkflowRun";
+import { generateGitHubFetch } from "../../utils/gitHubFetch";
 
 export const onRequestGet: PagesFunction<
   { GITHUB_API_TOKEN: string; GITHUB_USER: string },

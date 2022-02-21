@@ -77,9 +77,10 @@ describe("wrangler", () => {
               name  The name of the new bucket  [string] [required]
 
             Flags:
-              -c, --config   Path to .toml configuration file  [string]
-              -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
+              -c, --config      Path to .toml configuration file  [string]
+              -h, --help        Show help  [boolean]
+              -v, --version     Show version number  [boolean]
+                  --legacy-env  Use legacy environments  [boolean]
 
             Options:
               -l, --local  Run on my machine  [boolean] [default: false]
@@ -104,9 +105,10 @@ describe("wrangler", () => {
               name  The name of the new bucket  [string] [required]
 
             Flags:
-              -c, --config   Path to .toml configuration file  [string]
-              -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
+              -c, --config      Path to .toml configuration file  [string]
+              -h, --help        Show help  [boolean]
+              -v, --version     Show version number  [boolean]
+                  --legacy-env  Use legacy environments  [boolean]
 
             Options:
               -l, --local  Run on my machine  [boolean] [default: false]
@@ -157,9 +159,10 @@ describe("wrangler", () => {
               name  The name of the bucket to delete  [string] [required]
 
             Flags:
-              -c, --config   Path to .toml configuration file  [string]
-              -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
+              -c, --config      Path to .toml configuration file  [string]
+              -h, --help        Show help  [boolean]
+              -v, --version     Show version number  [boolean]
+                  --legacy-env  Use legacy environments  [boolean]
 
             Options:
               -l, --local  Run on my machine  [boolean] [default: false]
@@ -184,9 +187,10 @@ describe("wrangler", () => {
               name  The name of the bucket to delete  [string] [required]
 
             Flags:
-              -c, --config   Path to .toml configuration file  [string]
-              -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
+              -c, --config      Path to .toml configuration file  [string]
+              -h, --help        Show help  [boolean]
+              -v, --version     Show version number  [boolean]
+                  --legacy-env  Use legacy environments  [boolean]
 
             Options:
               -l, --local  Run on my machine  [boolean] [default: false]

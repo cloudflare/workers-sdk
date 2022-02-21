@@ -53,9 +53,10 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local    Run on my machine  [boolean] [default: false]
@@ -82,9 +83,10 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local    Run on my machine  [boolean] [default: false]
@@ -112,9 +114,10 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local    Run on my machine  [boolean] [default: false]
@@ -276,9 +279,10 @@ describe("wrangler", () => {
           Deletes a given namespace.
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
@@ -467,23 +471,24 @@ describe("wrangler", () => {
           Writes a single key/value pair to the given namespace.
 
           Positionals:
-            key    The key to write to.  [string] [required]
-            value  The value to write.  [string]
+            key    The key to write to  [string] [required]
+            value  The value to write  [string]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
-                --binding       The binding of the namespace to write to.  [string]
-                --namespace-id  The id of the namespace to write to.  [string]
+                --binding       The binding of the namespace to write to  [string]
+                --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-                --ttl           Time for which the entries should be visible.  [number]
+                --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path.  [string]
+                --path          Read value from the file at a given path  [string]
 
           Not enough non-option arguments: got 0, need at least 1"
         `);
@@ -503,23 +508,24 @@ describe("wrangler", () => {
           Writes a single key/value pair to the given namespace.
 
           Positionals:
-            key    The key to write to.  [string] [required]
-            value  The value to write.  [string]
+            key    The key to write to  [string] [required]
+            value  The value to write  [string]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
-                --binding       The binding of the namespace to write to.  [string]
-                --namespace-id  The id of the namespace to write to.  [string]
+                --binding       The binding of the namespace to write to  [string]
+                --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-                --ttl           Time for which the entries should be visible.  [number]
+                --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path.  [string]
+                --path          Read value from the file at a given path  [string]
 
           Exactly one of the arguments binding and namespace-id is required"
         `);
@@ -539,23 +545,24 @@ describe("wrangler", () => {
           Writes a single key/value pair to the given namespace.
 
           Positionals:
-            key    The key to write to.  [string] [required]
-            value  The value to write.  [string]
+            key    The key to write to  [string] [required]
+            value  The value to write  [string]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
-                --binding       The binding of the namespace to write to.  [string]
-                --namespace-id  The id of the namespace to write to.  [string]
+                --binding       The binding of the namespace to write to  [string]
+                --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-                --ttl           Time for which the entries should be visible.  [number]
+                --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path.  [string]
+                --path          Read value from the file at a given path  [string]
 
           Arguments binding and namespace-id are mutually exclusive"
         `);
@@ -575,23 +582,24 @@ describe("wrangler", () => {
           Writes a single key/value pair to the given namespace.
 
           Positionals:
-            key    The key to write to.  [string] [required]
-            value  The value to write.  [string]
+            key    The key to write to  [string] [required]
+            value  The value to write  [string]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
-                --binding       The binding of the namespace to write to.  [string]
-                --namespace-id  The id of the namespace to write to.  [string]
+                --binding       The binding of the namespace to write to  [string]
+                --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-                --ttl           Time for which the entries should be visible.  [number]
+                --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path.  [string]
+                --path          Read value from the file at a given path  [string]
 
           Exactly one of the arguments value and path is required"
         `);
@@ -611,23 +619,24 @@ describe("wrangler", () => {
           Writes a single key/value pair to the given namespace.
 
           Positionals:
-            key    The key to write to.  [string] [required]
-            value  The value to write.  [string]
+            key    The key to write to  [string] [required]
+            value  The value to write  [string]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
-                --binding       The binding of the namespace to write to.  [string]
-                --namespace-id  The id of the namespace to write to.  [string]
+                --binding       The binding of the namespace to write to  [string]
+                --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-                --ttl           Time for which the entries should be visible.  [number]
+                --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path.  [string]
+                --path          Read value from the file at a given path  [string]
 
           Arguments value and path are mutually exclusive"
         `);
@@ -940,9 +949,10 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
@@ -971,9 +981,10 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]
@@ -1003,9 +1014,10 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+            -c, --config      Path to .toml configuration file  [string]
+            -h, --help        Show help  [boolean]
+            -v, --version     Show version number  [boolean]
+                --legacy-env  Use legacy environments  [boolean]
 
           Options:
             -l, --local         Run on my machine  [boolean] [default: false]

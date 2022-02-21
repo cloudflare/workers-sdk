@@ -60,6 +60,7 @@ function renderDev({
   port,
   format,
   accountId,
+  legacyEnv = true,
   initialMode = "local",
   jsxFactory,
   jsxFragment,
@@ -86,6 +87,7 @@ function renderDev({
       entry={entry}
       env={env}
       port={port}
+      legacyEnv={legacyEnv}
       buildCommand={buildCommand}
       format={format}
       initialMode={initialMode}

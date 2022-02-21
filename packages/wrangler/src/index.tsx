@@ -186,6 +186,14 @@ function getEntry(config: Config, command: string, script?: string): Entry {
   return { file, directory };
 }
 
+function isLegacyEnv(args: unknown, config: Config): boolean {
+  return (
+    (args as { legacyEnv: boolean | undefined }).legacyEnv ??
+    config.legacy_env ??
+    false
+  );
+}
+
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 function demandOneOfOption(...options: string[]) {
@@ -288,11 +296,11 @@ export async function main(argv: string[]): Promise<void> {
     (yargs) => {
       return yargs
         .positional("name", {
-          describe: "The name of your worker.",
+          describe: "The name of your worker",
           type: "string",
         })
         .option("yes", {
-          describe: 'Answer "yes" to any prompts for new projects.',
+          describe: 'Answer "yes" to any prompts for new projects',
           type: "boolean",
           alias: "y",
         });
@@ -311,6 +319,8 @@ export async function main(argv: string[]): Promise<void> {
       const packageManager = await getPackageManager(process.cwd());
 
       const destination = "./wrangler.toml";
+      const workerName =
+        args.name || path.basename(path.resolve(process.cwd()));
       if (fs.existsSync(destination)) {
         console.warn(`${destination} file already exists!`);
         const shouldContinue = await confirm(
@@ -325,7 +335,7 @@ export async function main(argv: string[]): Promise<void> {
           await writeFile(
             destination,
             TOML.stringify({
-              name: args.name || path.basename(path.resolve(process.cwd())),
+              name: workerName,
               compatibility_date: compatibilityDate,
             }) + "\n"
           );
@@ -354,7 +364,7 @@ export async function main(argv: string[]): Promise<void> {
             "./package.json",
             JSON.stringify(
               {
-                name: args.name || path.basename(path.resolve(process.cwd())),
+                name: workerName,
                 version: "0.0.0",
                 devDependencies: {
                   wrangler: wranglerVersion,
@@ -588,10 +598,10 @@ export async function main(argv: string[]): Promise<void> {
       // I mean, this entire app does, but this too.
       return yargs
         .option("scopes-list", {
-          describe: "list all the available OAuth scopes with descriptions.",
+          describe: "List all the available OAuth scopes with descriptions",
         })
         .option("scopes", {
-          describe: "allows to choose your set of OAuth scopes.",
+          describe: "Pick the set of applicable OAuth scopes when logging in",
           array: true,
           type: "string",
         });
@@ -667,11 +677,11 @@ export async function main(argv: string[]): Promise<void> {
     (yargs) => {
       return yargs
         .positional("script", {
-          describe: "entry point",
+          describe: "The path to an entry point for your worker",
           type: "string",
         })
         .option("name", {
-          describe: "name of the script",
+          describe: "Name of the worker",
           type: "string",
         })
         .option("format", {
@@ -681,7 +691,6 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           describe: "Perform on a specific environment",
           type: "string",
-          // TODO: get choices for the toml file?
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -806,9 +815,10 @@ export async function main(argv: string[]): Promise<void> {
 
       const { waitUntilExit } = render(
         <Dev
-          name={args.name || config.name}
+          name={args.name ?? config.name}
           entry={entry}
           env={args.env}
+          legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           format={args.format || config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
@@ -881,11 +891,11 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Perform on a specific environment",
         })
         .positional("script", {
-          describe: "script to upload",
+          describe: "The path to an entry point for your worker",
           type: "string",
         })
         .option("name", {
-          describe: "name to use when uploading",
+          describe: "Name of the worker",
           type: "string",
         })
         .option("format", {
@@ -932,7 +942,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "array",
         })
         .option("routes", {
-          describe: "routes to upload",
+          describe: "Routes to upload",
           alias: "route",
           type: "array",
         })
@@ -1014,7 +1024,7 @@ export async function main(argv: string[]): Promise<void> {
         jsxFragment: args["jsx-fragment"],
         routes: args.routes,
         assetPaths,
-        legacyEnv: undefined, // TODO: get this from somewhere... config?
+        legacyEnv: isLegacyEnv(args, config),
         experimentalPublic: args["experimental-public"] !== undefined,
       });
     }
@@ -1028,7 +1038,7 @@ export async function main(argv: string[]): Promise<void> {
       return (
         yargs
           .positional("name", {
-            describe: "name of the worker",
+            describe: "Name of the worker",
             type: "string",
           })
           // TODO: auto-detect if this should be json or pretty based on atty
@@ -1092,7 +1102,10 @@ export async function main(argv: string[]): Promise<void> {
       if (!shortScriptName) {
         throw new Error("Missing script name");
       }
-      const scriptName = `${shortScriptName}${args.env ? `-${args.env}` : ""}`;
+
+      const scriptName = isLegacyEnv(args, config)
+        ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
+        : shortScriptName;
 
       // -- snip, extract --
       const loggedIn = await loginOrRefreshIfRequired();
@@ -1237,6 +1250,11 @@ export async function main(argv: string[]): Promise<void> {
           name={config.name}
           entry={entry}
           env={args.env}
+          legacyEnv={
+            (args["legacy-env"] as boolean | undefined) ??
+            config.legacy_env ??
+            false
+          }
           buildCommand={config.build || {}}
           format={config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
@@ -1299,7 +1317,7 @@ export async function main(argv: string[]): Promise<void> {
       return routeYargs
         .command(
           "list",
-          "List a route associated with a zone",
+          "List the routes associated with a zone",
           (yargs) => {
             return yargs
               .option("env", {
@@ -1308,10 +1326,10 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("zone", {
                 type: "string",
-                describe: "zone id",
+                describe: "Zone id",
               })
               .positional("zone", {
-                describe: "zone id",
+                describe: "Zone id",
                 type: "string",
               });
           },
@@ -1391,17 +1409,17 @@ export async function main(argv: string[]): Promise<void> {
           (yargs) => {
             return yargs
               .positional("key", {
-                describe: "The variable name to be accessible in the script.",
+                describe: "The variable name to be accessible in the script",
                 type: "string",
               })
               .option("name", {
-                describe: "name of the script",
+                describe: "Name of the worker",
                 type: "string",
               })
               .option("env", {
                 type: "string",
                 describe:
-                  "Binds the secret to the script of the specific environment.",
+                  "Binds the secret to the Worker of the specific environment",
               });
           },
           async (args) => {
@@ -1509,17 +1527,17 @@ export async function main(argv: string[]): Promise<void> {
           (yargs) => {
             return yargs
               .positional("key", {
-                describe: "The variable name to be accessible in the script.",
+                describe: "The variable name to be accessible in the script",
                 type: "string",
               })
               .option("name", {
-                describe: "name of the script",
+                describe: "Name of the worker",
                 type: "string",
               })
               .option("env", {
                 type: "string",
                 describe:
-                  "Binds the secret to the script of the specific environment.",
+                  "Binds the secret to the Worker of the specific environment",
               });
           },
           async (args) => {
@@ -1582,13 +1600,13 @@ export async function main(argv: string[]): Promise<void> {
           (yargs) => {
             return yargs
               .option("name", {
-                describe: "name of the script",
+                describe: "Name of the worker",
                 type: "string",
               })
               .option("env", {
                 type: "string",
                 describe:
-                  "Binds the secret to the script of the specific environment.",
+                  "Binds the secret to the Worker of the specific environment.",
               });
           },
           async (args) => {
@@ -1878,20 +1896,20 @@ export async function main(argv: string[]): Promise<void> {
             return yargs
               .positional("key", {
                 type: "string",
-                describe: "The key to write to.",
+                describe: "The key to write to",
                 demandOption: true,
               })
               .positional("value", {
                 type: "string",
-                describe: "The value to write.",
+                describe: "The value to write",
               })
               .option("binding", {
                 type: "string",
-                describe: "The binding of the namespace to write to.",
+                describe: "The binding of the namespace to write to",
               })
               .option("namespace-id", {
                 type: "string",
-                describe: "The id of the namespace to write to.",
+                describe: "The id of the namespace to write to",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
@@ -1904,7 +1922,7 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("ttl", {
                 type: "number",
-                describe: "Time for which the entries should be visible.",
+                describe: "Time for which the entries should be visible",
               })
               .option("expiration", {
                 type: "number",
@@ -1913,7 +1931,7 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("path", {
                 type: "string",
-                describe: "Read value from the file at a given path.",
+                describe: "Read value from the file at a given path",
               })
               .check(demandOneOfOption("value", "path"));
           },
@@ -2205,11 +2223,11 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
-                describe: "The name of the namespace to put to",
+                describe: "The name of the namespace to insert values into",
               })
               .option("namespace-id", {
                 type: "string",
-                describe: "The id of the namespace to put to",
+                describe: "The id of the namespace to insert values into",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
@@ -2502,6 +2520,10 @@ export async function main(argv: string[]): Promise<void> {
   });
 
   wrangler
+    .option("legacy-env", {
+      type: "boolean",
+      describe: "Use legacy environments",
+    })
     .option("config", {
       alias: "c",
       describe: "Path to .toml configuration file",
@@ -2514,7 +2536,7 @@ export async function main(argv: string[]): Promise<void> {
       default: false, // I bet this will a point of contention. We'll revisit it.
     });
 
-  wrangler.group(["config", "help", "version"], "Flags:");
+  wrangler.group(["config", "help", "version", "legacy-env"], "Flags:");
   wrangler.help().alias("h", "help");
   wrangler.version(wranglerVersion).alias("v", "version");
   wrangler.exitProcess(false);
