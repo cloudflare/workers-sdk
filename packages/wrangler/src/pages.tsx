@@ -748,9 +748,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "KV namespace to bind",
               alias: "k",
             },
+            mount: {
+              type: "array",
+              description: "Mount a path to an alias (DO_NAME=PATH)",
+              alias: "m",
+            },
             do: {
               type: "array",
-              description: "Durable Object to bind (NAME=CLASS)",
+              description: "Durable Object to bind (NAME=CLASS[@DO_NAME])",
               alias: "o",
             },
             "live-reload": {
@@ -769,6 +774,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         "script-path": singleWorkerScriptPath,
         binding: bindings = [],
         kv: kvs = [],
+        mount: mounts = [],
         do: durableObjects = [],
         "live-reload": liveReload,
         "--": remaining = [],
@@ -885,10 +891,18 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           kvNamespaces: kvs.map((kv) => kv.toString()),
 
-          durableObjects: Object.fromEntries(
-            durableObjects.map((durableObject) =>
-              durableObject.toString().split("=")
+          mounts: Object.fromEntries(
+            mounts.map((mount) => 
+              mount.toString().split("=")
             )
+          ),
+
+          durableObjects: Object.fromEntries(
+            durableObjects.map((durableObject) => {
+              const split = durableObject.toString().split("=")
+              const splitAgain = split[1].split("@")
+              return splitAgain.length === 1 ? split : [ split[0], { className: splitAgain[0], scriptName: splitAgain[1] } ]
+            })
           ),
 
           // User bindings
