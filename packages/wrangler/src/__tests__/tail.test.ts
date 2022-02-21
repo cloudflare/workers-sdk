@@ -201,10 +201,15 @@ describe("tail", () => {
       const serializedMessage = serialize(message);
 
       api.ws.send(serializedMessage);
-      expect(std.out).toMatchInlineSnapshot(`
+      expect(
+        std.out.replace(
+          new Date(mockEventTimestamp).toLocaleString(),
+          "mock timestamp string"
+        )
+      ).toMatchInlineSnapshot(`
         "successfully created tail, expires at 2/1/3005, 12:00:00 AM
         Connected to test-worker, waiting for logs...
-        GET https://example.org/ - Ok @ 2/21/2022, 8:41:10 AM"
+        GET https://example.org/ - Ok @ mock timestamp string"
       `);
     });
 
@@ -216,10 +221,15 @@ describe("tail", () => {
       const serializedMessage = serialize(message);
 
       api.ws.send(serializedMessage);
-      expect(std.out).toMatchInlineSnapshot(`
+      expect(
+        std.out.replace(
+          new Date(mockEventTimestamp).toLocaleString(),
+          "mock timestamp string"
+        )
+      ).toMatchInlineSnapshot(`
         "successfully created tail, expires at 2/1/3005, 12:00:00 AM
         Connected to test-worker, waiting for logs...
-        \\"* * * * *\\" @ 2/21/2022, 8:41:10 AM - Ok"
+        \\"* * * * *\\" @ mock timestamp string - Ok"
       `);
     });
   });
@@ -341,9 +351,9 @@ function mockCreateTailRequest(websocketURL: string): RequestCounter {
 const mockTailExpiration = new Date(3005, 1);
 
 /**
- * A formatted version of the mock expiration datetime for snapshot testing
+ * Default value for event timestamps
  */
-const formattedMockTailExpiration = mockTailExpiration.toLocaleString();
+const mockEventTimestamp = 1645454470467;
 
 /**
  * Mock out the API hit during Tail deletion
@@ -417,7 +427,7 @@ function generateMockEventMessage(
     outcome: opts?.outcome || "ok",
     exceptions: opts?.exceptions || [],
     logs: opts?.logs || [],
-    eventTimestamp: opts?.eventTimestamp || 1645454470467,
+    eventTimestamp: opts?.eventTimestamp || mockEventTimestamp,
     event: opts?.event || generateMockRequestEvent(),
   };
 }
@@ -458,6 +468,6 @@ function generateMockScheduledEvent(
 ): ScheduledEvent {
   return {
     cron: opts?.cron || "* * * * *",
-    scheduledTime: opts?.scheduledTime || 1645454470467,
+    scheduledTime: opts?.scheduledTime || mockEventTimestamp,
   };
 }
