@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
-import type Websocket from "ws";
+import type WebSocket from "ws";
 
 describe("tail", () => {
   runInTempDir();
@@ -246,7 +246,7 @@ describe("tail", () => {
  * @param message a message to serialize to JSON
  * @returns the same type we expect when deserializing in wrangler
  */
-function serialize(message: TailEventMessage): Websocket.RawData {
+function serialize(message: TailEventMessage): WebSocket.RawData {
   if (isScheduled(message.event)) {
     // `ScheduledEvent`s work just fine
     const stringified = JSON.stringify(message);
@@ -295,7 +295,7 @@ function isScheduled(
  * @param message a buffer of data received from the websocket
  * @returns a string ready to be printed to the terminal or compared against
  */
-function deserializeToJson(message: Websocket.RawData): string {
+function deserializeToJson(message: WebSocket.RawData): string {
   return JSON.stringify(JSON.parse(message.toString()), null, 2);
 }
 
