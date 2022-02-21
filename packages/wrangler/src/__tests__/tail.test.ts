@@ -202,14 +202,19 @@ describe("tail", () => {
 
       api.ws.send(serializedMessage);
       expect(
-        std.out.replace(
-          new Date(mockEventTimestamp).toLocaleString(),
-          "mock timestamp string"
-        )
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock event timestamp]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at 2/1/3005, 12:00:00 AM
+        "successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
-        GET https://example.org/ - Ok @ mock timestamp string"
+        GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
     });
 
@@ -222,14 +227,19 @@ describe("tail", () => {
 
       api.ws.send(serializedMessage);
       expect(
-        std.out.replace(
-          new Date(mockEventTimestamp).toLocaleString(),
-          "mock timestamp string"
-        )
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock timestamp string]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at 2/1/3005, 12:00:00 AM
+        "successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
-        \\"* * * * *\\" @ mock timestamp string - Ok"
+        \\"* * * * *\\" @ [mock timestamp string] - Ok"
       `);
     });
   });
