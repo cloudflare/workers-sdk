@@ -201,16 +201,11 @@ describe("tail", () => {
       const message = generateMockEventMessage({ event });
       const serializedMessage = serialize(message);
 
-      const method = event.request.method.toUpperCase();
-      const url = event.request.url;
-      const outcome = prettifyOutcome(message.outcome);
-      const datetime = new Date(message.eventTimestamp).toLocaleString();
-
       api.ws.send(serializedMessage);
       expect(std.out).toMatchInlineSnapshot(`
-        "successfully created tail, expires at ${formattedMockTailExpiration}
+        "successfully created tail, expires at 2/1/3005, 12:00:00 AM
         Connected to test-worker, waiting for logs...
-        ${method} ${url} - ${outcome} @ ${datetime}"
+        GET https://example.org/ - Ok @ 2/21/2022, 8:41:10 AM"
       `);
     });
 
@@ -221,15 +216,11 @@ describe("tail", () => {
       const message = generateMockEventMessage({ event });
       const serializedMessage = serialize(message);
 
-      const cron = event.cron;
-      const outcome = prettifyOutcome(message.outcome);
-      const datetime = new Date(message.eventTimestamp).toLocaleString();
-
       api.ws.send(serializedMessage);
       expect(std.out).toMatchInlineSnapshot(`
-        "successfully created tail, expires at ${formattedMockTailExpiration}
+        "successfully created tail, expires at 2/1/3005, 12:00:00 AM
         Connected to test-worker, waiting for logs...
-        \\"${cron}\\" @ ${datetime} - ${outcome}"
+        \\"* * * * *\\" @ 2/21/2022, 8:41:10 AM - Ok"
       `);
     });
   });
@@ -427,7 +418,7 @@ function generateMockEventMessage(
     outcome: opts?.outcome || "ok",
     exceptions: opts?.exceptions || [],
     logs: opts?.logs || [],
-    eventTimestamp: opts?.eventTimestamp || Date.now(),
+    eventTimestamp: opts?.eventTimestamp || 1645454470467,
     event: opts?.event || generateMockRequestEvent(),
   };
 }
@@ -468,6 +459,6 @@ function generateMockScheduledEvent(
 ): ScheduledEvent {
   return {
     cron: opts?.cron || "* * * * *",
-    scheduledTime: opts?.scheduledTime || Date.now(),
+    scheduledTime: opts?.scheduledTime || 1645454470467,
   };
 }
