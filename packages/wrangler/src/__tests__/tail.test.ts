@@ -5,8 +5,8 @@ import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { TailEventMessage, RequestEvent } from "../tail";
-import type WebSocket from "ws";
+import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
+import type Websocket from "ws";
 
 describe("tail", () => {
   runInTempDir();
@@ -163,11 +163,48 @@ describe("tail", () => {
 
   /* Printing */
 
-  it("logs incoming messages", async () => {
-    await runWrangler("tail test-worker");
-    const message = serialize(generateMockEventMessage());
-    api.ws.send(message);
-    expect(std.out).toMatch(deserializeToJson(message));
+  it("logs incoming messages in JSON format", async () => {
+    await runWrangler("tail test-worker --format json");
+
+    /* request event */
+    const requestEvent = generateMockRequestEvent();
+    const requestMessage = generateMockEventMessage({ event: requestEvent });
+    const serializedRequestMessage = serialize(requestMessage);
+
+    api.ws.send(serializedRequestMessage);
+    expect(std.out).toMatch(deserializeToJson(serializedRequestMessage));
+
+    /* scheduled event */
+    const scheduledEvent = generateMockScheduledEvent();
+    const scheduledMessage = generateMockEventMessage({
+      event: scheduledEvent,
+    });
+    const serializedEventMessage = serialize(scheduledMessage);
+
+    api.ws.send(serializedEventMessage);
+    expect(std.out).toMatch(deserializeToJson(serializedEventMessage));
+  });
+
+  it("logs messages in pretty-printing format", async () => {
+    await runWrangler("tail test-worker --format pretty");
+
+    /* request event */
+    const requestEvent = generateMockRequestEvent();
+    const requestMessage = generateMockEventMessage({ event: requestEvent });
+    const serializedRequestMessage = serialize(requestMessage);
+
+    api.ws.send(serializedRequestMessage);
+    expect(std.out).not.toMatch(deserializeToJson(serializedRequestMessage));
+
+    /* scheduled event */
+    const scheduledEvent = generateMockScheduledEvent();
+    const scheduledMessage = generateMockEventMessage({
+      event: scheduledEvent,
+    });
+    const serializedEventMessage = serialize(scheduledMessage);
+
+    api.ws.send(serializedEventMessage);
+    expect(std.out).not.toMatch(deserializeToJson(serializedEventMessage));
   });
 });
 
@@ -176,13 +213,51 @@ describe("tail", () => {
 /**
  * The built in serialize-to-JSON feature of our mock websocket doesn't work
  * for our use-case since we actually expect a raw buffer,
- * not a Javascript string.
+ * not a Javascript string. Additionally, we have to do some fiddling
+ * with `RequestEvent`s to get them to serialize properly.
  *
- * @param message an object to serialize to JSON
+ * @param message a message to serialize to JSON
  * @returns the same type we expect when deserializing in wrangler
  */
-function serialize(message: unknown): WebSocket.RawData {
-  return Buffer.from(JSON.stringify(message), "utf-8");
+function serialize(message: TailEventMessage): Websocket.RawData {
+  if (isScheduled(message.event)) {
+    // `ScheduledEvent`s work just fine
+    const stringified = JSON.stringify(message);
+    return Buffer.from(stringified, "utf-8");
+  } else {
+    // Since the "properties" of an `undici.Request` are actually getters,
+    // which don't serialize properly, we need to hydrate them manually.
+    // This isn't a problem outside of testing since deserialization
+    // works just fine and wrangler never _sends_ any event messages,
+    // it only receives them.
+    const request = (message.event as RequestEvent).request;
+    const stringified = JSON.stringify(message, (key, value) => {
+      if (key !== "request") {
+        return value;
+      }
+
+      return {
+        ...request,
+        url: request.url,
+        headers: request.headers,
+        method: request.method,
+      };
+    });
+
+    return Buffer.from(stringified, "utf-8");
+  }
+}
+
+/**
+ * Small helper to disambiguate the event types possible in a `TailEventMessage`
+ *
+ * @param event A TailEvent
+ * @returns whether event is a ScheduledEvent (true) or a RequestEvent
+ */
+function isScheduled(
+  event: ScheduledEvent | RequestEvent
+): event is ScheduledEvent {
+  return "cron" in event;
 }
 
 /**
@@ -193,7 +268,7 @@ function serialize(message: unknown): WebSocket.RawData {
  * @param message a buffer of data received from the websocket
  * @returns a string ready to be printed to the terminal or compared against
  */
-function deserializeToJson(message: WebSocket.RawData): string {
+function deserializeToJson(message: Websocket.RawData): string {
   return JSON.stringify(JSON.parse(message.toString()), null, 2);
 }
 
@@ -310,7 +385,7 @@ function generateMockEventMessage(
     outcome: opts?.outcome || "ok",
     exceptions: opts?.exceptions || [],
     logs: opts?.logs || [],
-    eventTimestamp: opts?.eventTimestamp || new Date(),
+    eventTimestamp: opts?.eventTimestamp || Date.now(),
     event: opts?.event || generateMockRequestEvent(),
   };
 }
@@ -343,5 +418,14 @@ function generateMockRequestEvent(
         },
       }
     ),
+  };
+}
+
+function generateMockScheduledEvent(
+  opts?: Partial<ScheduledEvent>
+): ScheduledEvent {
+  return {
+    cron: opts?.cron || "* * * * *",
+    scheduledTime: Date.now(),
   };
 }
