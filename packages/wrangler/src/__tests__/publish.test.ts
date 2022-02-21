@@ -28,6 +28,102 @@ describe("publish", () => {
     unsetAllMocks();
   });
 
+  describe("environments", () => {
+    describe("legacy", () => {
+      it("uses the script name when no environment is specified", async () => {
+        writeWranglerToml();
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          legacyEnv: true,
+        });
+        await runWrangler("publish index.js --legacy-env true");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded
+          test-name
+          (TIMINGS)
+          Published
+          test-name
+          (TIMINGS)
+
+          test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      it("appends the environment name when provided", async () => {
+        writeWranglerToml();
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          env: "some-env",
+          legacyEnv: true,
+        });
+        await runWrangler("publish index.js --env some-env --legacy-env true");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded
+          test-name-some-env
+          (TIMINGS)
+          Published
+          test-name-some-env
+          (TIMINGS)
+
+          test-name-some-env.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+
+    describe("services", () => {
+      it("uses the script name when no environment is specified", async () => {
+        writeWranglerToml();
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          legacyEnv: false,
+        });
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded
+          test-name
+          (TIMINGS)
+          Published
+          test-name
+          (TIMINGS)
+
+          test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      it("publishes as an environment when provided", async () => {
+        writeWranglerToml();
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          env: "some-env",
+          legacyEnv: false,
+        });
+        await runWrangler("publish index.js --env some-env");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded
+          test-name (some-env)
+          (TIMINGS)
+          Published
+          test-name (some-env)
+          (TIMINGS)
+
+          some-env.test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+  });
+
   it("should resolve wrangler.toml relative to the entrypoint", async () => {
     fs.mkdirSync("./some-path/worker", { recursive: true });
     fs.writeFileSync(
@@ -550,7 +646,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should make environment specific kv namespace for assets", async () => {
+    it("should make environment specific kv namespace for assets, even for service envs", async () => {
       // This is the same test as the one before this, but with an env arg
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
@@ -597,6 +693,58 @@ export default{
         (TIMINGS)
 
         some-env.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should make environment specific kv namespace for assets, even for legacy envs", async () => {
+      // And this is the same test as the one before this, but with legacyEnv:true
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-some-env-workers_sites_assets",
+        id: "__test-name-some-env-workers_sites_assets-id",
+      };
+      writeWranglerToml({
+        build: { upload: { main: "./index.js" } },
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        legacyEnv: true,
+        env: "some-env",
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name-some-env-workers_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      await runWrangler("publish --env some-env --legacy-env true");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "reading assets/file-1.txt...
+        uploading as assets/file-1.2ca234f380.txt...
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        Uploaded
+        test-name-some-env
+        (TIMINGS)
+        Published
+        test-name-some-env
+        (TIMINGS)
+
+        test-name-some-env.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1607,6 +1755,7 @@ function mockUploadWorkerRequest({
   expectedBindings,
   expectedModules = {},
   env = undefined,
+  legacyEnv = false,
 }: {
   available_on_subdomain?: boolean;
   expectedEntry?: string;
@@ -1614,15 +1763,18 @@ function mockUploadWorkerRequest({
   expectedBindings?: unknown;
   expectedModules?: Record<string, string>;
   env?: string | undefined;
+  legacyEnv?: boolean | undefined;
 } = {}) {
   setMockResponse(
-    env
-      ? `/accounts/:accountId/workers/services/:scriptName/environments/:envName`
+    env && !legacyEnv
+      ? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
       : "/accounts/:accountId/workers/scripts/:scriptName",
     "PUT",
     async ([_url, accountId, scriptName], { body }, queryParams) => {
       expect(accountId).toEqual("some-account-id");
-      expect(scriptName).toEqual("test-name");
+      expect(scriptName).toEqual(
+        legacyEnv && env ? `test-name-${env}` : "test-name"
+      );
       expect(queryParams.get("available_on_subdomain")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {

@@ -51,6 +51,7 @@ export type DevProps = {
     watch_dir?: undefined | string;
   };
   env: string | undefined;
+  legacyEnv: boolean;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -95,12 +96,16 @@ function Dev(props: DevProps): JSX.Element {
   );
 
   useTunnel(toggles.tunnel);
+  let scriptName = props.name || path.basename(props.entry.file);
+  if (props.legacyEnv) {
+    scriptName = `${scriptName}${props.env ? `-${props.env}` : ""}`;
+  }
 
   return (
     <>
       {toggles.local ? (
         <Local
-          name={props.name}
+          name={scriptName}
           bundle={bundle}
           format={format}
           bindings={props.bindings}
@@ -124,6 +129,7 @@ function Dev(props: DevProps): JSX.Element {
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
           env={props.env}
+          legacyEnv={props.legacyEnv}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -172,6 +178,7 @@ function Remote(props: {
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  legacyEnv: boolean | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -189,6 +196,7 @@ function Remote(props: {
     compatibilityFlags: props.compatibilityFlags,
     usageModel: props.usageModel,
     env: props.env,
+    legacyEnv: props.legacyEnv,
   });
 
   usePreviewServer({
@@ -630,6 +638,7 @@ function useWorker(props: {
   compatibilityFlags: string[] | undefined;
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
+  legacyEnv: boolean | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -666,10 +675,13 @@ function useWorker(props: {
 
       const assets = await syncAssets(
         accountId,
-        name || path.basename(bundle.path),
+        // When we're using the newer service environments, we wouldn't
+        // have added the env name on to the script name. However, we must
+        // include it in the kv namespace name regardless (since there's no
+        // concept of service environments for kv namespaces yet).
+        name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
         assetPaths,
-        true,
-        props.env
+        true
       ); // TODO: cancellable?
 
       let content = await readFile(bundle.path, "utf-8");
@@ -734,6 +746,7 @@ function useWorker(props: {
     bindings,
     modules,
     props.env,
+    props.legacyEnv,
   ]);
   return token;
 }

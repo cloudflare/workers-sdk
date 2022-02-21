@@ -471,6 +471,19 @@ export type Config = {
   };
 
   /**
+   * A boolean to enable "legacy" style wrangler environments (from wrangler 1).
+   * These have been superceded by Services, but there may be projects that won't
+   * (or can't) use them. If you're using a legacy environment, you can set this
+   * to `true` to enable it.
+   *
+   * NB: This is not inherited, and should not be duplicated across all environments.
+   *
+   * @optional
+
+   */
+  legacy_env?: boolean;
+
+  /**
    * The `env` section defines overrides for the configuration for
    * different environments. Most fields can be overridden, while
    * some have to be specifically duplicated in every environment.
@@ -479,7 +492,10 @@ export type Config = {
   env?: {
     [envName: string]:
       | undefined
-      | Omit<Config, "env" | "wasm_modules" | "migrations" | "site" | "dev">;
+      | Omit<
+          Config,
+          "env" | "wasm_modules" | "migrations" | "site" | "dev" | "legacy_env"
+        >;
   };
 };
 
@@ -538,7 +554,7 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
 
     type InheritedField = keyof Omit<
       Config,
-      "env" | "migrations" | "wasm_modules" | "site" | "dev"
+      "env" | "migrations" | "wasm_modules" | "site" | "dev" | "legacy_env"
     >;
 
     const inheritedFields: InheritedField[] = [

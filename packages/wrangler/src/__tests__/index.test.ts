@@ -44,9 +44,10 @@ describe("wrangler", () => {
           wrangler r2                📦 Interact with an R2 store
 
         Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]
+          -c, --config      Path to .toml configuration file  [string]
+          -h, --help        Show help  [boolean]
+          -v, --version     Show version number  [boolean]
+              --legacy-env  Use legacy environments  [boolean]
 
         Options:
           -l, --local  Run on my machine  [boolean] [default: false]"
@@ -82,9 +83,10 @@ describe("wrangler", () => {
           wrangler r2                📦 Interact with an R2 store
 
         Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]
+          -c, --config      Path to .toml configuration file  [string]
+          -h, --help        Show help  [boolean]
+          -v, --version     Show version number  [boolean]
+              --legacy-env  Use legacy environments  [boolean]
 
         Options:
           -l, --local  Run on my machine  [boolean] [default: false]

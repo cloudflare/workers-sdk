@@ -99,7 +99,6 @@ async function createKVNamespaceIfNotAlreadyExisting(
  * @param scriptName the name of the worker whose assets we are uploading.
  * @param siteAssets an objects describing what assets to upload, or undefined if there are no assets to upload.
  * @param preview if true then upload to a "preview" KV namespace.
- * @param _env (not implemented).
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
  * asset in the KV namespace.
  */
@@ -107,8 +106,7 @@ export async function syncAssets(
   accountId: string,
   scriptName: string,
   siteAssets: AssetPaths | undefined,
-  preview: boolean,
-  env: string | undefined
+  preview: boolean
 ): Promise<{
   manifest: { [filePath: string]: string } | undefined;
   namespace: string | undefined;
@@ -117,7 +115,7 @@ export async function syncAssets(
     return { manifest: undefined, namespace: undefined };
   }
 
-  const title = `__${scriptName}${env ? `-${env}` : ""}-workers_sites_assets${
+  const title = `__${scriptName}-workers_sites_assets${
     preview ? "_preview" : ""
   }`;
   const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
@@ -226,7 +224,6 @@ export interface AssetPaths {
  * Uses the args (passed from the command line) if available,
  * falling back to those defined in the config.
  *
- * // TODO: Support for environments
  */
 export function getAssetPaths(
   config: Config,
