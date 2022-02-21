@@ -400,14 +400,6 @@ function mockWebsocketAPIs(websocketURL = "ws://localhost:1234"): MockAPI {
     },
   };
 
-  // don't delete this line or else it breaks.
-  // we need to have api.ws be an instance of WS for
-  // the type checker to be happy, but if we have
-  // an actual open websocket then it causes problems
-  // since we create a new websocket beforeEach test.
-  // so we need to close it before we ever use it.
-  api.ws.close();
-
   beforeEach(() => {
     api.requests.creation = mockCreateTailRequest(websocketURL);
     api.requests.deletion = mockDeleteTailRequest();
