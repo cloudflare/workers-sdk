@@ -1,6 +1,5 @@
 import MockWebSocket from "jest-websocket-mock";
 import { Headers, Request } from "undici";
-import { prettifyOutcome } from "../tail";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";

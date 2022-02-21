@@ -4,7 +4,7 @@ import { fetchResult } from "../cfetch";
 import type { TailFilterMessage, Outcome } from "./filters";
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
-export { jsonPrintLogs, prettyPrintLogs, prettifyOutcome } from "./printing";
+export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 import type { Request } from "undici";
 
 /**
