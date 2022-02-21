@@ -1,5 +1,6 @@
 import MockWebSocket from "jest-websocket-mock";
 import { Headers, Request } from "undici";
+import { prettifyOutcome } from "../tail";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -16,195 +17,221 @@ describe("tail", () => {
   const std = mockConsoleMethods();
   const api = mockWebsocketAPIs();
 
-  /* API related functionality */
+  /**
+   * Interaction with the tailing API, including tail creation,
+   * deletion, and connection.
+   */
+  describe("API interaction", () => {
+    it("creates and then delete tails", async () => {
+      expect(api.requests.creation.count).toStrictEqual(0);
 
-  it("creates and then delete tails", async () => {
-    expect(api.requests.creation.count).toStrictEqual(0);
+      await runWrangler("tail test-worker");
 
-    await runWrangler("tail test-worker");
+      await expect(api.ws.connected).resolves.toBeTruthy();
+      expect(api.requests.creation.count).toStrictEqual(1);
+      expect(api.requests.deletion.count).toStrictEqual(0);
 
-    await expect(api.ws.connected).resolves.toBeTruthy();
-    expect(api.requests.creation.count).toStrictEqual(1);
-    expect(api.requests.deletion.count).toStrictEqual(0);
-
-    api.ws.close();
-    expect(api.requests.deletion.count).toStrictEqual(1);
-  });
-
-  it("errors when the websocket closes unexpectedly", async () => {
-    api.ws.close();
-
-    await expect(runWrangler("tail test-worker")).rejects.toThrow();
-  });
-
-  it("activates debug mode when the cli arg is passed in", async () => {
-    await runWrangler("tail test-worker --debug");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("debug", true);
-  });
-
-  /* filtering */
-
-  it("sends sampling rate filters", async () => {
-    const tooHigh = runWrangler("tail test-worker --sampling-rate 10");
-    await expect(tooHigh).rejects.toThrow();
-
-    const tooLow = runWrangler("tail test-worker --sampling-rate -5");
-    await expect(tooLow).rejects.toThrow();
-
-    await runWrangler("tail test-worker --sampling-rate 0.25");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { sampling_rate: 0.25 },
-    ]);
-  });
-
-  it("sends single status filters", async () => {
-    await runWrangler("tail test-worker --status error");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { outcome: ["exception", "exceededCpu", "unknown"] },
-    ]);
-  });
-
-  it("sends multiple status filters", async () => {
-    await runWrangler("tail test-worker --status error --status canceled");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { outcome: ["exception", "exceededCpu", "unknown", "canceled"] },
-    ]);
-  });
-
-  it("sends single HTTP method filters", async () => {
-    await runWrangler("tail test-worker --method POST");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { method: ["POST"] },
-    ]);
-  });
-
-  it("sends multiple HTTP method filters", async () => {
-    await runWrangler("tail test-worker --method POST --method GET");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { method: ["POST", "GET"] },
-    ]);
-  });
-
-  it("sends header filters without a query", async () => {
-    await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { header: { key: "X-CUSTOM-HEADER" } },
-    ]);
-  });
-
-  it("sends header filters with a query", async () => {
-    await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value ");
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
-    ]);
-  });
-
-  it("sends single IP filters", async () => {
-    const fakeIp = "192.0.2.1";
-
-    await runWrangler(`tail test-worker --ip ${fakeIp}`);
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { client_ip: [fakeIp] },
-    ]);
-  });
-
-  it("sends multiple IP filters", async () => {
-    const fakeIp = "192.0.2.1";
-
-    await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { client_ip: [fakeIp, "self"] },
-    ]);
-  });
-
-  it("sends search filters", async () => {
-    const search = "filterMe";
-
-    await runWrangler(`tail test-worker --search ${search}`);
-    await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-      { query: search },
-    ]);
-  });
-
-  it("sends everything but the kitchen sink", async () => {
-    const sampling_rate = 0.69;
-    const status = ["ok", "error"];
-    const method = ["GET", "POST", "PUT"];
-    const header = "X-HELLO:world";
-    const client_ip = ["192.0.2.1", "self"];
-    const query = "onlyTheseMessagesPlease";
-
-    const cliFilters =
-      `--sampling-rate ${sampling_rate} ` +
-      status.map((s) => `--status ${s} `).join("") +
-      method.map((m) => `--method ${m} `).join("") +
-      `--header ${header} ` +
-      client_ip.map((c) => `--ip ${c} `).join("") +
-      `--search ${query} ` +
-      `--debug`;
-
-    const expectedWebsocketMessage = {
-      filters: [
-        { sampling_rate },
-        { outcome: ["ok", "exception", "exceededCpu", "unknown"] },
-        { method },
-        { header: { key: "X-HELLO", query: "world" } },
-        { client_ip },
-        { query },
-      ],
-      debug: true,
-    };
-
-    await runWrangler(`tail test-worker ${cliFilters}`);
-    await expect(api.nextMessageJson()).resolves.toEqual(
-      expectedWebsocketMessage
-    );
-  });
-
-  /* Printing */
-
-  it("logs incoming messages in JSON format", async () => {
-    await runWrangler("tail test-worker --format json");
-
-    /* request event */
-    const requestEvent = generateMockRequestEvent();
-    const requestMessage = generateMockEventMessage({ event: requestEvent });
-    const serializedRequestMessage = serialize(requestMessage);
-
-    api.ws.send(serializedRequestMessage);
-    expect(std.out).toMatch(deserializeToJson(serializedRequestMessage));
-
-    /* scheduled event */
-    const scheduledEvent = generateMockScheduledEvent();
-    const scheduledMessage = generateMockEventMessage({
-      event: scheduledEvent,
+      api.ws.close();
+      expect(api.requests.deletion.count).toStrictEqual(1);
     });
-    const serializedEventMessage = serialize(scheduledMessage);
 
-    api.ws.send(serializedEventMessage);
-    expect(std.out).toMatch(deserializeToJson(serializedEventMessage));
+    it("errors when the websocket closes unexpectedly", async () => {
+      api.ws.close();
+
+      await expect(runWrangler("tail test-worker")).rejects.toThrow();
+    });
+
+    it("activates debug mode when the cli arg is passed in", async () => {
+      await runWrangler("tail test-worker --debug");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty(
+        "debug",
+        true
+      );
+    });
   });
 
-  it("logs messages in pretty-printing format", async () => {
-    await runWrangler("tail test-worker --format pretty");
+  describe("filtering", () => {
+    it("sends sampling rate filters", async () => {
+      const tooHigh = runWrangler("tail test-worker --sampling-rate 10");
+      await expect(tooHigh).rejects.toThrow();
 
-    /* request event */
-    const requestEvent = generateMockRequestEvent();
-    const requestMessage = generateMockEventMessage({ event: requestEvent });
-    const serializedRequestMessage = serialize(requestMessage);
+      const tooLow = runWrangler("tail test-worker --sampling-rate -5");
+      await expect(tooLow).rejects.toThrow();
 
-    api.ws.send(serializedRequestMessage);
-    expect(std.out).not.toMatch(deserializeToJson(serializedRequestMessage));
-
-    /* scheduled event */
-    const scheduledEvent = generateMockScheduledEvent();
-    const scheduledMessage = generateMockEventMessage({
-      event: scheduledEvent,
+      await runWrangler("tail test-worker --sampling-rate 0.25");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { sampling_rate: 0.25 },
+      ]);
     });
-    const serializedEventMessage = serialize(scheduledMessage);
 
-    api.ws.send(serializedEventMessage);
-    expect(std.out).not.toMatch(deserializeToJson(serializedEventMessage));
+    it("sends single status filters", async () => {
+      await runWrangler("tail test-worker --status error");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { outcome: ["exception", "exceededCpu", "unknown"] },
+      ]);
+    });
+
+    it("sends multiple status filters", async () => {
+      await runWrangler("tail test-worker --status error --status canceled");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { outcome: ["exception", "exceededCpu", "unknown", "canceled"] },
+      ]);
+    });
+
+    it("sends single HTTP method filters", async () => {
+      await runWrangler("tail test-worker --method POST");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { method: ["POST"] },
+      ]);
+    });
+
+    it("sends multiple HTTP method filters", async () => {
+      await runWrangler("tail test-worker --method POST --method GET");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { method: ["POST", "GET"] },
+      ]);
+    });
+
+    it("sends header filters without a query", async () => {
+      await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { header: { key: "X-CUSTOM-HEADER" } },
+      ]);
+    });
+
+    it("sends header filters with a query", async () => {
+      await runWrangler(
+        "tail test-worker --header X-CUSTOM-HEADER:some-value "
+      );
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
+      ]);
+    });
+
+    it("sends single IP filters", async () => {
+      const fakeIp = "192.0.2.1";
+
+      await runWrangler(`tail test-worker --ip ${fakeIp}`);
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { client_ip: [fakeIp] },
+      ]);
+    });
+
+    it("sends multiple IP filters", async () => {
+      const fakeIp = "192.0.2.1";
+
+      await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { client_ip: [fakeIp, "self"] },
+      ]);
+    });
+
+    it("sends search filters", async () => {
+      const search = "filterMe";
+
+      await runWrangler(`tail test-worker --search ${search}`);
+      await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
+        { query: search },
+      ]);
+    });
+
+    it("sends everything but the kitchen sink", async () => {
+      const sampling_rate = 0.69;
+      const status = ["ok", "error"];
+      const method = ["GET", "POST", "PUT"];
+      const header = "X-HELLO:world";
+      const client_ip = ["192.0.2.1", "self"];
+      const query = "onlyTheseMessagesPlease";
+
+      const cliFilters =
+        `--sampling-rate ${sampling_rate} ` +
+        status.map((s) => `--status ${s} `).join("") +
+        method.map((m) => `--method ${m} `).join("") +
+        `--header ${header} ` +
+        client_ip.map((c) => `--ip ${c} `).join("") +
+        `--search ${query} ` +
+        `--debug`;
+
+      const expectedWebsocketMessage = {
+        filters: [
+          { sampling_rate },
+          { outcome: ["ok", "exception", "exceededCpu", "unknown"] },
+          { method },
+          { header: { key: "X-HELLO", query: "world" } },
+          { client_ip },
+          { query },
+        ],
+        debug: true,
+      };
+
+      await runWrangler(`tail test-worker ${cliFilters}`);
+      await expect(api.nextMessageJson()).resolves.toEqual(
+        expectedWebsocketMessage
+      );
+    });
+  });
+
+  describe("printing", () => {
+    it("logs request messages in JSON format", async () => {
+      await runWrangler("tail test-worker --format json");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(std.out).toMatch(deserializeToJson(serializedMessage));
+    });
+
+    it("logs scheduled messages in JSON format", async () => {
+      await runWrangler("tail test-worker --format json");
+
+      const event = generateMockScheduledEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(std.out).toMatch(deserializeToJson(serializedMessage));
+    });
+
+    it("logs request messages in pretty format", async () => {
+      await runWrangler("tail test-worker --format pretty");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      const method = event.request.method.toUpperCase();
+      const url = event.request.url;
+      const outcome = prettifyOutcome(message.outcome);
+      const datetime = new Date(message.eventTimestamp).toLocaleString();
+
+      api.ws.send(serializedMessage);
+      expect(std.out).toMatchInlineSnapshot(`
+        "successfully created tail, expires at ${formattedMockTailExpiration}
+        Connected to test-worker, waiting for logs...
+        ${method} ${url} - ${outcome} @ ${datetime}"
+      `);
+    });
+
+    it("logs scheduled messages in pretty format", async () => {
+      await runWrangler("tail test-worker --format pretty");
+
+      const event = generateMockScheduledEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      const cron = event.cron;
+      const outcome = prettifyOutcome(message.outcome);
+      const datetime = new Date(message.eventTimestamp).toLocaleString();
+
+      api.ws.send(serializedMessage);
+      expect(std.out).toMatchInlineSnapshot(`
+        "successfully created tail, expires at ${formattedMockTailExpiration}
+        Connected to test-worker, waiting for logs...
+        \\"${cron}\\" @ ${datetime} - ${outcome}"
+      `);
+    });
   });
 });
 
@@ -310,13 +337,23 @@ function mockCreateTailRequest(websocketURL: string): RequestCounter {
       return {
         id: "tail-id",
         url: websocketURL,
-        expires_at: new Date(3005, 0, 0),
+        expires_at: mockTailExpiration,
       };
     }
   );
 
   return requests;
 }
+
+/**
+ * Mock expiration datetime for tails created during testing
+ */
+const mockTailExpiration = new Date(3005, 1);
+
+/**
+ * A formatted version of the mock expiration datetime for snapshot testing
+ */
+const formattedMockTailExpiration = mockTailExpiration.toLocaleString();
 
 /**
  * Mock out the API hit during Tail deletion
@@ -352,6 +389,11 @@ function mockWebsocketAPIs(websocketURL = "ws://localhost:1234"): MockAPI {
     },
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     ws: null!, // will be set in the `beforeEach()` below.
+
+    /**
+     * Parse the next message received by the mock websocket as JSON
+     * @returns JSON.parse of the next message received by the websocket
+     */
     async nextMessageJson() {
       const message = await api.ws.nextMessage;
       return JSON.parse(message as string);
@@ -418,7 +460,7 @@ function generateMockRequestEvent(
       {
         cf: opts?.cf || {
           tlsCipher: "AEAD-ENCRYPT-O-MATIC-SHA",
-          tlsVersion: "TLSv2.0", // when will they invent tls 2
+          tlsVersion: "TLSv2.0",
           asn: 42069,
           colo: "ATL",
           httpProtocol: "HTTP/4",
@@ -434,6 +476,6 @@ function generateMockScheduledEvent(
 ): ScheduledEvent {
   return {
     cron: opts?.cron || "* * * * *",
-    scheduledTime: Date.now(),
+    scheduledTime: opts?.scheduledTime || Date.now(),
   };
 }

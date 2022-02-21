@@ -45,7 +45,7 @@ function isScheduledEvent(
   return "cron" in event;
 }
 
-function prettifyOutcome(outcome: Outcome): string {
+export function prettifyOutcome(outcome: Outcome): string {
   switch (outcome) {
     case "ok":
       return "Ok";
