@@ -5,7 +5,7 @@ on:
     branches:
       - main
 jobs:
-  build:
+  prerelease:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish an alpha release to NPM
     runs-on: ubuntu-latest
@@ -56,3 +56,41 @@ jobs:
         run: node .github/sourcemap-url.js
       - run: npx sentry-cli --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} releases --org ${{ secrets.SENTRY_ORG }} --project ${{ secrets.SENTRY_PROJECT}} files "wrangler@$WRANGLER_VERSION" upload-sourcemaps ./wrangler-dist --url-prefix /
         working-directory: packages/wrangler
+  publish_prerelease_registry:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Publish Prerelease Registry
+    needs: prerelease
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.7
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.7
+          cache: "npm"
+
+      - uses: actions/cache@v2
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Build wrangler
+        run: npm run build
+        working-directory: packages/wrangler
+
+      - name: Build & Publish Prerelease Registry
+        run: npm run publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/prerelease-registry
