@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
+import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -608,9 +609,12 @@ describe("wrangler", () => {
       );
       await runWrangler("init");
       expect(fs.existsSync("./tsconfig.json")).toBe(true);
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("./tsconfig.json", "utf-8")
-      );
+      const { config: tsconfigJson, error: tsConfigParseError } =
+        parseConfigFileTextToJson(
+          "./tsconfig.json",
+          fs.readFileSync("./tsconfig.json", "utf-8")
+        );
+      expect(tsConfigParseError).toBeUndefined();
       expect(tsconfigJson.compilerOptions.types).toEqual([
         "@cloudflare/workers-types",
       ]);
