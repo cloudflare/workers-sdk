@@ -414,24 +414,10 @@ export async function main(argv: string[]): Promise<void> {
           isTypescriptProject = true;
           await writeFile(
             "./tsconfig.json",
-            JSON.stringify(
-              {
-                compilerOptions: {
-                  target: "es2021",
-                  module: "es2022",
-                  moduleResolution: "node",
-                  allowJs: true,
-                  allowSyntheticDefaultImports: true,
-                  isolatedModules: true,
-                  noEmit: true,
-                  lib: ["es2021"],
-                  resolveJsonModule: true,
-                  types: ["@cloudflare/workers-types"],
-                },
-              },
-              null,
-              "  "
-            ) + "\n"
+            await readFile(
+              path.join(__dirname, "../templates/tsconfig.json"),
+              "utf-8"
+            )
           );
           await packageManager.addDevDeps(
             "@cloudflare/workers-types",
