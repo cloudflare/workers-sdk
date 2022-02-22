@@ -831,7 +831,7 @@ export async function main(argv: string[]): Promise<void> {
             (args["compatibility-flags"] as string[]) ||
             config.compatibility_flags
           }
-          usageModel={config.usage_model}
+          usageModel={envRootObj.usage_model}
           bindings={{
             kv_namespaces: envRootObj.kv_namespaces?.map(
               ({ binding, preview_id, id: _id }) => {
