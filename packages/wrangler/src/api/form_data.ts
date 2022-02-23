@@ -54,13 +54,15 @@ export function toFormData(worker: CfWorkerInit): FormData {
   const formData = new FormData();
   const {
     main,
-    modules,
+
     bindings,
     migrations,
     usage_model,
     compatibility_date,
     compatibility_flags,
   } = worker;
+
+  let { modules } = worker;
 
   const metadataBindings: WorkerMetadata["bindings"] = [];
 
@@ -117,7 +119,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
   if (main.type === "commonjs") {
     // This is a service-worker format worker.
     // So we convert all `.wasm` modules into `wasm_module` bindings.
-    for (const [index, module] of Object.entries(modules || [])) {
+    for (const module of Object.values([...(modules || [])])) {
       if (module.type === "compiled-wasm") {
         // The "name" of the module is a file path. We use it
         // to instead be a "part" of the body, and a reference
@@ -139,7 +141,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
           })
         );
         // And then remove it from the modules collection
-        modules?.splice(parseInt(index, 10), 1);
+        modules = modules?.filter((m) => m !== module);
       }
     }
   }
