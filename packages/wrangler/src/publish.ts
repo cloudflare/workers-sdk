@@ -37,8 +37,6 @@ function sleep(ms: number) {
 export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
-  const { account_id: accountId, workers_dev: deployToWorkersDev = true } =
-    config;
 
   const envRootObj =
     props.env && config.env ? config.env[props.env] || {} : config;
@@ -48,15 +46,21 @@ export default async function publish(props: Props): Promise<void> {
     "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
+  const triggers = props.triggers || envRootObj.triggers?.crons;
+  const routes =
+    props.routes ||
+    envRootObj.routes ||
+    (envRootObj.route ? [envRootObj.route] : undefined);
+
+  const { account_id: accountId, workers_dev: deployToWorkersDev = !routes } =
+    config;
+
   if (accountId === undefined) {
     throw new Error("No account_id provided.");
   }
 
-  const triggers = props.triggers || config.triggers?.crons;
-  const routes = props.routes || config.routes;
-
-  const jsxFactory = props.jsxFactory || config.jsx_factory;
-  const jsxFragment = props.jsxFragment || config.jsx_fragment;
+  const jsxFactory = props.jsxFactory || envRootObj.jsx_factory;
+  const jsxFragment = props.jsxFragment || envRootObj.jsx_fragment;
 
   assert(config.account_id, "missing account id");
 
@@ -253,14 +257,13 @@ export default async function publish(props: Props): Promise<void> {
     console.log("Uploaded", workerName, formatTime(uploadMs));
     const deployments: Promise<string[]>[] = [];
 
-    const userSubdomain = (
-      await fetchResult<{ subdomain: string }>(
-        `/accounts/${accountId}/workers/subdomain`
-      )
-    ).subdomain;
-
     if (deployToWorkersDev) {
       // Deploy to a subdomain of `workers.dev`
+      const userSubdomain = (
+        await fetchResult<{ subdomain: string }>(
+          `/accounts/${accountId}/workers/subdomain`
+        )
+      ).subdomain;
       const scriptURL =
         props.legacyEnv || !props.env
           ? `${scriptName}.${userSubdomain}.workers.dev`
@@ -290,7 +293,7 @@ export default async function publish(props: Props): Promise<void> {
       }
     } else {
       // Disable the workers.dev deployment
-      fetchResult(`${workerUrl}/subdomain`, {
+      await fetchResult(`${workerUrl}/subdomain`, {
         method: "POST",
         body: JSON.stringify({ enabled: false }),
         headers: {
@@ -300,7 +303,7 @@ export default async function publish(props: Props): Promise<void> {
     }
 
     // Update routing table for the script.
-    if (routes && routes.length) {
+    if (routes && routes.length > 0) {
       deployments.push(
         fetchResult(`${workerUrl}/routes`, {
           // TODO: PATCH will not delete previous routes on this script,

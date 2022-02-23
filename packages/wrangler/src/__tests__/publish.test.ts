@@ -160,6 +160,67 @@ describe("publish", () => {
     expect(std.err).toMatchInlineSnapshot(`""`);
   });
 
+  describe("routes", () => {
+    it("should publish the worker to a route", async () => {
+      writeWranglerToml({
+        routes: ["example.com/some-route/*"],
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false });
+      mockUploadWorkerRequest({ expectedType: "esm" });
+      mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
+      await runWrangler("publish ./index");
+    });
+
+    it("should publish to legacy environment specific routes", async () => {
+      writeWranglerToml({
+        routes: ["example.com/some-route/*"],
+        env: {
+          dev: {
+            routes: ["dev-example.com/some-route/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false, legacyEnv: true, env: "dev" });
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        legacyEnv: true,
+        env: "dev",
+      });
+      mockPublishRoutesRequest({
+        routes: ["dev-example.com/some-route/*"],
+        legacyEnv: true,
+        env: "dev",
+      });
+      await runWrangler("publish ./index --env dev --legacy-env true");
+    });
+
+    it("services: should publish to service environment specific routes", async () => {
+      writeWranglerToml({
+        routes: ["example.com/some-route/*"],
+        env: {
+          dev: {
+            routes: ["dev-example.com/some-route/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        env: "dev",
+      });
+      mockPublishRoutesRequest({
+        routes: ["dev-example.com/some-route/*"],
+        env: "dev",
+      });
+      await runWrangler("publish ./index --env dev");
+    });
+
+    it.todo("should error if it's a workers.dev route");
+  });
+
   describe("entry-points", () => {
     it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
       writeWranglerToml();
@@ -1770,11 +1831,14 @@ function mockUploadWorkerRequest({
       ? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
       : "/accounts/:accountId/workers/scripts/:scriptName",
     "PUT",
-    async ([_url, accountId, scriptName], { body }, queryParams) => {
+    async ([_url, accountId, scriptName, envName], { body }, queryParams) => {
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual(
         legacyEnv && env ? `test-name-${env}` : "test-name"
       );
+      if (!legacyEnv) {
+        expect(envName).toEqual(env);
+      }
       expect(queryParams.get("available_on_subdomain")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
@@ -1810,25 +1874,60 @@ function mockSubDomainRequest(subdomain = "test-sub-domain") {
   });
 }
 
+/** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
 function mockUpdateWorkerRequest({
   env,
   enabled,
+  legacyEnv = false,
 }: {
-  env?: string | undefined;
   enabled: boolean;
+  env?: string | undefined;
+  legacyEnv?: boolean | undefined;
 }) {
   const requests = { count: 0 };
-  const servicesOrScripts = env ? "services" : "scripts";
-  const environment = env ? "/environments/:envName" : "";
+  const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+  const environment = env && !legacyEnv ? "/environments/:envName" : "";
   setMockResponse(
     `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
     "POST",
-    (_, { body }) => {
+    ([_url, accountId, scriptName], { body }) => {
+      expect(accountId).toEqual("some-account-id");
+      expect(scriptName).toEqual(
+        legacyEnv && env ? `test-name-${env}` : "test-name"
+      );
       expect(JSON.parse(body as string)).toEqual({ enabled });
       return null;
     }
   );
   return requests;
+}
+
+function mockPublishRoutesRequest({
+  routes,
+  env = undefined,
+  legacyEnv = false,
+}: {
+  routes: string[];
+  env?: string | undefined;
+  legacyEnv?: boolean | undefined;
+}) {
+  const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+  const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+  setMockResponse(
+    `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+    "PUT",
+    ([_url, accountId, scriptName], { body }) => {
+      expect(accountId).toEqual("some-account-id");
+      expect(scriptName).toEqual(
+        legacyEnv && env ? `test-name-${env}` : "test-name"
+      );
+      expect(JSON.parse(body as string)).toEqual(
+        routes.map((pattern) => ({ pattern }))
+      );
+      return null;
+    }
+  );
 }
 
 /** Create a mock handler for the request to get a list of all KV namespaces. */
