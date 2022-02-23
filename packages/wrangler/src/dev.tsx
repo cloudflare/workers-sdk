@@ -77,6 +77,12 @@ function Dev(props: DevProps): JSX.Element {
     );
   }
 
+  if (props.bindings.text_blobs && format === "modules") {
+    throw new Error(
+      "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
+    );
+  }
+
   const bundle = useEsbuild({
     entry,
     format,
@@ -684,12 +690,7 @@ function useWorker(props: {
         true
       ); // TODO: cancellable?
 
-      let content = await readFile(bundle.path, "utf-8");
-      if (format === "service-worker" && assets.manifest) {
-        content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
-          assets.manifest
-        )};\n${content}`;
-      }
+      const content = await readFile(bundle.path, "utf-8");
 
       const init: CfWorkerInit = {
         name,
@@ -699,7 +700,7 @@ function useWorker(props: {
           content,
         },
         modules: modules.concat(
-          assets.manifest && format === "modules"
+          assets.manifest
             ? {
                 name: "__STATIC_CONTENT_MANIFEST",
                 content: JSON.stringify(assets.manifest),
@@ -714,6 +715,13 @@ function useWorker(props: {
               ? { binding: "__STATIC_CONTENT", id: assets.namespace }
               : []
           ),
+          text_blobs: {
+            ...bindings.text_blobs,
+            ...(assets.manifest &&
+              format === "service-worker" && {
+                __STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+              }),
+          },
         },
         migrations: undefined, // no migrations in dev
         compatibility_date: compatibilityDate,

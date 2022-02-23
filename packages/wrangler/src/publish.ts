@@ -131,6 +131,12 @@ export default async function publish(props: Props): Promise<void> {
       );
     }
 
+    if ("text_blobs" in config && format === "modules") {
+      throw new Error(
+        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
+      );
+    }
+
     const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
       props.entry,
       props.experimentalPublic,
@@ -140,7 +146,7 @@ export default async function publish(props: Props): Promise<void> {
       format
     );
 
-    let content = readFileSync(resolvedEntryPointPath, {
+    const content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
     });
 
@@ -202,23 +208,24 @@ export default async function publish(props: Props): Promise<void> {
       ),
       vars: envRootObj.vars,
       wasm_modules: config.wasm_modules,
+      text_blobs: {
+        ...config.text_blobs,
+        ...(assets.manifest &&
+          format === "service-worker" && {
+            __STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+          }),
+      },
       durable_objects: envRootObj.durable_objects,
       r2_buckets: envRootObj.r2_buckets,
       unsafe: envRootObj.unsafe?.bindings,
     };
 
     if (assets.manifest) {
-      if (bundleType === "esm") {
-        modules.push({
-          name: "__STATIC_CONTENT_MANIFEST",
-          content: JSON.stringify(assets.manifest),
-          type: "text",
-        });
-      } else {
-        content = `const __STATIC_CONTENT_MANIFEST = ${JSON.stringify(
-          assets.manifest
-        )};\n${content}`;
-      }
+      modules.push({
+        name: "__STATIC_CONTENT_MANIFEST",
+        content: JSON.stringify(assets.manifest),
+        type: "text",
+      });
     }
 
     const worker: CfWorkerInit = {

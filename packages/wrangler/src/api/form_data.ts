@@ -37,6 +37,7 @@ export interface WorkerMetadata {
     | { type: "plain_text"; name: string; text: string }
     | { type: "json"; name: string; json: unknown }
     | { type: "wasm_module"; name: string; part: string }
+    | { type: "text_blob"; name: string; part: string }
     | {
         type: "durable_object_namespace";
         name: string;
@@ -54,13 +55,14 @@ export function toFormData(worker: CfWorkerInit): FormData {
   const formData = new FormData();
   const {
     main,
-    modules,
     bindings,
     migrations,
     usage_model,
     compatibility_date,
     compatibility_flags,
   } = worker;
+
+  let { modules } = worker;
 
   const metadataBindings: WorkerMetadata["bindings"] = [];
 
@@ -114,11 +116,28 @@ export function toFormData(worker: CfWorkerInit): FormData {
     );
   }
 
+  for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {
+    metadataBindings.push({
+      name,
+      type: "text_blob",
+      part: name,
+    });
+
+    if (name !== "__STATIC_CONTENT_MANIFEST") {
+      formData.set(
+        name,
+        new File([readFileSync(filePath)], filePath, {
+          type: "text/plain",
+        })
+      );
+    }
+  }
+
   if (main.type === "commonjs") {
     // This is a service-worker format worker.
-    // So we convert all `.wasm` modules into `wasm_module` bindings.
-    for (const [index, module] of Object.entries(modules || [])) {
+    for (const module of Object.values([...(modules || [])])) {
       if (module.type === "compiled-wasm") {
+        // Convert all `.wasm` modules into `wasm_module` bindings.
         // The "name" of the module is a file path. We use it
         // to instead be a "part" of the body, and a reference
         // that we can use inside our source. This identifier has to be a valid
@@ -139,7 +158,17 @@ export function toFormData(worker: CfWorkerInit): FormData {
           })
         );
         // And then remove it from the modules collection
-        modules?.splice(parseInt(index, 10), 1);
+        modules = modules?.filter((m) => m !== module);
+      } else if (module.name === "__STATIC_CONTENT_MANIFEST") {
+        // Add the manifest to the form data.
+        formData.set(
+          module.name,
+          new File([module.content], module.name, {
+            type: "text/plain",
+          })
+        );
+        // And then remove it from the modules collection
+        modules = modules?.filter((m) => m !== module);
       }
     }
   }

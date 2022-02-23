@@ -121,6 +121,18 @@ ${TOML.stringify({
     config.wasm_modules = modules;
   }
 
+  if (configPath && "text_blobs" in config) {
+    // rewrite text_blobs paths to be absolute
+    const modules: Record<string, string> = {};
+    for (const [name, filePath] of Object.entries(config.text_blobs || {})) {
+      modules[name] = path.relative(
+        process.cwd(),
+        path.join(path.dirname(configPath), filePath)
+      );
+    }
+    config.text_blobs = modules;
+  }
+
   if ("unsafe" in config) {
     console.warn(
       "'unsafe' fields are experimental and may change or break at any time."
@@ -856,6 +868,7 @@ export async function main(argv: string[]): Promise<void> {
             ),
             vars: envRootObj.vars,
             wasm_modules: config.wasm_modules,
+            text_blobs: config.text_blobs,
             durable_objects: envRootObj.durable_objects,
             r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
@@ -1284,6 +1297,7 @@ export async function main(argv: string[]): Promise<void> {
             ),
             vars: envRootObj.vars,
             wasm_modules: config.wasm_modules,
+            text_blobs: config.text_blobs,
             durable_objects: envRootObj.durable_objects,
             r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
@@ -1488,6 +1502,7 @@ export async function main(argv: string[]): Promise<void> {
                         durable_objects: { bindings: [] },
                         r2_buckets: [],
                         wasm_modules: {},
+                        text_blobs: {},
                         unsafe: [],
                       },
                       modules: [],

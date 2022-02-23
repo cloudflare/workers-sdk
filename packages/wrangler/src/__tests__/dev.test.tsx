@@ -70,6 +70,7 @@ function renderDev({
     durable_objects: { bindings: [] },
     r2_buckets: [],
     wasm_modules: {},
+    text_blobs: {},
     unsafe: [],
   },
   public: publicDir,
