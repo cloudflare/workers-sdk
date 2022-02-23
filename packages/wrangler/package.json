@@ -119,7 +119,7 @@
     "testTimeout": 30000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js"
