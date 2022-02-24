@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
-import type { CfModule, CfScriptFormat } from "./api/worker";
+import type { CfModule, CfScriptFormat, CfWorkerInit } from "./api/worker";
 import type { Config } from "./config";
 
 /**
@@ -26,6 +26,7 @@ export async function bundleWorker(
   entry: Entry,
   destination: string,
   options: {
+    durable_objects: CfWorkerInit["bindings"]["durable_objects"];
     serveAssetsFromWorker: boolean;
     jsxFactory: string | undefined;
     jsxFragment: string | undefined;
@@ -40,11 +41,12 @@ export async function bundleWorker(
     jsxFragment,
     format,
     rules,
+    durable_objects,
     watch,
   } = options;
   const moduleCollector = makeModuleCollector({ format, rules });
   const result = await esbuild.build({
-    ...getEntryPoint(entry.file, serveAssetsFromWorker),
+    ...getEntryPoint(entry.file, { durable_objects, serveAssetsFromWorker }),
     bundle: true,
     absWorkingDir: entry.directory,
     outdir: destination,
@@ -105,9 +107,36 @@ type EntryPoint =
  */
 function getEntryPoint(
   entryFile: string,
-  serveAssetsFromWorker: boolean
+  options: {
+    serveAssetsFromWorker: boolean;
+    durable_objects: CfWorkerInit["bindings"]["durable_objects"];
+  }
 ): EntryPoint {
-  if (serveAssetsFromWorker) {
+  const { serveAssetsFromWorker, durable_objects } = options;
+  if (durable_objects && durable_objects.bindings.some((b) => "module" in b)) {
+    return {
+      stdin: {
+        contents:
+          durable_objects?.bindings
+            ?.map((durable) => {
+              if ("module" in durable) {
+                return `export {${durable.export || "default"} as ${
+                  durable.name
+                }} from "${durable.module}";`;
+              }
+              return "";
+            })
+            .join("\n") +
+          `import worker from "__ENTRY_POINT__"; export default {fetch: worker.fetch}`.replace(
+            "__ENTRY_POINT__",
+            entryFile
+          ),
+        sourcefile: "durable-modules.js",
+        resolveDir: path.dirname(entryFile),
+      },
+      nodePaths: [],
+    };
+  } else if (serveAssetsFromWorker) {
     return {
       stdin: {
         contents: fs

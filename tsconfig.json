@@ -3,6 +3,7 @@
     "target": "esnext",
     "esModuleInterop": true,
     "allowJs": true,
+    "checkJs": true,
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,

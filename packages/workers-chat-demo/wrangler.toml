@@ -7,8 +7,8 @@ main = "./chat.mjs"
 
 [durable_objects]
 bindings = [
-  { name = "rooms", class_name = "ChatRoom" },
-  { name = "limiters", class_name = "RateLimiter" }
+  { name = "rooms", module = "./chatroom.js" },
+  { name = "limiters", module = "./rate-limiter.js" }
 ]
 
 # Indicate that you want the ChatRoom and RateLimiter classes to be callable as Durable Objects.

@@ -89,6 +89,7 @@ function Dev(props: DevProps): JSX.Element {
   const bundle = useEsbuild({
     entry,
     format,
+    durable_objects: props.bindings.durable_objects,
     destination: directory,
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
@@ -566,6 +567,7 @@ type EsbuildBundle = {
 
 function useEsbuild({
   entry,
+  durable_objects,
   destination,
   staticRoot,
   jsxFactory,
@@ -575,6 +577,7 @@ function useEsbuild({
   serveAssetsFromWorker,
 }: {
   entry: undefined | Entry;
+  durable_objects: CfWorkerInit["bindings"]["durable_objects"] | undefined;
   destination: string | undefined;
   format: CfScriptFormat | undefined;
   staticRoot: undefined | string;
@@ -610,6 +613,7 @@ function useEsbuild({
       const { resolvedEntryPointPath, bundleType, modules, stop } =
         await bundleWorker(entry, destination, {
           // In dev, we serve assets from the local proxy before we send the request to the worker.
+          durable_objects,
           serveAssetsFromWorker: false,
           jsxFactory,
           jsxFragment,
@@ -646,6 +650,7 @@ function useEsbuild({
     format,
     serveAssetsFromWorker,
     rules,
+    durable_objects,
   ]);
   return bundle;
 }

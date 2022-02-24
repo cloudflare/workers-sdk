@@ -196,14 +196,24 @@ export type Config = {
    * @inherited false
    */
   durable_objects?: {
-    bindings: {
-      /** The name of the binding used to refer to the Durable Object */
-      name: string;
-      /** The exported class name of the Durable Object */
-      class_name: string;
-      /** The script where the Durable Object is defined (if it's external to this worker) */
-      script_name?: string;
-    }[];
+    bindings: (
+      | {
+          /** The name of the binding used to refer to the Durable Object */
+          name: string;
+          /** The exported class name of the Durable Object */
+          class_name: string;
+          /** The script where the Durable Object is defined (if it's external to this worker) */
+          script_name?: string;
+        }
+      | {
+          /** The name of the binding used to refer to the Durable Object */
+          name: string;
+          /** The module that exports the Durable Object class */
+          module: string;
+          /** The exported class name of the Durable Object (defaults to 'default') */
+          class_name?: string;
+        }
+    )[];
   };
 
   /**

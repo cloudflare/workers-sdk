@@ -139,6 +139,7 @@ export default async function publish(props: Props): Promise<void> {
       props.entry,
       destination.path,
       {
+        durable_objects: config.durable_objects,
         serveAssetsFromWorker: props.experimentalPublic,
         jsxFactory,
         jsxFragment,
@@ -147,8 +148,16 @@ export default async function publish(props: Props): Promise<void> {
       }
     );
 
-    const content = readFileSync(resolvedEntryPointPath, {
+    let content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
+    });
+
+    envRootObj.durable_objects?.bindings?.forEach((durable) => {
+      if ("module" in durable) {
+        content = `export {${durable.class_name || "default"} as ${
+          durable.name
+        }} from "${durable.module}";${content}`;
+      }
     });
 
     // if config.migrations

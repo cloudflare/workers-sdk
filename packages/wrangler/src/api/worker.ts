@@ -101,11 +101,17 @@ interface CfTextBlobBindings {
 /**
  * A Durable Object.
  */
-interface CfDurableObject {
-  name: string;
-  class_name: string;
-  script_name?: string;
-}
+type CfDurableObject =
+  | {
+      name: string;
+      class_name: string;
+      script_name?: string;
+    }
+  | {
+      name: string;
+      module: string;
+      class_name?: string;
+    };
 
 interface CfR2Bucket {
   binding: string;

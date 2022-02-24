@@ -74,16 +74,22 @@ export function toFormData(worker: CfWorkerInit): FormData {
     });
   });
 
-  bindings.durable_objects?.bindings.forEach(
-    ({ name, class_name, script_name }) => {
+  bindings.durable_objects?.bindings.forEach((durable) => {
+    if ("module" in durable) {
       metadataBindings.push({
-        name,
+        name: durable.name,
         type: "durable_object_namespace",
-        class_name: class_name,
-        ...(script_name && { script_name }),
+        class_name: durable.name,
+      });
+    } else {
+      metadataBindings.push({
+        name: durable.name,
+        type: "durable_object_namespace",
+        class_name: durable.class_name,
+        ...(durable.script_name && { script_name: durable.script_name }),
       });
     }
-  );
+  });
 
   bindings.r2_buckets?.forEach(({ binding, bucket_name }) => {
     metadataBindings.push({
