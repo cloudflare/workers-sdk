@@ -64,7 +64,7 @@ export default async function publish(props: Props): Promise<void> {
 
   assert(config.account_id, "missing account id");
 
-  let scriptName = props.name || config.name;
+  const scriptName = props.name;
   assert(
     scriptName,
     'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
@@ -85,9 +85,6 @@ export default async function publish(props: Props): Promise<void> {
 
   const destination = await tmp.dir({ unsafeCleanup: true });
   try {
-    if (props.legacyEnv) {
-      scriptName += props.env ? `-${props.env}` : "";
-    }
     const envName = props.env ?? "production";
 
     if (props.config.build?.command) {

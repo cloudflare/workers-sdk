@@ -102,10 +102,7 @@ function Dev(props: DevProps): JSX.Element {
   );
 
   useTunnel(toggles.tunnel);
-  let scriptName = props.name || path.basename(props.entry.file);
-  if (props.legacyEnv) {
-    scriptName = `${scriptName}${props.env ? `-${props.env}` : ""}`;
-  }
+  const scriptName = props.name || path.basename(props.entry.file);
 
   return (
     <>
