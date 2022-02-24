@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { build } from "esbuild";
 import type { CfScriptFormat } from "./api/worker";
-import type { Entry } from "./bundle";
+import type { Entry } from "./entry";
 import type { Metafile } from "esbuild";
 
 /**

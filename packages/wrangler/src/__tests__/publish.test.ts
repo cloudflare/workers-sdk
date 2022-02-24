@@ -9,6 +9,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { WorkerMetadata } from "../api/form_data";
+import type { Config } from "../config";
 import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
 
@@ -29,6 +30,29 @@ describe("publish", () => {
   });
 
   describe("environments", () => {
+    it("should use legacy environments by default", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        env: "some-env",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env some-env");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name-some-env
+        (TIMINGS)
+        Published
+        test-name-some-env
+        (TIMINGS)
+
+        test-name-some-env.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
     describe("legacy", () => {
       it("uses the script name when no environment is specified", async () => {
         writeWranglerToml();
@@ -328,9 +352,13 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
-
-        main = \\"dist/index.js\\""
+        "Processing wrangler.toml configuration:
+          - DEPRECATION: \\"build.upload.main\\":
+            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+            Then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"dist/index.js\\"
+            \`\`\`"
       `);
     });
 
@@ -361,9 +389,15 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
-
-        main = \\"foo/index.js\\""
+        "Processing ../wrangler.toml configuration:
+          - DEPRECATION: \\"build.upload.main\\":
+            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+            Then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"foo/index.js\\"
+            \`\`\`
+          - DEPRECATION: \\"build.upload.dir\\":
+            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
       `);
     });
 
@@ -377,12 +411,13 @@ describe("publish", () => {
           },
         },
       });
-
-      await expect(
-        runWrangler("publish")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Don't define both the \`main\` and \`build.upload.main\` fields in your configuration. They serve the same purpose, to point to the entry-point of your worker. Delete the \`build.upload\` section."`
-      );
+      await expect(runWrangler("publish")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Processing wrangler.toml configuration:
+                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
+                  They serve the same purpose: to point to the entry-point of your worker.
+                  Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config."
+            `);
     });
 
     it("should be able to transpile TypeScript (esm)", async () => {
@@ -510,33 +545,29 @@ export default{
 
     it('should error if a site definition doesn\'t have a "bucket" field', async () => {
       writeWranglerToml({
-        // @ts-expect-error we're purposely missing the required `site.bucket` field
         site: {
           "entry-point": "./index.js",
-        },
+        } as Config["site"],
       });
       writeWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
 
-      await expect(
-        runWrangler("publish ./index.js")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"A [site] definition requires a \`bucket\` field with a path to the site's public directory."`
-      );
+      await expect(runWrangler("publish ./index.js")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Processing wrangler.toml configuration:
+                - ERROR: \\"site.bucket\\" is a required field."
+            `);
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "AssertionError [ERR_ASSERTION]: A [site] definition requires a \`bucket\` field with a path to the site's public directory.
+        "Processing wrangler.toml configuration:
+          - ERROR: \\"site.bucket\\" is a required field.
 
         [32m%s[0m
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
-      expect(std.warn).toMatchInlineSnapshot(`
-        "Deprecation notice: The \`site.entry-point\` config field is no longer used.
-        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
-        Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
-      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
     });
 
     it("should warn if there is a `site.entry-point` configuration", async () => {
@@ -1889,9 +1920,10 @@ export default{
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(
-        `"'unsafe' fields are experimental and may change or break at any time."`
-      );
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time."
+      `);
     });
     it("should warn if using unsafe bindings already handled by wrangler", async () => {
       writeWranglerToml({
@@ -1930,8 +1962,12 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "'unsafe' fields are experimental and may change or break at any time.
-        Raw 'plain_text' bindings are not directly supported by wrangler. Consider migrating to a format for 'plain_text' bindings that is supported by wrangler for optimal support: https://developers.cloudflare.com/workers/cli-wrangler/configuration"
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time.
+          - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+            - The binding type \\"plain_text\\" is directly supported by wrangler.
+              Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
+              For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
       `);
     });
   });
@@ -2041,13 +2077,14 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Deprecation notice: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-
-        [[rules]]
-        type = \\"Text\\"
-        globs = [ \\"**/*.file\\" ]
-        fallthrough = true
-        "
+        "Processing wrangler.toml configuration:
+          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+            \`\`\`
+            [[rules]]
+            type = \\"Text\\"
+            globs = [ \\"**/*.file\\" ]
+            fallthrough = true
+            \`\`\`"
       `);
     });
 
@@ -2142,7 +2179,7 @@ export default{
       expect(err?.message).toMatch(
         `The file ./other.other matched a module rule in your configuration ({"type":"Text","globs":["**/*.other"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
       );
-      // and the warnings because fallthrough was not explcitly set
+      // and the warnings because fallthrough was not explicitly set
       expect(std.warn).toMatchInlineSnapshot(`
         "The module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.
         The default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning."

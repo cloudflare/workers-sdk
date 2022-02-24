@@ -1,9 +1,9 @@
 import * as fs from "fs";
 import TOML from "@iarna/toml";
-import type { Config } from "../../config";
+import type { RawConfig } from "../../config";
 
 /** Write a mock wrangler.toml file to disk. */
-export default function writeWranglerToml(config: Config = {}) {
+export default function writeWranglerToml(config: RawConfig = {}) {
   fs.writeFileSync(
     "./wrangler.toml",
     TOML.stringify({

@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -12,9 +11,10 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
-import { normaliseAndValidateEnvironmentsConfig } from "./config";
+import { findWranglerToml, readConfig } from "./config";
 import Dev from "./dev";
 import { confirm, prompt } from "./dialogs";
+import { getEntry } from "./entry";
 import {
   getNamespaceId,
   listNamespaces,
@@ -28,13 +28,7 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
-import {
-  formatMessage,
-  ParseError,
-  parseJSON,
-  parseTOML,
-  readFile,
-} from "./parse";
+import { formatMessage, ParseError, parseJSON, readFile } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -55,174 +49,15 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import type { Entry } from "./bundle";
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
 import type Yargs from "yargs";
 
-const resetColor = "\x1b[0m";
-const fgGreenColor = "\x1b[32m";
-
-// a set of binding types that are known to be supported by wrangler
-const knownBindings = [
-  "plain_text",
-  "json",
-  "kv_namespace",
-  "durable_object_namespace",
-];
-
 type ConfigPath = string | undefined;
 
-async function findWranglerToml(
-  referencePath: string = process.cwd()
-): Promise<ConfigPath> {
-  const configPath = await findUp("wrangler.toml", { cwd: referencePath });
-  return configPath;
-}
-
-async function readConfig(configPath?: string): Promise<Config> {
-  const config: Config = {};
-  if (!configPath) {
-    configPath = await findWranglerToml();
-  }
-
-  if (configPath) {
-    const toml = await parseTOML(await readFile(configPath), configPath);
-    Object.assign(config, toml);
-  }
-
-  normaliseAndValidateEnvironmentsConfig(config);
-
-  // The field "experimental_services" doesn't exist anymore
-  // in the config, but we still want to error about any older usage.
-  // TODO: remove this error before GA.
-  if ("experimental_services" in config) {
-    throw new Error(
-      `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
-
-${TOML.stringify({
-  unsafe: {
-    bindings: (config.experimental_services || []).map((serviceDefinition) => {
-      return {
-        name: serviceDefinition.name,
-        type: "service",
-        service: serviceDefinition.service,
-        environment: serviceDefinition.environment,
-      };
-    }),
-  },
-})}`
-    );
-  }
-
-  if (configPath && "wasm_modules" in config) {
-    // rewrite wasm_module paths to be absolute
-    const modules: Record<string, string> = {};
-    for (const [name, filePath] of Object.entries(config.wasm_modules || {})) {
-      modules[name] = path.relative(
-        process.cwd(),
-        path.join(path.dirname(configPath), filePath)
-      );
-    }
-    config.wasm_modules = modules;
-  }
-
-  if (configPath && "text_blobs" in config) {
-    // rewrite text_blobs paths to be absolute
-    const modules: Record<string, string> = {};
-    for (const [name, filePath] of Object.entries(config.text_blobs || {})) {
-      modules[name] = path.relative(
-        process.cwd(),
-        path.join(path.dirname(configPath), filePath)
-      );
-    }
-    config.text_blobs = modules;
-  }
-
-  if ("unsafe" in config) {
-    console.warn(
-      "'unsafe' fields are experimental and may change or break at any time."
-    );
-  }
-
-  // todo: validate, add defaults
-  // let's just do some basics for now
-
-  for (const binding of config.unsafe?.bindings ?? []) {
-    if (knownBindings.includes(binding.type)) {
-      console.warn(
-        `Raw '${binding.type}' bindings are not directly supported by wrangler. Consider migrating to a ` +
-          `format for '${binding.type}' bindings that is supported by wrangler for optimal support: ` +
-          "https://developers.cloudflare.com/workers/cli-wrangler/configuration"
-      );
-    }
-  }
-
-  // @ts-expect-error we're being sneaky here
-  config.__path__ = configPath;
-
-  return config;
-}
-
-function getEntry(config: Config, command: string, script?: string): Entry {
-  // @ts-expect-error a hidden field
-  const wranglerTomlPath = config.__path__;
-  let file: string;
-  let directory = process.cwd();
-  if (script) {
-    // If the script name comes from the command line it is relative to the current working directory.
-    file = path.resolve(script);
-  } else {
-    // If the script name comes from the config, then it is relative to the wrangler.toml file.
-    if (config.main === undefined && config.build?.upload?.main === undefined) {
-      throw new Error(
-        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
-      );
-    } else if (config.build?.upload?.main !== undefined) {
-      if (config.main === undefined) {
-        console.warn(
-          `Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
-
-main = "${path.join(
-            config.build?.upload?.dir || "./dist",
-            config.build?.upload?.main
-          )}"`
-        );
-        directory = path.resolve(
-          path.dirname(wranglerTomlPath),
-          config.build?.upload?.dir || "./dist"
-        );
-        file = path.resolve(directory, config.build.upload.main);
-      } else {
-        throw new Error(
-          `Don't define both the \`main\` and \`build.upload.main\` fields in your configuration. They serve the same purpose, to point to the entry-point of your worker. Delete the \`build.upload\` section.`
-        );
-      }
-    } else {
-      assert(config.main, "Missing entry-point"); // should be caught by the above
-      directory = path.resolve(path.dirname(wranglerTomlPath));
-      file = path.resolve(directory, config.main);
-    }
-  }
-
-  if (!config.build?.command) {
-    let fileExists = false;
-    try {
-      // Use require.resolve to use node's resolution algorithm,
-      // this lets us use paths without explicit .js extension
-      // TODO: we should probably remove this, because it doesn't
-      // take into consideration other extensions like .tsx, .ts, .jsx, etc
-      fileExists = fs.existsSync(require.resolve(file));
-    } catch (e) {
-      // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
-    }
-    if (fileExists === false) {
-      throw new Error(`Could not resolve "${file}".`);
-    }
-  }
-  return { file, directory };
-}
+const resetColor = "\x1b[0m";
+const fgGreenColor = "\x1b[32m";
 
 function getRules(config: Config): Config["rules"] {
   const rules = config.rules ?? config.build?.upload?.rules ?? [];
@@ -243,13 +78,10 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
   return rules;
 }
 
-const LEGACY_ENV_DEFAULT = true; // TODO: set this as false to turn on service environments as the default
-
 function isLegacyEnv(args: unknown, config: Config): boolean {
   return (
     (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
-    config.legacy_env ??
-    LEGACY_ENV_DEFAULT
+    config.legacy_env
   );
 }
 
@@ -1310,11 +1142,7 @@ export async function main(argv: string[]): Promise<void> {
           entry={entry}
           rules={getRules(config)}
           env={args.env}
-          legacyEnv={
-            (args["legacy-env"] as boolean | undefined) ??
-            config.legacy_env ??
-            LEGACY_ENV_DEFAULT
-          }
+          legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           format={config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
@@ -1397,6 +1225,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             console.log(":route list", args);
             // TODO: use environment (current wrangler doesn't do so?)
+            // TODO: don't get `zone_id` from config at all and require the command line arg `--zone`.
             const config = await readConfig(args.config as ConfigPath);
             const zone = args.zone || config.zone_id;
             if (!zone) {

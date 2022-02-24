@@ -5,12 +5,7 @@ import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
 import type { CfModule, CfScriptFormat } from "./api/worker";
 import type { Config } from "./config";
-
-/**
- * An entry point for the worker. It consists not just of a `file`,
- * but also of a `directory` that is used to resolve relative paths.
- */
-export type Entry = { file: string; directory: string };
+import type { Entry } from "./entry";
 
 type BundleResult = {
   modules: CfModule[];
