@@ -1,95 +1,120 @@
 import { readFile as readFile_ } from "node:fs/promises";
+import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
-import type { PartialMessage, Location } from "esbuild";
+
+export type Message = {
+  text: string;
+  location?: Location;
+  notes?: Message[];
+  kind?: "warning" | "error";
+};
+
+export type Location = File & {
+  line: number;
+  column: number;
+  length?: number;
+  lineText?: string;
+  suggestion?: string;
+};
+
+export type File = {
+  file?: string;
+  fileText?: string;
+};
 
 /**
- * Formats a message using esbuild's pretty-print algorithm.
+ * Formats a `Message` using esbuild's pretty-printing algorithm.
  */
 export function formatMessage(
-  message: PartialMessage,
-  kind: "warning" | "error" = "error",
-  label?: string
+  { text, notes, location, kind = "error" }: Message,
+  color = true
 ): string {
-  const lines = formatMessagesSync([message], {
-    color: true,
+  const input = { text, notes, location };
+  delete input.location?.fileText;
+  for (const note of notes ?? []) {
+    delete note.location?.fileText;
+  }
+  const lines = formatMessagesSync([input], {
+    color,
     kind: kind,
     terminalWidth: process.stderr.columns,
   });
-  if (label) {
-    lines[0] = lines[0].replace(
-      kind.toUpperCase(),
-      `${label.toUpperCase()} ${kind.toUpperCase()}`
-    );
-  }
   return lines.join("\n");
-}
-
-/**
- * Formats and prints a message to stderr.
- */
-export function printMessage(
-  message: PartialMessage,
-  kind?: "warning" | "error",
-  label?: string
-): void {
-  const text = formatMessage(message, kind, label);
-  process.stderr.write(text);
 }
 
 /**
  * An error that's thrown when something fails to parse.
  */
-export class ParseError extends Error {
-  readonly detail: PartialMessage;
+export class ParseError extends Error implements Message {
+  readonly text: string;
+  readonly notes: Message[];
+  readonly location?: Location;
+  readonly kind: "warning" | "error";
 
-  constructor(message: PartialMessage) {
-    super(message.text);
+  constructor({ text, notes, location, kind }: Message) {
+    super(text);
     this.name = this.constructor.name;
-    this.detail = message;
-    if (!this.detail.notes) {
-      this.detail.notes = [];
-    }
+    this.text = text;
+    this.notes = notes ?? [];
+    this.location = location;
+    this.kind = kind ?? "error";
   }
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+const TOML_ERROR_NAME = "TomlError";
+const TOML_ERROR_SUFFIX = " at row ";
+
+type TomlError = Error & {
+  line: number;
+  col: number;
+};
+
 /**
- * A wrapper around `TOML.parse` that throws a friendly error.
+ * A wrapper around `TOML.parse` that throws a `ParseError`.
  */
 export function parseTOML(input: string, file?: string): any {
   try {
     return TOML.parse(input);
   } catch (err) {
-    const { name, message, line, col } = err;
-    if (name !== "TomlError") {
+    const { name, message, line, col } = err as TomlError;
+    if (name !== TOML_ERROR_NAME) {
       throw err;
     }
-    // Errors from the TOML parser are formatted as "... at row 1, col 3".
-    // Since the formatter already formats the line and column, the message can be truncated.
-    const text = message.split(" at row ", 2)[0];
+    const text = message.substring(0, message.lastIndexOf(TOML_ERROR_SUFFIX));
     const lineText = input.split("\n")[line];
-    const location = { file, lineText, line: line + 1, column: col - 2 };
+    const location = {
+      lineText,
+      line: line + 1,
+      column: col - 1,
+      file,
+      fileText: input,
+    };
     throw new ParseError({ text, location });
   }
 }
 
+const JSON_ERROR_SUFFIX = " in JSON at position ";
+
 /**
- * A wrapper around `JSON.parse` that throws a friendly error.
+ * A wrapper around `JSON.parse` that throws a `ParseError`.
  */
 export function parseJSON(input: string, file?: string): any {
   try {
     return JSON.parse(input);
   } catch (err) {
-    const { message } = err;
-    const index = message.lastIndexOf(" in JSON at position "); // length = 21
+    const { message } = err as Error;
+    const index = message.lastIndexOf(JSON_ERROR_SUFFIX);
     if (index < 0) {
       throw err;
     }
     const text = message.substring(0, index);
-    const position = parseInt(message.substring(index + 21));
-    const location = indexLocation(input, position, { file });
+    const position = parseInt(
+      message.substring(index + JSON_ERROR_SUFFIX.length)
+    );
+    const location = indexLocation({ file, fileText: input }, position);
     throw new ParseError({ text, location });
   }
 }
@@ -97,82 +122,62 @@ export function parseJSON(input: string, file?: string): any {
 /**
  * Reads a file and parses it based on its type.
  */
-export async function readFile(
-  file: string,
-  type?: "json" | "toml"
-): Promise<any> {
-  let content;
+export async function readFile(file: string): Promise<string> {
   try {
-    content = await readFile_(file, { encoding: "utf-8" });
+    return await readFile_(file, { encoding: "utf-8" });
   } catch (err) {
-    // TODO: cleanup common Node.js errors that can be confusing (e.g. ENOENT)
+    const { message } = err as Error;
     throw new ParseError({
-      text: err.message,
-      location: {
-        file,
-      },
+      text: `Could not read file: ${file}`,
+      notes: [
+        {
+          text: message.replace(file, resolve(file)),
+        },
+      ],
     });
   }
-  if (type === "json") {
-    return parseJSON(content, file);
-  }
-  if (type === "toml") {
-    return parseTOML(content, file);
-  }
-  return content;
 }
 
 /**
  * Calculates the line and column location from an index.
  */
-export function indexLocation(
-  input: string,
-  index: number,
-  extra?: Partial<Location>
-): Partial<Location> {
+export function indexLocation(file: File, index: number): Location {
   let lineText,
     line = 0,
     column = 0,
     cursor = 0;
-  for (const content of input.split("\n")) {
+  const { fileText = "" } = file;
+  for (const row of fileText.split("\n")) {
     line++;
-    cursor += content.length + 1;
+    cursor += row.length + 1;
     if (cursor >= index) {
-      lineText = content;
-      column = content.length - (cursor - index);
+      lineText = row;
+      column = row.length - (cursor - index);
       break;
     }
   }
-  return { lineText, line, column, ...extra };
+  return { lineText, line, column, ...file };
 }
 
 /**
  * Guesses the line and column location of a search query.
  */
-export function searchLocation(
-  input: string,
-  search: string,
-  extra?: Partial<Location>
-): Partial<Location> {
+export function searchLocation(file: File, query: unknown): Location {
   let lineText,
     length,
     line = 0,
     column = 0;
-  for (const content of input.split("\n")) {
+  const queryText = String(query);
+  const { fileText = "" } = file;
+  for (const content of fileText.split("\n")) {
     line++;
-    const index = content.indexOf(search);
+    const index = content.indexOf(queryText);
     if (index >= 0) {
       lineText = content;
       column = index;
-      length = search.length;
+      length = queryText.length;
       break;
     }
   }
-  return { lineText, line, column, length, ...extra };
+  return { lineText, line, column, length, ...file };
 }
-
-process.on("uncaughtException", (err) => {
-  if (err instanceof ParseError) {
-    printMessage(err.detail, "error");
-  }
-});

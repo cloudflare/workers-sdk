@@ -8,6 +8,7 @@ import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
 import makeCLI from "yargs";
+import TOML from "@iarna/toml";
 import { version as wranglerVersion } from "../package.json";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
@@ -27,7 +28,13 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
-import { ParseError, parseJSON, printMessage, readFile } from "./parse";
+import {
+  formatMessage,
+  ParseError,
+  parseJSON,
+  parseTOML,
+  readFile,
+} from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -81,7 +88,7 @@ async function readConfig(configPath?: string): Promise<Config> {
   }
 
   if (configPath) {
-    const toml = await readFile(configPath, "toml");
+    const toml = await parseTOML(await readFile(configPath), configPath);
     Object.assign(config, toml);
   }
 
@@ -211,6 +218,7 @@ main = "${path.join(
       // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
     }
     if (fileExists === false) {
+      // TODO(soon): use `readFile` instead.
       throw new Error(`Could not resolve "${file}".`);
     }
   }
@@ -429,7 +437,10 @@ export async function main(argv: string[]): Promise<void> {
       } else {
         // If package.json exists and wrangler isn't installed,
         // then ask to add wrangler to devDependencies
-        const packageJson = await readFile(pathToPackageJson, "json");
+        const packageJson = parseJSON(
+          await readFile(pathToPackageJson),
+          pathToPackageJson
+        );
         if (
           !(
             packageJson.devDependencies?.wrangler ||
@@ -457,10 +468,7 @@ export async function main(argv: string[]): Promise<void> {
           isTypescriptProject = true;
           await writeFile(
             "./tsconfig.json",
-            await readFile(
-              path.join(__dirname, "../templates/tsconfig.json"),
-              "utf-8"
-            )
+            await readFile(path.join(__dirname, "../templates/tsconfig.json"))
           );
           await packageManager.addDevDeps(
             "@cloudflare/workers-types",
@@ -476,7 +484,10 @@ export async function main(argv: string[]): Promise<void> {
         isTypescriptProject = true;
         // If there's a tsconfig, check if @cloudflare/workers-types
         // is already installed, and offer to install it if not
-        const packageJson = await readFile(pathToPackageJson, "json");
+        const packageJson = parseJSON(
+          await readFile(pathToPackageJson),
+          pathToPackageJson
+        );
         if (
           !(
             packageJson.devDependencies?.["@cloudflare/workers-types"] ||
@@ -499,8 +510,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      const packageJsonContent = JSON.parse(
-        await readFile(pathToPackageJson, "utf-8")
+      const packageJsonContent = parseJSON(
+        await readFile(pathToPackageJson),
+        pathToPackageJson
       );
       const shouldWritePackageJsonScripts =
         !packageJsonContent.scripts?.start &&
@@ -2281,19 +2293,10 @@ export async function main(argv: string[]): Promise<void> {
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
+
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-            const content = await readFile(filename);
-            let parsedContent;
-            try {
-              parsedContent = parseJSON(content);
-            } catch (err) {
-              throw new Error(
-                `Could not parse json from ${filename}.\n${
-                  (err as Error).message ?? err
-                }`
-              );
-            }
+            const content = parseJSON(await readFile(filename), filename);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -2368,18 +2371,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ filename, ...args }) => {
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-
-            const content = await readFile(filename);
-            let parsedContent;
-            try {
-              parsedContent = parseJSON(content);
-            } catch (err) {
-              throw new Error(
-                `Could not parse json from ${filename}.\n${
-                  (err as Error).message ?? err
-                }`
-              );
-            }
+            const content = parseJSON(await readFile(filename), filename);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -2588,10 +2580,11 @@ export async function main(argv: string[]): Promise<void> {
       console.error(""); // Just adds a bit of space
       console.error(e.message);
     } else if (e instanceof ParseError) {
-      e.detail.notes?.push({
+      console.error("");
+      e.notes.push({
         text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
       });
-      printMessage(e.detail);
+      console.error(formatMessage(e));
     } else {
       console.error(e instanceof Error ? e.message : e);
       console.error(""); // Just adds a bit of space

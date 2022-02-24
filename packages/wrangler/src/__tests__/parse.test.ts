@@ -5,268 +5,303 @@ import {
   parseJSON,
   parseTOML,
 } from "../parse";
+import type { Message } from "../parse";
 
 describe("formatMessage", () => {
-  test.each([
-    {
-      title: "should format message without location",
-      message: {
+  const format = (input: Message) => {
+    // No color and skip emojis at the start.
+    return formatMessage(input, false).substring(2);
+  };
+  it("should format message without location", () => {
+    expect(
+      format({
         text: "Invalid argument",
-      },
-      output:
-        "\x1B[31m✘ \x1B[41;31m[\x1B[41;97mERROR\x1B[41;31m]\x1B[0m \x1B[1mInvalid argument\x1B[0m\n\n",
-    },
-    {
-      title: "should format message with location",
-      message: {
+        kind: "warning",
+      })
+    ).toMatchInlineSnapshot(`
+      "[WARNING] Invalid argument
+
+      "
+    `);
+  });
+  it("should format message with location", () => {
+    expect(
+      format({
         text: "Missing property: main",
         location: {
-          file: "package.json",
           line: 1,
           column: 0,
           lineText: "{}",
+          file: "package.json",
+          fileText: "{}",
         },
-      },
-      output:
-        "\x1B[31m✘ \x1B[41;31m[\x1B[41;97mERROR\x1B[41;31m]\x1B[0m \x1B[1mMissing property: main\x1B[0m\n" +
-        "\n    package.json:1:0:\n\x1B[37m      1 │ \x1B[32m\x1B[37m{}\n        ╵ \x1B[32m^\x1B[0m\n\n",
-    },
-    {
-      title: "should format message with location and notes",
-      message: {
+      })
+    ).toMatchInlineSnapshot(`
+      "[ERROR] Missing property: main
+
+          package.json:1:0:
+            1 │ {}
+              ╵ ^
+
+      "
+    `);
+  });
+  it("should format message with location and notes", () => {
+    expect(
+      format({
         text: "Invalid property: type",
         location: {
-          file: "package.toml",
           line: 3,
           column: 8,
           length: 7,
           lineText: "type = 'modular'",
           suggestion: "Did you mean 'module'?",
+          file: "package.toml",
+          fileText: "[package]\ntype = 'modular'\n",
         },
         notes: [
           {
             text: "There are two acceptable types: 'module' and 'commonjs'",
           },
         ],
-      },
-      output:
-        "\x1B[31m✘ \x1B[41;31m[\x1B[41;97mERROR\x1B[41;31m]\x1B[0m \x1B[1mInvalid property: type\x1B[0m\n" +
-        "\n    package.toml:3:8:\n\x1B[37m      3 │ type = '\x1B[32mmodular\x1B[37m'\n        │         " +
-        "\x1B[32m~~~~~~~\x1B[37m\n        ╵         \x1B[32mDid you mean 'module'?\x1B[0m\n\n  " +
-        "There are two acceptable types: 'module' and 'commonjs'\n\n",
-    },
-  ])("$title", ({ message, output }) => {
-    expect(formatMessage(message)).toBe(output);
+      })
+    ).toMatchInlineSnapshot(`
+      "[ERROR] Invalid property: type
+
+          package.toml:3:8:
+            3 │ type = 'modular'
+              │         ~~~~~~~
+              ╵         Did you mean 'module'?
+
+        There are two acceptable types: 'module' and 'commonjs'
+
+      "
+    `);
   });
 });
 
 describe("parseTOML", () => {
-  test.each([
-    {
-      title: "should parse toml that is empty",
-      toml: "",
-      json: {},
-    },
-    {
-      title: "should parse toml with basic values",
-      toml: "name = 'basic'\nversion = 1",
-      json: {
-        name: "basic",
-        version: 1,
-      },
-    },
-    {
-      title: "should parse toml with complex values",
-      toml: "name = 'complex'\n\tversion = 2\n[owner]\nname = ['tim']\nalive = true\n[owner.dog]\nexists = true",
-      json: {
-        name: "complex",
-        version: 2,
-        owner: {
-          name: ["tim"],
-          alive: true,
-          dog: {
-            exists: true,
-          },
-        },
-      },
-    },
-  ])("$title", ({ toml, json }) => {
-    expect(parseTOML(toml)).toStrictEqual(json);
+  it("should parse toml that is empty", () => {
+    expect(parseTOML("")).toStrictEqual({});
   });
-  test.each([
-    {
-      title: "should fail to parse toml with invalid string",
-      toml: "\n\n\tname = 'fail",
-      error: {
-        text: "Unterminated string",
-        location: {
-          file: "config.toml",
-          lineText: "\tname = 'fail",
-          line: 3,
-          column: 12,
-        },
-      },
-    },
-    {
-      title: "should fail to parse toml with invalid header",
-      toml: "[name",
-      error: {
-        text: "Key ended without value",
-        location: {
-          file: "config.toml",
-          lineText: "[name",
-          line: 1,
-          column: 5,
-        },
-      },
-    },
-  ])("$title", async ({ toml, error }) => {
-    await expect(async () =>
-      parseTOML(toml, "config.toml")
-    ).rejects.toMatchObject({
-      detail: error,
+  it("should parse toml with basic values", () => {
+    expect(
+      parseTOML(`
+        name = "basic"
+        version = 1
+    `)
+    ).toStrictEqual({
+      name: "basic",
+      version: 1,
     });
+  });
+  it("should parse toml with complex values", () => {
+    expect(
+      parseTOML(`
+        name = 'complex'
+        version = 1
+        [owner]
+        name = ["tim"]
+        alive = true
+        [owner.dog]
+        exists = true
+      `)
+    ).toStrictEqual({
+      name: "complex",
+      owner: {
+        alive: true,
+        dog: {
+          exists: true,
+        },
+        name: ["tim"],
+      },
+      version: 1,
+    });
+  });
+  it("should fail to parse toml with invalid string", () => {
+    try {
+      parseTOML(`name = 'fail"`);
+      fail("parseTOML did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
+        text: "Unterminated string",
+        kind: "error",
+        location: {
+          line: 1,
+          column: 14,
+          fileText: "name = 'fail\"",
+          file: undefined,
+          lineText: "name = 'fail\"",
+        },
+        notes: [],
+      });
+    }
+  });
+  it("should fail to parse toml with invalid header", () => {
+    try {
+      parseTOML(`\n[name`, "config.toml");
+      fail("parseTOML did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
+        text: "Key ended without value",
+        kind: "error",
+        location: {
+          line: 2,
+          column: 5,
+          lineText: "[name",
+          file: "config.toml",
+          fileText: "\n[name",
+        },
+        notes: [],
+      });
+    }
   });
 });
 
 describe("parseJSON", () => {
-  test.each([
-    {
-      title: "should parse json that is empty",
-      text: "{}",
-      json: {},
-    },
-    {
-      title: "should parse json with basic values",
-      text: `{\n"name" : "basic",\n"version": 1\n}`,
-      json: {
-        name: "basic",
-        version: 1,
-      },
-    },
-    {
-      title: "should parse json with complex values",
-      text: `{\n\t"name":"complex",\n\t"spec":{\n\t\t"uptime":[1,2.5,3],\n\t\t"ok":true\n\t}\n}`,
-      json: {
-        name: "complex",
-        spec: {
-          uptime: [1, 2.5, 3],
-          ok: true,
-        },
-      },
-    },
-  ])("$title", ({ text, json }) => {
-    expect(parseJSON(text)).toStrictEqual(json);
+  it("should parse json that is empty", () => {
+    expect(parseJSON("{}")).toStrictEqual({});
   });
-  test.each([
-    {
-      title: "should fail to parse json with invalid string",
-      json: `\n{\n"version" "1\n}\n`,
-      error: {
+  it("should parse json with basic values", () => {
+    expect(
+      parseJSON(`
+      {
+        "name" : "basic",
+        "version": 1
+      }`)
+    ).toStrictEqual({
+      name: "basic",
+      version: 1,
+    });
+  });
+  it("should parse json with complex values", () => {
+    expect(
+      parseJSON(
+        `{
+          "name":"complex",
+          "spec":{
+            "uptime":[1,2.5,3],
+            "ok":true
+          }
+        }`
+      )
+    ).toStrictEqual({
+      name: "complex",
+      spec: {
+        uptime: [1, 2.5, 3],
+        ok: true,
+      },
+    });
+  });
+  it("should fail to parse json with invalid string", () => {
+    try {
+      parseJSON(`\n{\n"version" "1\n}\n`);
+      fail("parseJSON did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
         text: "Unexpected string",
+        kind: "error",
         location: {
-          file: "config.json",
-          lineText: `"version" "1`,
           line: 3,
           column: 9,
+          lineText: '"version" "1',
+          file: undefined,
+          fileText: `\n{\n"version" "1\n}\n`,
         },
-      },
-    },
-    {
-      title: "should fail to parse json with invalid number",
-      json: `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`,
-      error: {
+        notes: [],
+      });
+    }
+  });
+  it("should fail to parse json with invalid number", () => {
+    const file = "config.json",
+      fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
+    try {
+      parseJSON(fileText, file);
+      fail("parseJSON did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
         text: "Unexpected number",
+        kind: "error",
         location: {
-          file: "config.json",
-          lineText: `\t\t\t"c":[012345]`,
+          file,
+          fileText,
           line: 4,
           column: 8,
+          lineText: `\t\t\t"c":[012345]`,
         },
-      },
-    },
-  ])("$title", async ({ json, error }) => {
-    await expect(async () =>
-      parseJSON(json, "config.json")
-    ).rejects.toMatchObject({
-      detail: error,
-    });
+        notes: [],
+      });
+    }
   });
 });
 
 describe("indexLocation", () => {
-  test.each([
-    {
-      title: "should calculate location from one-line input",
-      input: "",
-      index: 1,
-      location: {
-        line: 1,
-        column: 0,
-        lineText: "",
-      },
-    },
-    {
-      title: "should calculate location from multi-line input",
-      input: `\n{\n\t"hello":"world"\n}\n`,
-      index: 11,
-      location: {
-        line: 3,
-        column: 7,
-        lineText: `\t"hello":"world"`,
-      },
-    },
-    {
-      title: "should calculate location when index is out of bounds",
-      input: "\n\n\n\n",
-      index: 10,
-      location: {
-        line: 5,
-        column: 0,
-        lineText: undefined,
-      },
-    },
-  ])("$title", ({ input, index, location }) => {
-    expect(indexLocation(input, index)).toStrictEqual(location);
+  it("should calculate location from one-line input", () => {
+    const fileText = "";
+    expect(indexLocation({ fileText }, 1)).toStrictEqual({
+      fileText,
+      line: 1,
+      column: 0,
+      lineText: "",
+    });
+  });
+  it("should calculate location from multi-line input", () => {
+    const file = "package.json",
+      fileText = `\n{\n\t"hello":"world"\n}\n`;
+    expect(indexLocation({ file, fileText }, 11)).toStrictEqual({
+      file,
+      fileText,
+      line: 3,
+      column: 7,
+      lineText: `\t"hello":"world"`,
+    });
+  });
+  it("should calculate location when index is out of bounds", () => {
+    const fileText = `\n\n\n\n`;
+    expect(indexLocation({ fileText }, 10)).toStrictEqual({
+      fileText,
+      line: 5,
+      column: 0,
+      lineText: undefined,
+    });
   });
 });
 
 describe("searchLocation", () => {
-  test.each([
-    {
-      title: "should calculate location from one-line match",
-      input: "name = 'coolthing'",
-      search: "coolthing",
-      location: {
-        line: 1,
-        column: 8,
-        length: 9,
-        lineText: "name = 'coolthing'",
-      },
-    },
-    {
-      title: "should calculate location from multi-line match",
-      input: `\n{"versions":[\n\t"1.2.3",\n\t"1.2.4",\n\t"1.2.5"\n]}\n`,
-      search: "1.2.4",
-      location: {
-        line: 4,
-        column: 2,
-        length: 5,
-        lineText: `\t"1.2.4",`,
-      },
-    },
-    {
-      title: "should calculate location from no match",
-      input: "\n{}\n",
-      search: "apple",
-      location: {
-        line: 3,
-        column: 0,
-        length: undefined,
-        lineText: undefined,
-      },
-    },
-  ])("$title", ({ input, search, location }) => {
-    expect(searchLocation(input, search)).toStrictEqual(location);
+  it("should calculate location from one-line match", () => {
+    const file = "config.toml",
+      fileText = `name = 'coolthing'`;
+    expect(searchLocation({ file, fileText }, "coolthing")).toStrictEqual({
+      file,
+      fileText,
+      line: 1,
+      column: 8,
+      length: 9,
+      lineText: `name = 'coolthing'`,
+    });
+  });
+  it("should calculate location from multi-line match", () => {
+    const fileText = `\n{"versions":[\n\t"1.2.3",\n\t"1.2.4",\n\t"1.2.5"\n]}\n`;
+    expect(searchLocation({ fileText }, "1.2.4")).toStrictEqual({
+      fileText,
+      line: 4,
+      column: 2,
+      length: 5,
+      lineText: `\t"1.2.4",`,
+    });
+  });
+  it("should calculate location from no match", () => {
+    const fileText = `\n{}\n`;
+    expect(searchLocation({ fileText }, "apple")).toStrictEqual({
+      fileText,
+      line: 3,
+      column: 0,
+      length: undefined,
+      lineText: undefined,
+    });
   });
 });
