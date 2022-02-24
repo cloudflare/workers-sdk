@@ -1,8 +1,8 @@
 import { createServer } from "node:http";
 import { connect } from "node:http2";
+import WebSocket from "faye-websocket";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
-import WebSocket from "ws";
 import type { CfPreviewToken } from "./api/preview";
 import type {
   IncomingHttpHeaders,
@@ -12,6 +12,12 @@ import type {
   Server,
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
+import type ws from "ws";
+
+interface IWebsocket extends ws {
+  // Pipe implements .on("message", ...)
+  pipe<T>(fn: T): IWebsocket;
+}
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -199,24 +205,26 @@ export function usePreviewServer({
     requestResponseBufferRef.current = [];
 
     /** HTTP/1 -> WebSocket (over HTTP/1)  */
-    const handleUpgrade = (message: IncomingMessage, socket: WebSocket) => {
+    const handleUpgrade = (
+      message: IncomingMessage,
+      socket: WebSocket,
+      body: Buffer
+    ) => {
       const { headers, url } = message;
       addCfPreviewTokenHeader(headers, previewToken.value);
       headers["host"] = previewToken.host;
-      const localWebsocket = WebSocket.createWebSocketStream(socket);
+      const localWebsocket = new WebSocket(message, socket, body) as IWebsocket;
       // TODO(soon): Custom WebSocket protocol is not working?
-      const remoteWebsocket = new WebSocket(
+      const remoteWebsocketClient = new WebSocket.Client(
         `wss://${previewToken.host}${url}`,
         [],
         { headers }
-      );
-      const remoteWebsocketStream =
-        WebSocket.createWebSocketStream(remoteWebsocket);
-      localWebsocket.pipe(remoteWebsocketStream).pipe(localWebsocket);
+      ) as IWebsocket;
+      localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
       // We close down websockets whenever we refresh the token.
       cleanupListeners.push(() => {
-        socket.close();
-        remoteWebsocket.close();
+        localWebsocket.close();
+        remoteWebsocketClient.close();
       });
     };
     proxy.on("upgrade", handleUpgrade);
