@@ -28,8 +28,14 @@ type TailCreationApiResponse = {
  * @param workerName the name of the worker to tail
  * @returns a `cfetch`-ready URL for creating a new tail
  */
-function makeCreateTailUrl(accountId: string, workerName: string): string {
-  return `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
+function makeCreateTailUrl(
+  accountId: string,
+  workerName: string,
+  env: string | undefined
+): string {
+  return env
+    ? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails`
+    : `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }
 
 /**
@@ -45,9 +51,12 @@ function makeCreateTailUrl(accountId: string, workerName: string): string {
 function makeDeleteTailUrl(
   accountId: string,
   workerName: string,
-  tailId: string
+  tailId: string,
+  env: string | undefined
 ): string {
-  return `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
+  return env
+    ? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails/${tailId}`
+    : `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
 /**
@@ -66,14 +75,15 @@ function makeDeleteTailUrl(
 export async function createTail(
   accountId: string,
   workerName: string,
-  message: TailFilterMessage
+  message: TailFilterMessage,
+  env: string | undefined
 ): Promise<{
   tail: WebSocket;
   expiration: Date;
   deleteTail: () => Promise<void>;
 }> {
   // create the tail
-  const createTailUrl = makeCreateTailUrl(accountId, workerName);
+  const createTailUrl = makeCreateTailUrl(accountId, workerName, env);
   const {
     id: tailId,
     url: websocketUrl,
@@ -83,7 +93,7 @@ export async function createTail(
   });
 
   // delete the tail (not yet!)
-  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
+  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
   async function deleteTail() {
     await fetchResult(deleteUrl, { method: "DELETE" });
   }

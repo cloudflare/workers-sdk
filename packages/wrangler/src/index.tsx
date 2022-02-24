@@ -1151,8 +1151,13 @@ export async function main(argv: string[]): Promise<void> {
       const { tail, expiration, deleteTail } = await createTail(
         accountId,
         scriptName,
-        filters
+        filters,
+        !isLegacyEnv(args, config) ? args.env : undefined
       );
+
+      const scriptDisplayName = `${scriptName}${
+        args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+      }`;
 
       console.log(
         `successfully created tail, expires at ${expiration.toLocaleString()}`
@@ -1177,11 +1182,13 @@ export async function main(argv: string[]): Promise<void> {
             await setTimeout(100);
             break;
           case tail.CLOSED:
-            throw new Error(`Connection to ${scriptName} closed unexpectedly.`);
+            throw new Error(
+              `Connection to ${scriptDisplayName} closed unexpectedly.`
+            );
         }
       }
 
-      console.log(`Connected to ${scriptName}, waiting for logs...`);
+      console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
 
       tail.on("close", async () => {
         tail.terminate();
