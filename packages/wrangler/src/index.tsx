@@ -200,10 +200,24 @@ function getEntry(config: Config, command: string, script?: string): Entry {
 
 function isLegacyEnv(args: unknown, config: Config): boolean {
   return (
-    (args as { legacyEnv: boolean | undefined }).legacyEnv ??
+    (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
     config.legacy_env ??
     false
   );
+}
+
+function getScriptName(
+  args: { name: string | undefined; env: string | undefined },
+  config: Config
+): string | undefined {
+  const shortScriptName = args.name ?? config.name;
+  if (!shortScriptName) {
+    return;
+  }
+
+  return isLegacyEnv(args, config)
+    ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
+    : shortScriptName;
 }
 
 // a helper to demand one of a set of options
@@ -813,7 +827,7 @@ export async function main(argv: string[]): Promise<void> {
 
       const { waitUntilExit } = render(
         <Dev
-          name={args.name ?? config.name}
+          name={getScriptName(args, config)}
           entry={entry}
           env={args.env}
           legacyEnv={isLegacyEnv(args, config)}
@@ -1010,7 +1024,7 @@ export async function main(argv: string[]): Promise<void> {
       );
       await publish({
         config,
-        name: args.name,
+        name: getScriptName(args, config),
         format: args.format || config.build?.upload?.format,
         entry,
         env: args.env,
@@ -1074,7 +1088,6 @@ export async function main(argv: string[]): Promise<void> {
               'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
             array: true,
           })
-          // TODO: is this deprecated now with services / environments / etc?
           .option("env", {
             type: "string",
             describe: "Perform on a specific environment",
@@ -1097,14 +1110,11 @@ export async function main(argv: string[]): Promise<void> {
 
       const config = await readConfig(args.config as ConfigPath);
 
-      const shortScriptName = args.name || config.name;
-      if (!shortScriptName) {
+      const scriptName = getScriptName(args, config);
+
+      if (!scriptName) {
         throw new Error("Missing script name");
       }
-
-      const scriptName = isLegacyEnv(args, config)
-        ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
-        : shortScriptName;
 
       // -- snip, extract --
       const loggedIn = await loginOrRefreshIfRequired();
@@ -1425,8 +1435,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = await readConfig(args.config as ConfigPath);
 
-            // TODO: use environment (how does current wrangler do it?)
-            const scriptName = args.name || config.name;
+            const scriptName = getScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1462,21 +1471,27 @@ export async function main(argv: string[]): Promise<void> {
               return;
             }
 
-            console.log(`🌀 Creating the secret for script ${scriptName}`);
+            console.log(
+              `🌀 Creating the secret for script ${scriptName} ${
+                args.env && !isLegacyEnv(args, config) ? `(${args.env})` : ""
+              }`
+            );
 
             async function submitSecret() {
-              return await fetchResult(
-                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/`,
-                {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    name: args.key,
-                    text: secretValue,
-                    type: "secret_text",
-                  }),
-                }
-              );
+              const url =
+                !args.env || isLegacyEnv(args, config)
+                  ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
+                  : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+
+              return await fetchResult(url, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: args.key,
+                  text: secretValue,
+                  type: "secret_text",
+                }),
+              });
             }
 
             try {
@@ -1485,8 +1500,11 @@ export async function main(argv: string[]): Promise<void> {
               // @ts-expect-error non-standard property on Error
               if (e.code === 10007) {
                 // upload a draft worker
+                // TODO: log a warning
                 await fetchResult(
-                  `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
+                  !args["legacy-env"] && args.env
+                    ? `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}`
+                    : `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
                   {
                     method: "PUT",
                     body: toFormData({
@@ -1544,8 +1562,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = await readConfig(args.config as ConfigPath);
 
-            // TODO: use environment (how does current wrangler do it?)
-            const scriptName = args.name || config.name;
+            const scriptName = getScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1576,21 +1593,29 @@ export async function main(argv: string[]): Promise<void> {
 
             if (
               await confirm(
-                `Are you sure you want to permanently delete the variable ${args.key} on the script ${scriptName}?`
+                `Are you sure you want to permanently delete the variable ${
+                  args.key
+                } on the script ${scriptName}${
+                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                }?`
               )
             ) {
               console.log(
-                `🌀 Deleting the secret ${args.key} on script ${scriptName}.`
+                `🌀 Deleting the secret ${args.key} on script ${scriptName}${
+                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                }`
               );
 
               if (args.local) {
                 return;
               }
 
-              await fetchResult(
-                `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets/${args.key}`,
-                { method: "DELETE" }
-              );
+              const url =
+                !args.env || isLegacyEnv(args, config)
+                  ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
+                  : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+
+              await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
               console.log(`✨ Success! Deleted secret ${args.key}`);
             }
           }
@@ -1613,8 +1638,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = await readConfig(args.config as ConfigPath);
 
-            // TODO: use environment (how does current wrangler do it?)
-            const scriptName = args.name || config.name;
+            const scriptName = getScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1645,15 +1669,12 @@ export async function main(argv: string[]): Promise<void> {
               return;
             }
 
-            console.log(
-              JSON.stringify(
-                await fetchResult(
-                  `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
-                ),
-                null,
-                "  "
-              )
-            );
+            const url =
+              !args.env || isLegacyEnv(args, config)
+                ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
+                : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+
+            console.log(JSON.stringify(await fetchResult(url), null, "  "));
           }
         );
     }

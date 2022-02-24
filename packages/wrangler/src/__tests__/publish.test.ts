@@ -2008,11 +2008,14 @@ function mockUpdateWorkerRequest({
   setMockResponse(
     `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
     "POST",
-    ([_url, accountId, scriptName], { body }) => {
+    ([_url, accountId, scriptName, envName], { body }) => {
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual(
         legacyEnv && env ? `test-name-${env}` : "test-name"
       );
+      if (!legacyEnv) {
+        expect(envName).toEqual(env);
+      }
       expect(JSON.parse(body as string)).toEqual({ enabled });
       return null;
     }
@@ -2035,11 +2038,15 @@ function mockPublishRoutesRequest({
   setMockResponse(
     `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
     "PUT",
-    ([_url, accountId, scriptName], { body }) => {
+    ([_url, accountId, scriptName, envName], { body }) => {
       expect(accountId).toEqual("some-account-id");
       expect(scriptName).toEqual(
         legacyEnv && env ? `test-name-${env}` : "test-name"
       );
+      if (!legacyEnv) {
+        expect(envName).toEqual(env);
+      }
+
       expect(JSON.parse(body as string)).toEqual(
         routes.map((pattern) => ({ pattern }))
       );
