@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
-import type { Config } from "./config";
+import type { Config, Environment } from "./config";
 
 type KvArgs = {
   binding?: string;
@@ -154,7 +154,7 @@ export async function deleteBulkKeyValue(
 
 export function getNamespaceId(
   { preview, binding, "namespace-id": namespaceId, env }: KvArgs,
-  config: Config
+  configOrEnv: Config | Environment | undefined
 ): string {
   // nice
   if (namespaceId) {
@@ -163,13 +163,13 @@ export function getNamespaceId(
 
   // begin pre-flight checks
 
-  // `--binding` is only valid if there's a wrangler configuration file.
-  if (binding && !config) {
+  // `--binding` is only valid if there's a wrangler configuration.
+  if (binding && !configOrEnv) {
     throw new Error("--binding specified, but no config file was found.");
   }
 
   // there's no config. abort here
-  if (!config) {
+  if (!configOrEnv) {
     throw new Error(
       "Failed to find a config file.\n" +
         "Either use --namespace-id to upload directly or create a configuration file with a binding."
@@ -178,38 +178,31 @@ export function getNamespaceId(
 
   // they want to use an environment, actually
   if (env) {
-    if (!config.env || !config.env[env]) {
+    if (!("env" in configOrEnv) || !configOrEnv.env[env]) {
       throw new Error(
         `Failed to find environment "${env}" in configuration file!`
       );
     }
-
-    // TODO: either a bespoke arg type for this function to avoid `undefined`s or an `EnvOrConfig` type
     return getNamespaceId(
       {
         binding,
         "namespace-id": namespaceId,
-        env: undefined,
         preview,
       },
-      {
-        env: undefined,
-        build: undefined,
-        name: undefined,
-        account_id: undefined,
-        ...config.env[env],
-      }
+      configOrEnv.env[env]
     );
   }
 
   // there's no KV namespaces
-  if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
+  if (!configOrEnv.kv_namespaces || configOrEnv.kv_namespaces.length === 0) {
     throw new Error(
       "No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
     );
   }
 
-  const namespace = config.kv_namespaces.find((ns) => ns.binding === binding);
+  const namespace = configOrEnv.kv_namespaces.find(
+    (ns) => ns.binding === binding
+  );
 
   // we couldn't find a namespace with that binding
   if (!namespace) {

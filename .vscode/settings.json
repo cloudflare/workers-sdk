@@ -27,7 +27,7 @@
     "websockets",
     "xxhash"
   ],
-  "cSpell.ignoreWords": ["TESTWASMNAME", "yxxx"],
+  "cSpell.ignoreWords": ["TESTTEXTBLOBNAME", "TESTWASMNAME", "yxxx"],
   "eslint.runtime": "node",
   "files.trimTrailingWhitespace": true
 }

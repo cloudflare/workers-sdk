@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { execaCommand } from "execa";
@@ -7,6 +7,7 @@ import tmp from "tmp-promise";
 import { toFormData } from "./api/form_data";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
+import { fileExists } from "./entry";
 import guessWorkerFormat from "./guess-worker-format";
 import { syncAssets } from "./sites";
 import type { CfScriptFormat, CfWorkerInit } from "./api/worker";
@@ -39,8 +40,8 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config } = props;
 
-  const envRootObj =
-    props.env && config.env ? config.env[props.env] || {} : config;
+  // TODO: should we automatically fallback to top level config if there is no matching environment??
+  const envRootObj = (props.env && config.env[props.env]) || config;
 
   assert(
     envRootObj.compatibility_date || props.compatibilityDate,
@@ -49,12 +50,12 @@ export default async function publish(props: Props): Promise<void> {
 
   const triggers = props.triggers || envRootObj.triggers?.crons;
   const routes =
-    props.routes ||
-    envRootObj.routes ||
-    (envRootObj.route ? [envRootObj.route] : undefined);
+    props.routes ??
+    envRootObj.routes ??
+    (envRootObj.route ? [envRootObj.route] : []) ??
+    [];
 
-  const { account_id: accountId, workers_dev: deployToWorkersDev = !routes } =
-    config;
+  const { account_id: accountId, workers_dev: deployToWorkersDev } = config;
 
   if (accountId === undefined) {
     throw new Error("No account_id provided.");
@@ -88,29 +89,24 @@ export default async function publish(props: Props): Promise<void> {
   try {
     const envName = props.env ?? "production";
 
-    if (props.config.build?.command) {
+    if (config.build.command) {
       // TODO: add a deprecation message here?
-      console.log("running:", props.config.build.command);
-      await execaCommand(props.config.build.command, {
+      console.log("running:", config.build.command);
+      await execaCommand(config.build.command, {
         shell: true,
         stdout: "inherit",
         stderr: "inherit",
         timeout: 1000 * 30,
-        ...(props.config.build?.cwd && { cwd: props.config.build.cwd }),
+        ...(config.build.cwd && { cwd: config.build.cwd }),
       });
 
-      let fileExists = false;
-      try {
-        // Use require.resolve to use node's resolution algorithm,
-        // this lets us use paths without explicit .js extension
-        // TODO: we should probably remove this, because it doesn't
-        // take into consideration other extensions like .tsx, .ts, .jsx, etc
-        fileExists = existsSync(require.resolve(props.entry.file));
-      } catch (e) {
-        // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
-      }
-      if (fileExists === false) {
-        throw new Error(`Could not resolve "${props.entry.file}".`);
+      if (fileExists(props.entry.file) === false) {
+        throw new Error(
+          `Could not resolve "${path.relative(
+            process.cwd(),
+            props.entry.file
+          )}".`
+        );
       }
     }
 
@@ -123,13 +119,13 @@ export default async function publish(props: Props): Promise<void> {
       );
     }
 
-    if ("wasm_modules" in config && format === "modules") {
+    if (config.wasm_modules && format === "modules") {
       throw new Error(
         "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
       );
     }
 
-    if ("text_blobs" in config && format === "modules") {
+    if (config.text_blobs && format === "modules") {
       throw new Error(
         "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
       );
@@ -154,7 +150,7 @@ export default async function publish(props: Props): Promise<void> {
     // if config.migrations
     // get current migration tag
     let migrations;
-    if (config.migrations !== undefined) {
+    if (config.migrations.length > 0) {
       const scripts = await fetchResult<
         { id: string; migration_tag: string }[]
       >(`/accounts/${accountId}/workers/scripts`);
@@ -311,7 +307,7 @@ export default async function publish(props: Props): Promise<void> {
     }
 
     // Update routing table for the script.
-    if (routes && routes.length > 0) {
+    if (routes.length > 0) {
       deployments.push(
         fetchResult(`${workerUrl}/routes`, {
           // TODO: PATCH will not delete previous routes on this script,

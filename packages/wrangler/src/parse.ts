@@ -1,4 +1,4 @@
-import { readFile as readFile_ } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
@@ -75,7 +75,7 @@ type TomlError = Error & {
 /**
  * A wrapper around `TOML.parse` that throws a `ParseError`.
  */
-export function parseTOML(input: string, file?: string): any {
+export function parseTOML(input: string, file?: string): object {
   try {
     return TOML.parse(input);
   } catch (err) {
@@ -122,9 +122,9 @@ export function parseJSON(input: string, file?: string): any {
 /**
  * Reads a file and parses it based on its type.
  */
-export async function readFile(file: string): Promise<string> {
+export function readFile(file: string): string {
   try {
-    return await readFile_(file, { encoding: "utf-8" });
+    return readFileSync(file, { encoding: "utf-8" });
   } catch (err) {
     const { message } = err as Error;
     throw new ParseError({
