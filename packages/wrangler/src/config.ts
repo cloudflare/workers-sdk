@@ -241,6 +241,16 @@ export type Config = {
   };
 
   /**
+   * A list of text files that your worker should be bound to. This is
+   * the "legacy" way of binding to a text file. ES module workers should
+   * do proper module imports.
+   * NB: these ARE NOT inherited, and SHOULD NOT be duplicated across all environments.
+   */
+  text_blobs?: {
+    [key: string]: string;
+  };
+
+  /**
    * "Unsafe" tables for features that aren't directly supported by wrangler.
    * NB: these are not inherited, and HAVE to be duplicated across all environments.
    *
@@ -494,7 +504,13 @@ export type Config = {
       | undefined
       | Omit<
           Config,
-          "env" | "wasm_modules" | "migrations" | "site" | "dev" | "legacy_env"
+          | "env"
+          | "wasm_modules"
+          | "text_blobs"
+          | "migrations"
+          | "site"
+          | "dev"
+          | "legacy_env"
         >;
   };
 };
@@ -554,7 +570,13 @@ export function normaliseAndValidateEnvironmentsConfig(config: Config) {
 
     type InheritedField = keyof Omit<
       Config,
-      "env" | "migrations" | "wasm_modules" | "site" | "dev" | "legacy_env"
+      | "env"
+      | "migrations"
+      | "wasm_modules"
+      | "text_blobs"
+      | "site"
+      | "dev"
+      | "legacy_env"
     >;
 
     const inheritedFields: InheritedField[] = [

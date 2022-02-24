@@ -601,7 +601,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("when using a service worker type, it should inline an asset manifest, and bind to a namespace", async () => {
+    it("when using a service worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
@@ -620,12 +620,20 @@ export default{
       writeAssets(assets);
       mockUploadWorkerRequest({
         expectedType: "sw",
-        expectedEntry: `const __STATIC_CONTENT_MANIFEST = {"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"};`,
+        expectedModules: {
+          __STATIC_CONTENT_MANIFEST:
+            '{"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"}',
+        },
         expectedBindings: [
           {
             name: "__STATIC_CONTENT",
             namespace_id: "__test-name-workers_sites_assets-id",
             type: "kv_namespace",
+          },
+          {
+            name: "__STATIC_CONTENT_MANIFEST",
+            part: "__STATIC_CONTENT_MANIFEST",
+            type: "text_blob",
           },
         ],
       });
@@ -1602,6 +1610,116 @@ export default{
       });
       mockSubDomainRequest();
       await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe("[text_blobs]", () => {
+    it("should be able to define text blobs for service-worker format workers", async () => {
+      writeWranglerToml({
+        text_blobs: {
+          TESTTEXTBLOBNAME: "./path/to/text.file",
+        },
+      });
+      writeWorkerSource({ type: "sw" });
+      fs.mkdirSync("./path/to", { recursive: true });
+      fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
+        expectedBindings: [
+          {
+            name: "TESTTEXTBLOBNAME",
+            part: "TESTTEXTBLOBNAME",
+            type: "text_blob",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should error when defining text blobs for modules format workers", async () => {
+      writeWranglerToml({
+        text_blobs: {
+          TESTTEXTBLOBNAME: "./path/to/text.file",
+        },
+      });
+      writeWorkerSource({ type: "esm" });
+      fs.mkdirSync("./path/to", { recursive: true });
+      fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
+
+      await expect(
+        runWrangler("publish index.js")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml"`
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
+
+        [32m%s[0m
+        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should resolve text blobs relative to the wrangler.toml file", async () => {
+      fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
+      fs.writeFileSync(
+        "./path/to/wrangler.toml",
+        TOML.stringify({
+          compatibility_date: "2022-01-12",
+          name: "test-name",
+          text_blobs: {
+            TESTTEXTBLOBNAME: "./and/the/path/to/text.file",
+          },
+        }),
+
+        "utf-8"
+      );
+
+      writeWorkerSource({ type: "sw" });
+      fs.writeFileSync(
+        "./path/to/and/the/path/to/text.file",
+        "SOME TEXT CONTENT"
+      );
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
+        expectedBindings: [
+          {
+            name: "TESTTEXTBLOBNAME",
+            part: "TESTTEXTBLOBNAME",
+            type: "text_blob",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+      await runWrangler("publish index.js --config ./path/to/wrangler.toml");
       expect(std.out).toMatchInlineSnapshot(`
         "Uploaded
         test-name
