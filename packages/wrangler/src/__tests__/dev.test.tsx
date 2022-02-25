@@ -35,12 +35,12 @@ describe("Dev component", () => {
       await expect(
         runWrangler("dev")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`build.upload.main\` config field."`
+        `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
       );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`build.upload.main\` config field.
+        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.
 
         [32m%s[0m
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."

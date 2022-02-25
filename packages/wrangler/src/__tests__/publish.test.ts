@@ -264,8 +264,8 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should be able to use the `build.upload.main` config as the entry-point for ESM sources", async () => {
-      writeWranglerToml({ build: { upload: { main: "./index.js" } } });
+    it("should be able to use the `main` config as the entry-point for ESM sources", async () => {
+      writeWranglerToml({ main: "./index.js" });
       writeWorkerSource();
       mockUploadWorkerRequest();
       mockSubDomainRequest();
@@ -285,13 +285,9 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should use `build.upload.main` relative to the wrangler.toml not cwd", async () => {
+    it("should use `main` relative to the wrangler.toml not cwd", async () => {
       writeWranglerToml({
-        build: {
-          upload: {
-            main: "./foo/index.js",
-          },
-        },
+        main: "./foo/index.js",
       });
       writeWorkerSource({ basePath: "foo" });
       mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
@@ -312,11 +308,36 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should use `build.upload.main` relative to `build.upload.dir` if format is `modules`", async () => {
+    it('should use `build.upload.main` as an entry point, where `build.upload.dir` defaults to "./dist", and log a deprecation warning', async () => {
+      writeWranglerToml({ build: { upload: { main: "./index.js" } } });
+      writeWorkerSource({ basePath: "./dist" });
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+
+      await runWrangler("publish");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+
+        main = \\"dist/index.js\\""
+      `);
+    });
+
+    it("should use `build.upload.main` relative to `build.upload.dir`", async () => {
       writeWranglerToml({
         build: {
           upload: {
-            format: "modules",
             main: "./index.js",
             dir: "./foo",
           },
@@ -339,6 +360,29 @@ describe("publish", () => {
         test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+
+        main = \\"foo/index.js\\""
+      `);
+    });
+
+    it("should error when both `main` and `build.upload.main` are used", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        build: {
+          upload: {
+            main: "./index.js",
+            dir: "./foo",
+          },
+        },
+      });
+
+      await expect(
+        runWrangler("publish")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Don't define both the \`main\` and \`build.upload.main\` fields in your configuration. They serve the same purpose, to point to the entry-point of your worker. Delete the \`build.upload\` section."`
+      );
     });
 
     it("should be able to transpile TypeScript (esm)", async () => {
@@ -485,7 +529,7 @@ export default{
       `);
       expect(std.warn).toMatchInlineSnapshot(`
         "Deprecation notice: The \`site.entry-point\` config field is no longer used.
-        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
         Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
       `);
     });
@@ -533,7 +577,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Deprecation notice: The \`site.entry-point\` config field is no longer used.
-        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
         Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
       `);
     });
@@ -546,12 +590,12 @@ export default{
       await expect(
         runWrangler("publish")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field."`
+        `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field."`
       );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`build.upload.main\` config field.
+        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
 
         [32m%s[0m
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
@@ -570,7 +614,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -611,7 +655,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -671,7 +715,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -726,7 +770,7 @@ export default{
         id: "__test-name-some-env-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -777,7 +821,7 @@ export default{
         id: "__test-name-some-env-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -828,7 +872,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -874,7 +918,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -917,7 +961,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -960,7 +1004,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
           include: ["file-1.txt"],
@@ -1004,7 +1048,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
           exclude: ["file-2.txt"],
@@ -1048,7 +1092,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
           include: ["file-2.txt"],
@@ -1092,7 +1136,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
           exclude: ["assets/file-1.txt"],
@@ -1142,7 +1186,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -1192,7 +1236,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },
@@ -1239,7 +1283,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
           exclude: ["assets/file-1.txt"],
@@ -1280,7 +1324,7 @@ export default{
         id: "__test-name-workers_sites_assets-id",
       };
       writeWranglerToml({
-        build: { upload: { main: "./index.js" } },
+        main: "./index.js",
         site: {
           bucket: "assets",
         },

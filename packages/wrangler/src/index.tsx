@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -168,16 +169,35 @@ function getEntry(config: Config, command: string, script?: string): Entry {
     file = path.resolve(script);
   } else {
     // If the script name comes from the config, then it is relative to the wrangler.toml file.
-    if (config.build?.upload?.main === undefined) {
+    if (config.main === undefined && config.build?.upload?.main === undefined) {
       throw new Error(
-        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`build.upload.main\` config field.`
+        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
       );
+    } else if (config.build?.upload?.main !== undefined) {
+      if (config.main === undefined) {
+        console.warn(
+          `The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+
+main = "${path.join(
+            config.build?.upload?.dir || "./dist",
+            config.build?.upload?.main
+          )}"`
+        );
+        directory = path.resolve(
+          path.dirname(wranglerTomlPath),
+          config.build?.upload?.dir || "./dist"
+        );
+        file = path.resolve(directory, config.build.upload.main);
+      } else {
+        throw new Error(
+          `Don't define both the \`main\` and \`build.upload.main\` fields in your configuration. They serve the same purpose, to point to the entry-point of your worker. Delete the \`build.upload\` section.`
+        );
+      }
+    } else {
+      assert(config.main, "Missing entry-point"); // should be caught by the above
+      directory = path.resolve(path.dirname(wranglerTomlPath));
+      file = path.resolve(directory, config.main);
     }
-    directory = path.resolve(
-      path.dirname(wranglerTomlPath),
-      config.build.upload.dir || ""
-    );
-    file = path.resolve(directory, config.build.upload.main);
   }
 
   if (!config.build?.command) {

@@ -37,7 +37,6 @@ export type Config = {
    *
    * @optional
    * @inherited
-   * @todo this needs to be implemented!
    */
   main?: string;
 
@@ -427,7 +426,7 @@ export type Config = {
   } & /**
    * Much of the rest of this configuration isn't necessary anymore
    * in wrangler2. We infer the format automatically, and we can pass
-   * the path to the script either in the CLI (or, @todo, as the top level
+   * the path to the script either in the CLI (or, as the top level
    * `main` property).
    */ {
     /**
