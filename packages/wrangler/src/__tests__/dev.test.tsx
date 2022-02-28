@@ -82,7 +82,8 @@ function renderDev({
   usageModel,
   buildCommand = {},
   enableLocalPersistence = false,
-  env = undefined,
+  env,
+  zone,
 }: Partial<DevProps>) {
   return render(
     <Dev
@@ -106,6 +107,7 @@ function renderDev({
       usageModel={usageModel}
       bindings={bindings}
       enableLocalPersistence={enableLocalPersistence}
+      zone={zone}
     />
   );
 }

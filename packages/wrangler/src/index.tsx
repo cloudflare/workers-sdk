@@ -707,6 +707,7 @@ export async function main(argv: string[]): Promise<void> {
           name={getScriptName(args, config)}
           entry={entry}
           env={args.env}
+          zone={undefined}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
@@ -1151,6 +1152,7 @@ export async function main(argv: string[]): Promise<void> {
           entry={entry}
           rules={getRules(config)}
           env={args.env}
+          zone={undefined}
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           format={config.build?.upload?.format}
