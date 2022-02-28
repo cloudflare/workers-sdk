@@ -328,7 +328,7 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+        "Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
 
         main = \\"dist/index.js\\""
       `);
@@ -361,7 +361,7 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+        "Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
 
         main = \\"foo/index.js\\""
       `);
@@ -428,7 +428,7 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should inline referenced text modules into the worker", async () => {
+    it("should add referenced text modules into the form upload", async () => {
       writeWranglerToml();
       fs.writeFileSync(
         "./index.js",
@@ -442,7 +442,12 @@ export default{
 `
       );
       fs.writeFileSync("./textfile.txt", "Hello, World!");
-      mockUploadWorkerRequest({ expectedEntry: "Hello, World!" });
+      mockUploadWorkerRequest({
+        expectedModules: {
+          "./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+            "Hello, World!",
+        },
+      });
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
@@ -1930,6 +1935,220 @@ export default{
       `);
     });
   });
+
+  describe("upload rules", () => {
+    it("should be able to define rules for uploading non-js modules (sw)", async () => {
+      writeWranglerToml({
+        rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+      });
+      fs.writeFileSync("./index.js", `import TEXT from './text.file';`);
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedBindings: [
+          {
+            name: "__2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0_text_file",
+            part: "__2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0_text_file",
+            type: "text_blob",
+          },
+        ],
+        expectedModules: {
+          __2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0_text_file:
+            "SOME TEXT CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should be able to define rules for uploading non-js modules (esm)", async () => {
+      writeWranglerToml({
+        rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from './text.file'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        expectedBindings: [],
+        expectedModules: {
+          "./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
+            "SOME TEXT CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should log a deprecation warning when using `build.upload.rules`", async () => {
+      writeWranglerToml({
+        build: {
+          upload: {
+            rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+          },
+        },
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from './text.file'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        expectedBindings: [],
+        expectedModules: {
+          "./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
+            "SOME TEXT CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Deprecation notice: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+
+        [[rules]]
+        type = \\"Text\\"
+        globs = [ \\"**/*.file\\" ]
+        fallthrough = true
+        "
+      `);
+    });
+
+    it("should be able to use fallthrough:true for multiple rules", async () => {
+      writeWranglerToml({
+        rules: [
+          { type: "Text", globs: ["**/*.file"], fallthrough: true },
+          { type: "Text", globs: ["**/*.other"], fallthrough: true },
+        ],
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from './text.file'; import OTHER from './other.other'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      fs.writeFileSync("./other.other", "SOME OTHER TEXT CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        expectedBindings: [],
+        expectedModules: {
+          "./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
+            "SOME TEXT CONTENT",
+          "./16347a01366873ed80fe45115119de3c92ab8db0-other.other":
+            "SOME OTHER TEXT CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded
+        test-name
+        (TIMINGS)
+        Published
+        test-name
+        (TIMINGS)
+
+        test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should be able to use fallthrough:false for multiple rules", async () => {
+      writeWranglerToml({
+        rules: [
+          { type: "Text", globs: ["**/*.file"], fallthrough: false },
+          { type: "Text", globs: ["**/*.other"] },
+        ],
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from './text.file'; import OTHER from './other.other'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      fs.writeFileSync("./other.other", "SOME OTHER TEXT CONTENT");
+
+      // We throw an error when we come across a file that matched a rule
+      // but was skipped because of fallthrough = false
+      let err: Error | undefined;
+      try {
+        await runWrangler("publish index.js");
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err?.message).toMatch(
+        `The file ./other.other matched a module rule in your configuration ({"type":"Text","globs":["**/*.other"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+      );
+    });
+
+    it("should warn when multiple rules for the same type do not have fallback defined", async () => {
+      writeWranglerToml({
+        rules: [
+          { type: "Text", globs: ["**/*.file"] },
+          { type: "Text", globs: ["**/*.other"] },
+        ],
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from './text.file'; import OTHER from './other.other'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      fs.writeFileSync("./other.other", "SOME OTHER TEXT CONTENT");
+
+      // We throw an error when we come across a file that matched a rule
+      // but was skipped because of fallthrough = false
+      let err: Error | undefined;
+      try {
+        await runWrangler("publish index.js");
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err?.message).toMatch(
+        `The file ./other.other matched a module rule in your configuration ({"type":"Text","globs":["**/*.other"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+      );
+      // and the warnings because fallthrough was not explcitly set
+      expect(std.warn).toMatchInlineSnapshot(`
+        "The module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.
+        The default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning."
+      `);
+    });
+  });
 });
 
 /** Write a mock Worker script to disk. */
@@ -2021,7 +2240,7 @@ function mockUploadWorkerRequest({
         expect(metadata.bindings).toEqual(expectedBindings);
       }
       for (const [name, content] of Object.entries(expectedModules)) {
-        expect(await (formBody.get(name) as File).text()).toMatch(content);
+        expect(await (formBody.get(name) as File).text()).toEqual(content);
       }
 
       return { available_on_subdomain };

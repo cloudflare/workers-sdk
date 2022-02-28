@@ -136,30 +136,7 @@ export function toFormData(worker: CfWorkerInit): FormData {
   if (main.type === "commonjs") {
     // This is a service-worker format worker.
     for (const module of Object.values([...(modules || [])])) {
-      if (module.type === "compiled-wasm") {
-        // Convert all `.wasm` modules into `wasm_module` bindings.
-        // The "name" of the module is a file path. We use it
-        // to instead be a "part" of the body, and a reference
-        // that we can use inside our source. This identifier has to be a valid
-        // JS identifier, so we replace all non alphanumeric characters
-        // with an underscore.
-        const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
-        metadataBindings.push({
-          name,
-          type: "wasm_module",
-          part: name,
-        });
-
-        // Add the module to the form data.
-        formData.set(
-          name,
-          new File([module.content], module.name, {
-            type: "application/wasm",
-          })
-        );
-        // And then remove it from the modules collection
-        modules = modules?.filter((m) => m !== module);
-      } else if (module.name === "__STATIC_CONTENT_MANIFEST") {
+      if (module.name === "__STATIC_CONTENT_MANIFEST") {
         // Add the manifest to the form data.
         formData.set(
           module.name,
@@ -169,6 +146,36 @@ export function toFormData(worker: CfWorkerInit): FormData {
         );
         // And then remove it from the modules collection
         modules = modules?.filter((m) => m !== module);
+      } else if (module.type === "compiled-wasm" || module.type === "text") {
+        // Convert all wasm/text modules into `wasm_module`/`text_blob` bindings.
+        // The "name" of the module is a file path. We use it
+        // to instead be a "part" of the body, and a reference
+        // that we can use inside our source. This identifier has to be a valid
+        // JS identifier, so we replace all non alphanumeric characters
+        // with an underscore.
+        const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
+        metadataBindings.push({
+          name,
+          type: module.type === "compiled-wasm" ? "wasm_module" : "text_blob",
+          part: name,
+        });
+
+        // Add the module to the form data.
+        formData.set(
+          name,
+          new File([module.content], module.name, {
+            type:
+              module.type === "compiled-wasm"
+                ? "application/wasm"
+                : "text/plain",
+          })
+        );
+        // And then remove it from the modules collection
+        modules = modules?.filter((m) => m !== module);
+      } else if (module.type === "buffer") {
+        throw new Error(
+          'The "buffer" module type is not yet supported in service worker format workers'
+        );
       }
     }
   }

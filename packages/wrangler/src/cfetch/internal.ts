@@ -1,9 +1,9 @@
 import { fetch } from "undici";
 import { getEnvironmentVariableFactory } from "../environment-variables";
+import { ParseError, parseJSON } from "../parse";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
-import { ParseError, parseJSON } from "../parse";
 
 /**
  * Get the URL to use to access the Cloudflare API.

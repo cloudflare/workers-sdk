@@ -3,12 +3,12 @@ import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
 import makeCLI from "yargs";
-import TOML from "@iarna/toml";
 import { version as wranglerVersion } from "../package.json";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
@@ -182,7 +182,7 @@ function getEntry(config: Config, command: string, script?: string): Entry {
     } else if (config.build?.upload?.main !== undefined) {
       if (config.main === undefined) {
         console.warn(
-          `The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
+          `Deprecation notice: The \`build.upload\` field is deprecated. Delete the \`build.upload\` field, and add this to your configuration file:
 
 main = "${path.join(
             config.build?.upload?.dir || "./dist",
@@ -222,6 +222,25 @@ main = "${path.join(
     }
   }
   return { file, directory };
+}
+
+function getRules(config: Config): Config["rules"] {
+  const rules = config.rules ?? config.build?.upload?.rules ?? [];
+
+  if (config.rules && config.build?.upload?.rules) {
+    throw new Error(
+      `You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+    );
+  }
+
+  if (config.build?.upload?.rules) {
+    console.warn(
+      `Deprecation notice: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+
+${TOML.stringify({ rules: config.build.upload.rules })}`
+    );
+  }
+  return rules;
 }
 
 function isLegacyEnv(args: unknown, config: Config): boolean {
@@ -850,6 +869,7 @@ export async function main(argv: string[]): Promise<void> {
           name={getScriptName(args, config)}
           entry={entry}
           env={args.env}
+          rules={getRules(config)}
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           format={args.format || config.build?.upload?.format}
@@ -1045,6 +1065,7 @@ export async function main(argv: string[]): Promise<void> {
       await publish({
         config,
         name: getScriptName(args, config),
+        rules: getRules(config),
         format: args.format || config.build?.upload?.format,
         entry,
         env: args.env,
@@ -1285,6 +1306,7 @@ export async function main(argv: string[]): Promise<void> {
         <Dev
           name={config.name}
           entry={entry}
+          rules={getRules(config)}
           env={args.env}
           legacyEnv={
             (args["legacy-env"] as boolean | undefined) ??

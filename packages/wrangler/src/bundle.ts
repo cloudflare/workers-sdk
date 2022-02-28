@@ -4,6 +4,7 @@ import * as path from "node:path";
 import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
 import type { CfModule, CfScriptFormat } from "./api/worker";
+import type { Config } from "./config";
 
 /**
  * An entry point for the worker. It consists not just of a `file`,
@@ -23,14 +24,25 @@ type BundleResult = {
  */
 export async function bundleWorker(
   entry: Entry,
-  serveAssetsFromWorker: boolean,
   destination: string,
-  jsxFactory: string | undefined,
-  jsxFragment: string | undefined,
-  format: CfScriptFormat,
-  watch?: esbuild.WatchMode
+  options: {
+    serveAssetsFromWorker: boolean;
+    jsxFactory: string | undefined;
+    jsxFragment: string | undefined;
+    format: CfScriptFormat;
+    rules: Config["rules"];
+    watch?: esbuild.WatchMode;
+  }
 ): Promise<BundleResult> {
-  const moduleCollector = makeModuleCollector({ format });
+  const {
+    serveAssetsFromWorker,
+    jsxFactory,
+    jsxFragment,
+    format,
+    rules,
+    watch,
+  } = options;
+  const moduleCollector = makeModuleCollector({ format, rules });
   const result = await esbuild.build({
     ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,
@@ -43,9 +55,8 @@ export async function bundleWorker(
     conditions: ["worker", "browser"],
     loader: {
       ".js": "jsx",
-      ".html": "text",
-      ".pem": "text",
-      ".txt": "text",
+      ".mjs": "jsx",
+      ".cjs": "jsx",
     },
     plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),
