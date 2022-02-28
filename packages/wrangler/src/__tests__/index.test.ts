@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
 import { parseConfigFileTextToJson } from "typescript";
+import { describe, it, beforeEach, expect } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,6 +10,7 @@ import { mockConfirm } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
+import type { MockedFunction } from "vitest";
 
 describe("wrangler", () => {
   let mockPackageManager: PackageManager;
@@ -16,10 +18,12 @@ describe("wrangler", () => {
 
   beforeEach(() => {
     mockPackageManager = {
-      addDevDeps: jest.fn(),
-      install: jest.fn(),
+      addDevDeps: vi.fn(),
+      install: vi.fn(),
     };
-    (getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+    (
+      getPackageManager as MockedFunction<typeof getPackageManager>
+    ).mockResolvedValue(mockPackageManager);
   });
 
   const std = mockConsoleMethods();

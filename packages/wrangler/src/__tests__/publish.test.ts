@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import { beforeEach, describe, it, afterEach, expect, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,8 +16,11 @@ import type { FormData, File } from "undici";
 describe("publish", () => {
   beforeEach(() => {
     // @ts-expect-error we're using a very simple setTimeout mock here
-    jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
-      fn();
+    vi.spyOn(global, "setTimeout").mock((fn, _period) => {
+      // check that fn is a function is called
+      if (typeof fn === "function") {
+        fn();
+      }
     });
   });
   mockAccountId();
@@ -26,6 +30,7 @@ describe("publish", () => {
 
   afterEach(() => {
     unsetAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("environments", () => {

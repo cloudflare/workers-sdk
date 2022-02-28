@@ -188,7 +188,8 @@ export function mockFetchKVGetValue(
 ) {
   const mapKey = `${accountId}/${namespaceId}/${key}`;
   if (kvGetMocks.has(mapKey)) {
-    return kvGetMocks.get(mapKey);
+    const value = kvGetMocks.get(mapKey);
+    if (value !== undefined) return Promise.resolve(value);
   }
   throw new Error(`no mock value found for \`kv:key get\` - ${mapKey}`);
 }

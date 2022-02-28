@@ -1,5 +1,6 @@
 import { writeFile } from "fs/promises";
 import path from "path";
+import { describe, it, expect } from "vitest";
 import guessWorkerFormat from "../guess-worker-format";
 import { runInTempDir } from "./helpers/run-in-tmp";
 

@@ -5,11 +5,13 @@ import path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as Sentry from "@sentry/node";
 import prompts from "prompts";
+import { vi, describe, it, afterEach, beforeEach, expect } from "vitest";
 
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-const { reportError } = jest.requireActual("../reporting");
+
+const { reportError } = await vi.importActual("../reporting");
 
 describe("Error Reporting", () => {
   runInTempDir({ homedir: "./home" });
@@ -18,19 +20,17 @@ describe("Error Reporting", () => {
 
   const originalTTY = process.stdout.isTTY;
   beforeEach(() => {
-    jest.mock("@sentry/node");
-    jest.spyOn(Sentry, "captureException");
+    vi.spyOn(Sentry, "captureException");
     process.stdout.isTTY = true;
   });
 
   afterEach(() => {
-    jest.unmock("@sentry/node");
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.stdout.isTTY = originalTTY;
   });
 
   it("should confirm user will allow error reporting usage", async () => {
-    jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
+    vi.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
 
     await reportError(new Error("test error"), "testFalse");
 
@@ -47,7 +47,7 @@ describe("Error Reporting", () => {
   });
 
   it("should confirm user will disallow error reporting usage", async () => {
-    jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
+    vi.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
     await reportError(new Error("test error"), "testFalse");
 
     const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
@@ -64,7 +64,7 @@ describe("Error Reporting", () => {
   });
 
   it("should confirm user will allow 'once' error reporting usage", async () => {
-    jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: "once" });
+    vi.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: "once" });
     await runWrangler();
     await reportError(new Error("test error"), "testFalse");
 
@@ -79,7 +79,7 @@ describe("Error Reporting", () => {
   });
 
   it("should not prompt w/ subsequent Errors after user disallows error reporting", async () => {
-    jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
+    vi.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
     await reportError(new Error("test error"), "testFalse");
 
     expect(Sentry.captureException).not.toHaveBeenCalledWith(
@@ -95,7 +95,7 @@ describe("Error Reporting", () => {
   });
 
   it("should not prompt w/ subsequent Errors after user Always allows error reporting", async () => {
-    jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
+    vi.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: true });
     await reportError(new Error("test error"), "testFalse");
 
     expect(Sentry.captureException).toHaveBeenCalledWith(
@@ -109,7 +109,7 @@ describe("Error Reporting", () => {
   });
 
   it("should prompt w/ subsequent Errors after user allows error reporting once", async () => {
-    const promptSpy = jest
+    const promptSpy = vi
       .spyOn(prompts, "prompt")
       .mockResolvedValue({ sentryDecision: "once" });
     await reportError(new Error("test error"), "testFalse");

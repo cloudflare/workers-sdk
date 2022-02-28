@@ -1,4 +1,5 @@
 import { writeFileSync } from "fs";
+import { describe, it, test, expect } from "vitest";
 import { runInTempDir } from "../../src/__tests__/helpers/run-in-tmp";
 import { toUrlPath } from "../../src/paths";
 import { compareRoutes, generateConfigFromFileTree } from "./filepath-routing";

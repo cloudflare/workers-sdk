@@ -4,8 +4,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "jsx": "react",
-    "types": ["vitest/globals", "vitest/types"]
+    "jsx": "react"
   },
   "exclude": [
     "vendor",

@@ -1,10 +1,18 @@
 import { writeFileSync } from "node:fs";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  it,
+  afterEach,
+  expect,
+  vi,
+} from "vitest";
+import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-const { getPackageManager, getPackageManagerName } =
-  jest.requireActual("../package-manager");
 interface TestCase {
   npm: boolean;
   yarn: boolean;
@@ -108,6 +116,13 @@ const testCases: TestCase[] = [
 describe("getPackageManager()", () => {
   runInTempDir();
   mockConsoleMethods();
+
+  beforeAll(() => {
+    vi.unmock("../package-manager");
+  });
+  afterAll(() => {
+    vi.mock("../package-manager");
+  });
 
   describe("no supported package manager", () => {
     mockYarn(false);

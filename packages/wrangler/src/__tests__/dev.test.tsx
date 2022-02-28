@@ -1,6 +1,7 @@
 import { render } from "ink-testing-library";
 import patchConsole from "patch-console";
 import React from "react";
+import { beforeEach, afterEach, describe, it, expect } from "vitest";
 import Dev from "../dev";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";

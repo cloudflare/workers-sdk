@@ -1,3 +1,4 @@
+import { expect } from "vitest";
 import { createFetchResult, setMockRawResponse } from "./mock-cfetch";
 
 export function mockKeyListRequest(

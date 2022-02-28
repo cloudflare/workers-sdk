@@ -1,12 +1,14 @@
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import fetchMock from "jest-fetch-mock";
+import { fetch } from "undici";
+import { describe, it, expect } from "vitest";
 import { initialise } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { writeUserConfig } from "./helpers/mock-user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { MockedFunction } from "vitest";
 
 describe("wrangler", () => {
   runInTempDir({ homedir: "./home" });
@@ -24,11 +26,14 @@ describe("wrangler", () => {
 
       // Mock out the response for a request to revoke the auth tokens,
       // checking the form of the request is as expected.
-      fetchMock.mockResponseOnce(async (req) => {
-        expect(req.url).toEqual("https://dash.cloudflare.com/oauth2/revoke");
-        expect(req.method).toEqual("POST");
-        return "";
-      });
+      (fetch as MockedFunction<typeof fetch>).mockImplementationOnce(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (req: any): Promise<any> => {
+          expect(req.url).toEqual("https://dash.cloudflare.com/oauth2/revoke");
+          expect(req.method).toEqual("POST");
+          return "";
+        }
+      );
 
       await initialise();
       await runWrangler("logout");
@@ -39,7 +44,7 @@ describe("wrangler", () => {
       `);
 
       // Make sure that we made the request to logout.
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(1);
 
       // Make sure that logout removed the config file containing the auth tokens.
       expect(
