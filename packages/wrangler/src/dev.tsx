@@ -17,6 +17,7 @@ import { createWorker } from "./api/worker";
 import { bundleWorker } from "./bundle";
 import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
+import { DEFAULT_MODULE_RULES } from "./module-collection";
 import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
@@ -24,6 +25,7 @@ import { getAPIToken } from "./user";
 import type { CfPreviewToken } from "./api/preview";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { Entry } from "./bundle";
+import type { Config } from "./config";
 import type { AssetPaths } from "./sites";
 import type { WatchMode } from "esbuild";
 import type { ExecaChildProcess } from "execa";
@@ -34,6 +36,7 @@ export type DevProps = {
   entry: Entry;
   port?: number;
   format: CfScriptFormat | undefined;
+  rules: Config["rules"];
   accountId: undefined | string;
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
@@ -89,6 +92,7 @@ function Dev(props: DevProps): JSX.Element {
     destination: directory,
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
+    rules: props.rules,
     jsxFragment: props.jsxFragment,
     serveAssetsFromWorker: !!props.public,
   });
@@ -115,6 +119,7 @@ function Dev(props: DevProps): JSX.Element {
           assetPaths={props.assetPaths}
           public={props.public}
           port={port}
+          rules={props.rules}
           enableLocalPersistence={props.enableLocalPersistence}
         />
       ) : (
@@ -223,6 +228,7 @@ function Local(props: {
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
   port: number;
+  rules: Config["rules"];
   enableLocalPersistence: boolean;
 }) {
   const { inspectorUrl } = useLocalWorker({
@@ -233,6 +239,7 @@ function Local(props: {
     assetPaths: props.assetPaths,
     public: props.public,
     port: props.port,
+    rules: props.rules,
     enableLocalPersistence: props.enableLocalPersistence,
   });
   useInspector({ inspectorUrl, port: 9229, logToTerminal: false });
@@ -242,6 +249,7 @@ function Local(props: {
 function useLocalWorker(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
+  rules: Config["rules"];
   format: CfScriptFormat | undefined;
   bindings: CfWorkerInit["bindings"];
   assetPaths: undefined | AssetPaths;
@@ -328,9 +336,9 @@ function useLocalWorker(props: {
               ];
             }
           ),
-          ...bundle.modules.reduce<string[]>((cmd, { name }) => {
+          ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
             if (format === "service-worker") {
-              if (name.endsWith(".wasm")) {
+              if (type === "compiled-wasm") {
                 // In service-worker format, .wasm modules are referenced
                 // by global identifiers, so we convert it here.
                 // This identifier has to be a valid JS identifier,
@@ -338,14 +346,26 @@ function useLocalWorker(props: {
                 // with an underscore.
                 const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
                 return cmd.concat([`--wasm`, `${identifier}=${name}`]);
+              } else {
+                // TODO: we should actually support this
+                throw new Error(
+                  `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
+                );
               }
             }
             return cmd;
           }, []),
           "--modules",
           String(format === "modules"),
-          "--modules-rule",
-          "CompiledWasm=**/*.wasm",
+          ...(props.rules || [])
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            .concat(DEFAULT_MODULE_RULES!)
+            .flatMap((rule) =>
+              rule.globs.flatMap((glob) => [
+                "--modules-rule",
+                `${rule.type}=${glob}`,
+              ])
+            ),
         ],
         {
           cwd: path.dirname(bundle.path),
@@ -415,6 +435,7 @@ function useLocalWorker(props: {
     props.enableLocalPersistence,
     assetPaths,
     props.public,
+    props.rules,
     bindings.wasm_modules,
   ]);
   return { inspectorUrl };
@@ -550,6 +571,7 @@ function useEsbuild({
   jsxFactory,
   jsxFragment,
   format,
+  rules,
   serveAssetsFromWorker,
 }: {
   entry: undefined | Entry;
@@ -558,6 +580,7 @@ function useEsbuild({
   staticRoot: undefined | string;
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
+  rules: Config["rules"];
   serveAssetsFromWorker: boolean;
 }): EsbuildBundle | undefined {
   const [bundle, setBundle] = useState<EsbuildBundle>();
@@ -585,16 +608,15 @@ function useEsbuild({
       if (!destination || !entry || !format) return;
 
       const { resolvedEntryPointPath, bundleType, modules, stop } =
-        await bundleWorker(
-          entry,
-          // In dev, we server assets from the local proxy before we send the request to the worker.
-          /* serveAssetsFromWorker */ false,
-          destination,
+        await bundleWorker(entry, destination, {
+          // In dev, we serve assets from the local proxy before we send the request to the worker.
+          serveAssetsFromWorker: false,
           jsxFactory,
           jsxFragment,
           format,
-          watchMode
-        );
+          rules,
+          watch: watchMode,
+        });
 
       // Capture the `stop()` method to use as the `useEffect()` destructor.
       stopWatching = stop;
@@ -623,6 +645,7 @@ function useEsbuild({
     jsxFragment,
     format,
     serveAssetsFromWorker,
+    rules,
   ]);
   return bundle;
 }

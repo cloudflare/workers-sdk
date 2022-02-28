@@ -17,6 +17,7 @@ type Props = {
   config: Config;
   format: CfScriptFormat | undefined;
   entry: { file: string; directory: string };
+  rules: Config["rules"];
   name: string | undefined;
   env: string | undefined;
   compatibilityDate: string | undefined;
@@ -136,11 +137,14 @@ export default async function publish(props: Props): Promise<void> {
 
     const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
       props.entry,
-      props.experimentalPublic,
       destination.path,
-      jsxFactory,
-      jsxFragment,
-      format
+      {
+        serveAssetsFromWorker: props.experimentalPublic,
+        jsxFactory,
+        jsxFragment,
+        format,
+        rules: props.rules,
+      }
     );
 
     const content = readFileSync(resolvedEntryPointPath, {

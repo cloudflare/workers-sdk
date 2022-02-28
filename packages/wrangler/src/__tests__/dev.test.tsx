@@ -64,6 +64,7 @@ function renderDev({
   initialMode = "local",
   jsxFactory,
   jsxFragment,
+  rules = [],
   bindings = {
     kv_namespaces: [],
     vars: {},
@@ -87,6 +88,7 @@ function renderDev({
       name={name}
       entry={entry}
       env={env}
+      rules={rules}
       port={port}
       legacyEnv={legacyEnv}
       buildCommand={buildCommand}

@@ -23,6 +23,14 @@ import assert from "node:assert";
  * *:todo means there's more work to be done (with details attached)
  * *:inherited means the field is copied to all environments
  */
+
+export type ConfigModuleRuleType =
+  | "ESModule"
+  | "CommonJS"
+  | "CompiledWasm"
+  | "Text"
+  | "Data";
+
 export type Config = {
   /**
    * The name of your worker. Alphanumeric + dashes only.
@@ -39,6 +47,21 @@ export type Config = {
    * @inherited
    */
   main?: string;
+
+  /**
+   * An ordered list of rules that define which modules to import,
+   * and what type to import them as. You will need to specify rules
+   * to use Text, Data, and CompiledWasm modules, or when you wish to
+   * have a .js file be treated as an ESModule instead of CommonJS.
+   *
+   * @optional
+   * @inherited
+   */
+  rules?: {
+    type: ConfigModuleRuleType;
+    globs: string[];
+    fallthrough?: boolean;
+  }[];
 
   /**
    * This is the ID of the account associated with your zone.
@@ -457,25 +480,14 @@ export type Config = {
       /**
        * The path to the Worker script, relative to `upload.dir`.
        *
-       * @deprecated This will be replaced by a command line argument.
+       * @deprecated This is now defined at the top level `main` field, or passed as a command line argument.
        */
       main?: string;
 
       /**
-       * An ordered list of rules that define which modules to import,
-       * and what type to import them as. You will need to specify rules
-       * to use Text, Data, and CompiledWasm modules, or when you wish to
-       * have a .js file be treated as an ESModule instead of CommonJS.
-       *
-       * @deprecated These are now inferred automatically for major file types, but you can still specify them manually.
-       * @todo this needs to be implemented!
-       * @breaking
+       * @deprecated This is now defined at the top level `rules` field.
        */
-      rules?: {
-        type: "ESModule" | "CommonJS" | "Text" | "Data" | "CompiledWasm";
-        globs: string[];
-        fallthrough?: boolean;
-      };
+      rules?: Config["rules"];
     };
   };
 
