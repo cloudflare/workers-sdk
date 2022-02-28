@@ -1,14 +1,14 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
 import makeCLI from "yargs";
+import TOML from "@iarna/toml";
 import { version as wranglerVersion } from "../package.json";
 import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
@@ -28,6 +28,13 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
+import {
+  formatMessage,
+  ParseError,
+  parseJSON,
+  parseTOML,
+  readFile,
+} from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -81,9 +88,8 @@ async function readConfig(configPath?: string): Promise<Config> {
   }
 
   if (configPath) {
-    const tml: string = await readFile(configPath, "utf-8");
-    const parsed = TOML.parse(tml) as Config;
-    Object.assign(config, parsed);
+    const toml = await parseTOML(await readFile(configPath), configPath);
+    Object.assign(config, toml);
   }
 
   normaliseAndValidateEnvironmentsConfig(config);
@@ -430,8 +436,9 @@ export async function main(argv: string[]): Promise<void> {
       } else {
         // If package.json exists and wrangler isn't installed,
         // then ask to add wrangler to devDependencies
-        const packageJson = JSON.parse(
-          await readFile(pathToPackageJson, "utf-8")
+        const packageJson = parseJSON(
+          await readFile(pathToPackageJson),
+          pathToPackageJson
         );
         if (
           !(
@@ -460,10 +467,7 @@ export async function main(argv: string[]): Promise<void> {
           isTypescriptProject = true;
           await writeFile(
             "./tsconfig.json",
-            await readFile(
-              path.join(__dirname, "../templates/tsconfig.json"),
-              "utf-8"
-            )
+            await readFile(path.join(__dirname, "../templates/tsconfig.json"))
           );
           await packageManager.addDevDeps(
             "@cloudflare/workers-types",
@@ -479,8 +483,9 @@ export async function main(argv: string[]): Promise<void> {
         isTypescriptProject = true;
         // If there's a tsconfig, check if @cloudflare/workers-types
         // is already installed, and offer to install it if not
-        const packageJson = JSON.parse(
-          await readFile(pathToPackageJson, "utf-8")
+        const packageJson = parseJSON(
+          await readFile(pathToPackageJson),
+          pathToPackageJson
         );
         if (
           !(
@@ -504,8 +509,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      const packageJsonContent = JSON.parse(
-        await readFile(pathToPackageJson, "utf-8")
+      const packageJsonContent = parseJSON(
+        await readFile(pathToPackageJson),
+        pathToPackageJson
       );
       const shouldWritePackageJsonScripts =
         !packageJsonContent.scripts?.start &&
@@ -559,10 +565,7 @@ export async function main(argv: string[]): Promise<void> {
             await mkdir("./src", { recursive: true });
             await writeFile(
               "./src/index.ts",
-              await readFile(
-                path.join(__dirname, "../templates/new-worker.ts"),
-                "utf-8"
-              )
+              await readFile(path.join(__dirname, "../templates/new-worker.ts"))
             );
 
             await writePackageJsonScripts(
@@ -583,10 +586,7 @@ export async function main(argv: string[]): Promise<void> {
             await mkdir("./src", { recursive: true });
             await writeFile(
               path.join("./src/index.js"),
-              await readFile(
-                path.join(__dirname, "../templates/new-worker.js"),
-                "utf-8"
-              )
+              await readFile(path.join(__dirname, "../templates/new-worker.js"))
             );
 
             await writePackageJsonScripts(
@@ -1989,7 +1989,7 @@ export async function main(argv: string[]): Promise<void> {
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
-              ? await readFile(args.path, "utf-8")
+              ? await readFile(args.path)
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 args.value!;
 
@@ -2292,19 +2292,10 @@ export async function main(argv: string[]): Promise<void> {
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
+
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-            const content = await readFile(filename, "utf-8");
-            let parsedContent;
-            try {
-              parsedContent = JSON.parse(content);
-            } catch (err) {
-              throw new Error(
-                `Could not parse json from ${filename}.\n${
-                  (err as Error).message ?? err
-                }`
-              );
-            }
+            const content = parseJSON(await readFile(filename), filename);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -2319,7 +2310,7 @@ export async function main(argv: string[]): Promise<void> {
                 value,
                 expiration,
                 expiration_ttl,
-              } of parsedContent) {
+              } of content) {
                 await ns.put(key, value, {
                   expiration,
                   expirationTtl: expiration_ttl,
@@ -2379,18 +2370,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ filename, ...args }) => {
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-
-            const content = await readFile(filename, "utf-8");
-            let parsedContent;
-            try {
-              parsedContent = JSON.parse(content);
-            } catch (err) {
-              throw new Error(
-                `Could not parse json from ${filename}.\n${
-                  (err as Error).message ?? err
-                }`
-              );
-            }
+            const content = parseJSON(await readFile(filename), filename);
 
             if (args.local) {
               const { Miniflare } = await import("miniflare");
@@ -2400,7 +2380,7 @@ export async function main(argv: string[]): Promise<void> {
                 script: ` `, // has to be a string with at least one char
               });
               const ns = await mf.getKVNamespace(namespaceId);
-              for (const key of parsedContent) {
+              for (const key of content) {
                 await ns.delete(key);
               }
             } else {
@@ -2598,6 +2578,12 @@ export async function main(argv: string[]): Promise<void> {
       wrangler.showHelp("error");
       console.error(""); // Just adds a bit of space
       console.error(e.message);
+    } else if (e instanceof ParseError) {
+      console.error("");
+      e.notes.push({
+        text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
+      });
+      console.error(formatMessage(e));
     } else {
       console.error(e instanceof Error ? e.message : e);
       console.error(""); // Just adds a bit of space

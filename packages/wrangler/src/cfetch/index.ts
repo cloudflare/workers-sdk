@@ -1,4 +1,5 @@
 import { URLSearchParams } from "node:url";
+import { ParseError } from "../parse";
 import { fetchInternal } from "./internal";
 import type { RequestInit } from "undici";
 
@@ -81,11 +82,12 @@ function throwFetchError(
   resource: string,
   response: FetchResult<unknown>
 ): never {
-  response.messages.forEach((message) => console.warn(message));
-  const errors = response.errors
-    .map((error) => `- ${error.code}: ${error.message}`)
-    .join("\n");
-  const error = new Error(`Failed to fetch ${resource}:\n${errors}`);
+  const error = new ParseError({
+    text: "Received a bad response from the API",
+    notes: response.errors.map((err) => ({
+      text: err.code ? `${err.message} [code: ${err.code}]` : err.message,
+    })),
+  });
   // add the first error code directly to this error
   // so consumers can use it for specific behaviour
   const code = response.errors[0]?.code;
