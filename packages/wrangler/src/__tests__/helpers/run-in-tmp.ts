@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
+import { beforeEach, afterEach, vi } from "vitest";
 
 const originalCwd = process.cwd();
 
@@ -18,7 +19,7 @@ export function runInTempDir({ homedir }: { homedir?: string } = {}) {
       // rather than an alias to the module (e.g. `import * as os from "node:os";`).
       // This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
       // getter that is not configurable (and so cannot be spied upon).
-      jest.spyOn(os, "homedir").mockReturnValue(homedir);
+      vi.spyOn(os, "homedir").mockReturnValue(homedir);
     }
   });
 

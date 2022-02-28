@@ -1,4 +1,5 @@
 import { confirm, prompt } from "../../dialogs";
+import type { MockedFunction } from "vitest";
 
 /**
  * The expected values for a confirmation request.
@@ -18,14 +19,16 @@ export interface ConfirmExpectation {
  * then an error is thrown.
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
-  (confirm as jest.Mock).mockImplementation((text: string) => {
-    for (const { text: expectedText, result } of expectations) {
-      if (text === expectedText) {
-        return Promise.resolve(result);
+  (confirm as MockedFunction<typeof confirm>).mockImplementation(
+    (text: string) => {
+      for (const { text: expectedText, result } of expectations) {
+        if (text === expectedText) {
+          return Promise.resolve(result);
+        }
       }
+      throw new Error(`Unexpected confirmation message: ${text}`);
     }
-    throw new Error(`Unexpected confirmation message: ${text}`);
-  });
+  );
 }
 
 /**
@@ -48,8 +51,8 @@ export interface PromptExpectation {
  * then an error is thrown.
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
-  (prompt as jest.Mock).mockImplementation(
-    (text: string, type: "text" | "password") => {
+  (prompt as MockedFunction<typeof prompt>).mockImplementation(
+    (text: string, type?: "text" | "password") => {
       for (const {
         text: expectedText,
         type: expectedType,

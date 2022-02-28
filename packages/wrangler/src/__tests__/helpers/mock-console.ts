@@ -1,11 +1,11 @@
+import { beforeEach, afterEach } from "vitest";
+import type { SpyInstance } from "vitest";
 /**
  * We use this module to mock console methods, and optionally
  * assert on the values they're called with in our tests.
  */
 
-let logSpy: jest.SpyInstance,
-  errorSpy: jest.SpyInstance,
-  warnSpy: jest.SpyInstance;
+let logSpy: SpyInstance, errorSpy: SpyInstance, warnSpy: SpyInstance;
 
 const std = {
   get out() {
@@ -27,9 +27,9 @@ const std = {
 
 export function mockConsoleMethods() {
   beforeEach(() => {
-    logSpy = jest.spyOn(console, "log").mockImplementation();
-    errorSpy = jest.spyOn(console, "error").mockImplementation();
-    warnSpy = jest.spyOn(console, "warn").mockImplementation();
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();

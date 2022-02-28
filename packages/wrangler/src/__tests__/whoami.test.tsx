@@ -1,5 +1,6 @@
 import { render } from "ink-testing-library";
 import React from "react";
+import { describe, expect, it } from "vitest";
 import { initialise } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
@@ -26,7 +27,9 @@ describe("getUserInfo()", () => {
   it("should return the user's email and accounts if authenticated via config token", async () => {
     writeUserConfig("some-oauth-token");
     setMockResponse("/user", () => {
-      return { email: "user@example.com" };
+      return {
+        email: "user@example.com",
+      };
     });
     setMockResponse("/accounts", () => {
       return [
