@@ -12,6 +12,7 @@ describe("formatMessage", () => {
     // No color and skip emojis at the start.
     return formatMessage(input, false).substring(2);
   };
+
   it("should format message without location", () => {
     expect(
       format({
@@ -24,6 +25,7 @@ describe("formatMessage", () => {
       "
     `);
   });
+
   it("should format message with location", () => {
     expect(
       format({
@@ -46,6 +48,7 @@ describe("formatMessage", () => {
       "
     `);
   });
+
   it("should format message with location and notes", () => {
     expect(
       format({
@@ -84,6 +87,7 @@ describe("parseTOML", () => {
   it("should parse toml that is empty", () => {
     expect(parseTOML("")).toStrictEqual({});
   });
+
   it("should parse toml with basic values", () => {
     expect(
       parseTOML(`
@@ -95,6 +99,7 @@ describe("parseTOML", () => {
       version: 1,
     });
   });
+
   it("should parse toml with complex values", () => {
     expect(
       parseTOML(`
@@ -118,6 +123,7 @@ describe("parseTOML", () => {
       version: 1,
     });
   });
+
   it("should fail to parse toml with invalid string", () => {
     try {
       parseTOML(`name = 'fail"`);
@@ -138,6 +144,7 @@ describe("parseTOML", () => {
       });
     }
   });
+
   it("should fail to parse toml with invalid header", () => {
     try {
       parseTOML(`\n[name`, "config.toml");
@@ -164,6 +171,7 @@ describe("parseJSON", () => {
   it("should parse json that is empty", () => {
     expect(parseJSON("{}")).toStrictEqual({});
   });
+
   it("should parse json with basic values", () => {
     expect(
       parseJSON(`
@@ -176,6 +184,7 @@ describe("parseJSON", () => {
       version: 1,
     });
   });
+
   it("should parse json with complex values", () => {
     expect(
       parseJSON(
@@ -195,6 +204,7 @@ describe("parseJSON", () => {
       },
     });
   });
+
   it("should fail to parse json with invalid string", () => {
     try {
       parseJSON(`\n{\n"version" "1\n}\n`);
@@ -215,6 +225,7 @@ describe("parseJSON", () => {
       });
     }
   });
+
   it("should fail to parse json with invalid number", () => {
     const file = "config.json",
       fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
@@ -249,6 +260,7 @@ describe("indexLocation", () => {
       lineText: "",
     });
   });
+
   it("should calculate location from multi-line input", () => {
     const file = "package.json",
       fileText = `\n{\n\t"hello":"world"\n}\n`;
@@ -260,6 +272,7 @@ describe("indexLocation", () => {
       lineText: `\t"hello":"world"`,
     });
   });
+
   it("should calculate location when index is out of bounds", () => {
     const fileText = `\n\n\n\n`;
     expect(indexLocation({ fileText }, 10)).toStrictEqual({
@@ -284,6 +297,7 @@ describe("searchLocation", () => {
       lineText: `name = 'coolthing'`,
     });
   });
+
   it("should calculate location from multi-line match", () => {
     const fileText = `\n{"versions":[\n\t"1.2.3",\n\t"1.2.4",\n\t"1.2.5"\n]}\n`;
     expect(searchLocation({ fileText }, "1.2.4")).toStrictEqual({
@@ -294,6 +308,7 @@ describe("searchLocation", () => {
       lineText: `\t"1.2.4",`,
     });
   });
+
   it("should calculate location from no match", () => {
     const fileText = `\n{}\n`;
     expect(searchLocation({ fileText }, "apple")).toStrictEqual({

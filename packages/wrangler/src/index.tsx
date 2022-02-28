@@ -218,7 +218,6 @@ main = "${path.join(
       // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
     }
     if (fileExists === false) {
-      // TODO(soon): use `readFile` instead.
       throw new Error(`Could not resolve "${file}".`);
     }
   }
