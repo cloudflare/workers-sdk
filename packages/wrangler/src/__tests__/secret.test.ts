@@ -96,7 +96,9 @@ describe("wrangler secret", () => {
         "some-env",
         false
       );
-      await runWrangler("secret put the-key --name script-name --env some-env");
+      await runWrangler(
+        "secret put the-key --name script-name --env some-env --legacy-env false"
+      );
 
       expect(std.out).toMatchInlineSnapshot(`
         "🌀 Creating the secret for script script-name (some-env)
@@ -216,7 +218,7 @@ describe("wrangler secret", () => {
         result: true,
       });
       await runWrangler(
-        "secret delete the-key --name script-name --env some-env"
+        "secret delete the-key --name script-name --env some-env --legacy-env false"
       );
       expect(std.out).toMatchInlineSnapshot(`
         "🌀 Deleting the secret the-key on script script-name (some-env)
@@ -321,7 +323,9 @@ describe("wrangler secret", () => {
 
     it("should list secrets: service envs", async () => {
       mockListRequest({ scriptName: "script-name" }, "some-env");
-      await runWrangler("secret list --name script-name --env some-env");
+      await runWrangler(
+        "secret list --name script-name --env some-env --legacy-env false"
+      );
       expect(std.out).toMatchInlineSnapshot(`
         "[
           {

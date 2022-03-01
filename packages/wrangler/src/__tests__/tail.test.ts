@@ -58,7 +58,7 @@ describe("tail", () => {
       const api = mockWebsocketAPIs("some-env");
       expect(api.requests.creation.count).toStrictEqual(0);
 
-      await runWrangler("tail test-worker --env some-env");
+      await runWrangler("tail test-worker --env some-env --legacy-env false");
 
       await expect(api.ws.connected).resolves.toBeTruthy();
       expect(api.requests.creation.count).toStrictEqual(1);
