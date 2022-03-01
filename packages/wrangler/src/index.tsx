@@ -243,11 +243,13 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
   return rules;
 }
 
+const LEGACY_ENV_DEFAULT = true; // TODO: set this as false to turn on service environments as the default
+
 function isLegacyEnv(args: unknown, config: Config): boolean {
   return (
     (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
     config.legacy_env ??
-    false
+    LEGACY_ENV_DEFAULT
   );
 }
 
@@ -1311,7 +1313,7 @@ export async function main(argv: string[]): Promise<void> {
           legacyEnv={
             (args["legacy-env"] as boolean | undefined) ??
             config.legacy_env ??
-            false
+            LEGACY_ENV_DEFAULT
           }
           buildCommand={config.build || {}}
           format={config.build?.upload?.format}

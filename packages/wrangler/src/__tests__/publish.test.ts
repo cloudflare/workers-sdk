@@ -107,7 +107,7 @@ describe("publish", () => {
           env: "some-env",
           legacyEnv: false,
         });
-        await runWrangler("publish index.js --env some-env");
+        await runWrangler("publish index.js --env some-env --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
           "Uploaded
           test-name (some-env)
@@ -215,7 +215,7 @@ describe("publish", () => {
         routes: ["dev-example.com/some-route/*"],
         env: "dev",
       });
-      await runWrangler("publish ./index --env dev");
+      await runWrangler("publish ./index --env dev --legacy-env false");
     });
 
     it.todo("should error if it's a workers.dev route");
@@ -796,7 +796,7 @@ export default{
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-      await runWrangler("publish --env some-env");
+      await runWrangler("publish --env some-env --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
