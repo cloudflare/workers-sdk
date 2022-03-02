@@ -766,12 +766,11 @@ export async function main(argv: string[]): Promise<void> {
           default: "127.0.0.1",
         })
         .option("port", {
-          describe: "Port to listen on, defaults to 8787",
+          describe: "Port to listen on",
           type: "number",
-          default: 8787,
         })
-        .option("devtools-port", {
-          describe: "Port for devtools to connect to, defaults to 9229",
+        .option("inspector-port", {
+          describe: "Port for devtools to connect to",
           type: "number",
         })
         .option("host", {
@@ -893,8 +892,12 @@ export async function main(argv: string[]): Promise<void> {
             args.siteInclude,
             args.siteExclude
           )}
-          port={args.port || config.dev?.port}
-          inspectorPort={args.devtoolsPort ?? (await getPort({ port: 9229 }))}
+          port={
+            args.port || config.dev?.port || (await getPort({ port: 8787 }))
+          }
+          inspectorPort={
+            args["inspector-port"] ?? (await getPort({ port: 9229 }))
+          }
           public={args["experimental-public"]}
           compatibilityDate={
             args["compatibility-date"] ||
@@ -1369,7 +1372,7 @@ export async function main(argv: string[]): Promise<void> {
             r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
           }}
-          inspectorPort={9229}
+          inspectorPort={await getPort({ port: 9229 })}
         />
       );
       await waitUntilExit();

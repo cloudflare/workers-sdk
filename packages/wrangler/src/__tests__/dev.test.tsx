@@ -58,7 +58,7 @@ function renderDev({
   name,
   entry = { file: "some/entry.ts", directory: process.cwd() },
   port,
-  inspectorPort = 8008,
+  inspectorPort = 9229,
   format,
   accountId,
   legacyEnv = true,
