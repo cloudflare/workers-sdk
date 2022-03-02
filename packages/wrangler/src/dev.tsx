@@ -56,6 +56,7 @@ export type DevProps = {
   };
   env: string | undefined;
   legacyEnv: boolean;
+  zone: string | undefined;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -142,6 +143,7 @@ function Dev(props: DevProps): JSX.Element {
           usageModel={props.usageModel}
           env={props.env}
           legacyEnv={props.legacyEnv}
+          zone={props.zone}
         />
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
@@ -192,6 +194,7 @@ function Remote(props: {
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
   legacyEnv: boolean | undefined;
+  zone: string | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -210,6 +213,7 @@ function Remote(props: {
     usageModel: props.usageModel,
     env: props.env,
     legacyEnv: props.legacyEnv,
+    zone: props.zone,
   });
 
   usePreviewServer({
@@ -685,6 +689,7 @@ function useWorker(props: {
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
   legacyEnv: boolean | undefined;
+  zone: string | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -769,10 +774,14 @@ function useWorker(props: {
         usage_model: usageModel,
       };
       setToken(
-        await createWorker(init, {
-          accountId,
-          apiToken,
-        })
+        await createWorker(
+          init,
+          {
+            accountId,
+            apiToken,
+          },
+          { env: props.env, legacyEnv: props.legacyEnv, zone: props.zone }
+        )
       );
     }
     start().catch((err) => {
@@ -795,6 +804,7 @@ function useWorker(props: {
     modules,
     props.env,
     props.legacyEnv,
+    props.zone,
   ]);
   return token;
 }

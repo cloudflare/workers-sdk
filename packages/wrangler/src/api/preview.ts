@@ -2,7 +2,7 @@ import { URL } from "node:url";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { toFormData } from "./form_data";
-import type { CfAccount, CfWorkerInit } from "./worker";
+import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 
 /**
  * A preview mode.
@@ -55,10 +55,13 @@ export interface CfPreviewToken {
 /**
  * Generates a preview session token.
  */
-async function sessionToken(account: CfAccount): Promise<CfPreviewToken> {
-  const { accountId, zoneId } = account;
-  const initUrl = zoneId
-    ? `/zones/${zoneId}/workers/edge-preview`
+async function sessionToken(
+  account: CfAccount,
+  ctx: CfWorkerContext
+): Promise<CfPreviewToken> {
+  const { accountId } = account;
+  const initUrl = ctx.zone
+    ? `/zones/${ctx.zone}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
   const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
@@ -92,15 +95,22 @@ function randomId(): string {
  */
 export async function previewToken(
   account: CfAccount,
-  worker: CfWorkerInit
+  worker: CfWorkerInit,
+  ctx: CfWorkerContext
 ): Promise<CfPreviewToken> {
-  const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(account);
+  const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(
+    account,
+    ctx
+  );
 
-  const { accountId, zoneId } = account;
-  const scriptId = zoneId ? randomId() : worker.name || host.split(".")[0];
-  const url = `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
+  const { accountId } = account;
+  const scriptId = ctx.zone ? randomId() : worker.name || host.split(".")[0];
+  const url =
+    ctx.env && !ctx.legacyEnv
+      ? `/accounts/${accountId}/workers/services/${scriptId}/environments/${ctx.env}/edge-preview`
+      : `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
-  const mode: CfPreviewMode = zoneId
+  const mode: CfPreviewMode = ctx.zone
     ? { routes: ["*/*"] }
     : { workers_dev: true };
 
@@ -119,8 +129,17 @@ export async function previewToken(
     value: preview_token,
     // TODO: verify this works with zoned workers
     host:
-      worker.name && !zoneId
-        ? `${worker.name}.${host.split(".").slice(1).join(".")}`
+      worker.name && !ctx.zone
+        ? // hrmm this might need change as well
+          `${
+            worker.name
+            // TODO: this should also probably have the env prefix
+            // but it doesn't appear to work yet, instead giving us the
+            // "There is nothing here yet" screen
+            // ctx.env && !ctx.legacyEnv
+            //   ? `${ctx.env}.${worker.name}`
+            //   : worker.name
+          }.${host.split(".").slice(1).join(".")}`
         : host,
     inspectorUrl,
     prewarmUrl,

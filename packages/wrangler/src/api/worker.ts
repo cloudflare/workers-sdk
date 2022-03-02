@@ -16,10 +16,6 @@ export interface CfAccount {
    * An account ID.
    */
   accountId: string;
-  /**
-   * A zone ID, only required if not using `workers.dev`.
-   */
-  zoneId?: string;
 }
 
 /**
@@ -164,6 +160,12 @@ export interface CfWorkerInit {
   usage_model: undefined | "bundled" | "unbound";
 }
 
+export interface CfWorkerContext {
+  env: string | undefined;
+  legacyEnv: boolean | undefined;
+  zone: string | undefined;
+}
+
 /**
  * A stub to create a Cloudflare Worker preview.
  *
@@ -172,9 +174,10 @@ export interface CfWorkerInit {
  */
 export async function createWorker(
   init: CfWorkerInit,
-  account: CfAccount
+  account: CfAccount,
+  ctx: CfWorkerContext
 ): Promise<CfPreviewToken> {
-  const token = await previewToken(account, init);
+  const token = await previewToken(account, init, ctx);
   const response = await fetch(token.prewarmUrl.href, { method: "POST" });
   if (!response.ok) {
     // console.error("worker failed to prewarm: ", response.statusText);
