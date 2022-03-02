@@ -5,6 +5,7 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import { findUp } from "find-up";
+import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
@@ -765,9 +766,12 @@ export async function main(argv: string[]): Promise<void> {
           default: "127.0.0.1",
         })
         .option("port", {
-          describe: "Port to listen on, defaults to 8787",
+          describe: "Port to listen on",
           type: "number",
-          default: 8787,
+        })
+        .option("inspector-port", {
+          describe: "Port for devtools to connect to",
+          type: "number",
         })
         .option("host", {
           type: "string",
@@ -888,7 +892,12 @@ export async function main(argv: string[]): Promise<void> {
             args.siteInclude,
             args.siteExclude
           )}
-          port={args.port || config.dev?.port}
+          port={
+            args.port || config.dev?.port || (await getPort({ port: 8787 }))
+          }
+          inspectorPort={
+            args["inspector-port"] ?? (await getPort({ port: 9229 }))
+          }
           public={args["experimental-public"]}
           compatibilityDate={
             args["compatibility-date"] ||
@@ -1363,6 +1372,7 @@ export async function main(argv: string[]): Promise<void> {
             r2_buckets: envRootObj.r2_buckets,
             unsafe: envRootObj.unsafe?.bindings,
           }}
+          inspectorPort={await getPort({ port: 9229 })}
         />
       );
       await waitUntilExit();

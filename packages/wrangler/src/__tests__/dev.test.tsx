@@ -58,6 +58,7 @@ function renderDev({
   name,
   entry = { file: "some/entry.ts", directory: process.cwd() },
   port,
+  inspectorPort = 9229,
   format,
   accountId,
   legacyEnv = true,
@@ -90,6 +91,7 @@ function renderDev({
       env={env}
       rules={rules}
       port={port}
+      inspectorPort={inspectorPort}
       legacyEnv={legacyEnv}
       buildCommand={buildCommand}
       format={format}

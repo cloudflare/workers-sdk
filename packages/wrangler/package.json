@@ -70,6 +70,7 @@
     "faye-websocket": "^0.11.4",
     "finalhandler": "^1.1.2",
     "find-up": "^6.2.0",
+    "get-port": "^6.1.2",
     "glob-to-regexp": "0.4.1",
     "ignore": "^5.2.0",
     "ink": "^3.2.0",
@@ -119,7 +120,7 @@
     "testTimeout": 30000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js"

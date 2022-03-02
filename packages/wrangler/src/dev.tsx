@@ -35,6 +35,7 @@ export type DevProps = {
   name?: string;
   entry: Entry;
   port?: number;
+  inspectorPort: number;
   format: CfScriptFormat | undefined;
   rules: Config["rules"];
   accountId: undefined | string;
@@ -102,7 +103,8 @@ function Dev(props: DevProps): JSX.Element {
       local: props.initialMode === "local",
       tunnel: false,
     },
-    port
+    port,
+    props.inspectorPort
   );
 
   useTunnel(toggles.tunnel);
@@ -120,6 +122,7 @@ function Dev(props: DevProps): JSX.Element {
           public={props.public}
           port={port}
           rules={props.rules}
+          inspectorPort={props.inspectorPort}
           enableLocalPersistence={props.enableLocalPersistence}
         />
       ) : (
@@ -133,6 +136,7 @@ function Dev(props: DevProps): JSX.Element {
           assetPaths={props.assetPaths}
           public={props.public}
           port={port}
+          inspectorPort={props.inspectorPort}
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
           usageModel={props.usageModel}
@@ -179,6 +183,7 @@ function Remote(props: {
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
   port: number;
+  inspectorPort: number;
   accountId: undefined | string;
   apiToken: undefined | string;
   bindings: CfWorkerInit["bindings"];
@@ -215,7 +220,7 @@ function Remote(props: {
 
   useInspector({
     inspectorUrl: previewToken ? previewToken.inspectorUrl.href : undefined,
-    port: 9229,
+    port: props.inspectorPort,
     logToTerminal: true,
   });
   return null;
@@ -229,6 +234,7 @@ function Local(props: {
   public: undefined | string;
   port: number;
   rules: Config["rules"];
+  inspectorPort: number;
   enableLocalPersistence: boolean;
 }) {
   const { inspectorUrl } = useLocalWorker({
@@ -240,9 +246,14 @@ function Local(props: {
     public: props.public,
     port: props.port,
     rules: props.rules,
+    inspectorPort: props.port,
     enableLocalPersistence: props.enableLocalPersistence,
   });
-  useInspector({ inspectorUrl, port: 9229, logToTerminal: false });
+  useInspector({
+    inspectorUrl,
+    port: props.inspectorPort,
+    logToTerminal: false,
+  });
   return null;
 }
 
@@ -255,10 +266,11 @@ function useLocalWorker(props: {
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
   port: number;
+  inspectorPort: number;
   enableLocalPersistence: boolean;
 }) {
   // TODO: pass vars via command line
-  const { bundle, format, bindings, port, assetPaths } = props;
+  const { bundle, format, bindings, port, assetPaths, inspectorPort } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
@@ -266,7 +278,14 @@ function useLocalWorker(props: {
     async function startLocalWorker() {
       if (!bundle || !format) return;
 
+      // port for the worker
       await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
+      // port for inspector
+      await waitForPortToBeAvailable(inspectorPort, {
+        retryPeriod: 200,
+        timeout: 2000,
+      });
+
       if (props.public) {
         throw new Error(
           '⎔ A "public" folder is not yet supported in local mode.'
@@ -386,7 +405,7 @@ function useLocalWorker(props: {
       local.current.stderr?.on("data", (data: Buffer) => {
         console.error(`${data.toString()}`);
         const matches =
-          /Debugger listening on (ws:\/\/127\.0\.0\.1:9229\/[A-Za-z0-9-]+)/.exec(
+          /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)/.exec(
             data.toString()
           );
         if (matches) {
@@ -429,6 +448,7 @@ function useLocalWorker(props: {
     bundle,
     format,
     port,
+    inspectorPort,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,
@@ -863,7 +883,11 @@ type useHotkeysInitialState = {
   local: boolean;
   tunnel: boolean;
 };
-function useHotkeys(initial: useHotkeysInitialState, port: number) {
+function useHotkeys(
+  initial: useHotkeysInitialState,
+  port: number,
+  inspectorPort: number
+) {
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
   useInput(
@@ -881,7 +905,7 @@ function useHotkeys(initial: useHotkeysInitialState, port: number) {
         // toggle inspector
         case "d": {
           await openInBrowser(
-            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:9229/ws`
+            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`
           );
           break;
         }
