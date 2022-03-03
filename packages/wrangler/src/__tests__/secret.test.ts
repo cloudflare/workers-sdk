@@ -123,22 +123,6 @@ describe("wrangler secret", () => {
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
     });
-
-    it("warns about being a no-op in local mode", async () => {
-      mockPrompt({
-        text: "Enter a secret value:",
-        type: "password",
-        result: "the-secret",
-      });
-
-      mockPutRequest({ name: "the-secret-name", text: "the-secret" });
-      await runWrangler("secret put the-key --name script-name --local");
-      expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(
-        `"\`wrangler secret put\` is a no-op in --local mode"`
-      );
-    });
   });
 
   describe("delete", () => {
@@ -244,21 +228,6 @@ describe("wrangler secret", () => {
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
     });
-
-    it("warns about being a no-op in local mode", async () => {
-      mockConfirm({
-        text: "Are you sure you want to permanently delete the variable the-key on the script script-name?",
-        result: true,
-      });
-      await runWrangler("secret delete the-key --name script-name --local");
-      expect(std.out).toMatchInlineSnapshot(
-        `"🌀 Deleting the secret the-key on script script-name"`
-      );
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(
-        `"\`wrangler secret delete\` is a no-op in --local mode"`
-      );
-    });
   });
 
   describe("list", () => {
@@ -352,15 +321,6 @@ describe("wrangler secret", () => {
         If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
-    });
-
-    it("warns about being a no-op in local mode", async () => {
-      await runWrangler("secret list --name script-name --local");
-      expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(
-        `"\`wrangler secret list\` is a no-op in --local mode"`
-      );
     });
   });
 });

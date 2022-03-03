@@ -59,7 +59,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
@@ -89,7 +88,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
@@ -120,7 +118,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local    Run on my machine  [boolean] [default: false]
                 --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
@@ -285,7 +282,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The name of the namespace to delete  [string]
                 --namespace-id  The id of the namespace to delete  [string]
                 --env           Perform on a specific environment  [string]
@@ -481,7 +477,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
@@ -518,7 +513,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
@@ -555,7 +549,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
@@ -592,7 +585,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
@@ -629,7 +621,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
                 --env           Perform on a specific environment  [string]
@@ -955,7 +946,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]
@@ -987,7 +977,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]
@@ -1020,7 +1009,6 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-            -l, --local         Run on my machine  [boolean] [default: false]
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
                 --env           Perform on a specific environment  [string]

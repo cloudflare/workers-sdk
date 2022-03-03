@@ -82,9 +82,6 @@ describe("wrangler", () => {
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
 
-            Options:
-              -l, --local  Run on my machine  [boolean] [default: false]
-
             Not enough non-option arguments: got 0, need at least 1"
           `);
         });
@@ -109,9 +106,6 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Options:
-              -l, --local  Run on my machine  [boolean] [default: false]
 
             Unexpected additional positional arguments \\"def ghi\\"."
           `);
@@ -164,9 +158,6 @@ describe("wrangler", () => {
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
 
-            Options:
-              -l, --local  Run on my machine  [boolean] [default: false]
-
             Not enough non-option arguments: got 0, need at least 1"
           `);
         });
@@ -191,9 +182,6 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Options:
-              -l, --local  Run on my machine  [boolean] [default: false]
 
             Unexpected additional positional arguments \\"def ghi\\"."
           `);
