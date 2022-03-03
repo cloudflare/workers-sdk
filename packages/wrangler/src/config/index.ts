@@ -13,7 +13,7 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig(configPath?: string): Config {
+export async function readConfig(configPath?: string): Promise<Config> {
   let rawConfig: RawConfig = {};
   if (!configPath) {
     configPath = findWranglerToml();
@@ -21,7 +21,7 @@ export function readConfig(configPath?: string): Config {
 
   // Load the configuration from disk if available
   if (configPath) {
-    rawConfig = parseTOML(readFile(configPath), configPath);
+    rawConfig = parseTOML(await readFile(configPath), configPath);
   }
 
   // Process the top-level configuration.
