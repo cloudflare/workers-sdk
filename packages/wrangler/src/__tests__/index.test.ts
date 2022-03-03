@@ -51,10 +51,7 @@ describe("wrangler", () => {
           -c, --config      Path to .toml configuration file  [string]
           -h, --help        Show help  [boolean]
           -v, --version     Show version number  [boolean]
-              --legacy-env  Use legacy environments  [boolean]
-
-        Options:
-          -l, --local  Run on my machine  [boolean] [default: false]"
+              --legacy-env  Use legacy environments  [boolean]"
       `);
 
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -91,9 +88,6 @@ describe("wrangler", () => {
           -h, --help        Show help  [boolean]
           -v, --version     Show version number  [boolean]
               --legacy-env  Use legacy environments  [boolean]
-
-        Options:
-          -l, --local  Run on my machine  [boolean] [default: false]
 
         Unknown command: invalid-command."
       `);

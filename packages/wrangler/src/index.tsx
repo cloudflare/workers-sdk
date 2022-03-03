@@ -131,7 +131,6 @@ class DeprecationError extends Error {
     super(`DEPRECATION WARNING:\n${message}`);
   }
 }
-class NotImplementedError extends Error {}
 
 export async function main(argv: string[]): Promise<void> {
   const wrangler = makeCLI(argv)
@@ -699,6 +698,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The function that is called for each JSX fragment",
           type: "string",
         })
+        .option("local", {
+          alias: "l",
+          describe: "Run on my machine",
+          type: "boolean",
+          default: false, // I bet this will a point of contention. We'll revisit it.
+        })
         .option("experimental-enable-local-persistence", {
           describe: "Enable persistence for this session (only for local mode)",
           type: "boolean",
@@ -903,12 +908,6 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      if (args.local) {
-        throw new NotImplementedError(
-          "🚫  Local publishing is not yet supported"
-        );
-      }
-
       if (args["experimental-public"]) {
         console.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
@@ -932,23 +931,21 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      if (!args.local) {
-        // -- snip, extract --
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
-
-        if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
-        }
-        // -- snip, end --
+      // -- snip, extract --
+      const loggedIn = await loginOrRefreshIfRequired();
+      if (!loggedIn) {
+        // didn't login, let's just quit
+        console.log("Did not login, quitting...");
+        return;
       }
+
+      if (!config.account_id) {
+        config.account_id = await getAccountId();
+        if (!config.account_id) {
+          throw new Error("No account id found, quitting...");
+        }
+      }
+      // -- snip, end --
 
       const assetPaths = getAssetPaths(
         config,
@@ -1037,12 +1034,6 @@ export async function main(argv: string[]): Promise<void> {
       );
     },
     async (args) => {
-      if (args.local) {
-        throw new NotImplementedError(
-          `local mode is not yet supported for this command`
-        );
-      }
-
       const config = await readConfig(args.config as ConfigPath);
 
       const scriptName = getScriptName(args, config);
@@ -1175,23 +1166,21 @@ export async function main(argv: string[]): Promise<void> {
       const config = await readConfig(args.config as ConfigPath);
       const entry = getEntry(config, "dev");
 
-      if (!args.local) {
-        // -- snip, extract --
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
-
-        if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
-        }
-        // -- snip, end --
+      // -- snip, extract --
+      const loggedIn = await loginOrRefreshIfRequired();
+      if (!loggedIn) {
+        // didn't login, let's just quit
+        console.log("Did not login, quitting...");
+        return;
       }
+
+      if (!config.account_id) {
+        config.account_id = await getAccountId();
+        if (!config.account_id) {
+          throw new Error("No account id found, quitting...");
+        }
+      }
+      // -- snip, end --
 
       const environments = config.env ?? {};
       const envRootObj = args.env ? environments[args.env] || {} : config;
@@ -1382,36 +1371,26 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            if (args.local) {
-              console.warn("`wrangler secret put` is a no-op in --local mode");
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
 
-            if (!args.local) {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
-              // -- snip, end --
             }
+            // -- snip, end --
 
             const secretValue = await prompt(
               "Enter a secret value:",
               "password"
             );
-
-            if (args.local) {
-              return;
-            }
 
             console.log(
               `🌀 Creating the secret for script ${scriptName} ${
@@ -1509,29 +1488,21 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            if (args.local) {
-              console.warn(
-                "`wrangler secret delete` is a no-op in --local mode"
-              );
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
 
-            if (!args.local) {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
-              // -- snip, end --
             }
+            // -- snip, end --
 
             if (
               await confirm(
@@ -1547,10 +1518,6 @@ export async function main(argv: string[]): Promise<void> {
                   args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
                 }`
               );
-
-              if (args.local) {
-                return;
-              }
 
               const url =
                 !args.env || isLegacyEnv(args, config)
@@ -1585,31 +1552,21 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            if (args.local) {
-              console.warn("`wrangler secret list` is a no-op in --local mode");
-            }
-
-            if (!args.local) {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-            }
-
-            if (args.local) {
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
               return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
 
             const url =
               !args.env || isLegacyEnv(args, config)
@@ -1674,52 +1631,38 @@ export async function main(argv: string[]): Promise<void> {
             const preview = args.preview ? "_preview" : "";
             const title = `${name}${environment}-${args.namespace}${preview}`;
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              await mf.getKVNamespace(title); // this should "create" the namespace
-              console.log(`✨ Success! Created KV namespace ${title}`);
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              // TODO: generate a binding name stripping non alphanumeric chars
-
-              console.log(`🌀 Creating namespace with title "${title}"`);
-              const namespaceId = await createNamespace(
-                config.account_id,
-                title
-              );
-
-              console.log("✨ Success!");
-              const envString = args.env ? ` under [env.${args.env}]` : "";
-              const previewString = args.preview ? "preview_" : "";
-              console.log(
-                `Add the following to your configuration file in your kv_namespaces array${envString}:`
-              );
-              console.log(
-                `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
-              );
-
-              // TODO: automatically write this block to the wrangler.toml config file??
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            // TODO: generate a binding name stripping non alphanumeric chars
+
+            console.log(`🌀 Creating namespace with title "${title}"`);
+            const namespaceId = await createNamespace(config.account_id, title);
+
+            console.log("✨ Success!");
+            const envString = args.env ? ` under [env.${args.env}]` : "";
+            const previewString = args.preview ? "preview_" : "";
+            console.log(
+              `Add the following to your configuration file in your kv_namespaces array${envString}:`
+            );
+            console.log(
+              `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
+            );
+
+            // TODO: automatically write this block to the wrangler.toml config file??
           }
         )
         .command(
@@ -1729,37 +1672,31 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = await readConfig(args.config as ConfigPath);
 
-            if (args.local) {
-              throw new NotImplementedError(
-                `local mode is not yet supported for this command`
-              );
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              // TODO: we should show bindings if they exist for given ids
-
-              console.log(
-                JSON.stringify(
-                  await listNamespaces(config.account_id),
-                  null,
-                  "  "
-                )
-              );
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            // TODO: we should show bindings if they exist for given ids
+
+            console.log(
+              JSON.stringify(
+                await listNamespaces(config.account_id),
+                null,
+                "  "
+              )
+            );
           }
         )
         .command(
@@ -1788,60 +1725,53 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = await readConfig(args.config as ConfigPath);
 
-            if (args.local) {
-              throw new NotImplementedError(
-                `local mode is not yet supported for this command`
+            let id;
+            try {
+              id = getNamespaceId(args, config);
+            } catch (e) {
+              throw new CommandLineArgsError(
+                "Not able to delete namespace.\n" + ((e as Error).message ?? e)
               );
-            } else {
-              let id;
-              try {
-                id = getNamespaceId(args, config);
-              } catch (e) {
-                throw new CommandLineArgsError(
-                  "Not able to delete namespace.\n" +
-                    ((e as Error).message ?? e)
-                );
-              }
-
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              await fetchResult<{ id: string }>(
-                `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
-                { method: "DELETE" }
-              );
-
-              // TODO: recommend they remove it from wrangler.toml
-
-              // test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
-              // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
-              // n
-              // 💁  Not deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
-              // ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
-              // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
-              // y
-              // 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
-              // ✨  Success
-              // ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
-              // ➜  test-mf
-
-              // TODO: do it automatically
-
-              // TODO: delete the preview namespace as well?
             }
+
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
+            }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            await fetchResult<{ id: string }>(
+              `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
+              { method: "DELETE" }
+            );
+
+            // TODO: recommend they remove it from wrangler.toml
+
+            // test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+            // n
+            // 💁  Not deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+            // ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
+            // Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
+            // y
+            // 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+            // ✨  Success
+            // ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
+            // ➜  test-mf
+
+            // TODO: do it automatically
+
+            // TODO: delete the preview namespace as well?
           }
         );
     }
@@ -1918,37 +1848,26 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              await ns.put(key, value, { expiration, expirationTtl: ttl });
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              await putKeyValue(config.account_id, namespaceId, key, value, {
-                expiration,
-                expiration_ttl: ttl,
-              });
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            await putKeyValue(config.account_id, namespaceId, key, value, {
+              expiration,
+              expiration_ttl: ttl,
+            });
           }
         )
         .command(
@@ -1985,40 +1904,28 @@ export async function main(argv: string[]): Promise<void> {
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              const listResponse = await ns.list({ prefix });
-              console.log(JSON.stringify(listResponse.keys, null, "  ")); // TODO: paginate, collate
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              const results = await listNamespaceKeys(
-                config.account_id,
-                namespaceId,
-                prefix
-              );
-              console.log(JSON.stringify(results, undefined, 2));
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            const results = await listNamespaceKeys(
+              config.account_id,
+              namespaceId,
+              prefix
+            );
+            console.log(JSON.stringify(results, undefined, 2));
           }
         )
         .command(
@@ -2059,39 +1966,23 @@ export async function main(argv: string[]): Promise<void> {
             const config = await readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              console.log(await ns.get(key));
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
               return;
             }
 
-            if (!args.local) {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
-              // -- snip, end --
-
-              console.log(
-                await getKeyValue(config.account_id, namespaceId, key)
-              );
             }
+            // -- snip, end --
+
+            console.log(await getKeyValue(config.account_id, namespaceId, key));
           }
         )
         .command(
@@ -2130,35 +2021,21 @@ export async function main(argv: string[]): Promise<void> {
               `deleting the key "${key}" on namespace ${namespaceId}`
             );
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              console.log(await ns.delete(key));
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
               return;
             }
 
-            if (!args.local) {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
               if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
+                throw new Error("No account id found, quitting...");
               }
-              // -- snip, end --
             }
+            // -- snip, end --
 
             await fetchResult(
               `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
@@ -2212,46 +2089,25 @@ export async function main(argv: string[]): Promise<void> {
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(await readFile(filename), filename);
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              for (const {
-                key,
-                value,
-                expiration,
-                expiration_ttl,
-              } of content) {
-                await ns.put(key, value, {
-                  expiration,
-                  expirationTtl: expiration_ttl,
-                });
-              }
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              console.log(
-                await putBulkKeyValue(config.account_id, namespaceId, content)
-              );
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            console.log(
+              await putBulkKeyValue(config.account_id, namespaceId, content)
+            );
           }
         )
         .command(
@@ -2287,42 +2143,25 @@ export async function main(argv: string[]): Promise<void> {
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(await readFile(filename), filename);
 
-            if (args.local) {
-              const { Miniflare } = await import("miniflare");
-              const mf = new Miniflare({
-                kvPersist: (args.kvPersist as string) || true,
-                // TODO: these options shouldn't be required
-                script: ` `, // has to be a string with at least one char
-              });
-              const ns = await mf.getKVNamespace(namespaceId);
-              for (const key of content) {
-                await ns.delete(key);
-              }
-            } else {
-              // -- snip, extract --
-              const loggedIn = await loginOrRefreshIfRequired();
-              if (!loggedIn) {
-                // didn't login, let's just quit
-                console.log("Did not login, quitting...");
-                return;
-              }
-
-              if (!config.account_id) {
-                config.account_id = await getAccountId();
-                if (!config.account_id) {
-                  throw new Error("No account id found, quitting...");
-                }
-              }
-              // -- snip, end --
-
-              console.log(
-                await deleteBulkKeyValue(
-                  config.account_id,
-                  namespaceId,
-                  content
-                )
-              );
+            // -- snip, extract --
+            const loggedIn = await loginOrRefreshIfRequired();
+            if (!loggedIn) {
+              // didn't login, let's just quit
+              console.log("Did not login, quitting...");
+              return;
             }
+
+            if (!config.account_id) {
+              config.account_id = await getAccountId();
+              if (!config.account_id) {
+                throw new Error("No account id found, quitting...");
+              }
+            }
+            // -- snip, end --
+
+            console.log(
+              await deleteBulkKeyValue(config.account_id, namespaceId, content)
+            );
           }
         );
     }
@@ -2353,42 +2192,6 @@ export async function main(argv: string[]): Promise<void> {
 
           const config = await readConfig(args.config as ConfigPath);
 
-          if (args.local) {
-            throw new NotImplementedError(
-              `local mode is not yet supported for this command`
-            );
-          } else {
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-
-            console.log(`Creating bucket ${args.name}.`);
-            await createR2Bucket(config.account_id, args.name);
-            console.log(`Created bucket ${args.name}.`);
-          }
-        }
-      );
-
-      r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-        const config = await readConfig(args.config as ConfigPath);
-
-        if (args.local) {
-          throw new NotImplementedError(
-            `local mode is not yet supported for this command`
-          );
-        } else {
           // -- snip, extract --
           const loggedIn = await loginOrRefreshIfRequired();
           if (!loggedIn) {
@@ -2405,10 +2208,34 @@ export async function main(argv: string[]): Promise<void> {
           }
           // -- snip, end --
 
-          console.log(
-            JSON.stringify(await listR2Buckets(config.account_id), null, 2)
-          );
+          console.log(`Creating bucket ${args.name}.`);
+          await createR2Bucket(config.account_id, args.name);
+          console.log(`Created bucket ${args.name}.`);
         }
+      );
+
+      r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
+        const config = await readConfig(args.config as ConfigPath);
+
+        // -- snip, extract --
+        const loggedIn = await loginOrRefreshIfRequired();
+        if (!loggedIn) {
+          // didn't login, let's just quit
+          console.log("Did not login, quitting...");
+          return;
+        }
+
+        if (!config.account_id) {
+          config.account_id = await getAccountId();
+          if (!config.account_id) {
+            throw new Error("No account id found, quitting...");
+          }
+        }
+        // -- snip, end --
+
+        console.log(
+          JSON.stringify(await listR2Buckets(config.account_id), null, 2)
+        );
       });
 
       r2BucketYargs.command(
@@ -2432,31 +2259,25 @@ export async function main(argv: string[]): Promise<void> {
 
           const config = await readConfig(args.config as ConfigPath);
 
-          if (args.local) {
-            throw new NotImplementedError(
-              `local mode is not yet supported for this command`
-            );
-          } else {
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-
-            console.log(`Deleting bucket ${args.name}.`);
-            await deleteR2Bucket(config.account_id, args.name);
-            console.log(`Deleted bucket ${args.name}.`);
+          // -- snip, extract --
+          const loggedIn = await loginOrRefreshIfRequired();
+          if (!loggedIn) {
+            // didn't login, let's just quit
+            console.log("Did not login, quitting...");
+            return;
           }
+
+          if (!config.account_id) {
+            config.account_id = await getAccountId();
+            if (!config.account_id) {
+              throw new Error("No account id found, quitting...");
+            }
+          }
+          // -- snip, end --
+
+          console.log(`Deleting bucket ${args.name}.`);
+          await deleteR2Bucket(config.account_id, args.name);
+          console.log(`Deleted bucket ${args.name}.`);
         }
       );
       return r2BucketYargs;
@@ -2472,12 +2293,6 @@ export async function main(argv: string[]): Promise<void> {
       alias: "c",
       describe: "Path to .toml configuration file",
       type: "string",
-    })
-    .option("local", {
-      alias: "l",
-      describe: "Run on my machine",
-      type: "boolean",
-      default: false, // I bet this will a point of contention. We'll revisit it.
     });
 
   wrangler.group(["config", "help", "version", "legacy-env"], "Flags:");
