@@ -16,6 +16,9 @@ describe("wrangler", () => {
 
   beforeEach(() => {
     mockPackageManager = {
+      cwd: process.cwd(),
+      // @ts-expect-error we're making a fake package manager here
+      type: "mockpm",
       addDevDeps: jest.fn(),
       install: jest.fn(),
     };
@@ -111,17 +114,19 @@ describe("wrangler", () => {
       expect(fs.existsSync("./tsconfig.json")).toBe(false);
     });
 
-    it("should create a named Worker wrangler.toml", async () => {
+    it("should create a wrangler.toml and a directory for a named Worker ", async () => {
       mockConfirm({
         text: "No package.json found. Would you like to create one?",
         result: false,
       });
       await runWrangler("init my-worker");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      const parsed = TOML.parse(
+        await fsp.readFile("./my-worker/wrangler.toml", "utf-8")
+      );
       expect(typeof parsed.compatibility_date).toBe("string");
       expect(parsed.name).toBe("my-worker");
-      expect(fs.existsSync("./package.json")).toBe(false);
-      expect(fs.existsSync("./tsconfig.json")).toBe(false);
+      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
+      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
@@ -138,6 +143,37 @@ describe("wrangler", () => {
       expect(std.warn).toContain("wrangler.toml file already exists!");
       const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(parsed.compatibility_date).toBe("something-else");
+    });
+
+    it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
+      fs.writeFileSync(
+        "./wrangler.toml",
+        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
+        "utf-8"
+      );
+      mockConfirm(
+        {
+          text: "Do you want to continue initializing this project?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.ts?",
+          result: true,
+        }
+      );
+
+      await runWrangler("init");
+      expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
+        `"compatibility_date=\\"something-else\\""`
+      );
     });
 
     it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
@@ -208,7 +244,7 @@ describe("wrangler", () => {
       );
       await runWrangler("init my-worker");
       const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
+        fs.readFileSync("./my-worker/package.json", "utf-8")
       );
       expect(packageJson.name).toBe("my-worker");
     });
@@ -399,18 +435,19 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.js")).toBe(false);
       expect(fs.existsSync("./src/index.ts")).toBe(true);
 
-      expect(packageJson.scripts.start).toBe("wrangler dev src/index.ts");
-      expect(packageJson.scripts.publish).toBe("wrangler publish src/index.ts");
+      expect(packageJson.scripts.start).toBe("wrangler dev");
+      expect(packageJson.scripts.publish).toBe("wrangler publish");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
-              "✨ Successfully created wrangler.toml
-              ✨ Created package.json
-              ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
-              To start developing on your worker, run npm start.
-              To publish your worker on to the internet, run npm run publish.
-              ✨ Created src/index.ts"
-            `);
+        "✨ Successfully created wrangler.toml
+        ✨ Created package.json
+        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created src/index.ts
+
+        To start developing your Worker, run \`npm start\`
+        To publish your Worker to the Internet, run \`npm run publish\`"
+      `);
     });
 
     it("should not overwrite package.json scripts for a typescript project", async () => {
@@ -448,12 +485,13 @@ describe("wrangler", () => {
       expect(packageJson.scripts.start).toBe("test-start");
       expect(packageJson.scripts.publish).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
-              "✨ Successfully created wrangler.toml
-              ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
-              To start developing on your worker, npx wrangler dev src/index.ts
-              To publish your worker on to the internet, npx wrangler publish src/index.ts
-              ✨ Created src/index.ts"
-            `);
+        "✨ Successfully created wrangler.toml
+        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created src/index.ts
+
+        To start developing your Worker, run \`npx wrangler dev\`
+        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+      `);
     });
 
     it("should add missing scripts for a non-ts project with .js extension", async () => {
@@ -485,17 +523,18 @@ describe("wrangler", () => {
       expect(fs.existsSync("./src/index.js")).toBe(true);
       expect(fs.existsSync("./src/index.ts")).toBe(false);
 
-      expect(packageJson.scripts.start).toBe("wrangler dev src/index.js");
-      expect(packageJson.scripts.publish).toBe("wrangler publish src/index.js");
+      expect(packageJson.scripts.start).toBe("wrangler dev");
+      expect(packageJson.scripts.publish).toBe("wrangler publish");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
-              "✨ Successfully created wrangler.toml
-              ✨ Created package.json
-              To start developing on your worker, run npm start.
-              To publish your worker on to the internet, run npm run publish.
-              ✨ Created src/index.js"
-            `);
+        "✨ Successfully created wrangler.toml
+        ✨ Created package.json
+        ✨ Created src/index.js
+
+        To start developing your Worker, run \`npm start\`
+        To publish your Worker to the Internet, run \`npm run publish\`"
+      `);
     });
 
     it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
@@ -533,11 +572,12 @@ describe("wrangler", () => {
       expect(packageJson.scripts.start).toBe("test-start");
       expect(packageJson.scripts.publish).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
-              "✨ Successfully created wrangler.toml
-              To start developing on your worker, npx wrangler dev src/index.js
-              To publish your worker on to the internet, npx wrangler publish src/index.js
-              ✨ Created src/index.js"
-            `);
+        "✨ Successfully created wrangler.toml
+        ✨ Created src/index.js
+
+        To start developing your Worker, run \`npx wrangler dev\`
+        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+      `);
     });
 
     it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
@@ -730,9 +770,45 @@ describe("wrangler", () => {
       expect(fs.existsSync("./tsconfig.json")).toBe(true);
       expect(fs.existsSync("./package.json")).toBe(true);
       expect(fs.existsSync("./wrangler.toml")).toBe(true);
+      expect(std.out).toMatchInlineSnapshot(`
+        "✨ Successfully created wrangler.toml
+        ✨ Created package.json
+        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created src/index.ts
+
+        To start developing your Worker, run \`npm start\`
+        To publish your Worker to the Internet, run \`npm run publish\`"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
     });
 
-    it("should initialize with no interactive prompts if `--y` is used", async () => {
+    it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
+      await runWrangler("init my-worker --yes");
+
+      expect(fs.existsSync("./my-worker/src/index.js")).toBe(false);
+      expect(fs.existsSync("./my-worker/src/index.ts")).toBe(true);
+      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(true);
+      expect(fs.existsSync("./my-worker/package.json")).toBe(true);
+      expect(fs.existsSync("./my-worker/wrangler.toml")).toBe(true);
+      const parsedWranglerToml = TOML.parse(
+        fs.readFileSync("./my-worker/wrangler.toml", "utf-8")
+      );
+      expect(parsedWranglerToml.main).toEqual("src/index.ts");
+      expect(std.out).toMatchInlineSnapshot(`
+        "✨ Successfully created wrangler.toml
+        ✨ Created package.json
+        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created src/index.ts
+
+        To start developing your Worker, run \`cd my-worker && npm start\`
+        To publish your Worker to the Internet, run \`npm run publish\`"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should initialize with no interactive prompts if `-y` is used", async () => {
       await runWrangler("init -y");
 
       expect(fs.existsSync("./src/index.js")).toBe(false);

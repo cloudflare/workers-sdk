@@ -842,7 +842,7 @@ function useTunnel(toggle: boolean) {
           await commandExists("cloudflared");
         } catch (e) {
           console.error(
-            "To share your worker on the internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+            "To share your worker on the Internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
           );
           return;
         }
