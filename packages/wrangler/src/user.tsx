@@ -976,7 +976,7 @@ export function listScopes(): void {
   // TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId() {
+export async function getAccountId(): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
 
