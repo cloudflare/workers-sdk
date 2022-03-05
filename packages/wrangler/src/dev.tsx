@@ -56,7 +56,12 @@ export type DevProps = {
   };
   env: string | undefined;
   legacyEnv: boolean;
-  zone: string | undefined;
+  zone:
+    | {
+        id: string;
+        host: string;
+      }
+    | undefined;
 };
 
 function Dev(props: DevProps): JSX.Element {
@@ -128,7 +133,7 @@ function Dev(props: DevProps): JSX.Element {
         />
       ) : (
         <Remote
-          name={props.name}
+          name={scriptName}
           bundle={bundle}
           format={format}
           accountId={props.accountId}
@@ -179,7 +184,7 @@ function useWorkerFormat(props: {
 }
 
 function Remote(props: {
-  name: undefined | string;
+  name: string;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   public: undefined | string;
@@ -194,7 +199,7 @@ function Remote(props: {
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: string | undefined;
+  zone: { id: string; host: string } | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -675,7 +680,7 @@ function useEsbuild({
 }
 
 function useWorker(props: {
-  name: undefined | string;
+  name: string;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   modules: CfModule[];
@@ -689,7 +694,7 @@ function useWorker(props: {
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: string | undefined;
+  zone: { id: string; host: string } | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,

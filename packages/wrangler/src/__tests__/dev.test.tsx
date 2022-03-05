@@ -1,31 +1,23 @@
-import { render } from "ink-testing-library";
+import * as fs from "node:fs";
 import patchConsole from "patch-console";
-import React from "react";
 import Dev from "../dev";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import type { DevProps } from "../dev";
 
 describe("Dev component", () => {
-  let restoreConsole: ReturnType<typeof patchConsole>;
-  beforeEach(() => (restoreConsole = patchConsole(() => {})));
-  afterEach(() => restoreConsole());
+  beforeEach(() => {});
+  mockAccountId();
+  mockApiToken();
+  runInTempDir();
   const std = mockConsoleMethods();
-
-  // This test needs to be rewritten because the error now throws asynchronously
-  // and the Ink framework does not yet have async testing support.
-  it.skip("should throw if format is service-worker and there is a public directory", () => {
-    const { lastFrame } = renderDev({
-      format: "service-worker",
-      accountId: "some-account-id",
-      public: "some/public/path",
-    });
-    expect(lastFrame()?.split("\n").slice(0, 2).join("\n"))
-      .toMatchInlineSnapshot(`
-      "Something went wrong:
-      Error: You cannot use the service worker format with a \`public\` directory."
-    `);
+  afterEach(() => {
+    (Dev as jest.Mock).mockClear();
+    patchConsole(() => {});
+    unsetAllMocks();
   });
 
   describe("entry-points", () => {
@@ -47,67 +39,210 @@ describe("Dev component", () => {
       `);
     });
   });
+
+  describe("host", () => {
+    it("should resolve a host to its zone", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev --host some-host.com");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "some-host.com",
+        id: "some-zone-id",
+      });
+    });
+
+    it("should read wrangler.toml's dev.host", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          host: "some-host.com",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("should read --route", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev --route http://some-host.com/some/path/*");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("should read wrangler.toml's routes", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        routes: [
+          "http://some-host.com/some/path/*",
+          "http://some-other-host.com/path/*",
+        ],
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("should read wrangler.toml's environment specific routes", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        routes: [
+          "http://a-host.com/some/path/*",
+          "http://another-host.com/path/*",
+        ],
+        env: {
+          staging: {
+            routes: [
+              "http://some-host.com/some/path/*",
+              "http://some-other-host.com/path/*",
+            ],
+          },
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev --env staging");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("111.222.333.some-host.com", []);
+      mockGetZones("222.333.some-host.com", []);
+      mockGetZones("333.some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev --host 111.222.333.some-host.com");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "111.222.333.some-host.com",
+        id: "some-zone-id",
+      });
+    });
+
+    it("should, in order, use args.host/config.dev.host/args.routes/config.route/config.routes", async () => {
+      // This test might seem like it's testing implmentation details, but let's be specific and consider it a spec
+
+      fs.writeFileSync("index.js", `export default {};`);
+
+      // config.routes
+      mockGetZones("5.some-host.com", [{ id: "some-zone-id-5" }]);
+      writeWranglerToml({
+        main: "index.js",
+        routes: ["http://5.some-host.com/some/path/*"],
+      });
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "5.some-host.com",
+        id: "some-zone-id-5",
+      });
+      (Dev as jest.Mock).mockClear();
+
+      // config.route
+      mockGetZones("4.some-host.com", [{ id: "some-zone-id-4" }]);
+      writeWranglerToml({
+        main: "index.js",
+        route: "https://4.some-host.com/some/path/*",
+        routes: ["http://5.some-host.com/some/path/*"],
+      });
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "4.some-host.com",
+        id: "some-zone-id-4",
+      });
+      (Dev as jest.Mock).mockClear();
+
+      // --routes
+      mockGetZones("3.some-host.com", [{ id: "some-zone-id-3" }]);
+      writeWranglerToml({
+        main: "index.js",
+        route: "https://4.some-host.com/some/path/*",
+        routes: ["http://5.some-host.com/some/path/*"],
+      });
+      await runWrangler("dev --routes http://3.some-host.com/some/path/*");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "3.some-host.com",
+        id: "some-zone-id-3",
+      });
+      (Dev as jest.Mock).mockClear();
+
+      // config.dev.host
+      mockGetZones("2.some-host.com", [{ id: "some-zone-id-2" }]);
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          host: `2.some-host.com`,
+        },
+        route: "4.some-host.com/some/path/*",
+        routes: ["5.some-host.com/some/path/*"],
+      });
+      await runWrangler("dev --routes http://3.some-host.com/some/path/*");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "2.some-host.com",
+        id: "some-zone-id-2",
+      });
+      (Dev as jest.Mock).mockClear();
+
+      // --host
+      mockGetZones("1.some-host.com", [{ id: "some-zone-id-1" }]);
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          host: `2.some-host.com`,
+        },
+        route: "4.some-host.com/some/path/*",
+        routes: ["5.some-host.com/some/path/*"],
+      });
+      await runWrangler(
+        "dev --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
+      );
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "1.some-host.com",
+        id: "some-zone-id-1",
+      });
+      (Dev as jest.Mock).mockClear();
+    });
+
+    it("should error if a host can't resolve to a zone", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", []);
+      await expect(
+        runWrangler("dev --host some-host.com")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Could not find zone for some-host.com"`
+      );
+    });
+  });
 });
 
-/**
- * Helper function to make it easier to setup and render the `Dev` component.
- *
- * All the `Dev` props are optional here, with sensible defaults for testing.
- */
-function renderDev({
-  name,
-  entry = { file: "some/entry.ts", directory: process.cwd() },
-  port,
-  inspectorPort = 9229,
-  format,
-  accountId,
-  legacyEnv = true,
-  initialMode = "local",
-  jsxFactory,
-  jsxFragment,
-  rules = [],
-  bindings = {
-    kv_namespaces: [],
-    vars: {},
-    durable_objects: { bindings: [] },
-    r2_buckets: [],
-    wasm_modules: {},
-    text_blobs: {},
-    unsafe: [],
-  },
-  public: publicDir,
-  assetPaths,
-  compatibilityDate,
-  compatibilityFlags,
-  usageModel,
-  buildCommand = {},
-  enableLocalPersistence = false,
-  env,
-  zone,
-}: Partial<DevProps>) {
-  return render(
-    <Dev
-      name={name}
-      entry={entry}
-      env={env}
-      rules={rules}
-      port={port}
-      inspectorPort={inspectorPort}
-      legacyEnv={legacyEnv}
-      buildCommand={buildCommand}
-      format={format}
-      initialMode={initialMode}
-      jsxFactory={jsxFactory}
-      jsxFragment={jsxFragment}
-      accountId={accountId}
-      assetPaths={assetPaths}
-      public={publicDir}
-      compatibilityDate={compatibilityDate}
-      compatibilityFlags={compatibilityFlags}
-      usageModel={usageModel}
-      bindings={bindings}
-      enableLocalPersistence={enableLocalPersistence}
-      zone={zone}
-    />
+function mockGetZones(domain: string, zones: { id: string }[] = []) {
+  const removeMock = setMockResponse(
+    "/zones",
+    "GET",
+    (_urlPieces, _init, queryParams) => {
+      expect([...queryParams.entries()]).toEqual([["name", domain]]);
+      // Because the API URL `/zones` is the same for each request, we can get into a situation where earlier mocks get triggered for later requests. So, we simply clear the mock on every trigger.
+      removeMock();
+      return zones;
+    }
   );
 }
