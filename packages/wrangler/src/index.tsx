@@ -29,7 +29,7 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
-import { formatMessage, ParseError, parseJSON, readFile } from "./parse";
+import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -302,7 +302,7 @@ export async function main(argv: string[]): Promise<void> {
         // If package.json exists and wrangler isn't installed,
         // then ask to add wrangler to devDependencies
         const packageJson = parseJSON(
-          await readFile(pathToPackageJson),
+          readFileSync(pathToPackageJson),
           pathToPackageJson
         );
         if (
@@ -332,7 +332,7 @@ export async function main(argv: string[]): Promise<void> {
           isTypescriptProject = true;
           await writeFile(
             path.join(creationDirectory, "./tsconfig.json"),
-            await readFile(path.join(__dirname, "../templates/tsconfig.json"))
+            readFileSync(path.join(__dirname, "../templates/tsconfig.json"))
           );
           await packageManager.addDevDeps(
             "@cloudflare/workers-types",
@@ -349,7 +349,7 @@ export async function main(argv: string[]): Promise<void> {
         // If there's a tsconfig, check if @cloudflare/workers-types
         // is already installed, and offer to install it if not
         const packageJson = parseJSON(
-          await readFile(pathToPackageJson),
+          readFileSync(pathToPackageJson),
           pathToPackageJson
         );
         if (
@@ -375,7 +375,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       const packageJsonContent = parseJSON(
-        await readFile(pathToPackageJson),
+        readFileSync(pathToPackageJson),
         pathToPackageJson
       );
       const shouldWritePackageJsonScripts =
@@ -392,7 +392,7 @@ export async function main(argv: string[]): Promise<void> {
         if (isCreatingWranglerToml) {
           // rewrite wrangler.toml with main = "path/to/script"
           const parsedWranglerToml = TOML.parse(
-            fs.readFileSync(wranglerTomlDestination, "utf-8")
+            readFileSync(wranglerTomlDestination)
           );
           fs.writeFileSync(
             wranglerTomlDestination,
@@ -464,7 +464,7 @@ export async function main(argv: string[]): Promise<void> {
             });
             await writeFile(
               path.join(creationDirectory, "./src/index.ts"),
-              await readFile(path.join(__dirname, "../templates/new-worker.ts"))
+              readFileSync(path.join(__dirname, "../templates/new-worker.ts"))
             );
 
             console.log(`✨ Created src/index.ts`);
@@ -488,7 +488,7 @@ export async function main(argv: string[]): Promise<void> {
             });
             await writeFile(
               path.join(path.join(creationDirectory, "./src/index.js")),
-              await readFile(path.join(__dirname, "../templates/new-worker.js"))
+              readFileSync(path.join(__dirname, "../templates/new-worker.js"))
             );
 
             console.log(`✨ Created src/index.js`);
@@ -710,9 +710,9 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      const config = await readConfig(
+      const config = readConfig(
         (args.config as ConfigPath) ||
-          (args.script && (await findWranglerToml(path.dirname(args.script))))
+          (args.script && findWranglerToml(path.dirname(args.script)))
       );
       const entry = getEntry(config, "dev", args.script);
 
@@ -919,9 +919,9 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const config = await readConfig(
+      const config = readConfig(
         (args.config as ConfigPath) ||
-          (args.script && (await findWranglerToml(path.dirname(args.script))))
+          (args.script && findWranglerToml(path.dirname(args.script)))
       );
       const entry = getEntry(config, "publish", args.script);
 
@@ -1034,7 +1034,7 @@ export async function main(argv: string[]): Promise<void> {
       );
     },
     async (args) => {
-      const config = await readConfig(args.config as ConfigPath);
+      const config = readConfig(args.config as ConfigPath);
 
       const scriptName = getScriptName(args, config);
 
@@ -1163,7 +1163,7 @@ export async function main(argv: string[]): Promise<void> {
           "***************************************************\n"
       );
 
-      const config = await readConfig(args.config as ConfigPath);
+      const config = readConfig(args.config as ConfigPath);
       const entry = getEntry(config, "dev");
 
       // -- snip, extract --
@@ -1277,7 +1277,7 @@ export async function main(argv: string[]): Promise<void> {
             console.log(":route list", args);
             // TODO: use environment (current wrangler doesn't do so?)
             // TODO: don't get `zone_id` from config at all and require the command line arg `--zone`.
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const zone = args.zone || config.zone_id;
             if (!zone) {
               throw new Error("missing zone id");
@@ -1307,7 +1307,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             console.log(":route delete", args);
             // TODO: use environment (current wrangler doesn't do so?)
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const zone = args.zone || config.zone_id;
             if (!zone) {
               throw new Error("missing zone id");
@@ -1364,7 +1364,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1481,7 +1481,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1545,7 +1545,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1619,7 +1619,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             if (!config.name) {
               console.warn(
                 "No configured name present, using `worker` as a prefix for the title"
@@ -1670,7 +1670,7 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
 
             // -- snip, extract --
             const loggedIn = await loginOrRefreshIfRequired();
@@ -1723,7 +1723,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
 
             let id;
             try {
@@ -1830,11 +1830,11 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
-              ? await readFile(args.path)
+              ? readFileSync(args.path)
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 args.value!;
 
@@ -1901,7 +1901,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
             // -- snip, extract --
@@ -1963,7 +1963,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
             // -- snip, extract --
@@ -2014,7 +2014,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
             console.log(
@@ -2085,9 +2085,9 @@ export async function main(argv: string[]): Promise<void> {
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
 
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-            const content = parseJSON(await readFile(filename), filename);
+            const content = parseJSON(readFileSync(filename), filename);
 
             // -- snip, extract --
             const loggedIn = await loginOrRefreshIfRequired();
@@ -2139,9 +2139,9 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            const config = await readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-            const content = parseJSON(await readFile(filename), filename);
+            const content = parseJSON(readFileSync(filename), filename);
 
             // -- snip, extract --
             const loggedIn = await loginOrRefreshIfRequired();
@@ -2190,7 +2190,7 @@ export async function main(argv: string[]): Promise<void> {
             );
           }
 
-          const config = await readConfig(args.config as ConfigPath);
+          const config = readConfig(args.config as ConfigPath);
 
           // -- snip, extract --
           const loggedIn = await loginOrRefreshIfRequired();
@@ -2215,7 +2215,7 @@ export async function main(argv: string[]): Promise<void> {
       );
 
       r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-        const config = await readConfig(args.config as ConfigPath);
+        const config = readConfig(args.config as ConfigPath);
 
         // -- snip, extract --
         const loggedIn = await loginOrRefreshIfRequired();
@@ -2257,7 +2257,7 @@ export async function main(argv: string[]): Promise<void> {
             );
           }
 
-          const config = await readConfig(args.config as ConfigPath);
+          const config = readConfig(args.config as ConfigPath);
 
           // -- snip, extract --
           const loggedIn = await loginOrRefreshIfRequired();

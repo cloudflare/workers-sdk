@@ -1,4 +1,4 @@
-import * as fsp from "fs/promises";
+import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
@@ -122,9 +122,9 @@ export function parseJSON(input: string, file?: string): any {
 /**
  * Reads a file and parses it based on its type.
  */
-export async function readFile(file: string): Promise<string> {
+export function readFileSync(file: string): string {
   try {
-    return await fsp.readFile(file, { encoding: "utf-8" });
+    return fs.readFileSync(file, { encoding: "utf-8" });
   } catch (err) {
     const { message } = err as Error;
     throw new ParseError({
