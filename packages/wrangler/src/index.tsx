@@ -26,6 +26,8 @@ import {
   createNamespace,
   isValidNamespaceBinding,
   getKeyValue,
+  isKeyValue,
+  unexpectedKeyValueProps,
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
@@ -1864,7 +1866,9 @@ export async function main(argv: string[]): Promise<void> {
             }
             // -- snip, end --
 
-            await putKeyValue(config.account_id, namespaceId, key, value, {
+            await putKeyValue(config.account_id, namespaceId, {
+              key,
+              value,
               expiration,
               expiration_ttl: ttl,
             });
@@ -2089,6 +2093,60 @@ export async function main(argv: string[]): Promise<void> {
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(readFileSync(filename), filename);
 
+            if (!Array.isArray(content)) {
+              throw new Error(
+                `Unexpected JSON input from "${filename}".\n` +
+                  `Expected an array of key-value objects but got type "${typeof content}".`
+              );
+            }
+
+            const errors: string[] = [];
+            const warnings: string[] = [];
+            for (let i = 0; i < content.length; i++) {
+              const keyValue = content[i];
+              if (typeof keyValue !== "object") {
+                errors.push(
+                  `The item at index ${i} is type: "${typeof keyValue}" - ${JSON.stringify(
+                    keyValue
+                  )}`
+                );
+              } else if (!isKeyValue(keyValue)) {
+                errors.push(
+                  `The item at index ${i} is ${JSON.stringify(keyValue)}`
+                );
+              } else {
+                const props = unexpectedKeyValueProps(keyValue);
+                if (props.length > 0) {
+                  warnings.push(
+                    `The item at index ${i} contains unexpected properties: ${JSON.stringify(
+                      props
+                    )}.`
+                  );
+                }
+              }
+            }
+            if (warnings.length > 0) {
+              console.warn(
+                `Unexpected key-value properties in "${filename}".\n` +
+                  warnings.join("\n")
+              );
+            }
+            if (errors.length > 0) {
+              throw new Error(
+                `Unexpected JSON input from "${filename}".\n` +
+                  `Each item in the array should be an object that matches:\n\n` +
+                  `interface KeyValue {\n` +
+                  `  key: string;\n` +
+                  `  value: string;\n` +
+                  `  expiration?: number;\n` +
+                  `  expiration_ttl?: number;\n` +
+                  `  metadata?: object;\n` +
+                  `  base64?: boolean;\n` +
+                  `}\n\n` +
+                  errors.join("\n")
+              );
+            }
+
             // -- snip, extract --
             const loggedIn = await loginOrRefreshIfRequired();
             if (!loggedIn) {
@@ -2141,7 +2199,34 @@ export async function main(argv: string[]): Promise<void> {
           async ({ filename, ...args }) => {
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
-            const content = parseJSON(readFileSync(filename), filename);
+            const content = parseJSON(
+              readFileSync(filename),
+              filename
+            ) as string[];
+
+            if (!Array.isArray(content)) {
+              throw new Error(
+                `Unexpected JSON input from "${filename}".\n` +
+                  `Expected an array of strings but got:\n${content}`
+              );
+            }
+
+            const errors: string[] = [];
+            for (let i = 0; i < content.length; i++) {
+              const key = content[i];
+              if (typeof key !== "string") {
+                errors.push(
+                  `The item at index ${i} is a ${typeof key}: ${key}`
+                );
+              }
+            }
+            if (errors.length > 0) {
+              throw new Error(
+                `Unexpected JSON input from "${filename}".\n` +
+                  `Expected an array of strings.\n` +
+                  errors.join("\n")
+              );
+            }
 
             // -- snip, extract --
             const loggedIn = await loginOrRefreshIfRequired();

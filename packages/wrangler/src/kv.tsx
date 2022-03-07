@@ -90,26 +90,64 @@ export async function listNamespaceKeys(
   );
 }
 
+/**
+ * Information about a key-value pair, including its "metadata" fields.
+ */
+export interface KeyValue {
+  key: string;
+  value: string;
+  expiration?: number;
+  expiration_ttl?: number;
+  metadata?: object;
+  base64?: boolean;
+}
+
+const KeyValueKeys = new Set([
+  "key",
+  "value",
+  "expiration",
+  "expiration_ttl",
+  "metadata",
+  "base64",
+]);
+
+/**
+ * Is the given object a valid `KeyValue` type?
+ */
+export function isKeyValue(keyValue: object): keyValue is KeyValue {
+  const props = Object.keys(keyValue);
+  if (!props.includes("key") || !props.includes("value")) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Get all the properties on the `keyValue` that are not expected.
+ */
+export function unexpectedKeyValueProps(keyValue: KeyValue): string[] {
+  const props = Object.keys(keyValue);
+  return props.filter((prop) => !KeyValueKeys.has(prop));
+}
+
 export async function putKeyValue(
   accountId: string,
   namespaceId: string,
-  key: string,
-  value: string,
-  args?: { expiration?: number; expiration_ttl?: number }
+  keyValue: KeyValue
 ) {
   let searchParams: URLSearchParams | undefined;
-  if (args) {
+  if (keyValue.expiration || keyValue.expiration_ttl) {
     searchParams = new URLSearchParams();
-    if (args.expiration) {
-      searchParams.set("expiration", `${args.expiration}`);
+    if (keyValue.expiration) {
+      searchParams.set("expiration", `${keyValue.expiration}`);
     }
-    if (args.expiration_ttl) {
-      searchParams.set("expiration_ttl", `${args.expiration_ttl}`);
+    if (keyValue.expiration_ttl) {
+      searchParams.set("expiration_ttl", `${keyValue.expiration_ttl}`);
     }
   }
   return await fetchResult(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
-    { method: "PUT", body: value },
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${keyValue.key}`,
+    { method: "PUT", body: keyValue.value },
     searchParams
   );
 }
@@ -125,13 +163,13 @@ export async function getKeyValue(
 export async function putBulkKeyValue(
   accountId: string,
   namespaceId: string,
-  keyvalueStr: string
+  keyValues: KeyValue[]
 ) {
   return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "PUT",
-      body: keyvalueStr,
+      body: JSON.stringify(keyValues),
       headers: { "Content-Type": "application/json" },
     }
   );
@@ -140,13 +178,13 @@ export async function putBulkKeyValue(
 export async function deleteBulkKeyValue(
   accountId: string,
   namespaceId: string,
-  keyStr: string
+  keys: string[]
 ) {
   return await fetchResult(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
     {
       method: "DELETE",
-      body: keyStr,
+      body: JSON.stringify(keys),
       headers: { "Content-Type": "application/json" },
     }
   );
