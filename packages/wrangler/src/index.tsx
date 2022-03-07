@@ -102,6 +102,20 @@ function getScriptName(
     : shortScriptName;
 }
 
+async function requireAuth(config: Config): Promise<string> {
+  const loggedIn = await loginOrRefreshIfRequired();
+  if (!loggedIn) {
+    // didn't login, let's just quit
+    throw new Error("Did not login, quitting...");
+  }
+  const accountId = config.account_id || (await getAccountId());
+  if (!accountId) {
+    throw new Error("No account id found, quitting...");
+  }
+
+  return accountId;
+}
+
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 function demandOneOfOption(...options: string[]) {
@@ -743,23 +757,7 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      if (!args.local) {
-        // -- snip, extract --
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
-
-        if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
-        }
-        // -- snip, end --
-      }
+      const accountId = !args.local ? await requireAuth(config) : undefined;
 
       // TODO: if worker_dev = false and no routes, then error (only for dev)
 
@@ -847,7 +845,7 @@ export async function main(argv: string[]): Promise<void> {
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }
-          accountId={config.account_id}
+          accountId={accountId}
           assetPaths={getAssetPaths(
             config,
             args.site,
@@ -1005,21 +1003,7 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      // -- snip, extract --
-      const loggedIn = await loginOrRefreshIfRequired();
-      if (!loggedIn) {
-        // didn't login, let's just quit
-        console.log("Did not login, quitting...");
-        return;
-      }
-
-      if (!config.account_id) {
-        config.account_id = await getAccountId();
-        if (!config.account_id) {
-          throw new Error("No account id found, quitting...");
-        }
-      }
-      // -- snip, end --
+      const accountId = await requireAuth(config);
 
       const assetPaths = getAssetPaths(
         config,
@@ -1029,6 +1013,7 @@ export async function main(argv: string[]): Promise<void> {
       );
       await publish({
         config,
+        accountId,
         name: getScriptName(args, config),
         rules: getRules(config),
         format: args.format || config.build?.upload?.format,
@@ -1116,23 +1101,7 @@ export async function main(argv: string[]): Promise<void> {
         throw new Error("Missing script name");
       }
 
-      // -- snip, extract --
-      const loggedIn = await loginOrRefreshIfRequired();
-      if (!loggedIn) {
-        // didn't login, let's just quit
-        console.log("Did not login, quitting...");
-        return;
-      }
-
-      if (!config.account_id) {
-        config.account_id = await getAccountId();
-        if (!config.account_id) {
-          throw new Error("No account id found, quitting...");
-        }
-      }
-      // -- snip, end --
-
-      const accountId = config.account_id;
+      const accountId = await requireAuth(config);
 
       const cliFilters: TailCLIFilters = {
         status: args.status as ("ok" | "error" | "canceled")[],
@@ -1240,21 +1209,7 @@ export async function main(argv: string[]): Promise<void> {
       const config = readConfig(args.config as ConfigPath);
       const entry = getEntry(config, "dev");
 
-      // -- snip, extract --
-      const loggedIn = await loginOrRefreshIfRequired();
-      if (!loggedIn) {
-        // didn't login, let's just quit
-        console.log("Did not login, quitting...");
-        return;
-      }
-
-      if (!config.account_id) {
-        config.account_id = await getAccountId();
-        if (!config.account_id) {
-          throw new Error("No account id found, quitting...");
-        }
-      }
-      // -- snip, end --
+      const accountId = await requireAuth(config);
 
       const environments = config.env ?? {};
       const envRootObj = args.env ? environments[args.env] || {} : config;
@@ -1273,7 +1228,7 @@ export async function main(argv: string[]): Promise<void> {
           jsxFactory={envRootObj?.jsx_factory}
           jsxFragment={envRootObj?.jsx_fragment}
           enableLocalPersistence={false}
-          accountId={config.account_id}
+          accountId={accountId}
           assetPaths={undefined}
           port={config.dev?.port}
           public={undefined}
@@ -1445,21 +1400,7 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             const secretValue = await prompt(
               "Enter a secret value:",
@@ -1475,8 +1416,8 @@ export async function main(argv: string[]): Promise<void> {
             async function submitSecret() {
               const url =
                 !args.env || isLegacyEnv(args, config)
-                  ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
-                  : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+                  ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+                  : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
               return await fetchResult(url, {
                 method: "PUT",
@@ -1498,8 +1439,8 @@ export async function main(argv: string[]): Promise<void> {
                 // TODO: log a warning
                 await fetchResult(
                   !args["legacy-env"] && args.env
-                    ? `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}`
-                    : `/accounts/${config.account_id}/workers/scripts/${scriptName}`,
+                    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
+                    : `/accounts/${accountId}/workers/scripts/${scriptName}`,
                   {
                     method: "PUT",
                     body: toFormData({
@@ -1562,21 +1503,7 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             if (
               await confirm(
@@ -1595,8 +1522,8 @@ export async function main(argv: string[]): Promise<void> {
 
               const url =
                 !args.env || isLegacyEnv(args, config)
-                  ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
-                  : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+                  ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+                  : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
               await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
               console.log(`✨ Success! Deleted secret ${args.key}`);
@@ -1626,26 +1553,12 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             const url =
               !args.env || isLegacyEnv(args, config)
-                ? `/accounts/${config.account_id}/workers/scripts/${scriptName}/secrets`
-                : `/accounts/${config.account_id}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+                ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+                : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
             console.log(JSON.stringify(await fetchResult(url), null, "  "));
           }
@@ -1705,26 +1618,12 @@ export async function main(argv: string[]): Promise<void> {
             const preview = args.preview ? "_preview" : "";
             const title = `${name}${environment}-${args.namespace}${preview}`;
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             // TODO: generate a binding name stripping non alphanumeric chars
 
             console.log(`🌀 Creating namespace with title "${title}"`);
-            const namespaceId = await createNamespace(config.account_id, title);
+            const namespaceId = await createNamespace(accountId, title);
 
             console.log("✨ Success!");
             const envString = args.env ? ` under [env.${args.env}]` : "";
@@ -1746,30 +1645,12 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             const config = readConfig(args.config as ConfigPath);
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             // TODO: we should show bindings if they exist for given ids
 
             console.log(
-              JSON.stringify(
-                await listNamespaces(config.account_id),
-                null,
-                "  "
-              )
+              JSON.stringify(await listNamespaces(accountId), null, "  ")
             );
           }
         )
@@ -1808,24 +1689,10 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             await fetchResult<{ id: string }>(
-              `/accounts/${config.account_id}/storage/kv/namespaces/${id}`,
+              `/accounts/${accountId}/storage/kv/namespaces/${id}`,
               { method: "DELETE" }
             );
 
@@ -1922,23 +1789,9 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
+            const accountId = await requireAuth(config);
 
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-
-            await putKeyValue(config.account_id, namespaceId, {
+            await putKeyValue(accountId, namespaceId, {
               key,
               value,
               expiration,
@@ -1980,24 +1833,10 @@ export async function main(argv: string[]): Promise<void> {
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             const results = await listNamespaceKeys(
-              config.account_id,
+              accountId,
               namespaceId,
               prefix
             );
@@ -2042,23 +1881,9 @@ export async function main(argv: string[]): Promise<void> {
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
+            const accountId = await requireAuth(config);
 
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-
-            console.log(await getKeyValue(config.account_id, namespaceId, key));
+            console.log(await getKeyValue(accountId, namespaceId, key));
           }
         )
         .command(
@@ -2097,24 +1922,10 @@ export async function main(argv: string[]): Promise<void> {
               `deleting the key "${key}" on namespace ${namespaceId}`
             );
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
+            const accountId = await requireAuth(config);
 
             await fetchResult(
-              `/accounts/${config.account_id}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
               { method: "DELETE" }
             );
           }
@@ -2219,22 +2030,8 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
-
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-            await putBulkKeyValue(config.account_id, namespaceId, content);
+            const accountId = await requireAuth(config);
+            await putBulkKeyValue(accountId, namespaceId, content);
           }
         )
         .command(
@@ -2313,23 +2110,9 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            // -- snip, extract --
-            const loggedIn = await loginOrRefreshIfRequired();
-            if (!loggedIn) {
-              // didn't login, let's just quit
-              console.log("Did not login, quitting...");
-              return;
-            }
+            const accountId = await requireAuth(config);
 
-            if (!config.account_id) {
-              config.account_id = await getAccountId();
-              if (!config.account_id) {
-                throw new Error("No account id found, quitting...");
-              }
-            }
-            // -- snip, end --
-
-            await deleteBulkKeyValue(config.account_id, namespaceId, content);
+            await deleteBulkKeyValue(accountId, namespaceId, content);
 
             console.log("Success!");
           }
@@ -2362,24 +2145,10 @@ export async function main(argv: string[]): Promise<void> {
 
           const config = readConfig(args.config as ConfigPath);
 
-          // -- snip, extract --
-          const loggedIn = await loginOrRefreshIfRequired();
-          if (!loggedIn) {
-            // didn't login, let's just quit
-            console.log("Did not login, quitting...");
-            return;
-          }
-
-          if (!config.account_id) {
-            config.account_id = await getAccountId();
-            if (!config.account_id) {
-              throw new Error("No account id found, quitting...");
-            }
-          }
-          // -- snip, end --
+          const accountId = await requireAuth(config);
 
           console.log(`Creating bucket ${args.name}.`);
-          await createR2Bucket(config.account_id, args.name);
+          await createR2Bucket(accountId, args.name);
           console.log(`Created bucket ${args.name}.`);
         }
       );
@@ -2387,25 +2156,9 @@ export async function main(argv: string[]): Promise<void> {
       r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
         const config = readConfig(args.config as ConfigPath);
 
-        // -- snip, extract --
-        const loggedIn = await loginOrRefreshIfRequired();
-        if (!loggedIn) {
-          // didn't login, let's just quit
-          console.log("Did not login, quitting...");
-          return;
-        }
+        const accountId = await requireAuth(config);
 
-        if (!config.account_id) {
-          config.account_id = await getAccountId();
-          if (!config.account_id) {
-            throw new Error("No account id found, quitting...");
-          }
-        }
-        // -- snip, end --
-
-        console.log(
-          JSON.stringify(await listR2Buckets(config.account_id), null, 2)
-        );
+        console.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
       });
 
       r2BucketYargs.command(
@@ -2429,24 +2182,10 @@ export async function main(argv: string[]): Promise<void> {
 
           const config = readConfig(args.config as ConfigPath);
 
-          // -- snip, extract --
-          const loggedIn = await loginOrRefreshIfRequired();
-          if (!loggedIn) {
-            // didn't login, let's just quit
-            console.log("Did not login, quitting...");
-            return;
-          }
-
-          if (!config.account_id) {
-            config.account_id = await getAccountId();
-            if (!config.account_id) {
-              throw new Error("No account id found, quitting...");
-            }
-          }
-          // -- snip, end --
+          const accountId = await requireAuth(config);
 
           console.log(`Deleting bucket ${args.name}.`);
-          await deleteR2Bucket(config.account_id, args.name);
+          await deleteR2Bucket(accountId, args.name);
           console.log(`Deleted bucket ${args.name}.`);
         }
       );

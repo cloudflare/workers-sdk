@@ -16,6 +16,7 @@ import type { AssetPaths } from "./sites";
 
 type Props = {
   config: Config;
+  accountId: string;
   format: CfScriptFormat | undefined;
   entry: { file: string; directory: string };
   rules: Config["rules"];
@@ -38,7 +39,7 @@ function sleep(ms: number) {
 
 export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
-  const { config } = props;
+  const { config, accountId } = props;
 
   // TODO: should we automatically fallback to top level config if there is no matching environment??
   const envRootObj = (props.env && config.env[props.env]) || config;
@@ -55,16 +56,10 @@ export default async function publish(props: Props): Promise<void> {
     (envRootObj.route ? [envRootObj.route] : []) ??
     [];
 
-  const { account_id: accountId, workers_dev: deployToWorkersDev } = config;
-
-  if (accountId === undefined) {
-    throw new Error("No account_id provided.");
-  }
+  const { workers_dev: deployToWorkersDev } = config;
 
   const jsxFactory = props.jsxFactory || envRootObj.jsx_factory;
   const jsxFragment = props.jsxFragment || envRootObj.jsx_fragment;
-
-  assert(config.account_id, "missing account id");
 
   const scriptName = props.name;
   assert(
