@@ -8,6 +8,7 @@ import {
   setMockFetchKVGetValue,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -1231,12 +1232,59 @@ describe("wrangler", () => {
       it("should delete the keys parsed from a file", async () => {
         const keys = ["someKey1", "ns:someKey2"];
         writeFileSync("./keys.json", JSON.stringify(keys));
+        mockConfirm({
+          text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+          result: true,
+        });
         const requests = mockDeleteRequest("some-namespace-id", keys);
         await runWrangler(
           `kv:bulk delete --namespace-id some-namespace-id keys.json`
         );
         expect(requests.count).toEqual(1);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should not delete the keys if the user confirms no", async () => {
+        const keys = ["someKey1", "ns:someKey2"];
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        mockConfirm({
+          text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+          result: false,
+        });
+        await runWrangler(
+          `kv:bulk delete --namespace-id some-namespace-id keys.json`
+        );
+        expect(std.out).toMatchInlineSnapshot(
+          `"Not deleting keys read from \\"keys.json\\"."`
+        );
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should delete the keys without asking if --force is provided", async () => {
+        const keys = ["someKey1", "ns:someKey2"];
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        const requests = mockDeleteRequest("some-namespace-id", keys);
+        await runWrangler(
+          `kv:bulk delete --namespace-id some-namespace-id keys.json --force`
+        );
+        expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should delete the keys without asking if -f is provided", async () => {
+        const keys = ["someKey1", "ns:someKey2"];
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        const requests = mockDeleteRequest("some-namespace-id", keys);
+        await runWrangler(
+          `kv:bulk delete --namespace-id some-namespace-id keys.json -f`
+        );
+        expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(`"Success!"`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
@@ -1244,6 +1292,10 @@ describe("wrangler", () => {
       it("should error if the file is not a JSON array", async () => {
         const keys = 12354;
         writeFileSync("./keys.json", JSON.stringify(keys));
+        mockConfirm({
+          text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+          result: true,
+        });
         await expect(
           runWrangler(
             `kv:bulk delete --namespace-id some-namespace-id keys.json`
@@ -1260,6 +1312,10 @@ describe("wrangler", () => {
       it("should error if the file contains non-string items", async () => {
         const keys = ["good", 12354, { key: "someKey" }, null];
         writeFileSync("./keys.json", JSON.stringify(keys));
+        mockConfirm({
+          text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+          result: true,
+        });
         await expect(
           runWrangler(
             `kv:bulk delete --namespace-id some-namespace-id keys.json`
