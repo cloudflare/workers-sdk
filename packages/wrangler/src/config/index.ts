@@ -1,5 +1,5 @@
 import { findUpSync } from "find-up";
-import { parseTOML, readFile } from "../parse";
+import { parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { Config, RawConfig } from "./config";
 
@@ -13,7 +13,7 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export async function readConfig(configPath?: string): Promise<Config> {
+export function readConfig(configPath?: string): Config {
   let rawConfig: RawConfig = {};
   if (!configPath) {
     configPath = findWranglerToml();
@@ -21,7 +21,7 @@ export async function readConfig(configPath?: string): Promise<Config> {
 
   // Load the configuration from disk if available
   if (configPath) {
-    rawConfig = parseTOML(await readFile(configPath), configPath);
+    rawConfig = parseTOML(readFileSync(configPath), configPath);
   }
 
   // Process the top-level configuration.
