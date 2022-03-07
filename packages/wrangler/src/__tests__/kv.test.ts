@@ -645,8 +645,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`
           "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
-          [32m%s[0m
-          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
         `);
       });
 
@@ -665,8 +664,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`
           "someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.
 
-          [32m%s[0m
-          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
         `);
         expect(requests.count).toEqual(0);
       });
@@ -856,8 +854,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`
           "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
-          [32m%s[0m
-          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
         `);
         expect(std.out).toMatchInlineSnapshot(`""`);
       });
@@ -1028,8 +1025,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`
           "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
-          [32m%s[0m
-          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
         `);
       });
     });
@@ -1091,8 +1087,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`
           "A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
-          [32m%s[0m
-          If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
         `);
       });
 

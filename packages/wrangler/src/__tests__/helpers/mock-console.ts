@@ -1,3 +1,5 @@
+import * as util from "node:util";
+
 /**
  * We use this module to mock console methods, and optionally
  * assert on the values they're called with in our tests.
@@ -9,21 +11,27 @@ let logSpy: jest.SpyInstance,
 
 const std = {
   get out() {
-    return stripTrailingWhitespace(
-      normalizeSlashes(stripTimings(logSpy.mock.calls.flat(2).join("\n")))
-    );
+    return normalizeOutput(logSpy);
   },
   get err() {
-    return stripTrailingWhitespace(
-      normalizeSlashes(stripTimings(errorSpy.mock.calls.flat(2).join("\n")))
-    );
+    return normalizeOutput(errorSpy);
   },
   get warn() {
-    return stripTrailingWhitespace(
-      normalizeSlashes(stripTimings(warnSpy.mock.calls.flat(2).join("\n")))
-    );
+    return normalizeOutput(warnSpy);
   },
 };
+
+function normalizeOutput(spy: jest.SpyInstance): string {
+  return stripTrailingWhitespace(
+    normalizeSlashes(stripTimings(captureCalls(spy)))
+  );
+}
+
+function captureCalls(spy: jest.SpyInstance): string {
+  return spy.mock.calls
+    .map((args: unknown[]) => util.format("%s", ...args))
+    .join("\n");
+}
 
 export function mockConsoleMethods() {
   beforeEach(() => {

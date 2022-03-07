@@ -118,8 +118,7 @@ describe("wrangler secret", () => {
       expect(std.err).toMatchInlineSnapshot(`
         "Missing script name
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
     });
@@ -223,8 +222,7 @@ describe("wrangler secret", () => {
       expect(std.err).toMatchInlineSnapshot(`
         "Missing script name
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
     });
@@ -317,8 +315,7 @@ describe("wrangler secret", () => {
       expect(std.err).toMatchInlineSnapshot(`
         "Missing script name
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
     });
