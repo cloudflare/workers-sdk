@@ -2263,11 +2263,27 @@ export async function main(argv: string[]): Promise<void> {
               .option("preview", {
                 type: "boolean",
                 describe: "Interact with a preview namespace",
+              })
+              .option("force", {
+                type: "boolean",
+                alias: "f",
+                describe: "Do not ask for confirmation before deleting",
               });
           },
           async ({ filename, ...args }) => {
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
+
+            if (!args.force) {
+              const result = await confirm(
+                `Are you sure you want to delete all the keys read from "${filename}" from kv-namespace with id "${namespaceId}"?`
+              );
+              if (!result) {
+                console.log(`Not deleting keys read from "${filename}".`);
+                return;
+              }
+            }
+
             const content = parseJSON(
               readFileSync(filename),
               filename
@@ -2314,6 +2330,8 @@ export async function main(argv: string[]): Promise<void> {
             // -- snip, end --
 
             await deleteBulkKeyValue(config.account_id, namespaceId, content);
+
+            console.log("Success!");
           }
         );
     }
