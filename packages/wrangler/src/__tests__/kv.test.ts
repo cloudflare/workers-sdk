@@ -1154,6 +1154,9 @@ describe("wrangler", () => {
           `kv:bulk put --namespace-id some-namespace-id keys.json`
         );
         expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
       it("should error if the file is not a JSON array", async () => {
@@ -1165,6 +1168,8 @@ describe("wrangler", () => {
                 "Unexpected JSON input from \\"keys.json\\".
                 Expected an array of key-value objects but got type \\"object\\"."
               `);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
       it("should error if the array contains items that are not key-value objects", async () => {
@@ -1236,6 +1241,9 @@ describe("wrangler", () => {
           `kv:bulk delete --namespace-id some-namespace-id keys.json`
         );
         expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
       it("should error if the file is not a JSON array", async () => {
@@ -1250,6 +1258,8 @@ describe("wrangler", () => {
                 Expected an array of strings but got:
                 12354"
               `);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
       it("should error if the file contains non-string items", async () => {
@@ -1266,6 +1276,8 @@ describe("wrangler", () => {
                 The item at index 2 is a object: [object Object]
                 The item at index 3 is a object: null"
               `);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
     });
   });

@@ -2234,10 +2234,7 @@ export async function main(argv: string[]): Promise<void> {
               }
             }
             // -- snip, end --
-
-            console.log(
-              await putBulkKeyValue(config.account_id, namespaceId, content)
-            );
+            await putBulkKeyValue(config.account_id, namespaceId, content);
           }
         )
         .command(
@@ -2316,9 +2313,7 @@ export async function main(argv: string[]): Promise<void> {
             }
             // -- snip, end --
 
-            console.log(
-              await deleteBulkKeyValue(config.account_id, namespaceId, content)
-            );
+            await deleteBulkKeyValue(config.account_id, namespaceId, content);
           }
         );
     }
