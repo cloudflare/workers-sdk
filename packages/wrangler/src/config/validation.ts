@@ -246,6 +246,7 @@ function normalizeAndValidateDev(
     port = 8787,
     local_protocol = "http",
     upstream_protocol = "https",
+    host,
     ...rest
   } = rawDev;
   validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -266,7 +267,8 @@ function normalizeAndValidateDev(
     upstream_protocol,
     "string"
   );
-  return { ip, port, local_protocol, upstream_protocol };
+  validateOptionalProperty(diagnostics, "dev", "host", host, "string");
+  return { ip, port, local_protocol, upstream_protocol, host };
 }
 
 /**

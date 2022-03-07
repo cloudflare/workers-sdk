@@ -21,6 +21,7 @@ describe("normalizeAndValidateConfig()", () => {
         local_protocol: "http",
         port: 8787,
         upstream_protocol: "https",
+        host: undefined,
       },
       durable_objects: {
         bindings: [],

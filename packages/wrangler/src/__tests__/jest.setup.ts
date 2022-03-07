@@ -55,3 +55,15 @@ jest.mock("../dialogs");
     "Unexpected call to `prompt()`. You should use `mockPrompt()` to mock calls to `prompt()` with expectations. Search the codebase for `mockPrompt` to learn more."
   );
 });
+
+jest.mock("../dev", () => {
+  const { useApp } = jest.requireActual("ink");
+  const { useEffect } = jest.requireActual("react");
+  return jest.fn().mockImplementation(() => {
+    const { exit } = useApp();
+    useEffect(() => {
+      exit();
+    });
+    return null;
+  });
+});

@@ -61,7 +61,7 @@ async function sessionToken(
 ): Promise<CfPreviewToken> {
   const { accountId } = account;
   const initUrl = ctx.zone
-    ? `/zones/${ctx.zone}/workers/edge-preview`
+    ? `/zones/${ctx.zone.id}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
   const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
@@ -111,7 +111,7 @@ export async function previewToken(
       : `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode: CfPreviewMode = ctx.zone
-    ? { routes: ["*/*"] }
+    ? { routes: ["*/*"] } // TODO: should we support routes here? how?
     : { workers_dev: true };
 
   const formData = toFormData(worker);
@@ -127,20 +127,18 @@ export async function previewToken(
 
   return {
     value: preview_token,
-    // TODO: verify this works with zoned workers
-    host:
-      worker.name && !ctx.zone
-        ? // hrmm this might need change as well
-          `${
-            worker.name
-            // TODO: this should also probably have the env prefix
-            // but it doesn't appear to work yet, instead giving us the
-            // "There is nothing here yet" screen
-            // ctx.env && !ctx.legacyEnv
-            //   ? `${ctx.env}.${worker.name}`
-            //   : worker.name
-          }.${host.split(".").slice(1).join(".")}`
-        : host,
+    host: ctx.zone
+      ? ctx.zone.host
+      : `${
+          worker.name
+          // TODO: this should also probably have the env prefix
+          // but it doesn't appear to work yet, instead giving us the
+          // "There is nothing here yet" screen
+          // ctx.env && !ctx.legacyEnv
+          //   ? `${ctx.env}.${worker.name}`
+          //   : worker.name
+        }.${host.split(".").slice(1).join(".")}`,
+
     inspectorUrl,
     prewarmUrl,
   };

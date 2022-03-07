@@ -94,6 +94,11 @@ export interface ConfigFields<Env extends RawEnvironment> {
      * @todo this needs to be implemented
      */
     upstream_protocol?: string;
+
+    /**
+     * Host to forward requests to, defaults to the zone of project
+     */
+    host?: string;
   };
 
   /**

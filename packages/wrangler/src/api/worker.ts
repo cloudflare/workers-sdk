@@ -133,7 +133,7 @@ export interface CfWorkerInit {
   /**
    * The name of the worker.
    */
-  name: string | undefined;
+  name: string;
   /**
    * The entrypoint module.
    */
@@ -163,7 +163,7 @@ export interface CfWorkerInit {
 export interface CfWorkerContext {
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: string | undefined;
+  zone: { id: string; host: string } | undefined;
 }
 
 /**
