@@ -2,6 +2,12 @@ import { URLSearchParams } from "node:url";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
 import type { Config, Environment } from "./config";
 
+/** The largest number of kv items we can pass to the API in a single request. */
+const API_MAX = 10000;
+// The const below are halved from the API's true capacity to help avoid
+// hammering it with large requests.
+const BATCH_KEY_MAX = API_MAX / 2;
+
 type KvArgs = {
   binding?: string;
   "namespace-id"?: string;
@@ -178,16 +184,26 @@ export async function putBulkKeyValue(
 export async function deleteBulkKeyValue(
   accountId: string,
   namespaceId: string,
-  keys: string[]
+  keys: string[],
+  progressCallback: (index: number, total: number) => void
 ) {
-  return await fetchResult(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
-    {
-      method: "DELETE",
-      body: JSON.stringify(keys),
-      headers: { "Content-Type": "application/json" },
+  for (let index = 0; index < keys.length; index += BATCH_KEY_MAX) {
+    if (progressCallback && keys.length > BATCH_KEY_MAX) {
+      progressCallback(index, keys.length);
     }
-  );
+
+    await fetchResult(
+      `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+      {
+        method: "DELETE",
+        body: JSON.stringify(keys.slice(index, index + BATCH_KEY_MAX)),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+  if (progressCallback && keys.length > BATCH_KEY_MAX) {
+    progressCallback(keys.length, keys.length);
+  }
 }
 
 export function getNamespaceId(
