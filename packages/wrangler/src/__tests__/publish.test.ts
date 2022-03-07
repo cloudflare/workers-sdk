@@ -40,14 +40,9 @@ describe("publish", () => {
       });
       await runWrangler("publish index.js --env some-env");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name-some-env
-        (TIMINGS)
-        Published
-        test-name-some-env
-        (TIMINGS)
-
-        test-name-some-env.test-sub-domain.workers.dev"
+        "Uploaded test-name-some-env (TIMINGS)
+        Published test-name-some-env (TIMINGS)
+          test-name-some-env.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -63,14 +58,9 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --legacy-env true");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded
-          test-name
-          (TIMINGS)
-          Published
-          test-name
-          (TIMINGS)
-
-          test-name.test-sub-domain.workers.dev"
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -86,14 +76,9 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --env some-env --legacy-env true");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded
-          test-name-some-env
-          (TIMINGS)
-          Published
-          test-name-some-env
-          (TIMINGS)
-
-          test-name-some-env.test-sub-domain.workers.dev"
+          "Uploaded test-name-some-env (TIMINGS)
+          Published test-name-some-env (TIMINGS)
+            test-name-some-env.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -110,14 +95,9 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded
-          test-name
-          (TIMINGS)
-          Published
-          test-name
-          (TIMINGS)
-
-          test-name.test-sub-domain.workers.dev"
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -133,14 +113,9 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --env some-env --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded
-          test-name (some-env)
-          (TIMINGS)
-          Published
-          test-name (some-env)
-          (TIMINGS)
-
-          some-env.test-name.test-sub-domain.workers.dev"
+          "Uploaded test-name (some-env) (TIMINGS)
+          Published test-name (some-env) (TIMINGS)
+            some-env.test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -172,14 +147,9 @@ describe("publish", () => {
     mockSubDomainRequest();
     await runWrangler("publish ./some-path/worker/index.js");
     expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded
-      test-name
-      (TIMINGS)
-      Published
-      test-name
-      (TIMINGS)
-
-      test-name.test-sub-domain.workers.dev"
+      "Uploaded test-name (TIMINGS)
+      Published test-name (TIMINGS)
+        test-name.test-sub-domain.workers.dev"
     `);
     expect(std.err).toMatchInlineSnapshot(`""`);
   });
@@ -255,14 +225,9 @@ describe("publish", () => {
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -276,14 +241,9 @@ describe("publish", () => {
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -297,14 +257,9 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -320,14 +275,9 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -341,14 +291,9 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -378,14 +323,9 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -428,14 +368,9 @@ describe("publish", () => {
       await runWrangler("publish index.ts");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -451,14 +386,9 @@ describe("publish", () => {
       await runWrangler("publish index.ts");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -486,14 +416,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -507,14 +432,9 @@ export default{
       await runWrangler("publish ./src/index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -531,14 +451,9 @@ export default{
       await runWrangler("publish ./src/index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -564,8 +479,7 @@ export default{
         "Processing wrangler.toml configuration:
           - ERROR: \\"site.bucket\\" is a required field.
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -601,14 +515,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -633,8 +542,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`
         "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
     });
   });
@@ -669,14 +577,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -729,14 +632,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -783,14 +681,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -834,14 +727,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name (some-env)
-        (TIMINGS)
-        Published
-        test-name (some-env)
-        (TIMINGS)
-
-        some-env.test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (some-env) (TIMINGS)
+        Published test-name (some-env) (TIMINGS)
+          some-env.test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -886,14 +774,9 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name-some-env
-        (TIMINGS)
-        Published
-        test-name-some-env
-        (TIMINGS)
-
-        test-name-some-env.test-sub-domain.workers.dev"
+        Uploaded test-name-some-env (TIMINGS)
+        Published test-name-some-env (TIMINGS)
+          test-name-some-env.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -932,14 +815,9 @@ export default{
         skipping - already uploaded
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -975,14 +853,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1018,14 +891,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1062,14 +930,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1106,14 +969,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1150,14 +1008,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1194,14 +1047,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1240,14 +1088,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/directory-1/file-1.txt...
         uploading as assets/directory-1/file-1.2ca234f380.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1290,14 +1133,9 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/.well-known/file-2.txt...
         uploading as assets/.well-known/file-2.5938485188.txt...
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1345,8 +1183,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`
         "File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
     });
 
@@ -1384,8 +1221,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`
         "The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
     });
   });
@@ -1400,14 +1236,9 @@ export default{
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1423,14 +1254,9 @@ export default{
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1447,12 +1273,8 @@ export default{
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        No publish targets for
-        test-name
-        (TIMINGS)"
+        "Uploaded test-name (TIMINGS)
+        No publish targets for test-name (TIMINGS)"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1467,14 +1289,9 @@ export default{
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1489,14 +1306,9 @@ export default{
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -1522,16 +1334,10 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "running:
-        node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
-        Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1552,16 +1358,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "running:
-          echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
-          Uploaded
-          test-name
-          (TIMINGS)
-          Published
-          test-name
-          (TIMINGS)
-
-          test-name.test-sub-domain.workers.dev"
+          "running: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1589,14 +1389,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1621,8 +1416,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`
         "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -1657,14 +1451,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js --config ./path/to/wrangler.toml");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1691,14 +1480,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1729,14 +1513,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1761,8 +1540,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`
         "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
 
-        [32m%s[0m
-        If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -1801,14 +1579,9 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js --config ./path/to/wrangler.toml");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1840,14 +1613,9 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1869,14 +1637,9 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1910,14 +1673,9 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -1951,14 +1709,9 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -1996,14 +1749,9 @@ export default{
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2029,14 +1777,9 @@ export default{
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2066,14 +1809,9 @@ export default{
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
@@ -2114,14 +1852,9 @@ export default{
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded
-        test-name
-        (TIMINGS)
-        Published
-        test-name
-        (TIMINGS)
-
-        test-name.test-sub-domain.workers.dev"
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
