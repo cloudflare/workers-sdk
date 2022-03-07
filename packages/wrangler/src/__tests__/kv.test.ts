@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { Headers } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
   setMockResponse,
@@ -10,7 +11,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { KVNamespaceInfo, NamespaceKeyInfo } from "../kv";
+import type { KeyValue, KVNamespaceInfo, NamespaceKeyInfo } from "../kv";
 
 describe("wrangler", () => {
   mockAccountId();
@@ -319,10 +320,7 @@ describe("wrangler", () => {
     describe("put", () => {
       function mockKeyPutRequest(
         expectedNamespaceId: string,
-        expectedKey: string,
-        expectedValue: string,
-        expiration?: number,
-        expirationTtl?: number
+        expectedKV: KeyValue
       ) {
         const requests = { count: 0 };
         setMockResponse(
@@ -332,15 +330,19 @@ describe("wrangler", () => {
             requests.count++;
             expect(accountId).toEqual("some-account-id");
             expect(namespaceId).toEqual(expectedNamespaceId);
-            expect(key).toEqual(expectedKey);
-            expect(body).toEqual(expectedValue);
-            if (expiration !== undefined) {
-              expect(query.get("expiration")).toEqual(`${expiration}`);
+            expect(key).toEqual(expectedKV.key);
+            expect(body).toEqual(expectedKV.value);
+            if (expectedKV.expiration !== undefined) {
+              expect(query.get("expiration")).toEqual(
+                `${expectedKV.expiration}`
+              );
             } else {
               expect(query.has("expiration")).toBe(false);
             }
-            if (expirationTtl) {
-              expect(query.get("expiration_ttl")).toEqual(`${expirationTtl}`);
+            if (expectedKV.expiration_ttl) {
+              expect(query.get("expiration_ttl")).toEqual(
+                `${expectedKV.expiration_ttl}`
+              );
             } else {
               expect(query.has("expiration_ttl")).toBe(false);
             }
@@ -351,11 +353,10 @@ describe("wrangler", () => {
       }
 
       it("should put a key in a given namespace specified by namespace-id", async () => {
-        const requests = mockKeyPutRequest(
-          "some-namespace-id",
-          "my-key",
-          "my-value"
-        );
+        const requests = mockKeyPutRequest("some-namespace-id", {
+          key: "my-key",
+          value: "my-value",
+        });
 
         await runWrangler(
           "kv:key put my-key my-value --namespace-id some-namespace-id"
@@ -370,7 +371,10 @@ describe("wrangler", () => {
 
       it("should put a key in a given namespace specified by binding", async () => {
         writeWranglerConfig();
-        const requests = mockKeyPutRequest("bound-id", "my-key", "my-value");
+        const requests = mockKeyPutRequest("bound-id", {
+          key: "my-key",
+          value: "my-value",
+        });
         await runWrangler(
           "kv:key put my-key my-value --binding someBinding --preview false"
         );
@@ -384,11 +388,10 @@ describe("wrangler", () => {
 
       it("should put a key in a given preview namespace specified by binding", async () => {
         writeWranglerConfig();
-        const requests = mockKeyPutRequest(
-          "preview-bound-id",
-          "my-key",
-          "my-value"
-        );
+        const requests = mockKeyPutRequest("preview-bound-id", {
+          key: "my-key",
+          value: "my-value",
+        });
 
         await runWrangler(
           "kv:key put my-key my-value --binding someBinding --preview"
@@ -402,13 +405,12 @@ describe("wrangler", () => {
       });
 
       it("should add expiration and ttl properties when putting a key", async () => {
-        const requests = mockKeyPutRequest(
-          "some-namespace-id",
-          "my-key",
-          "my-value",
-          10,
-          20
-        );
+        const requests = mockKeyPutRequest("some-namespace-id", {
+          key: "my-key",
+          value: "my-value",
+          expiration: 10,
+          expiration_ttl: 20,
+        });
         await runWrangler(
           "kv:key put my-key my-value --namespace-id some-namespace-id --expiration 10 --ttl 20"
         );
@@ -421,11 +423,10 @@ describe("wrangler", () => {
 
       it("should put a key to the specified environment in a given namespace", async () => {
         writeWranglerConfig();
-        const requests = mockKeyPutRequest(
-          "env-bound-id",
-          "my-key",
-          "my-value"
-        );
+        const requests = mockKeyPutRequest("env-bound-id", {
+          key: "my-key",
+          value: "my-value",
+        });
         await runWrangler(
           "kv:key put my-key my-value --binding someBinding --env some-environment --preview false"
         );
@@ -438,11 +439,10 @@ describe("wrangler", () => {
 
       it("should put a key with a value loaded from a given path", async () => {
         writeFileSync("foo.txt", "file-contents", "utf-8");
-        const requests = mockKeyPutRequest(
-          "some-namespace-id",
-          "my-key",
-          "file-contents"
-        );
+        const requests = mockKeyPutRequest("some-namespace-id", {
+          key: "my-key",
+          value: "file-contents",
+        });
         await runWrangler(
           "kv:key put my-key --namespace-id some-namespace-id --path foo.txt"
         );
@@ -652,11 +652,10 @@ describe("wrangler", () => {
 
       it("should error if a given binding has both preview and non-preview and --preview is not specified", async () => {
         writeWranglerConfig();
-        const requests = mockKeyPutRequest(
-          "preview-bound-id",
-          "my-key",
-          "my-value"
-        );
+        const requests = mockKeyPutRequest("preview-bound-id", {
+          key: "my-key",
+          value: "my-value",
+        });
         await expect(
           runWrangler("kv:key put my-key my-value --binding someBinding")
         ).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1117,6 +1116,156 @@ describe("wrangler", () => {
           `kv:key delete --binding someBinding --env some-environment --preview someKey`
         );
         expect(requests.count).toEqual(1);
+      });
+    });
+  });
+
+  describe("kv:bulk", () => {
+    describe("put", () => {
+      function mockPutRequest(
+        expectedNamespaceId: string,
+        expectedKeyValues: KeyValue[]
+      ) {
+        const requests = { count: 0 };
+        setMockResponse(
+          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
+          "PUT",
+          ([_url, accountId, namespaceId], { body }) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(namespaceId).toEqual(expectedNamespaceId);
+            expect(JSON.parse(body as string)).toEqual(expectedKeyValues);
+            return null;
+          }
+        );
+        return requests;
+      }
+
+      it("should put the key-values parsed from a file", async () => {
+        const keyValues: KeyValue[] = [
+          { key: "someKey1", value: "someValue1" },
+          { key: "ns:someKey2", value: "123", base64: true },
+          { key: "someKey3", value: "someValue3", expiration: 100 },
+          { key: "someKey4", value: "someValue4", expiration_ttl: 500 },
+        ];
+        writeFileSync("./keys.json", JSON.stringify(keyValues));
+        const requests = mockPutRequest("some-namespace-id", keyValues);
+        await runWrangler(
+          `kv:bulk put --namespace-id some-namespace-id keys.json`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should error if the file is not a JSON array", async () => {
+        const keyValues = { key: "someKey1", value: "someValue1" };
+        writeFileSync("./keys.json", JSON.stringify(keyValues));
+        await expect(
+          runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`
+                "Unexpected JSON input from \\"keys.json\\".
+                Expected an array of key-value objects but got type \\"object\\"."
+              `);
+      });
+
+      it("should error if the array contains items that are not key-value objects", async () => {
+        const keyValues = [
+          123,
+          "a string",
+          { key: "someKey" },
+          { value: "someValue" },
+          { key: "someKey1", value: "someValue1", invalid: true },
+        ];
+        writeFileSync("./keys.json", JSON.stringify(keyValues));
+        await expect(
+          runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`
+                "Unexpected JSON input from \\"keys.json\\".
+                Each item in the array should be an object that matches:
+
+                interface KeyValue {
+                  key: string;
+                  value: string;
+                  expiration?: number;
+                  expiration_ttl?: number;
+                  metadata?: object;
+                  base64?: boolean;
+                }
+
+                The item at index 0 is type: \\"number\\" - 123
+                The item at index 1 is type: \\"string\\" - \\"a string\\"
+                The item at index 2 is {\\"key\\":\\"someKey\\"}
+                The item at index 3 is {\\"value\\":\\"someValue\\"}"
+              `);
+
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "Unexpected key-value properties in \\"keys.json\\".
+          The item at index 4 contains unexpected properties: [\\"invalid\\"]."
+        `);
+      });
+    });
+
+    describe("delete", () => {
+      function mockDeleteRequest(
+        expectedNamespaceId: string,
+        expectedKeys: string[]
+      ) {
+        const requests = { count: 0 };
+        setMockResponse(
+          "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
+          "DELETE",
+          ([_url, accountId, namespaceId], { headers, body }) => {
+            requests.count++;
+            expect(accountId).toEqual("some-account-id");
+            expect(namespaceId).toEqual(expectedNamespaceId);
+            expect(new Headers(headers ?? []).get("Content-Type")).toEqual(
+              "application/json"
+            );
+            expect(JSON.parse(body as string)).toEqual(expectedKeys);
+            return null;
+          }
+        );
+        return requests;
+      }
+
+      it("should delete the keys parsed from a file", async () => {
+        const keys = ["someKey1", "ns:someKey2"];
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        const requests = mockDeleteRequest("some-namespace-id", keys);
+        await runWrangler(
+          `kv:bulk delete --namespace-id some-namespace-id keys.json`
+        );
+        expect(requests.count).toEqual(1);
+      });
+
+      it("should error if the file is not a JSON array", async () => {
+        const keys = 12354;
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        await expect(
+          runWrangler(
+            `kv:bulk delete --namespace-id some-namespace-id keys.json`
+          )
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`
+                "Unexpected JSON input from \\"keys.json\\".
+                Expected an array of strings but got:
+                12354"
+              `);
+      });
+
+      it("should error if the file contains non-string items", async () => {
+        const keys = ["good", 12354, { key: "someKey" }, null];
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        await expect(
+          runWrangler(
+            `kv:bulk delete --namespace-id some-namespace-id keys.json`
+          )
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`
+                "Unexpected JSON input from \\"keys.json\\".
+                Expected an array of strings.
+                The item at index 1 is a number: 12354
+                The item at index 2 is a object: [object Object]
+                The item at index 3 is a object: null"
+              `);
       });
     });
   });

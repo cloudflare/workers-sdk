@@ -9,6 +9,7 @@ import {
   putBulkKeyValue,
 } from "./kv";
 import type { Config } from "./config";
+import type { KeyValue } from "./kv";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
@@ -128,11 +129,7 @@ export async function syncAssets(
   const keys = new Set(result.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
-  const upload: {
-    key: string;
-    value: string;
-    base64: boolean;
-  }[] = [];
+  const upload: KeyValue[] = [];
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
@@ -167,7 +164,7 @@ export async function syncAssets(
     }
     manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }
-  await putBulkKeyValue(accountId, namespace, JSON.stringify(upload));
+  await putBulkKeyValue(accountId, namespace, upload);
   return { manifest, namespace };
 }
 
