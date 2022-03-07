@@ -164,7 +164,7 @@ export async function syncAssets(
     }
     manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }
-  await putBulkKeyValue(accountId, namespace, upload);
+  await putBulkKeyValue(accountId, namespace, upload, () => {});
   return { manifest, namespace };
 }
 

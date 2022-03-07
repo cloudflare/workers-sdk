@@ -2031,7 +2031,16 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             const accountId = await requireAuth(config);
-            await putBulkKeyValue(accountId, namespaceId, content);
+            await putBulkKeyValue(
+              accountId,
+              namespaceId,
+              content,
+              (index, total) => {
+                console.log(`Uploaded ${index} of ${total}.`);
+              }
+            );
+
+            console.log("Success!");
           }
         )
         .command(
