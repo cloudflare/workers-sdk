@@ -2098,7 +2098,9 @@ export async function main(argv: string[]): Promise<void> {
               const key = content[i];
               if (typeof key !== "string") {
                 errors.push(
-                  `The item at index ${i} is a ${typeof key}: ${key}`
+                  `The item at index ${i} is type: "${typeof key}" - ${JSON.stringify(
+                    key
+                  )}`
                 );
               }
             }
@@ -2112,7 +2114,14 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            await deleteBulkKeyValue(accountId, namespaceId, content);
+            await deleteBulkKeyValue(
+              accountId,
+              namespaceId,
+              content,
+              (index, total) => {
+                console.log(`Deleted ${index} of ${total}.`);
+              }
+            );
 
             console.log("Success!");
           }

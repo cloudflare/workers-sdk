@@ -1222,7 +1222,12 @@ describe("wrangler", () => {
             expect(new Headers(headers ?? []).get("Content-Type")).toEqual(
               "application/json"
             );
-            expect(JSON.parse(body as string)).toEqual(expectedKeys);
+            expect(JSON.parse(body as string)).toEqual(
+              expectedKeys.slice(
+                (requests.count - 1) * 5000,
+                requests.count * 5000
+              )
+            );
             return null;
           }
         );
@@ -1242,6 +1247,29 @@ describe("wrangler", () => {
         );
         expect(requests.count).toEqual(1);
         expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should delete the keys in batches of 5000 parsed from a file", async () => {
+        const keys = new Array(12000).fill("some-key");
+        writeFileSync("./keys.json", JSON.stringify(keys));
+        mockConfirm({
+          text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+          result: true,
+        });
+        const requests = mockDeleteRequest("some-namespace-id", keys);
+        await runWrangler(
+          `kv:bulk delete --namespace-id some-namespace-id keys.json`
+        );
+        expect(requests.count).toEqual(3);
+        expect(std.out).toMatchInlineSnapshot(`
+          "Deleted 0 of 12000.
+          Deleted 5000 of 12000.
+          Deleted 10000 of 12000.
+          Deleted 12000 of 12000.
+          Success!"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
@@ -1323,9 +1351,9 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(`
                 "Unexpected JSON input from \\"keys.json\\".
                 Expected an array of strings.
-                The item at index 1 is a number: 12354
-                The item at index 2 is a object: [object Object]
-                The item at index 3 is a object: null"
+                The item at index 1 is type: \\"number\\" - 12354
+                The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
+                The item at index 3 is type: \\"object\\" - null"
               `);
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
