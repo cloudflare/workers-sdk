@@ -153,9 +153,7 @@ function Dev(props: DevProps): JSX.Element {
       )}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text>
-          {`B to open a browser, D to open Devtools, S to ${
-            toggles.tunnel ? "turn off" : "turn on"
-          } (experimental) sharing, L to ${
+          {`B to open a browser, D to open Devtools, L to ${
             toggles.local ? "turn off" : "turn on"
           } local mode, X to exit`}
         </Text>
@@ -835,6 +833,10 @@ async function findTunnelHostname() {
   return hostName;
 }
 
+/**
+ * Create a tunnel to the remote worker.
+ * We've disabled this for now until we figure out a better user experience.
+ */
 function useTunnel(toggle: boolean) {
   const tunnel = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
@@ -924,13 +926,6 @@ function useHotkeys(
           );
           break;
         }
-        // toggle tunnel
-        case "s":
-          setToggles((previousToggles) => ({
-            ...previousToggles,
-            tunnel: !previousToggles.tunnel,
-          }));
-          break;
         // toggle local
         case "l":
           setToggles((previousToggles) => ({
