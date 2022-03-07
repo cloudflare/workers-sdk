@@ -1130,7 +1130,12 @@ describe("wrangler", () => {
             requests.count++;
             expect(accountId).toEqual("some-account-id");
             expect(namespaceId).toEqual(expectedNamespaceId);
-            expect(JSON.parse(body as string)).toEqual(expectedKeyValues);
+            expect(JSON.parse(body as string)).toEqual(
+              expectedKeyValues.slice(
+                (requests.count - 1) * 5000,
+                requests.count * 5000
+              )
+            );
             return null;
           }
         );
@@ -1150,7 +1155,29 @@ describe("wrangler", () => {
           `kv:bulk put --namespace-id some-namespace-id keys.json`
         );
         expect(requests.count).toEqual(1);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should put the key-values in batches of 5000 parsed from a file", async () => {
+        const keyValues: KeyValue[] = new Array(12000).fill({
+          key: "someKey1",
+          value: "someValue1",
+        });
+        writeFileSync("./keys.json", JSON.stringify(keyValues));
+        const requests = mockPutRequest("some-namespace-id", keyValues);
+        await runWrangler(
+          `kv:bulk put --namespace-id some-namespace-id keys.json`
+        );
+        expect(requests.count).toEqual(3);
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded 0 of 12000.
+          Uploaded 5000 of 12000.
+          Uploaded 10000 of 12000.
+          Uploaded 12000 of 12000.
+          Success!"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`""`);
       });

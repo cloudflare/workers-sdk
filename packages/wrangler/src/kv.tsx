@@ -169,16 +169,26 @@ export async function getKeyValue(
 export async function putBulkKeyValue(
   accountId: string,
   namespaceId: string,
-  keyValues: KeyValue[]
+  keyValues: KeyValue[],
+  progressCallback: (index: number, total: number) => void
 ) {
-  return await fetchResult(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
-    {
-      method: "PUT",
-      body: JSON.stringify(keyValues),
-      headers: { "Content-Type": "application/json" },
+  for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
+    if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
+      progressCallback(index, keyValues.length);
     }
-  );
+
+    await fetchResult(
+      `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+      {
+        method: "PUT",
+        body: JSON.stringify(keyValues.slice(index, index + BATCH_KEY_MAX)),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+  if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
+    progressCallback(keyValues.length, keyValues.length);
+  }
 }
 
 export async function deleteBulkKeyValue(
