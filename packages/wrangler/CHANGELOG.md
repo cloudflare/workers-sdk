@@ -1,5 +1,277 @@
 # wrangler
 
+## 0.0.18
+
+### Patch Changes
+
+- [#523](https://github.com/cloudflare/wrangler2/pull/523) [`8c99449`](https://github.com/cloudflare/wrangler2/commit/8c99449b7d1ae4eb86607a4e1ff13fd012e6ec8c) Thanks [@threepointone](https://github.com/threepointone)! - feat: secrets + environments
+
+  This implements environment support for `wrangler secret` (both legacy and services). We now consistently generate the right script name across commands with the `getScriptName()` helper.
+
+  Based on the work by @mitchelvanbever in https://github.com/cloudflare/wrangler2/pull/95.
+
+* [#554](https://github.com/cloudflare/wrangler2/pull/554) [`18ac439`](https://github.com/cloudflare/wrangler2/commit/18ac4398f8f6e3ed3d663ee61ceb7388510390aa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: limit bulk put API requests to batches of 5,000
+
+  The `kv:bulk put` command now batches up put requests in groups of 5,000,
+  displaying progress for each request.
+
+- [#437](https://github.com/cloudflare/wrangler2/pull/437) [`2805205`](https://github.com/cloudflare/wrangler2/commit/2805205d83fa6c960351d38517c8a4169067e4e6) Thanks [@jacobbednarz](https://github.com/jacobbednarz)! - feat: use `CLOUDFLARE_...` environment variables deprecating `CF_...`
+
+  Now one should use `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_BASE_URL` rather than `CF_API_TOKEN`, `CF_ACCOUNT_ID` and `CF_API_BASE_URL`, which have been deprecated.
+
+  If you use the deprecated variables they will still work but you will see a warning message.
+
+  Within the Cloudflare tooling ecosystem, we have a mix of `CF_` and `CLOUDFLARE_`
+  for prefixing environment variables. Until recently, many of the tools
+  were fine with `CF_` however, there started to be conflicts with
+  external tools (such as Cloudfoundary CLI), which also uses `CF_` as a
+  prefix, and would potentially be reading and writing the same value the
+  Cloudflare tooling.
+
+  The Go SDK[1], Terraform[2] and cf-terraforming[3] have made the jump to
+  the `CLOUDFLARE_` prefix for environment variable prefix.
+
+  In future, all SDKs will use this prefix for consistency and to allow all the tooling to reuse the same environment variables in the scenario where they are present.
+
+  [1]: https://github.com/cloudflare/cloudflare-go
+  [2]: https://github.com/cloudflare/terraform-provider-cloudflare
+  [3]: https://github.com/cloudflare/cf-terraforming
+
+* [#530](https://github.com/cloudflare/wrangler2/pull/530) [`fdb4afd`](https://github.com/cloudflare/wrangler2/commit/fdb4afdaf10bbc72c0f4d643f752f6aafe529058) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement `rules` config field
+
+  This implements the top level `rules` configuration field. It lets you specify transport rules for non-js modules. For example, you can specify `*.md` files to be included as a text file with -
+
+  ```
+  [[rules]]
+  {type = "Text", globs = ["**/*.md"]}
+  ```
+
+  We also include a default ruleset -
+
+  ```
+    { type: "Text", globs: ["**/*.txt", "**/*.html"] },
+    { type: "Data", globs: ["**/*.bin"] },
+    { type: "CompiledWasm", globs: ["**/*.wasm"] },
+  ```
+
+  More info at https://developers.cloudflare.com/workers/cli-wrangler/configuration/#build.
+
+  Known issues -
+
+  - non-wasm module types do not work in `--local` mode
+  - `Data` type does not work in service worker format, in either mode
+
+- [#517](https://github.com/cloudflare/wrangler2/pull/517) [`201a6bb`](https://github.com/cloudflare/wrangler2/commit/201a6bb6db51ab3dde16fc496ab3c93b91d1de81) Thanks [@threepointone](https://github.com/threepointone)! - fix: publish environment specific routes
+
+  This adds some tests for publishing routes, and fixes a couple of bugs with the flow.
+
+  - fixes publishing environment specific routes, closes https://github.com/cloudflare/wrangler2/issues/513
+  - default `workers_dev` to `false` if there are any routes specified
+  - catches a hanging promise when we were toggling off a `workers.dev` subdomain (which should have been caught by the `no-floating-promises` lint rule, so that's concerning)
+  - this also fixes publishing environment specific crons, but I'll write tests for that when I'm doing that feature in depth
+
+* [#528](https://github.com/cloudflare/wrangler2/pull/528) [`26f5ad2`](https://github.com/cloudflare/wrangler2/commit/26f5ad23a98839ffaa3627681b36c58a656407a4) Thanks [@threepointone](https://github.com/threepointone)! - feat: top level `main` config field
+
+  This implements a top level `main` field for `wrangler.toml` to define an entry point for the worker , and adds a deprecation warning for `build.upload.main`. The deprecation warning is detailed enough to give the exact line to copy-paste into your config file. Example -
+
+  ```
+  The `build.upload` field is deprecated. Delete the `build.upload` field, and add this to your configuration file:
+
+  main = "src/chat.mjs"
+  ```
+
+  This also makes `./dist` a default for `build.upload.dir`, to match wrangler 1's behaviour.
+
+  Closes https://github.com/cloudflare/wrangler2/issues/488
+
+- [#521](https://github.com/cloudflare/wrangler2/pull/521) [`5947bfe`](https://github.com/cloudflare/wrangler2/commit/5947bfe469d03af3838240041814a9a1eb8f8bb6) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild from 0.14.18 to 0.14.23
+
+* [#480](https://github.com/cloudflare/wrangler2/pull/480) [`10cb789`](https://github.com/cloudflare/wrangler2/commit/10cb789a3884db17c757a6f619c98abd930ced22) Thanks [@caass](https://github.com/caass)! - Refactored tail functionality in preparation for adding pretty printing.
+
+  - Moved the `debug` toggle from a build-time constant to a (hidden) CLI flag
+  - Implemented pretty-printing logs, togglable via `--format pretty` CLI option
+  - Added stronger typing for tail event messages
+
+- [#525](https://github.com/cloudflare/wrangler2/pull/525) [`9d5c14d`](https://github.com/cloudflare/wrangler2/commit/9d5c14db4e24db0e60ef83cdd40bfc7b5e9060b8) Thanks [@threepointone](https://github.com/threepointone)! - feat: tail+envs
+
+  This implements service environment support for `wrangler tail`. Fairly simple, we just generate the right URLs. wrangler tail already works for legacy envs, so there's nothing to do there.
+
+* [#553](https://github.com/cloudflare/wrangler2/pull/553) [`bc85682`](https://github.com/cloudflare/wrangler2/commit/bc85682028c70a1c4aff96d8f2e4314dc75d6785) Thanks [@threepointone](https://github.com/threepointone)! - feat: disable tunnel in `wrangler dev`
+
+  Disables sharing local development server on the internet. We will bring this back after it's more polished/ready.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/550
+
+- [#522](https://github.com/cloudflare/wrangler2/pull/522) [`a283836`](https://github.com/cloudflare/wrangler2/commit/a283836577371bc3287d28e3671db9efe94400a1) Thanks [@threepointone](https://github.com/threepointone)! - fix: websockets
+
+  This fixes websockets in `wrangler dev`. It looks like we broke it in https://github.com/cloudflare/wrangler2/pull/503. I've reverted the specific changes made to `proxy.ts`.
+
+  Test plan -
+
+  ```
+  cd packages/wrangler
+  npm run build
+  cd ../workers-chat-demo
+  npx wrangler dev
+
+  ```
+
+* [#481](https://github.com/cloudflare/wrangler2/pull/481) [`8874548`](https://github.com/cloudflare/wrangler2/commit/88745484106a37e862d5de56ae4b7599775d7e59) Thanks [@threepointone](https://github.com/threepointone)! - fix: replace the word "deploy" with "publish" everywhere.
+
+  We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
+
+- [#537](https://github.com/cloudflare/wrangler2/pull/537) [`b978db4`](https://github.com/cloudflare/wrangler2/commit/b978db400e5c56d393e4f469b3ca5557994f8102) Thanks [@threepointone](https://github.com/threepointone)! - feat: `--local` mode only applies in `wrangler dev`
+
+  We'd originally planned for `--local` mode to be a thing across all wrangler commands. In hindsight, that didn't make much sense, since every command other than `wrangler dev` assumes some interaction with cloudflare and their API. The only command other than dev where this "worked" was `kv`, but even that didn't make sense because wrangler dev wouldn't even read from it. We also have `--experimental-enable-local-persistence` there anyway.
+
+  So this moves the `--local` flag to only apply for `wrangler dev` and removes any trace from other commands.
+
+* [#518](https://github.com/cloudflare/wrangler2/pull/518) [`72f035e`](https://github.com/cloudflare/wrangler2/commit/72f035e47a586fd02278674b1b160f5cb34d1412) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement `[text_blobs]`
+
+  This implements support for `[text_blobs]` as defined by https://github.com/cloudflare/wrangler/pull/1677.
+
+  Text blobs can be defined in service-worker format with configuration in `wrangler.toml` as -
+
+  ```
+  [text_blobs]
+  MYTEXT = "./path/to/my-text.file"
+  ```
+
+  The content of the file will then be available as the global `MYTEXT` inside your code. Note that this ONLY makes sense in service-worker format workers (for now).
+
+  Workers Sites now uses `[text_blobs]` internally. Previously, we were inlining the asset manifest into the worker itself, but we now attach the asset manifest to the uploaded worker. I also added an additional example of Workers Sites with a modules format worker.
+
+- [#532](https://github.com/cloudflare/wrangler2/pull/532) [`046b17d`](https://github.com/cloudflare/wrangler2/commit/046b17d7a8721aafd5d50c40c7bf193dceea82f4) Thanks [@threepointone](https://github.com/threepointone)! - feat: dev+envs
+
+  This implements service environments + `wrangler dev`. Fairly simple, it just needed the right url when creating the edge preview token.
+
+  I tested this by publishing a service under one env, adding secrets under it in the dashboard, and then trying to dev under another env, and verifying that the secrets didn't leak.
+
+* [#552](https://github.com/cloudflare/wrangler2/pull/552) [`3cee150`](https://github.com/cloudflare/wrangler2/commit/3cee1508d14c118f8ad817cfbf9992c3ca343bce) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add confirmation and success messages to `kv:bulk delete` command
+
+  Added the following:
+
+  - When the deletion completes, we get `Success!` logged to the console.
+  - Before deleting, the user is now asked to confirm is that is desired.
+  - A new flag `--force`/`-f` to avoid the confirmation check.
+
+- [#533](https://github.com/cloudflare/wrangler2/pull/533) [`1b3a5f7`](https://github.com/cloudflare/wrangler2/commit/1b3a5f74b2f7ae5ed47d09c96ccb055d4b4cdfe8) Thanks [@threepointone](https://github.com/threepointone)! - feat: default to legacy environments
+
+  While implementing support for service environments, we unearthed a small number of usage issues. While we work those out, we should default to using regular "legacy" environments.
+
+* [#519](https://github.com/cloudflare/wrangler2/pull/519) [`93576a8`](https://github.com/cloudflare/wrangler2/commit/93576a853b6eff3810bdccb4b7496d77b5eb5416) Thanks [@caass](https://github.com/caass)! - fix: Improve port selection for `wrangler dev` for both worker ports and inspector ports.
+
+  Previously when running `wrangler dev` on multiple workers at the same time, you couldn't attach DevTools to both workers, since they were both listening on port 9229.
+  With this PR, that behavior is improved -- you can now pass an `--inspector-port` flag to specify a port for DevTools to connect to on a per-worker basis, or
+  if the option is omitted, wrangler will assign a random unused port for you.
+
+  This "if no option is given, assign a random unused port" behavior has also been added to `wrangler dev --port`, so running `wrangler dev` on two
+  workers at once should now "just work". Hopefully.
+
+- [#545](https://github.com/cloudflare/wrangler2/pull/545) [`9e89dd7`](https://github.com/cloudflare/wrangler2/commit/9e89dd7f868e10fcd3e09789f6f6a59dff8ed4e3) Thanks [@threepointone](https://github.com/threepointone)! - feat: zoned worker support for `wrangler dev`
+
+  This implements support for zoned workers in `wrangler dev`. Of note, since we're deprecating `zone_id`, we instead use the domain provided via `--host`/`config.dev.host`/`--routes`/`--route`/`config.routes`/`config.route` and infer the zone id from it.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/544
+
+* [#494](https://github.com/cloudflare/wrangler2/pull/494) [`6e6c30f`](https://github.com/cloudflare/wrangler2/commit/6e6c30f7a32656c6db9f54318ffec6da147d45f6) Thanks [@caass](https://github.com/caass)! - - Add tests covering pretty-printing of logs in `wrangler tail`
+  - Modify `RequestEvent` types
+    - Change `Date` types to `number` to make parsing easier
+    - Change `exception` and `log` `message` properties to `unknown`
+  - Add datetime to pretty-printed request events
+
+- [#496](https://github.com/cloudflare/wrangler2/pull/496) [`5a640f0`](https://github.com/cloudflare/wrangler2/commit/5a640f0bcee7626cb8a969c89b8de7751d553df3) Thanks [@jahands](https://github.com/jahands)! - chore: Remove acorn/acorn-walk dependency used in Pages Functions filepath-routing.
+
+  This shouldn't cause any functional changes, Pages Functions filepath-routing now uses esbuild to find exports.
+
+* [#419](https://github.com/cloudflare/wrangler2/pull/419) [`04f4332`](https://github.com/cloudflare/wrangler2/commit/04f43329a252fac297bb9e8330cd934f5e96726c) Thanks [@Electroid](https://github.com/Electroid)! - refactor: use esbuild's message formatting for cleaner error messages
+
+  This is the first step in making a standard format for error messages. For now, this uses esbuild's error formatting, which is nice and colored, but we could decide to customize our own later. Moreover, we should use the `parseJSON`, `parseTOML`, and `readFile` utilities so there are pretty errors for any configuration.
+
+- [#501](https://github.com/cloudflare/wrangler2/pull/501) [`824d8c0`](https://github.com/cloudflare/wrangler2/commit/824d8c03adae369608a26122b0071583b2ae0674) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: delegate deprecated `preview` command to `dev` if possible
+
+  The `preview` command is deprecated and not supported in this version of Wrangler.
+  Instead, one should use the `dev` command for most `preview` use-cases.
+
+  This change attempts to delegate any use of `preview` to `dev` failing if the command line contains positional arguments that are not compatible with `dev`.
+
+  Resolves #9
+
+* [#541](https://github.com/cloudflare/wrangler2/pull/541) [`371e6c5`](https://github.com/cloudflare/wrangler2/commit/371e6c581a26bd011f416de8417a2c2ca1b60097) Thanks [@threepointone](https://github.com/threepointone)! - chore: refactor some common code into `requireAuth()`
+
+  There was a common chunk of code across most commands that ensures a user is logged in, and retrieves an account ID. I'd resisted making this into an abstraction for a while. Now that the codebase is stable, and https://github.com/cloudflare/wrangler2/pull/537 removes some surrounding code there, I made an abstraction for this common code as `requireAuth()`. This gets a mention in the changelog simply because it touches a bunch of code, although it's mostly mechanical deletion/replacement.
+
+- [#551](https://github.com/cloudflare/wrangler2/pull/551) [`afd4b0e`](https://github.com/cloudflare/wrangler2/commit/afd4b0ed2c9fc95238b69c6fd86740243f58b049) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not log the `null` returned from `kv:bulk put` and `kv:bulk delete`
+
+* [#503](https://github.com/cloudflare/wrangler2/pull/503) [`e5c7ed8`](https://github.com/cloudflare/wrangler2/commit/e5c7ed8b17033fc6a9e77a9429cb32fa54b5d8fb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refact: consolidate on `ws` websocket library
+
+  Removes the `faye-websocket` library and uses `ws` across the code base.
+
+- [#502](https://github.com/cloudflare/wrangler2/pull/502) [`b30349a`](https://github.com/cloudflare/wrangler2/commit/b30349ac6b258c0c274606959d9d31bb8efb08d7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix(pages): ensure remaining args passed to `pages dev` command are captured
+
+  It is common to pass additional commands to `pages dev` to generate the input source.
+  For example:
+
+  ```bash
+  npx wrangler@beta pages dev -- npm run dev
+  ```
+
+  Previously the args after `--` were being dropped.
+  This change ensures that these are captured and used correctly.
+
+  Fixes #482
+
+* [#512](https://github.com/cloudflare/wrangler2/pull/512) [`b093df7`](https://github.com/cloudflare/wrangler2/commit/b093df775cc762517666bd68361cc37c5e936a9a) Thanks [@threepointone](https://github.com/threepointone)! - feat: a better `tsconfig.json`
+
+  This makes a better `tsconfig.json` when using `wrangler init`. Of note, it takes the default `tsconfig.json` generated by `tsc --init`, and adds our modifications.
+
+- [#510](https://github.com/cloudflare/wrangler2/pull/510) [`9534c7f`](https://github.com/cloudflare/wrangler2/commit/9534c7fd1351daacaed63b3a3e2fafa884b515a8) Thanks [@threepointone](https://github.com/threepointone)! - feat: `--legacy-env` cli arg / `legacy_env` config
+
+  This is the first of a few changes to codify how we do environments in wrangler2, both older legacy style environments, and newer service environments. Here, we add a cli arg and a config field for specifying whether to enable/disable legacy style environments, and pass it on to dev/publish commands. We also fix how we were generating kv namespaces for Workers Sites, among other smaller fixes.
+
+* [#549](https://github.com/cloudflare/wrangler2/pull/549) [`3d2ce01`](https://github.com/cloudflare/wrangler2/commit/3d2ce01a48acfb759147de5d94667eef77d9f16e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: kv:bulk should JSON encode its contents
+
+  The body passed to `kv:bulk delete` and `kv:bulk put` must be JSON encoded.
+  This change fixes that and adds some tests to prove it.
+
+  Fixes #547
+
+- [#554](https://github.com/cloudflare/wrangler2/pull/554) [`6e5319b`](https://github.com/cloudflare/wrangler2/commit/6e5319bd7a3685afa0e0b7c3e9bb81831b89e88f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: limit bulk delete API requests to batches of 5,000
+
+  The `kv:bulk delete` command now batches up delete requests in groups of 5,000,
+  displaying progress for each request.
+
+* [#538](https://github.com/cloudflare/wrangler2/pull/538) [`4b6c973`](https://github.com/cloudflare/wrangler2/commit/4b6c973dfdaf44429a47c8da387f9bc706ef4664) Thanks [@threepointone](https://github.com/threepointone)! - feat: with `wrangler init`, create a new directory for named workers
+
+  Currently, when creating a new project, we usually first have to create a directory before running `wrangler init`, since it defaults to creating the `wrangler.toml`, `package.json`, etc in the current working directory. This fix introduces an enhancement, where using the `wrangler init [name]` form creates a directory named `[name]` and initialises the project files inside it. This matches the usage pattern a little better, and still preserves the older behaviour when we're creating a worker inside existing projects.
+
+- [#548](https://github.com/cloudflare/wrangler2/pull/548) [`e3cab74`](https://github.com/cloudflare/wrangler2/commit/e3cab749650c70c313d9e2cc645c9656ea6be036) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: clean up unnecessary async functions
+
+  The `readFile()` and `readConfig()` helpers do not need to be async.
+  Doing so just adds complexity to their call sites.
+
+* [#529](https://github.com/cloudflare/wrangler2/pull/529) [`9d7e946`](https://github.com/cloudflare/wrangler2/commit/9d7e946608c54ca283b74885d5d547a87c02a79b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add more comprehensive config validation checking
+
+  The configuration for a Worker is complicated since we can define different "environments", and each environment can have its own configuration.
+  There is a default ("top-level") environment and then named environments that provide environment specific configuration.
+
+  This is further complicated by the fact that there are three kinds of environment configuration:
+
+  - **non-overridable**: these values are defined once in the top-level configuration, apply to all environments and cannot be overridden by an environment.
+  - **inheritable**: these values can be defined at the top-level but can also be overridden by environment specific values.
+    Named environments do not need to provide their own values, in which case they inherit the value from the top-level.
+  - **non-inheritable**: these values must be explicitly defined in each environment if they are defined at the top-level.
+    Named environments do not inherit such configuration and must provide their own values.
+
+  All configuration values in `wrangler.toml` are optional and will receive a default value if not defined.
+
+  This change adds more strict interfaces for top-level `Config` and `Environment` types,
+  as well as validation and normalization of the optional fields that are read from `wrangler.toml`.
+
+- [#486](https://github.com/cloudflare/wrangler2/pull/486) [`ff8c9f6`](https://github.com/cloudflare/wrangler2/commit/ff8c9f6cf9f6bf2922df74ea1083d12153a64ae0) Thanks [@threepointone](https://github.com/threepointone)! - fix: remove warning if worker with a durable object doesn't have a name
+
+  We were warning if you were trying to develop a durable object with an unnamed worker. Further, the internal api would actually throw if you tried to develop with a named worker if it wasn't already published. The latter is being fixed internally and should live soon, and this fix removes the warning completely.
+
 ## 0.0.17
 
 ### Patch Changes
