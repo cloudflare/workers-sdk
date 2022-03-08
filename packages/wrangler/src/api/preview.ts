@@ -129,7 +129,8 @@ export async function previewToken(
     value: preview_token,
     host: ctx.zone
       ? ctx.zone.host
-      : `${
+      : worker.name
+      ? `${
           worker.name
           // TODO: this should also probably have the env prefix
           // but it doesn't appear to work yet, instead giving us the
@@ -137,7 +138,8 @@ export async function previewToken(
           // ctx.env && !ctx.legacyEnv
           //   ? `${ctx.env}.${worker.name}`
           //   : worker.name
-        }.${host.split(".").slice(1).join(".")}`,
+        }.${host.split(".").slice(1).join(".")}`
+      : host,
 
     inspectorUrl,
     prewarmUrl,
