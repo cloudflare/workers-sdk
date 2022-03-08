@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import * as TOML from "@iarna/toml";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
@@ -24,7 +25,7 @@ import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
 import type { CfPreviewToken } from "./api/preview";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
-import type { Config } from "./config";
+import type { Config, RawConfig } from "./config";
 import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { WatchMode } from "esbuild";
@@ -275,7 +276,6 @@ function useLocalWorker(props: {
   inspectorPort: number;
   enableLocalPersistence: boolean;
 }) {
-  // TODO: pass vars via command line
   const { bundle, format, bindings, port, assetPaths, inspectorPort } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
@@ -307,6 +307,83 @@ function useLocalWorker(props: {
         );
       }
 
+      // Let's also construct a wrangler.toml file
+      const pathToWranglerToml = path.join(
+        path.dirname(bundle.path),
+        "wrangler.toml"
+      );
+      {
+        const config: RawConfig = {
+          vars: bindings.vars,
+          kv_namespaces: bindings.kv_namespaces,
+          build: {
+            upload: {
+              rules: (props.rules || []).concat(DEFAULT_MODULE_RULES),
+            },
+          },
+        };
+
+        (bindings.durable_objects?.bindings || []).forEach((binding) => {
+          if (binding.script_name) {
+            throw new Error(
+              `⎔ Durable object bindings to external scripts are not yet supported in local mode.`
+            );
+          }
+          config.durable_objects ||= { bindings: [] };
+          config.durable_objects.bindings.push(binding);
+        });
+
+        if (format === "service-worker") {
+          // We rewrite paths in wasm_modules/text_blobs to be absolute
+          // so they can be resolved correctly against the bundle
+          config.wasm_modules = Object.entries(
+            bindings.wasm_modules || {}
+          ).reduce((obj, [name, filePath]) => {
+            return {
+              ...obj,
+              [name]: path.join(process.cwd(), filePath),
+            };
+          }, {});
+          config.text_blobs = Object.entries(bindings.text_blobs || {}).reduce(
+            (obj, [name, filePath]) => {
+              return {
+                ...obj,
+                [name]: path.join(process.cwd(), filePath),
+              };
+            },
+            {}
+          );
+
+          // In service-worker format, modules are referenced
+          // by global identifiers, so we generate those here.
+          // This identifier has to be a valid JS identifier,
+          // so we replace all non alphanumeric characters
+          // with an underscore.
+          const identifierSanitiseRegex = /[^a-zA-Z0-9_$]/g;
+
+          bundle.modules.forEach(({ name, type }) => {
+            if (type === "compiled-wasm") {
+              config.wasm_modules ||= {};
+              const identifier = name.replace(identifierSanitiseRegex, "_");
+              config.wasm_modules[identifier] = name;
+            } else if (type === "text") {
+              config.text_blobs ||= {};
+              const identifier = name.replace(identifierSanitiseRegex, "_");
+              config.text_blobs[identifier] = name;
+            } else {
+              throw new Error(
+                `⎔ Cannot use the module ${name} with type "${type}" in service-worker format yet`
+              );
+            }
+          });
+        }
+
+        await writeFile(
+          pathToWranglerToml,
+          TOML.stringify(config as TOML.JsonMap)
+        );
+      }
+
       console.log("⎔ Starting a local server...");
       // TODO: just use execa for this
       local.current = spawn(
@@ -318,7 +395,7 @@ function useLocalWorker(props: {
           bundle.path,
           "--watch",
           "--wrangler-config",
-          path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
+          pathToWranglerToml,
           "--env",
           path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
           "--package",
@@ -342,55 +419,8 @@ function useLocalWorker(props: {
           ...(props.enableLocalPersistence
             ? ["--kv-persist", "--cache-persist", "--do-persist"]
             : []),
-          ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
-            return ["--binding", `${key}=${value}`];
-          }),
-          ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
-            return ["--kv", binding];
-          }),
-          ...(bindings.durable_objects?.bindings || []).flatMap(
-            ({ name, class_name }) => {
-              return ["--do", `${name}=${class_name}`];
-            }
-          ),
-          ...Object.entries(bindings.wasm_modules || {}).flatMap(
-            ([name, filePath]) => {
-              return [
-                "--wasm",
-                `${name}=${path.join(process.cwd(), filePath)}`,
-              ];
-            }
-          ),
-          ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
-            if (format === "service-worker") {
-              if (type === "compiled-wasm") {
-                // In service-worker format, .wasm modules are referenced
-                // by global identifiers, so we convert it here.
-                // This identifier has to be a valid JS identifier,
-                // so we replace all non alphanumeric characters
-                // with an underscore.
-                const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-                return cmd.concat([`--wasm`, `${identifier}=${name}`]);
-              } else {
-                // TODO: we should actually support this
-                throw new Error(
-                  `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
-                );
-              }
-            }
-            return cmd;
-          }, []),
           "--modules",
           String(format === "modules"),
-          ...(props.rules || [])
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            .concat(DEFAULT_MODULE_RULES!)
-            .flatMap((rule) =>
-              rule.globs.flatMap((glob) => [
-                "--modules-rule",
-                `${rule.type}=${glob}`,
-              ])
-            ),
         ],
         {
           cwd: path.dirname(bundle.path),
@@ -463,6 +493,7 @@ function useLocalWorker(props: {
     props.public,
     props.rules,
     bindings.wasm_modules,
+    bindings.text_blobs,
   ]);
   return { inspectorUrl };
 }
