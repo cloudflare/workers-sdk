@@ -1,7 +1,11 @@
+import * as fs from "node:fs";
+import * as TOML from "@iarna/toml";
+import fetchMock from "jest-fetch-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -44,83 +48,180 @@ describe("wrangler secret", () => {
       );
     }
 
-    it("should create a secret", async () => {
-      mockPrompt({
-        text: "Enter a secret value:",
-        type: "password",
-        result: "the-secret",
+    describe("interactive", () => {
+      useMockStdin({ isTTY: true });
+
+      it("should create a secret", async () => {
+        mockPrompt({
+          text: "Enter a secret value:",
+          type: "password",
+          result: "the-secret",
+        });
+
+        mockPutRequest({ name: "the-secret-name", text: "the-secret" });
+        await runWrangler("secret put the-key --name script-name");
+
+        expect(std.out).toMatchInlineSnapshot(`
+                  "🌀 Creating the secret for script script-name
+                  ✨ Success! Uploaded secret the-key"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
-      mockPutRequest({ name: "the-secret-name", text: "the-secret" });
-      await runWrangler("secret put the-key --name script-name");
+      it("should create a secret: legacy envs", async () => {
+        mockPrompt({
+          text: "Enter a secret value:",
+          type: "password",
+          result: "the-secret",
+        });
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Creating the secret for script script-name
-        ✨ Success! Uploaded secret the-key"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-    });
+        mockPutRequest(
+          { name: "the-secret-name", text: "the-secret" },
+          "some-env",
+          true
+        );
+        await runWrangler(
+          "secret put the-key --name script-name --env some-env --legacy-env"
+        );
 
-    it("should create a secret: legacy envs", async () => {
-      mockPrompt({
-        text: "Enter a secret value:",
-        type: "password",
-        result: "the-secret",
+        expect(std.out).toMatchInlineSnapshot(`
+                  "🌀 Creating the secret for script script-name-some-env
+                  ✨ Success! Uploaded secret the-key"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
-      mockPutRequest(
-        { name: "the-secret-name", text: "the-secret" },
-        "some-env",
-        true
-      );
-      await runWrangler(
-        "secret put the-key --name script-name --env some-env --legacy-env"
-      );
+      it("should create a secret: service envs", async () => {
+        mockPrompt({
+          text: "Enter a secret value:",
+          type: "password",
+          result: "the-secret",
+        });
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Creating the secret for script script-name-some-env
-        ✨ Success! Uploaded secret the-key"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-    });
+        mockPutRequest(
+          { name: "the-secret-name", text: "the-secret" },
+          "some-env",
+          false
+        );
+        await runWrangler(
+          "secret put the-key --name script-name --env some-env --legacy-env false"
+        );
 
-    it("should create a secret: service envs", async () => {
-      mockPrompt({
-        text: "Enter a secret value:",
-        type: "password",
-        result: "the-secret",
+        expect(std.out).toMatchInlineSnapshot(`
+                  "🌀 Creating the secret for script script-name (some-env)
+                  ✨ Success! Uploaded secret the-key"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
-      mockPutRequest(
-        { name: "the-secret-name", text: "the-secret" },
-        "some-env",
-        false
-      );
-      await runWrangler(
-        "secret put the-key --name script-name --env some-env --legacy-env false"
-      );
+      it("should error without a script name", async () => {
+        let error: Error | undefined;
+        try {
+          await runWrangler("secret put the-key");
+        } catch (e) {
+          error = e as Error;
+        }
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`
+          "Missing script name
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Creating the secret for script script-name (some-env)
-        ✨ Success! Uploaded secret the-key"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
+        expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
+      });
     });
 
-    it("should error without a script name", async () => {
-      let error: Error | undefined;
-      try {
-        await runWrangler("secret put the-key");
-      } catch (e) {
-        error = e as Error;
-      }
-      expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`
-        "Missing script name
+    describe("non-interactive", () => {
+      const mockStdIn = useMockStdin({ isTTY: false });
 
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-      `);
-      expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
+      it("should create a secret, from piped input", async () => {
+        mockPutRequest({ name: "the-key", text: "the-secret" });
+        // Pipe the secret in as three chunks to test that we reconstitute it correctly.
+        mockStdIn.send("the", "-", "secret");
+        await runWrangler("secret put the-key --name script-name");
+
+        expect(std.out).toMatchInlineSnapshot(`
+          "🌀 Creating the secret for script script-name
+          ✨ Success! Uploaded secret the-key"
+        `);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should error if the piped input fails", async () => {
+        mockPutRequest({ name: "the-key", text: "the-secret" });
+        mockStdIn.throwError(new Error("Error in stdin stream"));
+        await expect(
+          runWrangler("secret put the-key --name script-name")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
+
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      describe("with accountId", () => {
+        mockAccountId({ accountId: "" });
+
+        it("should error if a user has no account", async () => {
+          await expect(
+            runWrangler("secret put the-key --name script-name")
+          ).rejects.toThrowErrorMatchingInlineSnapshot(
+            `"No account id found, quitting..."`
+          );
+        });
+
+        it("should use the account from wrangler.toml", async () => {
+          fs.writeFileSync(
+            "wrangler.toml",
+            TOML.stringify({
+              name: "test-name",
+              account_id: "123",
+            }),
+            "utf-8"
+          );
+          await runWrangler("secret put the-key --name script-name");
+          expect(std.out).toMatchInlineSnapshot(`
+            "🌀 Creating the secret for script script-name
+            ✨ Success! Uploaded secret the-key"
+          `);
+          expect(std.warn).toMatchInlineSnapshot(`""`);
+          expect(std.err).toMatchInlineSnapshot(`""`);
+        });
+
+        it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
+          // This is a mock response for the request to the CF API memberships of the current user.
+          fetchMock.doMockOnce(async () => {
+            return {
+              body: JSON.stringify({
+                success: true,
+                result: [
+                  {
+                    id: "1",
+                    account: { id: "account-id-1", name: "account-name-1" },
+                  },
+                  {
+                    id: "2",
+                    account: { id: "account-id-2", name: "account-name-2" },
+                  },
+                  {
+                    id: "3",
+                    account: { id: "account-id-3", name: "account-name-3" },
+                  },
+                ],
+              }),
+            };
+          });
+          await expect(runWrangler("secret put the-key --name script-name"))
+            .rejects.toThrowErrorMatchingInlineSnapshot(`
+                  "More than one account available but unable to select one in non-interactive mode.
+                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+                    \\"account-name-1\\" - \\"account-id-1\\")
+                    \\"account-name-2\\" - \\"account-id-2\\")
+                    \\"account-name-3\\" - \\"account-id-3\\")"
+                `);
+        });
+      });
     });
   });
 
