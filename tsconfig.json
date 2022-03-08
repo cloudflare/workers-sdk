@@ -9,7 +9,8 @@
     "lib": ["esnext"],
     "incremental": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["jest"]
   },
   "exclude": ["node_modules/"]
 }

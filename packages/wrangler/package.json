@@ -46,13 +46,11 @@
     "fsevents": "~2.3.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.16.0",
     "@iarna/toml": "^2.2.5",
     "@sentry/cli": "^1.71.0",
     "@sentry/integrations": "^6.17.6",
     "@sentry/node": "^6.17.6",
     "@types/command-exists": "^1.2.0",
-    "@types/estree": "^0.0.50",
     "@types/glob-to-regexp": "0.4.1",
     "@types/mime": "^2.0.3",
     "@types/prompts": "^2.0.14",
