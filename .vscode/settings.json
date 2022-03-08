@@ -6,7 +6,6 @@
     "cloudflared",
     "esbuild",
     "eslintcache",
-    "estree",
     "execa",
     "iarna",
     "keyvalue",

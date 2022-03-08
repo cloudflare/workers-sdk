@@ -14,10 +14,10 @@
   "dependencies": {
     "@changesets/changelog-github": "^0.4.2",
     "@changesets/cli": "^2.18.0",
-    "@types/jest": "^27.4.0",
+    "@types/jest": "^27.4.1",
     "@types/node": "^16.11.11",
-    "@typescript-eslint/eslint-plugin": "^5.6.0",
-    "@typescript-eslint/parser": "^5.6.0",
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "@typescript-eslint/parser": "^5.14.0",
     "esbuild-jest": "0.5.0",
     "esbuild-register": "^3.2.0",
     "eslint": "^8.9.0",
@@ -26,15 +26,15 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-unused-imports": "^2.0.0",
     "ioredis": "^4.28.2",
-    "jest": "^27.4.2",
+    "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.5.1",
-    "typescript": "^4.5.2"
+    "typescript": "^4.6.2"
   },
   "scripts": {
-    "check": "run-p check:* --aggregate-output -l",
+    "check": "run-p check:* --aggregate-output --continue-on-error",
     "check:type": "npm run check:type --workspaces --if-present",
-    "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content",
+    "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
     "check:format": "prettier packages/** --check --ignore-unknown",
     "build": "npm run build --workspace=wrangler",
     "test": "npm run test --workspaces --if-present",
@@ -49,7 +49,8 @@
       "packages/wrangler/vendor",
       "packages/wrangler/*-dist",
       "packages/wrangler/pages/functions/template-worker.ts",
-      "packages/wrangler/templates"
+      "packages/wrangler/templates",
+      "example-remix-pages-app/public"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
