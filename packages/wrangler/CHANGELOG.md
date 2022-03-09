@@ -1,5 +1,13 @@
 # wrangler
 
+## 0.0.19
+
+### Patch Changes
+
+- [#557](https://github.com/cloudflare/wrangler2/pull/557) [`835c3ae`](https://github.com/cloudflare/wrangler2/commit/835c3ae061f7b0dd67fa5e0bd56c445cb6666bf8) Thanks [@threepointone](https://github.com/threepointone)! - fix: wrangler dev on unnamed workers in remote mode
+
+  With unnamed workers, we use the filename as the name of the worker, which isn't a valid name for workers because of the `.` (This break was introduced in https://github.com/cloudflare/wrangler2/pull/545). The preview service accepts unnamed workers and generates a hash anyway, so the fix is to simply not send it, and use the host that the service provides.
+
 ## 0.0.18
 
 ### Patch Changes
