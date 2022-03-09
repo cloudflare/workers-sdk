@@ -114,13 +114,12 @@ function Dev(props: DevProps): JSX.Element {
   );
 
   useTunnel(toggles.tunnel);
-  const scriptName = props.name || path.basename(props.entry.file);
 
   return (
     <>
       {toggles.local ? (
         <Local
-          name={scriptName}
+          name={props.name}
           bundle={bundle}
           format={format}
           bindings={props.bindings}
@@ -133,7 +132,7 @@ function Dev(props: DevProps): JSX.Element {
         />
       ) : (
         <Remote
-          name={scriptName}
+          name={props.name}
           bundle={bundle}
           format={format}
           accountId={props.accountId}
@@ -182,7 +181,7 @@ function useWorkerFormat(props: {
 }
 
 function Remote(props: {
-  name: string;
+  name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   public: undefined | string;
@@ -678,7 +677,7 @@ function useEsbuild({
 }
 
 function useWorker(props: {
-  name: string;
+  name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   modules: CfModule[];
