@@ -160,7 +160,7 @@ describe("wrangler secret", () => {
       });
 
       describe("with accountId", () => {
-        mockAccountId({ accountId: "" });
+        mockAccountId({ accountId: null });
 
         it("should error if a user has no account", async () => {
           await expect(
