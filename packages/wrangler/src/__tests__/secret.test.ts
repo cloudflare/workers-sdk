@@ -58,7 +58,7 @@ describe("wrangler secret", () => {
           result: "the-secret",
         });
 
-        mockPutRequest({ name: "the-secret-name", text: "the-secret" });
+        mockPutRequest({ name: "the-key", text: "the-secret" });
         await runWrangler("secret put the-key --name script-name");
 
         expect(std.out).toMatchInlineSnapshot(`
@@ -76,7 +76,7 @@ describe("wrangler secret", () => {
         });
 
         mockPutRequest(
-          { name: "the-secret-name", text: "the-secret" },
+          { name: "the-key", text: "the-secret" },
           "some-env",
           true
         );
@@ -99,7 +99,7 @@ describe("wrangler secret", () => {
         });
 
         mockPutRequest(
-          { name: "the-secret-name", text: "the-secret" },
+          { name: "the-key", text: "the-secret" },
           "some-env",
           false
         );
@@ -174,11 +174,12 @@ describe("wrangler secret", () => {
           fs.writeFileSync(
             "wrangler.toml",
             TOML.stringify({
-              name: "test-name",
-              account_id: "123",
+              account_id: "some-account-id",
             }),
             "utf-8"
           );
+          mockStdIn.send("the-secret");
+          mockPutRequest({ name: "the-key", text: "the-secret" });
           await runWrangler("secret put the-key --name script-name");
           expect(std.out).toMatchInlineSnapshot(`
             "🌀 Creating the secret for script script-name

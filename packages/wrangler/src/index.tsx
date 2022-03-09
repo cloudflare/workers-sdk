@@ -1466,49 +1466,61 @@ export async function main(argv: string[]): Promise<void> {
               });
             }
 
+            const createDraftWorker = async () => {
+              // TODO: log a warning
+              await fetchResult(
+                !args["legacy-env"] && args.env
+                  ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
+                  : `/accounts/${accountId}/workers/scripts/${scriptName}`,
+                {
+                  method: "PUT",
+                  body: toFormData({
+                    name: scriptName,
+                    main: {
+                      name: scriptName,
+                      content: `export default { fetch() {} }`,
+                      type: "esm",
+                    },
+                    bindings: {
+                      kv_namespaces: [],
+                      vars: {},
+                      durable_objects: { bindings: [] },
+                      r2_buckets: [],
+                      wasm_modules: {},
+                      text_blobs: {},
+                      unsafe: [],
+                    },
+                    modules: [],
+                    migrations: undefined,
+                    compatibility_date: undefined,
+                    compatibility_flags: undefined,
+                    usage_model: undefined,
+                  }),
+                }
+              );
+            };
+
+            function isMissingWorkerError(e: unknown): e is { code: 10007 } {
+              return (
+                typeof e === "object" &&
+                e !== null &&
+                (e as { code: 10007 }).code === 10007
+              );
+            }
+
             try {
               await submitSecret();
             } catch (e) {
-              // @ts-expect-error non-standard property on Error
-              if (e.code === 10007) {
-                // upload a draft worker
-                // TODO: log a warning
-                await fetchResult(
-                  !args["legacy-env"] && args.env
-                    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-                    : `/accounts/${accountId}/workers/scripts/${scriptName}`,
-                  {
-                    method: "PUT",
-                    body: toFormData({
-                      name: scriptName,
-                      main: {
-                        name: scriptName,
-                        content: `export default { fetch() {} }`,
-                        type: "esm",
-                      },
-                      bindings: {
-                        kv_namespaces: [],
-                        vars: {},
-                        durable_objects: { bindings: [] },
-                        r2_buckets: [],
-                        wasm_modules: {},
-                        text_blobs: {},
-                        unsafe: [],
-                      },
-                      modules: [],
-                      migrations: undefined,
-                      compatibility_date: undefined,
-                      compatibility_flags: undefined,
-                      usage_model: undefined,
-                    }),
-                  }
-                );
-
-                // and then try again
+              if (isMissingWorkerError(e)) {
+                // create a draft worker and try again
+                await createDraftWorker();
                 await submitSecret();
                 // TODO: delete the draft worker if this failed too?
+              } else {
+                throw e;
               }
             }
+
             console.log(`✨ Success! Uploaded secret ${args.key}`);
           }
         )
