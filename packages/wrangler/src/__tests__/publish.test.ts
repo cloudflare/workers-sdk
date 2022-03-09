@@ -474,13 +474,13 @@ export default{
       await expect(runWrangler("publish ./index.js")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
               "Processing wrangler.toml configuration:
-                - ERROR: \\"site.bucket\\" is a required field."
+                - \\"site.bucket\\" is a required field."
             `);
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - ERROR: \\"site.bucket\\" is a required field.
+          - \\"site.bucket\\" is a required field.
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);

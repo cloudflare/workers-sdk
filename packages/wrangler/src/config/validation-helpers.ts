@@ -237,21 +237,28 @@ export const validateRequiredProperty = (
   container: string,
   key: string,
   value: unknown,
-  type: string
+  type: string,
+  choices?: unknown[]
 ): boolean => {
   if (container) {
     container += ".";
   }
   if (value === undefined) {
-    diagnostics.errors.push(`ERROR: "${container}${key}" is a required field.`);
+    diagnostics.errors.push(`"${container}${key}" is a required field.`);
     return false;
   } else if (typeof value !== type) {
     diagnostics.errors.push(
-      `ERROR: "${container}${key}" should be of type ${type} but got ${JSON.stringify(
+      `Expected "${container}${key}" to be of type ${type} but got ${JSON.stringify(
         value
       )}.`
     );
     return false;
+  } else if (choices) {
+    if (
+      !isOneOf(...choices)(diagnostics, `${container}${key}`, value, undefined)
+    ) {
+      return false;
+    }
   }
   return true;
 };
@@ -264,10 +271,18 @@ export const validateOptionalProperty = (
   container: string,
   key: string,
   value: unknown,
-  type: string
+  type: string,
+  choices?: unknown[]
 ): boolean => {
   if (value !== undefined) {
-    return validateRequiredProperty(diagnostics, container, key, value, type);
+    return validateRequiredProperty(
+      diagnostics,
+      container,
+      key,
+      value,
+      type,
+      choices
+    );
   }
   return true;
 };
@@ -284,7 +299,7 @@ export const validateTypedArray = (
   let isValid = true;
   if (!Array.isArray(value)) {
     diagnostics.errors.push(
-      `"${container}" should be an array of ${type}s but got ${JSON.stringify(
+      `Expected "${container}" to be an array of ${type}s but got ${JSON.stringify(
         value
       )}`
     );

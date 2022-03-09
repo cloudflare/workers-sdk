@@ -65,8 +65,8 @@ describe("normalizeAndValidateConfig()", () => {
         dev: {
           ip: "255.255.255.255",
           port: 9999,
-          local_protocol: "HTTPS",
-          upstream_protocol: "HTTP",
+          local_protocol: "https",
+          upstream_protocol: "http",
         },
         build: {
           command: "COMMAND",
@@ -95,8 +95,8 @@ describe("normalizeAndValidateConfig()", () => {
         dev: {
           ip: 222,
           port: "FOO",
-          local_protocol: 333,
-          upstream_protocol: 444,
+          local_protocol: "wss",
+          upstream_protocol: "ws",
         },
         build: {
           command: 555,
@@ -115,17 +115,17 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - ERROR: \\"build.command\\" should be of type string but got 555.
-            - ERROR: \\"build.cwd\\" should be of type string but got 666.
-            - ERROR: \\"build.watch_dir\\" should be of type string but got 777.
-            - ERROR: \\"legacy_env\\" should be of type boolean but got \\"FOO\\".
-            - ERROR: \\"main\\" should be a string but got 111
-            - ERROR: \\"dev.ip\\" should be of type string but got 222.
-            - ERROR: \\"dev.port\\" should be of type number but got \\"FOO\\".
-            - ERROR: \\"dev.local_protocol\\" should be of type string but got 333.
-            - ERROR: \\"dev.upstream_protocol\\" should be of type string but got 444."
-        `);
+        "Processing wrangler configuration:
+          - Expected \\"build.command\\" to be of type string but got 555.
+          - Expected \\"build.cwd\\" to be of type string but got 666.
+          - Expected \\"build.watch_dir\\" to be of type string but got 777.
+          - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
+          - Expected \\"main\\" to be a string but got 111
+          - Expected \\"dev.ip\\" to be of type string but got 222.
+          - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
+          - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
+          - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
+      `);
     });
 
     it("should warn on and remove unexpected top level fields", () => {
@@ -244,14 +244,14 @@ describe("normalizeAndValidateConfig()", () => {
       expect(config).toEqual(expect.objectContaining(expectedConfig));
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - ERROR: \\"migrations[0].tag\\" should be of type string but got 111.
-            - ERROR: \\"migrations[0].new_classes.[0]\\" should be of type string but got 222.
-            - ERROR: \\"migrations[0].new_classes.[1]\\" should be of type string but got 333.
-            - \\"migrations[0].renamed_classes\\" should be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-            - ERROR: \\"migrations[0].deleted_classes.[0]\\" should be of type string but got 666.
-            - ERROR: \\"migrations[0].deleted_classes.[1]\\" should be of type string but got 777."
-        `);
+        "Processing wrangler configuration:
+          - Expected \\"migrations[0].tag\\" to be of type string but got 111.
+          - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
+          - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+          - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
+          - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
+          - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+      `);
     });
 
     describe("site", () => {
@@ -291,9 +291,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(config).toEqual(expect.objectContaining(expectedConfig));
         expect(diagnostics.hasErrors()).toBe(true);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - ERROR: \\"site.bucket\\" is a required field."
-              `);
+          "Processing wrangler configuration:
+            - \\"site.bucket\\" is a required field."
+        `);
         expect(diagnostics.hasWarnings()).toBe(false);
       });
 
@@ -314,12 +314,12 @@ describe("normalizeAndValidateConfig()", () => {
         expect(config).toEqual(expect.objectContaining(expectedConfig));
         expect(diagnostics.hasWarnings()).toBe(false);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-            "Processing wrangler configuration:
-              - ERROR: \\"sites.include.[0]\\" should be of type string but got 222.
-              - ERROR: \\"sites.include.[1]\\" should be of type string but got 333.
-              - ERROR: \\"sites.exclude.[0]\\" should be of type string but got 444.
-              - ERROR: \\"sites.exclude.[1]\\" should be of type string but got 555."
-          `);
+          "Processing wrangler configuration:
+            - Expected \\"sites.include.[0]\\" to be of type string but got 222.
+            - Expected \\"sites.include.[1]\\" to be of type string but got 333.
+            - Expected \\"sites.exclude.[0]\\" to be of type string but got 444.
+            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555."
+        `);
       });
 
       it("should error with a deprecation warning if entry-point is defined", async () => {
@@ -777,20 +777,20 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"durable_objects.bindings[0]\\": {}
-              - ERROR: bindings should have a string \\"name\\" field.
-              - ERROR: should have a string \\"class_name\\" field.
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
 
             - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
-              - ERROR: should have a string \\"class_name\\" field.
+              - binding should have a string \\"class_name\\" field.
 
             - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-              - ERROR: bindings should have a string \\"name\\" field.
-              - ERROR: should have a string \\"class_name\\" field.
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
 
             - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-              - ERROR: bindings should have a string \\"name\\" field.
-              - ERROR: should have a string \\"class_name\\" field.
-              - ERROR: should, optionally, have a string \\"script_name\\" field."
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
+              - binding should, optionally, have a string \\"script_name\\" field."
         `);
       });
     });
@@ -1207,15 +1207,15 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"unsafe.bindings[0]\\": {}
-              - ERROR: should have a string \\"name\\" field.
-              - ERROR: should have a string \\"type\\" field.
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"type\\" field.
 
             - \\"unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-              - ERROR: should have a string \\"type\\" field.
+              - binding should have a string \\"type\\" field.
 
             - \\"unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-              - ERROR: should have a string \\"name\\" field.
-              - ERROR: should have a string \\"type\\" field."
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"type\\" field."
         `);
       });
     });
@@ -1639,20 +1639,20 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"env.ENV1\\" environment configuration
 
               - \\"env.ENV1.durable_objects.bindings[0]\\": {}
-                - ERROR: bindings should have a string \\"name\\" field.
-                - ERROR: should have a string \\"class_name\\" field.
+                - binding should have a string \\"name\\" field.
+                - binding should have a string \\"class_name\\" field.
 
               - \\"env.ENV1.durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
-                - ERROR: should have a string \\"class_name\\" field.
+                - binding should have a string \\"class_name\\" field.
 
               - \\"env.ENV1.durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-                - ERROR: bindings should have a string \\"name\\" field.
-                - ERROR: should have a string \\"class_name\\" field.
+                - binding should have a string \\"name\\" field.
+                - binding should have a string \\"class_name\\" field.
 
               - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-                - ERROR: bindings should have a string \\"name\\" field.
-                - ERROR: should have a string \\"class_name\\" field.
-                - ERROR: should, optionally, have a string \\"script_name\\" field."
+                - binding should have a string \\"name\\" field.
+                - binding should have a string \\"class_name\\" field.
+                - binding should, optionally, have a string \\"script_name\\" field."
         `);
       });
     });
@@ -2149,15 +2149,15 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"env.ENV1\\" environment configuration
 
               - \\"env.ENV1.unsafe.bindings[0]\\": {}
-                - ERROR: should have a string \\"name\\" field.
-                - ERROR: should have a string \\"type\\" field.
+                - binding should have a string \\"name\\" field.
+                - binding should have a string \\"type\\" field.
 
               - \\"env.ENV1.unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-                - ERROR: should have a string \\"type\\" field.
+                - binding should have a string \\"type\\" field.
 
               - \\"env.ENV1.unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-                - ERROR: should have a string \\"name\\" field.
-                - ERROR: should have a string \\"type\\" field."
+                - binding should have a string \\"name\\" field.
+                - binding should have a string \\"type\\" field."
         `);
       });
     });
