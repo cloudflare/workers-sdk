@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
@@ -315,7 +315,7 @@ function useLocalWorker(props: {
           "--experimental-vm-modules",
           "--inspect",
           require.resolve("miniflare/cli"),
-          bundle.path,
+          realpathSync(bundle.path),
           "--watch",
           "--wrangler-config",
           path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
@@ -393,7 +393,7 @@ function useLocalWorker(props: {
             ),
         ],
         {
-          cwd: path.dirname(bundle.path),
+          cwd: path.dirname(realpathSync(bundle.path)),
         }
       );
       console.log(`⬣ Listening at http://localhost:${port}`);
