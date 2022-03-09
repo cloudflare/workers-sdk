@@ -591,7 +591,7 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"jsx_factory\\" field to be a string but got 999.
           - Expected \\"jsx_fragment\\" field to be a string but got 1000.
           - Expected \\"name\\" field to be a string but got 111.
-          - Expected \\"usage_model\\" field to be on of bundled,unbound but got \\"INVALID\\"."
+          - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
 
@@ -1421,7 +1421,7 @@ describe("normalizeAndValidateConfig()", () => {
             - Expected \\"jsx_factory\\" field to be a string but got 999.
             - Expected \\"jsx_fragment\\" field to be a string but got 1000.
             - Expected \\"name\\" field to be a string but got 111.
-            - Expected \\"usage_model\\" field to be on of bundled,unbound but got \\"INVALID\\"."
+            - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
 

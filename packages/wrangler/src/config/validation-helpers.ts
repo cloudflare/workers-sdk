@@ -205,9 +205,9 @@ export const isOneOf =
   (diagnostics, field, value) => {
     if (value !== undefined && !choices.some((choice) => value === choice)) {
       diagnostics.errors.push(
-        `Expected "${field}" field to be on of ${choices} but got ${JSON.stringify(
-          value
-        )}.`
+        `Expected "${field}" field to be one of ${JSON.stringify(
+          choices
+        )} but got ${JSON.stringify(value)}.`
       );
       return false;
     }
