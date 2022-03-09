@@ -102,18 +102,54 @@ function getScriptName(
     : shortScriptName;
 }
 
-async function requireAuth(config: Config): Promise<string> {
-  const loggedIn = await loginOrRefreshIfRequired();
+async function requireAuth(
+  config: Config,
+  isInteractive = true
+): Promise<string> {
+  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
   if (!loggedIn) {
     // didn't login, let's just quit
     throw new Error("Did not login, quitting...");
   }
-  const accountId = config.account_id || (await getAccountId());
+  const accountId = config.account_id || (await getAccountId(isInteractive));
   if (!accountId) {
     throw new Error("No account id found, quitting...");
   }
 
   return accountId;
+}
+
+/**
+ * Get a promise to the streamed input from stdin.
+ *
+ * This function can be used to grab the incoming stream of data from, say,
+ * piping the output of another process into the wrangler process.
+ */
+function readFromStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
+    const chunks: string[] = [];
+
+    // When there is data ready to be read, the `readable` event will be triggered.
+    // In the handler for `readable` we call `read()` over and over until all the available data has been read.
+    stdin.on("readable", () => {
+      let chunk;
+      while (null !== (chunk = stdin.read())) {
+        chunks.push(chunk);
+      }
+    });
+
+    // When the streamed data is complete the `end` event will be triggered.
+    // In the handler for `end` we join the chunks together and resolve the promise.
+    stdin.on("end", () => {
+      resolve(chunks.join(""));
+    });
+
+    // If there is an `error` event then the handler will reject the promise.
+    stdin.on("error", (err) => {
+      reject(err);
+    });
+  });
 }
 
 // a helper to demand one of a set of options
@@ -1400,12 +1436,12 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            const accountId = await requireAuth(config);
+            const isInteractive = process.stdin.isTTY;
+            const accountId = await requireAuth(config, isInteractive);
 
-            const secretValue = await prompt(
-              "Enter a secret value:",
-              "password"
-            );
+            const secretValue = isInteractive
+              ? await prompt("Enter a secret value:", "password")
+              : await readFromStdin();
 
             console.log(
               `🌀 Creating the secret for script ${scriptName} ${
@@ -1430,49 +1466,61 @@ export async function main(argv: string[]): Promise<void> {
               });
             }
 
+            const createDraftWorker = async () => {
+              // TODO: log a warning
+              await fetchResult(
+                !args["legacy-env"] && args.env
+                  ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
+                  : `/accounts/${accountId}/workers/scripts/${scriptName}`,
+                {
+                  method: "PUT",
+                  body: toFormData({
+                    name: scriptName,
+                    main: {
+                      name: scriptName,
+                      content: `export default { fetch() {} }`,
+                      type: "esm",
+                    },
+                    bindings: {
+                      kv_namespaces: [],
+                      vars: {},
+                      durable_objects: { bindings: [] },
+                      r2_buckets: [],
+                      wasm_modules: {},
+                      text_blobs: {},
+                      unsafe: [],
+                    },
+                    modules: [],
+                    migrations: undefined,
+                    compatibility_date: undefined,
+                    compatibility_flags: undefined,
+                    usage_model: undefined,
+                  }),
+                }
+              );
+            };
+
+            function isMissingWorkerError(e: unknown): e is { code: 10007 } {
+              return (
+                typeof e === "object" &&
+                e !== null &&
+                (e as { code: 10007 }).code === 10007
+              );
+            }
+
             try {
               await submitSecret();
             } catch (e) {
-              // @ts-expect-error non-standard property on Error
-              if (e.code === 10007) {
-                // upload a draft worker
-                // TODO: log a warning
-                await fetchResult(
-                  !args["legacy-env"] && args.env
-                    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-                    : `/accounts/${accountId}/workers/scripts/${scriptName}`,
-                  {
-                    method: "PUT",
-                    body: toFormData({
-                      name: scriptName,
-                      main: {
-                        name: scriptName,
-                        content: `export default { fetch() {} }`,
-                        type: "esm",
-                      },
-                      bindings: {
-                        kv_namespaces: [],
-                        vars: {},
-                        durable_objects: { bindings: [] },
-                        r2_buckets: [],
-                        wasm_modules: {},
-                        text_blobs: {},
-                        unsafe: [],
-                      },
-                      modules: [],
-                      migrations: undefined,
-                      compatibility_date: undefined,
-                      compatibility_flags: undefined,
-                      usage_model: undefined,
-                    }),
-                  }
-                );
-
-                // and then try again
+              if (isMissingWorkerError(e)) {
+                // create a draft worker and try again
+                await createDraftWorker();
                 await submitSecret();
                 // TODO: delete the draft worker if this failed too?
+              } else {
+                throw e;
               }
             }
+
             console.log(`✨ Success! Uploaded secret ${args.key}`);
           }
         )

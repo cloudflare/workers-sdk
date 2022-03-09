@@ -817,12 +817,15 @@ type LoginProps = {
   scopes?: Scope[];
 };
 
-export async function loginOrRefreshIfRequired(): Promise<boolean> {
+export async function loginOrRefreshIfRequired(
+  isInteractive = true
+): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
   if (!LocalState.accessToken) {
-    // not logged in.
-    return await login();
+    // Not logged in.
+    // If we are not interactive, we cannot ask the user to login
+    return isInteractive && (await login());
   } else if (isAccessTokenExpired()) {
     return await refreshToken();
   } else {
@@ -976,7 +979,9 @@ export function listScopes(): void {
   // TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(): Promise<string | undefined> {
+export async function getAccountId(
+  isInteractive = true
+): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
 
@@ -1007,7 +1012,7 @@ export async function getAccountId(): Promise<string | undefined> {
   if (responseJSON.success === true) {
     if (responseJSON.result.length === 1) {
       accountId = responseJSON.result[0].account.id;
-    } else {
+    } else if (isInteractive) {
       accountId = await new Promise((resolve) => {
         const accounts = responseJSON.result.map((x) => x.account);
         const { unmount } = render(
@@ -1020,6 +1025,15 @@ export async function getAccountId(): Promise<string | undefined> {
           />
         );
       });
+    } else {
+      throw new Error(
+        "More than one account available but unable to select one in non-interactive mode.\n" +
+          `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
+          `Available accounts are ("<name>" - "<id>"):\n` +
+          responseJSON.result
+            .map((x) => `  "${x.account.name}" - "${x.account.id}")`)
+            .join("\n")
+      );
     }
   }
   return accountId;
