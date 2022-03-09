@@ -231,7 +231,7 @@ function normalizeAndValidateMainField(
       return path.resolve(directory, rawMain);
     } else {
       diagnostics.errors.push(
-        `ERROR: "main" should be a string but got ${JSON.stringify(rawMain)}`
+        `Expected "main" to be a string but got ${JSON.stringify(rawMain)}`
       );
       return;
     }
@@ -267,14 +267,16 @@ function normalizeAndValidateDev(
     "dev",
     "local_protocol",
     local_protocol,
-    "string"
+    "string",
+    ["http", "https"]
   );
   validateOptionalProperty(
     diagnostics,
     "dev",
     "upstream_protocol",
     upstream_protocol,
-    "string"
+    "string",
+    ["http", "https"]
   );
   validateOptionalProperty(diagnostics, "dev", "host", host, "string");
   return { ip, port, local_protocol, upstream_protocol, host };
@@ -313,7 +315,7 @@ function normalizeAndValidateMigrations(
       if (migration.renamed_classes !== undefined) {
         if (!Array.isArray(migration.renamed_classes)) {
           diagnostics.errors.push(
-            `"migrations[${i}].renamed_classes" should be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
+            `Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
               migration.renamed_classes
             )}.`
           );
@@ -326,7 +328,7 @@ function normalizeAndValidateMigrations(
           )
         ) {
           diagnostics.errors.push(
-            `"migrations[${i}].renamed_classes" should be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
+            `Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
               migration.renamed_classes
             )}.`
           );
@@ -619,7 +621,7 @@ const validateAndNormalizeRules = (
     // Only create errors/warnings for the top-level environment
     if (rawEnv.rules && deprecatedRules) {
       diagnostics.errors.push(
-        `ERROR: You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+        `You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
       );
     } else if (deprecatedRules) {
       diagnostics.warnings.push(
@@ -669,7 +671,9 @@ const validateRules =
 
 const validateRule: ValidatorFn = (diagnostics, field, value) => {
   if (typeof value !== "object" || value === null) {
-    diagnostics.errors.push(`ERROR: should be an object.`);
+    diagnostics.errors.push(
+      `"${field}" should be an object but got ${JSON.stringify(value)}.`
+    );
     return false;
   }
   // Rules must have a type string and glob string array, and optionally a fallthrough boolean.
@@ -686,7 +690,7 @@ const validateRule: ValidatorFn = (diagnostics, field, value) => {
     ])
   ) {
     diagnostics.errors.push(
-      `ERROR: bindings should have a string "type" field, which contains one of "ESModule", "CommonJS", "CompiledWasm", "Text", or "Data".`
+      `bindings should have a string "type" field, which contains one of "ESModule", "CommonJS", "CompiledWasm", "Text", or "Data".`
     );
     isValid = false;
   }
@@ -697,7 +701,7 @@ const validateRule: ValidatorFn = (diagnostics, field, value) => {
 
   if (!isOptionalProperty(rule, "fallthrough", "boolean")) {
     diagnostics.errors.push(
-      `ERROR: should, optionally, have a boolean "fallthrough" field.`
+      `binding should, optionally, have a boolean "fallthrough" field.`
     );
     isValid = false;
   }
@@ -816,29 +820,29 @@ const getBindingNames = (value: unknown): string[] =>
  */
 const validateDurableObjectBinding: ValidatorFn = (
   diagnostics,
-  _field,
+  field,
   value
 ) => {
   if (typeof value !== "object" || value === null) {
-    diagnostics.errors.push(`ERROR: should be an object.`);
+    diagnostics.errors.push(
+      `Expected "${field}" to be an object but got ${JSON.stringify(value)}`
+    );
     return false;
   }
 
   // Durable Object bindings must have a name and class_name, and optionally a script_name.
   let isValid = true;
   if (!isRequiredProperty(value, "name", "string")) {
-    diagnostics.errors.push(
-      `ERROR: bindings should have a string "name" field.`
-    );
+    diagnostics.errors.push(`binding should have a string "name" field.`);
     isValid = false;
   }
   if (!isRequiredProperty(value, "class_name", "string")) {
-    diagnostics.errors.push(`ERROR: should have a string "class_name" field.`);
+    diagnostics.errors.push(`binding should have a string "class_name" field.`);
     isValid = false;
   }
   if (!isOptionalProperty(value, "script_name", "string")) {
     diagnostics.errors.push(
-      `ERROR: should, optionally, have a string "script_name" field.`
+      `binding should, optionally, have a string "script_name" field.`
     );
     isValid = false;
   }
@@ -851,16 +855,18 @@ const validateDurableObjectBinding: ValidatorFn = (
  *
  * TODO: further validation of known unsafe bindings.
  */
-const validateUnsafeBinding: ValidatorFn = (diagnostics, _field, value) => {
+const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
   if (typeof value !== "object" || value === null) {
-    diagnostics.errors.push(`ERROR: should be an object.`);
+    diagnostics.errors.push(
+      `Expected ${field} to be an object but got ${JSON.stringify(value)}.`
+    );
     return false;
   }
 
   let isValid = true;
   // Unsafe bindings must have a name and type.
   if (!isRequiredProperty(value, "name", "string")) {
-    diagnostics.errors.push(`ERROR: should have a string "name" field.`);
+    diagnostics.errors.push(`binding should have a string "name" field.`);
     isValid = false;
   }
   if (isRequiredProperty(value, "type", "string")) {
@@ -879,7 +885,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, _field, value) => {
       );
     }
   } else {
-    diagnostics.errors.push(`ERROR: should have a string "type" field.`);
+    diagnostics.errors.push(`binding should have a string "type" field.`);
     isValid = false;
   }
   return isValid;
