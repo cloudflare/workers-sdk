@@ -242,14 +242,6 @@ export default async function publish(props: Props): Promise<void> {
       ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
       : `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-    // it can be confusing to see "uploaded <worker>" but fail on the deployment step
-    // when the user is uploading to workers.dev but hasn't registered a subdomain,
-    // so we head off a "subdomain doesn't exist" error early
-    let userSubdomain = "";
-    if (deployToWorkersDev) {
-      userSubdomain = await getSubdomain(accountId);
-    }
-
     // Upload the script so it has time to propagate.
     const { available_on_subdomain } = await fetchResult(
       workerUrl,
@@ -261,11 +253,11 @@ export default async function publish(props: Props): Promise<void> {
     );
 
     const uploadMs = Date.now() - start;
-    console.log("Uploaded", workerName, formatTime(uploadMs));
     const deployments: Promise<string[]>[] = [];
 
     if (deployToWorkersDev) {
       // Deploy to a subdomain of `workers.dev`
+      const userSubdomain = await getSubdomain(accountId);
       const scriptURL =
         props.legacyEnv || !props.env
           ? `${scriptName}.${userSubdomain}.workers.dev`
@@ -303,6 +295,8 @@ export default async function publish(props: Props): Promise<void> {
         },
       });
     }
+
+    console.log("Uploaded", workerName, formatTime(uploadMs));
 
     // Update routing table for the script.
     if (routes.length > 0) {
