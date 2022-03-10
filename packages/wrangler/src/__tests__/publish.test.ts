@@ -2,7 +2,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
+import {
+  createFetchResult,
+  setMockRawResponse,
+  setMockResponse,
+  unsetAllMocks,
+} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -1312,6 +1317,22 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
+
+    it("should error politely when publishing to workers_dev when there is no workers.dev subdomain", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest();
+      mockSubDomainRequest("does-not-exist", false);
+
+      await expect(runWrangler("publish ./index")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Error: Set up a workers.dev subdomain before using workers_dev in wrangler.toml
+              To create a workers.dev subdomain, click the link below
+              https://dash.cloudflare.com/some-account-id/workers/onboarding"
+            `);
+    });
   });
 
   describe("custom builds", () => {
@@ -2019,10 +2040,21 @@ function mockUploadWorkerRequest({
 }
 
 /** Create a mock handler for the request to get the account's subdomain. */
-function mockSubDomainRequest(subdomain = "test-sub-domain") {
-  setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-    return { subdomain };
-  });
+function mockSubDomainRequest(
+  subdomain = "test-sub-domain",
+  registeredWorkersDev = true
+) {
+  if (registeredWorkersDev) {
+    setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
+      return { subdomain };
+    });
+  } else {
+    setMockRawResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
+      return createFetchResult(null, false, [
+        { code: 10007, message: "haven't registered workers.dev" },
+      ]);
+    });
+  }
 }
 
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */

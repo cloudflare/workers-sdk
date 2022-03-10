@@ -1,6 +1,6 @@
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { getCloudflareApiBaseUrl } from "../../cfetch";
+import { FetchError, FetchError, getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult } from "../../cfetch";
 import type { RequestInit } from "undici";
 
@@ -143,8 +143,8 @@ export function setMockResponse<ResponseType>(
 export async function createFetchResult<ResponseType>(
   result: ResponseType | Promise<ResponseType>,
   success = true,
-  errors = [],
-  messages = [],
+  errors: FetchError[] = [],
+  messages: string[] = [],
   result_info?: unknown
 ): Promise<FetchResult<ResponseType>> {
   return result_info

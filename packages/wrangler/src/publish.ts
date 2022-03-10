@@ -242,6 +242,14 @@ export default async function publish(props: Props): Promise<void> {
       ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
       : `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
+    // it can be confusing to see "uploaded <worker>" but fail on the deployment step
+    // when the user is uploading to workers.dev but hasn't registered a subdomain,
+    // so we head off a "subdomain doesn't exist" error early
+    let userSubdomain = "";
+    if (deployToWorkersDev) {
+      userSubdomain = await getSubdomain(accountId);
+    }
+
     // Upload the script so it has time to propagate.
     const { available_on_subdomain } = await fetchResult(
       workerUrl,
@@ -258,11 +266,6 @@ export default async function publish(props: Props): Promise<void> {
 
     if (deployToWorkersDev) {
       // Deploy to a subdomain of `workers.dev`
-      const userSubdomain = (
-        await fetchResult<{ subdomain: string }>(
-          `/accounts/${accountId}/workers/subdomain`
-        )
-      ).subdomain;
       const scriptURL =
         props.legacyEnv || !props.env
           ? `${scriptName}.${userSubdomain}.workers.dev`
@@ -360,4 +363,30 @@ export default async function publish(props: Props): Promise<void> {
 
 function formatTime(duration: number) {
   return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+async function getSubdomain(accountId: string): Promise<string> {
+  try {
+    const { subdomain } = await fetchResult(
+      `/accounts/${accountId}/workers/subdomain`
+    );
+    return subdomain;
+  } catch (e) {
+    const error = e as { code?: number };
+    if (typeof error === "object" && !!error && error.code === 10007) {
+      // 10007 error code: not found
+      // https://api.cloudflare.com/#worker-subdomain-get-subdomain
+      const errorMessage =
+        "Error: Set up a workers.dev subdomain before using workers_dev in wrangler.toml";
+      const onboardingMessage =
+        "To create a workers.dev subdomain, click the link below";
+      const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+
+      throw new Error(
+        `${errorMessage}\n${onboardingMessage}\n${onboardingLink}`
+      );
+    } else {
+      throw e;
+    }
+  }
 }
