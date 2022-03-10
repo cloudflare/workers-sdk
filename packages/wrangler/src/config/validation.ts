@@ -20,7 +20,13 @@ import {
   validateRequiredProperty,
   validateTypedArray,
 } from "./validation-helpers";
-import type { Config, DeprecatedUpload, RawConfig } from "./config";
+import type {
+  Config,
+  DeprecatedUpload,
+  DevConfig,
+  RawConfig,
+  RawDevConfig,
+} from "./config";
 import type { RawEnvironment, Environment, Rule } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
@@ -248,8 +254,8 @@ function normalizeAndValidateMainField(
  */
 function normalizeAndValidateDev(
   diagnostics: Diagnostics,
-  rawDev: Config["dev"]
-): Config["dev"] {
+  rawDev: RawDevConfig
+): DevConfig {
   const {
     ip = "127.0.0.1",
     port = 8787,
