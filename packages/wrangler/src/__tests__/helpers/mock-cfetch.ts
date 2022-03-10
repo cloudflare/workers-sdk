@@ -1,7 +1,7 @@
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { FetchError, FetchError, getCloudflareApiBaseUrl } from "../../cfetch";
-import type { FetchResult } from "../../cfetch";
+import { getCloudflareApiBaseUrl } from "../../cfetch";
+import type { FetchResult, FetchError } from "../../cfetch";
 import type { RequestInit } from "undici";
 
 /**
