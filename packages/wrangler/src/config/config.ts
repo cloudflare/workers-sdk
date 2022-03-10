@@ -20,13 +20,16 @@ import type { Environment, RawEnvironment } from "./environment";
  * - `@breaking`: the deprecation/optionality is a breaking change from wrangler 1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<Environment> & Environment;
+export type Config = ConfigFields<Environment, DevConfig> & Environment;
 
-export type RawConfig = Partial<ConfigFields<RawEnvironment>> &
+export type RawConfig = Partial<ConfigFields<RawEnvironment, RawDevConfig>> &
   RawEnvironment &
   DeprecatedConfigFields;
 
-export interface ConfigFields<Env extends RawEnvironment> {
+export interface ConfigFields<
+  Env extends RawEnvironment,
+  Dev extends RawDevConfig
+> {
   configPath: string | undefined;
 
   /**
@@ -60,46 +63,8 @@ export interface ConfigFields<Env extends RawEnvironment> {
 
   /**
    * Options to configure the development server that your worker will use.
-   *
-   * @default `{}`
    */
-  dev: {
-    /**
-     * IP address for the local dev server to listen on,
-     *
-     * @default `127.0.0.1`
-     * @todo this needs to be implemented
-     */
-    ip?: string;
-
-    /**
-     * Port for the local dev server to listen on
-     *
-     * @default `8787`
-     */
-    port?: number;
-
-    /**
-     * Protocol that local wrangler dev server listens to requests on.
-     *
-     * @default `http`
-     * @todo this needs to be implemented
-     */
-    local_protocol?: string;
-
-    /**
-     * Protocol that wrangler dev forwards requests on
-     *
-     * @default `https`
-     * @todo this needs to be implemented
-     */
-    upstream_protocol?: string;
-
-    /**
-     * Host to forward requests to, defaults to the zone of project
-     */
-    host?: string;
-  };
+  dev: Dev;
 
   /**
    * A list of migrations that should be uploaded with your Worker.
@@ -216,6 +181,46 @@ export interface ConfigFields<Env extends RawEnvironment> {
     upload?: DeprecatedUpload;
   };
 }
+
+export interface DevConfig {
+  /**
+   * IP address for the local dev server to listen on,
+   *
+   * @default `127.0.0.1`
+   * @todo this needs to be implemented
+   */
+  ip: string;
+
+  /**
+   * Port for the local dev server to listen on
+   *
+   * @default `8787`
+   */
+  port: number;
+
+  /**
+   * Protocol that local wrangler dev server listens to requests on.
+   *
+   * @default `http`
+   * @todo this needs to be implemented
+   */
+  local_protocol: string;
+
+  /**
+   * Protocol that wrangler dev forwards requests on
+   *
+   * @default `https`
+   * @todo this needs to be implemented
+   */
+  upstream_protocol: "https" | "http";
+
+  /**
+   * Host to forward requests to, defaults to the zone of project
+   */
+  host: string | undefined;
+}
+
+export type RawDevConfig = Partial<DevConfig>;
 
 export interface DeprecatedConfigFields {
   /**
