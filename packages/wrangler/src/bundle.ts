@@ -5,7 +5,7 @@ import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
-import type { CfModule, CfScriptFormat } from "./worker";
+import type { CfModule } from "./worker";
 
 type BundleResult = {
   modules: CfModule[];
@@ -24,20 +24,13 @@ export async function bundleWorker(
     serveAssetsFromWorker: boolean;
     jsxFactory: string | undefined;
     jsxFragment: string | undefined;
-    format: CfScriptFormat;
     rules: Config["rules"];
     watch?: esbuild.WatchMode;
   }
 ): Promise<BundleResult> {
-  const {
-    serveAssetsFromWorker,
-    jsxFactory,
-    jsxFragment,
-    format,
-    rules,
-    watch,
-  } = options;
-  const moduleCollector = makeModuleCollector({ format, rules });
+  const { serveAssetsFromWorker, jsxFactory, jsxFragment, rules, watch } =
+    options;
+  const moduleCollector = makeModuleCollector({ format: entry.format, rules });
   const result = await esbuild.build({
     ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,

@@ -1388,6 +1388,30 @@ export default{
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
     }
+
+    it("should throw an error if the entry doesn't exist after the build finishes", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        build: {
+          command: `node -e "console.log('custom build');"`,
+        },
+      });
+
+      await expect(
+        runWrangler("publish index.js")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
+      );
+      expect(std.out).toMatchInlineSnapshot(
+        `"running: node -e \\"console.log('custom build');\\""`
+      );
+      expect(std.err).toMatchInlineSnapshot(`
+        "Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("[wasm_modules]", () => {

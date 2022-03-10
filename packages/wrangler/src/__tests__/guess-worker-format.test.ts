@@ -1,6 +1,6 @@
 import { writeFile } from "fs/promises";
 import path from "path";
-import guessWorkerFormat from "../guess-worker-format";
+import guessWorkerFormat from "../entry";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("guess worker format", () => {
@@ -10,10 +10,8 @@ describe("guess worker format", () => {
     // Note that this isn't actually a valid worker, because it's missing
     // a fetch handler. Regardless, our heuristic is simply to check for exports.
     const guess = await guessWorkerFormat(
-      {
-        file: path.join(process.cwd(), "./index.ts"),
-        directory: process.cwd(),
-      },
+      path.join(process.cwd(), "./index.ts"),
+      process.cwd(),
       undefined
     );
     expect(guess).toBe("modules");
@@ -25,10 +23,8 @@ describe("guess worker format", () => {
     // a fetch listener. Regardless, our heuristic is simply to check for
     // the lack of exports.
     const guess = await guessWorkerFormat(
-      {
-        file: path.join(process.cwd(), "./index.ts"),
-        directory: process.cwd(),
-      },
+      path.join(process.cwd(), "./index.ts"),
+      process.cwd(),
       undefined
     );
     expect(guess).toBe("service-worker");
@@ -38,10 +34,8 @@ describe("guess worker format", () => {
     await writeFile("./index.ts", "export default {};");
     await expect(
       guessWorkerFormat(
-        {
-          file: path.join(process.cwd(), "./index.ts"),
-          directory: process.cwd(),
-        },
+        path.join(process.cwd(), "./index.ts"),
+        process.cwd(),
         "service-worker"
       )
     ).rejects.toThrow(
@@ -53,10 +47,8 @@ describe("guess worker format", () => {
     await writeFile("./index.ts", "");
     await expect(
       guessWorkerFormat(
-        {
-          file: path.join(process.cwd(), "./index.ts"),
-          directory: process.cwd(),
-        },
+        path.join(process.cwd(), "./index.ts"),
+        process.cwd(),
         "modules"
       )
     ).rejects.toThrow(

@@ -102,6 +102,9 @@ function getScriptName(
     : shortScriptName;
 }
 
+/**
+ * Ensure that a user is logged in, and a valid account_id is available.
+ */
 async function requireAuth(
   config: Config,
   isInteractive = true
@@ -771,7 +774,7 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && findWranglerToml(path.dirname(args.script)))
       );
-      const entry = getEntry(config, "dev", args.script);
+      const entry = await getEntry(args, config, "dev");
 
       if (args["experimental-public"]) {
         console.warn(
@@ -874,7 +877,6 @@ export async function main(argv: string[]): Promise<void> {
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
-          format={args.format || config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
@@ -1031,7 +1033,7 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && findWranglerToml(path.dirname(args.script)))
       );
-      const entry = getEntry(config, "publish", args.script);
+      const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
         console.warn(
@@ -1052,7 +1054,6 @@ export async function main(argv: string[]): Promise<void> {
         accountId,
         name: getScriptName(args, config),
         rules: getRules(config),
-        format: args.format || config.build?.upload?.format,
         entry,
         env: args.env,
         compatibilityDate: args.latest
@@ -1243,7 +1244,7 @@ export async function main(argv: string[]): Promise<void> {
       );
 
       const config = readConfig(args.config as ConfigPath);
-      const entry = getEntry(config, "dev");
+      const entry = await getEntry({}, config, "dev");
 
       const accountId = await requireAuth(config);
 
@@ -1259,7 +1260,6 @@ export async function main(argv: string[]): Promise<void> {
           zone={undefined}
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
-          format={config.build?.upload?.format}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={envRootObj?.jsx_factory}
           jsxFragment={envRootObj?.jsx_fragment}

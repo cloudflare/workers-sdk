@@ -209,7 +209,10 @@ export interface ConfigFields<Env extends RawEnvironment> {
     cwd?: string;
     /** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
     watch_dir?: string;
-    /** Deprecated field previously used to configure the build and upload of the script. */
+    /**
+     * Deprecated field previously used to configure the build and upload of the script.
+     * @deprecated
+     */
     upload?: DeprecatedUpload;
   };
 }
