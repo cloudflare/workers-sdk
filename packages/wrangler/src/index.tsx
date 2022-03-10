@@ -795,8 +795,6 @@ export async function main(argv: string[]): Promise<void> {
 
       const accountId = !args.local ? await requireAuth(config) : undefined;
 
-      // TODO: if worker_dev = false and no routes, then error (only for dev)
-
       /**
        * Given something that resembles a URL,
        * try to extract a host from it
@@ -1040,6 +1038,46 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       const accountId = await requireAuth(config);
+
+      /**
+       * Check to see if the wrangler project has routes assigned to it
+       * @param c Config wrangler was invoked with
+       * @returns true if the user specified routes somehow
+       */
+      function hasRoutes(c: Config): boolean {
+        const multipleRoutes = !!c.routes && c.routes.length !== 0;
+        const singleRoute = !!c.route;
+        return singleRoute || multipleRoutes;
+      }
+
+      if (config.workers_dev) {
+        // check if workers.dev subdomain exists
+        try {
+          await fetchResult(`/accounts/${accountId}/workers/subdomain`);
+        } catch (e) {
+          const error = e as { code?: number };
+          if (typeof error === "object" && !!error && error.code === 10007) {
+            // 10007 error code: not found
+            // https://api.cloudflare.com/#worker-subdomain-get-subdomain
+            const errorMessage =
+              "Please set up a workers.dev subdomain before using workers_dev in wrangler.toml";
+            const onboardingMessage =
+              "To create a workers.dev subdomain, click the link below";
+            const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+
+            throw new Error(
+              `${errorMessage}\n${onboardingMessage}\n${onboardingLink}`
+            );
+          } else {
+            throw e;
+          }
+        }
+      } else if (!hasRoutes(config)) {
+        // check if routes are specified
+        throw new Error(
+          "Please specify either workers_dev or routes in wrangler.toml"
+        );
+      }
 
       const assetPaths = getAssetPaths(
         config,
