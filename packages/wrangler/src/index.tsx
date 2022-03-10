@@ -795,6 +795,8 @@ export async function main(argv: string[]): Promise<void> {
 
       const accountId = !args.local ? await requireAuth(config) : undefined;
 
+      // TODO: if worker_dev = false and no routes, then error (only for dev)
+
       /**
        * Given something that resembles a URL,
        * try to extract a host from it
