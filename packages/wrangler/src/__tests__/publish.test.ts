@@ -1328,8 +1328,8 @@ export default{
 
       await expect(runWrangler("publish ./index")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
-              "Error: Set up a workers.dev subdomain before using workers_dev in wrangler.toml
-              To create a workers.dev subdomain, click the link below
+              "Error: You need to register a workers.dev subdomain before publishing to workers.dev
+              You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
               https://dash.cloudflare.com/some-account-id/workers/onboarding"
             `);
     });

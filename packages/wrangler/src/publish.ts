@@ -370,15 +370,14 @@ async function getSubdomain(accountId: string): Promise<string> {
     if (typeof error === "object" && !!error && error.code === 10007) {
       // 10007 error code: not found
       // https://api.cloudflare.com/#worker-subdomain-get-subdomain
+
       const errorMessage =
-        "Error: Set up a workers.dev subdomain before using workers_dev in wrangler.toml";
-      const onboardingMessage =
-        "To create a workers.dev subdomain, click the link below";
+        "Error: You need to register a workers.dev subdomain before publishing to workers.dev";
+      const solutionMessage =
+        "You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
       const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-      throw new Error(
-        `${errorMessage}\n${onboardingMessage}\n${onboardingLink}`
-      );
+      throw new Error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
     } else {
       throw e;
     }
