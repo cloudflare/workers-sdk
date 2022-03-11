@@ -4,15 +4,15 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { execaCommand } from "execa";
 import tmp from "tmp-promise";
-import { toFormData } from "./api/form_data";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
+import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { fileExists } from "./entry";
 import guessWorkerFormat from "./guess-worker-format";
 import { syncAssets } from "./sites";
-import type { CfScriptFormat, CfWorkerInit } from "./api/worker";
 import type { Config } from "./config";
 import type { AssetPaths } from "./sites";
+import type { CfScriptFormat, CfWorkerInit } from "./worker";
 
 type Props = {
   config: Config;
@@ -247,7 +247,7 @@ export default async function publish(props: Props): Promise<void> {
       workerUrl,
       {
         method: "PUT",
-        body: toFormData(worker),
+        body: createWorkerUploadForm(worker),
       },
       new URLSearchParams({ available_on_subdomain: "true" })
     );

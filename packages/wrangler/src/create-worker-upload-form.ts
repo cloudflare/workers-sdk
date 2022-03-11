@@ -51,7 +51,7 @@ export interface WorkerMetadata {
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
-export function toFormData(worker: CfWorkerInit): FormData {
+export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
   const formData = new FormData();
   const {
     main,

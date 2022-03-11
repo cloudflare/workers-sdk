@@ -10,9 +10,9 @@ import React from "react";
 import onExit from "signal-exit";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { toFormData } from "./api/form_data";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
+import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev";
 import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
@@ -1474,7 +1474,7 @@ export async function main(argv: string[]): Promise<void> {
                   : `/accounts/${accountId}/workers/scripts/${scriptName}`,
                 {
                   method: "PUT",
-                  body: toFormData({
+                  body: createWorkerUploadForm({
                     name: scriptName,
                     main: {
                       name: scriptName,

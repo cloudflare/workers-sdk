@@ -3,9 +3,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import makeModuleCollector from "./module-collection";
-import type { CfModule, CfScriptFormat } from "./api/worker";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
+import type { CfModule, CfScriptFormat } from "./worker";
 
 type BundleResult = {
   modules: CfModule[];

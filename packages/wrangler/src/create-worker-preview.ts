@@ -1,7 +1,7 @@
 import { URL } from "node:url";
 import { fetch } from "undici";
-import { fetchResult } from "../cfetch";
-import { toFormData } from "./form_data";
+import { fetchResult } from "./cfetch";
+import { createWorkerUploadForm } from "./create-worker-upload-form";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 
 /**
@@ -93,7 +93,7 @@ function randomId(): string {
 /**
  * Creates a preview token.
  */
-export async function previewToken(
+async function createPreviewToken(
   account: CfAccount,
   worker: CfWorkerInit,
   ctx: CfWorkerContext
@@ -114,7 +114,7 @@ export async function previewToken(
     ? { routes: ["*/*"] } // TODO: should we support routes here? how?
     : { workers_dev: true };
 
-  const formData = toFormData(worker);
+  const formData = createWorkerUploadForm(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
 
   const { preview_token } = await fetchResult<{ preview_token: string }>(url, {
@@ -144,4 +144,23 @@ export async function previewToken(
     inspectorUrl,
     prewarmUrl,
   };
+}
+
+/**
+ * A stub to create a Cloudflare Worker preview.
+ *
+ * @example
+ * const {value, host} = await createWorker(init, acct);
+ */
+export async function createWorkerPreview(
+  init: CfWorkerInit,
+  account: CfAccount,
+  ctx: CfWorkerContext
+): Promise<CfPreviewToken> {
+  const token = await createPreviewToken(account, init, ctx);
+  const response = await fetch(token.prewarmUrl.href, { method: "POST" });
+  if (!response.ok) {
+    // console.error("worker failed to prewarm: ", response.statusText);
+  }
+  return token;
 }
