@@ -1,7 +1,3 @@
-import { fetch } from "undici";
-import { previewToken } from "./preview";
-import type { CfPreviewToken } from "./preview";
-
 /**
  * A Cloudflare account.
  */
@@ -164,23 +160,4 @@ export interface CfWorkerContext {
   env: string | undefined;
   legacyEnv: boolean | undefined;
   zone: { id: string; host: string } | undefined;
-}
-
-/**
- * A stub to create a Cloudflare Worker preview.
- *
- * @example
- * const {value, host} = await createWorker(init, acct);
- */
-export async function createWorker(
-  init: CfWorkerInit,
-  account: CfAccount,
-  ctx: CfWorkerContext
-): Promise<CfPreviewToken> {
-  const token = await previewToken(account, init, ctx);
-  const response = await fetch(token.prewarmUrl.href, { method: "POST" });
-  if (!response.ok) {
-    // console.error("worker failed to prewarm: ", response.statusText);
-  }
-  return token;
 }

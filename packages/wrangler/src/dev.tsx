@@ -13,8 +13,8 @@ import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
-import { createWorker } from "./api/worker";
 import { bundleWorker } from "./bundle";
+import { createWorkerPreview } from "./create-worker-preview";
 import guessWorkerFormat from "./guess-worker-format";
 import useInspector from "./inspect";
 import { DEFAULT_MODULE_RULES } from "./module-collection";
@@ -22,11 +22,11 @@ import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
-import type { CfPreviewToken } from "./api/preview";
-import type { CfModule, CfWorkerInit, CfScriptFormat } from "./api/worker";
 import type { Config } from "./config";
+import type { CfPreviewToken } from "./create-worker-preview";
 import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
+import type { CfModule, CfWorkerInit, CfScriptFormat } from "./worker";
 import type { WatchMode } from "esbuild";
 import type { ExecaChildProcess } from "execa";
 import type { DirectoryResult } from "tmp-promise";
@@ -776,7 +776,7 @@ function useWorker(props: {
         usage_model: usageModel,
       };
       setToken(
-        await createWorker(
+        await createWorkerPreview(
           init,
           {
             accountId,

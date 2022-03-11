@@ -13,8 +13,8 @@ import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import type { WorkerMetadata } from "../api/form_data";
 import type { Config } from "../config";
+import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
 

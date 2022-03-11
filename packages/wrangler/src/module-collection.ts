@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
-import type { CfModule, CfModuleType, CfScriptFormat } from "./api/worker";
 import type { Config, ConfigModuleRuleType } from "./config";
+import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
 
 const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {

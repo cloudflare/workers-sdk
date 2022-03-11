@@ -3,7 +3,7 @@ import { connect } from "node:http2";
 import WebSocket from "faye-websocket";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
-import type { CfPreviewToken } from "./api/preview";
+import type { CfPreviewToken } from "./create-worker-preview";
 import type {
   IncomingHttpHeaders,
   RequestListener,
