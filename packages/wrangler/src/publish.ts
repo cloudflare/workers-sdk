@@ -64,14 +64,6 @@ export default async function publish(props: Props): Promise<void> {
     'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
   );
 
-  if (config.site?.["entry-point"]) {
-    console.warn(
-      "Deprecation notice: The `site.entry-point` config field is no longer used.\n" +
-        "The entry-point should be specified via the command line (e.g. `wrangler publish path/to/script`) or the `main` config field.\n" +
-        "Please remove the `site.entry-point` field from the `wrangler.toml` file."
-    );
-  }
-
   assert(
     !config.site || config.site.bucket,
     "A [site] definition requires a `bucket` field with a path to the site's public directory."

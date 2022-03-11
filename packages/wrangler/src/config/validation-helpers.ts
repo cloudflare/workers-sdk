@@ -5,7 +5,7 @@ import type { Environment, RawEnvironment } from "./environment";
 /**
  *  Mark a field as deprecated.
  *
- * This function will add a diagnostics warning if the deprecated field is found in the `rawEnv`.
+ * This function will add a diagnostics warning if the deprecated field is found in the `rawEnv` (or an error if it's also a breaking deprecation)
  * The `fieldPath` is a dot separated property path, e.g. `"build.upload.format"`.
  */
 export function deprecated<T extends object>(
@@ -13,11 +13,14 @@ export function deprecated<T extends object>(
   config: T,
   fieldPath: DeepKeyOf<T>,
   message: string,
-  remove: boolean
+  remove: boolean,
+  breaking = false
 ): void {
   const result = unwindPropertyPath(config, fieldPath);
   if (result !== undefined && result.field in result.container) {
-    diagnostics.warnings.push(`DEPRECATION: "${fieldPath}":\n${message}`);
+    (breaking ? diagnostics.errors : diagnostics.warnings).push(
+      `DEPRECATION: "${fieldPath}":\n${message}`
+    );
     if (remove) {
       delete (result.container as Record<string, unknown>)[result.field];
     }

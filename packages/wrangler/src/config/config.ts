@@ -255,7 +255,6 @@ export interface DeprecatedUpload {
    * Defaults to the directory containing the wrangler.toml file.
    *
    * @deprecated
-   * @breaking In wrangler 1, this defaults to ./dist, whereas in wrangler 2 it defaults to ./
    */
   dir?: string;
 
