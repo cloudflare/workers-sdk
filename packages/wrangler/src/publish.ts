@@ -253,16 +253,11 @@ export default async function publish(props: Props): Promise<void> {
     );
 
     const uploadMs = Date.now() - start;
-    console.log("Uploaded", workerName, formatTime(uploadMs));
     const deployments: Promise<string[]>[] = [];
 
     if (deployToWorkersDev) {
       // Deploy to a subdomain of `workers.dev`
-      const userSubdomain = (
-        await fetchResult<{ subdomain: string }>(
-          `/accounts/${accountId}/workers/subdomain`
-        )
-      ).subdomain;
+      const userSubdomain = await getSubdomain(accountId);
       const scriptURL =
         props.legacyEnv || !props.env
           ? `${scriptName}.${userSubdomain}.workers.dev`
@@ -300,6 +295,8 @@ export default async function publish(props: Props): Promise<void> {
         },
       });
     }
+
+    console.log("Uploaded", workerName, formatTime(uploadMs));
 
     // Update routing table for the script.
     if (routes.length > 0) {
@@ -360,4 +357,29 @@ export default async function publish(props: Props): Promise<void> {
 
 function formatTime(duration: number) {
   return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+async function getSubdomain(accountId: string): Promise<string> {
+  try {
+    const { subdomain } = await fetchResult(
+      `/accounts/${accountId}/workers/subdomain`
+    );
+    return subdomain;
+  } catch (e) {
+    const error = e as { code?: number };
+    if (typeof error === "object" && !!error && error.code === 10007) {
+      // 10007 error code: not found
+      // https://api.cloudflare.com/#worker-subdomain-get-subdomain
+
+      const errorMessage =
+        "Error: You need to register a workers.dev subdomain before publishing to workers.dev";
+      const solutionMessage =
+        "You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+      const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+
+      throw new Error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+    } else {
+      throw e;
+    }
+  }
 }
