@@ -39,6 +39,7 @@
     "esbuild": "0.14.23",
     "miniflare": "2.3.0",
     "path-to-regexp": "^6.2.0",
+    "selfsigned": "^2.0.0",
     "semiver": "^1.1.0",
     "xxhash-wasm": "^1.0.1"
   },
