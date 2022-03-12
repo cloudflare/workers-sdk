@@ -2,23 +2,20 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import { execaCommand } from "execa";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { fileExists } from "./entry";
-import guessWorkerFormat from "./guess-worker-format";
 import { syncAssets } from "./sites";
 import type { Config } from "./config";
+import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
-import type { CfScriptFormat, CfWorkerInit } from "./worker";
+import type { CfWorkerInit } from "./worker";
 
 type Props = {
   config: Config;
   accountId: string;
-  format: CfScriptFormat | undefined;
-  entry: { file: string; directory: string };
+  entry: Entry;
   rules: Config["rules"];
   name: string | undefined;
   env: string | undefined;
@@ -84,28 +81,7 @@ export default async function publish(props: Props): Promise<void> {
   try {
     const envName = props.env ?? "production";
 
-    if (config.build.command) {
-      // TODO: add a deprecation message here?
-      console.log("running:", config.build.command);
-      await execaCommand(config.build.command, {
-        shell: true,
-        stdout: "inherit",
-        stderr: "inherit",
-        timeout: 1000 * 30,
-        ...(config.build.cwd && { cwd: config.build.cwd }),
-      });
-
-      if (fileExists(props.entry.file) === false) {
-        throw new Error(
-          `Could not resolve "${path.relative(
-            process.cwd(),
-            props.entry.file
-          )}".`
-        );
-      }
-    }
-
-    const format = await guessWorkerFormat(props.entry, props.format);
+    const { format } = props.entry;
 
     if (props.experimentalPublic && format === "service-worker") {
       // TODO: check config too
@@ -133,7 +109,6 @@ export default async function publish(props: Props): Promise<void> {
         serveAssetsFromWorker: props.experimentalPublic,
         jsxFactory,
         jsxFragment,
-        format,
         rules: props.rules,
       }
     );

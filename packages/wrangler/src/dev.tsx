@@ -1,12 +1,11 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
-import { execaCommand } from "execa";
 import { Box, Text, useApp, useInput } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
@@ -15,7 +14,7 @@ import tmp from "tmp-promise";
 import { fetch } from "undici";
 import { bundleWorker } from "./bundle";
 import { createWorkerPreview } from "./create-worker-preview";
-import guessWorkerFormat from "./guess-worker-format";
+import { runCustomBuild } from "./entry";
 import useInspector from "./inspect";
 import { DEFAULT_MODULE_RULES } from "./module-collection";
 import openInBrowser from "./open-in-browser";
@@ -28,7 +27,6 @@ import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./worker";
 import type { WatchMode } from "esbuild";
-import type { ExecaChildProcess } from "execa";
 import type { DirectoryResult } from "tmp-promise";
 
 export type DevProps = {
@@ -36,7 +34,6 @@ export type DevProps = {
   entry: Entry;
   port?: number;
   inspectorPort: number;
-  format: CfScriptFormat | undefined;
   rules: Config["rules"];
   accountId: undefined | string;
   initialMode: "local" | "remote";
@@ -69,33 +66,28 @@ function Dev(props: DevProps): JSX.Element {
   const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
 
-  // if there isn't a build command, we just return the entry immediately
-  // ideally there would be a conditional here, but the rules of hooks
-  // kinda forbid that, so we thread the entry through useCustomBuild
-  const entry = useCustomBuild(props.entry, props.buildCommand);
+  useCustomBuild(props.entry, props.buildCommand);
 
-  const format = useWorkerFormat({ entry: props.entry, format: props.format });
-  if (format && props.public && format === "service-worker") {
+  if (props.public && props.entry.format === "service-worker") {
     throw new Error(
       "You cannot use the service worker format with a `public` directory."
     );
   }
 
-  if (props.bindings.wasm_modules && format === "modules") {
+  if (props.bindings.wasm_modules && props.entry.format === "modules") {
     throw new Error(
       "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
     );
   }
 
-  if (props.bindings.text_blobs && format === "modules") {
+  if (props.bindings.text_blobs && props.entry.format === "modules") {
     throw new Error(
       "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
     );
   }
 
   const bundle = useEsbuild({
-    entry,
-    format,
+    entry: props.entry,
     destination: directory,
     staticRoot: props.public,
     jsxFactory: props.jsxFactory,
@@ -121,7 +113,7 @@ function Dev(props: DevProps): JSX.Element {
         <Local
           name={props.name}
           bundle={bundle}
-          format={format}
+          format={props.entry.format}
           bindings={props.bindings}
           assetPaths={props.assetPaths}
           public={props.public}
@@ -134,7 +126,7 @@ function Dev(props: DevProps): JSX.Element {
         <Remote
           name={props.name}
           bundle={bundle}
-          format={format}
+          format={props.entry.format}
           accountId={props.accountId}
           apiToken={apiToken}
           bindings={props.bindings}
@@ -159,25 +151,6 @@ function Dev(props: DevProps): JSX.Element {
       </Box>
     </>
   );
-}
-
-function useWorkerFormat(props: {
-  entry: Entry | undefined;
-  format: undefined | CfScriptFormat;
-}): CfScriptFormat | undefined {
-  const [format, setFormat] = useState<CfScriptFormat | undefined>();
-  useEffect(() => {
-    async function validateFormat() {
-      if (!props.entry || format) {
-        return;
-      }
-      setFormat(await guessWorkerFormat(props.entry, props.format));
-    }
-    validateFormat().catch((err) => {
-      console.error("Failed to validate worker format:", err);
-    });
-  }, [props.entry, props.format, format]);
-  return format;
 }
 
 function Remote(props: {
@@ -500,85 +473,32 @@ function useTmpDir(): string | undefined {
 
 function useCustomBuild(
   expectedEntry: Entry,
-  props: {
+  build: {
     command?: undefined | string;
     cwd?: undefined | string;
     watch_dir?: undefined | string;
   }
-): undefined | Entry {
-  const [entry, setEntry] = useState<Entry | undefined>(
-    // if there's no build command, just return the expected entry
-    !props.command ? expectedEntry : undefined
-  );
-  const { command, cwd, watch_dir } = props;
+): void {
   useEffect(() => {
-    if (!command) return;
-    let cmd: ExecaChildProcess<string> | undefined,
-      interval: NodeJS.Timeout | undefined;
-    console.log("running:", command);
-    cmd = execaCommand(command, {
-      ...(cwd && { cwd }),
-      shell: true,
-      stderr: "inherit",
-      stdout: "inherit",
-    });
-    if (watch_dir) {
-      watch(watch_dir, { persistent: true, ignoreInitial: true }).on(
-        "all",
-        (_event, filePath) => {
-          console.log(`The file ${filePath} changed, restarting build...`);
-          cmd?.kill();
-          cmd = execaCommand(command, {
-            ...(cwd && { cwd }),
-            shell: true,
-            stderr: "inherit",
-            stdout: "inherit",
-          });
-        }
-      );
+    if (!build.command) return;
+    let watcher: ReturnType<typeof watch> | undefined;
+    if (build.watch_dir) {
+      watcher = watch(build.watch_dir, {
+        persistent: true,
+        ignoreInitial: true,
+      }).on("all", (_event, filePath) => {
+        //TODO: we should buffer requests to the proxy until this completes
+        console.log(`The file ${filePath} changed, restarting build...`);
+        runCustomBuild(expectedEntry.file, build).catch((err) => {
+          console.error("Custom build failed:", err);
+        });
+      });
     }
 
-    // check every so often whether `expectedEntry` exists
-    // if it does, we're done
-    const startedAt = Date.now();
-    interval = setInterval(() => {
-      let fileExists = false;
-      try {
-        // Use require.resolve to use node's resolution algorithm,
-        // this lets us use paths without explicit .js extension
-        // TODO: we should probably remove this, because it doesn't
-        // take into consideration other extensions like .tsx, .ts, .jsx, etc
-        fileExists = existsSync(require.resolve(expectedEntry.file));
-      } catch (e) {
-        // fail silently, usually means require.resolve threw MODULE_NOT_FOUND
-      }
-
-      if (fileExists === true) {
-        interval && clearInterval(interval);
-        setEntry(expectedEntry);
-      } else {
-        const elapsed = Date.now() - startedAt;
-        // timeout after 30 seconds of waiting
-        if (elapsed > 1000 * 30) {
-          console.error(
-            `⎔ Build timed out, Could not resolve ${expectedEntry.file}`
-          );
-          interval && clearInterval(interval);
-          cmd?.kill();
-        }
-      }
-    }, 200);
-
     return () => {
-      if (cmd) {
-        cmd.kill();
-        cmd = undefined;
-      }
-      interval && clearInterval(interval);
-      interval = undefined;
+      watcher?.close();
     };
-  }, [command, cwd, expectedEntry, watch_dir]);
-  return entry;
+  }, [build, expectedEntry.file]);
 }
 
 type EsbuildBundle = {
@@ -596,13 +516,11 @@ function useEsbuild({
   staticRoot,
   jsxFactory,
   jsxFragment,
-  format,
   rules,
   serveAssetsFromWorker,
 }: {
-  entry: undefined | Entry;
+  entry: Entry;
   destination: string | undefined;
-  format: CfScriptFormat | undefined;
   staticRoot: undefined | string;
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
@@ -631,7 +549,7 @@ function useEsbuild({
     };
 
     async function build() {
-      if (!destination || !entry || !format) return;
+      if (!destination) return;
 
       const { resolvedEntryPointPath, bundleType, modules, stop } =
         await bundleWorker(entry, destination, {
@@ -639,7 +557,6 @@ function useEsbuild({
           serveAssetsFromWorker: false,
           jsxFactory,
           jsxFragment,
-          format,
           rules,
           watch: watchMode,
         });
@@ -669,7 +586,6 @@ function useEsbuild({
     staticRoot,
     jsxFactory,
     jsxFragment,
-    format,
     serveAssetsFromWorker,
     rules,
   ]);

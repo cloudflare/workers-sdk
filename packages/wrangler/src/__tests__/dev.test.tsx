@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { readFileSync } from "node:fs";
 import patchConsole from "patch-console";
 import Dev from "../dev";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -9,7 +10,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 describe("Dev component", () => {
-  beforeEach(() => {});
   mockAccountId();
   mockApiToken();
   runInTempDir();
@@ -229,6 +229,82 @@ describe("Dev component", () => {
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Could not find zone for some-host.com"`
       );
+    });
+  });
+
+  describe("custom builds", () => {
+    it("should run a custom build before starting `dev`", async () => {
+      writeWranglerToml({
+        build: {
+          command: `node -e "console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
+        },
+      });
+
+      await runWrangler("dev index.js");
+
+      expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(
+        `"export default { fetch(){ return new Response(123) } }"`
+      );
+
+      // and the command would pass through
+      expect((Dev as jest.Mock).mock.calls[0][0].buildCommand).toEqual({
+        command:
+          "node -e \"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
+        cwd: undefined,
+        watch_dir: undefined,
+      });
+      expect(std.out).toMatchInlineSnapshot(
+        `"running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
+      );
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    if (process.platform !== "win32") {
+      it("should run a custom build of multiple steps combined by && before starting `dev`", async () => {
+        writeWranglerToml({
+          build: {
+            command: `echo "custom build" && echo "export default { fetch(){ return new Response(123) } }" > index.js`,
+          },
+        });
+
+        await runWrangler("dev index.js");
+
+        expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(`
+          "export default { fetch(){ return new Response(123) } }
+          "
+        `);
+
+        expect(std.out).toMatchInlineSnapshot(
+          `"running: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js"`
+        );
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    }
+
+    it("should throw an error if the entry doesn't exist after the build finishes", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        build: {
+          command: `node -e "console.log('custom build');"`,
+        },
+      });
+
+      await expect(
+        runWrangler("dev")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
+      );
+      expect(std.out).toMatchInlineSnapshot(
+        `"running: node -e \\"console.log('custom build');\\""`
+      );
+      expect(std.err).toMatchInlineSnapshot(`
+        "Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
     });
   });
 });
