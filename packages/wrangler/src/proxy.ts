@@ -1,17 +1,20 @@
-import { createServer } from "node:http";
+import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
+import { createServer as createHttpsServer } from "node:https";
 import WebSocket from "faye-websocket";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
+import { getHttpsOptions } from "./https-options";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type {
   IncomingHttpHeaders,
   RequestListener,
   IncomingMessage,
   ServerResponse,
-  Server,
+  Server as HttpServer,
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
+import type { Server as HttpsServer } from "node:https";
 import type ws from "ws";
 
 interface IWebsocket extends ws {
@@ -47,13 +50,17 @@ function addCfPreviewTokenHeader(
 function rewriteRemoteHostToLocalHostInHeaders(
   headers: IncomingHttpHeaders,
   remoteHost: string,
-  localPort: number
+  localPort: number,
+  localProtocol: "https" | "http"
 ) {
   for (const [name, value] of Object.entries(headers)) {
     // Rewrite the remote host to the local host.
     if (typeof value === "string" && value.includes(remoteHost)) {
       headers[name] = value
-        .replaceAll(`https://${remoteHost}`, `http://localhost:${localPort}`)
+        .replaceAll(
+          `https://${remoteHost}`,
+          `${localProtocol}://localhost:${localPort}`
+        )
         .replaceAll(remoteHost, `localhost:${localPort}`);
     }
   }
@@ -62,15 +69,30 @@ function rewriteRemoteHostToLocalHostInHeaders(
 export function usePreviewServer({
   previewToken,
   publicRoot,
-  port,
+  localProtocol,
+  localPort: port,
 }: {
   previewToken: CfPreviewToken | undefined;
   publicRoot: undefined | string;
-  port: number;
+  localProtocol: "https" | "http";
+  localPort: number;
 }) {
   /** Creates an HTTP/1 proxy that sends requests over HTTP/2. */
-  const proxyServer = useRef<Server>();
-  const proxy = (proxyServer.current ??= createProxyServer());
+  const [proxyServer, setProxyServer] = useState<HttpServer | HttpsServer>();
+
+  /**
+   * Create the instance of the local proxy server that will pass on
+   * requests to the preview worker.
+   */
+  useEffect(() => {
+    if (proxyServer === undefined) {
+      createProxyServer(localProtocol)
+        .then((proxy) => setProxyServer(proxy))
+        .catch((err) => {
+          console.error("Failed to create proxy server.", err);
+        });
+    }
+  }, [proxyServer, localProtocol]);
 
   /**
    * When we're not connected / getting a fresh token on changes,
@@ -98,6 +120,10 @@ export function usePreviewServer({
   }
 
   useEffect(() => {
+    if (proxyServer === undefined) {
+      return;
+    }
+
     // If we don't have a token, that means either we're just starting up,
     // or we're refreshing the token.
     if (!previewToken) {
@@ -109,8 +135,8 @@ export function usePreviewServer({
         // store the stream in a buffer so we can replay it later
         streamBufferRef.current.push({ stream, headers });
       };
-      proxy.on("stream", bufferStream);
-      cleanupListeners.push(() => proxy.off("stream", bufferStream));
+      proxyServer.on("stream", bufferStream);
+      cleanupListeners.push(() => proxyServer.off("stream", bufferStream));
 
       const bufferRequestResponse = (
         request: IncomingMessage,
@@ -120,8 +146,10 @@ export function usePreviewServer({
         requestResponseBufferRef.current.push({ request, response });
       };
 
-      proxy.on("request", bufferRequestResponse);
-      cleanupListeners.push(() => proxy.off("request", bufferRequestResponse));
+      proxyServer.on("request", bufferRequestResponse);
+      cleanupListeners.push(() =>
+        proxyServer.off("request", bufferRequestResponse)
+      );
       return () => {
         cleanupListeners.forEach((cleanup) => cleanup());
       };
@@ -142,9 +170,14 @@ export function usePreviewServer({
     cleanupListeners.push(() => remote.off("close", retryServerSetup));
 
     /** HTTP/2 -> HTTP/2  */
-    const handleStream = createStreamHandler(previewToken, remote, port);
-    proxy.on("stream", handleStream);
-    cleanupListeners.push(() => proxy.off("stream", handleStream));
+    const handleStream = createStreamHandler(
+      previewToken,
+      remote,
+      port,
+      localProtocol
+    );
+    proxyServer.on("stream", handleStream);
+    cleanupListeners.push(() => proxyServer.off("stream", handleStream));
 
     // flush and replay buffered streams
     streamBufferRef.current.forEach((buffer) =>
@@ -177,7 +210,8 @@ export function usePreviewServer({
         rewriteRemoteHostToLocalHostInHeaders(
           responseHeaders,
           previewToken.host,
-          port
+          port,
+          localProtocol
         );
         for (const name of Object.keys(responseHeaders)) {
           if (name.startsWith(":")) {
@@ -195,8 +229,10 @@ export function usePreviewServer({
       ? createHandleAssetsRequest(assetPath, handleRequest)
       : handleRequest;
 
-    proxy.on("request", actualHandleRequest);
-    cleanupListeners.push(() => proxy.off("request", actualHandleRequest));
+    proxyServer.on("request", actualHandleRequest);
+    cleanupListeners.push(() =>
+      proxyServer.off("request", actualHandleRequest)
+    );
 
     // flush and replay buffered requests
     requestResponseBufferRef.current.forEach(({ request, response }) =>
@@ -227,8 +263,8 @@ export function usePreviewServer({
         remoteWebsocketClient.close();
       });
     };
-    proxy.on("upgrade", handleUpgrade);
-    cleanupListeners.push(() => proxy.off("upgrade", handleUpgrade));
+    proxyServer.on("upgrade", handleUpgrade);
+    cleanupListeners.push(() => proxyServer.off("upgrade", handleUpgrade));
 
     return () => {
       cleanupListeners.forEach((cleanup) => cleanup());
@@ -237,7 +273,8 @@ export function usePreviewServer({
     previewToken,
     publicRoot,
     port,
-    proxy,
+    localProtocol,
+    proxyServer,
     // We use a state value as a sigil to trigger reconnecting the server.
     // It's not used inside the effect, so react-hooks/exhaustive-deps
     // doesn't complain if it's not included in the dependency array.
@@ -248,19 +285,23 @@ export function usePreviewServer({
   // Start/stop the server whenever the
   // containing component is mounted/unmounted.
   useEffect(() => {
+    if (proxyServer === undefined) {
+      return;
+    }
+
     waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 })
       .then(() => {
-        proxy.listen(port);
-        console.log(`⬣ Listening at http://localhost:${port}`);
+        proxyServer.listen(port);
+        console.log(`⬣ Listening at ${localProtocol}://localhost:${port}`);
       })
       .catch((err) => {
         console.error(`⬣ Failed to start server: ${err}`);
       });
 
     return () => {
-      proxy.close();
+      proxyServer.close();
     };
-  }, [port, proxy]);
+  }, [port, proxyServer, localProtocol]);
 }
 
 function createHandleAssetsRequest(
@@ -288,8 +329,15 @@ const HTTP1_HEADERS = new Set([
   "http2-settings",
 ]);
 
-function createProxyServer() {
-  return createServer()
+async function createProxyServer(
+  localProtocol: "https" | "http"
+): Promise<HttpServer | HttpsServer> {
+  const server: HttpServer | HttpsServer =
+    localProtocol === "https"
+      ? createHttpsServer(await getHttpsOptions())
+      : createHttpServer();
+
+  return server
     .on("request", function (req, res) {
       // log all requests
       console.log(
@@ -318,7 +366,8 @@ function createProxyServer() {
 function createStreamHandler(
   previewToken: CfPreviewToken,
   remote: ClientHttp2Session,
-  port: number
+  localPort: number,
+  localProtocol: "https" | "http"
 ) {
   return function handleStream(
     stream: ServerHttp2Stream,
@@ -331,7 +380,8 @@ function createStreamHandler(
       rewriteRemoteHostToLocalHostInHeaders(
         responseHeaders,
         previewToken.host,
-        port
+        localPort,
+        localProtocol
       );
       stream.respond(responseHeaders);
       request.pipe(stream, { end: true });
@@ -355,7 +405,7 @@ export async function waitForPortToBeAvailable(
       // Testing whether a port is 'available' involves simply
       // trying to make a server listen on that port, and retrying
       // until it succeeds.
-      const server = createServer();
+      const server = createHttpServer();
       server.on("error", (err) => {
         // @ts-expect-error non standard property on Error
         if (err.code === "EADDRINUSE") {

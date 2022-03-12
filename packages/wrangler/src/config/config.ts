@@ -204,7 +204,7 @@ export interface DevConfig {
    * @default `http`
    * @todo this needs to be implemented
    */
-  local_protocol: string;
+  local_protocol: "http" | "https";
 
   /**
    * Protocol that wrangler dev forwards requests on

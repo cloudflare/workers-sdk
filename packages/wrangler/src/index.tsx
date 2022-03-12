@@ -720,9 +720,8 @@ export async function main(argv: string[]): Promise<void> {
             "Host to forward requests to, defaults to the zone of project",
         })
         .option("local-protocol", {
-          default: "http",
           describe: "Protocol to listen to requests on, defaults to http.",
-          choices: ["http", "https"],
+          choices: ["http", "https"] as const,
         })
         .option("experimental-public", {
           describe: "Static assets to be served",
@@ -745,10 +744,9 @@ export async function main(argv: string[]): Promise<void> {
           array: true,
         })
         .option("upstream-protocol", {
-          default: "https",
           describe:
             "Protocol to forward requests to host on, defaults to https.",
-          choices: ["http", "https"],
+          choices: ["http", "https"] as const,
         })
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",
@@ -872,6 +870,12 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
+          localProtocol={
+            // The typings are not quite clever enough to handle element accesses, only property accesses,
+            // so we need to cast here.
+            (args["local-protocol"] as "http" | "https") ||
+            config.dev.local_protocol
+          }
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }
@@ -1255,6 +1259,7 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={envRootObj?.jsx_factory}
           jsxFragment={envRootObj?.jsx_fragment}
+          localProtocol={config.dev.local_protocol}
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}

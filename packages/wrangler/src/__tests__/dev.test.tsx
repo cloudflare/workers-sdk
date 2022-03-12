@@ -307,6 +307,54 @@ describe("Dev component", () => {
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
   });
+
+  describe("local-protocol", () => {
+    it("should default local-protocol to `http`", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use to `local_protocol` from `wrangler.toml`, if available", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          local_protocol: "https",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual(
+        "https"
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use --local-protocol command line arg, if provided", async () => {
+      // Here we show that the command line overrides the wrangler.toml by
+      // setting the config to https, and then setting it back to http on the command line.
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          local_protocol: "https",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --local-protocol=http");
+      expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {

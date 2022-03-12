@@ -39,6 +39,7 @@ export type DevProps = {
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  localProtocol: "https" | "http";
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
   public: undefined | string;
@@ -102,7 +103,8 @@ function Dev(props: DevProps): JSX.Element {
       tunnel: false,
     },
     port,
-    props.inspectorPort
+    props.inspectorPort,
+    props.localProtocol
   );
 
   useTunnel(toggles.tunnel);
@@ -133,6 +135,7 @@ function Dev(props: DevProps): JSX.Element {
           assetPaths={props.assetPaths}
           public={props.public}
           port={port}
+          localProtocol={props.localProtocol}
           inspectorPort={props.inspectorPort}
           compatibilityDate={props.compatibilityDate}
           compatibilityFlags={props.compatibilityFlags}
@@ -160,6 +163,7 @@ function Remote(props: {
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
   port: number;
+  localProtocol: "https" | "http";
   inspectorPort: number;
   accountId: undefined | string;
   apiToken: undefined | string;
@@ -194,7 +198,8 @@ function Remote(props: {
   usePreviewServer({
     previewToken,
     publicRoot: props.public,
-    port: props.port,
+    localProtocol: props.localProtocol,
+    localPort: props.port,
   });
 
   useInspector({
@@ -204,6 +209,7 @@ function Remote(props: {
   });
   return null;
 }
+
 function Local(props: {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
@@ -818,7 +824,8 @@ type useHotkeysInitialState = {
 function useHotkeys(
   initial: useHotkeysInitialState,
   port: number,
-  inspectorPort: number
+  inspectorPort: number,
+  localProtocol: "http" | "https"
 ) {
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
@@ -831,7 +838,7 @@ function useHotkeys(
       switch (input.toLowerCase()) {
         // open browser
         case "b": {
-          await openInBrowser(`http://localhost:${port}`);
+          await openInBrowser(`${localProtocol}://localhost:${port}`);
           break;
         }
         // toggle inspector
