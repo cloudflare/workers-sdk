@@ -136,7 +136,7 @@ describe("Dev component", () => {
     });
 
     it("should, in order, use args.host/config.dev.host/args.routes/config.route/config.routes", async () => {
-      // This test might seem like it's testing implmentation details, but let's be specific and consider it a spec
+      // This test might seem like it's testing implementation details, but let's be specific and consider it a spec
 
       fs.writeFileSync("index.js", `export default {};`);
 
