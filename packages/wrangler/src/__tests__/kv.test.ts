@@ -673,26 +673,25 @@ describe("wrangler", () => {
 
     describe("list", () => {
       it("should list the keys of a namespace specified by namespace-id", async () => {
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [
+          { name: "key-1" },
+          { name: "key-2", expiration: 123456789 },
+          { name: "key-3" },
+        ];
         mockKeyListRequest("some-namespace-id", keys);
         await runWrangler("kv:key list --namespace-id some-namespace-id");
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
               \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"expiration\\": 123456789
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -700,7 +699,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a namespace specified by binding", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("bound-id", keys);
 
         await runWrangler("kv:key list --binding someBinding");
@@ -708,19 +707,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -728,26 +721,20 @@ describe("wrangler", () => {
 
       it("should list the keys of a preview namespace specified by binding", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("preview-bound-id", keys);
         await runWrangler("kv:key list --binding someBinding --preview");
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -755,7 +742,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a namespace specified by binding, in a given environment", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("env-bound-id", keys);
         await runWrangler(
           "kv:key list --binding someBinding --env some-environment"
@@ -764,19 +751,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -784,7 +765,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("preview-env-bound-id", keys);
         await runWrangler(
           "kv:key list --binding someBinding --preview --env some-environment"
@@ -793,19 +774,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -822,9 +797,9 @@ describe("wrangler", () => {
         describe(`cursor - ${blankCursorValue}`, () => {
           it("should make multiple requests for paginated results", async () => {
             // Create a lot of mock keys, so that the fetch requests will be paginated
-            const keys: string[] = [];
+            const keys: NamespaceKeyInfo[] = [];
             for (let i = 0; i < 550; i++) {
-              keys.push("key-" + i);
+              keys.push({ name: "key-" + i });
             }
             // Ask for the keys in pages of size 100.
             const requests = mockKeyListRequest(
@@ -837,9 +812,7 @@ describe("wrangler", () => {
               "kv:key list --namespace-id some-namespace-id --limit 100"
             );
             expect(std.err).toMatchInlineSnapshot(`""`);
-            expect(
-              JSON.parse(std.out).map((k: NamespaceKeyInfo) => k.name)
-            ).toEqual(keys);
+            expect(JSON.parse(std.out)).toEqual(keys);
             expect(requests.count).toEqual(6);
           });
         });
