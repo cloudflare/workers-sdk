@@ -254,74 +254,105 @@ describe("normalizeAndValidateConfig()", () => {
         `);
     });
 
-    it("should override `site` config defaults with provided values", () => {
-      const expectedConfig: RawConfig = {
-        site: {
-          bucket: "BUCKET",
-          "entry-point": "ENTRY_POINT",
-          include: ["INCLUDE_1", "INCLUDE_2"],
-          exclude: ["EXCLUDE_1", "EXCLUDE_2"],
-        },
-      };
+    describe("site", () => {
+      it("should override `site` config defaults with provided values", () => {
+        const expectedConfig: RawConfig = {
+          site: {
+            bucket: "BUCKET",
+            include: ["INCLUDE_1", "INCLUDE_2"],
+            exclude: ["EXCLUDE_1", "EXCLUDE_2"],
+          },
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(false);
-    });
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
 
-    it("should error if `site` config is missing `bucket`", () => {
-      const expectedConfig: RawConfig = {
-        site: {
-          "entry-point": "ENTRY_POINT",
-          include: ["INCLUDE_1", "INCLUDE_2"],
-          exclude: ["EXCLUDE_1", "EXCLUDE_2"],
-        },
-      } as RawConfig;
+      it("should error if `site` config is missing `bucket`", () => {
+        const expectedConfig: RawConfig = {
+          // @ts-expect-error we're intentionally passing an invalid configuration here
+          site: {
+            include: ["INCLUDE_1", "INCLUDE_2"],
+            exclude: ["EXCLUDE_1", "EXCLUDE_2"],
+          },
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasErrors()).toBe(true);
-      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                "Processing wrangler configuration:
-                  - ERROR: \\"site.bucket\\" is a required field."
-            `);
-      expect(diagnostics.hasWarnings()).toBe(false);
-    });
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+                  "Processing wrangler configuration:
+                    - ERROR: \\"site.bucket\\" is a required field."
+              `);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
 
-    it("should error on invalid `site` values", () => {
-      const expectedConfig = {
-        site: {
-          bucket: "BUCKET",
-          "entry-point": 111,
-          include: [222, 333],
-          exclude: [444, 555],
-        },
-      };
+      it("should error on invalid `site` values", () => {
+        const expectedConfig = {
+          site: {
+            bucket: "BUCKET",
+            include: [222, 333],
+            exclude: [444, 555],
+          },
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig as unknown as RawConfig,
-        undefined
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig as unknown as RawConfig,
+          undefined
+        );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasWarnings()).toBe(false);
-      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - ERROR: \\"site.entry_point\\" should be of type string but got 111.
-            - ERROR: \\"sites.include.[0]\\" should be of type string but got 222.
-            - ERROR: \\"sites.include.[1]\\" should be of type string but got 333.
-            - ERROR: \\"sites.exclude.[0]\\" should be of type string but got 444.
-            - ERROR: \\"sites.exclude.[1]\\" should be of type string but got 555."
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+            "Processing wrangler configuration:
+              - ERROR: \\"sites.include.[0]\\" should be of type string but got 222.
+              - ERROR: \\"sites.include.[1]\\" should be of type string but got 333.
+              - ERROR: \\"sites.exclude.[0]\\" should be of type string but got 444.
+              - ERROR: \\"sites.exclude.[1]\\" should be of type string but got 555."
+          `);
+      });
+
+      it("should error with a deprecation warning if entry-point is defined", async () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          {
+            site: {
+              bucket: "some/path",
+              "entry-point": "some/other/script.js",
+            },
+          } as unknown as RawConfig,
+          undefined
+        );
+
+        expect(config.site).toMatchInlineSnapshot(`
+          Object {
+            "bucket": "some/path",
+            "exclude": Array [],
+            "include": Array [],
+          }
         `);
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Unexpected fields found in site field: \\"entry-point\\""
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - DEPRECATION: \\"site.entry-point\\":
+              The \`site.entry-point\` config field is no longer used.
+              The entry-point should be specified via the command line or the \`main\` config field."
+        `);
+      });
     });
 
     it("should map `wasm_module` paths from relative to the config path to relative to the cwd", () => {

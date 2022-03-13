@@ -61,6 +61,15 @@ export function normalizeAndValidateConfig(
     true
   );
 
+  deprecated(
+    diagnostics,
+    rawConfig,
+    `site.entry-point`,
+    `The \`site.entry-point\` config field is no longer used.\nThe entry-point should be specified via the command line or the \`main\` config field.`,
+    false,
+    true
+  );
+
   const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
     diagnostics,
     rawConfig,
@@ -342,25 +351,12 @@ function normalizeAndValidateSite(
   rawSite: Config["site"]
 ): Config["site"] {
   if (rawSite !== undefined) {
-    const {
-      bucket,
-      "entry-point": entryPoint,
-      include = [],
-      exclude = [],
-      ...rest
-    } = rawSite;
+    const { bucket, include = [], exclude = [], ...rest } = rawSite;
     validateAdditionalProperties(diagnostics, "site", Object.keys(rest), []);
     validateRequiredProperty(diagnostics, "site", "bucket", bucket, "string");
-    validateOptionalProperty(
-      diagnostics,
-      "site",
-      "entry_point",
-      entryPoint,
-      "string"
-    );
     validateTypedArray(diagnostics, "sites.include", include, "string");
     validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
-    return { bucket, "entry-point": entryPoint, include, exclude };
+    return { bucket, include, exclude };
   }
   return undefined;
 }

@@ -13,7 +13,6 @@ import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
@@ -465,9 +464,8 @@ export default{
 
     it('should error if a site definition doesn\'t have a "bucket" field', async () => {
       writeWranglerToml({
-        site: {
-          "entry-point": "./index.js",
-        } as Config["site"],
+        // @ts-expect-error we're intentionally setting an invalid config
+        site: {},
       });
       writeWorkerSource();
       mockUploadWorkerRequest();
@@ -489,7 +487,7 @@ export default{
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
 
-    it("should warn if there is a `site.entry-point` configuration", async () => {
+    it("should error if there is a `site.entry-point` configuration", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
@@ -513,22 +511,26 @@ export default{
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-      await runWrangler("publish ./index.js");
+      await expect(runWrangler("publish ./index.js")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Processing wrangler.toml configuration:
+                - DEPRECATION: \\"site.entry-point\\":
+                  The \`site.entry-point\` config field is no longer used.
+                  The entry-point should be specified via the command line or the \`main\` config field."
+            `);
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
-        Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - DEPRECATION: \\"site.entry-point\\":
+            The \`site.entry-point\` config field is no longer used.
+            The entry-point should be specified via the command line or the \`main\` config field.
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Deprecation notice: The \`site.entry-point\` config field is no longer used.
-        The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
-        Please remove the \`site.entry-point\` field from the \`wrangler.toml\` file."
+        "Processing wrangler.toml configuration:
+          - Unexpected fields found in site field: \\"entry-point\\""
       `);
     });
 
