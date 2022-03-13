@@ -1,7 +1,7 @@
-import { appendFile, readFile } from "fs/promises";
 import * as fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
-import path from "path/posix";
+import path from "node:path";
 import TOML from "@iarna/toml";
 import { RewriteFrames } from "@sentry/integrations";
 import {
@@ -43,12 +43,20 @@ export function initReporting() {
 
 async function appendReportingDecision(userInput: "true" | "false") {
   const homePath = path.join(os.homedir(), ".wrangler/config/");
-  fs.mkdirSync(homePath, { recursive: true });
-  await appendFile(
-    path.join(homePath, "reporting.toml"),
-    `error_tracking_opt = ${userInput} # Sentry \nerror_tracking_opt_date = ${new Date().toISOString()} # Sentry Date Decision \n`,
-    { encoding: "utf-8" }
-  );
+  const reportingConfigLocation = path.join(homePath, "reporting.toml");
+  try {
+    fs.mkdirSync(homePath, { recursive: true });
+    await writeFile(
+      reportingConfigLocation,
+      `error_tracking_opt = ${userInput} # Sentry \nerror_tracking_opt_date = ${new Date().toISOString()} # Sentry Date Decision \n`,
+      "utf-8"
+    );
+  } catch (err) {
+    console.warn(
+      `Unable to create wrangler's error reporting configuration file at ${reportingConfigLocation}: `,
+      err
+    );
+  }
 }
 
 function exceptionTransaction(error: Error, origin = "") {
@@ -72,7 +80,7 @@ export async function reportError(err: Error, origin = "") {
       message: "Would you like to submit a report when an error occurs?",
       choices: [
         { title: "Always", value: true },
-        { title: "Yes", value: "once" },
+        { title: "Only this time", value: "once" },
         { title: "No", value: false },
       ],
       initial: 2,
