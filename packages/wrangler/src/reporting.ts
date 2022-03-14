@@ -22,6 +22,14 @@ export function initReporting() {
     initialScope: {
       tags: { [pkj.name]: pkj.version },
     },
+    beforeBreadcrumb: (_breadcrumb, _hint) => {
+      // eventually, we might want to actually start dropping our own breadcrumbs.
+      // until then, we want to just ignore all of them, since sentry will
+      // automatically include breadcrumbs for things like console output,
+      // which can include unsanitized data that the user logs
+      // from their worker during development
+      return null;
+    },
     dsn: "https://5089b76bf8a64a9c949bf5c2b5e8003c@o51786.ingest.sentry.io/6190959",
     tracesSampleRate: 1.0,
     integrations: [
