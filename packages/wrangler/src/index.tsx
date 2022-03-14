@@ -1379,13 +1379,9 @@ export async function main(argv: string[]): Promise<void> {
             // "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
             const deprecationNotice =
               "`wrangler route delete` has been deprecated.";
-            const futureRoutes =
-              "Modify wrangler.toml to update the routes your worker will be deployed to upon publishing.";
-            const presentRoutes =
-              "Use the Cloudflare Dashboard to unassign a worker from existing routes";
-            throw new DeprecationError(
-              `${deprecationNotice}\n${futureRoutes}\n${presentRoutes}`
-            );
+            const shouldDo =
+              "Remove the unwanted route(s) from wrangler.toml and run `wrangler publish` to remove your worker from those routes.";
+            throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
           }
         );
     },

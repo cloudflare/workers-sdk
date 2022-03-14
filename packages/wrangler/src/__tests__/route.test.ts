@@ -18,8 +18,7 @@ describe("wrangler route", () => {
       .toThrowErrorMatchingInlineSnapshot(`
             "DEPRECATION WARNING:
             \`wrangler route delete\` has been deprecated.
-            Modify wrangler.toml to update the routes your worker will be deployed to upon publishing.
-            Use the Cloudflare Dashboard to unassign a worker from existing routes"
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler publish\` to remove your worker from those routes."
           `);
   });
 
@@ -28,8 +27,7 @@ describe("wrangler route", () => {
       .toThrowErrorMatchingInlineSnapshot(`
             "DEPRECATION WARNING:
             \`wrangler route delete\` has been deprecated.
-            Modify wrangler.toml to update the routes your worker will be deployed to upon publishing.
-            Use the Cloudflare Dashboard to unassign a worker from existing routes"
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler publish\` to remove your worker from those routes."
           `);
   });
 
