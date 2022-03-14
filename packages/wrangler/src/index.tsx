@@ -55,7 +55,7 @@ import { whoami } from "./whoami";
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
-import type { CommandModule, Argv } from "yargs";
+import type { CommandModule } from "yargs";
 import type Yargs from "yargs";
 
 type ConfigPath = string | undefined;

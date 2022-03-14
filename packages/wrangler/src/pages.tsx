@@ -16,7 +16,7 @@ import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
-import type { Argv, BuilderCallback } from "yargs";
+import type { BuilderCallback } from "yargs";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -699,7 +699,6 @@ async function buildFunctions({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
