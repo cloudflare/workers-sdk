@@ -2,9 +2,12 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
-import { initialise } from "../user";
+import {
+  reinitialiseAuthTokens,
+  USER_AUTH_CONFIG_FILE,
+  writeAuthConfigFile,
+} from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { writeUserConfig } from "./helpers/mock-user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -14,14 +17,15 @@ describe("wrangler", () => {
 
   describe("logout", () => {
     it("should exit with a message stating the user is not logged in", async () => {
-      await initialise();
       await runWrangler("logout");
       expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
     });
 
     it("should logout user that has been properly logged in", async () => {
-      writeUserConfig("some-oauth-tok", "some-refresh-tok");
-
+      writeAuthConfigFile({
+        oauth_token: "some-oauth-tok",
+        refresh_token: "some-refresh-tok",
+      });
       // Mock out the response for a request to revoke the auth tokens,
       // checking the form of the request is as expected.
       fetchMock.mockResponseOnce(async (req) => {
@@ -30,7 +34,8 @@ describe("wrangler", () => {
         return "";
       });
 
-      await initialise();
+      // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
+      reinitialiseAuthTokens();
       await runWrangler("logout");
 
       expect(std.out).toMatchInlineSnapshot(`
@@ -42,9 +47,9 @@ describe("wrangler", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
 
       // Make sure that logout removed the config file containing the auth tokens.
-      expect(
-        existsSync(path.join(os.homedir(), ".wrangler/config/default.toml"))
-      ).toBe(false);
+      expect(existsSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE))).toBe(
+        false
+      );
     });
   });
 });
