@@ -42,7 +42,7 @@ export default async function publish(props: Props): Promise<void> {
   const envRootObj = (props.env && config.env[props.env]) || config;
 
   assert(
-    envRootObj.compatibility_date || props.compatibilityDate,
+    props.compatibilityDate || envRootObj.compatibility_date,
     "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
@@ -53,7 +53,7 @@ export default async function publish(props: Props): Promise<void> {
     (envRootObj.route ? [envRootObj.route] : []) ??
     [];
 
-  const { workers_dev: deployToWorkersDev } = config;
+  const deployToWorkersDev = envRootObj.workers_dev;
 
   const jsxFactory = props.jsxFactory || envRootObj.jsx_factory;
   const jsxFragment = props.jsxFragment || envRootObj.jsx_fragment;
@@ -197,9 +197,11 @@ export default async function publish(props: Props): Promise<void> {
       bindings,
       migrations,
       modules,
-      compatibility_date: config.compatibility_date,
-      compatibility_flags: config.compatibility_flags,
-      usage_model: config.usage_model,
+      compatibility_date:
+        props.compatibilityDate ?? envRootObj.compatibility_date,
+      compatibility_flags:
+        props.compatibilityFlags ?? envRootObj.compatibility_flags,
+      usage_model: envRootObj.usage_model,
     };
 
     const start = Date.now();
