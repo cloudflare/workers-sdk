@@ -1,4 +1,5 @@
 import open from "open";
+
 /**
  * An extremely simple wrapper around the open command.
  * Specifically, it adds an 'error' event handler so that when this function
@@ -6,11 +7,11 @@ import open from "open";
  * stackblitz, remote servers), it doesn't just crash the process.
  *
  * @param url the URL to point the browser at
- * @param forceChromium open a chromium-based browser instead of the default
+ * @param options open a chromium-based browser instead of the default
  */
 export default async function openInBrowser(
   url: string,
-  forceChromium = false
+  { forceChromium }: { forceChromium: boolean } = { forceChromium: false }
 ): Promise<void> {
   const options: open.Options | undefined = forceChromium
     ? {
