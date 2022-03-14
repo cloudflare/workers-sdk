@@ -1332,7 +1332,7 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  // route
+  // [DEPRECATED] route
   wrangler.command(
     "route",
     false, // I think we want to hide this command
@@ -1357,21 +1357,21 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
               });
           },
-          async (args) => {
-            console.log(":route list", args);
-            // TODO: use environment (current wrangler doesn't do so?)
-            // TODO: don't get `zone_id` from config at all and require the command line arg `--zone`.
-            const config = readConfig(args.config as ConfigPath);
-            const zone = args.zone || config.zone_id;
-            if (!zone) {
-              throw new Error("missing zone id");
-            }
-
-            console.log(await fetchResult(`/zones/${zone}/workers/routes`));
+          () => {
+            // "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
+            const deprecationNotice =
+              "`wrangler route list` has been deprecated.";
+            const futureRoutes =
+              "Refer to wrangler.toml for a list of routes the worker will be deployed to upon publishing.";
+            const presentRoutes =
+              "Refer to the Cloudflare Dashboard to see the routes this worker is currently running on.";
+            throw new DeprecationError(
+              `${deprecationNotice}\n${futureRoutes}\n${presentRoutes}`
+            );
           }
         )
         .command(
-          "delete <id>",
+          "delete",
           "Delete a route associated with a zone",
           (yargs) => {
             return yargs
@@ -1388,22 +1388,22 @@ export async function main(argv: string[]): Promise<void> {
                 describe: "Perform on a specific environment",
               });
           },
-          async (args) => {
-            console.log(":route delete", args);
-            // TODO: use environment (current wrangler doesn't do so?)
-            const config = readConfig(args.config as ConfigPath);
-            const zone = args.zone || config.zone_id;
-            if (!zone) {
-              throw new Error("missing zone id");
-            }
-
-            console.log(
-              await fetchResult(`/zones/${zone}/workers/routes/${args.id}`, {
-                method: "DELETE",
-              })
-            );
+          () => {
+            // "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
+            const deprecationNotice =
+              "`wrangler route delete` has been deprecated.";
+            const shouldDo =
+              "Remove the unwanted route(s) from wrangler.toml and run `wrangler publish` to remove your worker from those routes.";
+            throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
           }
         );
+    },
+    () => {
+      // "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
+      const deprecationNotice = "`wrangler route` has been deprecated.";
+      const shouldDo =
+        "Please use wrangler.toml and/or `wrangler publish --routes` to modify routes";
+      throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
     }
   );
 
