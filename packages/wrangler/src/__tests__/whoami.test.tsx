@@ -1,9 +1,8 @@
 import { render } from "ink-testing-library";
 import React from "react";
-import { initialise } from "../user";
+import { reinitialiseAuthTokens, writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
-import { writeUserConfig } from "./helpers/mock-user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
@@ -11,20 +10,23 @@ describe("getUserInfo()", () => {
   runInTempDir({ homedir: "./home" });
 
   it("should return undefined if there is no config file", async () => {
-    await initialise();
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
   });
 
   it("should return undefined if there is an empty config file", async () => {
-    writeUserConfig();
-    await initialise();
+    writeAuthConfigFile({});
+    // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
+    reinitialiseAuthTokens();
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {
-    writeUserConfig("some-oauth-token");
+    writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+    // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
+    reinitialiseAuthTokens();
+
     setMockResponse("/user", () => {
       return { email: "user@example.com" };
     });
@@ -36,7 +38,6 @@ describe("getUserInfo()", () => {
       ];
     });
 
-    await initialise();
     const userInfo = await getUserInfo();
 
     expect(userInfo).toEqual({

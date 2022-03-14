@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
+import { reinitialiseAuthTokens } from "../../user";
 
 const originalCwd = process.cwd();
 
@@ -19,6 +20,8 @@ export function runInTempDir({ homedir }: { homedir?: string } = {}) {
       // This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
       // getter that is not configurable (and so cannot be spied upon).
       jest.spyOn(os, "homedir").mockReturnValue(homedir);
+      // Now that we have changed the home directory location, we must reinitialize the user auth state
+      reinitialiseAuthTokens();
     }
   });
 

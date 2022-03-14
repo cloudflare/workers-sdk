@@ -47,7 +47,6 @@ import {
   login,
   logout,
   listScopes,
-  initialise as initialiseUserConfig,
   loginOrRefreshIfRequired,
   getAccountId,
   validateScopeKeys,
@@ -2340,7 +2339,6 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.exitProcess(false);
 
   try {
-    await initialiseUserConfig();
     await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
