@@ -55,6 +55,7 @@ import { whoami } from "./whoami";
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
+import type { CommandModule } from "yargs";
 import type Yargs from "yargs";
 
 type ConfigPath = string | undefined;
@@ -203,7 +204,15 @@ export async function main(argv: string[]): Promise<void> {
     .scriptName("wrangler")
     .wrap(null);
 
-  // the default is to simply print the help menu
+  // Default help command that supports the subcommands
+  const subHelp: CommandModule = {
+    command: ["*"],
+    handler: async (args) => {
+      setImmediate(() =>
+        wrangler.parse([...args._.map((a) => `${a}`), "--help"])
+      );
+    },
+  };
   wrangler.command(
     ["*"],
     false,
@@ -1406,6 +1415,7 @@ export async function main(argv: string[]): Promise<void> {
     "🤫 Generate a secret that can be referenced in the worker script",
     (secretYargs) => {
       return secretYargs
+        .command(subHelp)
         .command(
           "put <key>",
           "Create or update a secret variable for a script",
@@ -1618,6 +1628,7 @@ export async function main(argv: string[]): Promise<void> {
     "🗂️  Interact with your Workers KV Namespaces",
     (namespaceYargs) => {
       return namespaceYargs
+        .command(subHelp)
         .command(
           "create <namespace>",
           "Create a new namespace",
@@ -1769,6 +1780,7 @@ export async function main(argv: string[]): Promise<void> {
     "🔑 Individually manage Workers KV key-value pairs",
     (kvKeyYargs) => {
       return kvKeyYargs
+        .command(subHelp)
         .command(
           "put <key> [value]",
           "Writes a single key/value pair to the given namespace.",
@@ -1984,6 +1996,7 @@ export async function main(argv: string[]): Promise<void> {
     "💪 Interact with multiple Workers KV key-value pairs at once",
     (kvBulkYargs) => {
       return kvBulkYargs
+        .command(subHelp)
         .command(
           "put <filename>",
           "Upload multiple key-value pairs to a namespace",
@@ -2183,77 +2196,81 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  wrangler.command("pages", "⚡️ Configure Cloudflare Pages", pages);
+  wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) =>
+    pages(pagesYargs.command(subHelp))
+  );
 
   wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
-    return r2Yargs.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
-      r2BucketYargs.command(
-        "create <name>",
-        "Create a new R2 bucket",
-        (yargs) => {
-          return yargs.positional("name", {
-            describe: "The name of the new bucket",
-            type: "string",
-            demandOption: true,
-          });
-        },
-        async (args) => {
-          // We expect three values in `_`: `r2`, `bucket`, `create`.
-          if (args._.length > 3) {
-            const extraArgs = args._.slice(3).join(" ");
-            throw new CommandLineArgsError(
-              `Unexpected additional positional arguments "${extraArgs}".`
-            );
-          }
+    return r2Yargs
+      .command(subHelp)
+      .command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
+        r2BucketYargs.command(
+          "create <name>",
+          "Create a new R2 bucket",
+          (yargs) => {
+            return yargs.positional("name", {
+              describe: "The name of the new bucket",
+              type: "string",
+              demandOption: true,
+            });
+          },
+          async (args) => {
+            // We expect three values in `_`: `r2`, `bucket`, `create`.
+            if (args._.length > 3) {
+              const extraArgs = args._.slice(3).join(" ");
+              throw new CommandLineArgsError(
+                `Unexpected additional positional arguments "${extraArgs}".`
+              );
+            }
 
+            const config = readConfig(args.config as ConfigPath);
+
+            const accountId = await requireAuth(config);
+
+            console.log(`Creating bucket ${args.name}.`);
+            await createR2Bucket(accountId, args.name);
+            console.log(`Created bucket ${args.name}.`);
+          }
+        );
+
+        r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
           const config = readConfig(args.config as ConfigPath);
 
           const accountId = await requireAuth(config);
 
-          console.log(`Creating bucket ${args.name}.`);
-          await createR2Bucket(accountId, args.name);
-          console.log(`Created bucket ${args.name}.`);
-        }
-      );
+          console.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
+        });
 
-      r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-        const config = readConfig(args.config as ConfigPath);
+        r2BucketYargs.command(
+          "delete <name>",
+          "Delete an R2 bucket",
+          (yargs) => {
+            return yargs.positional("name", {
+              describe: "The name of the bucket to delete",
+              type: "string",
+              demandOption: true,
+            });
+          },
+          async (args) => {
+            // We expect three values in `_`: `r2`, `bucket`, `delete`.
+            if (args._.length > 3) {
+              const extraArgs = args._.slice(3).join(" ");
+              throw new CommandLineArgsError(
+                `Unexpected additional positional arguments "${extraArgs}".`
+              );
+            }
 
-        const accountId = await requireAuth(config);
+            const config = readConfig(args.config as ConfigPath);
 
-        console.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
+            const accountId = await requireAuth(config);
+
+            console.log(`Deleting bucket ${args.name}.`);
+            await deleteR2Bucket(accountId, args.name);
+            console.log(`Deleted bucket ${args.name}.`);
+          }
+        );
+        return r2BucketYargs;
       });
-
-      r2BucketYargs.command(
-        "delete <name>",
-        "Delete an R2 bucket",
-        (yargs) => {
-          return yargs.positional("name", {
-            describe: "The name of the bucket to delete",
-            type: "string",
-            demandOption: true,
-          });
-        },
-        async (args) => {
-          // We expect three values in `_`: `r2`, `bucket`, `delete`.
-          if (args._.length > 3) {
-            const extraArgs = args._.slice(3).join(" ");
-            throw new CommandLineArgsError(
-              `Unexpected additional positional arguments "${extraArgs}".`
-            );
-          }
-
-          const config = readConfig(args.config as ConfigPath);
-
-          const accountId = await requireAuth(config);
-
-          console.log(`Deleting bucket ${args.name}.`);
-          await deleteR2Bucket(accountId, args.name);
-          console.log(`Deleted bucket ${args.name}.`);
-        }
-      );
-      return r2BucketYargs;
-    });
   });
 
   wrangler
