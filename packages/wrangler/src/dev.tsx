@@ -19,6 +19,7 @@ import useInspector from "./inspect";
 import { DEFAULT_MODULE_RULES } from "./module-collection";
 import openInBrowser from "./open-in-browser";
 import { usePreviewServer, waitForPortToBeAvailable } from "./proxy";
+import { reportError } from "./reporting";
 import { syncAssets } from "./sites";
 import { getAPIToken } from "./user";
 import type { Config } from "./config";
@@ -801,8 +802,9 @@ function useTunnel(toggle: boolean) {
       }
     }
 
-    startTunnel().catch((err) => {
+    startTunnel().catch(async (err) => {
       console.error("tunnel:", err);
+      await reportError(err);
     });
 
     return () => {
