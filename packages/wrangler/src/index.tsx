@@ -795,6 +795,17 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
+      const upstreamProtocol =
+        (args["upstream-protocol"] as "http" | "https") ||
+        config.dev.upstream_protocol;
+      if (upstreamProtocol === "http") {
+        console.warn(
+          "Setting upstream-protocol to http is not currently implemented.\n" +
+            "If this is required in your project, please add your use case to the following issue:\n" +
+            "https://github.com/cloudflare/wrangler2/issues/583."
+        );
+      }
+
       const accountId = !args.local ? await requireAuth(config) : undefined;
 
       // TODO: if worker_dev = false and no routes, then error (only for dev)
@@ -879,6 +890,7 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
           jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
+          upstreamProtocol={upstreamProtocol}
           localProtocol={
             // The typings are not quite clever enough to handle element accesses, only property accesses,
             // so we need to cast here.
@@ -1268,6 +1280,7 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={envRootObj?.jsx_factory}
           jsxFragment={envRootObj?.jsx_fragment}
+          upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
           enableLocalPersistence={false}
           accountId={accountId}
