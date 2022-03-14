@@ -1274,7 +1274,6 @@ export default{
       });
       writeWorkerSource();
       mockUploadWorkerRequest();
-      mockSubDomainRequest();
       mockUpdateWorkerRequest({ enabled: false });
 
       await runWrangler("publish ./index");
@@ -1282,6 +1281,104 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         No publish targets for test-name (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should disable the workers.dev domain if workers_dev is undefined but overwritten to `false` in environment", async () => {
+      writeWranglerToml({
+        env: {
+          dev: {
+            workers_dev: false,
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+      });
+      mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        No publish targets for test-name (dev) (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should disable the workers.dev domain if workers_dev is `true` but overwritten to `false` in environment", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+        env: {
+          dev: {
+            workers_dev: false,
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+      });
+      mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        No publish targets for test-name (dev) (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should publish to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async () => {
+      writeWranglerToml({
+        env: {
+          dev: {
+            workers_dev: true,
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+      });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        Published test-name (dev) (TIMINGS)
+          dev.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should publish to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async () => {
+      writeWranglerToml({
+        workers_dev: false,
+        env: {
+          dev: {
+            workers_dev: true,
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+      });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        Published test-name (dev) (TIMINGS)
+          dev.test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
