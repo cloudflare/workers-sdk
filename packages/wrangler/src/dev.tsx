@@ -39,6 +39,7 @@ export type DevProps = {
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  upstreamProtocol: "https" | "http";
   localProtocol: "https" | "http";
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];

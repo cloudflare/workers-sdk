@@ -308,6 +308,40 @@ describe("Dev component", () => {
     });
   });
 
+  describe("upstream-protocol", () => {
+    it("should default upstream-protocol to `https`", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+        "https"
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should warn if `--upstream-protocol=http` is used", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --upstream-protocol=http");
+      expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+        "http"
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Setting upstream-protocol to http is not currently implemented.
+        If this is required in your project, please add your use case to the following issue:
+        https://github.com/cloudflare/wrangler2/issues/583."
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("local-protocol", () => {
     it("should default local-protocol to `http`", async () => {
       writeWranglerToml({
