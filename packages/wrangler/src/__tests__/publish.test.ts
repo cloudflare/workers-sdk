@@ -1966,6 +1966,62 @@ export default{
       `);
     });
   });
+
+  describe("legacy module specifiers", () => {
+    it("should work with legacy module specifiers, with a deprecation warning (1)", async () => {
+      writeWranglerToml({
+        rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `import TEXT from 'text.file'; export default {};`
+      );
+      fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedModules: {
+          "./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
+            "SOME TEXT CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(
+        `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";"`
+      );
+    });
+  });
+
+  it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
+    writeWranglerToml();
+    fs.writeFileSync(
+      "./index.js",
+      `import WASM from 'index.wasm'; export default {};`
+    );
+    fs.writeFileSync("./index.wasm", "SOME WASM CONTENT");
+    mockSubDomainRequest();
+    mockUploadWorkerRequest({
+      expectedModules: {
+        "./94b240d0d692281e6467aa42043986e5c7eea034-index.wasm":
+          "SOME WASM CONTENT",
+      },
+    });
+    await runWrangler("publish index.js");
+    expect(std.out).toMatchInlineSnapshot(`
+      "Uploaded test-name (TIMINGS)
+      Published test-name (TIMINGS)
+        test-name.test-sub-domain.workers.dev"
+    `);
+    expect(std.err).toMatchInlineSnapshot(`""`);
+    expect(std.warn).toMatchInlineSnapshot(
+      `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
+    );
+  });
 });
 
 /** Write a mock Worker script to disk. */
@@ -2044,7 +2100,6 @@ function mockUploadWorkerRequest({
           expectedEntry
         );
       }
-
       const metadata = JSON.parse(
         formBody.get("metadata") as string
       ) as WorkerMetadata;

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
-import makeModuleCollector from "./module-collection";
+import createModuleCollector from "./module-collection";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -30,7 +30,23 @@ export async function bundleWorker(
 ): Promise<BundleResult> {
   const { serveAssetsFromWorker, jsxFactory, jsxFragment, rules, watch } =
     options;
-  const moduleCollector = makeModuleCollector({ format: entry.format, rules });
+  const entryDirectory = path.dirname(entry.file);
+  const moduleCollector = createModuleCollector({
+    wrangler1xlegacyModuleReferences: {
+      rootDirectory: entryDirectory,
+      fileNames: new Set(
+        fs
+          .readdirSync(entryDirectory, { withFileTypes: true })
+          .filter(
+            (dirEntry) =>
+              dirEntry.isFile() && dirEntry.name !== path.basename(entry.file)
+          )
+          .map((dirEnt) => dirEnt.name)
+      ),
+    },
+    format: entry.format,
+    rules,
+  });
   const result = await esbuild.build({
     ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,
