@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { readFileSync } from "node:fs";
 import patchConsole from "patch-console";
-import Dev from "../dev";
+import Dev from "../dev/dev";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
