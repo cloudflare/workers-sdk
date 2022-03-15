@@ -13,7 +13,7 @@ import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import Dev from "./dev";
+import Dev from "./dev/dev";
 import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
 import {
