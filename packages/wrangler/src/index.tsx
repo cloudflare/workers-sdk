@@ -253,7 +253,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
       throw new DeprecationError(
-        "`wrangler generate` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler generate` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
       );
     }
   );
@@ -581,7 +581,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
       throw new DeprecationError(
-        "`wrangler build` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler build` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
       );
     }
   );
