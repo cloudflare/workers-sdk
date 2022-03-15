@@ -1,4 +1,4 @@
-## [WIP] Deprecations
+# [WIP] Deprecations
 
 This document describes the difference between `wrangler` 1.x and v2, specifically deprecations and breaking changes.
 
@@ -76,18 +76,35 @@ A few configuration fields are deprecated and will not work as expected anymore.
 
   The `type` configuration was used to specify the type of Worker; it has since been made redundant and is now inferred from usage. If you were using `type = "webpack"` (and the optional `webpack_config` field), you should read the [TODO: webpack migration guide](/todo/webpack-migration.md) to modify your project and use a custom build instead.
 
-### Deprecated commands
+## Deprecated commands
 
 The following commands are deprecated in `wrangler` v2.
 
-- **`build`**
-- **`config`**: use `wrangler login` / `wrangler logout`
-- **`preview`**: use `wrangler dev`
-- **`subdomain`**: you can create workers.dev subdomain on your Workers dashboard
-- **`generate`**: (TODO: a guide on using degit)
-- **`route`**: configure routes in `wrangler.toml`
+### build:
 
-### Other deprecated behaviour
+`wrangler` will implicitly build the script when necessary.
+
+### config:
+
+use `wrangler login` / `wrangler logout`
+
+### preview:
+
+use `wrangler dev`
+
+### subdomain:
+
+you can create workers.dev subdomain on your Workers dashboard
+
+### generate:
+
+(TODO: a guide on using degit)
+
+### route:
+
+configure routes in `wrangler.toml`
+
+## Other deprecated behaviour
 
 - `wrangler` will no longer use `index.js` in the directory where `wrangler dev` is called as the entry point to a worker. Use the `main` configuration field, or explicitly pass it as a command line argument. Example: `wrangler dev index.js`.
 
