@@ -8,15 +8,15 @@ This document describes the difference between `wrangler` 1.x and v2, specifical
 
 ### New fields
 
-**`main`**: _string_, optional
+- **`main`**: _string_, optional
 
 The `main` field is used to specify an entry point to the Worker. It may be in the established service worker format[`], or the newer, preferred modules format[`]. An entry point is now explicitly required, and can be configured either via the `main` field, or passed directly as a command line argument; e.g. `wrangler dev index.js`. This field replaces the legacy `build.upload.main` field (which only applied to modules format Workers). Read more at (ref:)[]
 
-**`rules`**: _array_, optional
+- **`rules`**: _array_, optional
 
 The `rules` field is an array of mappings between module types and file patterns. It instructs `wrangler` to interpret specific files differently than JavaScript. For example, this is useful for reading text-like content as text files, or compiled WASM as ready to instantiate and execute. These rules can apply to Workers of both the established service worker format, and the newer modules format. This field replaces the legacy `build.upload.rules` field (which only applied to modules format Workers). Read more at (ref:)[]
 
-**`legacy_env`**: _boolean_, optional. default: `true`
+- **`legacy_env`**: _boolean_, optional. default: `true`
 
 The `legacy_env` field toggles how environments are handled by `wrangler`.
 
@@ -24,27 +24,27 @@ The `legacy_env` field toggles how environments are handled by `wrangler`.
 - When `legacy_env` is `false`, it uses the newer service environments, where scripts for a given Worker are grouped under the same same script name in the Cloudflare Workers dashboard, and environments are subdomains for a given published script (when `workers_dev = true`).
   Read more at (ref:)[]
 
-**`services`**: TODO
+- **`services`**: TODO
 
-**`node-compat`**: TODO
+- **`node-compat`**: TODO
 
-**`public`**: TODO
+- **`public`**: TODO
 
 ### Non-mandatory fields
 
 A few configuration fields which were previously required, are now non-mandatory in particular situations; they can either be inferred, or added as an optimisation. (Indeed, _no_ fields are mandatory anymore when starting, and you can gradually add configuration as the need arises.)
 
-**`name`**: _string_
+- **`name`**: _string_
 
 The `name` configuration field is now not mandatory for `wrangler dev`, or any of the `wrangler kv:*` commands. Further, it can also be passed as a command line argument as `--name <name>`. It is still required for `wrangler publish`.
 
-**`account_id`**: _string_
+- **`account_id`**: _string_
 
 The `account_id` field is not mandatory for any of the commands. Any relevant commands will check if you're logged in, and if not, will prompt you to log in. Once logged in it will use your account ID, and will not prompt you again until your login session expires. If you multiple account IDs, you will be presented with a list of accounts to choose from.
 
 You can still configure `account_id` in your `wrangler.toml` file, or as an environment variable `CLOUDFLARE_ACCOUNT_ID`; this will make startup faster, and bypass the list of choices if you have multiple IDs. By also setting the `CLOUDFLARE_API_TOKEN` environment variable, this configuration is useful in scenarios like CI/CD where you won't be able to interactively login.
 
-**`workers_dev`** _boolean_, default: `true` when no routes are present
+- **`workers_dev`** _boolean_, default: `true` when no routes are present
 
 The `workers_dev` field is used to indicate that the Worker should be published to `workers.dev`. For example, for a script named "my-worker" and a previously configured workers.dev subdomain "username", the Worker will get published to https://my-worker.username.workers.dev.com. This field is not mandatory, and defaults to `true` when `route` or `routes` are not configured. When routes are present, it defaults to `false`. If you want to neither publish it to a `workers.dev` subdomain nor any routes, you can set workers_dev to `false`. This useful when you're publishing a Worker as a standalone service that can only be accessed from another Worker with (`services`)[TODO:link/to/services/docs] bindings.
 
@@ -80,27 +80,27 @@ The `type` configuration was used to specify the type of Worker; it has since be
 
 The following commands are deprecated in `wrangler` v2.
 
-### **`build`**:
+### build:
 
 `wrangler` will implicitly build the script when necessary.
 
-### **`config`**:
+### config:
 
 use `wrangler login` / `wrangler logout`
 
-### **`preview`**:
+### preview:
 
 use `wrangler dev`
 
-### **`subdomain`**:
+### subdomain:
 
 you can create workers.dev subdomain on your Workers dashboard
 
-### **`generate`**:
+### generate:
 
 (TODO: a guide on using degit)
 
-### **`route`**:
+### route:
 
 configure routes in `wrangler.toml`
 
