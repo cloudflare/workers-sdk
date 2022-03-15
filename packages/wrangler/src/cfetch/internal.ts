@@ -1,6 +1,7 @@
 import { fetch } from "undici";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
+import { reportError } from "../reporting";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
@@ -47,6 +48,7 @@ export async function fetchInternal<ResponseType>(
   try {
     return parseJSON(jsonText) as ResponseType;
   } catch (err) {
+    await reportError(err as Error);
     throw new ParseError({
       text: "Received a malformed response from the API",
       notes: [
