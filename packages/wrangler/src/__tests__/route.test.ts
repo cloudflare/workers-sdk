@@ -1,7 +1,9 @@
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler route", () => {
+  mockConsoleMethods();
   runInTempDir();
 
   it("shows a deprecation notice when `wrangler route` is run", async () => {
