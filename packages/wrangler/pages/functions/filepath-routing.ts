@@ -64,8 +64,8 @@ export async function generateConfigFromFileTree({
 
           routePath = `${baseURL}/${routePath}`;
 
-          routePath = routePath.replace(/\[\[(.+)]]/g, ":$1*"); // transform [[id]] => :id*
-          routePath = routePath.replace(/\[(.+)]/g, ":$1"); // transform [id] => :id
+          routePath = routePath.replace(/\[\[([^\]]+)\]\]/g, ":$1*"); // transform [[id]] => :id*
+          routePath = routePath.replaceAll(/\[([^\]]+)\]/g, ":$1"); // transform [id] => :id
 
           const routeEntry: RouteConfig = {
             routePath: toUrlPath(routePath),

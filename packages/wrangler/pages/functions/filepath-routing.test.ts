@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { runInTempDir } from "../../src/__tests__/helpers/run-in-tmp";
 import { toUrlPath } from "../../src/paths";
 import { compareRoutes, generateConfigFromFileTree } from "./filepath-routing";
@@ -83,34 +83,133 @@ describe("filepath-routing", () => {
       `
       );
 
+      mkdirSync("todos");
+
+      writeFileSync(
+        "todos/[id].ts",
+        `
+      export function onRequestPost() {}
+      export function onRequestDelete() {}
+      `
+      );
+
+      mkdirSync("authors");
+      mkdirSync("authors/[authorId]");
+      mkdirSync("authors/[authorId]/todos");
+
+      writeFileSync(
+        "authors/[authorId]/todos/[todoId].ts",
+        `
+      export function onRequestPost() {}
+      `
+      );
+
+      mkdirSync("books");
+
+      writeFileSync(
+        "books/[[title]].ts",
+        `
+      export function onRequestPost() {}
+      `
+      );
+
+      mkdirSync("cats");
+      mkdirSync("cats/[[breed]]");
+
+      writeFileSync(
+        "cats/[[breed]]/blah.ts",
+        `
+      export function onRequestPost() {}
+      `
+      );
+
+      writeFileSync(
+        "cats/[[breed]]/[[name]].ts",
+        `
+      export function onRequestPost() {}
+      `
+      );
+
       const entries = await generateConfigFromFileTree({
         baseDir: ".",
         baseURL: "/base" as UrlPath,
       });
-      expect(entries).toEqual({
-        routes: [
-          {
-            method: "DELETE",
-            module: ["bar.ts:onRequestDelete"],
-            routePath: "/base/bar",
-          },
-          {
-            method: "PUT",
-            module: ["bar.ts:onRequestPut"],
-            routePath: "/base/bar",
-          },
-          {
-            method: "GET",
-            module: ["foo.ts:onRequestGet"],
-            routePath: "/base/foo",
-          },
-          {
-            method: "POST",
-            module: ["foo.ts:onRequestPost"],
-            routePath: "/base/foo",
-          },
-        ],
-      });
+      expect(entries).toMatchInlineSnapshot(`
+        Object {
+          "routes": Array [
+            Object {
+              "method": "POST",
+              "module": Array [
+                "authors/[authorId]/todos/[todoId].ts:onRequestPost",
+              ],
+              "routePath": "/base/authors/:authorId/todos/:todoId",
+            },
+            Object {
+              "method": "POST",
+              "module": Array [
+                "cats/[[breed]]/blah.ts:onRequestPost",
+              ],
+              "routePath": "/base/cats/:breed*/blah",
+            },
+            Object {
+              "method": "POST",
+              "module": Array [
+                "cats/[[breed]]/[[name]].ts:onRequestPost",
+              ],
+              "routePath": "/base/cats/:breed*/:name*",
+            },
+            Object {
+              "method": "DELETE",
+              "module": Array [
+                "todos/[id].ts:onRequestDelete",
+              ],
+              "routePath": "/base/todos/:id",
+            },
+            Object {
+              "method": "POST",
+              "module": Array [
+                "todos/[id].ts:onRequestPost",
+              ],
+              "routePath": "/base/todos/:id",
+            },
+            Object {
+              "method": "POST",
+              "module": Array [
+                "books/[[title]].ts:onRequestPost",
+              ],
+              "routePath": "/base/books/:title*",
+            },
+            Object {
+              "method": "DELETE",
+              "module": Array [
+                "bar.ts:onRequestDelete",
+              ],
+              "routePath": "/base/bar",
+            },
+            Object {
+              "method": "PUT",
+              "module": Array [
+                "bar.ts:onRequestPut",
+              ],
+              "routePath": "/base/bar",
+            },
+            Object {
+              "method": "GET",
+              "module": Array [
+                "foo.ts:onRequestGet",
+              ],
+              "routePath": "/base/foo",
+            },
+            Object {
+              "method": "POST",
+              "module": Array [
+                "foo.ts:onRequestPost",
+              ],
+              "routePath": "/base/foo",
+            },
+          ],
+        }
+      `);
     });
   });
 });
