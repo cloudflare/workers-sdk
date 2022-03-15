@@ -29,6 +29,7 @@ import type { AssetPaths } from "./sites";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "./worker";
 import type { WatchMode } from "esbuild";
 import type { DirectoryResult } from "tmp-promise";
+import { Miniflare } from "miniflare";
 
 export type DevProps = {
   name?: string;
@@ -289,94 +290,192 @@ function useLocalWorker(props: {
       }
 
       console.log("⎔ Starting a local server...");
-      // TODO: just use execa for this
-      local.current = spawn(
-        "node",
-        [
-          "--experimental-vm-modules",
-          "--inspect",
-          require.resolve("miniflare/cli"),
-          realpathSync(bundle.path),
-          "--watch",
-          "--wrangler-config",
-          path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
-          "--env",
-          path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
-          "--package",
-          path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
-          "--port",
-          port.toString(),
-          ...(assetPaths
-            ? [
-                "--site",
-                path.join(process.cwd(), assetPaths.baseDirectory),
-                ...assetPaths.includePatterns.map((pattern) => [
-                  "--site-include",
-                  pattern,
-                ]),
-                ...assetPaths.excludePatterns.map((pattern) => [
-                  "--site-exclude",
-                  pattern,
-                ]),
-              ].flatMap((x) => x)
-            : []),
-          ...(props.enableLocalPersistence
-            ? ["--kv-persist", "--cache-persist", "--do-persist"]
-            : []),
-          ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
-            return ["--binding", `${key}=${value}`];
-          }),
-          ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
-            return ["--kv", binding];
-          }),
-          ...(bindings.durable_objects?.bindings || []).flatMap(
-            ({ name, class_name }) => {
-              return ["--do", `${name}=${class_name}`];
+      const options = {
+        "experimental-vm-modules": true,
+        "wrangler-config": path.join(
+          __dirname,
+          "../miniflare-config-stubs/wrangler.empty.toml"
+        ),
+        inspect: true,
+        watch: true,
+        env: path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
+        package: path.join(
+          __dirname,
+          "../miniflare-config-stubs/package.empty.json"
+        ),
+        port,
+        ...(props.enableLocalPersistence
+          ? ["kv-persist", "cache-persist", "do-persist"]
+          : []),
+        ...(assetPaths
+          ? [
+              "site",
+              path.join(process.cwd(), assetPaths.baseDirectory),
+              ...assetPaths.includePatterns.map((pattern) => [
+                "site-include",
+                pattern,
+              ]),
+              ...assetPaths.excludePatterns.map((pattern) => [
+                "site-exclude",
+                pattern,
+              ]),
+            ].flatMap((x) => x)
+          : []),
+
+        ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
+          return ["binding", `${key}=${value}`];
+        }),
+
+        ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
+          return ["kv", binding];
+        }),
+
+        ...(bindings.durable_objects?.bindings || []).flatMap(
+          ({ name, class_name }) => {
+            return ["do", `${name}=${class_name}`];
+          }
+        ),
+
+        ...Object.entries(bindings.wasm_modules || {}).flatMap(
+          ([name, filePath]) => {
+            return ["wasm", `${name}=${path.join(process.cwd(), filePath)}`];
+          }
+        ),
+
+        ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
+          if (format === "service-worker") {
+            if (type === "compiled-wasm") {
+              // In service-worker format, .wasm modules are referenced
+              // by global identifiers, so we convert it here.
+              // This identifier has to be a valid JS identifier,
+              // so we replace all non alphanumeric characters
+              // with an underscore.
+              const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+              return cmd.concat([`wasm`, `${identifier}=${name}`]);
+            } else {
+              // TODO: we should actually support this
+              throw new Error(
+                `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
+              );
             }
+          }
+          return cmd;
+        }, []),
+
+        modules: Boolean(format === "modules"),
+        ...(props.rules || [])
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          .concat(DEFAULT_MODULE_RULES!)
+          .flatMap((rule) =>
+            rule.globs.flatMap((glob) => [
+              "modules-rule",
+              `${rule.type}=${glob}`,
+            ])
           ),
-          ...Object.entries(bindings.wasm_modules || {}).flatMap(
-            ([name, filePath]) => {
-              return [
-                "--wasm",
-                `${name}=${path.join(process.cwd(), filePath)}`,
-              ];
-            }
-          ),
-          ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
-            if (format === "service-worker") {
-              if (type === "compiled-wasm") {
-                // In service-worker format, .wasm modules are referenced
-                // by global identifiers, so we convert it here.
-                // This identifier has to be a valid JS identifier,
-                // so we replace all non alphanumeric characters
-                // with an underscore.
-                const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-                return cmd.concat([`--wasm`, `${identifier}=${name}`]);
-              } else {
-                // TODO: we should actually support this
-                throw new Error(
-                  `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
-                );
-              }
-            }
-            return cmd;
-          }, []),
-          "--modules",
-          String(format === "modules"),
-          ...(props.rules || [])
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            .concat(DEFAULT_MODULE_RULES!)
-            .flatMap((rule) =>
-              rule.globs.flatMap((glob) => [
-                "--modules-rule",
-                `${rule.type}=${glob}`,
-              ])
-            ),
-        ],
-        {
-          cwd: path.dirname(realpathSync(bundle.path)),
-        }
-      );
+      };
+
+      const mf = new Miniflare(options);
+      try {
+        // Start Miniflare development server
+        await mf.startServer();
+        await mf.startScheduler();
+      } catch (e: unknown) {
+        mf.log.error(e as Error);
+        process.exitCode = 1;
+        // Unmount any mounted workers
+        await mf.dispose();
+        return;
+      }
+
+      /** START OF MINIFLARE OPTIONS -- CONVERT TO OPTIONS OBJECT */
+      // local.current = spawn(
+      //   "node",
+      //   [
+      //     "--experimental-vm-modules",
+      //     "--inspect",
+      //     require.resolve("miniflare/cli"),
+      //     realpathSync(bundle.path),
+      //     "--watch",
+      //     "--wrangler-config",
+      //     path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
+      //     "--env",
+      //     path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
+      //     "--package",
+      //     path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
+      //     "--port",
+      //     port.toString(),
+      //     ...(assetPaths
+      //       ? [
+      //           "--site",
+      //           path.join(process.cwd(), assetPaths.baseDirectory),
+      //           ...assetPaths.includePatterns.map((pattern) => [
+      //             "--site-include",
+      //             pattern,
+      //           ]),
+      //           ...assetPaths.excludePatterns.map((pattern) => [
+      //             "--site-exclude",
+      //             pattern,
+      //           ]),
+      //         ].flatMap((x) => x)
+      //       : []),
+      //     ...(props.enableLocalPersistence
+      //       ? ["--kv-persist", "--cache-persist", "--do-persist"]
+      //       : []),
+      //     ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
+      //       return ["--binding", `${key}=${value}`];
+      //     }),
+      //     ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
+      //       return ["--kv", binding];
+      //     }),
+      //     ...(bindings.durable_objects?.bindings || []).flatMap(
+      //       ({ name, class_name }) => {
+      //         return ["--do", `${name}=${class_name}`];
+      //       }
+      //     ),
+      //     ...Object.entries(bindings.wasm_modules || {}).flatMap(
+      //       ([name, filePath]) => {
+      //         return [
+      //           "--wasm",
+      //           `${name}=${path.join(process.cwd(), filePath)}`,
+      //         ];
+      //       }
+      //     ),
+      //     ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
+      //       if (format === "service-worker") {
+      //         if (type === "compiled-wasm") {
+      //           // In service-worker format, .wasm modules are referenced
+      //           // by global identifiers, so we convert it here.
+      //           // This identifier has to be a valid JS identifier,
+      //           // so we replace all non alphanumeric characters
+      //           // with an underscore.
+      //           const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+      //           return cmd.concat([`--wasm`, `${identifier}=${name}`]);
+      //         } else {
+      //           // TODO: we should actually support this
+      //           throw new Error(
+      //             `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
+      //           );
+      //         }
+      //       }
+      //       return cmd;
+      //     }, []),
+      //     "--modules",
+      //     String(format === "modules"),
+      //     ...(props.rules || [])
+      //       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //       .concat(DEFAULT_MODULE_RULES!)
+      //       .flatMap((rule) =>
+      //         rule.globs.flatMap((glob) => [
+      //           "--modules-rule",
+      //           `${rule.type}=${glob}`,
+      //         ])
+      //       ),
+      //   ],
+      //   {
+      //     cwd: path.dirname(realpathSync(bundle.path)),
+      //   }
+      // );
+      /** END OF MINIFLARE OPTIONS */
       console.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {
