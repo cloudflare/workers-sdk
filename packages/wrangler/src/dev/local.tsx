@@ -33,7 +33,6 @@ export function Local(props: {
     public: props.public,
     port: props.port,
     rules: props.rules,
-    inspectorPort: props.port,
     enableLocalPersistence: props.enableLocalPersistence,
   });
   useInspector({
@@ -53,11 +52,10 @@ function useLocalWorker(props: {
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
   port: number;
-  inspectorPort: number;
   enableLocalPersistence: boolean;
 }) {
   // TODO: pass vars via command line
-  const { bundle, format, bindings, port, assetPaths, inspectorPort } = props;
+  const { bundle, format, bindings, port, assetPaths } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
@@ -67,11 +65,6 @@ function useLocalWorker(props: {
 
       // port for the worker
       await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
-      // port for inspector
-      await waitForPortToBeAvailable(inspectorPort, {
-        retryPeriod: 200,
-        timeout: 2000,
-      });
 
       if (props.public) {
         throw new Error(
@@ -235,7 +228,6 @@ function useLocalWorker(props: {
     bundle,
     format,
     port,
-    inspectorPort,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,
