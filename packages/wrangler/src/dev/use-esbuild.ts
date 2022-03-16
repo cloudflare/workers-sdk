@@ -84,7 +84,9 @@ export function useEsbuild({
       // on build errors anyway so this is a no-op error handler
     });
 
-    return stopWatching;
+    return () => {
+      stopWatching?.();
+    };
   }, [
     entry,
     destination,

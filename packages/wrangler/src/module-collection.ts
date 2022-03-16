@@ -126,6 +126,12 @@ export default function createModuleCollector(props: {
             ),
           },
           async (args: esbuild.OnResolveArgs) => {
+            if (
+              args.kind !== "import-statement" &&
+              args.kind !== "require-call"
+            ) {
+              return;
+            }
             // In the future, this will simply throw an error
             console.warn(
               `Deprecation warning: detected a legacy module import in "./${path.relative(
