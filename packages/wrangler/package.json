@@ -106,7 +106,7 @@
     "import_meta_url.js"
   ],
   "scripts": {
-    "clean": "rm -rf wrangler-dist",
+    "clean": "rm -rf wrangler-dist miniflare-dist",
     "check:type": "tsc",
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
