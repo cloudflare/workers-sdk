@@ -19,7 +19,6 @@ import type { Config } from "../config";
 import type { Entry } from "../entry";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
-import type { DirectoryResult } from "tmp-promise";
 
 export type DevProps = {
   name?: string;
@@ -55,7 +54,7 @@ export type DevProps = {
     | undefined;
 };
 
-function Dev(props: DevProps): JSX.Element {
+export function DevImplementation(props: DevProps): JSX.Element {
   const port = props.port ?? 8787;
   const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
@@ -149,35 +148,29 @@ function Dev(props: DevProps): JSX.Element {
   );
 }
 
+export interface DirectorySyncResult {
+  name: string;
+  removeCallback: () => void;
+}
+
 function useTmpDir(): string | undefined {
-  const [directory, setDirectory] = useState<DirectoryResult>();
+  const [directory, setDirectory] = useState<DirectorySyncResult>();
   const handleError = useErrorHandler();
   useEffect(() => {
-    let dir: DirectoryResult;
-    async function create() {
-      try {
-        dir = await tmp.dir({ unsafeCleanup: true });
-        setDirectory(dir);
-        return;
-      } catch (err) {
-        console.error("failed to create tmp dir");
-        throw err;
-      }
-    }
-    create().catch((err) => {
-      // we want to break here
-      // we can't do much without a temp dir anyway
+    let dir: DirectorySyncResult | undefined;
+    try {
+      dir = tmp.dirSync({ unsafeCleanup: true });
+      setDirectory(dir);
+      return;
+    } catch (err) {
+      console.error("failed to create tmp dir");
       handleError(err);
-    });
+    }
     return () => {
-      dir.cleanup().catch(() => {
-        // extremely unlikely,
-        // but it's 2022 after all
-        console.error("failed to cleanup tmp dir");
-      });
+      dir?.removeCallback();
     };
   }, [handleError]);
-  return directory?.path;
+  return directory?.name;
 }
 
 function useCustomBuild(
@@ -261,7 +254,7 @@ function useTunnel(toggle: boolean) {
         ]);
 
         tunnel.current.on("close", (code) => {
-          if (code !== 0) {
+          if (code) {
             console.log(`Tunnel process exited with code ${code}`);
           }
         });
@@ -350,7 +343,7 @@ function useHotkeys(
 
 function ErrorFallback(props: { error: Error }) {
   const { exit } = useApp();
-  useEffect(() => exit(new Error()));
+  useEffect(() => exit(props.error));
   return (
     <>
       <Text>Something went wrong:</Text>
@@ -359,4 +352,6 @@ function ErrorFallback(props: { error: Error }) {
   );
 }
 
-export default withErrorBoundary(Dev, { FallbackComponent: ErrorFallback });
+export default withErrorBoundary(DevImplementation, {
+  FallbackComponent: ErrorFallback,
+});

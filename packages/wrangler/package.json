@@ -56,6 +56,7 @@
     "@types/mime": "^2.0.3",
     "@types/prompts": "^2.0.14",
     "@types/react": "^17.0.37",
+    "@types/react-test-renderer": "^17.0.1",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",
     "@types/ws": "^8.2.1",
@@ -83,6 +84,7 @@
     "open": "^8.4.0",
     "prompts": "^2.4.2",
     "react": "^17.0.2",
+    "react-test-renderer": "^17.0.2",
     "react-error-boundary": "^3.1.4",
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.6",
@@ -122,7 +124,8 @@
       "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port)"
     ],
     "moduleNameMapper": {
-      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js"
+      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
+      "miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
     },
     "transform": {
       "^.+\\.c?(t|j)sx?$": [

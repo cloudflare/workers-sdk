@@ -180,7 +180,7 @@ function useLocalWorker(props: {
       console.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {
-        if (code !== null) {
+        if (code) {
           console.log(`miniflare process exited with code ${code}`);
         }
       });
@@ -201,7 +201,7 @@ function useLocalWorker(props: {
       });
 
       local.current.on("exit", (code) => {
-        if (code !== 0) {
+        if (code) {
           console.error(`miniflare process exited with code ${code}`);
         }
       });
