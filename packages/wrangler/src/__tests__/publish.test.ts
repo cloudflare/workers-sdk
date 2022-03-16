@@ -147,6 +147,7 @@ describe("publish", () => {
           type: "json",
         },
       ],
+      expectedCompatibilityDate: "2022-01-12",
     });
     mockSubDomainRequest();
     await runWrangler("publish ./some-path/worker/index.js");
@@ -1383,6 +1384,95 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
+    it("should use the global compatibility_date and compatibility_flags if they are not overwritten by the environment", async () => {
+      writeWranglerToml({
+        compatibility_date: "2022-01-12",
+        compatibility_flags: ["no_global_navigator"],
+        env: {
+          dev: {},
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+        expectedCompatibilityDate: "2022-01-12",
+        expectedCompatibilityFlags: ["no_global_navigator"],
+      });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        Published test-name (dev) (TIMINGS)
+          dev.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use the environment specific compatibility_date and compatibility_flags", async () => {
+      writeWranglerToml({
+        compatibility_date: "2022-01-12",
+        compatibility_flags: ["no_global_navigator"],
+        env: {
+          dev: {
+            compatibility_date: "2022-01-13",
+            compatibility_flags: ["global_navigator"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+        expectedCompatibilityDate: "2022-01-13",
+        expectedCompatibilityFlags: ["global_navigator"],
+      });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+
+      await runWrangler("publish ./index --env dev --legacy-env false");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        Published test-name (dev) (TIMINGS)
+          dev.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use the command line --compatibility-date and --compatibility-flags if they are specified", async () => {
+      writeWranglerToml({
+        compatibility_date: "2022-01-12",
+        compatibility_flags: ["no_global_navigator"],
+        env: {
+          dev: {
+            compatibility_date: "2022-01-13",
+            compatibility_flags: ["global_navigator"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({
+        env: "dev",
+        expectedCompatibilityDate: "2022-01-14",
+        expectedCompatibilityFlags: ["url_standard"],
+      });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+
+      await runWrangler(
+        "publish ./index --env dev --legacy-env false --compatibility-date 2022-01-14 --compatibility-flags url_standard"
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (dev) (TIMINGS)
+        Published test-name (dev) (TIMINGS)
+          dev.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
     it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
       writeWranglerToml();
       writeWorkerSource();
@@ -1591,6 +1681,7 @@ export default{
         expectedBindings: [
           { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
         ],
+        expectedCompatibilityDate: "2022-01-12",
       });
       mockSubDomainRequest();
       await runWrangler("publish index.js --config ./path/to/wrangler.toml");
@@ -1719,6 +1810,7 @@ export default{
             type: "text_blob",
           },
         ],
+        expectedCompatibilityDate: "2022-01-12",
       });
       mockSubDomainRequest();
       await runWrangler("publish index.js --config ./path/to/wrangler.toml");
@@ -2110,6 +2202,8 @@ function mockUploadWorkerRequest({
   expectedType = "esm",
   expectedBindings,
   expectedModules = {},
+  expectedCompatibilityDate,
+  expectedCompatibilityFlags,
   env = undefined,
   legacyEnv = false,
 }: {
@@ -2118,8 +2212,10 @@ function mockUploadWorkerRequest({
   expectedType?: "esm" | "sw";
   expectedBindings?: unknown;
   expectedModules?: Record<string, string>;
-  env?: string | undefined;
-  legacyEnv?: boolean | undefined;
+  expectedCompatibilityDate?: string;
+  expectedCompatibilityFlags?: string[];
+  env?: string;
+  legacyEnv?: boolean;
 } = {}) {
   setMockResponse(
     env && !legacyEnv
@@ -2152,6 +2248,14 @@ function mockUploadWorkerRequest({
       }
       if (expectedBindings !== undefined) {
         expect(metadata.bindings).toEqual(expectedBindings);
+      }
+      if (expectedCompatibilityDate !== undefined) {
+        expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
+      }
+      if (expectedCompatibilityFlags !== undefined) {
+        expect(metadata.compatibility_flags).toEqual(
+          expectedCompatibilityFlags
+        );
       }
       for (const [name, content] of Object.entries(expectedModules)) {
         expect(await (formBody.get(name) as File).text()).toEqual(content);
