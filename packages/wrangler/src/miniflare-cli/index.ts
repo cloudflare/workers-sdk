@@ -11,10 +11,15 @@ async function main() {
       choices: enumKeys(LogLevel),
     }).argv;
 
+  const logLevel = LogLevel[args.log ?? "INFO"];
   const config = {
     ...JSON.parse((args._[0] as string) ?? "{}"),
-    log: new Log(LogLevel[args.log ?? "INFO"]),
+    log: new Log(logLevel),
   };
+
+  if (logLevel > LogLevel.INFO) {
+    console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
+  }
 
   const mf = new Miniflare(config);
 
