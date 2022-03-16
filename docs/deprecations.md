@@ -126,7 +126,7 @@ configure routes in `wrangler.toml`
   });
   ```
 
-  `wrangler` 1.x would resolve `import SomeDependency from "some-dependency.js";` to the file `some-dependency.js`, but `wrangler` v2 will _not_. Instead, you should rewrite the import to specifiy that it's a relative path, like so:
+  `wrangler` 1.x would resolve `import SomeDependency from "some-dependency.js";` to the file `some-dependency.js`. This will also work in wrangler 2.0, but will also log a deprecation warning; in the future, this will break with an error. Instead, you should rewrite the import to specifiy that it's a relative path, like so:
 
   ```diff
   - import SomeDependency from "some-dependency.js";
