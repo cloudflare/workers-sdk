@@ -67,7 +67,7 @@ export async function generateConfigFromFileTree({
           routePath = routePath.replace(/\[\[([^\]]+)\]\]/g, ":$1*"); // transform [[id]] => :id*
           routePath = routePath.replaceAll(/\[([^\]]+)\]/g, ":$1"); // transform [id] => :id
 
-          // These are used as module specifiers so UrlPath are okay to use even on Windows
+          // These are used as module specifiers so UrlPaths are okay to use even on Windows
           const modulePath = toUrlPath(path.relative(baseDir, filepath));
 
           const routeEntry: RouteConfig = {
