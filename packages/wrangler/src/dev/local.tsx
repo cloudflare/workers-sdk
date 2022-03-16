@@ -11,11 +11,14 @@ import type { Config } from "../config";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { MiniflareOptions } from "miniflare";
 
-export function Local(props: {
+interface LocalProps {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
+  compatibilityDate: string | undefined;
+  compatibilityFlags: undefined | string[];
   bindings: CfWorkerInit["bindings"];
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
@@ -24,19 +27,10 @@ export function Local(props: {
   rules: Config["rules"];
   inspectorPort: number;
   enableLocalPersistence: boolean;
-}) {
-  const { inspectorUrl } = useLocalWorker({
-    name: props.name,
-    bundle: props.bundle,
-    format: props.format,
-    bindings: props.bindings,
-    assetPaths: props.assetPaths,
-    public: props.public,
-    port: props.port,
-    ip: props.ip,
-    rules: props.rules,
-    enableLocalPersistence: props.enableLocalPersistence,
-  });
+}
+
+export function Local(props: LocalProps) {
+  const { inspectorUrl } = useLocalWorker(props);
   useInspector({
     inspectorUrl,
     port: props.inspectorPort,
@@ -45,20 +39,21 @@ export function Local(props: {
   return null;
 }
 
-function useLocalWorker(props: {
-  name: undefined | string;
-  bundle: EsbuildBundle | undefined;
-  rules: Config["rules"];
-  format: CfScriptFormat | undefined;
-  bindings: CfWorkerInit["bindings"];
-  assetPaths: undefined | AssetPaths;
-  public: undefined | string;
-  port: number;
-  ip: string;
-  enableLocalPersistence: boolean;
-}) {
+function useLocalWorker({
+  name: workerName,
+  bundle,
+  format,
+  compatibilityDate,
+  compatibilityFlags,
+  bindings,
+  assetPaths,
+  public: publicDirectory,
+  port,
+  rules,
+  enableLocalPersistence,
+  ip,
+}: LocalProps) {
   // TODO: pass vars via command line
-  const { bundle, format, bindings, port, ip, assetPaths } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
@@ -69,7 +64,7 @@ function useLocalWorker(props: {
       // port for the worker
       await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
 
-      if (props.public) {
+      if (publicDirectory) {
         throw new Error(
           '⎔ A "public" folder is not yet supported in local mode.'
         );
@@ -84,102 +79,81 @@ function useLocalWorker(props: {
         );
       }
 
+      const scriptPath = realpathSync(bundle.path);
+
+      const wasmBindings = { ...bindings.wasm_modules };
+      if (format === "service-worker") {
+        for (const { type, name } of bundle.modules) {
+          if (type === "compiled-wasm") {
+            // In service-worker format, .wasm modules are referenced by global identifiers,
+            // so we convert it here.
+            // This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+            // characters with an underscore.
+            const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+            wasmBindings[identifier] = name;
+          }
+        }
+      }
+
+      const options: MiniflareOptions = {
+        name: workerName,
+        port,
+        scriptPath,
+        host: ip,
+        modules: format === "modules",
+        modulesRules: (rules || [])
+          .concat(DEFAULT_MODULE_RULES)
+          .map(({ type, globs: include, fallthrough }) => ({
+            type,
+            include,
+            fallthrough,
+          })),
+        compatibilityDate,
+        compatibilityFlags,
+        kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
+        kvPersist: enableLocalPersistence,
+        durableObjects: Object.fromEntries(
+          (bindings.durable_objects?.bindings ?? []).map<[string, string]>(
+            (value) => [value.name, value.class_name]
+          )
+        ),
+        durableObjectsPersist: enableLocalPersistence,
+        cache: !enableLocalPersistence,
+        sitePath: assetPaths?.baseDirectory,
+        siteInclude: assetPaths?.includePatterns,
+        siteExclude: assetPaths?.excludePatterns,
+        bindings: bindings.vars,
+        wasmBindings,
+      };
+
+      // The path to the Miniflare CLI assumes that this file is being run from
+      // `wrangler-dist` and that the CLI is found in `miniflare-dist`.
+      // If either of those paths change this line needs updating.
+      const miniflareCLIPath = path.resolve(
+        __dirname,
+        "../miniflare-dist/index.mjs"
+      );
+      const optionsArg = JSON.stringify(options, null);
+
       console.log("⎔ Starting a local server...");
-      // TODO: just use execa for this
       local.current = spawn(
         "node",
         [
-          "--experimental-vm-modules",
-          "--inspect",
-          require.resolve("miniflare/cli"),
-          realpathSync(bundle.path),
-          "--watch",
-          "--wrangler-config",
-          path.join(__dirname, "../miniflare-config-stubs/wrangler.empty.toml"),
-          "--env",
-          path.join(__dirname, "../miniflare-config-stubs/.env.empty"),
-          "--package",
-          path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
-          "--port",
-          port.toString(),
-          "--host",
-          ip,
-          ...(assetPaths
-            ? [
-                "--site",
-                path.join(process.cwd(), assetPaths.baseDirectory),
-                ...assetPaths.includePatterns.map((pattern) => [
-                  "--site-include",
-                  pattern,
-                ]),
-                ...assetPaths.excludePatterns.map((pattern) => [
-                  "--site-exclude",
-                  pattern,
-                ]),
-              ].flatMap((x) => x)
-            : []),
-          ...(props.enableLocalPersistence
-            ? ["--kv-persist", "--cache-persist", "--do-persist"]
-            : []),
-          ...Object.entries(bindings.vars || {}).flatMap(([key, value]) => {
-            return ["--binding", `${key}=${value}`];
-          }),
-          ...(bindings.kv_namespaces || []).flatMap(({ binding }) => {
-            return ["--kv", binding];
-          }),
-          ...(bindings.durable_objects?.bindings || []).flatMap(
-            ({ name, class_name }) => {
-              return ["--do", `${name}=${class_name}`];
-            }
-          ),
-          ...Object.entries(bindings.wasm_modules || {}).flatMap(
-            ([name, filePath]) => {
-              return [
-                "--wasm",
-                `${name}=${path.join(process.cwd(), filePath)}`,
-              ];
-            }
-          ),
-          ...bundle.modules.reduce<string[]>((cmd, { name, type }) => {
-            if (format === "service-worker") {
-              if (type === "compiled-wasm") {
-                // In service-worker format, .wasm modules are referenced
-                // by global identifiers, so we convert it here.
-                // This identifier has to be a valid JS identifier,
-                // so we replace all non alphanumeric characters
-                // with an underscore.
-                const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-                return cmd.concat([`--wasm`, `${identifier}=${name}`]);
-              } else {
-                // TODO: we should actually support this
-                throw new Error(
-                  `⎔ Unsupported module type ${type} for file ${name} in service-worker format`
-                );
-              }
-            }
-            return cmd;
-          }, []),
-          "--modules",
-          String(format === "modules"),
-          ...(props.rules || [])
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            .concat(DEFAULT_MODULE_RULES!)
-            .flatMap((rule) =>
-              rule.globs.flatMap((glob) => [
-                "--modules-rule",
-                `${rule.type}=${glob}`,
-              ])
-            ),
+          "--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+          "--no-warnings", // hide annoying Node warnings
+          "--inspect", // start Miniflare listening for a debugger to attach
+          miniflareCLIPath,
+          optionsArg,
+          // "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
         ],
         {
-          cwd: path.dirname(realpathSync(bundle.path)),
+          cwd: path.dirname(scriptPath),
         }
       );
-      console.log(`⬣ Listening at http://localhost:${port}`);
 
       local.current.on("close", (code) => {
         if (code) {
-          console.log(`miniflare process exited with code ${code}`);
+          console.log(`Miniflare process exited with code ${code}`);
         }
       });
 
@@ -200,12 +174,12 @@ function useLocalWorker(props: {
 
       local.current.on("exit", (code) => {
         if (code) {
-          console.error(`miniflare process exited with code ${code}`);
+          console.error(`Miniflare process exited with code ${code}`);
         }
       });
 
       local.current.on("error", (error: Error) => {
-        console.error(`miniflare process failed to spawn`);
+        console.error(`Miniflare process failed to spawn`);
         console.error(error);
       });
 
@@ -231,16 +205,19 @@ function useLocalWorker(props: {
     };
   }, [
     bundle,
+    workerName,
     format,
     port,
     ip,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,
-    props.enableLocalPersistence,
+    compatibilityDate,
+    compatibilityFlags,
+    enableLocalPersistence,
     assetPaths,
-    props.public,
-    props.rules,
+    publicDirectory,
+    rules,
     bindings.wasm_modules,
   ]);
   return { inspectorUrl };
