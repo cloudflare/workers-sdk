@@ -400,8 +400,23 @@ export async function waitForPortToBeAvailable(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error(`Timed out waiting for port ${port}`));
+      doReject(new Error(`Timed out waiting for port ${port}`));
     }, options.timeout);
+
+    const interval = setInterval(checkPort, options.retryPeriod);
+    checkPort();
+
+    function doResolve() {
+      clearTimeout(timeout);
+      clearInterval(interval);
+      resolve();
+    }
+
+    function doReject(err: unknown) {
+      clearInterval(interval);
+      clearTimeout(timeout);
+      reject(err);
+    }
 
     function checkPort() {
       // Testing whether a port is 'available' involves simply
@@ -410,19 +425,14 @@ export async function waitForPortToBeAvailable(
       const server = createHttpServer();
       server.on("error", (err) => {
         // @ts-expect-error non standard property on Error
-        if (err.code === "EADDRINUSE") {
-          setTimeout(checkPort, options.retryPeriod);
-        } else {
-          reject(err);
+        if (err.code !== "EADDRINUSE") {
+          doReject(err);
         }
       });
       server.listen(port, () => {
         server.close();
-        clearTimeout(timeout);
-        resolve();
+        doResolve();
       });
     }
-
-    checkPort();
   });
 }
