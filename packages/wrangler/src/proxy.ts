@@ -5,6 +5,7 @@ import WebSocket from "faye-websocket";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
+import { reportError } from "./reporting";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type {
   IncomingHttpHeaders,
@@ -88,8 +89,9 @@ export function usePreviewServer({
     if (proxyServer === undefined) {
       createProxyServer(localProtocol)
         .then((proxy) => setProxyServer(proxy))
-        .catch((err) => {
+        .catch(async (err) => {
           console.error("Failed to create proxy server.", err);
+          await reportError(err);
         });
     }
   }, [proxyServer, localProtocol]);

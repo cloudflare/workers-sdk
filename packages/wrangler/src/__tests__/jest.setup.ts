@@ -56,7 +56,7 @@ jest.mock("../dialogs");
   );
 });
 
-jest.mock("../dev", () => {
+jest.mock("../dev/dev", () => {
   const { useApp } = jest.requireActual("ink");
   const { useEffect } = jest.requireActual("react");
   return jest.fn().mockImplementation(() => {
