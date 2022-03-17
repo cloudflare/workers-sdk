@@ -123,6 +123,7 @@ describe("filepath-routing", () => {
       `
       );
 
+      // This won't actually work at runtime.
       writeFileSync(
         "cats/[[breed]]/[[name]].ts",
         `
