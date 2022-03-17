@@ -151,7 +151,7 @@ export function normalizeAndValidateConfig(
     diagnostics,
     "top-level",
     Object.keys(rawConfig),
-    Object.keys(config)
+    [...Object.keys(config), "miniflare"]
   );
 
   return { config, diagnostics };
