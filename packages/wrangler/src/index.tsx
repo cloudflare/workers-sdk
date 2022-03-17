@@ -664,7 +664,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
       throw new DeprecationError(
-        "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler config` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#config for alternatives"
       );
     }
   );
@@ -1417,7 +1417,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       throw new DeprecationError(
-        "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler subdomain` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#subdomain for alternatives"
       );
     }
   );
