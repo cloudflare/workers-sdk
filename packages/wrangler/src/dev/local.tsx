@@ -27,6 +27,7 @@ interface LocalProps {
   rules: Config["rules"];
   inspectorPort: number;
   enableLocalPersistence: boolean;
+  workingDir: string; // Currently from "Entry directory"
 }
 
 export function Local(props: LocalProps) {
@@ -52,6 +53,7 @@ function useLocalWorker({
   rules,
   enableLocalPersistence,
   ip,
+  workingDir,
 }: LocalProps) {
   // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
@@ -144,10 +146,10 @@ function useLocalWorker({
           "--inspect", // start Miniflare listening for a debugger to attach
           miniflareCLIPath,
           optionsArg,
-          // "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+          "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
         ],
         {
-          cwd: path.dirname(scriptPath),
+          cwd: workingDir,
         }
       );
 
@@ -219,6 +221,7 @@ function useLocalWorker({
     publicDirectory,
     rules,
     bindings.wasm_modules,
+    workingDir,
   ]);
   return { inspectorUrl };
 }

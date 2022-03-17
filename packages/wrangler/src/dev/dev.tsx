@@ -120,6 +120,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
           rules={props.rules}
           inspectorPort={props.inspectorPort}
           enableLocalPersistence={props.enableLocalPersistence}
+          workingDir={props.entry.directory}
         />
       ) : (
         <Remote
