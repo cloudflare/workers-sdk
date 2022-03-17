@@ -135,7 +135,7 @@ describe("Dev component", () => {
       });
     });
 
-    it("should, in order, use args.host/config.dev.host/args.routes/config.route/config.routes", async () => {
+    it("should, in order, use args.host/config.dev.host/args.routes/(config.route|config.routes)", async () => {
       // This test might seem like it's testing implementation details, but let's be specific and consider it a spec
 
       fs.writeFileSync("index.js", `export default {};`);
@@ -158,7 +158,6 @@ describe("Dev component", () => {
       writeWranglerToml({
         main: "index.js",
         route: "https://4.some-host.com/some/path/*",
-        routes: ["http://5.some-host.com/some/path/*"],
       });
       await runWrangler("dev");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -172,7 +171,6 @@ describe("Dev component", () => {
       writeWranglerToml({
         main: "index.js",
         route: "https://4.some-host.com/some/path/*",
-        routes: ["http://5.some-host.com/some/path/*"],
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -189,7 +187,6 @@ describe("Dev component", () => {
           host: `2.some-host.com`,
         },
         route: "4.some-host.com/some/path/*",
-        routes: ["5.some-host.com/some/path/*"],
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -206,7 +203,6 @@ describe("Dev component", () => {
           host: `2.some-host.com`,
         },
         route: "4.some-host.com/some/path/*",
-        routes: ["5.some-host.com/some/path/*"],
       });
       await runWrangler(
         "dev --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
