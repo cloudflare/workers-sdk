@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
-import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
-import type { Config, Environment } from "../config";
+import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
+import type { Config, Environment } from "./config";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;

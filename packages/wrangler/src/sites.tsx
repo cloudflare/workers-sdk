@@ -4,32 +4,31 @@ import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import {
   createNamespace,
+  getKeyValue,
   listNamespaceKeys,
   listNamespaces,
   putBulkKeyValue,
 } from "./kv";
 import type { Config } from "./config";
-import type { KeyValue } from "./kv";
+import type { KeyValue, NamespaceKeyInfo } from "./kv";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
-const ALWAYS_IGNORE = ["node_modules"];
-const HIDDEN_FILES_TO_INCLUDE = [
+const ALWAYS_IGNORE = new Set(["node_modules"]);
+const HIDDEN_FILES_TO_INCLUDE = new Set([
   ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
-];
+]);
+const FIVE_MINUTES = 1000 * 60 * 5;
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
   for (const file of files) {
     // Skip files that we never want to process.
-    if (ALWAYS_IGNORE.some((p) => file.name === p)) {
+    if (ALWAYS_IGNORE.has(file.name)) {
       continue;
     }
     // Skip hidden files (starting with .) except for some special ones
-    if (
-      file.name.startsWith(".") &&
-      !HIDDEN_FILES_TO_INCLUDE.some((p) => file.name === p)
-    ) {
+    if (file.name.startsWith(".") && !HIDDEN_FILES_TO_INCLUDE.has(file.name)) {
       continue;
     }
     // TODO: follow symlinks??
@@ -126,16 +125,18 @@ export async function syncAssets(
 
   // let's get all the keys in this namespace
   const result = await listNamespaceKeys(accountId, namespace);
-  const keys = new Set(result.map((x) => x.name));
+  const keyMap = result.reduce<Record<string, NamespaceKeyInfo>>(
+    (km, key) => Object.assign(km, { [key.name]: key }),
+    {}
+  );
 
   const manifest: Record<string, string> = {};
-  const upload: KeyValue[] = [];
+  const toUpload: KeyValue[] = [];
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
   const hasher = await xxhash();
 
-  // TODO: this can be more efficient by parallelising
   for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
     if (!include(file)) {
       continue;
@@ -148,13 +149,13 @@ export async function syncAssets(
     console.log(`reading ${file}...`);
     const content = await readFile(file, "base64");
 
-    const assetKey = await hashAsset(hasher, file, content);
+    const assetKey = hashAsset(hasher, file, content);
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
-    if (!keys.has(assetKey)) {
+    if (!(assetKey in keyMap) || keyMap[assetKey].expiration) {
       console.log(`uploading as ${assetKey}...`);
-      upload.push({
+      toUpload.push({
         key: assetKey,
         value: content,
         base64: true,
@@ -162,9 +163,42 @@ export async function syncAssets(
     } else {
       console.log(`skipping - already uploaded`);
     }
+    // remove the key from the set so we know we've seen it
+    delete keyMap[assetKey];
     manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
   }
-  await putBulkKeyValue(accountId, namespace, upload, () => {});
+
+  // `keyMap` now contains the assets that we need to expire
+  const FIVE_MINUTES_LATER = Math.ceil((Date.now() + FIVE_MINUTES) / 1000); // expressed in seconds, since that's what the API accepts
+
+  let toExpire: KeyValue[] = [];
+  for (const asset of Object.values(keyMap)) {
+    if (!asset.expiration) {
+      console.log(`expiring unused ${asset.name}...`);
+      toExpire.push({
+        key: asset.name,
+        value: "", // we'll fill all the values in one go
+        expiration: FIVE_MINUTES_LATER,
+        base64: true,
+      });
+    }
+  }
+
+  // TODO: batch these in groups if it causes problems
+  toExpire = await Promise.all(
+    toExpire.map(async (asset) => ({
+      ...asset,
+      // it would be great if we didn't have to do this fetch at all
+      value: await getKeyValue(accountId, namespace, asset.key),
+    }))
+  );
+
+  await putBulkKeyValue(
+    accountId,
+    namespace,
+    toUpload.concat(toExpire),
+    () => {}
+  );
   return { manifest, namespace };
 }
 
