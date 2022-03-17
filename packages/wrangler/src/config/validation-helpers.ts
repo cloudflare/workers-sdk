@@ -215,6 +215,51 @@ export const isOneOf =
   };
 
 /**
+ * Aggregate multiple validator functions
+ */
+export const all = (...validations: ValidatorFn[]): ValidatorFn => {
+  return (diagnostics, field, value, config) => {
+    let passedValidations = true;
+
+    for (const validate of validations) {
+      if (!validate(diagnostics, field, value, config)) {
+        passedValidations = false;
+      }
+    }
+
+    return passedValidations;
+  };
+};
+
+/**
+ * Check that the field is mutually exclusive with a list of other fields.
+ *
+ * @param container the container of the fields to check against.
+ * @param fields the names of the fields to check against.
+ */
+export const isMutuallyExclusiveWith = <T extends RawEnvironment | RawConfig>(
+  container: T,
+  ...fields: (keyof T)[]
+): ValidatorFn => {
+  return (diagnostics, field, value) => {
+    if (value === undefined) {
+      return true;
+    }
+
+    for (const exclusiveWith of fields) {
+      if (container[exclusiveWith] !== undefined) {
+        diagnostics.errors.push(
+          `Expected exactly one of ${JSON.stringify([field, ...fields])}.`
+        );
+        return false;
+      }
+    }
+
+    return true;
+  };
+};
+
+/**
  * Validate that the field is a boolean.
  */
 export const isBoolean: ValidatorFn = (diagnostics, field, value) => {
