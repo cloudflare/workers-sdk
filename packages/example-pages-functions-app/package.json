@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "pages-functions-example",
+  "name": "example-pages-functions-app",
   "scripts": {
     "dev": "npx wrangler pages dev public --port 8789",
     "test": "npx jest --forceExit"
