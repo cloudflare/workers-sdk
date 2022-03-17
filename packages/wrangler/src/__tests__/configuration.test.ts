@@ -130,6 +130,26 @@ describe("normalizeAndValidateConfig()", () => {
 
     it("should warn on and remove unexpected top level fields", () => {
       const expectedConfig = {
+        unexpected: {
+          subkey: "some-value",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig as unknown as RawConfig,
+        undefined
+      );
+
+      expect("unexpected" in config).toBe(false);
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Unexpected fields found in top-level field: \\"unexpected\\""
+      `);
+    });
+
+    it("should ignore `miniflare` top level fields", () => {
+      const expectedConfig = {
         miniflare: {
           host: "127.0.0.1",
         },
@@ -144,7 +164,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Unexpected fields found in top-level field: \\"miniflare\\""
+        "
       `);
     });
 
