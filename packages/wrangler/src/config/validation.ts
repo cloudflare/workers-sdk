@@ -19,6 +19,8 @@ import {
   validateOptionalTypedArray,
   validateRequiredProperty,
   validateTypedArray,
+  all,
+  isMutuallyExclusiveWith,
 } from "./validation-helpers";
 import type {
   Config,
@@ -474,7 +476,7 @@ function normalizeAndValidateEnvironment(
     config,
     rawEnv,
     "routes",
-    isStringArray,
+    all(isStringArray, isMutuallyExclusiveWith(rawEnv, "route")),
     undefined
   );
   const workers_dev = inheritable(

@@ -498,7 +498,6 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
@@ -584,6 +583,7 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
           - Expected \\"route\\" field to be a string but got 888.
           - Expected \\"routes\\" field to be an array of strings but got [666,777].
+          - Expected exactly one of [\\"routes\\",\\"route\\"].
           - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
           - Expected \\"account_id\\" field to be a string but got 222.
           - Expected \\"compatibility_date\\" field to be a string but got 333.
@@ -1259,6 +1259,25 @@ describe("normalizeAndValidateConfig()", () => {
           `);
       });
     });
+
+    describe("route & routes fields", () => {
+      it("should error if both route and routes are specified", () => {
+        const rawConfig: RawConfig = {
+          route: "route1",
+          routes: ["route2", "route3"],
+        };
+
+        const { diagnostics } = normalizeAndValidateConfig(
+          rawConfig,
+          undefined
+        );
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected exactly one of [\\"routes\\",\\"route\\"]."
+        `);
+      });
+    });
   });
 
   describe("named environments", () => {
@@ -1270,7 +1289,6 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
@@ -1295,7 +1313,6 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
         workers_dev: true,
         routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
-        route: "ENV_ROUTE_3",
         jsx_factory: "ENV_JSX_FACTORY",
         jsx_fragment: "ENV_JSX_FRAGMENT",
         triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
@@ -1308,7 +1325,6 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
@@ -1414,6 +1430,7 @@ describe("normalizeAndValidateConfig()", () => {
           - \\"env.ENV1\\" environment configuration
             - Expected \\"route\\" field to be a string but got 888.
             - Expected \\"routes\\" field to be an array of strings but got [666,777].
+            - Expected exactly one of [\\"routes\\",\\"route\\"].
             - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
             - Expected \\"account_id\\" field to be a string but got 222.
             - Expected \\"compatibility_date\\" field to be a string but got 333.
@@ -2205,6 +2222,231 @@ describe("normalizeAndValidateConfig()", () => {
                 environment = \\"ENV\\"
                 \`\`\`"
         `);
+      });
+    });
+
+    describe("route & routes fields", () => {
+      it("should error if both route and routes are specified in the same environment", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV_ROUTE_1",
+          routes: ["ENV_ROUTE_2", "ENV_ROUTE_3"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          routes: ["ROUTE_1", "ROUTE_2"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
+
+        expect(config.env.ENV1).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+
+            - \\"env.ENV1\\" environment configuration
+              - Expected exactly one of [\\"routes\\",\\"route\\"]."
+        `);
+      });
+
+      it("should error if both route and routes are specified in the top-level environment", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          routes: ["ROUTE_2", "ROUTE_3"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
+
+        expect(config.env.ENV1).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected exactly one of [\\"routes\\",\\"route\\"]."
+        `);
+      });
+
+      it("should not error if <env>.route and <top-level>.routes are specified", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV_ROUTE_1",
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          routes: ["ROUTE_1", "ROUTE_2"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
+
+        expect(config.env.ENV1).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should not error if <env>.routes and <top-level>.route are specified", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
+
+        expect(config.env.ENV1).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should not error if <env1>.route and <env2>.routes are specified", () => {
+        const environment1: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV1_ROUTE_1", "ENV2_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const environment2: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV2_ROUTE_1",
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment1,
+            ENV2: environment2,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined
+        );
+
+        expect(config.env.ENV1).toEqual(expect.objectContaining(environment1));
+        expect(config.env.ENV2).toEqual(expect.objectContaining(environment2));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
       });
     });
   });
