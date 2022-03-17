@@ -1,4 +1,4 @@
-import { fetch } from "undici";
+import { fetch, Headers } from "undici";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
 import { reportError } from "../reporting";
@@ -74,7 +74,11 @@ function truncate(text: string, maxLength: number): string {
 function cloneHeaders(
   headers: HeadersInit | undefined
 ): Record<string, string> {
-  return { ...headers };
+  return headers instanceof Headers
+    ? Object.fromEntries(headers.entries())
+    : Array.isArray(headers)
+    ? Object.fromEntries(headers)
+    : { ...headers };
 }
 
 async function requireLoggedIn(): Promise<void> {
