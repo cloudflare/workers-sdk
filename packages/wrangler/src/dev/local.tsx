@@ -27,7 +27,6 @@ interface LocalProps {
   rules: Config["rules"];
   inspectorPort: number;
   enableLocalPersistence: boolean;
-  workingDir: string; // Currently from "Entry directory"
 }
 
 export function Local(props: LocalProps) {
@@ -53,7 +52,6 @@ function useLocalWorker({
   rules,
   enableLocalPersistence,
   ip,
-  workingDir,
 }: LocalProps) {
   // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
@@ -122,8 +120,12 @@ function useLocalWorker({
         durableObjectsPersist: enableLocalPersistence,
         cache: !enableLocalPersistence,
         sitePath: assetPaths?.baseDirectory,
-        siteInclude: assetPaths?.includePatterns,
-        siteExclude: assetPaths?.excludePatterns,
+        siteInclude: assetPaths?.includePatterns.length
+          ? assetPaths?.includePatterns
+          : undefined,
+        siteExclude: assetPaths?.excludePatterns.length
+          ? assetPaths.excludePatterns
+          : undefined,
         bindings: bindings.vars,
         wasmBindings,
       };
@@ -138,20 +140,14 @@ function useLocalWorker({
       const optionsArg = JSON.stringify(options, null);
 
       console.log("⎔ Starting a local server...");
-      local.current = spawn(
-        "node",
-        [
-          "--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-          "--no-warnings", // hide annoying Node warnings
-          "--inspect", // start Miniflare listening for a debugger to attach
-          miniflareCLIPath,
-          optionsArg,
-          "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-        ],
-        {
-          cwd: workingDir,
-        }
-      );
+      local.current = spawn("node", [
+        "--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+        "--no-warnings", // hide annoying Node warnings
+        "--inspect", // start Miniflare listening for a debugger to attach
+        miniflareCLIPath,
+        optionsArg,
+        "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+      ]);
 
       local.current.on("close", (code) => {
         if (code) {
@@ -221,7 +217,6 @@ function useLocalWorker({
     publicDirectory,
     rules,
     bindings.wasm_modules,
-    workingDir,
   ]);
   return { inspectorUrl };
 }

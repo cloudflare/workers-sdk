@@ -265,7 +265,10 @@ export function getAssetPaths(
 ): undefined | AssetPaths {
   return baseDirectory
     ? {
-        baseDirectory,
+        baseDirectory: path.resolve(
+          path.dirname(config.configPath ?? "wrangler.toml"),
+          baseDirectory
+        ),
         includePatterns,
         excludePatterns,
       }
