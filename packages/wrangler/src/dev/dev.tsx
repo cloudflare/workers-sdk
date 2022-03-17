@@ -59,7 +59,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
   const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
 
-  useCustomBuild(props.entry, props.buildCommand);
+  useCustomBuild(props.entry, props.buildCommand, props.env);
 
   if (props.public && props.entry.format === "service-worker") {
     throw new Error(
@@ -179,7 +179,8 @@ function useCustomBuild(
     command?: undefined | string;
     cwd?: undefined | string;
     watch_dir?: undefined | string;
-  }
+  },
+  env: string | undefined
 ): void {
   useEffect(() => {
     if (!build.command) return;
@@ -191,7 +192,7 @@ function useCustomBuild(
       }).on("all", (_event, filePath) => {
         //TODO: we should buffer requests to the proxy until this completes
         console.log(`The file ${filePath} changed, restarting build...`);
-        runCustomBuild(expectedEntry.file, build).catch((err) => {
+        runCustomBuild(expectedEntry.file, build, env).catch((err) => {
           console.error("Custom build failed:", err);
         });
       });
@@ -200,7 +201,7 @@ function useCustomBuild(
     return () => {
       watcher?.close();
     };
-  }, [build, expectedEntry.file]);
+  }, [build, expectedEntry.file, env]);
 }
 
 function sleep(period: number) {

@@ -1261,7 +1261,7 @@ export async function main(argv: string[]): Promise<void> {
       );
 
       const config = readConfig(args.config as ConfigPath);
-      const entry = await getEntry({}, config, "dev");
+      const entry = await getEntry({ env: args.env }, config, "dev");
 
       const accountId = await requireAuth(config);
 

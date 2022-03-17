@@ -18,7 +18,11 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
  * Compute the entry-point for the Worker.
  */
 export async function getEntry(
-  args: { script?: string; format?: CfScriptFormat | undefined },
+  args: {
+    script?: string;
+    format?: CfScriptFormat | undefined;
+    env: string | undefined;
+  },
   config: Config,
   command: string
 ): Promise<Entry> {
@@ -36,7 +40,7 @@ export async function getEntry(
     file = path.resolve(directory, config.main);
   }
 
-  await runCustomBuild(file, config.build);
+  await runCustomBuild(file, config.build, args.env);
 
   if (fileExists(file) === false) {
     throw new Error(
@@ -53,7 +57,8 @@ export async function getEntry(
 
 export async function runCustomBuild(
   expectedEntry: string,
-  build: Config["build"]
+  build: Config["build"],
+  env: string | undefined
 ) {
   if (build?.command) {
     // TODO: add a deprecation message here?
@@ -63,6 +68,9 @@ export async function runCustomBuild(
       stdout: "inherit",
       stderr: "inherit",
       timeout: 1000 * 30,
+      env: {
+        CLOUDFLARE_WRANGLER_ENV: env,
+      },
       ...(build.cwd && { cwd: build.cwd }),
     });
 

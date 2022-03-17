@@ -1576,6 +1576,31 @@ export default{
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
+
+      it("should pass env as CLOUDFLARE_WRANGLER_ENV to the build process", async () => {
+        writeWranglerToml({
+          build: {
+            command: `echo "export default { fetch(){ return new Response('\${CLOUDFLARE_WRANGLER_ENV}') } }" > index.js`,
+          },
+        });
+
+        mockUploadWorkerRequest({
+          env: "environmentname",
+          legacyEnv: true,
+          expectedEntry: 'return new Response("environmentname")',
+        });
+        mockSubDomainRequest();
+
+        await runWrangler("publish index.js --env environmentname");
+        expect(std.out).toMatchInlineSnapshot(`
+          "running: echo \\"export default { fetch(){ return new Response('\${CLOUDFLARE_WRANGLER_ENV}') } }\\" > index.js
+          Uploaded test-name-environmentname (TIMINGS)
+          Published test-name-environmentname (TIMINGS)
+            test-name-environmentname.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
     }
 
     it("should throw an error if the entry doesn't exist after the build finishes", async () => {
