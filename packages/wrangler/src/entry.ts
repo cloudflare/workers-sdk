@@ -51,7 +51,7 @@ export async function getEntry(
 
   if (format === "service-worker" && hasDurableObjectImplementation(config)) {
     throw new Error(
-      "You cannot use a durable object from a Service Worker, and should migrate to the Module Worker format instead.\nhttps://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+      "You cannot implement a Durable Object in a Service Worker, and should migrate to the Module format instead.\nhttps://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
     );
   }
 

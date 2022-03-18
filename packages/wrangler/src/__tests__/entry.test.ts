@@ -30,7 +30,7 @@ describe("entry", () => {
 
     await expect(runWrangler("publish")).rejects
       .toThrowErrorMatchingInlineSnapshot(`
-            "You cannot use a durable object from a Service Worker, and should migrate to the Module Worker format instead.
+            "You cannot implement a Durable Object in a Service Worker, and should migrate to the Module format instead.
             https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
           `);
   });
@@ -59,7 +59,7 @@ describe("entry", () => {
 
     await expect(runWrangler("publish")).rejects
       .toThrowErrorMatchingInlineSnapshot(`
-            "You cannot use a durable object from a Service Worker, and should migrate to the Module Worker format instead.
+            "You cannot implement a Durable Object in a Service Worker, and should migrate to the Module format instead.
             https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
           `);
   });
