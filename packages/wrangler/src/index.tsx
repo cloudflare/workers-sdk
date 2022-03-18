@@ -3,11 +3,13 @@ import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
+import chalk from "chalk";
 import { findUp } from "find-up";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
+import supportsColor from "supports-color";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
@@ -80,6 +82,22 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
     );
   }
   return rules;
+}
+
+function printWranglerBanner() {
+  // Let's not print this in tests
+  if (typeof jest !== "undefined") {
+    return;
+  }
+  const text = ` ⛅️ wrangler ${wranglerVersion} `;
+
+  console.log(
+    text +
+      "\n" +
+      (supportsColor.stdout
+        ? chalk.hex("#FF8800")("-".repeat(text.length))
+        : "-".repeat(text.length))
+  );
 }
 
 function isLegacyEnv(args: unknown, config: Config): boolean {
@@ -275,6 +293,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
+      printWranglerBanner();
       if ("type" in args) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
@@ -608,6 +627,7 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: scopes
     },
     async (args) => {
+      printWranglerBanner();
       if (args["scopes-list"]) {
         listScopes();
         return;
@@ -642,6 +662,7 @@ export async function main(argv: string[]): Promise<void> {
     // "🚪 Logout from Cloudflare",
     () => {},
     async () => {
+      printWranglerBanner();
       await logout();
     }
   );
@@ -652,6 +673,7 @@ export async function main(argv: string[]): Promise<void> {
     "🕵️  Retrieve your user info and test your auth config",
     () => {},
     async () => {
+      printWranglerBanner();
       await whoami();
     }
   );
@@ -777,6 +799,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
+      printWranglerBanner();
       const config = readConfig(
         (args.config as ConfigPath) ||
           (args.script && findWranglerToml(path.dirname(args.script)))
@@ -1035,6 +1058,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
+      printWranglerBanner();
       if (args["experimental-public"]) {
         console.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
@@ -1147,6 +1171,9 @@ export async function main(argv: string[]): Promise<void> {
       );
     },
     async (args) => {
+      if (args.format === "pretty") {
+        printWranglerBanner();
+      }
       const config = readConfig(args.config as ConfigPath);
 
       const scriptName = getScriptName(args, config);
@@ -1449,6 +1476,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
+            printWranglerBanner();
             const config = readConfig(args.config as ConfigPath);
 
             const scriptName = getScriptName(args, config);
@@ -1548,6 +1576,7 @@ export async function main(argv: string[]): Promise<void> {
           "delete <key>",
           "Delete a secret variable from a script",
           (yargs) => {
+            printWranglerBanner();
             return yargs
               .positional("key", {
                 describe: "The variable name to be accessible in the script",
@@ -1662,6 +1691,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
+            printWranglerBanner();
             if (args._.length > 2) {
               const extraArgs = args._.slice(2).join(" ");
               throw new CommandLineArgsError(
@@ -1747,6 +1777,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
+            printWranglerBanner();
             const config = readConfig(args.config as ConfigPath);
 
             let id;
@@ -1841,6 +1872,7 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
+            printWranglerBanner();
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
@@ -1985,6 +2017,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
+            printWranglerBanner();
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2039,6 +2072,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
+            printWranglerBanner();
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
@@ -2148,6 +2182,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
+            printWranglerBanner();
             const config = readConfig(args.config as ConfigPath);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2228,6 +2263,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
+            printWranglerBanner();
             // We expect three values in `_`: `r2`, `bucket`, `create`.
             if (args._.length > 3) {
               const extraArgs = args._.slice(3).join(" ");
@@ -2265,6 +2301,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
+            printWranglerBanner();
             // We expect three values in `_`: `r2`, `bucket`, `delete`.
             if (args._.length > 3) {
               const extraArgs = args._.slice(3).join(" ");
