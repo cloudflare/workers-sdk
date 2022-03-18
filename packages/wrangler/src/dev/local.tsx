@@ -128,6 +128,8 @@ function useLocalWorker({
           : undefined,
         bindings: bindings.vars,
         wasmBindings,
+        sourceMap: true,
+        logUnhandledRejections: true,
       };
 
       // The path to the Miniflare CLI assumes that this file is being run from
