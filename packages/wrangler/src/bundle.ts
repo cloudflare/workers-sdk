@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import createModuleCollector from "./module-collection";
@@ -8,6 +9,7 @@ import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
 type BundleResult = {
+  chunks: CfModule[];
   modules: CfModule[];
   resolvedEntryPointPath: string;
   bundleType: "esm" | "commonjs";
@@ -53,7 +55,7 @@ export async function bundleWorker(
     absWorkingDir: entry.directory,
     outdir: destination,
     external: ["__STATIC_CONTENT_MANIFEST"],
-    format: "esm",
+    format: "esm", // TODO: maybe it makes more sense for this to be commonjs for service worker format workers? What's the semantic/functional difference?
     sourcemap: true,
     metafile: true,
     conditions: ["worker", "browser"],
@@ -62,14 +64,32 @@ export async function bundleWorker(
       ".mjs": "jsx",
       ".cjs": "jsx",
     },
+    splitting: entry.format === "modules",
     plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),
     watch,
   });
 
+  const chunks: CfModule[] = [];
+
+  for (const [filePath, output] of Object.entries(result.metafile.outputs)) {
+    if (
+      output.entryPoint &&
+      path.join(entry.directory, output.entryPoint) !== entry.file
+    ) {
+      chunks.push({
+        name: path.basename(filePath),
+        content: await readFile(filePath, "utf8"),
+        type: "esm",
+      });
+    }
+  }
+
   const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
-    ([_path, output]) => output.entryPoint !== undefined
+    ([_path, output]) =>
+      output.entryPoint &&
+      path.join(entry.directory, output.entryPoint) === entry.file
   );
   assert(
     entryPointOutputs.length > 0,
@@ -86,6 +106,7 @@ export async function bundleWorker(
   const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
   return {
+    chunks,
     modules: moduleCollector.modules,
     resolvedEntryPointPath: path.resolve(
       entry.directory,

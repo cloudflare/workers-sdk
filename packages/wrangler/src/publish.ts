@@ -94,16 +94,13 @@ export default async function publish(props: Props): Promise<void> {
       );
     }
 
-    const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
-      props.entry,
-      destination.path,
-      {
+    const { modules, resolvedEntryPointPath, bundleType, chunks } =
+      await bundleWorker(props.entry, destination.path, {
         serveAssetsFromWorker: props.experimentalPublic,
         jsxFactory,
         jsxFragment,
         rules: props.rules,
-      }
-    );
+      });
 
     const content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
@@ -197,6 +194,7 @@ export default async function publish(props: Props): Promise<void> {
       bindings,
       migrations,
       modules,
+      chunks,
       compatibility_date:
         props.compatibilityDate ?? envRootObj.compatibility_date,
       compatibility_flags:

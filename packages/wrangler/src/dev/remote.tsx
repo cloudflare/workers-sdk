@@ -8,7 +8,7 @@ import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import type { CfPreviewToken } from "../create-worker-preview";
 import type { AssetPaths } from "../sites";
-import type { CfModule, CfWorkerInit, CfScriptFormat } from "../worker";
+import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 
 export function Remote(props: {
@@ -36,7 +36,6 @@ export function Remote(props: {
     name: props.name,
     bundle: props.bundle,
     format: props.format,
-    modules: props.bundle ? props.bundle.modules : [],
     accountId: props.accountId,
     apiToken: props.apiToken,
     bindings: props.bindings,
@@ -69,7 +68,6 @@ export function useWorker(props: {
   name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
-  modules: CfModule[];
   accountId: string;
   apiToken: string;
   bindings: CfWorkerInit["bindings"];
@@ -86,7 +84,6 @@ export function useWorker(props: {
     name,
     bundle,
     format,
-    modules,
     accountId,
     apiToken,
     bindings,
@@ -135,7 +132,8 @@ export function useWorker(props: {
           type: format === "modules" ? "esm" : "commonjs",
           content,
         },
-        modules: modules.concat(
+        chunks: bundle.chunks,
+        modules: bundle.modules.concat(
           assets.manifest
             ? {
                 name: "__STATIC_CONTENT_MANIFEST",
@@ -192,7 +190,6 @@ export function useWorker(props: {
     compatibilityFlags,
     usageModel,
     bindings,
-    modules,
     props.env,
     props.legacyEnv,
     props.zone,

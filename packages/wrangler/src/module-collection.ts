@@ -176,7 +176,10 @@ export default function createModuleCollector(props: {
         // ~ end legacy module specifier support ~
 
         rules?.forEach((rule) => {
-          if (rule.type === "ESModule" || rule.type === "CommonJS") return; // TODO: we should treat these as js files, and use the jsx loader
+          // ESModule and CommonJS modules get consumed by esbuild,
+          // potentially generating more chunks (when format === 'modules'),
+          // which we handle separately
+          if (rule.type === "ESModule" || rule.type === "CommonJS") return;
 
           rule.globs.forEach((glob) => {
             build.onResolve(

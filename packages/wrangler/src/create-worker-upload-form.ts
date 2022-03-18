@@ -58,6 +58,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
     bindings,
     migrations,
     usage_model,
+    chunks,
     compatibility_date,
     compatibility_flags,
   } = worker;
@@ -204,7 +205,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
     );
   }
 
-  for (const module of [main].concat(modules || [])) {
+  for (const module of [main].concat(modules || []).concat(chunks)) {
     formData.set(
       module.name,
       new File([module.content], module.name, {

@@ -1510,6 +1510,7 @@ export async function main(argv: string[]): Promise<void> {
                       text_blobs: {},
                       unsafe: [],
                     },
+                    chunks: [],
                     modules: [],
                     migrations: undefined,
                     compatibility_date: undefined,

@@ -139,6 +139,10 @@ export interface CfWorkerInit {
    */
   modules: undefined | CfModule[];
   /**
+   * A list of javascript chunks that will be loaded
+   */
+  chunks: CfModule[];
+  /**
    * All the bindings
    */
   bindings: {
