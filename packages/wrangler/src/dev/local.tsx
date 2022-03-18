@@ -118,7 +118,7 @@ function useLocalWorker({
           )
         ),
         durableObjectsPersist: enableLocalPersistence,
-        cache: !enableLocalPersistence,
+        cachePersist: !enableLocalPersistence,
         sitePath: assetPaths?.baseDirectory,
         siteInclude: assetPaths?.includePatterns.length
           ? assetPaths?.includePatterns
