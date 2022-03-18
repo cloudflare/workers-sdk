@@ -1,27 +1,30 @@
 import { spawn } from "child_process";
 import { resolve } from "path";
 import { fetch } from "undici";
+import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
-  let response: Response | undefined = undefined;
+  const container = await new Promise((resolvePromise) => {
+    const closedLoop = setTimeout(async () => {
+      const response = await fetch(url);
+      if (response.status === 200) {
+        clearTimeout(closedLoop);
+        resolvePromise(response);
+      }
+    }, 1500);
+  });
 
-  while (response === undefined) {
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-    try {
-      response = await fetch(url);
-    } catch {}
-  }
-
-  return response as Response;
+  await new Promise(process.nextTick); // flushes previous Promises in the event loop
+  return (await container) as Response;
 };
 
 const isWindows = process.platform === "win32";
 
 describe("Remix", () => {
+  let wranglerProcess: ChildProcess | undefined;
   beforeAll(async () => {
-    const wranglerProcess = spawn("npm", ["run", "dev"], {
+    wranglerProcess = spawn("npm", ["run", "dev"], {
       shell: isWindows,
       cwd: resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
@@ -32,6 +35,11 @@ describe("Remix", () => {
     wranglerProcess.stderr.on("data", (chunk) => {
       console.log(chunk.toString());
     });
+  });
+  afterAll(async () => {
+    if (wranglerProcess) {
+      wranglerProcess.kill();
+    }
   });
 
   it("renders static pages", async () => {
