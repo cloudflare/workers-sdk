@@ -48,6 +48,13 @@ export async function getEntry(
     directory,
     args.format ?? config.build?.upload?.format
   );
+
+  if (format === "service-worker" && hasDurableObjectBindings(config)) {
+    throw new Error(
+      "You cannot use a durable object from a Service Worker, and should migrate to the Module Worker format instead.\nhttps://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+    );
+  }
+
   return { file, directory, format };
 }
 
@@ -156,4 +163,16 @@ export function fileExists(filePath: string): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Returns true if the given config contains durable object bindings
+ */
+function hasDurableObjectBindings(config: Config): boolean {
+  const topLevel = config.durable_objects.bindings.length > 0;
+  const nested = Object.values(config.env).some(
+    (env) => env.durable_objects.bindings.length > 0
+  );
+
+  return topLevel || nested;
 }
