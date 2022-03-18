@@ -137,19 +137,24 @@ export async function syncAssets(
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
   const hasher = await xxhash();
 
-  for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
-    if (!include(file)) {
+  const assetDirectory = path.join(
+    siteAssets.baseDirectory,
+    siteAssets.assetDirectory
+  );
+  for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
+    const assetFile = path.relative(siteAssets.baseDirectory, absAssetFile);
+    if (!include(assetFile)) {
       continue;
     }
-    if (exclude(file)) {
+    if (exclude(assetFile)) {
       continue;
     }
 
-    await validateAssetSize(file);
-    console.log(`reading ${file}...`);
-    const content = await readFile(file, "base64");
+    await validateAssetSize(absAssetFile, assetFile);
+    console.log(`reading ${assetFile}...`);
+    const content = await readFile(absAssetFile, "base64");
 
-    const assetKey = hashAsset(hasher, file, content);
+    const assetKey = hashAsset(hasher, assetFile, content);
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
@@ -165,7 +170,7 @@ export async function syncAssets(
     }
     // remove the key from the set so we know we've seen it
     delete keyMap[assetKey];
-    manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
+    manifest[path.relative(siteAssets.assetDirectory, absAssetFile)] = assetKey;
   }
 
   // `keyMap` now contains the assets that we need to expire
@@ -215,11 +220,14 @@ function createPatternMatcher(
   }
 }
 
-async function validateAssetSize(filePath: string) {
-  const { size } = await stat(filePath);
+async function validateAssetSize(
+  absFilePath: string,
+  relativeFilePath: string
+) {
+  const { size } = await stat(absFilePath);
   if (size > 25 * 1024 * 1024) {
     throw new Error(
-      `File ${filePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+      `File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
     );
   }
 }
@@ -245,8 +253,23 @@ function urlSafe(filePath: string): string {
  * Information about the assets that should be uploaded
  */
 export interface AssetPaths {
+  /**
+   * Absolute path to the root of the project.
+   *
+   * This is the directory containing wrangler.toml or cwd if no config.
+   */
   baseDirectory: string;
+  /**
+   * The path to the assets directory, relative to the `baseDirectory`.
+   */
+  assetDirectory: string;
+  /**
+   * An array of patterns that match files that should be uploaded.
+   */
   includePatterns: string[];
+  /**
+   * An array of patterns that match files that should not be uploaded.
+   */
   excludePatterns: string[];
 }
 
@@ -259,16 +282,17 @@ export interface AssetPaths {
  */
 export function getAssetPaths(
   config: Config,
-  baseDirectory = config.site?.bucket,
+  assetDirectory = config.site?.bucket,
   includePatterns = config.site?.include ?? [],
   excludePatterns = config.site?.exclude ?? []
 ): undefined | AssetPaths {
-  return baseDirectory
+  const baseDirectory = path.resolve(
+    path.dirname(config.configPath ?? "wrangler.toml")
+  );
+  return assetDirectory
     ? {
-        baseDirectory: path.resolve(
-          path.dirname(config.configPath ?? "wrangler.toml"),
-          baseDirectory
-        ),
+        baseDirectory,
+        assetDirectory,
         includePatterns,
         excludePatterns,
       }
