@@ -10,7 +10,7 @@ describe("entry", () => {
   runInTempDir();
   mockConsoleMethods();
 
-  it("should error when encountering a service worker with a durable object binding", async () => {
+  it("should error when encountering a service worker with a durable object implementation", async () => {
     await writeFile(
       "./index.ts",
       "addEventListener('fetch', () => \"hello, world!\")"
@@ -18,7 +18,13 @@ describe("entry", () => {
     writeWranglerToml({
       main: "index.ts",
       durable_objects: {
-        bindings: [{ name: "THIS_SHOULD_FAIL", class_name: "ThisShouldFail" }],
+        bindings: [
+          {
+            name: "THIS_SHOULD_FAIL",
+            class_name: "ThisShouldFail",
+            script_name: "this-should-fail.js",
+          },
+        ],
       },
     });
 
@@ -29,7 +35,7 @@ describe("entry", () => {
           `);
   });
 
-  it("should error when encountering a service worker with a per-environment durable object binding", async () => {
+  it("should error when encountering a service worker with a per-environment durable object implementation", async () => {
     await writeFile(
       "./index.ts",
       "addEventListener('fetch', () => \"hello, world!\")"
@@ -43,6 +49,7 @@ describe("entry", () => {
               {
                 name: "THIS_SHOULD_FAIL",
                 class_name: "ThisShouldFail",
+                script_name: "this-should-fail.js",
               },
             ],
           },
@@ -55,6 +62,58 @@ describe("entry", () => {
             "You cannot use a durable object from a Service Worker, and should migrate to the Module Worker format instead.
             https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
           `);
+  });
+
+  it("should allow service workers to bind to durable objects defined elsewhere", async () => {
+    await writeFile(
+      "./index.ts",
+      "addEventListener('fetch', () => \"hello, world!\")"
+    );
+    writeWranglerToml({
+      main: "index.ts",
+      durable_objects: {
+        bindings: [
+          {
+            name: "THIS_SHOULD_PASS",
+            class_name: "ThisShouldPass",
+          },
+        ],
+      },
+    });
+
+    await expect(
+      runWrangler("publish")
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Did not login, quitting..."`
+    );
+  });
+
+  it("should allow service workers to bind to per-environment durable objects defined elsewhere", async () => {
+    await writeFile(
+      "./index.ts",
+      "addEventListener('fetch', () => \"hello, world!\")"
+    );
+    writeWranglerToml({
+      main: "index.ts",
+      env: {
+        ENV_1: {
+          durable_objects: {
+            bindings: [
+              {
+                name: "THIS_SHOULD_PASS",
+                class_name: "ThisShouldPass",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await expect(
+      runWrangler("publish")
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Did not login, quitting..."`
+    );
   });
 
   describe("guess worker format", () => {
