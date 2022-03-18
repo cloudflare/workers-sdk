@@ -21,6 +21,7 @@ import {
   validateTypedArray,
   all,
   isMutuallyExclusiveWith,
+  inheritableInLegacyEnvironments,
 } from "./validation-helpers";
 import type {
   Config,
@@ -537,7 +538,14 @@ function normalizeAndValidateEnvironment(
       deprecatedRules,
       envName
     ),
-    name: inheritable(diagnostics, config, rawEnv, "name", isString, undefined),
+    name: inheritableInLegacyEnvironments(
+      diagnostics,
+      config,
+      rawEnv,
+      "name",
+      isString,
+      undefined
+    ),
     route,
     routes,
     triggers: inheritable(

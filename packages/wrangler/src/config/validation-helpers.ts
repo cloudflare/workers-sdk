@@ -65,6 +65,41 @@ export function inheritable<K extends keyof Environment>(
 }
 
 /**
+ * Get an inheritable environment field, but only if we are in legacy environments
+ */
+export function inheritableInLegacyEnvironments<K extends keyof Environment>(
+  diagnostics: Diagnostics,
+  config: Config | undefined,
+  rawEnv: RawEnvironment,
+  field: K,
+  validate: ValidatorFn,
+  defaultValue: Environment[K]
+): Environment[K] {
+  return config === undefined || config.legacy_env
+    ? inheritable(diagnostics, config, rawEnv, field, validate, defaultValue)
+    : notAllowedInNamedServiceEnvironment(diagnostics, config, rawEnv, field);
+}
+
+/**
+ * Log an error if this named environment is trying to override the value in the top-level
+ * environment, which is not allow for this field.
+ */
+function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
+  diagnostics: Diagnostics,
+  config: Config,
+  rawEnv: RawEnvironment,
+  field: K
+): Environment[K] {
+  if (field in rawEnv) {
+    diagnostics.errors.push(
+      `The "${field}" field is not allowed in named service environments.\n` +
+        `Please remove the field from this environment.`
+    );
+  }
+  return config[field];
+}
+
+/**
  * Get a not inheritable environment field, after computing and validating its value.
  *
  * If the field is not defined in the given environment but it is defined in the top-level config,
