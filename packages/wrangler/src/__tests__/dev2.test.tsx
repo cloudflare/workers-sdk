@@ -91,6 +91,7 @@ async function renderDev({
   name,
   entry = { file: "index.js", directory: "", format: "modules" },
   port,
+  ip = "localhost",
   inspectorPort = 9229,
   accountId,
   legacyEnv = true,
@@ -128,6 +129,7 @@ async function renderDev({
         env={env}
         rules={rules}
         port={port}
+        ip={ip}
         inspectorPort={inspectorPort}
         legacyEnv={legacyEnv}
         buildCommand={buildCommand}

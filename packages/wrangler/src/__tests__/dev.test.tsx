@@ -385,6 +385,50 @@ describe("Dev component", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
+
+  describe("ip", () => {
+    it("should default ip to localhost", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use to `ip` from `wrangler.toml`, if available", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          ip: "0.0.0.0",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use --ip command line arg, if provided", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          ip: "1.1.1.1",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --ip=0.0.0.0");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
