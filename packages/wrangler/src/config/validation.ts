@@ -81,7 +81,8 @@ export function normalizeAndValidateConfig(
   const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
     diagnostics,
     rawConfig,
-    rawConfig.build ?? {}
+    rawConfig.build ?? {},
+    configPath
   );
 
   validateOptionalProperty(
@@ -165,7 +166,8 @@ export function normalizeAndValidateConfig(
 function normalizeAndValidateBuild(
   diagnostics: Diagnostics,
   rawConfig: RawConfig,
-  rawBuild: Config["build"]
+  rawBuild: Config["build"],
+  configPath: string | undefined
 ): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
   const { command, cwd, watch_dir, upload, ...rest } = rawBuild;
   const deprecatedUpload: DeprecatedUpload = { ...upload };
@@ -220,7 +222,25 @@ function normalizeAndValidateBuild(
     );
   }
 
-  return { command, cwd, watch_dir, deprecatedUpload };
+  return {
+    command,
+    watch_dir:
+      // - `watch_dir` only matters when `command` is defined, so we apply
+      // a default only when `command` is defined
+      // - `configPath` will always be defined since `build` can only
+      // be configured in `wrangler.toml`, but who knows, that may
+      // change in the future, so we do a check anyway
+      command
+        ? configPath
+          ? path.relative(
+              process.cwd(),
+              path.join(path.dirname(configPath), watch_dir || "./src")
+            )
+          : watch_dir || "./src"
+        : watch_dir,
+    cwd,
+    deprecatedUpload,
+  };
 }
 
 /**
