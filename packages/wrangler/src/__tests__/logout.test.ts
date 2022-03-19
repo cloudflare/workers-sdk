@@ -38,10 +38,7 @@ describe("wrangler", () => {
       reinitialiseAuthTokens();
       await runWrangler("logout");
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked
-        Removing ./home/.wrangler/config/default.toml.. success!"
-      `);
+      expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
 
       // Make sure that we made the request to logout.
       expect(fetchMock).toHaveBeenCalledTimes(1);
