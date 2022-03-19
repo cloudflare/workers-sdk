@@ -270,6 +270,8 @@ interface State extends AuthTokens {
 interface AuthTokens {
   accessToken?: AccessToken;
   refreshToken?: RefreshToken;
+  /** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+  apiToken?: string;
 }
 
 /**
@@ -285,7 +287,8 @@ export interface UserAuthConfig {
   oauth_token?: string;
   refresh_token?: string;
   expiration_time?: string;
-  // api_token?: string;
+  /** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+  api_token?: string;
 }
 
 interface RefreshToken {
@@ -357,7 +360,7 @@ function getAuthTokens(): AuthTokens {
     }
 
     // otherwise try loading from the user auth config file.
-    const { oauth_token, refresh_token, expiration_time } =
+    const { oauth_token, refresh_token, expiration_time, api_token } =
       readAuthConfigFile();
 
     if (oauth_token) {
@@ -369,6 +372,8 @@ function getAuthTokens(): AuthTokens {
         },
         refreshToken: { value: refresh_token ?? "" },
       };
+    } else if (api_token) {
+      return { apiToken: api_token };
     } else {
       return {};
     }
@@ -385,6 +390,13 @@ export function reinitialiseAuthTokens(): void {
 }
 
 export function getAPIToken(): string | undefined {
+  if (LocalState.apiToken) {
+    console.warn(
+      "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
+        "This is no longer supported in the current version of Wrangler.\n" +
+        "If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
+    );
+  }
   return LocalState.accessToken?.value;
 }
 
@@ -847,7 +859,7 @@ export async function loginOrRefreshIfRequired(
 ): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
-  if (LocalState.accessToken === undefined) {
+  if (!getAPIToken()) {
     // Not logged in.
     // If we are not interactive, we cannot ask the user to login
     return isInteractive && (await login());
@@ -859,6 +871,7 @@ export async function loginOrRefreshIfRequired(
 }
 
 export async function login(props?: LoginProps): Promise<boolean> {
+  console.log("Attempting to login via OAuth...");
   const urlToOpen = await getAuthURL(props?.scopes);
   await openInBrowser(urlToOpen);
   let server: http.Server;
@@ -930,9 +943,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
             res.end(() => {
               finish(true);
             });
-            console.log(
-              `Successfully configured. You can find your configuration file at: ${os.homedir()}/${USER_AUTH_CONFIG_FILE}`
-            );
+            console.log(`Successfully logged in.`);
 
             return;
           }
@@ -1009,12 +1020,8 @@ export async function logout(): Promise<void> {
     },
   });
   await response.text(); // blank text? would be nice if it was something meaningful
-  console.log(
-    "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
-  );
-  // delete the file
   rmSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE));
-  console.log(`Removing ${os.homedir()}/${USER_AUTH_CONFIG_FILE}.. success!`);
+  console.log(`Successfully logged out.`);
 }
 
 export function listScopes(message = "💁 Available scopes:"): void {

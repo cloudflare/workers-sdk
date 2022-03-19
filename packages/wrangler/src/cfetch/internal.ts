@@ -89,11 +89,11 @@ async function requireLoggedIn(): Promise<void> {
 }
 
 function requireApiToken(): string {
-  const apiToken = getAPIToken();
-  if (!apiToken) {
+  const authToken = getAPIToken();
+  if (!authToken) {
     throw new Error("No API token found.");
   }
-  return apiToken;
+  return authToken;
 }
 
 function addAuthorizationHeader(

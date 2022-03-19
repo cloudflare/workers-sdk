@@ -3,11 +3,13 @@ import React from "react";
 import { reinitialiseAuthTokens, writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {
   runInTempDir({ homedir: "./home" });
+  const std = mockConsoleMethods();
 
   it("should return undefined if there is no config file", async () => {
     const userInfo = await getUserInfo();
@@ -50,6 +52,17 @@ describe("getUserInfo()", () => {
         { name: "Account Three", id: "account-3" },
       ],
     });
+  });
+
+  it("should display a warning message if the config file contains a legacy api_token field", async () => {
+    writeAuthConfigFile({ api_token: "API_TOKEN" });
+    await reinitialiseAuthTokens();
+    await getUserInfo();
+    expect(std.warn).toMatchInlineSnapshot(`
+      "It looks like you have used Wrangler 1's \`config\` command to login with an API token.
+      This is no longer supported in the current version of Wrangler.
+      If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
+    `);
   });
 });
 
