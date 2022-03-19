@@ -280,7 +280,7 @@ function normalizeAndValidateDev(
   rawDev: RawDevConfig
 ): DevConfig {
   const {
-    ip = "127.0.0.1",
+    ip = "localhost",
     port = 8787,
     local_protocol = "http",
     upstream_protocol = "https",

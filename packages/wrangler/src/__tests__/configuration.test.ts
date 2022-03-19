@@ -17,7 +17,7 @@ describe("normalizeAndValidateConfig()", () => {
       compatibility_flags: [],
       configPath: undefined,
       dev: {
-        ip: "127.0.0.1",
+        ip: "localhost",
         local_protocol: "http",
         port: 8787,
         upstream_protocol: "https",
@@ -151,7 +151,7 @@ describe("normalizeAndValidateConfig()", () => {
     it("should ignore `miniflare` top level fields", () => {
       const expectedConfig = {
         miniflare: {
-          host: "127.0.0.1",
+          host: "localhost",
         },
       };
 

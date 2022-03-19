@@ -727,9 +727,8 @@ export async function main(argv: string[]): Promise<void> {
           default: true,
         })
         .option("ip", {
-          describe: "IP address to listen on",
+          describe: "IP address to listen on, defaults to `localhost`",
           type: "string",
-          default: "127.0.0.1",
         })
         .option("port", {
           describe: "Port to listen on",
@@ -932,6 +931,7 @@ export async function main(argv: string[]): Promise<void> {
           port={
             args.port || config.dev?.port || (await getPort({ port: 8787 }))
           }
+          ip={args.ip || config.dev.ip}
           inspectorPort={
             args["inspector-port"] ?? (await getPort({ port: 9229 }))
           }
@@ -1312,6 +1312,7 @@ export async function main(argv: string[]): Promise<void> {
           accountId={accountId}
           assetPaths={undefined}
           port={config.dev?.port}
+          ip={config.dev.ip}
           public={undefined}
           compatibilityDate={
             config.compatibility_date ||

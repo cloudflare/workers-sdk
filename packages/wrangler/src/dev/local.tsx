@@ -20,6 +20,7 @@ export function Local(props: {
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
   port: number;
+  ip: string;
   rules: Config["rules"];
   inspectorPort: number;
   enableLocalPersistence: boolean;
@@ -32,6 +33,7 @@ export function Local(props: {
     assetPaths: props.assetPaths,
     public: props.public,
     port: props.port,
+    ip: props.ip,
     rules: props.rules,
     enableLocalPersistence: props.enableLocalPersistence,
   });
@@ -52,10 +54,11 @@ function useLocalWorker(props: {
   assetPaths: undefined | AssetPaths;
   public: undefined | string;
   port: number;
+  ip: string;
   enableLocalPersistence: boolean;
 }) {
   // TODO: pass vars via command line
-  const { bundle, format, bindings, port, assetPaths } = props;
+  const { bundle, format, bindings, port, ip, assetPaths } = props;
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
@@ -99,6 +102,8 @@ function useLocalWorker(props: {
           path.join(__dirname, "../miniflare-config-stubs/package.empty.json"),
           "--port",
           port.toString(),
+          "--host",
+          ip,
           ...(assetPaths
             ? [
                 "--site",
@@ -228,6 +233,7 @@ function useLocalWorker(props: {
     bundle,
     format,
     port,
+    ip,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,

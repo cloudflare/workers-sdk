@@ -18,6 +18,7 @@ export function Remote(props: {
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
   port: number;
+  ip: string;
   localProtocol: "https" | "http";
   inspectorPort: number;
   accountId: undefined | string;
@@ -55,6 +56,7 @@ export function Remote(props: {
     publicRoot: props.public,
     localProtocol: props.localProtocol,
     localPort: props.port,
+    ip: props.ip,
   });
 
   useInspector({

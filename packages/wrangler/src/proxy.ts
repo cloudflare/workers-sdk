@@ -72,11 +72,13 @@ export function usePreviewServer({
   publicRoot,
   localProtocol,
   localPort: port,
+  ip,
 }: {
   previewToken: CfPreviewToken | undefined;
   publicRoot: undefined | string;
   localProtocol: "https" | "http";
   localPort: number;
+  ip: string;
 }) {
   /** Creates an HTTP/1 proxy that sends requests over HTTP/2. */
   const [proxyServer, setProxyServer] = useState<HttpServer | HttpsServer>();
@@ -293,8 +295,8 @@ export function usePreviewServer({
 
     waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 })
       .then(() => {
-        proxyServer.listen(port);
-        console.log(`⬣ Listening at ${localProtocol}://localhost:${port}`);
+        proxyServer.listen(port, ip);
+        console.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
       })
       .catch((err) => {
         console.error(`⬣ Failed to start server: ${err}`);
@@ -303,7 +305,7 @@ export function usePreviewServer({
     return () => {
       proxyServer.close();
     };
-  }, [port, proxyServer, localProtocol]);
+  }, [port, ip, proxyServer, localProtocol]);
 }
 
 function createHandleAssetsRequest(

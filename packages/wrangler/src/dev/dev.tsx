@@ -24,6 +24,7 @@ export type DevProps = {
   name?: string;
   entry: Entry;
   port?: number;
+  ip: string;
   inspectorPort: number;
   rules: Config["rules"];
   accountId: undefined | string;
@@ -95,6 +96,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
       tunnel: false,
     },
     port,
+    props.ip,
     props.inspectorPort,
     props.localProtocol
   );
@@ -112,6 +114,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
           assetPaths={props.assetPaths}
           public={props.public}
           port={port}
+          ip={props.ip}
           rules={props.rules}
           inspectorPort={props.inspectorPort}
           enableLocalPersistence={props.enableLocalPersistence}
@@ -127,6 +130,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
           assetPaths={props.assetPaths}
           public={props.public}
           port={port}
+          ip={props.ip}
           localProtocol={props.localProtocol}
           inspectorPort={props.inspectorPort}
           compatibilityDate={props.compatibilityDate}
@@ -295,6 +299,7 @@ type useHotkeysInitialState = {
 function useHotkeys(
   initial: useHotkeysInitialState,
   port: number,
+  ip: string,
   inspectorPort: number,
   localProtocol: "http" | "https"
 ) {
@@ -309,7 +314,7 @@ function useHotkeys(
       switch (input.toLowerCase()) {
         // open browser
         case "b": {
-          await openInBrowser(`${localProtocol}://localhost:${port}`);
+          await openInBrowser(`${localProtocol}://${ip}:${port}`);
           break;
         }
         // toggle inspector
