@@ -120,7 +120,7 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"build.cwd\\" to be of type string but got 666.
           - Expected \\"build.watch_dir\\" to be of type string but got 777.
           - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-          - Expected \\"main\\" to be a string but got 111
+          - Expected \\"main\\" field to be a string but got 111.
           - Expected \\"dev.ip\\" to be of type string but got 222.
           - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
           - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".

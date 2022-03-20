@@ -37,6 +37,57 @@ describe("Dev component", () => {
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
     });
+
+    it("should use `main` from the top-level environment", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `main` from a named environment", async () => {
+      writeWranglerToml({
+        env: {
+          ENV1: {
+            main: "index.js",
+          },
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --env=ENV1");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `main` from a named environment, rather than the top-level", async () => {
+      writeWranglerToml({
+        main: "other.js",
+        env: {
+          ENV1: {
+            main: "index.js",
+          },
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --env=ENV1");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("host", () => {
@@ -351,7 +402,7 @@ describe("Dev component", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should use to `local_protocol` from `wrangler.toml`, if available", async () => {
+    it("should use `local_protocol` from `wrangler.toml`, if available", async () => {
       writeWranglerToml({
         main: "index.js",
         dev: {
