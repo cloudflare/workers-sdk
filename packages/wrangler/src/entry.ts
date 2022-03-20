@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
-import type { Config } from "./config";
+import type { Config, Environment } from "./config";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -20,6 +20,7 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
 export async function getEntry(
   args: { script?: string; format?: CfScriptFormat | undefined },
   config: Config,
+  env: Environment,
   command: string
 ): Promise<Entry> {
   let file: string;
@@ -27,13 +28,13 @@ export async function getEntry(
   if (args.script) {
     // If the script name comes from the command line it is relative to the current working directory.
     file = path.resolve(args.script);
-  } else if (config.main === undefined) {
+  } else if (env.main === undefined) {
     throw new Error(
       `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
     );
   } else {
     directory = path.resolve(path.dirname(config.configPath ?? "."));
-    file = path.resolve(directory, config.main);
+    file = path.resolve(directory, env.main);
   }
 
   await runCustomBuild(file, config.build);

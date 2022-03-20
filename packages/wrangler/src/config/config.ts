@@ -33,11 +33,6 @@ export interface ConfigFields<
   configPath: string | undefined;
 
   /**
-   * The entrypoint/path to the JavaScript file that will be executed.
-   */
-  main: string | undefined;
-
-  /**
    * A boolean to enable "legacy" style wrangler environments (from wrangler 1).
    * These have been superseded by Services, but there may be projects that won't
    * (or can't) use them. If you're using a legacy environment, you can set this

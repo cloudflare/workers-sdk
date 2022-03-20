@@ -52,6 +52,11 @@ interface EnvironmentInheritable {
   compatibility_flags: string[];
 
   /**
+   * The entrypoint/path to the JavaScript file that will be executed.
+   */
+  main: string | undefined;
+
+  /**
    * Whether we use <name>.<subdomain>.workers.dev to
    * test and deploy your worker.
    *

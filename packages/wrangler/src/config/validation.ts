@@ -97,18 +97,13 @@ export function normalizeAndValidateConfig(
   // Process the top-level default environment configuration.
   const config: Config = {
     configPath,
-    main: normalizeAndValidateMainField(
-      diagnostics,
-      configPath,
-      rawConfig.main,
-      deprecatedUpload
-    ),
     // TODO: set the default to false to turn on service environments as the default
     legacy_env: rawConfig.legacy_env ?? true,
     ...normalizeAndValidateEnvironment(
       diagnostics,
+      configPath,
       rawConfig,
-      deprecatedUpload.rules
+      deprecatedUpload
     ),
     env: {}, // Will be filled below by `normalizeAndValidateEnvironment()`.
     dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
@@ -140,8 +135,9 @@ export function normalizeAndValidateConfig(
       );
       const environment = normalizeAndValidateEnvironment(
         envDiagnostics,
+        configPath,
         rawConfig.env[envName] as RawEnvironment,
-        deprecatedUpload.rules,
+        deprecatedUpload,
         envName,
         config,
         rawConfig
@@ -248,10 +244,9 @@ function normalizeAndValidateBuild(
  * Validate the `main` field and return the normalized values.
  */
 function normalizeAndValidateMainField(
-  diagnostics: Diagnostics,
   configPath: string | undefined,
   rawMain: string | undefined,
-  deprecatedUpload: { dir?: string; main?: string }
+  deprecatedUpload: DeprecatedUpload | undefined
 ): string | undefined {
   const configDir = path.dirname(configPath ?? "wrangler.toml");
   if (rawMain !== undefined) {
@@ -259,13 +254,13 @@ function normalizeAndValidateMainField(
       const directory = path.resolve(configDir);
       return path.resolve(directory, rawMain);
     } else {
-      diagnostics.errors.push(
-        `Expected "main" to be a string but got ${JSON.stringify(rawMain)}`
-      );
       return;
     }
-  } else if (deprecatedUpload.main !== undefined) {
-    const directory = path.resolve(configDir, deprecatedUpload.dir || "./dist");
+  } else if (deprecatedUpload?.main !== undefined) {
+    const directory = path.resolve(
+      configDir,
+      deprecatedUpload?.dir || "./dist"
+    );
     return path.resolve(directory, deprecatedUpload.main);
   } else {
     return;
@@ -426,27 +421,30 @@ function normalizeAndValidateModulePaths(
  */
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
+  configPath: string | undefined,
   topLevelEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined
+  deprecatedUpload: DeprecatedUpload | undefined
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
  */
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
+  configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined,
+  deprecatedUpload: DeprecatedUpload | undefined,
   envName: string,
   config: Config,
   rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
+  configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined,
+  deprecatedUpload: DeprecatedUpload | undefined,
   envName = "top level",
-  config?: Config | undefined,
-  rawConfig?: RawConfig | undefined
+  config?: Config,
+  rawConfig?: RawConfig
 ): Environment {
   deprecated(
     diagnostics,
@@ -555,7 +553,7 @@ function normalizeAndValidateEnvironment(
       diagnostics,
       config,
       rawEnv,
-      deprecatedRules,
+      deprecatedUpload?.rules,
       envName
     ),
     name: inheritableInLegacyEnvironments(
@@ -565,6 +563,11 @@ function normalizeAndValidateEnvironment(
       "name",
       isString,
       undefined
+    ),
+    main: normalizeAndValidateMainField(
+      configPath,
+      inheritable(diagnostics, config, rawEnv, "main", isString, undefined),
+      deprecatedUpload
     ),
     route,
     routes,

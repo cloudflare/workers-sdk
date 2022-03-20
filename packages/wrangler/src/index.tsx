@@ -802,7 +802,9 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && findWranglerToml(path.dirname(args.script)))
       );
-      const entry = await getEntry(args, config, "dev");
+      const envRootObj = (args.env && config.env?.[args.env]) || config;
+
+      const entry = await getEntry(args, config, envRootObj, "dev");
 
       if (args["experimental-public"]) {
         console.warn(
@@ -856,9 +858,6 @@ export async function main(argv: string[]): Promise<void> {
         );
         return zones[0]?.id;
       }
-
-      const environments = config.env ?? {};
-      const envRootObj = args.env ? environments[args.env] || {} : config;
 
       const hostLike =
         args.host ||
@@ -1073,7 +1072,8 @@ export async function main(argv: string[]): Promise<void> {
         (args.config as ConfigPath) ||
           (args.script && findWranglerToml(path.dirname(args.script)))
       );
-      const entry = await getEntry(args, config, "publish");
+      const envRootObj = (args.env && config.env?.[args.env]) || config;
+      const entry = await getEntry(args, config, envRootObj, "publish");
 
       if (args.latest) {
         console.warn(
@@ -1287,12 +1287,10 @@ export async function main(argv: string[]): Promise<void> {
       );
 
       const config = readConfig(args.config as ConfigPath);
-      const entry = await getEntry({}, config, "dev");
+      const envRootObj = (args.env && config.env?.[args.env]) || config;
+      const entry = await getEntry({}, config, envRootObj, "dev");
 
       const accountId = await requireAuth(config);
-
-      const environments = config.env ?? {};
-      const envRootObj = args.env ? environments[args.env] || {} : config;
 
       const { waitUntilExit } = render(
         <Dev
