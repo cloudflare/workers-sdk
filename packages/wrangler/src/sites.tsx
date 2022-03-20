@@ -18,7 +18,7 @@ const ALWAYS_IGNORE = new Set(["node_modules"]);
 const HIDDEN_FILES_TO_INCLUDE = new Set([
   ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
 ]);
-const FIVE_MINUTES = 1000 * 60 * 5;
+const FIVE_MINUTES = 60 * 5; // expressed in seconds, since that's what the api expects
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
@@ -169,7 +169,6 @@ export async function syncAssets(
   }
 
   // `keyMap` now contains the assets that we need to expire
-  const FIVE_MINUTES_LATER = Math.ceil((Date.now() + FIVE_MINUTES) / 1000); // expressed in seconds, since that's what the API accepts
 
   let toExpire: KeyValue[] = [];
   for (const asset of Object.values(keyMap)) {
@@ -178,7 +177,9 @@ export async function syncAssets(
       toExpire.push({
         key: asset.name,
         value: "", // we'll fill all the values in one go
-        expiration: FIVE_MINUTES_LATER,
+        // we use expiration_ttl, since we can't trust the time
+        // that a deploy source might provide (eg - https://github.com/cloudflare/wrangler/issues/2224)
+        expiration_ttl: FIVE_MINUTES,
         base64: true,
       });
     }
