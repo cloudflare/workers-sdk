@@ -247,7 +247,7 @@ describe("Dev component", () => {
         command:
           "node -e \"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
         cwd: undefined,
-        watch_dir: undefined,
+        watch_dir: "src",
       });
       expect(std.out).toMatchInlineSnapshot(
         `"running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`

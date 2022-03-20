@@ -212,6 +212,53 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
+    it("should default custom build watch directories to src", () => {
+      const expectedConfig: RawConfig = {
+        build: {
+          command: "execute some --build",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: "./src",
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+      const expectedConfig: RawConfig = {
+        build: {
+          command: "execute some --build",
+          watch_dir: "some/path",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml"
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: path.normalize("project/some/path"),
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
     it("should override `migrations` config defaults with provided values", () => {
       const expectedConfig: RawConfig = {
         migrations: [
