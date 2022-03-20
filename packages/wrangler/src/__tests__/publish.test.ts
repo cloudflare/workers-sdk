@@ -1239,18 +1239,6 @@ export default{
     });
 
     describe("expire unused assets", () => {
-      // it's a 100 seconds past epoch
-      // everyone's still talking about how great woodstock was
-      const DATE_NOW = 100000;
-      beforeEach(() => {
-        jest.spyOn(Date, "now").mockImplementation((): number => {
-          return DATE_NOW;
-        });
-      });
-      afterEach(() => {
-        (Date.now as jest.Mock).mockRestore();
-      });
-
       it("should expire uploaded assets that aren't included anymore", async () => {
         const assets = [
           { filePath: "assets/file-1.txt", content: "Content of file-1" },
@@ -1299,14 +1287,14 @@ export default{
           {
             filePath: "assets/file-3.txt",
             content: "Content of file-3",
-            // expire this asset 300 seconds from now
-            expiration: DATE_NOW / 1000 + 300,
+            // expect to expire this asset 300 seconds from now
+            expiration_ttl: 300,
           },
           {
             filePath: "assets/file-4.txt",
             content: "Content of file-4",
-            // expire this asset 300 seconds from now
-            expiration: DATE_NOW / 1000 + 300,
+            // expect to expire this asset 300 seconds from now
+            expiration_ttl: 300,
           },
         ]);
 
@@ -1375,8 +1363,8 @@ export default{
           {
             filePath: "assets/file-4.txt",
             content: "Content of file-4",
-            // expire this asset 300 seconds from now
-            expiration: DATE_NOW / 1000 + 300,
+            // expect to expire this asset 300 seconds from now
+            expiration_ttl: 300,
           },
         ]);
 
@@ -2580,7 +2568,12 @@ function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 /** Create a mock handler for the request that tries to do a bulk upload of assets to a KV namespace. */
 function mockUploadAssetsToKVRequest(
   expectedNamespaceId: string,
-  assets: { filePath: string; content: string; expiration?: number }[]
+  assets: {
+    filePath: string;
+    content: string;
+    expiration?: number;
+    expiration_ttl?: number;
+  }[]
 ) {
   setMockResponse(
     "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
@@ -2610,6 +2603,7 @@ function mockUploadAssetsToKVRequest(
           asset.content
         );
         expect(upload.expiration).toEqual(asset.expiration);
+        expect(upload.expiration_ttl).toEqual(asset.expiration_ttl);
       }
       return null;
     }

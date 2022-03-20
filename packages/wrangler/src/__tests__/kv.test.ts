@@ -676,7 +676,7 @@ describe("wrangler", () => {
         const keys = [
           { name: "key-1" },
           { name: "key-2", expiration: 123456789 },
-          { name: "key-3" },
+          { name: "key-3", expiration_ttl: 666 },
         ];
         mockKeyListRequest("some-namespace-id", keys);
         await runWrangler("kv:key list --namespace-id some-namespace-id");
@@ -691,7 +691,8 @@ describe("wrangler", () => {
               \\"expiration\\": 123456789
             },
             {
-              \\"name\\": \\"key-3\\"
+              \\"name\\": \\"key-3\\",
+              \\"expiration_ttl\\": 666
             }
           ]"
         `);
