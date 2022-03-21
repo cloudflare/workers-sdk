@@ -119,7 +119,9 @@ function useLocalWorker({
         ),
         durableObjectsPersist: enableLocalPersistence,
         cachePersist: enableLocalPersistence,
-        sitePath: assetPaths?.assetDirectory,
+        sitePath: assetPaths?.assetDirectory
+          ? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
+          : undefined,
         siteInclude: assetPaths?.includePatterns.length
           ? assetPaths?.includePatterns
           : undefined,
