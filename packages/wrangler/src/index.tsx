@@ -711,6 +711,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           describe: "Perform on a specific environment",
           type: "string",
+          alias: "e",
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -990,6 +991,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           type: "string",
           describe: "Perform on a specific environment",
+          alias: "e",
         })
         .positional("script", {
           describe: "The path to an entry point for your worker",
@@ -1159,6 +1161,7 @@ export async function main(argv: string[]): Promise<void> {
           .option("env", {
             type: "string",
             describe: "Perform on a specific environment",
+            alias: "e",
           })
           .option("debug", {
             type: "boolean",
@@ -1473,6 +1476,7 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment",
+                alias: "e",
               });
           },
           async (args) => {
@@ -1590,6 +1594,7 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment",
+                alias: "e",
               });
           },
           async (args) => {
@@ -1640,6 +1645,7 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment.",
+                alias: "e",
               });
           },
           async (args) => {
@@ -1684,6 +1690,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1770,6 +1777,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1851,6 +1859,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1918,6 +1927,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1967,6 +1977,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -2010,6 +2021,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -2065,6 +2077,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -2170,6 +2183,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
