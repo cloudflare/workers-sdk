@@ -1,5 +1,16 @@
 # wrangler
 
+## 0.0.21
+
+### Patch Changes
+
+- [#647](https://github.com/cloudflare/wrangler2/pull/647) [`f3f3907`](https://github.com/cloudflare/wrangler2/commit/f3f3907963e87de17cad9a3733be716e201a8996) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for `--ip` and `config.dev.ip` in the dev command
+
+  Note that this change modifies the default listening address to `localhost`, which is different to `127.0.0.1`, which is what Wrangler 1 does.
+  For most developers this will make no observable difference, since the default host mapping in most OSes from `localhost` to `127.0.0.1`.
+
+  Resolves [#584](https://github.com/cloudflare/wrangler2/issues/584)
+
 ## 0.0.20
 
 ### Patch Changes
@@ -51,7 +62,7 @@
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", (event) => {
+  addEventListener("fetch", event => {
     // ...
   });
   ```
