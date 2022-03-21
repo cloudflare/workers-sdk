@@ -118,7 +118,7 @@ function useLocalWorker({
           )
         ),
         durableObjectsPersist: enableLocalPersistence,
-        cachePersist: !enableLocalPersistence,
+        cachePersist: enableLocalPersistence,
         sitePath: assetPaths?.assetDirectory,
         siteInclude: assetPaths?.includePatterns.length
           ? assetPaths?.includePatterns
@@ -148,7 +148,7 @@ function useLocalWorker({
         "--inspect", // start Miniflare listening for a debugger to attach
         miniflareCLIPath,
         optionsArg,
-        "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+        // "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
       ]);
 
       local.current.on("close", (code) => {
