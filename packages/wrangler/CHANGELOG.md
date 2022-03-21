@@ -1,5 +1,15 @@
 # wrangler
 
+## 0.0.22
+
+### Patch Changes
+
+- [#656](https://github.com/cloudflare/wrangler2/pull/656) [`aeb0fe0`](https://github.com/cloudflare/wrangler2/commit/aeb0fe02dbc9b8ef2edc0e2a669315bd40bbdfb3) Thanks [@threepointone](https://github.com/threepointone)! - fix: resolve npm modules correctly
+
+  When implementing legacy module specifiers, we didn't throughly test the interaction when there weren't any other files next to the entry worker, and importing npm modules. It would create a Regex that matched _every_ import, and fail because a file of that name wasn't present in the source directory. This fix constructs a better regex, applies it only when there are more files next to the worker, and increases test coverage for that scenario.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/655
+
 ## 0.0.21
 
 ### Patch Changes
@@ -62,7 +72,7 @@
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", (event) => {
+  addEventListener("fetch", event => {
     // ...
   });
   ```
