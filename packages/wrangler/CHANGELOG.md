@@ -62,7 +62,7 @@
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", event => {
+  addEventListener("fetch", (event) => {
     // ...
   });
   ```
