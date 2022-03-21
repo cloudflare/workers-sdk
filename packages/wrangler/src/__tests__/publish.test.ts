@@ -2045,6 +2045,132 @@ export default{
     });
   });
 
+  describe("durable object bindings", () => {
+    it("should support durable object bindings", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            { name: "EXAMPLE_DO_BINDING", class_name: "ExampleDurableObject" },
+          ],
+        },
+      });
+      writeWorkerSource({ type: "esm" });
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          {
+            class_name: "ExampleDurableObject",
+            name: "EXAMPLE_DO_BINDING",
+            type: "durable_object_namespace",
+          },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should support service-workers binding to external durable objects", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "EXAMPLE_DO_BINDING",
+              class_name: "ExampleDurableObject",
+              script_name: "example-do-binding-worker",
+            },
+          ],
+        },
+      });
+      writeWorkerSource({ type: "sw" });
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedBindings: [
+          {
+            name: "EXAMPLE_DO_BINDING",
+            class_name: "ExampleDurableObject",
+            script_name: "example-do-binding-worker",
+            type: "durable_object_namespace",
+          },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should support module workers implementing  durable objects", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "EXAMPLE_DO_BINDING",
+              class_name: "ExampleDurableObject",
+            },
+          ],
+        },
+      });
+      writeWorkerSource({ type: "esm" });
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        expectedBindings: [
+          {
+            name: "EXAMPLE_DO_BINDING",
+            class_name: "ExampleDurableObject",
+            type: "durable_object_namespace",
+          },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should error when detecting service workers implementing  durable objects", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "EXAMPLE_DO_BINDING",
+              class_name: "ExampleDurableObject",
+            },
+          ],
+        },
+      });
+      writeWorkerSource({ type: "sw" });
+      mockSubDomainRequest();
+
+      await expect(runWrangler("publish index.js")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.
+              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
+              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
+              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
+              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+            `);
+    });
+  });
+
   describe("unsafe bindings", () => {
     it("should warn if using unsafe bindings", async () => {
       writeWranglerToml({
