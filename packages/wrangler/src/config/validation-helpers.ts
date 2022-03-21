@@ -1,4 +1,4 @@
-import type { Config, RawConfig } from "./config";
+import type { RawConfig } from "./config";
 import type { Diagnostics } from "./diagnostics";
 import type { Environment, RawEnvironment } from "./environment";
 
@@ -54,14 +54,16 @@ export function experimental<T extends object>(
  */
 export function inheritable<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  topLevelEnv: Environment | undefined,
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
   defaultValue: Environment[K]
 ): Environment[K] {
-  validate(diagnostics, field, rawEnv[field], config);
-  return (rawEnv[field] as Environment[K]) ?? config?.[field] ?? defaultValue;
+  validate(diagnostics, field, rawEnv[field], topLevelEnv);
+  return (
+    (rawEnv[field] as Environment[K]) ?? topLevelEnv?.[field] ?? defaultValue
+  );
 }
 
 /**
@@ -69,15 +71,28 @@ export function inheritable<K extends keyof Environment>(
  */
 export function inheritableInLegacyEnvironments<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  isLegacyEnv: boolean | undefined,
+  topLevelEnv: Environment | undefined,
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
   defaultValue: Environment[K]
 ): Environment[K] {
-  return config === undefined || config.legacy_env
-    ? inheritable(diagnostics, config, rawEnv, field, validate, defaultValue)
-    : notAllowedInNamedServiceEnvironment(diagnostics, config, rawEnv, field);
+  return topLevelEnv === undefined || isLegacyEnv === true
+    ? inheritable(
+        diagnostics,
+        topLevelEnv,
+        rawEnv,
+        field,
+        validate,
+        defaultValue
+      )
+    : notAllowedInNamedServiceEnvironment(
+        diagnostics,
+        topLevelEnv,
+        rawEnv,
+        field
+      );
 }
 
 /**
@@ -86,7 +101,7 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
  */
 function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config,
+  topLevelEnv: Environment,
   rawEnv: RawEnvironment,
   field: K
 ): Environment[K] {
@@ -96,7 +111,7 @@ function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
         `Please remove the field from this environment.`
     );
   }
-  return config[field];
+  return topLevelEnv[field];
 }
 
 /**
@@ -107,7 +122,7 @@ function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
  */
 export function notInheritable<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  topLevelEnv: Environment | undefined,
   rawConfig: RawConfig | undefined,
   rawEnv: RawEnvironment,
   envName: string,
@@ -116,7 +131,7 @@ export function notInheritable<K extends keyof Environment>(
   defaultValue: Environment[K]
 ): Environment[K] {
   if (rawEnv[field] !== undefined) {
-    validate(diagnostics, field, rawEnv[field], config);
+    validate(diagnostics, field, rawEnv[field], topLevelEnv);
   } else {
     if (rawConfig?.[field] !== undefined) {
       diagnostics.warnings.push(
@@ -174,7 +189,7 @@ export type ValidatorFn = (
   diagnostics: Diagnostics,
   field: string,
   value: unknown,
-  config: Config | undefined
+  topLevelEnv: Environment | undefined
 ) => boolean;
 
 /**

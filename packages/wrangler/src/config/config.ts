@@ -3,7 +3,7 @@ import type { Environment, RawEnvironment } from "./environment";
 /**
  * This is the static type definition for the configuration object.
  *
- * It reflects the configuration that you can write in wrangler.toml,
+ * It reflects a normalized and validated version of the configuration that you can write in wrangler.toml,
  * and optionally augment with arguments passed directly to wrangler.
  *
  * For more information about the configuration object, see the
@@ -20,16 +20,14 @@ import type { Environment, RawEnvironment } from "./environment";
  * - `@breaking`: the deprecation/optionality is a breaking change from wrangler 1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<Environment, DevConfig> & Environment;
+export type Config = ConfigFields<DevConfig> & Environment;
 
-export type RawConfig = Partial<ConfigFields<RawEnvironment, RawDevConfig>> &
+export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
   RawEnvironment &
-  DeprecatedConfigFields;
+  DeprecatedConfigFields &
+  EnvironmentMap;
 
-export interface ConfigFields<
-  Env extends RawEnvironment,
-  Dev extends RawDevConfig
-> {
+export interface ConfigFields<Dev extends RawDevConfig> {
   configPath: string | undefined;
 
   /**
@@ -39,22 +37,6 @@ export interface ConfigFields<
    * to `true` to enable it.
    */
   legacy_env: boolean;
-
-  /**
-   * The `env` section defines overrides for the configuration for different environments.
-   *
-   * All environment fields can be specified at the top level of the config indicating the default environment settings.
-   *
-   * - Some fields are inherited and overridable in each environment.
-   * - But some are not inherited and must be explicitly specified in every environment, if they are specified at the top level.
-   *
-   * For more information, see the documentation at https://developers.cloudflare.com/workers/cli-wrangler/configuration#environments
-   *
-   * @default `{}`
-   */
-  env: {
-    [envName: string]: Env;
-  };
 
   /**
    * Options to configure the development server that your worker will use.
@@ -271,4 +253,22 @@ export interface DeprecatedUpload {
    * @deprecated This is now defined at the top level `rules` field.
    */
   rules?: Environment["rules"];
+}
+
+interface EnvironmentMap {
+  /**
+   * The `env` section defines overrides for the configuration for different environments.
+   *
+   * All environment fields can be specified at the top level of the config indicating the default environment settings.
+   *
+   * - Some fields are inherited and overridable in each environment.
+   * - But some are not inherited and must be explicitly specified in every environment, if they are specified at the top level.
+   *
+   * For more information, see the documentation at https://developers.cloudflare.com/workers/cli-wrangler/configuration#environments
+   *
+   * @default `{}`
+   */
+  env?: {
+    [envName: string]: RawEnvironment;
+  };
 }

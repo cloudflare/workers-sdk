@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
-import type { Config, Environment } from "./config";
+import type { Config } from "./config";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;
@@ -11,7 +11,6 @@ const BATCH_KEY_MAX = API_MAX / 2;
 type KvArgs = {
   binding?: string;
   "namespace-id"?: string;
-  env?: string;
   preview?: boolean;
 };
 
@@ -217,8 +216,8 @@ export async function deleteBulkKeyValue(
 }
 
 export function getNamespaceId(
-  { preview, binding, "namespace-id": namespaceId, env }: KvArgs,
-  configOrEnv: Config | Environment | undefined
+  { preview, binding, "namespace-id": namespaceId }: KvArgs,
+  config: Config
 ): string {
   // nice
   if (namespaceId) {
@@ -228,45 +227,26 @@ export function getNamespaceId(
   // begin pre-flight checks
 
   // `--binding` is only valid if there's a wrangler configuration.
-  if (binding && !configOrEnv) {
+  if (binding && !config) {
     throw new Error("--binding specified, but no config file was found.");
   }
 
   // there's no config. abort here
-  if (!configOrEnv) {
+  if (!config) {
     throw new Error(
       "Failed to find a config file.\n" +
         "Either use --namespace-id to upload directly or create a configuration file with a binding."
     );
   }
 
-  // they want to use an environment, actually
-  if (env) {
-    if (!("env" in configOrEnv) || !configOrEnv.env[env]) {
-      throw new Error(
-        `Failed to find environment "${env}" in configuration file!`
-      );
-    }
-    return getNamespaceId(
-      {
-        binding,
-        "namespace-id": namespaceId,
-        preview,
-      },
-      configOrEnv.env[env]
-    );
-  }
-
   // there's no KV namespaces
-  if (!configOrEnv.kv_namespaces || configOrEnv.kv_namespaces.length === 0) {
+  if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
     throw new Error(
       "No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
     );
   }
 
-  const namespace = configOrEnv.kv_namespaces.find(
-    (ns) => ns.binding === binding
-  );
+  const namespace = config.kv_namespaces.find((ns) => ns.binding === binding);
 
   // we couldn't find a namespace with that binding
   if (!namespace) {
