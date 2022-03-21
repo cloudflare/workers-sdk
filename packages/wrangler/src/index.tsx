@@ -799,13 +799,11 @@ export async function main(argv: string[]): Promise<void> {
     },
     async (args) => {
       printWranglerBanner();
-      const config = readConfig(
+      const configPath =
         (args.config as ConfigPath) ||
-          (args.script && findWranglerToml(path.dirname(args.script)))
-      );
-      const envRootObj = (args.env && config.env?.[args.env]) || config;
-
-      const entry = await getEntry(args, config, envRootObj, "dev");
+        (args.script && findWranglerToml(path.dirname(args.script)));
+      const config = readConfig(configPath, args.env);
+      const entry = await getEntry(args, config, "dev");
 
       if (args["experimental-public"]) {
         console.warn(
@@ -864,8 +862,8 @@ export async function main(argv: string[]): Promise<void> {
         args.host ||
         config.dev.host ||
         (args.routes && args.routes[0]) ||
-        envRootObj.route ||
-        (envRootObj.routes && envRootObj.routes[0]);
+        config.route ||
+        (config.routes && config.routes[0]);
 
       // When we're given a host (in one of the above ways), we do 2 things:
       // - We try to extract a host from it
@@ -909,8 +907,8 @@ export async function main(argv: string[]): Promise<void> {
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
-          jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
+          jsxFactory={args["jsx-factory"] || config.jsx_factory}
+          jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
           upstreamProtocol={upstreamProtocol}
           localProtocol={
             // The typings are not quite clever enough to handle element accesses, only property accesses,
@@ -945,9 +943,9 @@ export async function main(argv: string[]): Promise<void> {
             (args["compatibility-flags"] as string[]) ||
             config.compatibility_flags
           }
-          usageModel={envRootObj.usage_model}
+          usageModel={config.usage_model}
           bindings={{
-            kv_namespaces: envRootObj.kv_namespaces?.map(
+            kv_namespaces: config.kv_namespaces?.map(
               ({ binding, preview_id, id: _id }) => {
                 // In `dev`, we make folks use a separate kv namespace called
                 // `preview_id` instead of `id` so that they don't
@@ -968,12 +966,12 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: envRootObj.vars,
+            vars: config.vars,
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
-            durable_objects: envRootObj.durable_objects,
-            r2_buckets: envRootObj.r2_buckets,
-            unsafe: envRootObj.unsafe?.bindings,
+            durable_objects: config.durable_objects,
+            r2_buckets: config.r2_buckets,
+            unsafe: config.unsafe?.bindings,
           }}
         />
       );
@@ -1070,12 +1068,11 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const config = readConfig(
+      const configPath =
         (args.config as ConfigPath) ||
-          (args.script && findWranglerToml(path.dirname(args.script)))
-      );
-      const envRootObj = (args.env && config.env?.[args.env]) || config;
-      const entry = await getEntry(args, config, envRootObj, "publish");
+        (args.script && findWranglerToml(path.dirname(args.script)));
+      const config = readConfig(configPath, args.env);
+      const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
         console.warn(
@@ -1176,7 +1173,7 @@ export async function main(argv: string[]): Promise<void> {
       if (args.format === "pretty") {
         printWranglerBanner();
       }
-      const config = readConfig(args.config as ConfigPath);
+      const config = readConfig(args.config as ConfigPath, args.env);
 
       const scriptName = getScriptName(args, config);
 
@@ -1289,9 +1286,8 @@ export async function main(argv: string[]): Promise<void> {
           "***************************************************\n"
       );
 
-      const config = readConfig(args.config as ConfigPath);
-      const envRootObj = (args.env && config.env?.[args.env]) || config;
-      const entry = await getEntry({}, config, envRootObj, "dev");
+      const config = readConfig(args.config as ConfigPath, args.env);
+      const entry = await getEntry({}, config, "dev");
 
       const accountId = await requireAuth(config);
 
@@ -1305,8 +1301,8 @@ export async function main(argv: string[]): Promise<void> {
           legacyEnv={isLegacyEnv(args, config)}
           buildCommand={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={envRootObj?.jsx_factory}
-          jsxFragment={envRootObj?.jsx_fragment}
+          jsxFactory={config.jsx_factory}
+          jsxFragment={config.jsx_fragment}
           upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
           enableLocalPersistence={false}
@@ -1325,7 +1321,7 @@ export async function main(argv: string[]): Promise<void> {
           }
           usageModel={config.usage_model}
           bindings={{
-            kv_namespaces: envRootObj.kv_namespaces?.map(
+            kv_namespaces: config.kv_namespaces?.map(
               ({ binding, preview_id, id: _id }) => {
                 // In `dev`, we make folks use a separate kv namespace called
                 // `preview_id` instead of `id` so that they don't
@@ -1346,12 +1342,12 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: envRootObj.vars,
+            vars: config.vars,
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
-            durable_objects: envRootObj.durable_objects,
-            r2_buckets: envRootObj.r2_buckets,
-            unsafe: envRootObj.unsafe?.bindings,
+            durable_objects: config.durable_objects,
+            r2_buckets: config.r2_buckets,
+            unsafe: config.unsafe?.bindings,
           }}
           inspectorPort={await getPort({ port: 9229 })}
         />
@@ -1479,7 +1475,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1596,7 +1592,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1647,7 +1643,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
 
             const scriptName = getScriptName(args, config);
             if (!scriptName) {
@@ -1710,7 +1706,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             if (!config.name) {
               console.warn(
                 "No configured name present, using `worker` as a prefix for the title"
@@ -1747,7 +1743,7 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, undefined);
 
             const accountId = await requireAuth(config);
 
@@ -1784,7 +1780,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
 
             let id;
             try {
@@ -1880,7 +1876,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ttl, expiration, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
@@ -1940,7 +1936,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -1989,7 +1985,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -2028,7 +2024,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
 
             console.log(
@@ -2088,7 +2084,7 @@ export async function main(argv: string[]): Promise<void> {
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(readFileSync(filename), filename);
 
@@ -2195,7 +2191,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ filename, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args.env);
             const namespaceId = getNamespaceId(args, config);
 
             if (!args.force) {
@@ -2284,7 +2280,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, undefined);
 
             const accountId = await requireAuth(config);
 
@@ -2295,7 +2291,7 @@ export async function main(argv: string[]): Promise<void> {
         );
 
         r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-          const config = readConfig(args.config as ConfigPath);
+          const config = readConfig(args.config as ConfigPath, undefined);
 
           const accountId = await requireAuth(config);
 
@@ -2322,7 +2318,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, undefined);
 
             const accountId = await requireAuth(config);
 

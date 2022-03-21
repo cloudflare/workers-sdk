@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
-import type { Config, Environment } from "./config";
+import type { Config } from "./config";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -20,7 +20,6 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
 export async function getEntry(
   args: { script?: string; format?: CfScriptFormat | undefined },
   config: Config,
-  env: Environment,
   command: string
 ): Promise<Entry> {
   let file: string;
@@ -28,13 +27,13 @@ export async function getEntry(
   if (args.script) {
     // If the script name comes from the command line it is relative to the current working directory.
     file = path.resolve(args.script);
-  } else if (env.main === undefined) {
+  } else if (config.main === undefined) {
     throw new Error(
       `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
     );
   } else {
     directory = path.resolve(path.dirname(config.configPath ?? "."));
-    file = path.resolve(directory, env.main);
+    file = path.resolve(directory, config.main);
   }
 
   await runCustomBuild(file, config.build);
@@ -181,9 +180,9 @@ export function fileExists(filePath: string): boolean {
  * property in wrangler.toml
  */
 function hasDurableObjectImplementations(config: Config): boolean {
-  const allBindings = getDurableObjectBindings(config);
-
-  return allBindings.some((binding) => binding.script_name === undefined);
+  return config.durable_objects.bindings.some(
+    (binding) => binding.script_name === undefined
+  );
 }
 
 /**
@@ -192,13 +191,11 @@ function hasDurableObjectImplementations(config: Config): boolean {
  * externally defined Durable Object.
  */
 function generateAddScriptNameExamples(config: Config): string {
-  const allBindings = getDurableObjectBindings(config);
-
   function exampleScriptName(binding_name: string): string {
     return `${binding_name.toLowerCase().replaceAll("_", "-")}-worker`;
   }
 
-  return allBindings
+  return config.durable_objects.bindings
     .filter((binding) => binding.script_name === undefined)
     .map(({ name, class_name }) => {
       const script_name = exampleScriptName(name);
@@ -208,17 +205,4 @@ function generateAddScriptNameExamples(config: Config): string {
       return `${currentBinding} ==> ${fixedBinding}`;
     })
     .join("\n");
-}
-
-/**
- * Get the Durable Object bindings in a given config, including those
- * specified in different environments
- */
-function getDurableObjectBindings(config: Config) {
-  return [
-    ...config.durable_objects.bindings,
-    ...Object.values(config.env)
-      .map((env) => env.durable_objects.bindings)
-      .flat(),
-  ];
 }

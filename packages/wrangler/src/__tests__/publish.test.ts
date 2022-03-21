@@ -38,7 +38,7 @@ describe("publish", () => {
 
   describe("environments", () => {
     it("should use legacy environments by default", async () => {
-      writeWranglerToml();
+      writeWranglerToml({ env: { "some-env": {} } });
       writeWorkerSource();
       mockSubDomainRequest();
       mockUploadWorkerRequest({
@@ -74,7 +74,7 @@ describe("publish", () => {
       });
 
       it("appends the environment name when provided", async () => {
-        writeWranglerToml();
+        writeWranglerToml({ env: { "some-env": {} } });
         writeWorkerSource();
         mockSubDomainRequest();
         mockUploadWorkerRequest({
@@ -111,7 +111,7 @@ describe("publish", () => {
       });
 
       it("publishes as an environment when provided", async () => {
-        writeWranglerToml();
+        writeWranglerToml({ env: { "some-env": {} } });
         writeWorkerSource();
         mockSubDomainRequest();
         mockUploadWorkerRequest({
@@ -714,6 +714,7 @@ export default{
         site: {
           bucket: "assets",
         },
+        env: { "some-env": {} },
       });
       writeWorkerSource();
       writeAssets(assets);
@@ -760,6 +761,7 @@ export default{
         site: {
           bucket: "assets",
         },
+        env: { "some-env": {} },
       });
       writeWorkerSource();
       writeAssets(assets);

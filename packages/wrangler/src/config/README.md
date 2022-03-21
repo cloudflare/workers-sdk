@@ -25,24 +25,23 @@ This includes the `EnvironmentInheritable` and `EnvironmentNonInheritable` field
 ### Config
 
 The "non-overridable" types are defined in the [`ConfigFields`](./config.ts) type.
-Notably this also contains a property called `env` which is the container for the named environment configuration.
-
 The `Config` type is the overall configuration, which consists of the `ConfigFields` and also an `Environment`.
-In this case the `Environment`, here, corresponds to the top level environment.
+In this case the `Environment`, here, corresponds to the "currently active" environment. This is specified by the `--env` command line argument.
+If there is no argument passed then the currently active environment is the "top-level" environment.
 The fields in `Config` and `Environment` are not generally optional and so you can expect they have been filled with suitable inherited or default values.
 These types should be used when you are working with fields that should be passed to commands.
 
 ### RawConfig
 
 The `RawConfig` type is a version of `Config`, where all the fields are optional.
-The `RawConfig` type also includes `DeprecatedConfigFields` and extends and contains the `RawEnvironment` type,
-which is a version of `Environment` where all the fields are optional.
+The `RawConfig` type includes `DeprecatedConfigFields` and `EnvironmentMap`.
+It also extends the `RawEnvironment` type, which is a version of `Environment` where all the fields are optional.
 These optional fields map to the actual fields found in the `wrangler.toml`.
 These types should be used when you are working with raw configuration that is read or will be written to a `wrangler.toml`.
 
 ## Validation
 
-Validation is triggered by passing a `RawConfig` object to the `normalizeAndValidateConfig()` function.
+Validation is triggered by passing a `RawConfig` object, and the active environment name, to the `normalizeAndValidateConfig()` function.
 This function will return:
 
 - a `Config` object, where all the fields have suitable valid values
@@ -62,6 +61,7 @@ The [high level API](./index.ts) for configuration processing consists of the `f
 ### readConfig()
 
 The `readConfig()` function will find the nearest `wrangler.toml` file, load and parse it, then validate and normalize the values into a `Config` object.
+Note that you should pass the current active environment name in as a parameter. The resulting `Config` object will contain only the fields appropriate to that environment.
 If there are validation errors then it will throw a suitable error.
 
 ## Changing configuration

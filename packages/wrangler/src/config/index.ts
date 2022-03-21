@@ -13,7 +13,10 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig(configPath?: string): Config {
+export function readConfig(
+  configPath: string | undefined,
+  envName: string | undefined
+): Config {
   let rawConfig: RawConfig = {};
   if (!configPath) {
     configPath = findWranglerToml();
@@ -27,7 +30,8 @@ export function readConfig(configPath?: string): Config {
   // Process the top-level configuration.
   const { config, diagnostics } = normalizeAndValidateConfig(
     rawConfig,
-    configPath
+    configPath,
+    envName
   );
 
   if (diagnostics.hasWarnings()) {

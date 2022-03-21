@@ -38,25 +38,19 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config, accountId } = props;
 
-  // TODO: should we automatically fallback to top level config if there is no matching environment??
-  const envRootObj = (props.env && config.env[props.env]) || config;
-
   assert(
-    props.compatibilityDate || envRootObj.compatibility_date,
+    props.compatibilityDate || config.compatibility_date,
     "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
-  const triggers = props.triggers || envRootObj.triggers?.crons;
+  const triggers = props.triggers || config.triggers?.crons;
   const routes =
-    props.routes ??
-    envRootObj.routes ??
-    (envRootObj.route ? [envRootObj.route] : []) ??
-    [];
+    props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 
-  const deployToWorkersDev = envRootObj.workers_dev;
+  const deployToWorkersDev = config.workers_dev;
 
-  const jsxFactory = props.jsxFactory || envRootObj.jsx_factory;
-  const jsxFragment = props.jsxFragment || envRootObj.jsx_fragment;
+  const jsxFactory = props.jsxFactory || config.jsx_factory;
+  const jsxFragment = props.jsxFragment || config.jsx_fragment;
 
   const scriptName = props.name;
   assert(
@@ -160,12 +154,12 @@ export default async function publish(props: Props): Promise<void> {
     );
 
     const bindings: CfWorkerInit["bindings"] = {
-      kv_namespaces: (envRootObj.kv_namespaces || []).concat(
+      kv_namespaces: (config.kv_namespaces || []).concat(
         assets.namespace
           ? { binding: "__STATIC_CONTENT", id: assets.namespace }
           : []
       ),
-      vars: envRootObj.vars,
+      vars: config.vars,
       wasm_modules: config.wasm_modules,
       text_blobs: {
         ...config.text_blobs,
@@ -174,9 +168,9 @@ export default async function publish(props: Props): Promise<void> {
             __STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
           }),
       },
-      durable_objects: envRootObj.durable_objects,
-      r2_buckets: envRootObj.r2_buckets,
-      unsafe: envRootObj.unsafe?.bindings,
+      durable_objects: config.durable_objects,
+      r2_buckets: config.r2_buckets,
+      unsafe: config.unsafe?.bindings,
     };
 
     if (assets.manifest) {
@@ -197,11 +191,10 @@ export default async function publish(props: Props): Promise<void> {
       bindings,
       migrations,
       modules,
-      compatibility_date:
-        props.compatibilityDate ?? envRootObj.compatibility_date,
+      compatibility_date: props.compatibilityDate ?? config.compatibility_date,
       compatibility_flags:
-        props.compatibilityFlags ?? envRootObj.compatibility_flags,
-      usage_model: envRootObj.usage_model,
+        props.compatibilityFlags ?? config.compatibility_flags,
+      usage_model: config.usage_model,
     };
 
     const start = Date.now();
