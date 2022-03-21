@@ -22,6 +22,9 @@ import type { BuilderCallback } from "yargs";
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
 
+export const pagesBetaWarning =
+  "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+
 const EXIT_CALLBACKS: (() => void)[] = [];
 const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
@@ -760,7 +763,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "Auto reload HTML pages when change is detected",
             },
             // TODO: Miniflare user options
-          });
+          })
+          .epilogue(pagesBetaWarning);
       },
       async ({
         local,
@@ -774,6 +778,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         "live-reload": liveReload,
         _: [_pages, _dev, ...remaining],
       }) => {
+        // Beta message for `wrangler pages <commands>` usage
+        console.log(pagesBetaWarning);
+
         if (!local) {
           console.error("Only local mode is supported at the moment.");
           return;
@@ -1017,7 +1024,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 description:
                   "Watch for changes to the functions and automatically rebuild the Worker script",
               },
-            }),
+            })
+            .epilogue(pagesBetaWarning),
         async ({
           directory,
           "script-path": scriptPath,
@@ -1027,6 +1035,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           fallbackService,
           watch,
         }) => {
+          // Beta message for `wrangler pages <commands>` usage
+          console.log(pagesBetaWarning);
+
           await buildFunctions({
             scriptPath,
             outputConfigPath,

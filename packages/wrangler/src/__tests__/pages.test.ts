@@ -1,3 +1,4 @@
+import { execaSync } from "execa";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -23,22 +24,59 @@ describe("subcommand implicit help ran on imcomplete command execution", () => {
   function endEventLoop() {
     return new Promise((resolve) => setImmediate(resolve));
   }
-  it("no subcommand for 'pages' should display a list of available subcommands", async () => {
+
+  it("should should display a list of available subcommands, for pages with no subcommand", async () => {
     await runWrangler("pages");
     await endEventLoop();
+
     expect(std.out).toMatchInlineSnapshot(`
-    "wrangler pages
+      "wrangler pages
 
-    ⚡️ Configure Cloudflare Pages
+      ⚡️ Configure Cloudflare Pages
 
-    Commands:
-      wrangler pages dev [directory] [-- command]  🧑‍💻 Develop your full-stack Pages application locally
+      Commands:
+        wrangler pages dev [directory] [-- command]  🧑‍💻 Develop your full-stack Pages application locally
 
-    Flags:
-      -c, --config      Path to .toml configuration file  [string]
-      -h, --help        Show help  [boolean]
-      -v, --version     Show version number  [boolean]
-          --legacy-env  Use legacy environments  [boolean]"
+      Flags:
+        -c, --config      Path to .toml configuration file  [string]
+        -h, --help        Show help  [boolean]
+        -v, --version     Show version number  [boolean]
+            --legacy-env  Use legacy environments  [boolean]
+
+      🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
     `);
+  });
+});
+
+describe("beta message for subcommands", () => {
+  const isWindows = process.platform === "win32";
+  it("should display for pages:dev", async () => {
+    try {
+      execaSync("npx", ["wrangler", "pages", "dev"], {
+        shell: isWindows,
+        env: { BROWSER: "none", ...process.env },
+      }).stderr;
+    } catch (e: unknown) {
+      expect(e).toMatchInlineSnapshot(`
+        [Error: Command failed with exit code 1: npx wrangler pages dev
+        🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+        Must specify a directory of static assets to serve or a command to run.]
+      `);
+    }
+  });
+
+  it("should display for pages:functions", async () => {
+    try {
+      execaSync("npx", ["wrangler", "pages", "functions"], {
+        shell: isWindows,
+        env: { BROWSER: "none", ...process.env },
+      }).stderr;
+    } catch (e: unknown) {
+      expect(e).toMatchInlineSnapshot(`
+          [Error: Command failed with exit code 1: npx wrangler pages functions
+          🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+          Must specify a directory of static assets to serve or a command to run.]
+        `);
+    }
   });
 });
