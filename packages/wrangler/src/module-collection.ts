@@ -117,62 +117,67 @@ export default function createModuleCollector(props: {
           });
         });
 
-        build.onResolve(
-          {
-            filter: new RegExp(
-              [...props.wrangler1xlegacyModuleReferences.fileNames]
-                .map((fileName) => `^${fileName}$`)
-                .join("|")
-            ),
-          },
-          async (args: esbuild.OnResolveArgs) => {
-            if (
-              args.kind !== "import-statement" &&
-              args.kind !== "require-call"
-            ) {
-              return;
-            }
-            // In the future, this will simply throw an error
-            console.warn(
-              `Deprecation warning: detected a legacy module import in "./${path.relative(
-                process.cwd(),
-                args.importer
-              )}". This will stop working in the future. Replace references to "${
+        if (props.wrangler1xlegacyModuleReferences.fileNames.size > 0) {
+          build.onResolve(
+            {
+              filter: new RegExp(
+                "^(" +
+                  [...props.wrangler1xlegacyModuleReferences.fileNames].join(
+                    "|"
+                  ) +
+                  ")$"
+              ),
+            },
+            async (args: esbuild.OnResolveArgs) => {
+              if (
+                args.kind !== "import-statement" &&
+                args.kind !== "require-call"
+              ) {
+                return;
+              }
+              // In the future, this will simply throw an error
+              console.warn(
+                `Deprecation warning: detected a legacy module import in "./${path.relative(
+                  process.cwd(),
+                  args.importer
+                )}". This will stop working in the future. Replace references to "${
+                  args.path
+                }" with "./${args.path}";`
+              );
+
+              // take the file and massage it to a
+              // transportable/manageable format
+              const filePath = path.join(
+                props.wrangler1xlegacyModuleReferences.rootDirectory,
                 args.path
-              }" with "./${args.path}";`
-            );
+              );
+              const fileContent = await readFile(filePath);
+              const fileHash = crypto
+                .createHash("sha1")
+                .update(fileContent)
+                .digest("hex");
+              const fileName = `./${fileHash}-${path.basename(args.path)}`;
 
-            // take the file and massage it to a
-            // transportable/manageable format
-            const filePath = path.join(
-              props.wrangler1xlegacyModuleReferences.rootDirectory,
-              args.path
-            );
-            const fileContent = await readFile(filePath);
-            const fileHash = crypto
-              .createHash("sha1")
-              .update(fileContent)
-              .digest("hex");
-            const fileName = `./${fileHash}-${path.basename(args.path)}`;
-
-            const { rule } =
-              rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
-            if (rule) {
-              // add the module to the array
-              modules.push({
-                name: fileName,
-                content: fileContent,
-                type: RuleTypeToModuleType[rule.type],
-              });
-              return {
-                path: fileName, // change the reference to the changed module
-                external: props.format === "modules", // mark it as external in the bundle
-                namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
-                watchFiles: [filePath], // we also add the file to esbuild's watch list
-              };
+              const { rule } =
+                rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
+              if (rule) {
+                // add the module to the array
+                modules.push({
+                  name: fileName,
+                  content: fileContent,
+                  type: RuleTypeToModuleType[rule.type],
+                });
+                return {
+                  path: fileName, // change the reference to the changed module
+                  external: props.format === "modules", // mark it as external in the bundle
+                  namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
+                  watchFiles: [filePath], // we also add the file to esbuild's watch list
+                };
+              }
             }
-          }
-        );
+          );
+        }
+
         // ~ end legacy module specifier support ~
 
         rules?.forEach((rule) => {

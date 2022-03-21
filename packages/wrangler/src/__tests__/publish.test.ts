@@ -2362,6 +2362,30 @@ export default{
       `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
     );
   });
+
+  it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
+    // see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+
+    fs.writeFileSync(
+      "./index.js",
+      `import inner from './inner/index.js'; export default {};`
+    );
+    fs.mkdirSync("./inner", { recursive: true });
+    fs.writeFileSync("./inner/index.js", `export default 123`);
+    mockSubDomainRequest();
+    mockUploadWorkerRequest();
+
+    await runWrangler(
+      "publish index.js --compatibility-date 2022-03-17 --name test-name"
+    );
+    expect(std.out).toMatchInlineSnapshot(`
+      "Uploaded test-name (TIMINGS)
+      Published test-name (TIMINGS)
+        test-name.test-sub-domain.workers.dev"
+    `);
+    expect(std.err).toMatchInlineSnapshot(`""`);
+    expect(std.warn).toMatchInlineSnapshot(`""`);
+  });
 });
 
 /** Write a mock Worker script to disk. */
