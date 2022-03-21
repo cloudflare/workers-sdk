@@ -289,6 +289,7 @@ export function getAssetPaths(
   const baseDirectory = path.resolve(
     path.dirname(config.configPath ?? "wrangler.toml")
   );
+
   return assetDirectory
     ? {
         baseDirectory,
