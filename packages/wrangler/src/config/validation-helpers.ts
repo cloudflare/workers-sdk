@@ -183,7 +183,7 @@ export type ValidatorFn = (
 export const isString: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && typeof value !== "string") {
     diagnostics.errors.push(
-      `Expected "${field}" field to be a string but got ${JSON.stringify(
+      `Expected "${field}" to be of type string but got ${JSON.stringify(
         value
       )}.`
     );
@@ -201,7 +201,7 @@ export const isStringArray: ValidatorFn = (diagnostics, field, value) => {
     (!Array.isArray(value) || value.some((item) => typeof item !== "string"))
   ) {
     diagnostics.errors.push(
-      `Expected "${field}" field to be an array of strings but got ${JSON.stringify(
+      `Expected "${field}" to be of type string array but got ${JSON.stringify(
         value
       )}.`
     );
@@ -223,7 +223,7 @@ export const isObjectWith =
         !properties.every((prop) => prop in value))
     ) {
       diagnostics.errors.push(
-        `Expected "${field}" field to be an object containing properties ${properties} but got ${JSON.stringify(
+        `Expected "${field}" to be of type object, containing properties ${properties}, but got ${JSON.stringify(
           value
         )}.`
       );
@@ -284,7 +284,10 @@ export const isMutuallyExclusiveWith = <T extends RawEnvironment | RawConfig>(
     for (const exclusiveWith of fields) {
       if (container[exclusiveWith] !== undefined) {
         diagnostics.errors.push(
-          `Expected exactly one of ${JSON.stringify([field, ...fields])}.`
+          `Expected exactly one of the following fields ${JSON.stringify([
+            field,
+            ...fields,
+          ])}.`
         );
         return false;
       }
@@ -300,7 +303,7 @@ export const isMutuallyExclusiveWith = <T extends RawEnvironment | RawConfig>(
 export const isBoolean: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && typeof value !== "boolean") {
     diagnostics.errors.push(
-      `Expected "${field}" field to be a boolean but got ${JSON.stringify(
+      `Expected "${field}" to be of type boolean but got ${JSON.stringify(
         value
       )}.`
     );

@@ -120,7 +120,7 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"build.cwd\\" to be of type string but got 666.
           - Expected \\"build.watch_dir\\" to be of type string but got 777.
           - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-          - Expected \\"main\\" field to be a string but got 111.
+          - Expected \\"main\\" to be of type string but got 111.
           - Expected \\"dev.ip\\" to be of type string but got 222.
           - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
           - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
@@ -467,10 +467,10 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - Expected \\"wasm_modules['MODULE_1']\\" field to be a string but got 111.
-            - Expected \\"wasm_modules['MODULE_2']\\" field to be a string but got 222."
-        `);
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"wasm_modules['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"wasm_modules['MODULE_2']\\" to be of type string but got 222."
+      `);
     });
 
     it("should map `text_blobs` paths from relative to the config path to relative to the cwd", () => {
@@ -518,10 +518,10 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - Expected \\"text_blobs['MODULE_1']\\" field to be a string but got 111.
-            - Expected \\"text_blobs['MODULE_2']\\" field to be a string but got 222."
-        `);
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
+      `);
     });
 
     describe("(deprecated)", () => {
@@ -648,16 +648,16 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" field to be a string but got 888.
-          - Expected \\"routes\\" field to be an array of strings but got [666,777].
-          - Expected exactly one of [\\"routes\\",\\"route\\"].
-          - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
-          - Expected \\"account_id\\" field to be a string but got 222.
-          - Expected \\"compatibility_date\\" field to be a string but got 333.
-          - Expected \\"compatibility_flags\\" field to be an array of strings but got [444,555].
-          - Expected \\"jsx_factory\\" field to be a string but got 999.
-          - Expected \\"jsx_fragment\\" field to be a string but got 1000.
-          - Expected \\"name\\" field to be a string but got 111.
+          - Expected \\"route\\" to be of type string but got 888.
+          - Expected \\"routes\\" to be of type string array but got [666,777].
+          - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+          - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+          - Expected \\"account_id\\" to be of type string but got 222.
+          - Expected \\"compatibility_date\\" to be of type string but got 333.
+          - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+          - Expected \\"jsx_factory\\" to be of type string but got 999.
+          - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+          - Expected \\"name\\" to be of type string but got 111.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
@@ -1341,7 +1341,7 @@ describe("normalizeAndValidateConfig()", () => {
 
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - Expected exactly one of [\\"routes\\",\\"route\\"]."
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
         `);
       });
     });
@@ -1567,16 +1567,16 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" field to be a string but got 888.
-            - Expected \\"routes\\" field to be an array of strings but got [666,777].
-            - Expected exactly one of [\\"routes\\",\\"route\\"].
-            - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
-            - Expected \\"account_id\\" field to be a string but got 222.
-            - Expected \\"compatibility_date\\" field to be a string but got 333.
-            - Expected \\"compatibility_flags\\" field to be an array of strings but got [444,555].
-            - Expected \\"jsx_factory\\" field to be a string but got 999.
-            - Expected \\"jsx_fragment\\" field to be a string but got 1000.
-            - Expected \\"name\\" field to be a string but got 111.
+            - Expected \\"route\\" to be of type string but got 888.
+            - Expected \\"routes\\" to be of type string array but got [666,777].
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+            - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+            - Expected \\"account_id\\" to be of type string but got 222.
+            - Expected \\"compatibility_date\\" to be of type string but got 333.
+            - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+            - Expected \\"jsx_factory\\" to be of type string but got 999.
+            - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+            - Expected \\"name\\" to be of type string but got 111.
             - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
@@ -2408,7 +2408,7 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"env.ENV1\\" environment configuration
-              - Expected exactly one of [\\"routes\\",\\"route\\"]."
+              - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
         `);
       });
 
@@ -2453,7 +2453,7 @@ describe("normalizeAndValidateConfig()", () => {
 
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - Expected exactly one of [\\"routes\\",\\"route\\"]."
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
         `);
       });
 
