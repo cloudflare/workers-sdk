@@ -49,6 +49,22 @@ export async function getEntry(
     directory,
     args.format ?? config.build?.upload?.format
   );
+
+  if (format === "service-worker" && hasDurableObjectImplementations(config)) {
+    const errorMessage =
+      "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.";
+    const addScriptName =
+      "You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
+    const addScriptNameExamples = generateAddScriptNameExamples(config);
+    const migrateText =
+      "Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
+    const migrateUrl =
+      "https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
+    throw new Error(
+      `${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`
+    );
+  }
+
   return { file, directory, format };
 }
 
@@ -157,4 +173,52 @@ export function fileExists(filePath: string): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Returns true if the given config contains Durable Object bindings that are implemented
+ * in this worker instead of being implemented elsewhere, and bound via a `script_name`
+ * property in wrangler.toml
+ */
+function hasDurableObjectImplementations(config: Config): boolean {
+  const allBindings = getDurableObjectBindings(config);
+
+  return allBindings.some((binding) => binding.script_name === undefined);
+}
+
+/**
+ * Generates some help text based on the Durable Object bindings in a given
+ * config indicating how the user can add a `script_name` field to bind an
+ * externally defined Durable Object.
+ */
+function generateAddScriptNameExamples(config: Config): string {
+  const allBindings = getDurableObjectBindings(config);
+
+  function exampleScriptName(binding_name: string): string {
+    return `${binding_name.toLowerCase().replaceAll("_", "-")}-worker`;
+  }
+
+  return allBindings
+    .filter((binding) => binding.script_name === undefined)
+    .map(({ name, class_name }) => {
+      const script_name = exampleScriptName(name);
+      const currentBinding = `{ name = ${name}, class_name = ${class_name} }`;
+      const fixedBinding = `{ name = ${name}, class_name = ${class_name}, script_name = ${script_name} }`;
+
+      return `${currentBinding} ==> ${fixedBinding}`;
+    })
+    .join("\n");
+}
+
+/**
+ * Get the Durable Object bindings in a given config, including those
+ * specified in different environments
+ */
+function getDurableObjectBindings(config: Config) {
+  return [
+    ...config.durable_objects.bindings,
+    ...Object.values(config.env)
+      .map((env) => env.durable_objects.bindings)
+      .flat(),
+  ];
 }
