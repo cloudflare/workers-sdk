@@ -805,13 +805,15 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           console.log(`Compiling worker to "${scriptPath}"...`);
 
-          await buildFunctions({
-            scriptPath,
-            functionsDirectory,
-            sourcemap: true,
-            watch: true,
-            onEnd: () => scriptReadyResolve(),
-          });
+          try {
+            await buildFunctions({
+              scriptPath,
+              functionsDirectory,
+              sourcemap: true,
+              watch: true,
+              onEnd: () => scriptReadyResolve(),
+            });
+          } catch {}
 
           watch([functionsDirectory], {
             persistent: true,
