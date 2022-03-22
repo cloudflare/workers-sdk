@@ -4,7 +4,6 @@ import * as TOML from "@iarna/toml";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
   createFetchResult,
-  setMockFetchKVGetValue,
   setMockRawResponse,
   setMockResponse,
   unsetAllMocks,
@@ -588,6 +587,7 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -643,6 +643,7 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -692,6 +693,7 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -739,6 +741,7 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
           some-env.test-name.test-sub-domain.workers.dev"
@@ -787,6 +790,7 @@ export default{
         uploading as assets/file-1.2ca234f380.txt...
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
           test-name-some-env.test-sub-domain.workers.dev"
@@ -830,6 +834,7 @@ export default{
         skipping - already uploaded
         reading assets/file-2.txt...
         uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -868,6 +873,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -906,6 +912,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -945,6 +952,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -984,6 +992,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1023,6 +1032,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1062,6 +1072,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/file-1.txt...
         uploading as assets/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1103,6 +1114,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/directory-1/file-1.txt...
         uploading as assets/directory-1/file-1.2ca234f380.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1148,6 +1160,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`
         "reading assets/.well-known/file-2.txt...
         uploading as assets/.well-known/file-2.5938485188.txt...
+        ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1240,150 +1253,60 @@ export default{
       `);
     });
 
-    describe("expire unused assets", () => {
-      it("should expire uploaded assets that aren't included anymore", async () => {
-        const assets = [
-          { filePath: "assets/file-1.txt", content: "Content of file-1" },
-          { filePath: "assets/file-2.txt", content: "Content of file-2" },
-        ];
-        const kvNamespace = {
-          title: "__test-name-workers_sites_assets",
-          id: "__test-name-workers_sites_assets-id",
-        };
-        writeWranglerToml({
-          main: "./index.js",
-          site: {
-            bucket: "assets",
-          },
-        });
-        writeWorkerSource();
-        writeAssets(assets);
-        mockUploadWorkerRequest();
-        mockSubDomainRequest();
-        mockListKVNamespacesRequest(kvNamespace);
-        mockKeyListRequest(kvNamespace.id, [
-          // Put file-1 in the KV namespace
-          { name: "assets/file-1.2ca234f380.txt" },
-          // As well as a couple from a previous upload
-          { name: "assets/file-3.somehash.txt" },
-          { name: "assets/file-4.anotherhash.txt" },
-        ]);
-
-        // Check that we pull down the values of file-3.txt and file-4.txt
-        setMockFetchKVGetValue(
-          "some-account-id",
-          "__test-name-workers_sites_assets-id",
-          "assets/file-3.somehash.txt",
-          Buffer.from("Content of file-3", "utf8").toString("base64")
-        );
-        setMockFetchKVGetValue(
-          "some-account-id",
-          "__test-name-workers_sites_assets-id",
-          "assets/file-4.anotherhash.txt",
-          Buffer.from("Content of file-4", "utf8").toString("base64")
-        );
-
-        // and send them back up
-        mockUploadAssetsToKVRequest(kvNamespace.id, [
-          ...assets.filter((a) => a.filePath !== "assets/file-1.txt"),
-          {
-            filePath: "assets/file-3.txt",
-            content: "Content of file-3",
-            // expect to expire this asset 300 seconds from now
-            expiration_ttl: 300,
-          },
-          {
-            filePath: "assets/file-4.txt",
-            content: "Content of file-4",
-            // expect to expire this asset 300 seconds from now
-            expiration_ttl: 300,
-          },
-        ]);
-
-        await runWrangler("publish");
-
-        expect(std.out).toMatchInlineSnapshot(`
-          "reading assets/file-1.txt...
-          skipping - already uploaded
-          reading assets/file-2.txt...
-          uploading as assets/file-2.5938485188.txt...
-          expiring unused assets/file-3.somehash.txt...
-          expiring unused assets/file-4.anotherhash.txt...
-          Uploaded test-name (TIMINGS)
-          Published test-name (TIMINGS)
-            test-name.test-sub-domain.workers.dev"
-        `);
-        expect(std.err).toMatchInlineSnapshot(`""`);
+    it("should delete uploaded assets that aren't included anymore", async () => {
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      writeWranglerToml({
+        main: "./index.js",
+        site: {
+          bucket: "assets",
+        },
       });
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, [
+        // Put file-1 in the KV namespace
+        { name: "assets/file-1.2ca234f380.txt" },
+        // As well as a couple from a previous upload
+        { name: "assets/file-3.somehash.txt" },
+        { name: "assets/file-4.anotherhash.txt" },
+      ]);
 
-      it("should not try to expire uploaded assets that are already set to expire", async () => {
-        const assets = [
-          {
-            filePath: "assets/file-1.txt",
-            content: "Content of file-1",
-          },
-          { filePath: "assets/file-2.txt", content: "Content of file-2" },
-        ];
-        const kvNamespace = {
-          title: "__test-name-workers_sites_assets",
-          id: "__test-name-workers_sites_assets-id",
-        };
-        writeWranglerToml({
-          main: "./index.js",
-          site: {
-            bucket: "assets",
-          },
-        });
-        writeWorkerSource();
-        writeAssets(assets);
-        mockUploadWorkerRequest();
-        mockSubDomainRequest();
-        mockListKVNamespacesRequest(kvNamespace);
-        // These return with an expiration added on each of them
-        mockKeyListRequest(kvNamespace.id, [
-          // Put file-1 in the KV namespace, with an expiration
-          { name: "assets/file-1.2ca234f380.txt", expiration: 10000 },
-          // As well as a couple from a previous upload
-          // This one's set to expire so it won't be uploaded back
-          { name: "assets/file-3.somehash.txt", expiration: 10000 },
-          // This one will be sent back with an expiration value
-          { name: "assets/file-4.anotherhash.txt" },
-        ]);
+      // we upload only file-1.txt
+      mockUploadAssetsToKVRequest(kvNamespace.id, [
+        ...assets.filter((a) => a.filePath !== "assets/file-1.txt"),
+      ]);
 
-        setMockFetchKVGetValue(
-          "some-account-id",
-          "__test-name-workers_sites_assets-id",
-          "assets/file-4.anotherhash.txt",
-          Buffer.from("Content of file-4", "utf8").toString("base64")
-        );
+      // and mark file-3 and file-4 for deletion
+      mockDeleteUnusedAssetsRequest(kvNamespace.id, [
+        "assets/file-3.somehash.txt",
+        "assets/file-4.anotherhash.txt",
+      ]);
 
-        mockUploadAssetsToKVRequest(kvNamespace.id, [
-          // so it'll re-upload file-1 because it's set to expire
-          // and file-2 because it hasn't been uploaded yet
-          ...assets,
-          // and it'll expire file-4 since it's just not included anymore
-          {
-            filePath: "assets/file-4.txt",
-            content: "Content of file-4",
-            // expect to expire this asset 300 seconds from now
-            expiration_ttl: 300,
-          },
-        ]);
+      await runWrangler("publish");
 
-        await runWrangler("publish");
-
-        expect(std.out).toMatchInlineSnapshot(`
-          "reading assets/file-1.txt...
-          uploading as assets/file-1.2ca234f380.txt...
-          reading assets/file-2.txt...
-          uploading as assets/file-2.5938485188.txt...
-          expiring unused assets/file-4.anotherhash.txt...
-          Uploaded test-name (TIMINGS)
-          Published test-name (TIMINGS)
-            test-name.test-sub-domain.workers.dev"
-        `);
-        expect(std.err).toMatchInlineSnapshot(`""`);
-      });
+      expect(std.out).toMatchInlineSnapshot(`
+        "reading assets/file-1.txt...
+        skipping - already uploaded
+        reading assets/file-2.txt...
+        uploading as assets/file-2.5938485188.txt...
+        deleting assets/file-3.somehash.txt from the asset store...
+        deleting assets/file-4.anotherhash.txt from the asset store...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
 
@@ -2757,6 +2680,24 @@ function mockUploadAssetsToKVRequest(
         expect(upload.expiration).toEqual(asset.expiration);
         expect(upload.expiration_ttl).toEqual(asset.expiration_ttl);
       }
+      return null;
+    }
+  );
+}
+
+/** Create a mock handler for thr request that does a bulk delete of unused assets */
+function mockDeleteUnusedAssetsRequest(
+  expectedNamespaceId: string,
+  assets: string[]
+) {
+  setMockResponse(
+    "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
+    "DELETE",
+    ([_url, accountId, namespaceId], { body }) => {
+      expect(accountId).toEqual("some-account-id");
+      expect(namespaceId).toEqual(expectedNamespaceId);
+      const deletes = JSON.parse(body as string);
+      expect(assets).toEqual(deletes);
       return null;
     }
   );
