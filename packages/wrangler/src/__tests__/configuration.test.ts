@@ -1,6 +1,11 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "../config/validation";
-import type { RawConfig, RawEnvironment } from "../config";
+import type {
+  ConfigFields,
+  RawDevConfig,
+  RawConfig,
+  RawEnvironment,
+} from "../config";
 
 describe("normalizeAndValidateConfig()", () => {
   it("should use defaults for empty configuration", () => {
@@ -61,20 +66,13 @@ describe("normalizeAndValidateConfig()", () => {
 
   describe("top-level non-environment configuration", () => {
     it("should override config defaults with provided values", () => {
-      const main = "src/index.ts";
-      const expectedConfig: RawConfig = {
-        main,
+      const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
         legacy_env: true,
         dev: {
           ip: "255.255.255.255",
           port: 9999,
           local_protocol: "https",
           upstream_protocol: "http",
-        },
-        build: {
-          command: "COMMAND",
-          cwd: "CWD",
-          watch_dir: "WATCH_DIR",
         },
       };
 
@@ -84,28 +82,19 @@ describe("normalizeAndValidateConfig()", () => {
         undefined
       );
 
-      const resolvedMain = path.resolve(process.cwd(), main);
-      expect(config).toEqual(
-        expect.objectContaining({ ...expectedConfig, main: resolvedMain })
-      );
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should error on invalid top level fields", () => {
       const expectedConfig = {
-        main: 111,
         legacy_env: "FOO",
         dev: {
           ip: 222,
           port: "FOO",
           local_protocol: "wss",
           upstream_protocol: "ws",
-        },
-        build: {
-          command: 555,
-          cwd: 666,
-          watch_dir: 777,
         },
       };
 
@@ -121,11 +110,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"build.command\\" to be of type string but got 555.
-          - Expected \\"build.cwd\\" to be of type string but got 666.
-          - Expected \\"build.watch_dir\\" to be of type string but got 777.
           - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-          - Expected \\"main\\" to be of type string but got 111.
           - Expected \\"dev.ip\\" to be of type string but got 222.
           - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
           - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
@@ -173,100 +158,6 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
         "
       `);
-    });
-
-    it("should override build.upload config defaults with provided values and warn about deprecations", () => {
-      const expectedConfig: RawConfig = {
-        build: {
-          upload: {
-            dir: "src",
-            format: "modules",
-            main: "index.ts",
-            rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
-          },
-        },
-      };
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        path.resolve("project/wrangler.toml"),
-        undefined
-      );
-
-      expect(config.main).toEqual(path.resolve("project/src/index.ts"));
-      expect(config.build.upload).toBeUndefined();
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(true);
-      expect(normalizePath(diagnostics.renderWarnings()))
-        .toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.format\\":
-            The format is inferred automatically from the code.
-          - DEPRECATION: \\"build.upload.main\\":
-            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-            Then add the top level \`main\` field to your configuration file:
-            \`\`\`
-            main = \\"src/index.ts\\"
-            \`\`\`
-          - DEPRECATION: \\"build.upload.dir\\":
-            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-            \`\`\`
-            [[rules]]
-            type = \\"Text\\"
-            globs = [ \\"GLOB\\" ]
-            fallthrough = true
-            \`\`\`"
-      `);
-    });
-
-    it("should default custom build watch directories to src", () => {
-      const expectedConfig: RawConfig = {
-        build: {
-          command: "execute some --build",
-        },
-      };
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        undefined
-      );
-
-      expect(config.build).toEqual(
-        expect.objectContaining({
-          command: "execute some --build",
-          watch_dir: "./src",
-        })
-      );
-
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(false);
-    });
-
-    it("should resolve custom build watch directories relative to wrangler.toml", async () => {
-      const expectedConfig: RawConfig = {
-        build: {
-          command: "execute some --build",
-          watch_dir: "some/path",
-        },
-      };
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        "project/wrangler.toml",
-        undefined
-      );
-
-      expect(config.build).toEqual(
-        expect.objectContaining({
-          command: "execute some --build",
-          watch_dir: path.normalize("project/some/path"),
-        })
-      );
-
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should override `migrations` config defaults with provided values", () => {
@@ -579,7 +470,10 @@ describe("normalizeAndValidateConfig()", () => {
 
   describe("top-level environment configuration", () => {
     it("should override config defaults with provided values", () => {
-      const expectedConfig: RawConfig = {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
+
+      const expectedConfig: RawEnvironment = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
@@ -590,6 +484,12 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main,
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
         vars: {
           VAR1: "VALUE_1",
           VAR2: "VALUE_2",
@@ -638,7 +538,9 @@ describe("normalizeAndValidateConfig()", () => {
         undefined
       );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(config).toEqual(
+        expect.objectContaining({ ...expectedConfig, main: resolvedMain })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
@@ -647,7 +549,7 @@ describe("normalizeAndValidateConfig()", () => {
     });
 
     it("should error on invalid environment values", () => {
-      const expectedConfig: RawConfig = {
+      const expectedConfig: RawEnvironment = {
         name: 111,
         account_id: 222,
         compatibility_date: 333,
@@ -659,7 +561,13 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: 1000,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
-      } as unknown as RawConfig;
+        main: 1333,
+        build: {
+          command: 1444,
+          cwd: 1555,
+          watch_dir: 1666,
+        },
+      } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
@@ -675,14 +583,112 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"routes\\" to be of type string array but got [666,777].
           - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
           - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+          - Expected \\"build.command\\" to be of type string but got 1444.
+          - Expected \\"build.cwd\\" to be of type string but got 1555.
+          - Expected \\"build.watch_dir\\" to be of type string but got 1666.
           - Expected \\"account_id\\" to be of type string but got 222.
           - Expected \\"compatibility_date\\" to be of type string but got 333.
           - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
           - Expected \\"jsx_factory\\" to be of type string but got 999.
           - Expected \\"jsx_fragment\\" to be of type string but got 1000.
           - Expected \\"name\\" to be of type string but got 111.
+          - Expected \\"main\\" to be of type string but got 1333.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
+    });
+
+    it("should override build.upload config defaults with provided values and warn about deprecations", () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          upload: {
+            dir: "src",
+            format: "modules",
+            main: "index.ts",
+            rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        path.resolve("project/wrangler.toml"),
+        undefined
+      );
+
+      expect(config.main).toEqual(path.resolve("project/src/index.ts"));
+      expect(config.build.upload).toBeUndefined();
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(true);
+      expect(normalizePath(diagnostics.renderWarnings()))
+        .toMatchInlineSnapshot(`
+        "Processing project/wrangler.toml configuration:
+          - DEPRECATION: \\"build.upload.format\\":
+            The format is inferred automatically from the code.
+          - DEPRECATION: \\"build.upload.main\\":
+            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+            Then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"src/index.ts\\"
+            \`\`\`
+          - DEPRECATION: \\"build.upload.dir\\":
+            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
+          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+            \`\`\`
+            [[rules]]
+            type = \\"Text\\"
+            globs = [ \\"GLOB\\" ]
+            fallthrough = true
+            \`\`\`"
+      `);
+    });
+
+    it("should default custom build watch directories to src", () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          command: "execute some --build",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        undefined
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: "./src",
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          command: "execute some --build",
+          watch_dir: "some/path",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        undefined
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: path.normalize("project/some/path"),
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     describe("durable_objects field", () => {
@@ -1427,7 +1433,7 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
-    it("should warn if we specify an environment that does not match the named environments", () => {
+    it("should error if we specify an environment that does not match the named environments", () => {
       const rawConfig: RawConfig = { env: { ENV1: {} } };
       const { diagnostics } = normalizeAndValidateConfig(
         rawConfig,
@@ -1453,6 +1459,8 @@ describe("normalizeAndValidateConfig()", () => {
     });
 
     it("should use top-level values for inheritable config fields", () => {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
       const expectedConfig: RawConfig = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
@@ -1464,6 +1472,12 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main,
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1472,13 +1486,17 @@ describe("normalizeAndValidateConfig()", () => {
         "DEV"
       );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(config).toEqual(
+        expect.objectContaining({ ...expectedConfig, main: resolvedMain })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should override top-level values for inheritable config fields", () => {
-      const environment: RawEnvironment = {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
+      const rawEnv: RawEnvironment = {
         name: "ENV_NAME",
         account_id: "ENV_ACCOUNT_ID",
         compatibility_date: "2022-02-02",
@@ -1489,8 +1507,14 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: "ENV_JSX_FRAGMENT",
         triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
         usage_model: "unbound",
+        main,
+        build: {
+          command: "ENV_COMMAND",
+          cwd: "ENV_CWD",
+          watch_dir: "ENV_WATCH_DIR",
+        },
       };
-      const expectedConfig: RawConfig = {
+      const rawConfig: RawConfig = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
@@ -1501,18 +1525,26 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: "JSX_FRAGMENT",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main: "top-level.js",
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
         env: {
-          ENV1: environment,
+          ENV1: rawEnv,
         },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
+        rawConfig,
         undefined,
         "ENV1"
       );
 
-      expect(config).toEqual(expect.objectContaining(environment));
+      expect(config).toEqual(
+        expect.objectContaining({ ...rawEnv, main: resolvedMain })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
     });
@@ -1664,6 +1696,12 @@ describe("normalizeAndValidateConfig()", () => {
         jsx_fragment: 1000,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
+        main: 1333,
+        build: {
+          command: 1444,
+          cwd: 1555,
+          watch_dir: 1666,
+        },
       } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1682,12 +1720,16 @@ describe("normalizeAndValidateConfig()", () => {
             - Expected \\"routes\\" to be of type string array but got [666,777].
             - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
             - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+            - Expected \\"build.command\\" to be of type string but got 1444.
+            - Expected \\"build.cwd\\" to be of type string but got 1555.
+            - Expected \\"build.watch_dir\\" to be of type string but got 1666.
             - Expected \\"account_id\\" to be of type string but got 222.
             - Expected \\"compatibility_date\\" to be of type string but got 333.
             - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
             - Expected \\"jsx_factory\\" to be of type string but got 999.
             - Expected \\"jsx_fragment\\" to be of type string but got 1000.
             - Expected \\"name\\" to be of type string but got 111.
+            - Expected \\"main\\" to be of type string but got 1333.
             - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
