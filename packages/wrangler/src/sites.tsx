@@ -4,13 +4,13 @@ import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import {
   createNamespace,
-  getKeyValue,
   listNamespaceKeys,
   listNamespaces,
   putBulkKeyValue,
+  deleteBulkKeyValue,
 } from "./kv";
 import type { Config } from "./config";
-import type { KeyValue, NamespaceKeyInfo } from "./kv";
+import type { KeyValue } from "./kv";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
@@ -18,7 +18,6 @@ const ALWAYS_IGNORE = new Set(["node_modules"]);
 const HIDDEN_FILES_TO_INCLUDE = new Set([
   ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
 ]);
-const FIVE_MINUTES = 60 * 5; // expressed in seconds, since that's what the api expects
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
@@ -125,10 +124,7 @@ export async function syncAssets(
 
   // let's get all the keys in this namespace
   const result = await listNamespaceKeys(accountId, namespace);
-  const keyMap = result.reduce<Record<string, NamespaceKeyInfo>>(
-    (km, key) => Object.assign(km, { [key.name]: key }),
-    {}
-  );
+  const keys = new Set(result.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
   const toUpload: KeyValue[] = [];
@@ -158,7 +154,7 @@ export async function syncAssets(
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
-    if (!(assetKey in keyMap) || keyMap[assetKey].expiration) {
+    if (!keys.has(assetKey)) {
       console.log(`uploading as ${assetKey}...`);
       toUpload.push({
         key: assetKey,
@@ -168,43 +164,26 @@ export async function syncAssets(
     } else {
       console.log(`skipping - already uploaded`);
     }
-    // remove the key from the set so we know we've seen it
-    delete keyMap[assetKey];
+
+    // remove the key from the set so we know what we've already uploaded
+    keys.delete(assetKey);
     manifest[path.relative(siteAssets.assetDirectory, absAssetFile)] = assetKey;
   }
 
-  // `keyMap` now contains the assets that we need to expire
-
-  let toExpire: KeyValue[] = [];
-  for (const asset of Object.values(keyMap)) {
-    if (!asset.expiration) {
-      console.log(`expiring unused ${asset.name}...`);
-      toExpire.push({
-        key: asset.name,
-        value: "", // we'll fill all the values in one go
-        // we use expiration_ttl, since we can't trust the time
-        // that a deploy source might provide (eg - https://github.com/cloudflare/wrangler/issues/2224)
-        expiration_ttl: FIVE_MINUTES,
-        base64: true,
-      });
-    }
+  // keys now contains all the files we're deleting
+  for (const key of keys) {
+    console.log(`deleting ${key} from the asset store...`);
   }
 
-  // TODO: batch these in groups if it causes problems
-  toExpire = await Promise.all(
-    toExpire.map(async (asset) => ({
-      ...asset,
-      // it would be great if we didn't have to do this fetch at all
-      value: await getKeyValue(accountId, namespace, asset.key),
-    }))
-  );
+  await Promise.all([
+    // upload all the new assets
+    putBulkKeyValue(accountId, namespace, toUpload, () => {}),
+    // delete all the unused assets
+    deleteBulkKeyValue(accountId, namespace, Array.from(keys), () => {}),
+  ]);
 
-  await putBulkKeyValue(
-    accountId,
-    namespace,
-    toUpload.concat(toExpire),
-    () => {}
-  );
+  console.log("↗️  Done syncing assets");
+
   return { manifest, namespace };
 }
 
