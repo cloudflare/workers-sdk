@@ -3,7 +3,13 @@ import { parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { Config, RawConfig } from "./config";
 
-export type { Config, RawConfig } from "./config";
+export type {
+  Config,
+  RawConfig,
+  ConfigFields,
+  DevConfig,
+  RawDevConfig,
+} from "./config";
 export type {
   Environment,
   RawEnvironment,

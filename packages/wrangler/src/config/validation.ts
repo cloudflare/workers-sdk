@@ -23,14 +23,13 @@ import {
   isMutuallyExclusiveWith,
   inheritableInLegacyEnvironments,
 } from "./validation-helpers";
+import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
-  Config,
+  RawEnvironment,
   DeprecatedUpload,
-  DevConfig,
-  RawConfig,
-  RawDevConfig,
-} from "./config";
-import type { RawEnvironment, Environment, Rule } from "./environment";
+  Environment,
+  Rule,
+} from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
 /**
@@ -80,13 +79,6 @@ export function normalizeAndValidateConfig(
     true
   );
 
-  const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
-    diagnostics,
-    rawConfig,
-    rawConfig.build ?? {},
-    configPath
-  );
-
   validateOptionalProperty(
     diagnostics,
     "",
@@ -101,8 +93,7 @@ export function normalizeAndValidateConfig(
   const topLevelEnv = normalizeAndValidateEnvironment(
     diagnostics,
     configPath,
-    rawConfig,
-    deprecatedUpload
+    rawConfig
   );
 
   let activeEnv = topLevelEnv;
@@ -116,7 +107,6 @@ export function normalizeAndValidateConfig(
         envDiagnostics,
         configPath,
         rawEnv,
-        deprecatedUpload,
         envName,
         topLevelEnv,
         isLegacyEnv,
@@ -170,7 +160,6 @@ export function normalizeAndValidateConfig(
       "text_blobs",
       rawConfig.text_blobs
     ),
-    build,
   };
 
   validateAdditionalProperties(
@@ -188,7 +177,7 @@ export function normalizeAndValidateConfig(
  */
 function normalizeAndValidateBuild(
   diagnostics: Diagnostics,
-  rawConfig: RawConfig,
+  rawEnv: RawEnvironment,
   rawBuild: Config["build"],
   configPath: string | undefined
 ): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
@@ -208,13 +197,13 @@ function normalizeAndValidateBuild(
 
   deprecated(
     diagnostics,
-    rawConfig,
+    rawEnv,
     "build.upload.format",
     "The format is inferred automatically from the code.",
     true
   );
 
-  if (rawConfig.main !== undefined && rawBuild.upload?.main) {
+  if (rawEnv.main !== undefined && rawBuild.upload?.main) {
     diagnostics.errors.push(
       `Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.\n` +
         `They serve the same purpose: to point to the entry-point of your worker.\n` +
@@ -223,7 +212,7 @@ function normalizeAndValidateBuild(
   } else {
     deprecated(
       diagnostics,
-      rawConfig,
+      rawEnv,
       "build.upload.main",
       `Delete the \`build.upload.main\` and \`build.upload.dir\` fields.\n` +
         `Then add the top level \`main\` field to your configuration file:\n` +
@@ -238,7 +227,7 @@ function normalizeAndValidateBuild(
 
     deprecated(
       diagnostics,
-      rawConfig,
+      rawEnv,
       "build.upload.dir",
       `Use the top level "main" field or a command-line argument to specify the entry-point for the Worker.`,
       true
@@ -280,7 +269,7 @@ function normalizeAndValidateMainField(
       const directory = path.resolve(configDir);
       return path.resolve(directory, rawMain);
     } else {
-      return;
+      return rawMain;
     }
   } else if (deprecatedUpload?.main !== undefined) {
     const directory = path.resolve(
@@ -448,8 +437,7 @@ function normalizeAndValidateModulePaths(
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
   configPath: string | undefined,
-  topLevelEnv: RawEnvironment,
-  deprecatedUpload: DeprecatedUpload | undefined
+  topLevelEnv: RawEnvironment
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -458,7 +446,6 @@ function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
   configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedUpload: DeprecatedUpload | undefined,
   envName: string,
   topLevelEnv: Environment,
   isLegacyEnv: boolean,
@@ -468,7 +455,6 @@ function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
   configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedUpload: DeprecatedUpload | undefined,
   envName = "top level",
   topLevelEnv?: Environment | undefined,
   isLegacyEnv?: boolean,
@@ -533,6 +519,13 @@ function normalizeAndValidateEnvironment(
     "workers_dev",
     isBoolean,
     !(routes || route)
+  );
+
+  const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
+    diagnostics,
+    rawEnv,
+    rawEnv.build ?? topLevelEnv?.build ?? {},
+    configPath
   );
 
   const environment: Environment = {
@@ -623,6 +616,7 @@ function normalizeAndValidateEnvironment(
       isOneOf("bundled", "unbound"),
       undefined
     ),
+    build,
     workers_dev,
     // Not inherited fields
     vars: notInheritable(
