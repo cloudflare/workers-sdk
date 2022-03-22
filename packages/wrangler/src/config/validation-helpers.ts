@@ -563,10 +563,10 @@ const isBindingObject = (value: object): value is { [key: string]: unknown } =>
 /**
  * Transform an array of strings into an english representation
  *
- * ["hello"] => "hello"
- * ["hello", "world"] => "hello and world"
- * ["one", "two", "three"] => "one, two, and three"
- * ["a", "b", "c", ..., "y", "z"] => "a, b, c, ..., y, and z"
+ * - `["hello"]` --> "hello"
+ * - `["hello", "world"]` --> "hello and world"
+ * - `["one", "two", "three"]` --> "one, two, and three"
+ * - `["a", "b", "c", ..., "y", "z"]` --> "a, b, c, ..., y, and z"
  */
 export const englishify = (arr: string[]): string => {
   switch (arr.length) {

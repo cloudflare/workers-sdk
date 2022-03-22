@@ -1700,6 +1700,446 @@ export default{
   });
 
   describe("bindings", () => {
+    it("should allow bindings with different names", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "DURABLE_OBJECT_ONE",
+              class_name: "SomeDurableObject",
+              script_name: "some-durable-object-worker",
+            },
+            {
+              name: "DURABLE_OBJECT_TWO",
+              class_name: "AnotherDurableObject",
+              script_name: "another-durable-object-worker",
+            },
+          ],
+        },
+        kv_namespaces: [
+          { binding: "KV_NAMESPACE_ONE", id: "kv-ns-one-id" },
+          { binding: "KV_NAMESPACE_TWO", id: "kv-ns-two-id" },
+        ],
+        r2_buckets: [
+          { binding: "R2_BUCKET_ONE", bucket_name: "r2-bucket-one-name" },
+          { binding: "R2_BUCKET_TWO", bucket_name: "r2-bucket-two-name" },
+        ],
+        text_blobs: {
+          TEXT_BLOB_ONE: "./my-entire-app-depends-on-this.cfg",
+          TEXT_BLOB_TWO: "./the-entirety-of-human-knowledge.txt",
+        },
+        unsafe: {
+          bindings: [
+            {
+              name: "UNSAFE_BINDING_ONE",
+              type: "some unsafe thing",
+              data: { some: { unsafe: "thing" } },
+            },
+            {
+              name: "UNSAFE_BINDING_TWO",
+              type: "another unsafe thing",
+              data: 1337,
+            },
+          ],
+        },
+        vars: {
+          ENV_VAR_ONE: 123,
+          ENV_VAR_TWO: "Hello, I'm an environment variable",
+        },
+        wasm_modules: {
+          WASM_MODULE_ONE: "./some_wasm.wasm",
+          WASM_MODULE_TWO: "./more_wasm.wasm",
+        },
+      });
+
+      writeWorkerSource({ type: "sw" });
+      fs.writeFileSync("./my-entire-app-depends-on-this.cfg", "config = value");
+      fs.writeFileSync(
+        "./the-entirety-of-human-knowledge.txt",
+        "Everything's bigger in Texas"
+      );
+      fs.writeFileSync("./some_wasm.wasm", "some wasm");
+      fs.writeFileSync("./more_wasm.wasm", "more wasm");
+
+      mockUploadWorkerRequest({
+        expectedType: "sw",
+        expectedBindings: [
+          {
+            name: "KV_NAMESPACE_ONE",
+            namespace_id: "kv-ns-one-id",
+            type: "kv_namespace",
+          },
+          {
+            name: "KV_NAMESPACE_TWO",
+            namespace_id: "kv-ns-two-id",
+            type: "kv_namespace",
+          },
+          {
+            class_name: "SomeDurableObject",
+            name: "DURABLE_OBJECT_ONE",
+            script_name: "some-durable-object-worker",
+            type: "durable_object_namespace",
+          },
+          {
+            class_name: "AnotherDurableObject",
+            name: "DURABLE_OBJECT_TWO",
+            script_name: "another-durable-object-worker",
+            type: "durable_object_namespace",
+          },
+          {
+            bucket_name: "r2-bucket-one-name",
+            name: "R2_BUCKET_ONE",
+            type: "r2_bucket",
+          },
+          {
+            bucket_name: "r2-bucket-two-name",
+            name: "R2_BUCKET_TWO",
+            type: "r2_bucket",
+          },
+          { json: 123, name: "ENV_VAR_ONE", type: "json" },
+          {
+            name: "ENV_VAR_TWO",
+            text: "Hello, I'm an environment variable",
+            type: "plain_text",
+          },
+          {
+            name: "WASM_MODULE_ONE",
+            part: "WASM_MODULE_ONE",
+            type: "wasm_module",
+          },
+          {
+            name: "WASM_MODULE_TWO",
+            part: "WASM_MODULE_TWO",
+            type: "wasm_module",
+          },
+          { name: "TEXT_BLOB_ONE", part: "TEXT_BLOB_ONE", type: "text_blob" },
+          { name: "TEXT_BLOB_TWO", part: "TEXT_BLOB_TWO", type: "text_blob" },
+          {
+            data: { some: { unsafe: "thing" } },
+            name: "UNSAFE_BINDING_ONE",
+            type: "some unsafe thing",
+          },
+          {
+            data: 1337,
+            name: "UNSAFE_BINDING_TWO",
+            type: "another unsafe thing",
+          },
+        ],
+      });
+      mockSubDomainRequest();
+
+      await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time."
+      `);
+    });
+
+    it("should error when bindings of different types have the same name", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "CONFLICTING_NAME_ONE",
+              class_name: "SomeDurableObject",
+              script_name: "some-durable-object-worker",
+            },
+            {
+              name: "CONFLICTING_NAME_TWO",
+              class_name: "AnotherDurableObject",
+              script_name: "another-durable-object-worker",
+            },
+          ],
+        },
+        kv_namespaces: [
+          { binding: "CONFLICTING_NAME_ONE", id: "kv-ns-one-id" },
+          { binding: "CONFLICTING_NAME_TWO", id: "kv-ns-two-id" },
+        ],
+        r2_buckets: [
+          {
+            binding: "CONFLICTING_NAME_ONE",
+            bucket_name: "r2-bucket-one-name",
+          },
+          {
+            binding: "CONFLICTING_NAME_THREE",
+            bucket_name: "r2-bucket-two-name",
+          },
+        ],
+        text_blobs: {
+          CONFLICTING_NAME_THREE: "./my-entire-app-depends-on-this.cfg",
+          CONFLICTING_NAME_FOUR: "./the-entirety-of-human-knowledge.txt",
+        },
+        unsafe: {
+          bindings: [
+            {
+              name: "CONFLICTING_NAME_THREE",
+              type: "some unsafe thing",
+              data: { some: { unsafe: "thing" } },
+            },
+            {
+              name: "CONFLICTING_NAME_FOUR",
+              type: "another unsafe thing",
+              data: 1337,
+            },
+          ],
+        },
+        vars: {
+          ENV_VAR_ONE: 123,
+          CONFLICTING_NAME_THREE: "Hello, I'm an environment variable",
+        },
+        wasm_modules: {
+          WASM_MODULE_ONE: "./some_wasm.wasm",
+          CONFLICTING_NAME_THREE: "./more_wasm.wasm",
+        },
+      });
+
+      writeWorkerSource({ type: "sw" });
+      fs.writeFileSync("./my-entire-app-depends-on-this.cfg", "config = value");
+      fs.writeFileSync(
+        "./the-entirety-of-human-knowledge.txt",
+        "Everything's bigger in Texas"
+      );
+      fs.writeFileSync("./some_wasm.wasm", "some wasm");
+      fs.writeFileSync("./more_wasm.wasm", "more wasm");
+
+      await expect(runWrangler("publish index.js")).rejects
+        .toMatchInlineSnapshot(`
+              [Error: Processing wrangler.toml configuration:
+                - Found r2_buckets, kv_namespaces, and durable_objects bindings using CONFLICTING_NAME_ONE.
+                - Found kv_namespaces and durable_objects bindings using CONFLICTING_NAME_TWO.
+                - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
+                - Found unsafe and text_blobs bindings using CONFLICTING_NAME_FOUR.]
+            `);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - Found r2_buckets, kv_namespaces, and durable_objects bindings using CONFLICTING_NAME_ONE.
+          - Found kv_namespaces and durable_objects bindings using CONFLICTING_NAME_TWO.
+          - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
+          - Found unsafe and text_blobs bindings using CONFLICTING_NAME_FOUR.
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time."
+      `);
+    });
+
+    it("should error when bindings of the same type have the same name", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "CONFLICTING_DURABLE_OBJECT_NAME",
+              class_name: "SomeDurableObject",
+              script_name: "some-durable-object-worker",
+            },
+            {
+              name: "CONFLICTING_DURABLE_OBJECT_NAME",
+              class_name: "AnotherDurableObject",
+              script_name: "another-durable-object-worker",
+            },
+          ],
+        },
+        kv_namespaces: [
+          { binding: "CONFLICTING_KV_NAMESPACE_NAME", id: "kv-ns-one-id" },
+          { binding: "CONFLICTING_KV_NAMESPACE_NAME", id: "kv-ns-two-id" },
+        ],
+        r2_buckets: [
+          {
+            binding: "CONFLICTING_R2_BUCKET_NAME",
+            bucket_name: "r2-bucket-one-name",
+          },
+          {
+            binding: "CONFLICTING_R2_BUCKET_NAME",
+            bucket_name: "r2-bucket-two-name",
+          },
+        ],
+        unsafe: {
+          bindings: [
+            {
+              name: "CONFLICTING_UNSAFE_NAME",
+              type: "some unsafe thing",
+              data: { some: { unsafe: "thing" } },
+            },
+            {
+              name: "CONFLICTING_UNSAFE_NAME",
+              type: "another unsafe thing",
+              data: 1337,
+            },
+          ],
+        },
+        // text_blobs, vars, and wasm_modules are fine because they're object literals,
+        // and by definition cannot have two keys of the same name
+        //
+        // text_blobs: {
+        //   CONFLICTING_TEXT_BLOB_NAME: "./my-entire-app-depends-on-this.cfg",
+        //   CONFLICTING_TEXT_BLOB_NAME: "./the-entirety-of-human-knowledge.txt",
+        // },
+        // vars: {
+        //   CONFLICTING_VARS_NAME: 123,
+        //   CONFLICTING_VARS_NAME: "Hello, I'm an environment variable",
+        // },
+        // wasm_modules: {
+        //   CONFLICTING_WASM_MODULE_NAME: "./some_wasm.wasm",
+        //   CONFLICTING_WASM_MODULE_NAME: "./more_wasm.wasm",
+        // },
+      });
+
+      writeWorkerSource({ type: "sw" });
+
+      await expect(runWrangler("publish index.js")).rejects
+        .toMatchInlineSnapshot(`
+              [Error: Processing wrangler.toml configuration:
+                - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+                - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
+                - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
+                - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.]
+            `);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+          - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
+          - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
+          - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time."
+      `);
+    });
+
+    it("should error correctly when bindings of the same and different types use the same name", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "CONFLICTING_DURABLE_OBJECT_NAME",
+              class_name: "SomeDurableObject",
+              script_name: "some-durable-object-worker",
+            },
+            {
+              name: "CONFLICTING_DURABLE_OBJECT_NAME",
+              class_name: "AnotherDurableObject",
+              script_name: "another-durable-object-worker",
+            },
+          ],
+        },
+        kv_namespaces: [
+          {
+            binding: "CONFLICTING_KV_NAMESPACE_NAME",
+            id: "kv-ns-one-id",
+          },
+          {
+            binding: "CONFLICTING_KV_NAMESPACE_NAME",
+            id: "kv-ns-two-id",
+          },
+          { binding: "CONFLICTING_NAME_ONE", id: "kv-ns-three-id" },
+          { binding: "CONFLICTING_NAME_TWO", id: "kv-ns-four-id" },
+        ],
+        r2_buckets: [
+          {
+            binding: "CONFLICTING_R2_BUCKET_NAME",
+            bucket_name: "r2-bucket-one-name",
+          },
+          {
+            binding: "CONFLICTING_R2_BUCKET_NAME",
+            bucket_name: "r2-bucket-two-name",
+          },
+          {
+            binding: "CONFLICTING_NAME_THREE",
+            bucket_name: "r2-bucket-three-name",
+          },
+          {
+            binding: "CONFLICTING_NAME_FOUR",
+            bucket_name: "r2-bucket-four-name",
+          },
+        ],
+        text_blobs: {
+          CONFLICTING_NAME_THREE: "./my-entire-app-depends-on-this.cfg",
+          CONFLICTING_NAME_FOUR: "./the-entirety-of-human-knowledge.txt",
+        },
+        unsafe: {
+          bindings: [
+            {
+              name: "CONFLICTING_UNSAFE_NAME",
+              type: "some unsafe thing",
+              data: { some: { unsafe: "thing" } },
+            },
+            {
+              name: "CONFLICTING_UNSAFE_NAME",
+              type: "another unsafe thing",
+              data: 1337,
+            },
+            {
+              name: "CONFLICTING_NAME_THREE",
+              type: "yet another unsafe thing",
+              data: "how is a string unsafe?",
+            },
+            {
+              name: "CONFLICTING_NAME_FOUR",
+              type: "a fourth unsafe thing",
+              data: null,
+            },
+          ],
+        },
+        vars: {
+          ENV_VAR_ONE: 123,
+          CONFLICTING_NAME_THREE: "Hello, I'm an environment variable",
+        },
+        wasm_modules: {
+          WASM_MODULE_ONE: "./some_wasm.wasm",
+          CONFLICTING_NAME_THREE: "./more_wasm.wasm",
+        },
+      });
+
+      writeWorkerSource({ type: "sw" });
+      fs.writeFileSync("./my-entire-app-depends-on-this.cfg", "config = value");
+      fs.writeFileSync(
+        "./the-entirety-of-human-knowledge.txt",
+        "Everything's bigger in Texas"
+      );
+      fs.writeFileSync("./some_wasm.wasm", "some wasm");
+      fs.writeFileSync("./more_wasm.wasm", "more wasm");
+
+      await expect(runWrangler("publish index.js")).rejects
+        .toMatchInlineSnapshot(`
+              [Error: Processing wrangler.toml configuration:
+                - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+                - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
+                - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
+                - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
+                - Found unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_FOUR.
+                - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.]
+            `);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+          - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
+          - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
+          - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
+          - Found unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_FOUR.
+          - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.
+
+        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "Processing wrangler.toml configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time."
+      `);
+    });
+
     describe("[wasm_modules]", () => {
       it("should be able to define wasm modules for service-worker format workers", async () => {
         writeWranglerToml({
@@ -1720,10 +2160,10 @@ export default{
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1745,10 +2185,10 @@ export default{
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-        "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
+                  "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
 
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-      `);
+                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+              `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -1783,10 +2223,10 @@ export default{
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1815,10 +2255,10 @@ export default{
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1848,10 +2288,10 @@ export default{
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1873,10 +2313,10 @@ export default{
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
+                  "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
 
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-      `);
+                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+              `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -1915,10 +2355,10 @@ export default{
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1949,10 +2389,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -1973,10 +2413,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -2008,10 +2448,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -2044,10 +2484,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -2078,10 +2518,10 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -2138,15 +2578,15 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time."
-      `);
+                  "Processing wrangler.toml configuration:
+                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+              `);
       });
       it("should warn if using unsafe bindings already handled by wrangler", async () => {
         writeWranglerToml({
@@ -2174,19 +2614,19 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time.
-          - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
-            - The binding type \\"plain_text\\" is directly supported by wrangler.
-              Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
-              For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
-      `);
+                  "Processing wrangler.toml configuration:
+                    - \\"unsafe\\" fields are experimental and may change or break at any time.
+                    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+                      - The binding type \\"plain_text\\" is directly supported by wrangler.
+                        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
+                        For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
+              `);
       });
     });
   });

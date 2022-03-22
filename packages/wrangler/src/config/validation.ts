@@ -1140,9 +1140,7 @@ const validateBindingsHaveUniqueNames = (
     .reduce((map, { bindingType, bindingNames }) => {
       bindingNames.forEach((name) => {
         const existingBindings = map.get(name) || [];
-        const newBindings = [bindingType, ...existingBindings].filter(
-          (type, i, arr) => arr.indexOf(type) === i
-        );
+        const newBindings = [bindingType, ...existingBindings];
         map.set(name, newBindings);
       });
       return map;
@@ -1154,14 +1152,38 @@ const validateBindingsHaveUniqueNames = (
     if (types.length > 1) {
       hasDuplicates = true;
 
-      const errorDetails = `Found ${englishify(types)} bindings named ${name}.`;
-      const errorSummary =
-        "Bindings must have unique names, because they are all part of the same environment.";
-      const explanation = `With duplicate names, your worker might receive a ${types[0]} binding when accessing ${name}, even though it expected a ${types[1]} binding. This leads to unwanted behavior -- and errors.`;
-      const mitigation = "You should rename the bindings to have unique names.";
+      // check if there's repeat names within the same binding type
+      const bindingGroups = types
+        .reduce((groups, type) => {
+          // see if we've already seen this binding type before
+          const typeIndex = groups.findIndex((group) => group.type === type);
+          if (typeIndex > -1) {
+            // we have, so increment the count
+            groups[typeIndex].count++;
+          } else {
+            // we haven't, so add a new binding group for this type
+            groups.push({ type, count: 1 });
+          }
+          return groups;
+        }, [] as { type: keyof Config; count: number }[])
+        .filter(({ count }) => count > 1);
 
-      const errorMessage = `${errorDetails}\n${errorSummary}\n${explanation}\n${mitigation}`;
-      diagnostics.errors.push(errorMessage);
+      bindingGroups.forEach(({ type }) => {
+        diagnostics.errors.push(
+          `Found multiple ${type} bindings using ${name}.`
+        );
+      });
+
+      // we've now checked for dupes within the same binding type,
+      // so now we'll check for duplicates across different binding types
+      const uniqueTypes = types.filter(
+        (type, i, arr) => arr.indexOf(type) === i
+      );
+      if (uniqueTypes.length > 1) {
+        diagnostics.errors.push(
+          `Found ${englishify(uniqueTypes)} bindings using ${name}.`
+        );
+      }
     }
   }
 
