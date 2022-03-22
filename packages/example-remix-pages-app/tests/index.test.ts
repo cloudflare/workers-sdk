@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "child_process";
 import { resolve } from "path";
 import { fetch } from "undici";
+import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
@@ -20,12 +21,14 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 const isWindows = process.platform === "win32";
 
 describe("Remix", () => {
+  let wranglerProcess: ChildProcess;
+
   beforeAll(async () => {
     spawnSync("npm", ["run", "build"], {
       shell: isWindows,
       cwd: resolve(__dirname, "../"),
     });
-    const wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
+    wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
       shell: isWindows,
       cwd: resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
@@ -36,6 +39,10 @@ describe("Remix", () => {
     wranglerProcess.stderr.on("data", (chunk) => {
       console.log(chunk.toString());
     });
+  });
+
+  afterAll(() => {
+    wranglerProcess.kill();
   });
 
   it("renders", async () => {
