@@ -23,6 +23,7 @@ import {
   isMutuallyExclusiveWith,
   inheritableInLegacyEnvironments,
   appendEnvName,
+  getBindingNames,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -881,14 +882,6 @@ const validateBindingsProperty =
     }
     return isValid;
   };
-
-/**
- * Get the names of the bindings collection in `value`.
- */
-const getBindingNames = (value: unknown): string[] =>
-  ((value as { bindings: { name: string }[] })?.bindings ?? []).map(
-    (binding) => binding.name
-  );
 
 /**
  * Check that the given field is a valid "durable_object" binding object.

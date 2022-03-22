@@ -502,3 +502,11 @@ export const validateAdditionalProperties = (
   }
   return true;
 };
+
+/**
+ * Get the names of the bindings collection in `value`.
+ */
+export const getBindingNames = (value: unknown): string[] =>
+  ((value as { bindings: { name: string }[] })?.bindings ?? []).map(
+    (binding) => binding.name
+  );
