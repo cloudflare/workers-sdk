@@ -168,6 +168,17 @@ export function normalizeAndValidateConfig(
     ),
   };
 
+  validateBindingsHaveUniqueNames(
+    diagnostics,
+    config.durable_objects,
+    config.kv_namespaces,
+    config.r2_buckets,
+    config.text_blobs,
+    config.unsafe,
+    config.vars,
+    config.wasm_modules
+  );
+
   validateAdditionalProperties(
     diagnostics,
     "top-level",
@@ -1086,4 +1097,69 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
     isValid = false;
   }
   return isValid;
+};
+
+/**
+ * Check that bindings whose names might conflict, don't.
+ *
+ * We don't want to have, for example, a KV namespace named "DATA"
+ * and a Durable Object also named "DATA". Then it would be ambiguous
+ * what exactly would live at `env.DATA` (or in the case of service workers,
+ * the `DATA` global).
+ */
+const validateBindingsHaveUniqueNames = (
+  diagnostics: Diagnostics,
+  durable_objects: Config["durable_objects"],
+  kv_namespaces: Config["kv_namespaces"],
+  r2_buckets: Config["r2_buckets"],
+  text_blobs: Config["text_blobs"],
+  unsafe: Config["unsafe"],
+  vars: Config["vars"],
+  wasm_modules: Config["wasm_modules"]
+): boolean => {
+  // we receieve bindings grouped by binding type, and
+  // we want them grouped by name -- a KV namespace and
+  // a Durable Object both named "DATA" should be grouped,
+  // instead of having all the KV namespaces grouped together
+  // separately from all the Durable Objects
+  const bindings = Object.entries({
+    durable_objects,
+    kv_namespaces,
+    r2_buckets,
+    text_blobs,
+    unsafe,
+    vars,
+    wasm_modules,
+  })
+    .map(([key, value]) => {
+      const bindingType = key as keyof Config;
+      const bindingNames = getBindingNames(value);
+      return { bindingType, bindingNames };
+    })
+    .reduce((map, { bindingType, bindingNames }) => {
+      bindingNames.forEach((name) => {
+        const existingBindings = map.get(name) || [];
+        map.set(name, [bindingType, ...existingBindings]);
+      });
+      return map;
+    }, new Map<string, (keyof Config)[]>());
+
+  let hasDuplicates = false;
+
+  for (const [name, types] of bindings) {
+    if (types.length > 1) {
+      hasDuplicates = true;
+
+      const errorDetails = `Found ${types.join(", ")} bindings named ${name}.`;
+      const errorSummary =
+        "Bindings must have unique names, because they are all part of the same environment.";
+      const explanation = `With duplicate names, your worker might receive a ${types[0]} binding when accessing ${name}, even though it expected a ${types[1]} binding. This leads to unwanted behavior -- and errors.`;
+      const mitigation = "You should rename the bindings to have unique names.";
+
+      const errorMessage = `${errorDetails}\n${errorSummary}\n${explanation}\n${mitigation}`;
+      diagnostics.errors.push(errorMessage);
+    }
+  }
+
+  return !hasDuplicates;
 };

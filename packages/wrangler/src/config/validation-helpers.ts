@@ -505,8 +505,57 @@ export const validateAdditionalProperties = (
 
 /**
  * Get the names of the bindings collection in `value`.
+ *
+ * Will return an empty array if it doesn't understand the value
+ * passed in, so another form of validation should be
+ * performed externally.
  */
-export const getBindingNames = (value: unknown): string[] =>
-  ((value as { bindings: { name: string }[] })?.bindings ?? []).map(
-    (binding) => binding.name
+export const getBindingNames = (value: unknown): string[] => {
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  if (isBindingList(value)) {
+    return value.bindings.map(({ name }) => name);
+  } else if (isNamespaceList(value)) {
+    return value.map(({ binding }) => binding);
+  } else if (isBindingObject(value)) {
+    return Object.keys(value);
+  } else {
+    return [];
+  }
+};
+
+const isBindingList = (
+  value: object
+): value is {
+  bindings: {
+    name: string;
+  }[];
+} =>
+  value !== null &&
+  !Array.isArray(value) &&
+  "bindings" in value &&
+  Array.isArray((value as { bindings: unknown }).bindings) &&
+  (value as { bindings: unknown[] }).bindings.every(
+    (binding) =>
+      typeof binding === "object" &&
+      binding !== null &&
+      !Array.isArray(binding) &&
+      "name" in binding &&
+      typeof (binding as { name: unknown }).name === "string"
   );
+
+const isNamespaceList = (value: object): value is { binding: string }[] =>
+  value !== null &&
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      typeof entry === "object" &&
+      entry !== null &&
+      "binding" in entry &&
+      typeof (entry as { binding: unknown }).binding === "string"
+  );
+
+const isBindingObject = (value: object): value is { [key: string]: unknown } =>
+  value !== null && !Array.isArray(value);
