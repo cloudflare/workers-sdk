@@ -1699,480 +1699,487 @@ export default{
     });
   });
 
-  describe("[wasm_modules]", () => {
-    it("should be able to define wasm modules for service-worker format workers", async () => {
-      writeWranglerToml({
-        wasm_modules: {
-          TESTWASMNAME: "./path/to/test.wasm",
-        },
-      });
-      writeWorkerSource({ type: "sw" });
-      fs.mkdirSync("./path/to", { recursive: true });
-      fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
-        expectedBindings: [
-          { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
-        ],
-      });
-      mockSubDomainRequest();
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+  describe("bindings", () => {
+    describe("[wasm_modules]", () => {
+      it("should be able to define wasm modules for service-worker format workers", async () => {
+        writeWranglerToml({
+          wasm_modules: {
+            TESTWASMNAME: "./path/to/test.wasm",
+          },
+        });
+        writeWorkerSource({ type: "sw" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
+          expectedBindings: [
+            { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
+          ],
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should error when defining wasm modules for modules format workers", async () => {
-      writeWranglerToml({
-        wasm_modules: {
-          TESTWASMNAME: "./path/to/test.wasm",
-        },
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
-      writeWorkerSource({ type: "esm" });
-      fs.mkdirSync("./path/to", { recursive: true });
-      fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
 
-      await expect(
-        runWrangler("publish index.js")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
-      );
-      expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`
+      it("should error when defining wasm modules for modules format workers", async () => {
+        writeWranglerToml({
+          wasm_modules: {
+            TESTWASMNAME: "./path/to/test.wasm",
+          },
+        });
+        writeWorkerSource({ type: "esm" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
+
+        await expect(
+          runWrangler("publish index.js")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
+        );
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`
         "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should resolve wasm modules relative to the wrangler.toml file", async () => {
-      fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
-      fs.writeFileSync(
-        "./path/to/wrangler.toml",
-        TOML.stringify({
-          compatibility_date: "2022-01-12",
-          name: "test-name",
-          wasm_modules: {
-            TESTWASMNAME: "./and/the/path/to/test.wasm",
-          },
-        }),
-
-        "utf-8"
-      );
-
-      writeWorkerSource({ type: "sw" });
-      fs.writeFileSync(
-        "./path/to/and/the/path/to/test.wasm",
-        "SOME WASM CONTENT"
-      );
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
-        expectedBindings: [
-          { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
-        ],
-        expectedCompatibilityDate: "2022-01-12",
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
-      mockSubDomainRequest();
-      await runWrangler("publish index.js --config ./path/to/wrangler.toml");
-      expect(std.out).toMatchInlineSnapshot(`
+
+      it("should resolve wasm modules relative to the wrangler.toml file", async () => {
+        fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
+        fs.writeFileSync(
+          "./path/to/wrangler.toml",
+          TOML.stringify({
+            compatibility_date: "2022-01-12",
+            name: "test-name",
+            wasm_modules: {
+              TESTWASMNAME: "./and/the/path/to/test.wasm",
+            },
+          }),
+
+          "utf-8"
+        );
+
+        writeWorkerSource({ type: "sw" });
+        fs.writeFileSync(
+          "./path/to/and/the/path/to/test.wasm",
+          "SOME WASM CONTENT"
+        );
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTWASMNAME: "SOME WASM CONTENT" },
+          expectedBindings: [
+            { name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
+          ],
+          expectedCompatibilityDate: "2022-01-12",
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should be able to import .wasm modules from service-worker format workers", async () => {
-      writeWranglerToml();
-      fs.writeFileSync("./index.js", "import TESTWASMNAME from './test.wasm';");
-      fs.writeFileSync("./test.wasm", "SOME WASM CONTENT");
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedModules: {
-          __94b240d0d692281e6467aa42043986e5c7eea034_test_wasm:
-            "SOME WASM CONTENT",
-        },
-        expectedBindings: [
-          {
-            name: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
-            part: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
-            type: "wasm_module",
-          },
-        ],
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
-      mockSubDomainRequest();
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+
+      it("should be able to import .wasm modules from service-worker format workers", async () => {
+        writeWranglerToml();
+        fs.writeFileSync(
+          "./index.js",
+          "import TESTWASMNAME from './test.wasm';"
+        );
+        fs.writeFileSync("./test.wasm", "SOME WASM CONTENT");
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: {
+            __94b240d0d692281e6467aa42043986e5c7eea034_test_wasm:
+              "SOME WASM CONTENT",
+          },
+          expectedBindings: [
+            {
+              name: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
+              part: "__94b240d0d692281e6467aa42043986e5c7eea034_test_wasm",
+              type: "wasm_module",
+            },
+          ],
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
     });
-  });
 
-  describe("[text_blobs]", () => {
-    it("should be able to define text blobs for service-worker format workers", async () => {
-      writeWranglerToml({
-        text_blobs: {
-          TESTTEXTBLOBNAME: "./path/to/text.file",
-        },
-      });
-      writeWorkerSource({ type: "sw" });
-      fs.mkdirSync("./path/to", { recursive: true });
-      fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
-        expectedBindings: [
-          {
-            name: "TESTTEXTBLOBNAME",
-            part: "TESTTEXTBLOBNAME",
-            type: "text_blob",
+    describe("[text_blobs]", () => {
+      it("should be able to define text blobs for service-worker format workers", async () => {
+        writeWranglerToml({
+          text_blobs: {
+            TESTTEXTBLOBNAME: "./path/to/text.file",
           },
-        ],
-      });
-      mockSubDomainRequest();
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+        });
+        writeWorkerSource({ type: "sw" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
+          expectedBindings: [
+            {
+              name: "TESTTEXTBLOBNAME",
+              part: "TESTTEXTBLOBNAME",
+              type: "text_blob",
+            },
+          ],
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should error when defining text blobs for modules format workers", async () => {
-      writeWranglerToml({
-        text_blobs: {
-          TESTTEXTBLOBNAME: "./path/to/text.file",
-        },
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
-      writeWorkerSource({ type: "esm" });
-      fs.mkdirSync("./path/to", { recursive: true });
-      fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
 
-      await expect(
-        runWrangler("publish index.js")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml"`
-      );
-      expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`
+      it("should error when defining text blobs for modules format workers", async () => {
+        writeWranglerToml({
+          text_blobs: {
+            TESTTEXTBLOBNAME: "./path/to/text.file",
+          },
+        });
+        writeWorkerSource({ type: "esm" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
+
+        await expect(
+          runWrangler("publish index.js")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml"`
+        );
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`
         "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should resolve text blobs relative to the wrangler.toml file", async () => {
-      fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
-      fs.writeFileSync(
-        "./path/to/wrangler.toml",
-        TOML.stringify({
-          compatibility_date: "2022-01-12",
-          name: "test-name",
-          text_blobs: {
-            TESTTEXTBLOBNAME: "./and/the/path/to/text.file",
-          },
-        }),
-
-        "utf-8"
-      );
-
-      writeWorkerSource({ type: "sw" });
-      fs.writeFileSync(
-        "./path/to/and/the/path/to/text.file",
-        "SOME TEXT CONTENT"
-      );
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
-        expectedBindings: [
-          {
-            name: "TESTTEXTBLOBNAME",
-            part: "TESTTEXTBLOBNAME",
-            type: "text_blob",
-          },
-        ],
-        expectedCompatibilityDate: "2022-01-12",
-      });
-      mockSubDomainRequest();
-      await runWrangler("publish index.js --config ./path/to/wrangler.toml");
-      expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-  });
-
-  describe("vars bindings", () => {
-    it("should support json bindings", async () => {
-      writeWranglerToml({
-        vars: {
-          text: "plain ol' string",
-          count: 1,
-          complex: { enabled: true, id: 123 },
-        },
-      });
-      writeWorkerSource();
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedBindings: [
-          { name: "text", type: "plain_text", text: "plain ol' string" },
-          { name: "count", type: "json", json: 1 },
-          {
-            name: "complex",
-            type: "json",
-            json: { enabled: true, id: 123 },
-          },
-        ],
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-  });
+      it("should resolve text blobs relative to the wrangler.toml file", async () => {
+        fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
+        fs.writeFileSync(
+          "./path/to/wrangler.toml",
+          TOML.stringify({
+            compatibility_date: "2022-01-12",
+            name: "test-name",
+            text_blobs: {
+              TESTTEXTBLOBNAME: "./and/the/path/to/text.file",
+            },
+          }),
 
-  describe("r2 bucket bindings", () => {
-    it("should support r2 bucket bindings", async () => {
-      writeWranglerToml({
-        r2_buckets: [{ binding: "FOO", bucket_name: "foo-bucket" }],
-      });
-      writeWorkerSource();
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedBindings: [
-          { bucket_name: "foo-bucket", name: "FOO", type: "r2_bucket" },
-        ],
-      });
+          "utf-8"
+        );
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
-        Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
-      `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-  });
-
-  describe("durable object bindings", () => {
-    it("should support durable object bindings", async () => {
-      writeWranglerToml({
-        durable_objects: {
-          bindings: [
-            { name: "EXAMPLE_DO_BINDING", class_name: "ExampleDurableObject" },
+        writeWorkerSource({ type: "sw" });
+        fs.writeFileSync(
+          "./path/to/and/the/path/to/text.file",
+          "SOME TEXT CONTENT"
+        );
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
+          expectedBindings: [
+            {
+              name: "TESTTEXTBLOBNAME",
+              part: "TESTTEXTBLOBNAME",
+              type: "text_blob",
+            },
           ],
-        },
-      });
-      writeWorkerSource({ type: "esm" });
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedBindings: [
-          {
-            class_name: "ExampleDurableObject",
-            name: "EXAMPLE_DO_BINDING",
-            type: "durable_object_namespace",
-          },
-        ],
-      });
-
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+          expectedCompatibilityDate: "2022-01-12",
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
     });
 
-    it("should support service-workers binding to external durable objects", async () => {
-      writeWranglerToml({
-        durable_objects: {
-          bindings: [
+    describe("[vars]", () => {
+      it("should support json bindings", async () => {
+        writeWranglerToml({
+          vars: {
+            text: "plain ol' string",
+            count: 1,
+            complex: { enabled: true, id: 123 },
+          },
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            { name: "text", type: "plain_text", text: "plain ol' string" },
+            { name: "count", type: "json", json: 1 },
+            {
+              name: "complex",
+              type: "json",
+              json: { enabled: true, id: 123 },
+            },
+          ],
+        });
+
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+
+    describe("[r2_buckets]", () => {
+      it("should support r2 bucket bindings", async () => {
+        writeWranglerToml({
+          r2_buckets: [{ binding: "FOO", bucket_name: "foo-bucket" }],
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            { bucket_name: "foo-bucket", name: "FOO", type: "r2_bucket" },
+          ],
+        });
+
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+
+    describe("[durable_objects]", () => {
+      it("should support durable object bindings", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              {
+                name: "EXAMPLE_DO_BINDING",
+                class_name: "ExampleDurableObject",
+              },
+            ],
+          },
+        });
+        writeWorkerSource({ type: "esm" });
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            {
+              class_name: "ExampleDurableObject",
+              name: "EXAMPLE_DO_BINDING",
+              type: "durable_object_namespace",
+            },
+          ],
+        });
+
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should support service-workers binding to external durable objects", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              {
+                name: "EXAMPLE_DO_BINDING",
+                class_name: "ExampleDurableObject",
+                script_name: "example-do-binding-worker",
+              },
+            ],
+          },
+        });
+        writeWorkerSource({ type: "sw" });
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedBindings: [
             {
               name: "EXAMPLE_DO_BINDING",
               class_name: "ExampleDurableObject",
               script_name: "example-do-binding-worker",
+              type: "durable_object_namespace",
             },
           ],
-        },
-      });
-      writeWorkerSource({ type: "sw" });
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedType: "sw",
-        expectedBindings: [
-          {
-            name: "EXAMPLE_DO_BINDING",
-            class_name: "ExampleDurableObject",
-            script_name: "example-do-binding-worker",
-            type: "durable_object_namespace",
-          },
-        ],
-      });
+        });
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
 
-    it("should support module workers implementing  durable objects", async () => {
-      writeWranglerToml({
-        durable_objects: {
-          bindings: [
+      it("should support module workers implementing  durable objects", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              {
+                name: "EXAMPLE_DO_BINDING",
+                class_name: "ExampleDurableObject",
+              },
+            ],
+          },
+        });
+        writeWorkerSource({ type: "esm" });
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedType: "esm",
+          expectedBindings: [
             {
               name: "EXAMPLE_DO_BINDING",
               class_name: "ExampleDurableObject",
+              type: "durable_object_namespace",
             },
           ],
-        },
-      });
-      writeWorkerSource({ type: "esm" });
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedType: "esm",
-        expectedBindings: [
-          {
-            name: "EXAMPLE_DO_BINDING",
-            class_name: "ExampleDurableObject",
-            type: "durable_object_namespace",
-          },
-        ],
-      });
+        });
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
-    });
-
-    it("should error when detecting service workers implementing  durable objects", async () => {
-      writeWranglerToml({
-        durable_objects: {
-          bindings: [
-            {
-              name: "EXAMPLE_DO_BINDING",
-              class_name: "ExampleDurableObject",
-            },
-          ],
-        },
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
       });
-      writeWorkerSource({ type: "sw" });
-      mockSubDomainRequest();
 
-      await expect(runWrangler("publish index.js")).rejects
-        .toThrowErrorMatchingInlineSnapshot(`
+      it("should error when detecting service workers implementing  durable objects", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              {
+                name: "EXAMPLE_DO_BINDING",
+                class_name: "ExampleDurableObject",
+              },
+            ],
+          },
+        });
+        writeWorkerSource({ type: "sw" });
+        mockSubDomainRequest();
+
+        await expect(runWrangler("publish index.js")).rejects
+          .toThrowErrorMatchingInlineSnapshot(`
               "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.
               You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
               { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
               Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
               https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
             `);
+      });
     });
-  });
 
-  describe("unsafe bindings", () => {
-    it("should warn if using unsafe bindings", async () => {
-      writeWranglerToml({
-        unsafe: {
-          bindings: [
+    describe("[unsafe]", () => {
+      it("should warn if using unsafe bindings", async () => {
+        writeWranglerToml({
+          unsafe: {
+            bindings: [
+              {
+                name: "my-binding",
+                type: "binding-type",
+                param: "binding-param",
+              },
+            ],
+          },
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
             {
               name: "my-binding",
               type: "binding-type",
               param: "binding-param",
             },
           ],
-        },
-      });
-      writeWorkerSource();
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedBindings: [
-          {
-            name: "my-binding",
-            type: "binding-type",
-            param: "binding-param",
-          },
-        ],
-      });
+        });
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
           - \\"unsafe\\" fields are experimental and may change or break at any time."
       `);
-    });
-    it("should warn if using unsafe bindings already handled by wrangler", async () => {
-      writeWranglerToml({
-        unsafe: {
-          bindings: [
+      });
+      it("should warn if using unsafe bindings already handled by wrangler", async () => {
+        writeWranglerToml({
+          unsafe: {
+            bindings: [
+              {
+                name: "my-binding",
+                type: "plain_text",
+                text: "text",
+              },
+            ],
+          },
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
             {
               name: "my-binding",
               type: "plain_text",
               text: "text",
             },
           ],
-        },
-      });
-      writeWorkerSource();
-      mockSubDomainRequest();
-      mockUploadWorkerRequest({
-        expectedBindings: [
-          {
-            name: "my-binding",
-            type: "plain_text",
-            text: "text",
-          },
-        ],
-      });
+        });
 
-      await runWrangler("publish index.js");
-      expect(std.out).toMatchInlineSnapshot(`
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
         "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
           - \\"unsafe\\" fields are experimental and may change or break at any time.
           - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
@@ -2180,6 +2187,7 @@ export default{
               Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
               For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
       `);
+      });
     });
   });
 
