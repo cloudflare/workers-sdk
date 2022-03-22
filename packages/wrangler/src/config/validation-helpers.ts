@@ -559,3 +559,24 @@ const isNamespaceList = (value: object): value is { binding: string }[] =>
 
 const isBindingObject = (value: object): value is { [key: string]: unknown } =>
   value !== null && !Array.isArray(value);
+
+/**
+ * Transform an array of strings into an english representation
+ *
+ * ["hello"] => "hello"
+ * ["hello", "world"] => "hello and world"
+ * ["one", "two", "three"] => "one, two, and three"
+ * ["a", "b", "c", ..., "y", "z"] => "a, b, c, ..., y, and z"
+ */
+export const englishify = (arr: string[]): string => {
+  switch (arr.length) {
+    case 0:
+      return "";
+    case 1:
+      return arr[0];
+    case 2:
+      return `${arr[0]} and ${arr[1]}`;
+    default:
+      return `${arr.slice(0, -1).join(", ")}, and ${arr[arr.length - 1]}`;
+  }
+};

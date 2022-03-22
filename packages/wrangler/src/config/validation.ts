@@ -24,6 +24,7 @@ import {
   inheritableInLegacyEnvironments,
   appendEnvName,
   getBindingNames,
+  englishify,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -1139,7 +1140,10 @@ const validateBindingsHaveUniqueNames = (
     .reduce((map, { bindingType, bindingNames }) => {
       bindingNames.forEach((name) => {
         const existingBindings = map.get(name) || [];
-        map.set(name, [bindingType, ...existingBindings]);
+        const newBindings = [bindingType, ...existingBindings].filter(
+          (type, i, arr) => arr.indexOf(type) === i
+        );
+        map.set(name, newBindings);
       });
       return map;
     }, new Map<string, (keyof Config)[]>());
@@ -1150,7 +1154,7 @@ const validateBindingsHaveUniqueNames = (
     if (types.length > 1) {
       hasDuplicates = true;
 
-      const errorDetails = `Found ${types.join(", ")} bindings named ${name}.`;
+      const errorDetails = `Found ${englishify(types)} bindings named ${name}.`;
       const errorSummary =
         "Bindings must have unique names, because they are all part of the same environment.";
       const explanation = `With duplicate names, your worker might receive a ${types[0]} binding when accessing ${name}, even though it expected a ${types[1]} binding. This leads to unwanted behavior -- and errors.`;
