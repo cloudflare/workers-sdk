@@ -89,6 +89,26 @@ describe("publish", () => {
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
+
+      it("should throw an error w/ helpful message when using --env --name", async () => {
+        writeWranglerToml({ env: { "some-env": {} } });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          env: "some-env",
+          legacyEnv: true,
+        });
+        await runWrangler(
+          "publish index.js --name voyager --env some-env --legacy-env true"
+        ).catch((err) =>
+          expect(err).toMatchInlineSnapshot(`
+            [Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
+                [env.some-env]
+                name = "voyager"
+                ]
+          `)
+        );
+      });
     });
 
     describe("services", () => {

@@ -22,6 +22,7 @@ import {
   all,
   isMutuallyExclusiveWith,
   inheritableInLegacyEnvironments,
+  appendEnvName,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -43,7 +44,8 @@ import type { ValidatorFn } from "./validation-helpers";
 export function normalizeAndValidateConfig(
   rawConfig: RawConfig,
   configPath: string | undefined,
-  envName: string | undefined
+  envName: string | undefined,
+  args: unknown
 ): {
   config: Config;
   diagnostics: Diagnostics;
@@ -88,7 +90,10 @@ export function normalizeAndValidateConfig(
   );
 
   // TODO: set the default to false to turn on service environments as the default
-  const isLegacyEnv = rawConfig.legacy_env ?? true;
+  const isLegacyEnv =
+    (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
+    rawConfig.legacy_env ??
+    true;
 
   const topLevelEnv = normalizeAndValidateEnvironment(
     diagnostics,
@@ -584,6 +589,7 @@ function normalizeAndValidateEnvironment(
       rawEnv,
       "name",
       isString,
+      appendEnvName(envName),
       undefined
     ),
     main: normalizeAndValidateMainField(
