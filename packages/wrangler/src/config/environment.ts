@@ -252,6 +252,18 @@ interface EnvironmentNonInheritable {
   }[];
 
   /**
+   * Specifies service bindings (worker-to-worker) that are bound to this Worker environment.
+   */
+  services: {
+    /** The binding name used to refer to the bound service. */
+    binding: string;
+    /** The name of the service. */
+    service: string;
+    /** The environment of the service (e.g. production, staging, etc). */
+    environment: string;
+  }[];
+
+  /**
    * "Unsafe" tables for features that aren't directly supported by wrangler.
    *
    * NOTE: This field is not automatically inherited from the top level environment,

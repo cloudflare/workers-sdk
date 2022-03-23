@@ -44,6 +44,7 @@ describe("normalizeAndValidateConfig()", () => {
       migrations: [],
       name: undefined,
       r2_buckets: [],
+      services: [],
       route: undefined,
       routes: undefined,
       rules: [],
@@ -534,6 +535,13 @@ describe("normalizeAndValidateConfig()", () => {
             binding: "R2_BINDING_2",
             bucket_name: "R2_BUCKET_2",
             preview_bucket_name: "R2_PREVIEW_2",
+          },
+        ],
+        services: [
+          {
+            binding: "SERVICE_BINDING_1",
+            service: "SERVICE_BINDING_1",
+            environment: "SERVICE_BINDING_ENVIRONMENT_1",
           },
         ],
         unsafe: {
@@ -1148,6 +1156,131 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
             - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
             - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+        `);
+      });
+    });
+
+    describe("services field", () => {
+      it("should error if services is an object", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: {} } as unknown as RawConfig,
+          undefined,
+          undefined,
+          {}
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got {}."
+        `);
+      });
+
+      it("should error if services is a string", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: "BAD" } as unknown as RawConfig,
+          undefined,
+          undefined,
+          {}
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got \\"BAD\\"."
+        `);
+      });
+
+      it("should error if services is a number", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: 999 } as unknown as RawConfig,
+          undefined,
+          undefined,
+          {}
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got 999."
+        `);
+      });
+
+      it("should error if services is null", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: null } as unknown as RawConfig,
+          undefined,
+          undefined,
+          {}
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got null."
+        `);
+      });
+
+      it("should error if services bindings are not valid", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          {
+            services: [
+              {},
+              { binding: "SERVICE_BINDING_1" },
+              { binding: 123, service: 456 },
+              { binding: 123, service: 456, environment: 789 },
+              { binding: "SERVICE_BINDING_1", service: 456, environment: 789 },
+              {
+                binding: 123,
+                service: "SERVICE_BINDING_SERVICE_1",
+                environment: 789,
+              },
+              {
+                binding: 123,
+                service: 456,
+                environment: "SERVICE_BINDING_ENVIRONMENT_1",
+              },
+            ],
+          } as unknown as RawConfig,
+          undefined,
+          undefined,
+          {}
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({
+            services: { bindings: expect.anything },
+          })
+        );
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
+            - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
+            - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
+            - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+            - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
+            - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+            - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+            - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+            - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
         `);
       });
     });

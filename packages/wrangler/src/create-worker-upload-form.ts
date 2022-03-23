@@ -45,6 +45,7 @@ export interface WorkerMetadata {
         script_name?: string;
       }
     | { type: "r2_bucket"; name: string; bucket_name: string }
+    | { type: "service"; name: string; service: string; environment: string }
   )[];
 }
 
@@ -65,6 +66,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
   let { modules } = worker;
 
   const metadataBindings: WorkerMetadata["bindings"] = [];
+
+  Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
+    if (typeof value === "string") {
+      metadataBindings.push({ name: key, type: "plain_text", text: value });
+    } else {
+      metadataBindings.push({ name: key, type: "json", json: value });
+    }
+  });
 
   bindings.kv_namespaces?.forEach(({ id, binding }) => {
     metadataBindings.push({
@@ -93,12 +102,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
     });
   });
 
-  Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
-    if (typeof value === "string") {
-      metadataBindings.push({ name: key, type: "plain_text", text: value });
-    } else {
-      metadataBindings.push({ name: key, type: "json", json: value });
-    }
+  bindings.services?.forEach(({ binding, service, environment }) => {
+    metadataBindings.push({
+      name: binding,
+      type: "service",
+      service,
+      environment,
+    });
   });
 
   for (const [name, filePath] of Object.entries(bindings.wasm_modules || {})) {

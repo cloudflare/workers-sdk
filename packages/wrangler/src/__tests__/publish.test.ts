@@ -2104,6 +2104,37 @@ export default{
     });
   });
 
+  describe("service bindings", () => {
+    it("should support service bindings", async () => {
+      writeWranglerToml({
+        services: [
+          { binding: "FOO", service: "foo-service", environment: "production" },
+        ],
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          {
+            type: "service",
+            name: "FOO",
+            service: "foo-service",
+            environment: "production",
+          },
+        ],
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("unsafe bindings", () => {
     it("should warn if using unsafe bindings", async () => {
       writeWranglerToml({

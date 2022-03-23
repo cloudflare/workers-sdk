@@ -106,6 +106,7 @@ async function renderDev({
     vars: {},
     durable_objects: { bindings: [] },
     r2_buckets: [],
+    services: [],
     wasm_modules: undefined,
     text_blobs: undefined,
     unsafe: [],

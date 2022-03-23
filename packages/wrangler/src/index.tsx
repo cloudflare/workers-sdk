@@ -983,6 +983,7 @@ export async function main(argv: string[]): Promise<void> {
             text_blobs: config.text_blobs,
             durable_objects: config.durable_objects,
             r2_buckets: config.r2_buckets,
+            services: config.services,
             unsafe: config.unsafe?.bindings,
           }}
         />
@@ -1359,6 +1360,7 @@ export async function main(argv: string[]): Promise<void> {
             text_blobs: config.text_blobs,
             durable_objects: config.durable_objects,
             r2_buckets: config.r2_buckets,
+            services: config.services,
             unsafe: config.unsafe?.bindings,
           }}
           inspectorPort={await getPort({ port: 9229 })}
@@ -1548,6 +1550,7 @@ export async function main(argv: string[]): Promise<void> {
                       vars: {},
                       durable_objects: { bindings: [] },
                       r2_buckets: [],
+                      services: [],
                       wasm_modules: {},
                       text_blobs: {},
                       unsafe: [],

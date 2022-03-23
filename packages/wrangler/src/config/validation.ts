@@ -667,6 +667,16 @@ function normalizeAndValidateEnvironment(
       validateBindingArray(envName, validateR2Binding),
       []
     ),
+    services: notInheritable(
+      diagnostics,
+      topLevelEnv,
+      rawConfig,
+      rawEnv,
+      envName,
+      "services",
+      validateBindingArray(envName, validateServiceBinding),
+      []
+    ),
     unsafe: notInheritable(
       diagnostics,
       topLevelEnv,
@@ -950,6 +960,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
       "json",
       "kv_namespace",
       "durable_object_namespace",
+      "service",
     ];
 
     if (safeBindings.includes(value.type)) {
@@ -1087,6 +1098,42 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
   if (!isOptionalProperty(value, "preview_bucket_name", "string")) {
     diagnostics.errors.push(
       `"${field}" bindings should, optionally, have a string "preview_bucket_name" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  return isValid;
+};
+
+const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
+  if (typeof value !== "object" || value === null) {
+    diagnostics.errors.push(
+      `"services" bindings should be objects, but got ${JSON.stringify(value)}`
+    );
+    return false;
+  }
+  let isValid = true;
+  // Service bindings must have a binding, service, and environment.
+  if (!isRequiredProperty(value, "binding", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isRequiredProperty(value, "service", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "service" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isOptionalProperty(value, "environment", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
         value
       )}.`
     );
