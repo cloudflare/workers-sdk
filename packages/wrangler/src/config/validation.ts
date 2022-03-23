@@ -1109,21 +1109,21 @@ const validateBindingsHaveUniqueNames = (
     unsafe,
     vars,
     wasm_modules,
-  }: Config
+  }: Partial<Config>
 ): boolean => {
   let hasDuplicates = false;
 
-  const bindingsGroupedByType = {
-    "Durable Object": durable_objects.bindings.map((binding) => binding.name),
-    "KV Namespace": kv_namespaces.map((namespace) => namespace.binding),
-    "R2 Bucket": r2_buckets.map((bucket) => bucket.binding),
-    "Text Blob": Object.keys(text_blobs || {}),
-    Unsafe: unsafe.bindings.map((binding) => binding.name),
-    "Environment Variable": Object.keys(vars),
-    "WASM Module": Object.keys(wasm_modules || {}),
-  };
+  const bindingsGroupedByType = Object.entries({
+    "Durable Object": getBindingNames(durable_objects),
+    "KV Namespace": getBindingNames(kv_namespaces),
+    "R2 Bucket": getBindingNames(r2_buckets),
+    "Text Blob": getBindingNames(text_blobs),
+    Unsafe: getBindingNames(unsafe),
+    "Environment Variable": getBindingNames(vars),
+    "WASM Module": getBindingNames(wasm_modules),
+  });
 
-  const bindingsGroupedByName = Object.entries(bindingsGroupedByType).reduce(
+  const bindingsGroupedByName = bindingsGroupedByType.reduce(
     (bindings, [bindingType, bindingNames]) => {
       for (const bindingName of bindingNames) {
         if (!(bindingName in bindings)) {
