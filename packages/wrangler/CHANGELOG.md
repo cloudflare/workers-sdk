@@ -1,5 +1,82 @@
 # wrangler
 
+## 0.0.23
+
+### Patch Changes
+
+- [#675](https://github.com/cloudflare/wrangler2/pull/675) [`e88a54e`](https://github.com/cloudflare/wrangler2/commit/e88a54ed41ec9e5de707d35115f5bc7395b0d28f) Thanks [@threepointone](https://github.com/threepointone)! - fix: resolve non-js modules correctly in local mode
+
+  In https://github.com/cloudflare/wrangler2/pull/633, we missed passing a cwd to the process that runs the miniflare cli. This broke how miniflare resolves modules, and led back to the dreaded "path should be a `path.relative()`d string" error. The fix is to simply pass the cwd to the `spawn` call.
+
+  Test plan:
+
+  ```
+  cd packages/wrangler
+  npm run build
+  cd ../workers-chat-demo
+  npx wrangler dev --local
+  ```
+
+* [#668](https://github.com/cloudflare/wrangler2/pull/668) [`3dcdb0d`](https://github.com/cloudflare/wrangler2/commit/3dcdb0d7dfdfd842228987e8b095ca5526d7404d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: tighten up the named environment configuration
+
+  Now, when we normalize and validate the raw config, we pass in the currently
+  active environment name, and the config that is returned contains all the
+  environment fields correctly normalized (including inheritance) at the top
+  level of the config object. This avoids other commands from having to check
+  both the current named environment and the top-level config for such fields.
+
+  Also, now, handle the case where the active environment name passed in via the
+  `--env` command line argument does not match any of the named environments
+  in the configuration:
+
+  - This is an error if there are named environments configured;
+  - or only a warning if there are no named environments configured.
+
+- [#633](https://github.com/cloudflare/wrangler2/pull/633) [`003f3c4`](https://github.com/cloudflare/wrangler2/commit/003f3c41942ec8e299ae603fe74b3cd2e802b49d) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: create a custom CLI wrapper around Miniflare API
+
+  This allows us to tightly control the options that are passed to Miniflare.
+  The current CLI is setup to be more compatible with how Wrangler 1 works, which is not optimal for Wrangler 2.
+
+* [#633](https://github.com/cloudflare/wrangler2/pull/633) [`84c857e`](https://github.com/cloudflare/wrangler2/commit/84c857eabc2c09ad1dd2f4fa3963638b8b7f3daa) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: ensure asset keys are relative to the project root
+
+  Previously, asset file paths were computed relative to the current working
+  directory, even if we had used `-c` to run Wrangler on a project in a different
+  directory to the current one.
+
+  Now, assets file paths are computed relative to the "project root", which is
+  either the directory containing the wrangler.toml or the current working directory
+  if there is no config specified.
+
+- [#673](https://github.com/cloudflare/wrangler2/pull/673) [`456e1da`](https://github.com/cloudflare/wrangler2/commit/456e1da5347afb103ba0827ba632a0b6aa81de6f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: allow the `build` field to be inherited/overridden in a named environment"
+
+  Now the `build` field can be specified within a named environment, overriding whatever
+  may appear at the top level.
+
+  Resolves https://github.com/cloudflare/wrangler2/issues/588
+
+* [#650](https://github.com/cloudflare/wrangler2/pull/650) [`d3d1ff8`](https://github.com/cloudflare/wrangler2/commit/d3d1ff8721dd834ce5e58b652cccd7806cba1711) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: make `main` an inheritable environment field
+
+  See [#588](https://github.com/cloudflare/wrangler2/issues/588)
+
+- [#650](https://github.com/cloudflare/wrangler2/pull/650) [`f0eed7f`](https://github.com/cloudflare/wrangler2/commit/f0eed7fe0cc5f6166b4c2b34d193e260b881e4de) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: make validation error messages more consistent
+
+* [#662](https://github.com/cloudflare/wrangler2/pull/662) [`612952b`](https://github.com/cloudflare/wrangler2/commit/612952ba11b198277be14c70d1c4090338c876bc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: use alias `-e` for `--env` to prevent scripts using Wrangler 1 from breaking when switching to Wrangler 2.
+
+- [#671](https://github.com/cloudflare/wrangler2/pull/671) [`ef0aaad`](https://github.com/cloudflare/wrangler2/commit/ef0aaadad180face06e13fb1de079eb040badaf2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: don't exit on initial Pages Functions compilation failure
+
+  Previously, we'd exit the `wrangler pages dev` process if we couldn't immediately compile a Worker from the `functions` directory. We now log the error, but don't exit the process. This means that proxy processes can be cleaned up cleanly on SIGINT and SIGTERM, and it matches the behavior of if a compilation error is introduced once already running (we don't exit then either).
+
+* [#667](https://github.com/cloudflare/wrangler2/pull/667) [`e29a241`](https://github.com/cloudflare/wrangler2/commit/e29a24168da2e87259b90d1a4dd0d3860bb3ba8e) Thanks [@threepointone](https://github.com/threepointone)! - fix: delete unused `[site]` assets
+
+  We discovered critical issues with the way we expire unused assets with `[site]` (see https://github.com/cloudflare/wrangler2/issues/666, https://github.com/cloudflare/wrangler/issues/2224), that we're going back to the legacy manner of handling unused assets, i.e- deleting unused assets.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/666
+
+- [#640](https://github.com/cloudflare/wrangler2/pull/640) [`2a2d50c`](https://github.com/cloudflare/wrangler2/commit/2a2d50c921ffcf8f9b8719dd029206f9479ebdd8) Thanks [@caass](https://github.com/caass)! - Error if the user is trying to implement DO's in a service worker
+
+  Durable Objects can only be implemented in Module Workers, so we should throw if we detect that
+  the user is trying to implement a Durable Object but their worker is in Service Worker format.
+
 ## 0.0.22
 
 ### Patch Changes
@@ -72,7 +149,7 @@
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", (event) => {
+  addEventListener("fetch", event => {
     // ...
   });
   ```
