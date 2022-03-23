@@ -557,7 +557,9 @@ const isNamespaceList = (value: object): value is { binding: string }[] =>
       typeof (entry as { binding: unknown }).binding === "string"
   );
 
-const isBindingObject = (value: object): value is { [key: string]: unknown } =>
+const isBindingObject = (
+  value: object
+): value is Record<string | number | symbol, unknown> =>
   value !== null && !Array.isArray(value);
 
 /**
