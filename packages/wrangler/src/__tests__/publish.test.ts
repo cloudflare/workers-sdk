@@ -1911,18 +1911,22 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found r2_buckets, kv_namespaces, and durable_objects bindings using CONFLICTING_NAME_ONE.
-                - Found kv_namespaces and durable_objects bindings using CONFLICTING_NAME_TWO.
-                - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
-                - Found unsafe and text_blobs bindings using CONFLICTING_NAME_FOUR.]
+                - Found Durable Object, KV Namespace, and R2 Bucket bindings using CONFLICTING_NAME_ONE.
+                - Found Durable Object and KV Namespace bindings using CONFLICTING_NAME_TWO.
+                - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
+                - Found Text Blob and Unsafe bindings using CONFLICTING_NAME_FOUR.
+                - Bindings must have unique names, so that they can all be referenced in the worker.
+                  Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found r2_buckets, kv_namespaces, and durable_objects bindings using CONFLICTING_NAME_ONE.
-          - Found kv_namespaces and durable_objects bindings using CONFLICTING_NAME_TWO.
-          - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
-          - Found unsafe and text_blobs bindings using CONFLICTING_NAME_FOUR.
+          - Found Durable Object, KV Namespace, and R2 Bucket bindings using CONFLICTING_NAME_ONE.
+          - Found Durable Object and KV Namespace bindings using CONFLICTING_NAME_TWO.
+          - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
+          - Found Text Blob and Unsafe bindings using CONFLICTING_NAME_FOUR.
+          - Bindings must have unique names, so that they can all be referenced in the worker.
+            Please change your bindings to have unique names.
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
@@ -1998,18 +2002,22 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-                - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
-                - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
-                - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.]
+                - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+                - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
+                - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
+                - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+                - Bindings must have unique names, so that they can all be referenced in the worker.
+                  Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-          - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
-          - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
-          - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+          - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
+          - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
+          - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - Bindings must have unique names, so that they can all be referenced in the worker.
+            Please change your bindings to have unique names.
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
@@ -2115,22 +2123,26 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-                - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
-                - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
-                - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
-                - Found unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_FOUR.
-                - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.]
+                - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+                - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
+                - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
+                - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
+                - Found R2 Bucket, Text Blob, and Unsafe bindings using CONFLICTING_NAME_FOUR.
+                - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+                - Bindings must have unique names, so that they can all be referenced in the worker.
+                  Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found multiple durable_objects bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-          - Found multiple kv_namespaces bindings using CONFLICTING_KV_NAMESPACE_NAME.
-          - Found multiple r2_buckets bindings using CONFLICTING_R2_BUCKET_NAME.
-          - Found wasm_modules, vars, unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_THREE.
-          - Found unsafe, text_blobs, and r2_buckets bindings using CONFLICTING_NAME_FOUR.
-          - Found multiple unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
+          - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
+          - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
+          - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
+          - Found R2 Bucket, Text Blob, and Unsafe bindings using CONFLICTING_NAME_FOUR.
+          - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - Bindings must have unique names, so that they can all be referenced in the worker.
+            Please change your bindings to have unique names.
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);

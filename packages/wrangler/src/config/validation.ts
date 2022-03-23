@@ -169,16 +169,7 @@ export function normalizeAndValidateConfig(
     ),
   };
 
-  validateBindingsHaveUniqueNames(
-    diagnostics,
-    config.durable_objects,
-    config.kv_namespaces,
-    config.r2_buckets,
-    config.text_blobs,
-    config.unsafe,
-    config.vars,
-    config.wasm_modules
-  );
+  validateBindingsHaveUniqueNames(diagnostics, config);
 
   validateAdditionalProperties(
     diagnostics,
@@ -1110,20 +1101,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
  */
 const validateBindingsHaveUniqueNames = (
   diagnostics: Diagnostics,
-  durable_objects: Config["durable_objects"],
-  kv_namespaces: Config["kv_namespaces"],
-  r2_buckets: Config["r2_buckets"],
-  text_blobs: Config["text_blobs"],
-  unsafe: Config["unsafe"],
-  vars: Config["vars"],
-  wasm_modules: Config["wasm_modules"]
-): boolean => {
-  // we receieve bindings grouped by binding type, and
-  // we want them grouped by name -- a KV namespace and
-  // a Durable Object both named "DATA" should be grouped,
-  // instead of having all the KV namespaces grouped together
-  // separately from all the Durable Objects
-  const bindings = Object.entries({
+  {
     durable_objects,
     kv_namespaces,
     r2_buckets,
@@ -1131,60 +1109,81 @@ const validateBindingsHaveUniqueNames = (
     unsafe,
     vars,
     wasm_modules,
-  })
-    .map(([key, value]) => {
-      const bindingType = key as keyof Config;
-      const bindingNames = getBindingNames(value);
-      return { bindingType, bindingNames };
-    })
-    .reduce((map, { bindingType, bindingNames }) => {
-      bindingNames.forEach((name) => {
-        const existingBindings = map.get(name) || [];
-        const newBindings = [bindingType, ...existingBindings];
-        map.set(name, newBindings);
-      });
-      return map;
-    }, new Map<string, (keyof Config)[]>());
-
+  }: Config
+): boolean => {
   let hasDuplicates = false;
 
-  for (const [name, types] of bindings) {
-    if (types.length > 1) {
-      hasDuplicates = true;
+  const bindingsGroupedByType = {
+    "Durable Object": durable_objects.bindings.map((binding) => binding.name),
+    "KV Namespace": kv_namespaces.map((namespace) => namespace.binding),
+    "R2 Bucket": r2_buckets.map((bucket) => bucket.binding),
+    "Text Blob": Object.keys(text_blobs || {}),
+    Unsafe: unsafe.bindings.map((binding) => binding.name),
+    "Environment Variable": Object.keys(vars),
+    "WASM Module": Object.keys(wasm_modules || {}),
+  };
 
-      // check if there's repeat names within the same binding type
-      const bindingGroups = types
-        .reduce((groups, type) => {
-          // see if we've already seen this binding type before
-          const typeIndex = groups.findIndex((group) => group.type === type);
-          if (typeIndex > -1) {
-            // we have, so increment the count
-            groups[typeIndex].count++;
-          } else {
-            // we haven't, so add a new binding group for this type
-            groups.push({ type, count: 1 });
-          }
-          return groups;
-        }, [] as { type: keyof Config; count: number }[])
-        .filter(({ count }) => count > 1);
+  const bindingsGroupedByName = Object.entries(bindingsGroupedByType).reduce(
+    (bindings, [bindingType, bindingNames]) => {
+      for (const bindingName of bindingNames) {
+        if (!(bindingName in bindings)) {
+          bindings[bindingName] = [];
+        }
 
-      bindingGroups.forEach(({ type }) => {
-        diagnostics.errors.push(
-          `Found multiple ${type} bindings using ${name}.`
-        );
-      });
-
-      // we've now checked for dupes within the same binding type,
-      // so now we'll check for duplicates across different binding types
-      const uniqueTypes = types.filter(
-        (type, i, arr) => arr.indexOf(type) === i
-      );
-      if (uniqueTypes.length > 1) {
-        diagnostics.errors.push(
-          `Found ${englishify(uniqueTypes)} bindings using ${name}.`
-        );
+        bindings[bindingName].push(bindingType);
       }
+
+      return bindings;
+    },
+    {} as Record<string, string[]>
+  );
+
+  for (const bindingName in bindingsGroupedByName) {
+    const bindingTypes = bindingsGroupedByName[bindingName];
+    if (bindingTypes.length < 2) {
+      // there's only one (or zero) binding(s) with this name, which is fine, actually
+      continue;
     }
+
+    hasDuplicates = true;
+
+    // there's two types of duplicates we want to look for:
+    // - bindings with the same name of the same type (e.g. two Durable Objects both named "OBJ")
+    // - bindings with the same name of different types (a KV namespace and DO both named "DATA")
+
+    const sameType = bindingTypes
+      // filter once to find duplicate binding types
+      .filter((type, i) => bindingTypes.indexOf(type) !== i)
+      // filter twice to only get _unique_ duplicate binding types
+      .filter(
+        (type, i, duplicateBindingTypes) =>
+          duplicateBindingTypes.indexOf(type) === i
+      );
+
+    // filter for bindings
+    const differentTypes = bindingTypes.filter(
+      (type, i) => bindingTypes.indexOf(type) === i
+    );
+
+    if (differentTypes.length > 1) {
+      // we have multiple different types using the same name
+      diagnostics.errors.push(
+        `Found ${englishify(differentTypes)} bindings using ${bindingName}.`
+      );
+    }
+
+    sameType.forEach((bindingType) => {
+      diagnostics.errors.push(
+        `Found multiple ${bindingType} bindings using ${bindingName}.`
+      );
+    });
+  }
+
+  if (hasDuplicates) {
+    const problem =
+      "Bindings must have unique names, so that they can all be referenced in the worker.";
+    const resolution = "Please change your bindings to have unique names.";
+    diagnostics.errors.push(`${problem}\n${resolution}`);
   }
 
   return !hasDuplicates;
