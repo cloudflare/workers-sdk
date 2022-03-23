@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "child_process";
-import { resolve } from "path";
+import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
@@ -26,23 +26,32 @@ describe("Remix", () => {
   beforeAll(async () => {
     spawnSync("npm", ["run", "build"], {
       shell: isWindows,
-      cwd: resolve(__dirname, "../"),
+      cwd: path.resolve(__dirname, "../"),
     });
     wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
       shell: isWindows,
-      cwd: resolve(__dirname, "../"),
+      cwd: path.resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
     });
-    wranglerProcess.stdout.on("data", (chunk) => {
+    wranglerProcess.stdout?.on("data", (chunk) => {
       console.log(chunk.toString());
     });
-    wranglerProcess.stderr.on("data", (chunk) => {
+    wranglerProcess.stderr?.on("data", (chunk) => {
       console.log(chunk.toString());
     });
   });
 
-  afterAll(() => {
-    wranglerProcess.kill();
+  afterAll(async () => {
+    await new Promise((resolve, reject) => {
+      wranglerProcess.once("exit", (code) => {
+        if (!code) {
+          resolve(code);
+        } else {
+          reject(code);
+        }
+      });
+      wranglerProcess.kill();
+    });
   });
 
   it("renders", async () => {

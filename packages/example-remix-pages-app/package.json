@@ -1,6 +1,7 @@
 {
-  "private": true,
   "name": "example-remix-pages-app",
+  "version": "0.0.0",
+  "private": true,
   "description": "",
   "license": "",
   "scripts": {
