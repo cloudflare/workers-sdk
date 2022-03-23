@@ -144,14 +144,20 @@ function useLocalWorker({
       const optionsArg = JSON.stringify(options, null);
 
       console.log("⎔ Starting a local server...");
-      local.current = spawn("node", [
-        "--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-        "--no-warnings", // hide annoying Node warnings
-        "--inspect", // start Miniflare listening for a debugger to attach
-        miniflareCLIPath,
-        optionsArg,
-        // "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-      ]);
+      local.current = spawn(
+        "node",
+        [
+          "--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+          "--no-warnings", // hide annoying Node warnings
+          "--inspect", // start Miniflare listening for a debugger to attach
+          miniflareCLIPath,
+          optionsArg,
+          // "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+        ],
+        {
+          cwd: path.dirname(scriptPath),
+        }
+      );
 
       local.current.on("close", (code) => {
         if (code) {
