@@ -21,7 +21,8 @@ export type {
  */
 export function readConfig(
   configPath: string | undefined,
-  envName: string | undefined
+  envName: string | undefined,
+  args: unknown
 ): Config {
   let rawConfig: RawConfig = {};
   if (!configPath) {
@@ -37,7 +38,8 @@ export function readConfig(
   const { config, diagnostics } = normalizeAndValidateConfig(
     rawConfig,
     configPath,
-    envName
+    envName,
+    args
   );
 
   if (diagnostics.hasWarnings()) {

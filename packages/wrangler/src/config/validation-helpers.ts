@@ -58,11 +58,14 @@ export function inheritable<K extends keyof Environment>(
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
-  defaultValue: Environment[K]
+  defaultValue: Environment[K],
+  transformFn: TransformFn<Environment[K]> = (v) => v
 ): Environment[K] {
   validate(diagnostics, field, rawEnv[field], topLevelEnv);
   return (
-    (rawEnv[field] as Environment[K]) ?? topLevelEnv?.[field] ?? defaultValue
+    (rawEnv[field] as Environment[K]) ??
+    transformFn(topLevelEnv?.[field]) ??
+    defaultValue
   );
 }
 
@@ -76,6 +79,7 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
+  transformFn: TransformFn<Environment[K]>,
   defaultValue: Environment[K]
 ): Environment[K] {
   return topLevelEnv === undefined || isLegacyEnv === true
@@ -85,7 +89,8 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
         rawEnv,
         field,
         validate,
-        defaultValue
+        defaultValue,
+        transformFn
       )
     : notAllowedInNamedServiceEnvironment(
         diagnostics,
@@ -94,6 +99,19 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
         field
       );
 }
+
+/**
+ * Type of function that is used to transform an inheritable environment field.
+ */
+type TransformFn<T> = (fieldValue: T | undefined) => T | undefined;
+
+/**
+ * Transform an environment field by appending current environment name to it.
+ */
+export const appendEnvName =
+  (envName: string): TransformFn<string | undefined> =>
+  (fieldValue) =>
+    fieldValue ? `${fieldValue}-${envName}` : undefined;
 
 /**
  * Log an error if this named environment is trying to override the value in the top-level

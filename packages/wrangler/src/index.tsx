@@ -100,24 +100,36 @@ function printWranglerBanner() {
 }
 
 function isLegacyEnv(args: unknown, config: Config): boolean {
-  return (
-    (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
-    config.legacy_env
-  );
+  return config.legacy_env;
 }
 
 function getScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ): string | undefined {
-  const shortScriptName = args.name ?? config.name;
-  if (!shortScriptName) {
-    return;
+  if (args.name && isLegacyEnv(args, config) && args.env) {
+    throw new CommandLineArgsError(
+      "In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
+        `
+    [env.${args.env}]
+    name = "${args.name}"
+    `
+    );
   }
 
-  return isLegacyEnv(args, config)
-    ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
-    : shortScriptName;
+  return args.name ?? config.name;
+}
+
+/**
+ * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler1
+ */
+function getLegacyScriptName(
+  args: { name: string | undefined; env: string | undefined },
+  config: Config
+) {
+  return args.name && args.env && isLegacyEnv(args, config)
+    ? `${args.name}-${args.env}`
+    : args.name ?? config.name;
 }
 
 /**
@@ -802,7 +814,7 @@ export async function main(argv: string[]): Promise<void> {
       const configPath =
         (args.config as ConfigPath) ||
         (args.script && findWranglerToml(path.dirname(args.script)));
-      const config = readConfig(configPath, args.env);
+      const config = readConfig(configPath, args.env, args);
       const entry = await getEntry(args, config, "dev");
 
       if (args["experimental-public"]) {
@@ -1071,7 +1083,7 @@ export async function main(argv: string[]): Promise<void> {
       const configPath =
         (args.config as ConfigPath) ||
         (args.script && findWranglerToml(path.dirname(args.script)));
-      const config = readConfig(configPath, args.env);
+      const config = readConfig(configPath, args.env, args);
       const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
@@ -1173,9 +1185,9 @@ export async function main(argv: string[]): Promise<void> {
       if (args.format === "pretty") {
         printWranglerBanner();
       }
-      const config = readConfig(args.config as ConfigPath, args.env);
+      const config = readConfig(args.config as ConfigPath, args.env, args);
 
-      const scriptName = getScriptName(args, config);
+      const scriptName = getLegacyScriptName(args, config);
 
       if (!scriptName) {
         throw new Error("Missing script name");
@@ -1286,7 +1298,7 @@ export async function main(argv: string[]): Promise<void> {
           "***************************************************\n"
       );
 
-      const config = readConfig(args.config as ConfigPath, args.env);
+      const config = readConfig(args.config as ConfigPath, args.env, args);
       const entry = await getEntry({}, config, "dev");
 
       const accountId = await requireAuth(config);
@@ -1475,9 +1487,13 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1592,9 +1608,13 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1643,9 +1663,13 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1706,7 +1730,11 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             if (!config.name) {
               console.warn(
                 "No configured name present, using `worker` as a prefix for the title"
@@ -1743,7 +1771,11 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            const config = readConfig(args.config as ConfigPath, undefined);
+            const config = readConfig(
+              args.config as ConfigPath,
+              undefined,
+              args
+            );
 
             const accountId = await requireAuth(config);
 
@@ -1780,7 +1812,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
 
             let id;
             try {
@@ -1876,7 +1912,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ttl, expiration, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
@@ -1936,7 +1976,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -1985,7 +2029,11 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -2024,7 +2072,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
 
             console.log(
@@ -2084,7 +2136,11 @@ export async function main(argv: string[]): Promise<void> {
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
 
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(readFileSync(filename), filename);
 
@@ -2191,7 +2247,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ filename, ...args }) => {
             printWranglerBanner();
-            const config = readConfig(args.config as ConfigPath, args.env);
+            const config = readConfig(
+              args.config as ConfigPath,
+              args.env,
+              args
+            );
             const namespaceId = getNamespaceId(args, config);
 
             if (!args.force) {
@@ -2280,7 +2340,11 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath, undefined);
+            const config = readConfig(
+              args.config as ConfigPath,
+              undefined,
+              args
+            );
 
             const accountId = await requireAuth(config);
 
@@ -2291,7 +2355,7 @@ export async function main(argv: string[]): Promise<void> {
         );
 
         r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-          const config = readConfig(args.config as ConfigPath, undefined);
+          const config = readConfig(args.config as ConfigPath, undefined, args);
 
           const accountId = await requireAuth(config);
 
@@ -2318,7 +2382,11 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath, undefined);
+            const config = readConfig(
+              args.config as ConfigPath,
+              undefined,
+              args
+            );
 
             const accountId = await requireAuth(config);
 
