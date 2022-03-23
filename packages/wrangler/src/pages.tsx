@@ -27,6 +27,7 @@ const EXIT = (message?: string, code?: number) => {
   if (message) console.log(message);
   if (code) process.exitCode = code;
   EXIT_CALLBACKS.forEach((callback) => callback());
+  RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
   process.exit(code);
 };
 

@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { resolve } from "path";
+import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
@@ -26,7 +26,7 @@ describe("Pages Functions", () => {
   beforeAll(async () => {
     wranglerProcess = spawn("npm", ["run", "dev"], {
       shell: isWindows,
-      cwd: resolve(__dirname, "../"),
+      cwd: path.resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
     });
     wranglerProcess.stdout.on("data", (chunk) => {
@@ -37,8 +37,17 @@ describe("Pages Functions", () => {
     });
   });
 
-  afterAll(() => {
-    wranglerProcess.kill();
+  afterAll(async () => {
+    await new Promise((resolve, reject) => {
+      wranglerProcess.once("exit", (code) => {
+        if (!code) {
+          resolve(code);
+        } else {
+          reject(code);
+        }
+      });
+      wranglerProcess.kill();
+    });
   });
 
   it("renders static pages", async () => {

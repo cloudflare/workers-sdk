@@ -5,6 +5,8 @@ const semiver = require("semiver");
 
 const MIN_NODE_VERSION = "16.7.0";
 
+let wranglerProcess;
+
 async function main() {
   if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
     // Note Volta and nvm are also recommended in the official docs:
@@ -18,7 +20,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
     return;
   }
 
-  spawn(
+  wranglerProcess = spawn(
     process.execPath,
     [
       "--no-warnings",
@@ -32,5 +34,12 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
     process.exit(code === undefined || code === null ? 0 : code)
   );
 }
+
+process.on("SIGINT", () => {
+  wranglerProcess.kill();
+});
+process.on("SIGTERM", () => {
+  wranglerProcess.kill();
+});
 
 void main();
