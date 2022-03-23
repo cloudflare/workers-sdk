@@ -519,7 +519,7 @@ export const getBindingNames = (value: unknown): string[] => {
     return value.bindings.map(({ name }) => name);
   } else if (isNamespaceList(value)) {
     return value.map(({ binding }) => binding);
-  } else if (isBindingObject(value)) {
+  } else if (isRecord(value)) {
     return Object.keys(value);
   } else {
     return [];
@@ -527,40 +527,31 @@ export const getBindingNames = (value: unknown): string[] => {
 };
 
 const isBindingList = (
-  value: object
+  value: unknown
 ): value is {
   bindings: {
     name: string;
   }[];
 } =>
-  value !== null &&
-  !Array.isArray(value) &&
+  isRecord(value) &&
   "bindings" in value &&
-  Array.isArray((value as { bindings: unknown }).bindings) &&
-  (value as { bindings: unknown[] }).bindings.every(
+  Array.isArray(value.bindings) &&
+  value.bindings.every(
     (binding) =>
-      typeof binding === "object" &&
-      binding !== null &&
-      !Array.isArray(binding) &&
-      "name" in binding &&
-      typeof (binding as { name: unknown }).name === "string"
+      isRecord(binding) && "name" in binding && typeof binding.name === "string"
   );
 
-const isNamespaceList = (value: object): value is { binding: string }[] =>
-  value !== null &&
+const isNamespaceList = (value: unknown): value is { binding: string }[] =>
   Array.isArray(value) &&
   value.every(
     (entry) =>
-      typeof entry === "object" &&
-      entry !== null &&
-      "binding" in entry &&
-      typeof (entry as { binding: unknown }).binding === "string"
+      isRecord(entry) && "binding" in entry && typeof entry.binding === "string"
   );
 
-const isBindingObject = (
-  value: object
+const isRecord = (
+  value: unknown
 ): value is Record<string | number | symbol, unknown> =>
-  value !== null && !Array.isArray(value);
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Transform an array of strings into an english representation

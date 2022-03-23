@@ -1911,20 +1911,20 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found Durable Object, KV Namespace, and R2 Bucket bindings using CONFLICTING_NAME_ONE.
-                - Found Durable Object and KV Namespace bindings using CONFLICTING_NAME_TWO.
-                - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
-                - Found Text Blob and Unsafe bindings using CONFLICTING_NAME_FOUR.
+                - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
+                - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
+                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+                - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
                 - Bindings must have unique names, so that they can all be referenced in the worker.
                   Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found Durable Object, KV Namespace, and R2 Bucket bindings using CONFLICTING_NAME_ONE.
-          - Found Durable Object and KV Namespace bindings using CONFLICTING_NAME_TWO.
-          - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
-          - Found Text Blob and Unsafe bindings using CONFLICTING_NAME_FOUR.
+          - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
+          - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
+          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+          - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
           - Bindings must have unique names, so that they can all be referenced in the worker.
             Please change your bindings to have unique names.
 
@@ -2002,20 +2002,20 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-                - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
-                - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
-                - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
                 - Bindings must have unique names, so that they can all be referenced in the worker.
                   Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-          - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
-          - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
-          - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+          - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+          - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+          - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
           - Bindings must have unique names, so that they can all be referenced in the worker.
             Please change your bindings to have unique names.
 
@@ -2123,24 +2123,24 @@ export default{
       await expect(runWrangler("publish index.js")).rejects
         .toMatchInlineSnapshot(`
               [Error: Processing wrangler.toml configuration:
-                - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-                - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
-                - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
-                - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
-                - Found R2 Bucket, Text Blob, and Unsafe bindings using CONFLICTING_NAME_FOUR.
-                - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+                - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
+                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
                 - Bindings must have unique names, so that they can all be referenced in the worker.
                   Please change your bindings to have unique names.]
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - Found multiple Durable Object bindings using CONFLICTING_DURABLE_OBJECT_NAME.
-          - Found multiple KV Namespace bindings using CONFLICTING_KV_NAMESPACE_NAME.
-          - Found multiple R2 Bucket bindings using CONFLICTING_R2_BUCKET_NAME.
-          - Found R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings using CONFLICTING_NAME_THREE.
-          - Found R2 Bucket, Text Blob, and Unsafe bindings using CONFLICTING_NAME_FOUR.
-          - Found multiple Unsafe bindings using CONFLICTING_UNSAFE_NAME.
+          - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+          - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+          - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+          - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
+          - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
           - Bindings must have unique names, so that they can all be referenced in the worker.
             Please change your bindings to have unique names.
 

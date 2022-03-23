@@ -1113,7 +1113,7 @@ const validateBindingsHaveUniqueNames = (
 ): boolean => {
   let hasDuplicates = false;
 
-  const bindingsGroupedByType = Object.entries({
+  const bindingsGroupedByType = {
     "Durable Object": getBindingNames(durable_objects),
     "KV Namespace": getBindingNames(kv_namespaces),
     "R2 Bucket": getBindingNames(r2_buckets),
@@ -1121,22 +1121,21 @@ const validateBindingsHaveUniqueNames = (
     Unsafe: getBindingNames(unsafe),
     "Environment Variable": getBindingNames(vars),
     "WASM Module": getBindingNames(wasm_modules),
-  });
+  } as Record<string, string[]>;
 
-  const bindingsGroupedByName = bindingsGroupedByType.reduce(
-    (bindings, [bindingType, bindingNames]) => {
-      for (const bindingName of bindingNames) {
-        if (!(bindingName in bindings)) {
-          bindings[bindingName] = [];
-        }
+  const bindingsGroupedByName: Record<string, string[]> = {};
 
-        bindings[bindingName].push(bindingType);
+  for (const bindingType in bindingsGroupedByType) {
+    const bindingNames = bindingsGroupedByType[bindingType];
+
+    for (const bindingName of bindingNames) {
+      if (!(bindingName in bindingsGroupedByName)) {
+        bindingsGroupedByName[bindingName] = [];
       }
 
-      return bindings;
-    },
-    {} as Record<string, string[]>
-  );
+      bindingsGroupedByName[bindingName].push(bindingType);
+    }
+  }
 
   for (const bindingName in bindingsGroupedByName) {
     const bindingTypes = bindingsGroupedByName[bindingName];
@@ -1160,7 +1159,6 @@ const validateBindingsHaveUniqueNames = (
           duplicateBindingTypes.indexOf(type) === i
       );
 
-    // filter for bindings
     const differentTypes = bindingTypes.filter(
       (type, i) => bindingTypes.indexOf(type) === i
     );
@@ -1168,13 +1166,13 @@ const validateBindingsHaveUniqueNames = (
     if (differentTypes.length > 1) {
       // we have multiple different types using the same name
       diagnostics.errors.push(
-        `Found ${englishify(differentTypes)} bindings using ${bindingName}.`
+        `${bindingName} assigned to ${englishify(differentTypes)} bindings.`
       );
     }
 
     sameType.forEach((bindingType) => {
       diagnostics.errors.push(
-        `Found multiple ${bindingType} bindings using ${bindingName}.`
+        `${bindingName} assigned to multiple ${bindingType} bindings.`
       );
     });
   }
