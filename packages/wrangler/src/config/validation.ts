@@ -23,6 +23,7 @@ import {
   isMutuallyExclusiveWith,
   inheritableInLegacyEnvironments,
   appendEnvName,
+  getBindingNames,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -32,6 +33,8 @@ import type {
   Rule,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
+
+const ENGLISH = new Intl.ListFormat("en");
 
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
@@ -166,6 +169,8 @@ export function normalizeAndValidateConfig(
       rawConfig.text_blobs
     ),
   };
+
+  validateBindingsHaveUniqueNames(diagnostics, config);
 
   validateAdditionalProperties(
     diagnostics,
@@ -883,14 +888,6 @@ const validateBindingsProperty =
   };
 
 /**
- * Get the names of the bindings collection in `value`.
- */
-const getBindingNames = (value: unknown): string[] =>
-  ((value as { bindings: { name: string }[] })?.bindings ?? []).map(
-    (binding) => binding.name
-  );
-
-/**
  * Check that the given field is a valid "durable_object" binding object.
  */
 const validateDurableObjectBinding: ValidatorFn = (
@@ -1093,4 +1090,100 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
     isValid = false;
   }
   return isValid;
+};
+
+/**
+ * Check that bindings whose names might conflict, don't.
+ *
+ * We don't want to have, for example, a KV namespace named "DATA"
+ * and a Durable Object also named "DATA". Then it would be ambiguous
+ * what exactly would live at `env.DATA` (or in the case of service workers,
+ * the `DATA` global).
+ */
+const validateBindingsHaveUniqueNames = (
+  diagnostics: Diagnostics,
+  {
+    durable_objects,
+    kv_namespaces,
+    r2_buckets,
+    text_blobs,
+    unsafe,
+    vars,
+    wasm_modules,
+  }: Partial<Config>
+): boolean => {
+  let hasDuplicates = false;
+
+  const bindingsGroupedByType = {
+    "Durable Object": getBindingNames(durable_objects),
+    "KV Namespace": getBindingNames(kv_namespaces),
+    "R2 Bucket": getBindingNames(r2_buckets),
+    "Text Blob": getBindingNames(text_blobs),
+    Unsafe: getBindingNames(unsafe),
+    "Environment Variable": getBindingNames(vars),
+    "WASM Module": getBindingNames(wasm_modules),
+  } as Record<string, string[]>;
+
+  const bindingsGroupedByName: Record<string, string[]> = {};
+
+  for (const bindingType in bindingsGroupedByType) {
+    const bindingNames = bindingsGroupedByType[bindingType];
+
+    for (const bindingName of bindingNames) {
+      if (!(bindingName in bindingsGroupedByName)) {
+        bindingsGroupedByName[bindingName] = [];
+      }
+
+      bindingsGroupedByName[bindingName].push(bindingType);
+    }
+  }
+
+  for (const bindingName in bindingsGroupedByName) {
+    const bindingTypes = bindingsGroupedByName[bindingName];
+    if (bindingTypes.length < 2) {
+      // there's only one (or zero) binding(s) with this name, which is fine, actually
+      continue;
+    }
+
+    hasDuplicates = true;
+
+    // there's two types of duplicates we want to look for:
+    // - bindings with the same name of the same type (e.g. two Durable Objects both named "OBJ")
+    // - bindings with the same name of different types (a KV namespace and DO both named "DATA")
+
+    const sameType = bindingTypes
+      // filter once to find duplicate binding types
+      .filter((type, i) => bindingTypes.indexOf(type) !== i)
+      // filter twice to only get _unique_ duplicate binding types
+      .filter(
+        (type, i, duplicateBindingTypes) =>
+          duplicateBindingTypes.indexOf(type) === i
+      );
+
+    const differentTypes = bindingTypes.filter(
+      (type, i) => bindingTypes.indexOf(type) === i
+    );
+
+    if (differentTypes.length > 1) {
+      // we have multiple different types using the same name
+      diagnostics.errors.push(
+        `${bindingName} assigned to ${ENGLISH.format(differentTypes)} bindings.`
+      );
+    }
+
+    sameType.forEach((bindingType) => {
+      diagnostics.errors.push(
+        `${bindingName} assigned to multiple ${bindingType} bindings.`
+      );
+    });
+  }
+
+  if (hasDuplicates) {
+    const problem =
+      "Bindings must have unique names, so that they can all be referenced in the worker.";
+    const resolution = "Please change your bindings to have unique names.";
+    diagnostics.errors.push(`${problem}\n${resolution}`);
+  }
+
+  return !hasDuplicates;
 };

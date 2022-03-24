@@ -502,3 +502,53 @@ export const validateAdditionalProperties = (
   }
   return true;
 };
+
+/**
+ * Get the names of the bindings collection in `value`.
+ *
+ * Will return an empty array if it doesn't understand the value
+ * passed in, so another form of validation should be
+ * performed externally.
+ */
+export const getBindingNames = (value: unknown): string[] => {
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  if (isBindingList(value)) {
+    return value.bindings.map(({ name }) => name);
+  } else if (isNamespaceList(value)) {
+    return value.map(({ binding }) => binding);
+  } else if (isRecord(value)) {
+    return Object.keys(value);
+  } else {
+    return [];
+  }
+};
+
+const isBindingList = (
+  value: unknown
+): value is {
+  bindings: {
+    name: string;
+  }[];
+} =>
+  isRecord(value) &&
+  "bindings" in value &&
+  Array.isArray(value.bindings) &&
+  value.bindings.every(
+    (binding) =>
+      isRecord(binding) && "name" in binding && typeof binding.name === "string"
+  );
+
+const isNamespaceList = (value: unknown): value is { binding: string }[] =>
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      isRecord(entry) && "binding" in entry && typeof entry.binding === "string"
+  );
+
+const isRecord = (
+  value: unknown
+): value is Record<string | number | symbol, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
