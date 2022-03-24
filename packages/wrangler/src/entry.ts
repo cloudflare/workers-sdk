@@ -20,7 +20,7 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
 export async function getEntry(
   args: { script?: string; format?: CfScriptFormat | undefined },
   config: Config,
-  command: string
+  command: "dev" | "publish"
 ): Promise<Entry> {
   let file: string;
   let directory = process.cwd();
@@ -49,12 +49,24 @@ export async function getEntry(
     args.format ?? config.build?.upload?.format
   );
 
-  if (format === "service-worker" && hasDurableObjectImplementations(config)) {
+  const { localBindings, remoteBindings } =
+    partitionDurableObjectBindings(config);
+
+  if (command === "dev" && remoteBindings.length > 0) {
+    console.warn(
+      "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.\n" +
+        "Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.\n" +
+        "Remote Durable Objects that are affected:\n" +
+        remoteBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")
+    );
+  }
+
+  if (format === "service-worker" && localBindings.length > 0) {
     const errorMessage =
       "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.";
     const addScriptName =
       "You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
-    const addScriptNameExamples = generateAddScriptNameExamples(config);
+    const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
     const migrateText =
       "Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
     const migrateUrl =
@@ -174,15 +186,26 @@ export function fileExists(filePath: string): boolean {
   return false;
 }
 
+type DurableObjectBindings = Config["durable_objects"]["bindings"];
+
 /**
- * Returns true if the given config contains Durable Object bindings that are implemented
- * in this worker instead of being implemented elsewhere, and bound via a `script_name`
- * property in wrangler.toml
+ * Groups the durable object bindings into two lists:
+ * those that are defined locally and those that refer to a durable object defined in another script.
  */
-function hasDurableObjectImplementations(config: Config): boolean {
-  return config.durable_objects.bindings.some(
-    (binding) => binding.script_name === undefined
-  );
+function partitionDurableObjectBindings(config: Config): {
+  localBindings: DurableObjectBindings;
+  remoteBindings: DurableObjectBindings;
+} {
+  const localBindings: DurableObjectBindings = [];
+  const remoteBindings: DurableObjectBindings = [];
+  for (const binding of config.durable_objects.bindings) {
+    if (binding.script_name === undefined) {
+      localBindings.push(binding);
+    } else {
+      remoteBindings.push(binding);
+    }
+  }
+  return { localBindings, remoteBindings };
 }
 
 /**
@@ -190,13 +213,14 @@ function hasDurableObjectImplementations(config: Config): boolean {
  * config indicating how the user can add a `script_name` field to bind an
  * externally defined Durable Object.
  */
-function generateAddScriptNameExamples(config: Config): string {
+function generateAddScriptNameExamples(
+  localBindings: DurableObjectBindings
+): string {
   function exampleScriptName(binding_name: string): string {
     return `${binding_name.toLowerCase().replaceAll("_", "-")}-worker`;
   }
 
-  return config.durable_objects.bindings
-    .filter((binding) => binding.script_name === undefined)
+  return localBindings
     .map(({ name, class_name }) => {
       const script_name = exampleScriptName(name);
       const currentBinding = `{ name = ${name}, class_name = ${class_name} }`;
