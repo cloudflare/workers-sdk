@@ -56,6 +56,16 @@ describe("Pages Functions", () => {
     expect(text).toContain("Hello, world!");
   });
 
+  it("passes environment variables", async () => {
+    const response = await waitUntilReady("http://localhost:8789/variables");
+    const env = await response.json();
+    expect(env).toEqual({
+      ASSETS: {},
+      NAME: "VALUE",
+      OTHER_NAME: "THING=WITH=EQUALS",
+    });
+  });
+
   it("intercepts static requests with next()", async () => {
     const response = await waitUntilReady("http://localhost:8789/intercept");
     const text = await response.text();

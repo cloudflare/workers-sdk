@@ -898,7 +898,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           // User bindings
           bindings: {
             ...Object.fromEntries(
-              bindings.map((binding) => binding.toString().split("=", 1))
+              bindings
+                .map((binding) => binding.toString().split("="))
+                .map(([key, ...values]) => [key, values.join("=")])
             ),
           },
 
