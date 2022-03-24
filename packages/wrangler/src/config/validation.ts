@@ -24,7 +24,6 @@ import {
   inheritableInLegacyEnvironments,
   appendEnvName,
   getBindingNames,
-  englishify,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -1166,7 +1165,14 @@ const validateBindingsHaveUniqueNames = (
     if (differentTypes.length > 1) {
       // we have multiple different types using the same name
       diagnostics.errors.push(
-        `${bindingName} assigned to ${englishify(differentTypes)} bindings.`
+        // TODO
+        // types haven't been updated yet, once this PR lands we can remove this
+        // https://github.com/microsoft/TypeScript/pull/47254
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        `${bindingName} assigned to ${new Intl.ListFormat("en").format(
+          differentTypes
+        )} bindings.`
       );
     }
 
