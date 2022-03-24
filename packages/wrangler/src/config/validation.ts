@@ -34,6 +34,8 @@ import type {
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
+const ENGLISH = new Intl.ListFormat("en");
+
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
  *
@@ -1165,14 +1167,7 @@ const validateBindingsHaveUniqueNames = (
     if (differentTypes.length > 1) {
       // we have multiple different types using the same name
       diagnostics.errors.push(
-        // TODO
-        // types haven't been updated yet, once this PR lands we can remove this
-        // https://github.com/microsoft/TypeScript/pull/47254
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        `${bindingName} assigned to ${new Intl.ListFormat("en").format(
-          differentTypes
-        )} bindings.`
+        `${bindingName} assigned to ${ENGLISH.format(differentTypes)} bindings.`
       );
     }
 
