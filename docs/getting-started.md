@@ -1,4 +1,4 @@
-## Getting started with 🤠 Wrangler
+## Getting started with ⛅️ Wrangler
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
