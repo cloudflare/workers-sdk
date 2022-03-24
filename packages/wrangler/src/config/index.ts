@@ -38,7 +38,6 @@ export function readConfig(
   const { config, diagnostics } = normalizeAndValidateConfig(
     rawConfig,
     configPath,
-    envName,
     args
   );
 
