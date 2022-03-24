@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-Validate that bindings have unique names
+fix: validate that bindings have unique names
 
 We don't want to have, for example, a KV namespace named "DATA"
 and a Durable Object also named "DATA". Then it would be ambiguous
