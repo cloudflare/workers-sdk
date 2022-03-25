@@ -57,6 +57,11 @@ export async function bundleWorker(
     sourcemap: true,
     metafile: true,
     conditions: ["worker", "browser"],
+    ...(process.env.NODE_ENV && {
+      define: {
+        "process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+      },
+    }),
     loader: {
       ".js": "jsx",
       ".mjs": "jsx",
