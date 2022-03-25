@@ -125,6 +125,11 @@ export default async function guessWorkerFormat(
     bundle: false,
     format: "esm",
     write: false,
+    loader: {
+      ".js": "jsx",
+      ".mjs": "jsx",
+      ".cjs": "jsx",
+    },
   });
   // result.metafile is defined because of the `metafile: true` option above.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
