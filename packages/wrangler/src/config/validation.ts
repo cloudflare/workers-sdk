@@ -528,7 +528,7 @@ function normalizeAndValidateEnvironment(
     rawEnv,
     "workers_dev",
     isBoolean,
-    !(routes || route)
+    undefined
   );
 
   const { deprecatedUpload, ...build } = normalizeAndValidateBuild(

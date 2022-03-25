@@ -47,7 +47,8 @@ export default async function publish(props: Props): Promise<void> {
   const routes =
     props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 
-  const deployToWorkersDev = config.workers_dev;
+  // deployToWorkersDev defaults to true only if there aren't any routes defined
+  const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
 
   const jsxFactory = props.jsxFactory || config.jsx_factory;
   const jsxFragment = props.jsxFragment || config.jsx_fragment;
