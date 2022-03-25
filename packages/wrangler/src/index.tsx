@@ -32,7 +32,7 @@ import {
   unexpectedKeyValueProps,
 } from "./kv";
 import { getPackageManager } from "./package-manager";
-import { pages } from "./pages";
+import { pages, pagesBetaWarning } from "./pages";
 import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
@@ -2312,8 +2312,12 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) =>
-    pages(pagesYargs.command(subHelp))
+  wrangler.command(
+    "pages",
+    "⚡️ Configure Cloudflare Pages",
+    async (pagesYargs) => {
+      await pages(pagesYargs.command(subHelp).epilogue(pagesBetaWarning));
+    }
   );
 
   wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
