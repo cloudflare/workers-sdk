@@ -58,7 +58,7 @@ describe("normalizeAndValidateConfig()", () => {
       usage_model: undefined,
       vars: {},
       wasm_modules: undefined,
-      workers_dev: true,
+      workers_dev: undefined,
       zone_id: undefined,
     });
     expect(diagnostics.hasErrors()).toBe(false);

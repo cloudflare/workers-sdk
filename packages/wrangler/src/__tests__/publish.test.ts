@@ -1618,6 +1618,253 @@ export default{
               https://dash.cloudflare.com/some-account-id/workers/onboarding"
             `);
     });
+
+    it("should not deploy to workers.dev if there are any routes defined", async () => {
+      writeWranglerToml({
+        routes: ["http://example.com/*"],
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      mockUpdateWorkerRequest({
+        enabled: false,
+      });
+      mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
+      await runWrangler("publish index.js");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          http://example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not deploy to workers.dev if there are any routes defined (environments)", async () => {
+      writeWranglerToml({
+        routes: ["http://example.com/*"],
+        env: {
+          production: {
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not deploy to workers.dev if there are any routes defined (only in environments)", async () => {
+      writeWranglerToml({
+        env: {
+          production: {
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("can deploy to both workers.dev and routes if both defined ", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+        routes: ["http://example.com/*"],
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      mockUpdateWorkerRequest({
+        enabled: false,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://example.com/*"],
+      });
+      await runWrangler("publish index.js");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev
+          http://example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("can deploy to both workers.dev and routes if both defined (environments: 1)", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+        env: {
+          production: {
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          test-name-production.test-sub-domain.workers.dev
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("can deploy to both workers.dev and routes if both defined (environments: 2)", async () => {
+      writeWranglerToml({
+        env: {
+          production: {
+            workers_dev: true,
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          test-name-production.test-sub-domain.workers.dev
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("will deploy only to routes when workers_dev is false (environments 1) ", async () => {
+      writeWranglerToml({
+        workers_dev: false,
+        env: {
+          production: {
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("will deploy only to routes when workers_dev is false (environments 2) ", async () => {
+      writeWranglerToml({
+        env: {
+          production: {
+            workers_dev: false,
+            routes: ["http://production.example.com/*"],
+          },
+        },
+      });
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({ env: "production", legacyEnv: true });
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "production",
+        legacyEnv: true,
+      });
+      mockPublishRoutesRequest({
+        routes: ["http://production.example.com/*"],
+        env: "production",
+        legacyEnv: true,
+      });
+      await runWrangler("publish index.js --env production");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name-production (TIMINGS)
+        Published test-name-production (TIMINGS)
+          http://production.example.com/*"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("custom builds", () => {

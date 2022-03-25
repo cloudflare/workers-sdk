@@ -64,7 +64,7 @@ interface EnvironmentInheritable {
    * @breaking
    * @inheritable
    */
-  workers_dev: boolean;
+  workers_dev: boolean | undefined;
 
   /**
    * A list of routes that your worker should be published to.
