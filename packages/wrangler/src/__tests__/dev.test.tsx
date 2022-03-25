@@ -9,7 +9,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
-describe("Dev component", () => {
+describe("wrangler dev", () => {
   mockAccountId();
   mockApiToken();
   runInTempDir();
@@ -477,6 +477,42 @@ describe("Dev component", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe("durable_objects", () => {
+    it("should warn if there is one or more remote Durable Object", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        durable_objects: {
+          bindings: [
+            { name: "NAME_1", class_name: "CLASS_1" },
+            {
+              name: "NAME_2",
+              class_name: "CLASS_2",
+              script_name: "SCRIPT_A",
+            },
+            { name: "NAME_3", class_name: "CLASS_3" },
+            {
+              name: "NAME_4",
+              class_name: "CLASS_4",
+              script_name: "SCRIPT_B",
+            },
+          ],
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.
+        Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
+        Remote Durable Objects that are affected:
+        - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}"
+      `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
