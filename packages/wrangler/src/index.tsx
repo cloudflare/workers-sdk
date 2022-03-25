@@ -627,8 +627,7 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.command(
     // this needs scopes as an option?
     "login",
-    false, // we don't need to show this in the menu
-    // "🔓 Login to Cloudflare",
+    "🔓 Login to Cloudflare",
     (yargs) => {
       // TODO: This needs some copy editing
       // I mean, this entire app does, but this too.
@@ -676,8 +675,7 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.command(
     // this needs scopes as an option?
     "logout",
-    false, // we don't need to show this in the menu
-    // "🚪 Logout from Cloudflare",
+    "🚪 Logout from Cloudflare",
     () => {},
     async () => {
       printWranglerBanner();

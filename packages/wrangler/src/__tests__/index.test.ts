@@ -31,11 +31,14 @@ describe("wrangler", () => {
     it("should display a list of available commands", async () => {
       await runWrangler();
 
-      expect(std.out).toMatchInlineSnapshot(`
+      expect(std.out).toMatchInlineSnapshot(
+        `
         "wrangler
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
@@ -52,7 +55,8 @@ describe("wrangler", () => {
           -h, --help        Show help  [boolean]
           -v, --version     Show version number  [boolean]
               --legacy-env  Use legacy environments  [boolean]"
-      `);
+      `
+      );
 
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -67,11 +71,14 @@ describe("wrangler", () => {
       );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`
+      expect(std.err).toMatchInlineSnapshot(
+        `
         "wrangler
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
@@ -90,7 +97,8 @@ describe("wrangler", () => {
               --legacy-env  Use legacy environments  [boolean]
 
         Unknown argument: invalid-command"
-      `);
+      `
+      );
     });
   });
 
