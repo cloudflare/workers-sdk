@@ -345,7 +345,7 @@ let LocalState: State = getAuthTokens();
 /**
  * Compute the current auth tokens.
  */
-function getAuthTokens(): AuthTokens {
+function getAuthTokens(config?: UserAuthConfig): AuthTokens {
   // get refreshToken/accessToken from fs if exists
   try {
     // if the environment variable is available, use that
@@ -361,7 +361,7 @@ function getAuthTokens(): AuthTokens {
 
     // otherwise try loading from the user auth config file.
     const { oauth_token, refresh_token, expiration_time, api_token } =
-      readAuthConfigFile();
+      config || readAuthConfigFile();
 
     if (oauth_token) {
       return {
@@ -384,9 +384,20 @@ function getAuthTokens(): AuthTokens {
 
 /**
  * Run the initialisation of the auth state, in the case that something changed.
+ *
+ * This runs automatically whenever `writeAuthConfigFile` is run, so generally
+ * you won't need to call it yourself.
  */
-export function reinitialiseAuthTokens(): void {
-  LocalState = getAuthTokens();
+export function reinitialiseAuthTokens(): void;
+
+/**
+ * Reinitialise auth state from an in-memory config, skipping
+ * over the part where we write a file and then read it back into memory
+ */
+export function reinitialiseAuthTokens(config: UserAuthConfig): void;
+
+export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
+  LocalState = getAuthTokens(config);
 }
 
 export function getAPIToken(): string | undefined {
@@ -832,6 +843,10 @@ function generateRandomState(lengthOfState: number): string {
     .join("");
 }
 
+/**
+ * Writes a a wrangler config file (auth credentials) to disk,
+ * and updates the user auth state with the new credentials.
+ */
 export function writeAuthConfigFile(config: UserAuthConfig) {
   mkdirSync(path.join(os.homedir(), ".wrangler/config/"), {
     recursive: true,
@@ -841,6 +856,8 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
     TOML.stringify(config as TOML.JsonMap),
     { encoding: "utf-8" }
   );
+
+  reinitialiseAuthTokens();
 }
 
 function readAuthConfigFile(): UserAuthConfig {
