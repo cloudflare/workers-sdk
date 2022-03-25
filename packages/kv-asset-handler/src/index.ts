@@ -274,7 +274,7 @@ const getAssetFromKV = async (event: Evt, options?: Partial<Options>): Promise<R
 
     if (shouldEdgeCache) {
       response.headers.set('Accept-Ranges', 'bytes')
-      response.headers.set('Content-Length', body.length)
+      response.headers.set('Content-Length', String(body.byteLength))
       // set etag before cache insertion
       if (!response.headers.has('etag')) {
         response.headers.set('etag', formatETag(pathKey, 'strong'))
