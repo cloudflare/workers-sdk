@@ -1,6 +1,6 @@
 import { render } from "ink-testing-library";
 import React from "react";
-import { reinitialiseAuthTokens, writeAuthConfigFile } from "../user";
+import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -18,16 +18,12 @@ describe("getUserInfo()", () => {
 
   it("should return undefined if there is an empty config file", async () => {
     writeAuthConfigFile({});
-    // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
-    reinitialiseAuthTokens();
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {
     writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-    // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
-    reinitialiseAuthTokens();
 
     setMockResponse("/user", () => {
       return { email: "user@example.com" };
@@ -56,7 +52,6 @@ describe("getUserInfo()", () => {
 
   it("should display a warning message if the config file contains a legacy api_token field", async () => {
     writeAuthConfigFile({ api_token: "API_TOKEN" });
-    await reinitialiseAuthTokens();
     await getUserInfo();
     expect(std.warn).toMatchInlineSnapshot(`
       "It looks like you have used Wrangler 1's \`config\` command to login with an API token.

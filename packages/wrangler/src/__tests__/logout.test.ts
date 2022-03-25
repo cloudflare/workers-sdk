@@ -2,11 +2,7 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
-import {
-  reinitialiseAuthTokens,
-  USER_AUTH_CONFIG_FILE,
-  writeAuthConfigFile,
-} from "../user";
+import { USER_AUTH_CONFIG_FILE, writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -34,8 +30,6 @@ describe("wrangler", () => {
         return "";
       });
 
-      // Now that we have changed the auth tokens in the wrangler.toml we must reinitialize the user auth state.
-      reinitialiseAuthTokens();
       await runWrangler("logout");
 
       expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
