@@ -47,7 +47,6 @@ const ENGLISH = new Intl.ListFormat("en");
 export function normalizeAndValidateConfig(
   rawConfig: RawConfig,
   configPath: string | undefined,
-  envName: string | undefined,
   args: unknown
 ): {
   config: Config;
@@ -103,6 +102,9 @@ export function normalizeAndValidateConfig(
     configPath,
     rawConfig
   );
+
+  //TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
+  const envName = (args as { env: string | undefined }).env;
 
   let activeEnv = topLevelEnv;
   if (envName !== undefined) {

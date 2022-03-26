@@ -9,12 +9,9 @@ import type {
 
 describe("normalizeAndValidateConfig()", () => {
   it("should use defaults for empty configuration", () => {
-    const { config, diagnostics } = normalizeAndValidateConfig(
-      {},
-      undefined,
-      undefined,
-      {}
-    );
+    const { config, diagnostics } = normalizeAndValidateConfig({}, undefined, {
+      env: undefined,
+    });
 
     expect(config).toEqual({
       account_id: undefined,
@@ -80,8 +77,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -103,8 +99,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -131,8 +126,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect("unexpected" in config).toBe(false);
@@ -153,8 +147,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect("miniflare" in config).toBe(false);
@@ -185,8 +178,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -214,8 +206,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -244,8 +235,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -265,8 +255,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -290,8 +279,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -314,8 +302,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config.site).toMatchInlineSnapshot(`
@@ -351,8 +338,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         "project/wrangler.toml",
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -378,8 +364,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         "project/wrangler.toml",
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -406,8 +391,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         "project/wrangler.toml",
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -433,8 +417,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
         "project/wrangler.toml",
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -460,8 +443,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         // Note the `.not.` here...
@@ -551,8 +533,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -589,8 +570,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -630,8 +610,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         path.resolve("project/wrangler.toml"),
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config.main).toEqual(path.resolve("project/src/index.ts"));
@@ -671,8 +650,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         undefined,
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config.build).toEqual(
@@ -697,8 +675,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
         "project/wrangler.toml",
-        undefined,
-        {}
+        { env: undefined }
       );
 
       expect(config.build).toEqual(
@@ -717,8 +694,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: [] } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -735,8 +711,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: "BAD" } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -753,8 +728,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: 999 } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -771,8 +745,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: null } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -789,8 +762,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: {} } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -807,8 +779,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: {} } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -827,8 +798,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -847,8 +817,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: 999 } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -867,8 +836,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: null } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -900,8 +868,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -937,8 +904,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: {} } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -955,8 +921,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: "BAD" } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -973,8 +938,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: 999 } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -991,8 +955,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: null } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1020,8 +983,7 @@ describe("normalizeAndValidateConfig()", () => {
             ],
           } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1047,8 +1009,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: {} } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1065,8 +1026,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: "BAD" } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1083,8 +1043,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: 999 } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1101,8 +1060,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: null } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1130,8 +1088,7 @@ describe("normalizeAndValidateConfig()", () => {
             ],
           } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1157,8 +1114,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: [] } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1178,8 +1134,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: "BAD" } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1199,8 +1154,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: 999 } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1220,8 +1174,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: null } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1241,8 +1194,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: {} } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1262,8 +1214,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: {} } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1285,8 +1236,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: "BAD" } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1308,8 +1258,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: 999 } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1331,8 +1280,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: null } } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1367,8 +1315,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1413,8 +1360,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect("experimental_services" in config).toBe(false);
@@ -1449,8 +1395,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          undefined,
-          {}
+          { env: undefined }
         );
 
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -1464,12 +1409,9 @@ describe("normalizeAndValidateConfig()", () => {
   describe("named environments", () => {
     it("should warn if we specify an environment but there are no named environments", () => {
       const rawConfig: RawConfig = {};
-      const { diagnostics } = normalizeAndValidateConfig(
-        rawConfig,
-        undefined,
-        "DEV",
-        {}
-      );
+      const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
+        env: "DEV",
+      });
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
         "
@@ -1489,12 +1431,9 @@ describe("normalizeAndValidateConfig()", () => {
 
     it("should error if we specify an environment that does not match the named environments", () => {
       const rawConfig: RawConfig = { env: { ENV1: {} } };
-      const { diagnostics } = normalizeAndValidateConfig(
-        rawConfig,
-        undefined,
-        "DEV",
-        {}
-      );
+      const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
+        env: "DEV",
+      });
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
           - No environment found in configuration with name \\"DEV\\".
@@ -1538,8 +1477,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         { ...rawConfig, env: { DEV: {} } },
         undefined,
-        "DEV",
-        {}
+        { env: "DEV" }
       );
 
       expect(config).toEqual(
@@ -1599,8 +1537,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         rawConfig,
         undefined,
-        "ENV1",
-        {}
+        { env: "ENV1" }
       );
 
       expect(config).toEqual(
@@ -1621,8 +1558,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          "DEV",
-          {}
+          { env: "DEV" }
         );
 
         expect(config.name).toEqual("NAME");
@@ -1643,8 +1579,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          "DEV",
-          {}
+          { env: "DEV" }
         );
 
         expect(config.name).toBeUndefined();
@@ -1672,8 +1607,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
           undefined,
-          "DEV",
-          {}
+          { env: "DEV" }
         );
 
         expect(config.name).toEqual("NAME");
@@ -1712,8 +1646,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         rawConfig,
         undefined,
-        "ENV1",
-        {}
+        { env: "ENV1" }
       );
 
       expect(config).toEqual(
@@ -1772,8 +1705,7 @@ describe("normalizeAndValidateConfig()", () => {
       const { config, diagnostics } = normalizeAndValidateConfig(
         { env: { ENV1: expectedConfig } },
         undefined,
-        "ENV1",
-        {}
+        { env: "ENV1" }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1805,8 +1737,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1825,8 +1756,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1845,8 +1775,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1865,8 +1794,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1885,8 +1813,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1907,8 +1834,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { durable_objects: { bindings: {} } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1931,8 +1857,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { durable_objects: { bindings: "BAD" } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1955,8 +1880,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { durable_objects: { bindings: 999 } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -1979,8 +1903,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { durable_objects: { bindings: null } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2018,8 +1941,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2057,8 +1979,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2077,8 +1998,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2097,8 +2017,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2117,8 +2036,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2152,8 +2070,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2181,8 +2098,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2201,8 +2117,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2221,8 +2136,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2241,8 +2155,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2276,8 +2189,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2305,8 +2217,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2330,8 +2241,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2355,8 +2265,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2380,8 +2289,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2405,8 +2313,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2432,8 +2339,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { unsafe: { bindings: {} } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2461,8 +2367,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { unsafe: { bindings: "BAD" } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2490,8 +2395,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { unsafe: { bindings: 999 } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2519,8 +2423,7 @@ describe("normalizeAndValidateConfig()", () => {
             env: { ENV1: { unsafe: { bindings: null } } },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2563,8 +2466,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           } as unknown as RawConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(
@@ -2617,8 +2519,7 @@ describe("normalizeAndValidateConfig()", () => {
             },
           },
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect("experimental_services" in config).toBe(false);
@@ -2679,8 +2580,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(expect.objectContaining(environment));
@@ -2728,8 +2628,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(expect.objectContaining(environment));
@@ -2774,8 +2673,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(expect.objectContaining(environment));
@@ -2815,8 +2713,7 @@ describe("normalizeAndValidateConfig()", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
           undefined,
-          "ENV1",
-          {}
+          { env: "ENV1" }
         );
 
         expect(config).toEqual(expect.objectContaining(environment));
@@ -2866,23 +2763,17 @@ describe("normalizeAndValidateConfig()", () => {
           },
         };
 
-        const result1 = normalizeAndValidateConfig(
-          expectedConfig,
-          undefined,
-          "ENV1",
-          {}
-        );
+        const result1 = normalizeAndValidateConfig(expectedConfig, undefined, {
+          env: "ENV1",
+        });
 
         expect(result1.config).toEqual(expect.objectContaining(environment1));
         expect(result1.diagnostics.hasErrors()).toBe(false);
         expect(result1.diagnostics.hasWarnings()).toBe(false);
 
-        const result2 = normalizeAndValidateConfig(
-          expectedConfig,
-          undefined,
-          "ENV2",
-          {}
-        );
+        const result2 = normalizeAndValidateConfig(expectedConfig, undefined, {
+          env: "ENV2",
+        });
 
         expect(result2.config).toEqual(expect.objectContaining(environment2));
         expect(result2.diagnostics.hasErrors()).toBe(false);
