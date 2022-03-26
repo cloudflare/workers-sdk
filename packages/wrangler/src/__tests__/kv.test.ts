@@ -72,7 +72,7 @@ describe("wrangler", () => {
         await expect(
           runWrangler("kv:namespace create abc def ghi")
         ).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"Unexpected additional positional arguments \\"def ghi\\"."`
+          `"Unknown arguments: def, ghi"`
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
@@ -93,7 +93,7 @@ describe("wrangler", () => {
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
-          Unexpected additional positional arguments \\"def ghi\\"."
+          Unknown arguments: def, ghi"
         `);
       });
 
@@ -809,9 +809,7 @@ describe("wrangler", () => {
               100,
               blankCursorValue
             );
-            await runWrangler(
-              "kv:key list --namespace-id some-namespace-id --limit 100"
-            );
+            await runWrangler("kv:key list --namespace-id some-namespace-id");
             expect(std.err).toMatchInlineSnapshot(`""`);
             expect(JSON.parse(std.out)).toEqual(keys);
             expect(requests.count).toEqual(6);
@@ -889,7 +887,7 @@ describe("wrangler", () => {
           "my-value"
         );
         await runWrangler(
-          "kv:key get my-key my-value --binding someBinding --env some-environment --preview false"
+          "kv:key get my-key --binding someBinding --env some-environment --preview false"
         );
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);

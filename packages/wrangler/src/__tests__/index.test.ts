@@ -63,7 +63,7 @@ describe("wrangler", () => {
       await expect(
         runWrangler("invalid-command")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Unknown command: invalid-command."`
+        `"Unknown argument: invalid-command"`
       );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
@@ -89,7 +89,7 @@ describe("wrangler", () => {
           -v, --version     Show version number  [boolean]
               --legacy-env  Use legacy environments  [boolean]
 
-        Unknown command: invalid-command."
+        Unknown argument: invalid-command"
       `);
     });
   });
@@ -812,14 +812,6 @@ describe("wrangler", () => {
       expect(fs.existsSync("./wrangler.toml")).toBe(true);
     });
 
-    it("should error if `--type` is used", async () => {
-      await expect(
-        runWrangler("init --type")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"The --type option is no longer supported."`
-      );
-    });
-
     it("should error if `--type javascript` is used", async () => {
       await expect(
         runWrangler("init --type javascript")
@@ -854,7 +846,7 @@ describe("wrangler", () => {
               Try using \`wrangler dev\` to to try out a worker during development.
               "
             `);
-      await expect(runWrangler("preview GET 'Some Body'")).rejects
+      await expect(runWrangler(`preview GET "SomeBody"`)).rejects
         .toThrowErrorMatchingInlineSnapshot(`
               "DEPRECATION WARNING:
               The \`wrangler preview\` command has been deprecated.

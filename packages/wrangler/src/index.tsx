@@ -219,6 +219,7 @@ class DeprecationError extends Error {
 
 export async function main(argv: string[]): Promise<void> {
   const wrangler = makeCLI(argv)
+    .strict()
     // We handle errors ourselves in a try-catch around `yargs.parse`.
     // If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
     // Otherwise we just log the error that was thrown without any "help info".
@@ -297,6 +298,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The name of your worker",
           type: "string",
         })
+        .option("type", {
+          describe: "The type of worker to create",
+          type: "string",
+          choices: ["rust", "javascript", "webpack"],
+          deprecated: true,
+        })
         .option("yes", {
           describe: 'Answer "yes" to any prompts for new projects',
           type: "boolean",
@@ -305,7 +312,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     async (args) => {
       printWranglerBanner();
-      if ("type" in args) {
+      if (args.type) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
           message +=
@@ -1407,7 +1414,7 @@ export async function main(argv: string[]): Promise<void> {
           }
         )
         .command(
-          "delete",
+          "delete [id]",
           "Delete a route associated with a zone",
           (yargs) => {
             return yargs
@@ -1717,12 +1724,6 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            if (args._.length > 2) {
-              const extraArgs = args._.slice(2).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
 
             if (!isValidNamespaceBinding(args.namespace)) {
               throw new CommandLineArgsError(
@@ -2336,13 +2337,6 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            // We expect three values in `_`: `r2`, `bucket`, `create`.
-            if (args._.length > 3) {
-              const extraArgs = args._.slice(3).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
 
             const config = readConfig(
               args.config as ConfigPath,
@@ -2378,13 +2372,6 @@ export async function main(argv: string[]): Promise<void> {
           },
           async (args) => {
             printWranglerBanner();
-            // We expect three values in `_`: `r2`, `bucket`, `delete`.
-            if (args._.length > 3) {
-              const extraArgs = args._.slice(3).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
 
             const config = readConfig(
               args.config as ConfigPath,
