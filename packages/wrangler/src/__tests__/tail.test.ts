@@ -134,7 +134,7 @@ describe("tail", () => {
 
     it("sends header filters without a query", async () => {
       const api = mockWebsocketAPIs();
-      await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
+      await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
       await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
         { header: { key: "X-CUSTOM-HEADER" } },
       ]);
@@ -142,9 +142,7 @@ describe("tail", () => {
 
     it("sends header filters with a query", async () => {
       const api = mockWebsocketAPIs();
-      await runWrangler(
-        "tail test-worker --header X-CUSTOM-HEADER:some-value "
-      );
+      await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
       await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
         { header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
       ]);

@@ -90,7 +90,7 @@ describe("wrangler", () => {
           await expect(
             runWrangler("r2 bucket create abc def ghi")
           ).rejects.toThrowErrorMatchingInlineSnapshot(
-            `"Unexpected additional positional arguments \\"def ghi\\"."`
+            `"Unknown arguments: def, ghi"`
           );
           expect(std.out).toMatchInlineSnapshot(`""`);
           expect(std.err).toMatchInlineSnapshot(`
@@ -107,7 +107,7 @@ describe("wrangler", () => {
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
 
-            Unexpected additional positional arguments \\"def ghi\\"."
+            Unknown arguments: def, ghi"
           `);
         });
 
@@ -166,7 +166,7 @@ describe("wrangler", () => {
           await expect(
             runWrangler("r2 bucket delete abc def ghi")
           ).rejects.toThrowErrorMatchingInlineSnapshot(
-            `"Unexpected additional positional arguments \\"def ghi\\"."`
+            `"Unknown arguments: def, ghi"`
           );
           expect(std.out).toMatchInlineSnapshot(`""`);
           expect(std.err).toMatchInlineSnapshot(`
@@ -183,7 +183,7 @@ describe("wrangler", () => {
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
 
-            Unexpected additional positional arguments \\"def ghi\\"."
+            Unknown arguments: def, ghi"
           `);
         });
 
