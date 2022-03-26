@@ -610,8 +610,8 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
     `?response_type=code&` +
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    // @ts-expect-error we add offline_access manually
-    `scope=${encodeURIComponent(scopes.concat("offline_access").join(" "))}&` +
+    // we add offline_access manually for every request
+    `scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
     `state=${stateQueryParam}&` +
     `code_challenge=${encodeURIComponent(codeChallenge)}&` +
     `code_challenge_method=S256`
@@ -864,7 +864,16 @@ export async function loginOrRefreshIfRequired(
     // If we are not interactive, we cannot ask the user to login
     return isInteractive && (await login());
   } else if (isAccessTokenExpired()) {
-    return await refreshToken();
+    // We're logged in, but the refresh token seems to have expired,
+    // so let's try to refresh it
+    const didRefresh = await refreshToken();
+    if (didRefresh) {
+      // The token was refreshed, so we're done here
+      return true;
+    } else {
+      // If the refresh token isn't valid, then we ask the user to login again
+      return isInteractive && (await login());
+    }
   } else {
     return true;
   }
