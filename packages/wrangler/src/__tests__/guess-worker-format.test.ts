@@ -55,4 +55,14 @@ describe("guess worker format", () => {
       "You configured this worker to be 'modules', but the file you are trying to build doesn't export a handler. Please pass `--format service-worker`, or simply remove the configuration."
     );
   });
+
+  it("should not error if a .js entry point has jsx", async () => {
+    await writeFile("./index.js", "console.log(<div/>)");
+    const guess = await guessWorkerFormat(
+      path.join(process.cwd(), "./index.js"),
+      process.cwd(),
+      undefined
+    );
+    expect(guess).toBe("service-worker");
+  });
 });
