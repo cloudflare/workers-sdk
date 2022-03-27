@@ -277,6 +277,15 @@ describe("wrangler dev", () => {
         `"Could not find zone for some-host.com"`
       );
     });
+
+    it("should not try to resolve a zone when starting in local mode", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --host some-host.com --local");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual(undefined);
+    });
   });
 
   describe("custom builds", () => {
