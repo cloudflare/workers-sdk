@@ -36,7 +36,7 @@
     "check:type": "npm run check:type --workspaces --if-present",
     "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
     "check:format": "prettier packages/** .changeset docs --check --ignore-unknown",
-    "build": "npm run build --workspace=wrangler",
+    "build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler",
     "test": "npm run test --workspaces --if-present",
     "prettify": "prettier packages/** --write --ignore-unknown"
   },
@@ -50,7 +50,8 @@
       "packages/wrangler/*-dist",
       "packages/wrangler/pages/functions/template-worker.ts",
       "packages/wrangler/templates",
-      "example-remix-pages-app/public"
+      "example-remix-pages-app/public",
+      "packages/jest-environment-wrangler/dist"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {

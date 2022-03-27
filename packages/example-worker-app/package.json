@@ -2,9 +2,15 @@
   "name": "example-worker-app",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {},
+  "main": "src/index.js",
+  "scripts": {
+    "test": "npx jest"
+  },
   "author": "",
   "license": "ISC",
-  "private": true
+  "private": true,
+  "jest": {
+    "testRegex": ".*.test\\.[jt]sx?$",
+    "testEnvironment": "wrangler"
+  }
 }

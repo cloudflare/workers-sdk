@@ -8,7 +8,7 @@
     "check:type": "tsc",
     "prestart": "npm run build",
     "start": "npx wrangler dev _worker.js",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "publish": "npx wrangler publish _worker.js"
   },
   "devDependencies": {

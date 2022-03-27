@@ -1,8 +1,10 @@
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
+packages/wrangler/CHANGELOG.md
 packages/example-worker-app/dist/
 packages/example-remix-pages-app/build
 packages/example-remix-pages-app/public/
 packages/prerelease-registry/_worker.js
-packages/wrangler/CHANGELOG.md
+packages/jest-environment-wrangler/dist/
+
