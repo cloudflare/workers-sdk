@@ -1142,7 +1142,7 @@ export async function main(argv: string[]): Promise<void> {
           })
           // TODO: auto-detect if this should be json or pretty based on atty
           .option("format", {
-            default: "json",
+            default: "pretty",
             choices: ["json", "pretty"],
             describe: "The format of log entries",
           })
