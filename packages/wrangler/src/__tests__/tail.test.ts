@@ -266,6 +266,33 @@ describe("tail", () => {
       `);
     });
 
+    it("defaults to logging in pretty format", async () => {
+      // the same test as the one before, but without the --format flag
+      const api = mockWebsocketAPIs();
+      await runWrangler("tail test-worker");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock event timestamp]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
+      ).toMatchInlineSnapshot(`
+        "successfully created tail, expires at [mock expiration date]
+        Connected to test-worker, waiting for logs...
+        GET https://example.org/ - Ok @ [mock event timestamp]"
+      `);
+    });
+
     it("logs scheduled messages in pretty format", async () => {
       const api = mockWebsocketAPIs();
       await runWrangler("tail test-worker --format pretty");
