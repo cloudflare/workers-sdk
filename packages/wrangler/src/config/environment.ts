@@ -88,6 +88,11 @@ interface EnvironmentInheritable {
   route: string | undefined;
 
   /**
+   * Path to a custom tsconfig
+   */
+  tsconfig: string | undefined;
+
+  /**
    * The function to use to replace jsx syntax.
    *
    * @default `"React.createElement"`

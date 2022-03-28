@@ -26,10 +26,17 @@ export async function bundleWorker(
     jsxFragment: string | undefined;
     rules: Config["rules"];
     watch?: esbuild.WatchMode;
+    tsconfig: string | undefined;
   }
 ): Promise<BundleResult> {
-  const { serveAssetsFromWorker, jsxFactory, jsxFragment, rules, watch } =
-    options;
+  const {
+    serveAssetsFromWorker,
+    jsxFactory,
+    jsxFragment,
+    rules,
+    watch,
+    tsconfig,
+  } = options;
   const entryDirectory = path.dirname(entry.file);
   const moduleCollector = createModuleCollector({
     wrangler1xlegacyModuleReferences: {
@@ -65,6 +72,7 @@ export async function bundleWorker(
     plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),
+    ...(tsconfig && { tsconfig }),
     watch,
   });
 

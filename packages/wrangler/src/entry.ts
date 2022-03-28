@@ -46,7 +46,8 @@ export async function getEntry(
   const format = await guessWorkerFormat(
     file,
     directory,
-    args.format ?? config.build?.upload?.format
+    args.format ?? config.build?.upload?.format,
+    config.tsconfig
   );
 
   const { localBindings, remoteBindings } =
@@ -116,7 +117,8 @@ export async function runCustomBuild(
 export default async function guessWorkerFormat(
   entryFile: string,
   entryWorkingDirectory: string,
-  hint: CfScriptFormat | undefined
+  hint: CfScriptFormat | undefined,
+  tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
   const result = await esbuild.build({
     entryPoints: [entryFile],
@@ -130,6 +132,7 @@ export default async function guessWorkerFormat(
       ".mjs": "jsx",
       ".cjs": "jsx",
     },
+    ...(tsconfig && { tsconfig }),
   });
   // result.metafile is defined because of the `metafile: true` option above.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

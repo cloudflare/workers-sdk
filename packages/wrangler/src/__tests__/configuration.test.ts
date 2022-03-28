@@ -35,6 +35,7 @@ describe("normalizeAndValidateConfig()", () => {
       },
       jsx_factory: "React.createElement",
       jsx_fragment: "React.Fragment",
+      tsconfig: undefined,
       kv_namespaces: [],
       legacy_env: true,
       main: undefined,
@@ -433,6 +434,27 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
+    it("should resolve tsconfig relative to wrangler.toml", async () => {
+      const expectedConfig: RawEnvironment = {
+        tsconfig: "path/to/some-tsconfig.json",
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          tsconfig: path.normalize("project/path/to/some-tsconfig.json"),
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
     describe("(deprecated)", () => {
       it("should remove and warn about deprecated properties", () => {
         const rawConfig: RawConfig = {
@@ -480,6 +502,7 @@ describe("normalizeAndValidateConfig()", () => {
         routes: ["ROUTE_1", "ROUTE_2"],
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
         main,
@@ -557,6 +580,7 @@ describe("normalizeAndValidateConfig()", () => {
         route: 888,
         jsx_factory: 999,
         jsx_fragment: 1000,
+        tsconfig: true,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
         main: 1333,
@@ -589,6 +613,7 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
           - Expected \\"jsx_factory\\" to be of type string but got 999.
           - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+          - Expected \\"tsconfig\\" to be of type string but got true.
           - Expected \\"name\\" to be of type string but got 111.
           - Expected \\"main\\" to be of type string but got 1333.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
@@ -1464,6 +1489,7 @@ describe("normalizeAndValidateConfig()", () => {
         routes: ["ROUTE_1", "ROUTE_2"],
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig.json",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
         main,
@@ -1503,6 +1529,7 @@ describe("normalizeAndValidateConfig()", () => {
         routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
         jsx_factory: "ENV_JSX_FACTORY",
         jsx_fragment: "ENV_JSX_FRAGMENT",
+        tsconfig: "ENV_path/to/tsconfig.json",
         triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
         usage_model: "unbound",
         main,
@@ -1521,6 +1548,7 @@ describe("normalizeAndValidateConfig()", () => {
         routes: ["ROUTE_1", "ROUTE_2"],
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig.json",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
         main: "top-level.js",
@@ -1692,6 +1720,7 @@ describe("normalizeAndValidateConfig()", () => {
         route: 888,
         jsx_factory: 999,
         jsx_fragment: 1000,
+        tsconfig: 123,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
         main: 1333,
@@ -1726,6 +1755,7 @@ describe("normalizeAndValidateConfig()", () => {
             - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
             - Expected \\"jsx_factory\\" to be of type string but got 999.
             - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+            - Expected \\"tsconfig\\" to be of type string but got 123.
             - Expected \\"name\\" to be of type string but got 111.
             - Expected \\"main\\" to be of type string but got 1333.
             - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."

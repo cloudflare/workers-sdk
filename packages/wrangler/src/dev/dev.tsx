@@ -32,6 +32,7 @@ export type DevProps = {
   initialMode: "local" | "remote";
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  tsconfig: string | undefined;
   upstreamProtocol: "https" | "http";
   localProtocol: "https" | "http";
   enableLocalPersistence: boolean;
@@ -88,6 +89,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
     rules: props.rules,
     jsxFragment: props.jsxFragment,
     serveAssetsFromWorker: !!props.public,
+    tsconfig: props.tsconfig,
   });
 
   // only load the UI if we're running in a supported environment
