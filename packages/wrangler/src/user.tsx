@@ -899,7 +899,6 @@ export async function loginOrRefreshIfRequired(
 export async function login(props?: LoginProps): Promise<boolean> {
   console.log("Attempting to login via OAuth...");
   const urlToOpen = await getAuthURL(props?.scopes);
-  await openInBrowser(urlToOpen);
   let server: http.Server;
   let loginTimeoutHandle: NodeJS.Timeout;
   const timerPromise = new Promise<boolean>((resolve) => {
@@ -979,6 +978,8 @@ export async function login(props?: LoginProps): Promise<boolean> {
 
     server.listen(8976);
   });
+
+  await openInBrowser(urlToOpen);
 
   return Promise.race([timerPromise, loginPromise]);
 }
