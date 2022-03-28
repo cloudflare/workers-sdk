@@ -924,7 +924,7 @@ export async function main(argv: string[]): Promise<void> {
           zone={zone}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(args, config)}
-          buildCommand={config.build || {}}
+          build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
           jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
@@ -1318,7 +1318,7 @@ export async function main(argv: string[]): Promise<void> {
           env={args.env}
           zone={undefined}
           legacyEnv={isLegacyEnv(args, config)}
-          buildCommand={config.build || {}}
+          build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}

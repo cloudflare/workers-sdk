@@ -294,7 +294,7 @@ describe("wrangler dev", () => {
       );
 
       // and the command would pass through
-      expect((Dev as jest.Mock).mock.calls[0][0].buildCommand).toEqual({
+      expect((Dev as jest.Mock).mock.calls[0][0].build).toEqual({
         command:
           "node -e \"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
         cwd: undefined,

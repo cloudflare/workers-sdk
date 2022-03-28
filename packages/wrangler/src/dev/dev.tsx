@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
-import { Box, Text, useApp, useInput } from "ink";
+import { Box, Text, useApp, useInput, useStdin } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
@@ -19,11 +19,12 @@ import type { Config } from "../config";
 import type { Entry } from "../entry";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
+import type { EsbuildBundle } from "./use-esbuild";
 
 export type DevProps = {
   name?: string;
   entry: Entry;
-  port?: number;
+  port: number;
   ip: string;
   inspectorPort: number;
   rules: Config["rules"];
@@ -40,7 +41,7 @@ export type DevProps = {
   compatibilityDate: undefined | string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
-  buildCommand: {
+  build: {
     command?: undefined | string;
     cwd?: undefined | string;
     watch_dir?: undefined | string;
@@ -56,11 +57,10 @@ export type DevProps = {
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
-  const port = props.port ?? 8787;
   const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
 
-  useCustomBuild(props.entry, props.buildCommand);
+  useCustomBuild(props.entry, props.build);
 
   if (props.public && props.entry.format === "service-worker") {
     throw new Error(
@@ -90,12 +90,32 @@ export function DevImplementation(props: DevProps): JSX.Element {
     serveAssetsFromWorker: !!props.public,
   });
 
+  // only load the UI if we're running in a supported environment
+  const { isRawModeSupported } = useStdin();
+  return isRawModeSupported ? (
+    <InteractiveDevSession {...props} bundle={bundle} apiToken={apiToken} />
+  ) : (
+    <DevSession
+      {...props}
+      bundle={bundle}
+      apiToken={apiToken}
+      local={props.initialMode === "local"}
+    />
+  );
+}
+
+type InteractiveDevSessionProps = DevProps & {
+  apiToken: string | undefined;
+  bundle: EsbuildBundle | undefined;
+};
+
+function InteractiveDevSession(props: InteractiveDevSessionProps) {
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
       tunnel: false,
     },
-    port,
+    props.port,
     props.ip,
     props.inspectorPort,
     props.localProtocol
@@ -105,44 +125,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
 
   return (
     <>
-      {toggles.local ? (
-        <Local
-          name={props.name}
-          bundle={bundle}
-          format={props.entry.format}
-          compatibilityDate={props.compatibilityDate}
-          compatibilityFlags={props.compatibilityFlags}
-          bindings={props.bindings}
-          assetPaths={props.assetPaths}
-          public={props.public}
-          port={port}
-          ip={props.ip}
-          rules={props.rules}
-          inspectorPort={props.inspectorPort}
-          enableLocalPersistence={props.enableLocalPersistence}
-        />
-      ) : (
-        <Remote
-          name={props.name}
-          bundle={bundle}
-          format={props.entry.format}
-          accountId={props.accountId}
-          apiToken={apiToken}
-          bindings={props.bindings}
-          assetPaths={props.assetPaths}
-          public={props.public}
-          port={port}
-          ip={props.ip}
-          localProtocol={props.localProtocol}
-          inspectorPort={props.inspectorPort}
-          compatibilityDate={props.compatibilityDate}
-          compatibilityFlags={props.compatibilityFlags}
-          usageModel={props.usageModel}
-          env={props.env}
-          legacyEnv={props.legacyEnv}
-          zone={props.zone}
-        />
-      )}
+      <DevSession {...props} local={toggles.local} />
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text>
           {`B to open a browser, D to open Devtools, L to ${
@@ -151,6 +134,49 @@ export function DevImplementation(props: DevProps): JSX.Element {
         </Text>
       </Box>
     </>
+  );
+}
+
+type DevSessionProps = InteractiveDevSessionProps & { local: boolean };
+
+function DevSession(props: DevSessionProps) {
+  return props.local ? (
+    <Local
+      name={props.name}
+      bundle={props.bundle}
+      format={props.entry.format}
+      compatibilityDate={props.compatibilityDate}
+      compatibilityFlags={props.compatibilityFlags}
+      bindings={props.bindings}
+      assetPaths={props.assetPaths}
+      public={props.public}
+      port={props.port}
+      ip={props.ip}
+      rules={props.rules}
+      inspectorPort={props.inspectorPort}
+      enableLocalPersistence={props.enableLocalPersistence}
+    />
+  ) : (
+    <Remote
+      name={props.name}
+      bundle={props.bundle}
+      format={props.entry.format}
+      accountId={props.accountId}
+      apiToken={props.apiToken}
+      bindings={props.bindings}
+      assetPaths={props.assetPaths}
+      public={props.public}
+      port={props.port}
+      ip={props.ip}
+      localProtocol={props.localProtocol}
+      inspectorPort={props.inspectorPort}
+      compatibilityDate={props.compatibilityDate}
+      compatibilityFlags={props.compatibilityFlags}
+      usageModel={props.usageModel}
+      env={props.env}
+      legacyEnv={props.legacyEnv}
+      zone={props.zone}
+    />
   );
 }
 
