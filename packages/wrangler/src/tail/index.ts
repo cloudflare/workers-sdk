@@ -161,7 +161,7 @@ export type TailEventMessage = {
    * Any logs sent out by the worker
    */
   logs: {
-    message: unknown;
+    message: unknown[];
     level: string; // TODO: make this a union of possible values
     timestamp: number;
   }[];

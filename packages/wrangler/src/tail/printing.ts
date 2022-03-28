@@ -24,7 +24,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
   if (eventMessage.logs.length > 0) {
     eventMessage.logs.forEach(({ level, message }) => {
-      console.log(`  (${level})`, message);
+      console.log(`  (${level})`, ...message);
     });
   }
 
