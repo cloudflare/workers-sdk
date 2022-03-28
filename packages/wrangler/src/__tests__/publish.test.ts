@@ -72,7 +72,7 @@ describe("publish", () => {
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
-      it("appends the environment name when provided", async () => {
+      it("appends the environment name when provided, and there is associated config", async () => {
         writeWranglerToml({ env: { "some-env": {} } });
         writeWorkerSource();
         mockSubDomainRequest();
@@ -90,14 +90,58 @@ describe("publish", () => {
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
-      it("should throw an error w/ helpful message when using --env --name", async () => {
-        writeWranglerToml({ env: { "some-env": {} } });
+      it("appends the environment name when provided (with a warning), if there are no configured environments", async () => {
+        writeWranglerToml({});
         writeWorkerSource();
         mockSubDomainRequest();
         mockUploadWorkerRequest({
           env: "some-env",
           legacyEnv: true,
         });
+        await runWrangler("publish index.js --env some-env --legacy-env true");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name-some-env (TIMINGS)
+          Published test-name-some-env (TIMINGS)
+            test-name-some-env.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "Processing wrangler.toml configuration:
+            - No environment found in configuration with name \\"some-env\\".
+              Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+
+              Consider adding an environment configuration section to the wrangler.toml file:
+              \`\`\`
+              [env.some-env]
+              \`\`\`
+          "
+        `);
+      });
+
+      it("should throw an error when an environment name when provided, which doesn't match those in the config", async () => {
+        writeWranglerToml({ env: { "other-env": {} } });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        await expect(
+          runWrangler("publish index.js --env some-env --legacy-env true")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`
+                "Processing wrangler.toml configuration:
+                  - No environment found in configuration with name \\"some-env\\".
+                    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+                    The available configured environment names are: [\\"other-env\\"]
+
+                    Consider adding an environment configuration section to the wrangler.toml file:
+                    \`\`\`
+                    [env.some-env]
+                    \`\`\`
+                "
+              `);
+      });
+
+      it("should throw an error w/ helpful message when using --env --name", async () => {
+        writeWranglerToml({ env: { "some-env": {} } });
+        writeWorkerSource();
+        mockSubDomainRequest();
         await runWrangler(
           "publish index.js --name voyager --env some-env --legacy-env true"
         ).catch((err) =>
@@ -2801,12 +2845,12 @@ export default{
 
         await expect(runWrangler("publish index.js")).rejects
           .toThrowErrorMatchingInlineSnapshot(`
-              "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.
-              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
-              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
-              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
-              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
-            `);
+                              "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.
+                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
+                              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
+                              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
+                              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+                          `);
       });
     });
 

@@ -108,11 +108,11 @@ export function normalizeAndValidateConfig(
 
   let activeEnv = topLevelEnv;
   if (envName !== undefined) {
+    const envDiagnostics = new Diagnostics(
+      `"env.${envName}" environment configuration`
+    );
     const rawEnv = rawConfig.env?.[envName];
     if (rawEnv !== undefined) {
-      const envDiagnostics = new Diagnostics(
-        `"env.${envName}" environment configuration`
-      );
       activeEnv = normalizeAndValidateEnvironment(
         envDiagnostics,
         configPath,
@@ -124,6 +124,18 @@ export function normalizeAndValidateConfig(
       );
       diagnostics.addChild(envDiagnostics);
     } else {
+      // An environment was specified, but no configuration for it was found.
+      // To cover any legacy environment cases, where the `envName` is used,
+      // Let's create a fake active environment with the specified `envName`.
+      activeEnv = normalizeAndValidateEnvironment(
+        envDiagnostics,
+        configPath,
+        {},
+        envName,
+        topLevelEnv,
+        isLegacyEnv,
+        rawConfig
+      );
       const envNames = rawConfig.env
         ? `The available configured environment names are: ${JSON.stringify(
             Object.keys(rawConfig.env)
