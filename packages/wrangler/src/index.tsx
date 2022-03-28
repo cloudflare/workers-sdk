@@ -805,6 +805,10 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The function that is called for each JSX fragment",
           type: "string",
         })
+        .option("tsconfig", {
+          describe: "Path to a custom tsconfig.json file",
+          type: "string",
+        })
         .option("local", {
           alias: "l",
           describe: "Run on my machine",
@@ -930,6 +934,7 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
           jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
+          tsconfig={args.tsconfig ?? config.tsconfig}
           upstreamProtocol={upstreamProtocol}
           localProtocol={
             // The typings are not quite clever enough to handle element accesses, only property accesses,
@@ -1074,6 +1079,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
+        })
+        .option("tsconfig", {
+          describe: "Path to a custom tsconfig.json file",
+          type: "string",
         });
     },
     async (args) => {
@@ -1123,6 +1132,7 @@ export async function main(argv: string[]): Promise<void> {
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
+        tsconfig: args.tsconfig,
         routes: args.routes,
         assetPaths,
         legacyEnv: isLegacyEnv(args, config),
@@ -1324,6 +1334,7 @@ export async function main(argv: string[]): Promise<void> {
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}
+          tsconfig={config.tsconfig}
           upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
           enableLocalPersistence={false}

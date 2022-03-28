@@ -27,6 +27,7 @@ type Props = {
   legacyEnv: boolean | undefined;
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  tsconfig: undefined | string;
   experimentalPublic: boolean;
 };
 
@@ -97,6 +98,7 @@ export default async function publish(props: Props): Promise<void> {
         jsxFactory,
         jsxFragment,
         rules: props.rules,
+        tsconfig: props.tsconfig ?? config.tsconfig,
       }
     );
 

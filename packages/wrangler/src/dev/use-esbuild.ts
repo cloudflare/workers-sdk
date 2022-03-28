@@ -23,6 +23,7 @@ export function useEsbuild({
   jsxFragment,
   rules,
   serveAssetsFromWorker,
+  tsconfig,
 }: {
   entry: Entry;
   destination: string | undefined;
@@ -31,6 +32,7 @@ export function useEsbuild({
   jsxFragment: string | undefined;
   rules: Config["rules"];
   serveAssetsFromWorker: boolean;
+  tsconfig: string | undefined;
 }): EsbuildBundle | undefined {
   const [bundle, setBundle] = useState<EsbuildBundle>();
   useEffect(() => {
@@ -64,6 +66,7 @@ export function useEsbuild({
           jsxFragment,
           rules,
           watch: watchMode,
+          tsconfig,
         });
 
       // Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -95,6 +98,7 @@ export function useEsbuild({
     jsxFragment,
     serveAssetsFromWorker,
     rules,
+    tsconfig,
   ]);
   return bundle;
 }
