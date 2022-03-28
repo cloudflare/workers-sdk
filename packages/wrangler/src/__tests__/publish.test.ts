@@ -2795,7 +2795,7 @@ export default{
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
-      it("should support module workers implementing  durable objects", async () => {
+      it("should support module workers implementing durable objects", async () => {
         writeWranglerToml({
           durable_objects: {
             bindings: [
@@ -3126,6 +3126,40 @@ export default{
         "The module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.
         The default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning."
       `);
+    });
+
+    describe("inject process.env.NODE_ENV", () => {
+      let actualProcessEnvNodeEnv: string | undefined;
+      beforeEach(() => {
+        actualProcessEnvNodeEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = "some-node-env";
+      });
+      afterEach(() => {
+        process.env.NODE_ENV = actualProcessEnvNodeEnv;
+      });
+      it("should replace `process.env.NODE_ENV` in scripts", async () => {
+        writeWranglerToml();
+        fs.writeFileSync(
+          "./index.js",
+          `export default {
+            fetch(){
+              return new Response(process.env.NODE_ENV);
+            }
+          }`
+        );
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedEntry: `return new Response("some-node-env");`,
+        });
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
     });
   });
 
