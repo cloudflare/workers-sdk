@@ -877,13 +877,6 @@ export async function main(argv: string[]): Promise<void> {
         return zones[0]?.id;
       }
 
-      const hostLike =
-        args.host ||
-        config.dev.host ||
-        (args.routes && args.routes[0]) ||
-        config.route ||
-        (config.routes && config.routes[0]);
-
       // When we're given a host (in one of the above ways), we do 2 things:
       // - We try to extract a host from it
       // - We try to get a zone id from the host
@@ -894,27 +887,36 @@ export async function main(argv: string[]): Promise<void> {
       // get a zone id for it, by lopping off subdomains until we get a hit
       // from the API. That's it!
 
-      const host = typeof hostLike === "string" ? getHost(hostLike) : undefined;
+      let zone: { host: string; id: string } | undefined;
 
-      let zoneId: string | undefined;
-      const hostPieces = typeof host === "string" ? host.split(".") : undefined;
-
-      while (hostPieces && hostPieces.length > 1) {
-        zoneId = await getZoneId(hostPieces.join("."));
-        if (zoneId) break;
-        hostPieces.shift();
+      if (!args.local) {
+        const hostLike =
+          args.host ||
+          config.dev.host ||
+          (args.routes && args.routes[0]) ||
+          config.route ||
+          (config.routes && config.routes[0]);
+        const host =
+          typeof hostLike === "string" ? getHost(hostLike) : undefined;
+        let zoneId: string | undefined;
+        const hostPieces =
+          typeof host === "string" ? host.split(".") : undefined;
+        while (hostPieces && hostPieces.length > 1) {
+          zoneId = await getZoneId(hostPieces.join("."));
+          if (zoneId) break;
+          hostPieces.shift();
+        }
+        if (host && !zoneId) {
+          throw new Error(`Could not find zone for ${hostLike}`);
+        }
+        zone =
+          typeof zoneId === "string" && typeof host === "string"
+            ? {
+                host,
+                id: zoneId,
+              }
+            : undefined;
       }
-      if (host && !zoneId) {
-        throw new Error(`Could not find zone for ${hostLike}`);
-      }
-
-      const zone =
-        typeof zoneId === "string" && typeof host === "string"
-          ? {
-              host,
-              id: zoneId,
-            }
-          : undefined;
 
       const { waitUntilExit } = render(
         <Dev
