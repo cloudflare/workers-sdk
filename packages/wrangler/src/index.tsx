@@ -623,77 +623,6 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  // login
-  wrangler.command(
-    // this needs scopes as an option?
-    "login",
-    "🔓 Login to Cloudflare",
-    (yargs) => {
-      // TODO: This needs some copy editing
-      // I mean, this entire app does, but this too.
-      return yargs
-        .option("scopes-list", {
-          describe: "List all the available OAuth scopes with descriptions",
-        })
-        .option("scopes", {
-          describe: "Pick the set of applicable OAuth scopes when logging in",
-          array: true,
-          type: "string",
-        });
-
-      // TODO: scopes
-    },
-    async (args) => {
-      printWranglerBanner();
-      if (args["scopes-list"]) {
-        listScopes();
-        return;
-      }
-      if (args.scopes) {
-        if (args.scopes.length === 0) {
-          // don't allow no scopes to be passed, that would be weird
-          listScopes();
-          return;
-        }
-        if (!validateScopeKeys(args.scopes)) {
-          throw new CommandLineArgsError(
-            `One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
-          );
-        }
-        await login({ scopes: args.scopes });
-        return;
-      }
-      await login();
-
-      // TODO: would be nice if it optionally saved login
-      // credentials inside node_modules/.cache or something
-      // this way you could have multiple users on a single machine
-    }
-  );
-
-  // logout
-  wrangler.command(
-    // this needs scopes as an option?
-    "logout",
-    "🚪 Logout from Cloudflare",
-    () => {},
-    async () => {
-      printWranglerBanner();
-      await logout();
-    }
-  );
-
-  // whoami
-  wrangler.command(
-    "whoami",
-    "🕵️  Retrieve your user info and test your auth config",
-    () => {},
-    async () => {
-      printWranglerBanner();
-      await whoami();
-    }
-  );
-
   // config
   wrangler.command(
     "config",
@@ -2344,6 +2273,81 @@ export async function main(argv: string[]): Promise<void> {
         return r2BucketYargs;
       });
   });
+
+  /**
+   * User Group: login, logout, and whoami
+   * TODO: group commands into User group similar to .group() for flags in yargs
+   */
+  // login
+  wrangler.command(
+    // this needs scopes as an option?
+    "login",
+    "🔓 Login to Cloudflare",
+    (yargs) => {
+      // TODO: This needs some copy editing
+      // I mean, this entire app does, but this too.
+      return yargs
+        .option("scopes-list", {
+          describe: "List all the available OAuth scopes with descriptions",
+        })
+        .option("scopes", {
+          describe: "Pick the set of applicable OAuth scopes when logging in",
+          array: true,
+          type: "string",
+        });
+
+      // TODO: scopes
+    },
+    async (args) => {
+      printWranglerBanner();
+      if (args["scopes-list"]) {
+        listScopes();
+        return;
+      }
+      if (args.scopes) {
+        if (args.scopes.length === 0) {
+          // don't allow no scopes to be passed, that would be weird
+          listScopes();
+          return;
+        }
+        if (!validateScopeKeys(args.scopes)) {
+          throw new CommandLineArgsError(
+            `One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+          );
+        }
+        await login({ scopes: args.scopes });
+        return;
+      }
+      await login();
+
+      // TODO: would be nice if it optionally saved login
+      // credentials inside node_modules/.cache or something
+      // this way you could have multiple users on a single machine
+    }
+  );
+
+  // logout
+  wrangler.command(
+    // this needs scopes as an option?
+    "logout",
+    "🚪 Logout from Cloudflare",
+    () => {},
+    async () => {
+      printWranglerBanner();
+      await logout();
+    }
+  );
+
+  // whoami
+  wrangler.command(
+    "whoami",
+    "🕵️  Retrieve your user info and test your auth config",
+    () => {},
+    async () => {
+      printWranglerBanner();
+      await whoami();
+    }
+  );
 
   wrangler
     .option("legacy-env", {
