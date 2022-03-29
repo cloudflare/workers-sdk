@@ -1,5 +1,12 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import fetchMock from "jest-fetch-mock";
-import { readAuthConfigFile, writeAuthConfigFile } from "../user";
+import {
+  readAuthConfigFile,
+  USER_AUTH_CONFIG_FILE,
+  writeAuthConfigFile,
+} from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -69,9 +76,8 @@ describe("wrangler", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
 
       // Make sure that logout removed the config file containing the auth tokens.
-      expect(() => readAuthConfigFile()).toThrowErrorMatchingInlineSnapshot(
-        `"Could not read file: home/.wrangler/config/default.toml"`
-      );
+      const config = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
+      expect(fs.existsSync(config)).toBeFalsy();
     });
   });
 });
