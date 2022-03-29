@@ -96,6 +96,12 @@ export function usePreviewServer({
           await reportError(err);
         });
     }
+    return () => {
+      if (proxyServer !== undefined) {
+        proxyServer.close();
+        setProxyServer(undefined);
+      }
+    };
   }, [proxyServer, localProtocol]);
 
   /**
