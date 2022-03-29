@@ -51,32 +51,36 @@ describe("subcommand implicit help ran on imcomplete command execution", () => {
 describe("beta message for subcommands", () => {
   const isWindows = process.platform === "win32";
   it("should display for pages:dev", async () => {
+    let err: Error | undefined;
     try {
       execaSync("npx", ["wrangler", "pages", "dev"], {
         shell: isWindows,
         env: { BROWSER: "none", ...process.env },
       }).stderr;
     } catch (e: unknown) {
-      expect(e).toMatchInlineSnapshot(`
+      err = e as Error;
+    }
+    expect(err).toMatchInlineSnapshot(`
         [Error: Command failed with exit code 1: npx wrangler pages dev
         🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
         Must specify a directory of static assets to serve or a command to run.]
       `);
-    }
   });
 
   it("should display for pages:functions", async () => {
+    let err: Error | undefined;
     try {
       execaSync("npx", ["wrangler", "pages", "functions"], {
         shell: isWindows,
         env: { BROWSER: "none", ...process.env },
       }).stderr;
     } catch (e: unknown) {
-      expect(e).toMatchInlineSnapshot(`
+      err = e as Error;
+    }
+    expect(err).toMatchInlineSnapshot(`
           [Error: Command failed with exit code 1: npx wrangler pages functions
           🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
           Must specify a directory of static assets to serve or a command to run.]
         `);
-    }
   });
 });
