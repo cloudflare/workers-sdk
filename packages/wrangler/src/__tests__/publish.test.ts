@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
   createFetchResult,
@@ -11,6 +12,7 @@ import {
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
+import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
@@ -19,20 +21,78 @@ import type { KVNamespaceInfo } from "../kv";
 import type { FormData, File } from "undici";
 
 describe("publish", () => {
-  beforeEach(() => {
-    // @ts-expect-error we're using a very simple setTimeout mock here
-    jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
-      fn();
-    });
-  });
   mockAccountId();
   mockApiToken();
-  runInTempDir();
+  runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
+  const { mockGrantAccessToken, mockGrantAuthorization } = mockOAuthFlow();
 
   afterEach(() => {
     unsetAllMocks();
     unsetMockFetchKVGetValues();
+  });
+
+  describe("authentication", () => {
+    mockApiToken({ apiToken: null });
+
+    it("drops a user into the login flow if they're unauthenticated", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+
+      const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
+      mockGrantAuthorization({ respondWith: "success" });
+
+      await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+
+      expect(accessTokenRequest.actual.url).toEqual(
+        accessTokenRequest.expected.url
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Attempting to login via OAuth...
+        Successfully logged in.
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("warns a user when they're authenticated with an API token in wrangler config file", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      writeAuthConfigFile({
+        api_token: "some-api-token",
+      });
+
+      const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
+      mockGrantAuthorization({ respondWith: "success" });
+
+      await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+
+      expect(accessTokenRequest.actual.url).toEqual(
+        accessTokenRequest.expected.url
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Attempting to login via OAuth...
+        Successfully logged in.
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "It looks like you have used Wrangler 1's \`config\` command to login with an API token.
+        This is no longer supported in the current version of Wrangler.
+        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("environments", () => {
@@ -1912,11 +1972,6 @@ export default{
   });
 
   describe("custom builds", () => {
-    beforeEach(() => {
-      // @ts-expect-error disable the mock we'd setup earlier
-      // or else custom builds will timeout immediately
-      global.setTimeout.mockRestore();
-    });
     it("should run a custom build before publishing", async () => {
       writeWranglerToml({
         build: {

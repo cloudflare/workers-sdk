@@ -860,7 +860,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
   reinitialiseAuthTokens();
 }
 
-function readAuthConfigFile(): UserAuthConfig {
+export function readAuthConfigFile(): UserAuthConfig {
   const toml = TOML.parse(
     readFileSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE))
   );

@@ -23,11 +23,10 @@ export const mockOpenInBrowser = async (url: string, ..._args: unknown[]) => {
     throw "unimplemented";
   } else {
     const queryParams = toQueryParams(oauthGrantResponse, searchParams);
-    await fetch(`${searchParams.get("redirect_uri")}?${queryParams}`).catch(
-      (reason) => {
-        throw reason;
-      }
-    );
+    // don't await this -- it will block the rest of the login flow
+    fetch(`${searchParams.get("redirect_uri")}?${queryParams}`).catch((e) => {
+      fail(e);
+    });
     return new ChildProcess();
   }
 };
