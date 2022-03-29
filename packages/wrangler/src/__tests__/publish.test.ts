@@ -27,6 +27,13 @@ describe("publish", () => {
   const std = mockConsoleMethods();
   const { mockGrantAccessToken, mockGrantAuthorization } = mockOAuthFlow();
 
+  beforeEach(() => {
+    // @ts-expect-error we're using a very simple setTimeout mock here
+    jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+      setImmediate(fn);
+    });
+  });
+
   afterEach(() => {
     unsetAllMocks();
     unsetMockFetchKVGetValues();
@@ -34,6 +41,12 @@ describe("publish", () => {
 
   describe("authentication", () => {
     mockApiToken({ apiToken: null });
+    beforeEach(() => {
+      // @ts-expect-error disable the mock we'd setup earlier
+      // or else our server won't bother listening for oauth requests
+      // and will timeout and fail
+      global.setTimeout.mockRestore();
+    });
 
     it("drops a user into the login flow if they're unauthenticated", async () => {
       writeWranglerToml();
@@ -1972,6 +1985,11 @@ export default{
   });
 
   describe("custom builds", () => {
+    beforeEach(() => {
+      // @ts-expect-error disable the mock we'd setup earlier
+      // or else custom builds will timeout immediately
+      global.setTimeout.mockRestore();
+    });
     it("should run a custom build before publishing", async () => {
       writeWranglerToml({
         build: {

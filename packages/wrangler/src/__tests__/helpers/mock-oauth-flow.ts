@@ -25,7 +25,10 @@ export const mockOpenInBrowser = async (url: string, ..._args: unknown[]) => {
     const queryParams = toQueryParams(oauthGrantResponse, searchParams);
     // don't await this -- it will block the rest of the login flow
     fetch(`${searchParams.get("redirect_uri")}?${queryParams}`).catch((e) => {
-      fail(e);
+      throw new Error(
+        "Failed to send OAuth Grant to wrangler, maybe the server was closed?",
+        e as Error
+      );
     });
     return new ChildProcess();
   }
