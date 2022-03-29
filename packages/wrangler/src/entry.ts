@@ -150,14 +150,30 @@ export default async function guessWorkerFormat(
     "More than one entry-point found for generated bundle." +
       listEntryPoints(entryPoints)
   );
-  const guessedWorkerFormat =
-    entryPoints[0][1].exports.length > 0 ? "modules" : "service-worker";
+
+  let guessedWorkerFormat: CfScriptFormat;
+  const scriptExports = entryPoints[0][1].exports;
+  if (scriptExports.length > 0) {
+    if (scriptExports.includes("default")) {
+      guessedWorkerFormat = "modules";
+    } else {
+      console.warn(
+        `The entrypoint ${path.relative(
+          process.cwd(),
+          entryFile
+        )} has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using "service-worker" format...`
+      );
+      guessedWorkerFormat = "service-worker";
+    }
+  } else {
+    guessedWorkerFormat = "service-worker";
+  }
 
   if (hint) {
     if (hint !== guessedWorkerFormat) {
       if (hint === "service-worker") {
         throw new Error(
-          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have ES module exports. Please pass `--format modules`, or simply remove the configuration."
+          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have a `default` export like a module worker. Please pass `--format modules`, or simply remove the configuration."
         );
       } else {
         throw new Error(
