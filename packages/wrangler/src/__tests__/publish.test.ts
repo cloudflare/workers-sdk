@@ -18,6 +18,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
+import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
 
 describe("publish", () => {
@@ -2063,9 +2064,222 @@ export default{
     });
   });
 
+  describe("durable object migrations", () => {
+    it("should warn when you try to publish durable objects without migrations", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
+        },
+      });
+      fs.writeFileSync(
+        "index.js",
+        `export class SomeClass{}; export default {};`
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(
+        `"In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."`
+      );
+    });
+
+    it("does not warn if all the durable object bindings are to external classes", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            {
+              name: "SOMENAME",
+              class_name: "SomeClass",
+              script_name: "some-script",
+            },
+          ],
+        },
+      });
+      fs.writeFileSync(
+        "index.js",
+        `export class SomeClass{}; export default {};`
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should publish all migrations on first publish", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            { name: "SOMENAME", class_name: "SomeClass" },
+            { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+          ],
+        },
+        migrations: [
+          { tag: "v1", new_classes: ["SomeClass"] },
+          { tag: "v2", new_classes: ["SomeOtherClass"] },
+        ],
+      });
+      fs.writeFileSync(
+        "index.js",
+        `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+      );
+      mockSubDomainRequest();
+      mockScriptData({ scripts: [] }); // no previously uploaded scripts at all
+      mockUploadWorkerRequest({
+        expectedMigrations: {
+          new_tag: "v2",
+          steps: [
+            { new_classes: ["SomeClass"] },
+            { new_classes: ["SomeOtherClass"] },
+          ],
+        },
+      });
+
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should upload migrations past a previously uploaded tag", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            { name: "SOMENAME", class_name: "SomeClass" },
+            { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+          ],
+        },
+        migrations: [
+          { tag: "v1", new_classes: ["SomeClass"] },
+          { tag: "v2", new_classes: ["SomeOtherClass"] },
+        ],
+      });
+      fs.writeFileSync(
+        "index.js",
+        `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+      );
+      mockSubDomainRequest();
+      mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
+      mockUploadWorkerRequest({
+        expectedMigrations: {
+          old_tag: "v1",
+          new_tag: "v2",
+          steps: [
+            {
+              new_classes: ["SomeOtherClass"],
+            },
+          ],
+        },
+      });
+
+      await runWrangler("publish index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should not send migrations if they've all already been sent", async () => {
+      writeWranglerToml({
+        durable_objects: {
+          bindings: [
+            { name: "SOMENAME", class_name: "SomeClass" },
+            { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+          ],
+        },
+        migrations: [
+          { tag: "v1", new_classes: ["SomeClass"] },
+          { tag: "v2", new_classes: ["SomeOtherClass"] },
+          { tag: "v3", new_classes: ["YetAnotherClass"] },
+        ],
+      });
+      fs.writeFileSync(
+        "index.js",
+        `export class SomeClass{}; export class SomeOtherClass{}; export class YetAnotherClass{}; export default {};`
+      );
+      mockSubDomainRequest();
+      mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v3" }] });
+      mockUploadWorkerRequest({
+        expectedMigrations: undefined,
+      });
+
+      await runWrangler("publish index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+
+    describe("service environments", () => {
+      it("should error when using service environments + durable objects", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              { name: "SOMENAME", class_name: "SomeClass" },
+              { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+            ],
+          },
+          migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
+        });
+        fs.writeFileSync(
+          "index.js",
+          `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+        );
+
+        mockSubDomainRequest();
+
+        await expect(
+          runWrangler("publish index.js --legacy-env false")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739"`
+        );
+        expect(std).toMatchInlineSnapshot(`
+          Object {
+            "err": "Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739
+
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.",
+            "out": "",
+            "warn": "",
+          }
+        `);
+      });
+    });
+  });
+
   describe("bindings", () => {
     it("should allow bindings with different names", async () => {
       writeWranglerToml({
+        migrations: [
+          {
+            tag: "v1",
+            new_classes: ["SomeDurableObject", "AnotherDurableObject"],
+          },
+        ],
         durable_objects: {
           bindings: [
             {
@@ -2191,6 +2405,7 @@ export default{
         ],
       });
       mockSubDomainRequest();
+      mockScriptData({ scripts: [] });
 
       await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
       expect(std.out).toMatchInlineSnapshot(`
@@ -2809,9 +3024,14 @@ export default{
               },
             ],
           },
+          migrations: [{ tag: "v1", new_classes: ["ExampleDurableObject"] }],
         });
-        writeWorkerSource({ type: "esm" });
+        fs.writeFileSync(
+          "index.js",
+          `export class ExampleDurableObject {}; export default{};`
+        );
         mockSubDomainRequest();
+        mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
         mockUploadWorkerRequest({
           expectedBindings: [
             {
@@ -2878,9 +3098,14 @@ export default{
               },
             ],
           },
+          migrations: [{ tag: "v1", new_classes: ["ExampleDurableObject"] }],
         });
-        writeWorkerSource({ type: "esm" });
+        fs.writeFileSync(
+          "index.js",
+          `export class ExampleDurableObject {}; export default{};`
+        );
         mockSubDomainRequest();
+        mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
         mockUploadWorkerRequest({
           expectedType: "esm",
           expectedBindings: [
@@ -3356,27 +3581,32 @@ function writeAssets(assets: { filePath: string; content: string }[]) {
 }
 
 /** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest({
-  available_on_subdomain = true,
-  expectedEntry,
-  expectedType = "esm",
-  expectedBindings,
-  expectedModules = {},
-  expectedCompatibilityDate,
-  expectedCompatibilityFlags,
-  env = undefined,
-  legacyEnv = false,
-}: {
-  available_on_subdomain?: boolean;
-  expectedEntry?: string;
-  expectedType?: "esm" | "sw";
-  expectedBindings?: unknown;
-  expectedModules?: Record<string, string>;
-  expectedCompatibilityDate?: string;
-  expectedCompatibilityFlags?: string[];
-  env?: string;
-  legacyEnv?: boolean;
-} = {}) {
+function mockUploadWorkerRequest(
+  options: {
+    available_on_subdomain?: boolean;
+    expectedEntry?: string;
+    expectedType?: "esm" | "sw";
+    expectedBindings?: unknown;
+    expectedModules?: Record<string, string>;
+    expectedCompatibilityDate?: string;
+    expectedCompatibilityFlags?: string[];
+    expectedMigrations?: CfWorkerInit["migrations"];
+    env?: string;
+    legacyEnv?: boolean;
+  } = {}
+) {
+  const {
+    available_on_subdomain = true,
+    expectedEntry,
+    expectedType = "esm",
+    expectedBindings,
+    expectedModules = {},
+    expectedCompatibilityDate,
+    expectedCompatibilityFlags,
+    env = undefined,
+    legacyEnv = false,
+    expectedMigrations,
+  } = options;
   setMockResponse(
     env && !legacyEnv
       ? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
@@ -3405,16 +3635,19 @@ function mockUploadWorkerRequest({
       } else {
         expect(metadata.body_part).toEqual("index.js");
       }
-      if (expectedBindings !== undefined) {
+      if ("expectedBindings" in options) {
         expect(metadata.bindings).toEqual(expectedBindings);
       }
-      if (expectedCompatibilityDate !== undefined) {
+      if ("expectedCompatibilityDate" in options) {
         expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
       }
-      if (expectedCompatibilityFlags !== undefined) {
+      if ("expectedCompatibilityFlags" in options) {
         expect(metadata.compatibility_flags).toEqual(
           expectedCompatibilityFlags
         );
+      }
+      if ("expectedMigrations" in options) {
+        expect(metadata.migrations).toEqual(expectedMigrations);
       }
       for (const [name, content] of Object.entries(expectedModules)) {
         expect(await (formBody.get(name) as File).text()).toEqual(content);
@@ -3577,6 +3810,20 @@ function mockDeleteUnusedAssetsRequest(
       const deletes = JSON.parse(body as string);
       expect(assets).toEqual(deletes);
       return null;
+    }
+  );
+}
+
+type LegacyScriptInfo = { id: string; migration_tag?: string };
+
+function mockScriptData(options: { scripts: LegacyScriptInfo[] }) {
+  const { scripts } = options;
+  setMockResponse(
+    "/accounts/:accountId/workers/scripts",
+    "GET",
+    ([_url, accountId]) => {
+      expect(accountId).toEqual("some-account-id");
+      return scripts;
     }
   );
 }
