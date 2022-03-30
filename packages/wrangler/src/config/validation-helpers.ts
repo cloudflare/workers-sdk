@@ -16,10 +16,13 @@ export function deprecated<T extends object>(
   remove: boolean,
   breaking = false
 ): void {
+  const diagonsticMessage = breaking
+    ? `🚨 DEPRECATION: "${fieldPath}":\n${message}`
+    : `🦺 DEPRECATION: "${fieldPath}":\n${message}`;
   const result = unwindPropertyPath(config, fieldPath);
   if (result !== undefined && result.field in result.container) {
     (breaking ? diagnostics.errors : diagnostics.warnings).push(
-      `DEPRECATION: "${fieldPath}":\n${message}`
+      diagonsticMessage
     );
     if (remove) {
       delete (result.container as Record<string, unknown>)[result.field];
