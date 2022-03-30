@@ -348,6 +348,7 @@ function useHotkeys(
 ) {
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
+  const { exit } = useApp();
   useInput(
     async (
       input,
@@ -385,7 +386,7 @@ function useHotkeys(
         // shut down
         case "q":
         case "x":
-          process.exit(0);
+          exit();
           break;
         default:
           // nothing?

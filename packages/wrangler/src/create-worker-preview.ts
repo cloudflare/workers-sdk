@@ -57,7 +57,8 @@ export interface CfPreviewToken {
  */
 async function sessionToken(
   account: CfAccount,
-  ctx: CfWorkerContext
+  ctx: CfWorkerContext,
+  abort: AbortSignal
 ): Promise<CfPreviewToken> {
   const { accountId } = account;
   const initUrl = ctx.zone
@@ -66,7 +67,7 @@ async function sessionToken(
 
   const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
   const { inspector_websocket, token } = (await (
-    await fetch(exchange_url)
+    await fetch(exchange_url, { signal: abort })
   ).json()) as { inspector_websocket: string; token: string };
   const { host } = new URL(inspector_websocket);
   const query = `cf_workers_preview_token=${token}`;
@@ -96,11 +97,13 @@ function randomId(): string {
 async function createPreviewToken(
   account: CfAccount,
   worker: CfWorkerInit,
-  ctx: CfWorkerContext
+  ctx: CfWorkerContext,
+  abort: AbortSignal
 ): Promise<CfPreviewToken> {
   const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(
     account,
-    ctx
+    ctx,
+    abort
   );
 
   const { accountId } = account;
@@ -155,10 +158,14 @@ async function createPreviewToken(
 export async function createWorkerPreview(
   init: CfWorkerInit,
   account: CfAccount,
-  ctx: CfWorkerContext
+  ctx: CfWorkerContext,
+  abort: AbortSignal
 ): Promise<CfPreviewToken> {
-  const token = await createPreviewToken(account, init, ctx);
-  const response = await fetch(token.prewarmUrl.href, { method: "POST" });
+  const token = await createPreviewToken(account, init, ctx, abort);
+  const response = await fetch(token.prewarmUrl.href, {
+    method: "POST",
+    signal: abort,
+  });
   if (!response.ok) {
     // console.error("worker failed to prewarm: ", response.statusText);
   }
