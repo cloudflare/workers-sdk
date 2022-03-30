@@ -17,7 +17,7 @@ export function deprecated<T extends object>(
   breaking = false
 ): void {
   const diagonsticMessage = breaking
-    ? `🚨 DEPRECATION: "${fieldPath}":\n${message}`
+    ? `🚨 NO LONGER SUPPORTED: "${fieldPath}":\n${message}`
     : `🦺 DEPRECATION: "${fieldPath}":\n${message}`;
   const result = unwindPropertyPath(config, fieldPath);
   if (result !== undefined && result.field in result.container) {

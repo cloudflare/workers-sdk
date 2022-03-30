@@ -443,7 +443,7 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.main\\":
+          - 🦺 DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
@@ -475,13 +475,13 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing ../wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.main\\":
+          - 🦺 DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"foo/index.js\\"
             \`\`\`
-          - DEPRECATION: \\"build.upload.dir\\":
+          - 🦺 DEPRECATION: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
       `);
     });
@@ -655,7 +655,7 @@ export default{
       await expect(runWrangler("publish ./index.js")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
               "Processing wrangler.toml configuration:
-                - DEPRECATION: \\"site.entry-point\\":
+                - 🚨 NO LONGER SUPPORTED: \\"site.entry-point\\":
                   The \`site.entry-point\` config field is no longer used.
                   The entry-point should be specified via the command line or the \`main\` config field."
             `);
@@ -663,7 +663,7 @@ export default{
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - DEPRECATION: \\"site.entry-point\\":
+          - 🚨 NO LONGER SUPPORTED: \\"site.entry-point\\":
             The \`site.entry-point\` config field is no longer used.
             The entry-point should be specified via the command line or the \`main\` config field.
 
