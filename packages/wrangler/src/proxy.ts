@@ -289,21 +289,29 @@ export function usePreviewServer({
   // Start/stop the server whenever the
   // containing component is mounted/unmounted.
   useEffect(() => {
+    const abortController = new AbortController();
     if (proxyServer === undefined) {
       return;
     }
 
-    waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 })
+    waitForPortToBeAvailable(port, {
+      retryPeriod: 200,
+      timeout: 2000,
+      abortSignal: abortController.signal,
+    })
       .then(() => {
         proxyServer.listen(port, ip);
         console.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
       })
       .catch((err) => {
-        console.error(`⬣ Failed to start server: ${err}`);
+        if ((err as { code: string }).code !== "ABORT_ERR") {
+          console.error(`⬣ Failed to start server: ${err}`);
+        }
       });
 
     return () => {
       proxyServer.close();
+      abortController.abort();
     };
   }, [port, ip, proxyServer, localProtocol]);
 }
@@ -398,9 +406,16 @@ function createStreamHandler(
  */
 export async function waitForPortToBeAvailable(
   port: number,
-  options: { retryPeriod: number; timeout: number }
+  options: { retryPeriod: number; timeout: number; abortSignal: AbortSignal }
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (options.abortSignal as any).addEventListener("abort", () => {
+      const abortError = new Error("waitForPortToBeAvailable() aborted");
+      (abortError as Error & { code: string }).code = "ABORT_ERR";
+      doReject(abortError);
+    });
+
     const timeout = setTimeout(() => {
       doReject(new Error(`Timed out waiting for port ${port}`));
     }, options.timeout);

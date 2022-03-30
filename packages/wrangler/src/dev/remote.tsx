@@ -106,7 +106,7 @@ export function useWorker(props: {
   const startedRef = useRef(false);
 
   useEffect(() => {
-    const abortCtrl = new AbortController();
+    const abortController = new AbortController();
     async function start() {
       setToken(undefined); // reset token in case we're re-running
 
@@ -175,20 +175,18 @@ export function useWorker(props: {
             apiToken,
           },
           { env: props.env, legacyEnv: props.legacyEnv, zone: props.zone },
-          abortCtrl.signal
+          abortController.signal
         )
       );
     }
     start().catch((err) => {
-      if ((err as { code: string }).code !== "ABORT_ERR") {
-        // we want to log the error, but not end the process
-        // since it could recover after the developer fixes whatever's wrong
-        console.error("remote worker:", err);
-      }
+      // we want to log the error, but not end the process
+      // since it could recover after the developer fixes whatever's wrong
+      console.error("remote worker:", err);
     });
 
     return () => {
-      abortCtrl.abort();
+      abortController.abort();
     };
   }, [
     name,
