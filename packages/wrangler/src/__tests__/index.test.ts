@@ -36,7 +36,6 @@ describe("wrangler", () => {
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
@@ -46,6 +45,9 @@ describe("wrangler", () => {
           wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
           wrangler pages             ⚡️ Configure Cloudflare Pages
           wrangler r2                📦 Interact with an R2 store
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
+          wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -72,7 +74,6 @@ describe("wrangler", () => {
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
@@ -82,6 +83,9 @@ describe("wrangler", () => {
           wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
           wrangler pages             ⚡️ Configure Cloudflare Pages
           wrangler r2                📦 Interact with an R2 store
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
+          wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
