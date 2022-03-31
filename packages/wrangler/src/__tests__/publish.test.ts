@@ -732,7 +732,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("when using a service worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
+    it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
@@ -2902,7 +2902,7 @@ export default{
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
-      it("should error when detecting service workers implementing  durable objects", async () => {
+      it("should error when detecting a service-worker worker implementing durable objects", async () => {
         writeWranglerToml({
           durable_objects: {
             bindings: [
@@ -2918,7 +2918,7 @@ export default{
 
         await expect(runWrangler("publish index.js")).rejects
           .toThrowErrorMatchingInlineSnapshot(`
-                              "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.
+                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
                               You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
                               { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
                               Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:

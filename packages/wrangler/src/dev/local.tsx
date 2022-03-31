@@ -82,6 +82,7 @@ function useLocalWorker({
       const scriptPath = realpathSync(bundle.path);
 
       const wasmBindings = { ...bindings.wasm_modules };
+      const textBlobBindings = { ...bindings.text_blobs };
       if (format === "service-worker") {
         for (const { type, name } of bundle.modules) {
           if (type === "compiled-wasm") {
@@ -91,6 +92,13 @@ function useLocalWorker({
             // characters with an underscore.
             const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
             wasmBindings[identifier] = name;
+          } else if (type === "text") {
+            // In service-worker format, text modules are referenced by global identifiers,
+            // so we convert it here.
+            // This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+            // characters with an underscore.
+            const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+            textBlobBindings[identifier] = name;
           }
         }
       }
@@ -130,6 +138,7 @@ function useLocalWorker({
           : undefined,
         bindings: bindings.vars,
         wasmBindings,
+        textBlobBindings,
         sourceMap: true,
         logUnhandledRejections: true,
       };
@@ -227,6 +236,7 @@ function useLocalWorker({
     publicDirectory,
     rules,
     bindings.wasm_modules,
+    bindings.text_blobs,
   ]);
   return { inspectorUrl };
 }

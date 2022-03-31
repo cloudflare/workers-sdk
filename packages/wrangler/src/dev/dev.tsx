@@ -65,7 +65,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
 
   if (props.public && props.entry.format === "service-worker") {
     throw new Error(
-      "You cannot use the service worker format with a `public` directory."
+      "You cannot use the service-worker format with a `public` directory."
     );
   }
 

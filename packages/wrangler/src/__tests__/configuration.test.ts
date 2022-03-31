@@ -354,7 +354,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
-    it("should error on invalid `wasm_module` paths", () => {
+    it("should error on invalid `wasm_modules` paths", () => {
       const expectedConfig = {
         wasm_modules: {
           MODULE_1: 111,

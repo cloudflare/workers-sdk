@@ -1140,7 +1140,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
  *
  * We don't want to have, for example, a KV namespace named "DATA"
  * and a Durable Object also named "DATA". Then it would be ambiguous
- * what exactly would live at `env.DATA` (or in the case of service workers,
+ * what exactly would live at `env.DATA` (or in the case of service-workers,
  * the `DATA` global).
  */
 const validateBindingsHaveUniqueNames = (

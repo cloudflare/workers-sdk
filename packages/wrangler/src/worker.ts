@@ -75,7 +75,7 @@ interface CfKvNamespace {
 }
 
 /**
- * A binding to a wasm module (in service worker format)
+ * A binding to a wasm module (in service-worker format)
  */
 
 interface CfWasmModuleBindings {
@@ -83,7 +83,7 @@ interface CfWasmModuleBindings {
 }
 
 /**
- * A binding to a text blob (in service worker format)
+ * A binding to a text blob (in service-worker format)
  */
 
 interface CfTextBlobBindings {

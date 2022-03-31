@@ -74,7 +74,7 @@ export default async function publish(props: Props): Promise<void> {
     if (props.experimentalPublic && format === "service-worker") {
       // TODO: check config too
       throw new Error(
-        "You cannot publish in the service worker format with a public directory."
+        "You cannot publish in the service-worker format with a public directory."
       );
     }
 

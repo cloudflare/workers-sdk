@@ -102,7 +102,7 @@ export default function createModuleCollector(props: {
           modules.splice(0);
         });
 
-        // ~ start  legacy module specifier support ~
+        // ~ start legacy module specifier support ~
 
         // This section detects usage of "legacy" 1.x style module specifiers
         // and modifies them so they "work" in wrangler v2, but with a warning
@@ -218,6 +218,11 @@ export default function createModuleCollector(props: {
               build.onLoad(
                 { filter: globToRegExp(glob) },
                 async (args: esbuild.OnLoadArgs) => {
+                  if (rule.type === "Data") {
+                    throw new Error(
+                      "Data modules are not supported in the service-worker format"
+                    );
+                  }
                   return {
                     // We replace the the module with an identifier
                     // that we'll separately add to the form upload
