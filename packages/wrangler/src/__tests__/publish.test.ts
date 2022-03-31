@@ -2328,6 +2328,10 @@ export default{
           WASM_MODULE_ONE: "./some_wasm.wasm",
           WASM_MODULE_TWO: "./more_wasm.wasm",
         },
+        data_blobs: {
+          DATA_BLOB_ONE: "./some-data-blob.bin",
+          DATA_BLOB_TWO: "./more-data-blob.bin",
+        },
       });
 
       writeWorkerSource({ type: "sw" });
@@ -2338,6 +2342,9 @@ export default{
       );
       fs.writeFileSync("./some_wasm.wasm", "some wasm");
       fs.writeFileSync("./more_wasm.wasm", "more wasm");
+
+      fs.writeFileSync("./some-data-blob.bin", "some data");
+      fs.writeFileSync("./more-data-blob.bin", "more data");
 
       mockUploadWorkerRequest({
         expectedType: "sw",
@@ -2392,6 +2399,8 @@ export default{
           },
           { name: "TEXT_BLOB_ONE", part: "TEXT_BLOB_ONE", type: "text_blob" },
           { name: "TEXT_BLOB_TWO", part: "TEXT_BLOB_TWO", type: "text_blob" },
+          { name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE", type: "data_blob" },
+          { name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO", type: "data_blob" },
           {
             data: { some: { unsafe: "thing" } },
             name: "UNSAFE_BINDING_ONE",
@@ -2476,6 +2485,10 @@ export default{
           WASM_MODULE_ONE: "./some_wasm.wasm",
           CONFLICTING_NAME_THREE: "./more_wasm.wasm",
         },
+        data_blobs: {
+          DATA_BLOB_ONE: "./some_data.bin",
+          CONFLICTING_NAME_THREE: "./more_data.bin",
+        },
       });
 
       writeWorkerSource({ type: "sw" });
@@ -2492,7 +2505,7 @@ export default{
               [Error: Processing wrangler.toml configuration:
                 - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
                 - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
                 - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
                 - Bindings must have unique names, so that they can all be referenced in the worker.
                   Please change your bindings to have unique names.]
@@ -2502,7 +2515,7 @@ export default{
         "Processing wrangler.toml configuration:
           - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
           - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
           - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
           - Bindings must have unique names, so that they can all be referenced in the worker.
             Please change your bindings to have unique names.
@@ -2559,7 +2572,7 @@ export default{
             },
           ],
         },
-        // text_blobs, vars, and wasm_modules are fine because they're object literals,
+        // text_blobs, vars, wasm_modules and data_blobs are fine because they're object literals,
         // and by definition cannot have two keys of the same name
         //
         // text_blobs: {
@@ -2688,6 +2701,10 @@ export default{
           WASM_MODULE_ONE: "./some_wasm.wasm",
           CONFLICTING_NAME_THREE: "./more_wasm.wasm",
         },
+        data_blobs: {
+          DATA_BLOB_ONE: "./some_data.bin",
+          CONFLICTING_NAME_THREE: "./more_data.bin",
+        },
       });
 
       writeWorkerSource({ type: "sw" });
@@ -2705,7 +2722,7 @@ export default{
                 - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
                 - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
                 - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
                 - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
                 - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
                 - Bindings must have unique names, so that they can all be referenced in the worker.
@@ -2717,7 +2734,7 @@ export default{
           - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
           - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
           - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, and WASM Module bindings.
+          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
           - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
           - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
           - Bindings must have unique names, so that they can all be referenced in the worker.
@@ -2900,14 +2917,14 @@ export default{
         await expect(
           runWrangler("publish index.js")
         ).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml"`
+          `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-                  "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[build.upload.rules]\` in your wrangler.toml
+          "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
 
-                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-              `);
+          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -2939,6 +2956,106 @@ export default{
               name: "TESTTEXTBLOBNAME",
               part: "TESTTEXTBLOBNAME",
               type: "text_blob",
+            },
+          ],
+          expectedCompatibilityDate: "2022-01-12",
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+        expect(std.out).toMatchInlineSnapshot(`
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+
+    describe("[data_blobs]", () => {
+      it("should be able to define data blobs for service-worker format workers", async () => {
+        writeWranglerToml({
+          data_blobs: {
+            TESTDATABLOBNAME: "./path/to/data.bin",
+          },
+        });
+        writeWorkerSource({ type: "sw" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/data.bin", "SOME DATA CONTENT");
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTDATABLOBNAME: "SOME DATA CONTENT" },
+          expectedBindings: [
+            {
+              name: "TESTDATABLOBNAME",
+              part: "TESTDATABLOBNAME",
+              type: "data_blob",
+            },
+          ],
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should error when defining data blobs for modules format workers", async () => {
+        writeWranglerToml({
+          data_blobs: {
+            TESTDATABLOBNAME: "./path/to/data.bin",
+          },
+        });
+        writeWorkerSource({ type: "esm" });
+        fs.mkdirSync("./path/to", { recursive: true });
+        fs.writeFileSync("./path/to/data.bin", "SOME DATA CONTENT");
+
+        await expect(
+          runWrangler("publish index.js")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
+        );
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`
+                  "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
+
+                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+              `);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should resolve data blobs relative to the wrangler.toml file", async () => {
+        fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
+        fs.writeFileSync(
+          "./path/to/wrangler.toml",
+          TOML.stringify({
+            compatibility_date: "2022-01-12",
+            name: "test-name",
+            data_blobs: {
+              TESTDATABLOBNAME: "./and/the/path/to/data.bin",
+            },
+          }),
+
+          "utf-8"
+        );
+
+        writeWorkerSource({ type: "sw" });
+        fs.writeFileSync(
+          "./path/to/and/the/path/to/data.bin",
+          "SOME DATA CONTENT"
+        );
+        mockUploadWorkerRequest({
+          expectedType: "sw",
+          expectedModules: { TESTDATABLOBNAME: "SOME DATA CONTENT" },
+          expectedBindings: [
+            {
+              name: "TESTDATABLOBNAME",
+              part: "TESTDATABLOBNAME",
+              type: "data_blob",
             },
           ],
           expectedCompatibilityDate: "2022-01-12",

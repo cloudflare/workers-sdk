@@ -218,18 +218,12 @@ export default function createModuleCollector(props: {
               build.onLoad(
                 { filter: globToRegExp(glob) },
                 async (args: esbuild.OnLoadArgs) => {
-                  if (rule.type === "Data") {
-                    throw new Error(
-                      "Data modules are not supported in the service-worker format"
-                    );
-                  }
                   return {
                     // We replace the the module with an identifier
                     // that we'll separately add to the form upload
-                    // as part of [wasm_modules]/[text_blobs]. This identifier has to be a valid
+                    // as part of [wasm_modules]/[text_blobs]/[data_blobs]. This identifier has to be a valid
                     // JS identifier, so we replace all non alphanumeric characters
                     // with an underscore.
-                    // TODO: what of "Data"?
                     contents: `export default ${args.path.replace(
                       /[^a-zA-Z0-9_$]/g,
                       "_"

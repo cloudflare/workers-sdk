@@ -91,6 +91,14 @@ interface CfTextBlobBindings {
 }
 
 /**
+ * A binding to a data blob (in service-worker format)
+ */
+
+interface CfDataBlobBindings {
+  [key: string]: string;
+}
+
+/**
  * A Durable Object.
  */
 interface CfDurableObject {
@@ -146,6 +154,7 @@ export interface CfWorkerInit {
     kv_namespaces: CfKvNamespace[] | undefined;
     wasm_modules: CfWasmModuleBindings | undefined;
     text_blobs: CfTextBlobBindings | undefined;
+    data_blobs: CfDataBlobBindings | undefined;
     durable_objects: { bindings: CfDurableObject[] } | undefined;
     r2_buckets: CfR2Bucket[] | undefined;
     unsafe: CfUnsafeBinding[] | undefined;

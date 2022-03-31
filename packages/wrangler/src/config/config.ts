@@ -135,6 +135,17 @@ export interface ConfigFields<Dev extends RawDevConfig> {
         [key: string]: string;
       }
     | undefined;
+
+  /**
+   * A list of data files that your worker should be bound to. This is
+   * the "legacy" way of binding to a data file. ES module workers should
+   * do proper module imports.
+   */
+  data_blobs:
+    | {
+        [key: string]: string;
+      }
+    | undefined;
 }
 
 export interface DevConfig {

@@ -83,6 +83,7 @@ function useLocalWorker({
 
       const wasmBindings = { ...bindings.wasm_modules };
       const textBlobBindings = { ...bindings.text_blobs };
+      const dataBlobBindings = { ...bindings.data_blobs };
       if (format === "service-worker") {
         for (const { type, name } of bundle.modules) {
           if (type === "compiled-wasm") {
@@ -99,6 +100,13 @@ function useLocalWorker({
             // characters with an underscore.
             const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
             textBlobBindings[identifier] = name;
+          } else if (type === "buffer") {
+            // In service-worker format, data blobs are referenced by global identifiers,
+            // so we convert it here.
+            // This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+            // characters with an underscore.
+            const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+            dataBlobBindings[identifier] = name;
           }
         }
       }
@@ -139,6 +147,7 @@ function useLocalWorker({
         bindings: bindings.vars,
         wasmBindings,
         textBlobBindings,
+        dataBlobBindings,
         sourceMap: true,
         logUnhandledRejections: true,
       };
@@ -237,6 +246,7 @@ function useLocalWorker({
     rules,
     bindings.wasm_modules,
     bindings.text_blobs,
+    bindings.data_blobs,
   ]);
   return { inspectorUrl };
 }

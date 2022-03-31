@@ -38,6 +38,7 @@ export interface WorkerMetadata {
     | { type: "json"; name: string; json: unknown }
     | { type: "wasm_module"; name: string; part: string }
     | { type: "text_blob"; name: string; part: string }
+    | { type: "data_blob"; name: string; part: string }
     | {
         type: "durable_object_namespace";
         name: string;
@@ -133,6 +134,21 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
     }
   }
 
+  for (const [name, filePath] of Object.entries(bindings.data_blobs || {})) {
+    metadataBindings.push({
+      name,
+      type: "data_blob",
+      part: name,
+    });
+
+    formData.set(
+      name,
+      new File([readFileSync(filePath)], filePath, {
+        type: "application/octet-stream",
+      })
+    );
+  }
+
   if (main.type === "commonjs") {
     // This is a service-worker format worker.
     for (const module of Object.values([...(modules || [])])) {
@@ -146,8 +162,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
         );
         // And then remove it from the modules collection
         modules = modules?.filter((m) => m !== module);
-      } else if (module.type === "compiled-wasm" || module.type === "text") {
-        // Convert all wasm/text modules into `wasm_module`/`text_blob` bindings.
+      } else if (
+        module.type === "compiled-wasm" ||
+        module.type === "text" ||
+        module.type === "buffer"
+      ) {
+        // Convert all wasm/text/data modules into `wasm_module`/`text_blob`/`data_blob` bindings.
         // The "name" of the module is a file path. We use it
         // to instead be a "part" of the body, and a reference
         // that we can use inside our source. This identifier has to be a valid
@@ -156,7 +176,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
         const name = module.name.replace(/[^a-zA-Z0-9_$]/g, "_");
         metadataBindings.push({
           name,
-          type: module.type === "compiled-wasm" ? "wasm_module" : "text_blob",
+          type:
+            module.type === "compiled-wasm"
+              ? "wasm_module"
+              : module.type === "text"
+              ? "text_blob"
+              : "data_blob",
           part: name,
         });
 
@@ -167,7 +192,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
             type:
               module.type === "compiled-wasm"
                 ? "application/wasm"
-                : "text/plain",
+                : module.type === "text"
+                ? "text/plain"
+                : "application/octet-stream",
           })
         );
         // And then remove it from the modules collection

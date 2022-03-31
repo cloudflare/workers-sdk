@@ -182,6 +182,12 @@ export function normalizeAndValidateConfig(
       "text_blobs",
       rawConfig.text_blobs
     ),
+    data_blobs: normalizeAndValidateModulePaths(
+      diagnostics,
+      configPath,
+      "data_blobs",
+      rawConfig.data_blobs
+    ),
   };
 
   validateBindingsHaveUniqueNames(diagnostics, config);
@@ -427,12 +433,12 @@ function normalizeAndValidateSite(
 }
 
 /**
- * Map the paths of the `wasm_modules` or `text_blobs` configuration to be relative to the current working directory.
+ * Map the paths of the `wasm_modules`, `text_blobs` or `data_blobs` configuration to be relative to the current working directory.
  */
 function normalizeAndValidateModulePaths(
   diagnostics: Diagnostics,
   configPath: string | undefined,
-  field: "wasm_modules" | "text_blobs",
+  field: "wasm_modules" | "text_blobs" | "data_blobs",
   rawMapping: Record<string, string> | undefined
 ): Record<string, string> | undefined {
   if (rawMapping === undefined) {
@@ -1153,6 +1159,7 @@ const validateBindingsHaveUniqueNames = (
     unsafe,
     vars,
     wasm_modules,
+    data_blobs,
   }: Partial<Config>
 ): boolean => {
   let hasDuplicates = false;
@@ -1165,6 +1172,7 @@ const validateBindingsHaveUniqueNames = (
     Unsafe: getBindingNames(unsafe),
     "Environment Variable": getBindingNames(vars),
     "WASM Module": getBindingNames(wasm_modules),
+    "Data Blob": getBindingNames(data_blobs),
   } as Record<string, string[]>;
 
   const bindingsGroupedByName: Record<string, string[]> = {};
