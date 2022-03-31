@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker } from "../bundle";
 import type { Config } from "../config";
@@ -35,6 +36,7 @@ export function useEsbuild({
   tsconfig: string | undefined;
 }): EsbuildBundle | undefined {
   const [bundle, setBundle] = useState<EsbuildBundle>();
+  const { exit } = useApp();
   useEffect(() => {
     let stopWatching: (() => void) | undefined = undefined;
 
@@ -82,9 +84,11 @@ export function useEsbuild({
       });
     }
 
-    build().catch(() => {
-      // esbuild already logs errors to stderr and we don't want to end the process
-      // on build errors anyway so this is a no-op error handler
+    build().catch((err) => {
+      // If esbuild fails on first run, we want to quit the process
+      // since we can't recover from here
+      // related: https://github.com/evanw/esbuild/issues/1037
+      exit(err);
     });
 
     return () => {
@@ -99,6 +103,7 @@ export function useEsbuild({
     serveAssetsFromWorker,
     rules,
     tsconfig,
+    exit,
   ]);
   return bundle;
 }
