@@ -64,7 +64,7 @@ export async function getEntry(
 
   if (format === "service-worker" && localBindings.length > 0) {
     const errorMessage =
-      "You seem to be trying to use Durable Objects in a Worker written with Service Worker syntax.";
+      "You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
     const addScriptName =
       "You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
     const addScriptNameExamples = generateAddScriptNameExamples(localBindings);

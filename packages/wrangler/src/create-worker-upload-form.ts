@@ -26,7 +26,7 @@ export function toMimeType(type: CfModuleType): string {
 export interface WorkerMetadata {
   /** The name of the entry point module. Only exists when the worker is in the ES module format */
   main_module?: string;
-  /** The name of the entry point module. Only exists when the worker is in the Service Worker format */
+  /** The name of the entry point module. Only exists when the worker is in the service-worker format */
   body_part?: string;
   compatibility_date?: string;
   compatibility_flags?: string[];
@@ -172,10 +172,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
         );
         // And then remove it from the modules collection
         modules = modules?.filter((m) => m !== module);
-      } else if (module.type === "buffer") {
-        throw new Error(
-          'The "buffer" module type is not yet supported in service worker format workers'
-        );
       }
     }
   }
