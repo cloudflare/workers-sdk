@@ -86,7 +86,13 @@ export default async function publish(props: Props): Promise<void> {
 
     if (config.text_blobs && format === "modules") {
       throw new Error(
-        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
+        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+      );
+    }
+
+    if (config.data_blobs && format === "modules") {
+      throw new Error(
+        "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
       );
     }
 
@@ -199,6 +205,7 @@ export default async function publish(props: Props): Promise<void> {
             __STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
           }),
       },
+      data_blobs: config.data_blobs,
       durable_objects: config.durable_objects,
       r2_buckets: config.r2_buckets,
       unsafe: config.unsafe?.bindings,

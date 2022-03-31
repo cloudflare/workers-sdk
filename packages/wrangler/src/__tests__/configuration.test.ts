@@ -56,6 +56,7 @@ describe("normalizeAndValidateConfig()", () => {
       usage_model: undefined,
       vars: {},
       wasm_modules: undefined,
+      data_blobs: undefined,
       workers_dev: undefined,
       zone_id: undefined,
     });
@@ -431,6 +432,59 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing project/wrangler.toml configuration:
           - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
           - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
+      `);
+    });
+
+    it("should map `data_blobs` paths from relative to the config path to relative to the cwd", () => {
+      const expectedConfig: RawConfig = {
+        data_blobs: {
+          BLOB_1: "path/to/data1.bin",
+          BLOB_2: "data2.bin",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          data_blobs: {
+            BLOB_1: path.normalize("project/path/to/data1.bin"),
+            BLOB_2: path.normalize("project/data2.bin"),
+          },
+        })
+      );
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should error on invalid `data_blob` paths", () => {
+      const expectedConfig = {
+        data_blobs: {
+          MODULE_1: 111,
+          MODULE_2: 222,
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig as unknown as RawConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          data_blobs: {},
+        })
+      );
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"data_blobs['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"data_blobs['MODULE_2']\\" to be of type string but got 222."
       `);
     });
 
