@@ -927,6 +927,7 @@ export async function main(argv: string[]): Promise<void> {
             r2_buckets: config.r2_buckets,
             unsafe: config.unsafe?.bindings,
           }}
+          crons={config.triggers.crons}
         />
       );
       await waitUntilExit();
@@ -1310,6 +1311,7 @@ export async function main(argv: string[]): Promise<void> {
             r2_buckets: config.r2_buckets,
             unsafe: config.unsafe?.bindings,
           }}
+          crons={config.triggers.crons}
           inspectorPort={await getPort({ port: 9229 })}
         />
       );
