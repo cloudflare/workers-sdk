@@ -18,6 +18,7 @@ import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
+import { DeprecationError } from "./errors";
 import {
   getNamespaceId,
   listNamespaces,
@@ -211,11 +212,6 @@ function demandOneOfOption(...options: string[]) {
 }
 
 class CommandLineArgsError extends Error {}
-class DeprecationError extends Error {
-  constructor(message: string) {
-    super(`DEPRECATION WARNING:\n${message}`);
-  }
-}
 
 export async function main(argv: string[]): Promise<void> {
   const wrangler = makeCLI(argv)
