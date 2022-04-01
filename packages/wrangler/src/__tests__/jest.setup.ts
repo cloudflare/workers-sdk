@@ -1,3 +1,4 @@
+import { ChildProcess } from "node:child_process";
 import fetchMock from "jest-fetch-mock";
 import {
   fetchInternal,
@@ -71,4 +72,10 @@ jest.mock("../dev/dev", () => {
 });
 
 jest.mock("../open-in-browser");
-(openInBrowser as jest.Mock).mockImplementation(mockOpenInBrowserForOAuthFlow);
+(openInBrowser as jest.Mock).mockImplementation((url: string, ...args) => {
+  if (url.includes("cloudflare.com")) {
+    return mockOpenInBrowserForOAuthFlow(url, args);
+  } else {
+    return () => new ChildProcess();
+  }
+});

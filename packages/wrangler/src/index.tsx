@@ -31,6 +31,7 @@ import {
   isKeyValue,
   unexpectedKeyValueProps,
 } from "./kv";
+import openInBrowser from "./open-in-browser";
 import { getPackageManager } from "./package-manager";
 import { pages, pagesBetaWarning } from "./pages";
 import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
@@ -2349,6 +2350,62 @@ export async function main(argv: string[]): Promise<void> {
     async () => {
       printWranglerBanner();
       await whoami();
+    }
+  );
+
+  // jeans
+  wrangler.command(
+    "jeans",
+    "👖 Real. Comfortable. Jeans.®",
+    (yargs) => {
+      return yargs.option("gender", {
+        describe: "Select from a subset of available jeans based on gender",
+        // these are the three genders recognized by Wrangler Jeans Co.
+        choices: ["men", "women", "western"],
+      });
+    },
+    async ({ gender }) => {
+      printWranglerBanner();
+      let url = "";
+      switch (gender) {
+        case "men":
+          url = "https://www.wrangler.com/shop/men-jeans";
+          break;
+        case "women":
+          url = "https://www.wrangler.com/shop/women-jeans";
+          break;
+        case "western":
+          url = "https://www.wrangler.com/western-wear.html";
+          break;
+        default:
+          url = "https://www.wrangler.com/";
+          break;
+      }
+
+      await openInBrowser(url);
+    }
+  );
+
+  // jeep
+  wrangler.command(
+    "jeep",
+    "🚙 Go Anywhere, Do Anything®",
+    (yargs) => {
+      return yargs.option("test-drive", {
+        describe: "Test drive your Wrangler online before you buy",
+        boolean: true,
+      });
+    },
+    async ({ testDrive }) => {
+      printWranglerBanner();
+
+      await openInBrowser("https://www.jeep.com/wrangler.html");
+
+      if (testDrive) {
+        await openInBrowser(
+          "https://cameronmcgehee.com/flash-game-archive/gamewithemulator?gameid=37485f4343ab780bd"
+        );
+      }
     }
   );
 

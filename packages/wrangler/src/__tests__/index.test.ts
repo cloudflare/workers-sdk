@@ -3,6 +3,7 @@ import * as fsp from "node:fs/promises";
 import * as TOML from "@iarna/toml";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
+import openInBrowser from "../open-in-browser";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -48,6 +49,8 @@ describe("wrangler", () => {
           wrangler login             🔓 Login to Cloudflare
           wrangler logout            🚪 Logout from Cloudflare
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
+          wrangler jeans             👖 Real. Comfortable. Jeans.®
+          wrangler jeep              🚙 Go Anywhere, Do Anything®
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -86,6 +89,8 @@ describe("wrangler", () => {
           wrangler login             🔓 Login to Cloudflare
           wrangler logout            🚪 Logout from Cloudflare
           wrangler whoami            🕵️  Retrieve your user info and test your auth config
+          wrangler jeans             👖 Real. Comfortable. Jeans.®
+          wrangler jeep              🚙 Go Anywhere, Do Anything®
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -982,6 +987,50 @@ describe("wrangler", () => {
           \`wrangler build\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
         `);
       });
+    });
+  });
+
+  describe("jeep", () => {
+    it("should direct users to the Jeep Wrangler site", async () => {
+      await expect(runWrangler("jeep")).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith(
+        "https://www.jeep.com/wrangler.html"
+      );
+    });
+
+    it("should open a test-driving simulator when --test-drive is passed", async () => {
+      await expect(runWrangler("jeep --test-drive")).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith(
+        "https://cameronmcgehee.com/flash-game-archive/gamewithemulator?gameid=37485f4343ab780bd"
+      );
+    });
+  });
+
+  describe("jeans", () => {
+    it("should direct users to the Wrangler Jeans site", async () => {
+      await expect(runWrangler("jeans")).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith("https://www.wrangler.com/");
+    });
+
+    it("should respect your gender identity", async () => {
+      await expect(runWrangler("jeans --gender men")).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith(
+        "https://www.wrangler.com/shop/men-jeans"
+      );
+
+      await expect(
+        runWrangler("jeans --gender women")
+      ).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith(
+        "https://www.wrangler.com/shop/women-jeans"
+      );
+
+      await expect(
+        runWrangler("jeans --gender western")
+      ).resolves.toBeUndefined();
+      expect(openInBrowser).lastCalledWith(
+        "https://www.wrangler.com/western-wear.html"
+      );
     });
   });
 });
