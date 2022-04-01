@@ -139,7 +139,7 @@ function InteractiveDevSession(props: InteractiveDevSessionProps) {
         <Text>
           {`B to open a browser, D to open Devtools, L to ${
             toggles.local ? "turn off" : "turn on"
-          } local mode, X to exit`}
+          } local mode, C to clear console, X to exit`}
         </Text>
       </Box>
     </>
@@ -350,6 +350,13 @@ function useHotkeys(
       key
     ) => {
       switch (input.toLowerCase()) {
+        // clear console
+        case "c":
+          console.clear();
+          // This console.log causes Ink to re-render the `DevSession` component.
+          // Couldn't find a better way to tell it to do so...
+          console.log();
+          break;
         // open browser
         case "b": {
           await openInBrowser(`${localProtocol}://${ip}:${port}`);
