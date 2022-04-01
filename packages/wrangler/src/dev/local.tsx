@@ -191,7 +191,6 @@ function useLocalWorker({
       });
 
       local.current.stderr?.on("data", (data: Buffer) => {
-        console.error(`${data.toString()}`);
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)/.exec(
             data.toString()
