@@ -37,6 +37,7 @@ export type DevProps = {
   localProtocol: "https" | "http";
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
+  crons: Config["triggers"]["crons"];
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
   compatibilityDate: undefined | string;
@@ -163,6 +164,7 @@ function DevSession(props: DevSessionProps) {
       rules={props.rules}
       inspectorPort={props.inspectorPort}
       enableLocalPersistence={props.enableLocalPersistence}
+      crons={props.crons}
     />
   ) : (
     <Remote

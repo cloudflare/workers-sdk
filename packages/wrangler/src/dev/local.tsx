@@ -27,6 +27,7 @@ interface LocalProps {
   rules: Config["rules"];
   inspectorPort: number;
   enableLocalPersistence: boolean;
+  crons: Config["triggers"]["crons"];
 }
 
 export function Local(props: LocalProps) {
@@ -52,6 +53,7 @@ function useLocalWorker({
   rules,
   enableLocalPersistence,
   ip,
+  crons,
 }: LocalProps) {
   // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
@@ -150,6 +152,7 @@ function useLocalWorker({
         dataBlobBindings,
         sourceMap: true,
         logUnhandledRejections: true,
+        crons,
       };
 
       // The path to the Miniflare CLI assumes that this file is being run from
@@ -247,6 +250,7 @@ function useLocalWorker({
     bindings.wasm_modules,
     bindings.text_blobs,
     bindings.data_blobs,
+    crons,
   ]);
   return { inspectorUrl };
 }
