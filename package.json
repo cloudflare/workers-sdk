@@ -9,7 +9,8 @@
   },
   "homepage": "https://github.com/cloudflare/wrangler#readme",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "dependencies": {
     "@changesets/changelog-github": "^0.4.2",
@@ -50,7 +51,7 @@
       "packages/wrangler/*-dist",
       "packages/wrangler/pages/functions/template-worker.ts",
       "packages/wrangler/templates",
-      "example-remix-pages-app/public",
+      "examples/remix-pages-app/public",
       "packages/jest-environment-wrangler/dist"
     ],
     "parser": "@typescript-eslint/parser",

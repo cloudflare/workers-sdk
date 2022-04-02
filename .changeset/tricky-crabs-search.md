@@ -1,5 +1,4 @@
 ---
-"example-worker-app": patch
 "wrangler": patch
 ---
 
