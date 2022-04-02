@@ -17,6 +17,7 @@
     "pgrep",
     "PKCE",
     "Positionals",
+    "scandir",
     "selfsigned",
     "textfile",
     "tsbuildinfo",
@@ -28,7 +29,12 @@
     "websockets",
     "xxhash"
   ],
-  "cSpell.ignoreWords": ["TESTTEXTBLOBNAME", "TESTWASMNAME", "yxxx"],
+  "cSpell.ignoreWords": [
+    "TESTTEXTBLOBNAME",
+    "TESTWASMNAME",
+    "extensionless",
+    "yxxx"
+  ],
   "eslint.runtime": "node",
   "files.trimTrailingWhitespace": true
 }

@@ -10,6 +10,7 @@ import { getType } from "mime";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
+import { FatalError } from "./errors";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import type { Config } from "../pages/functions/routes";
@@ -25,17 +26,20 @@ import type { BuilderCallback } from "yargs";
 export const pagesBetaWarning =
   "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
 
-const EXIT_CALLBACKS: (() => void)[] = [];
-const EXIT = (message?: string, code?: number) => {
-  if (message) console.log(message);
-  if (code) process.exitCode = code;
-  EXIT_CALLBACKS.forEach((callback) => callback());
+const CLEANUP_CALLBACKS: (() => void)[] = [];
+const CLEANUP = () => {
+  CLEANUP_CALLBACKS.forEach((callback) => callback());
   RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
-  process.exit(code);
 };
 
-process.on("SIGINT", () => EXIT());
-process.on("SIGTERM", () => EXIT());
+process.on("SIGINT", () => {
+  CLEANUP();
+  process.exit();
+});
+process.on("SIGTERM", () => {
+  CLEANUP();
+  process.exit();
+});
 
 function isWindows() {
   return process.platform === "win32";
@@ -108,11 +112,13 @@ async function spawnProxyProcess({
   port?: number;
   command: (string | number)[];
 }): Promise<void | number> {
-  if (command.length === 0)
-    return EXIT(
+  if (command.length === 0) {
+    CLEANUP();
+    throw new FatalError(
       "Must specify a directory of static assets to serve or a command to run.",
       1
     );
+  }
 
   console.log(`Running ${command.join(" ")}...`);
   const proxy = spawn(
@@ -126,7 +132,7 @@ async function spawnProxyProcess({
       },
     }
   );
-  EXIT_CALLBACKS.push(() => {
+  CLEANUP_CALLBACKS.push(() => {
     proxy.kill();
   });
 
@@ -157,7 +163,8 @@ async function spawnProxyProcess({
       .filter((port) => port !== undefined)[0];
 
     if (port === undefined) {
-      return EXIT(
+      CLEANUP();
+      throw new FatalError(
         "Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
         1
       );
@@ -970,13 +977,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             });
           }
 
-          EXIT_CALLBACKS.push(() => {
+          CLEANUP_CALLBACKS.push(() => {
             server.close();
             miniflare.dispose().catch((err) => miniflare.log.error(err));
           });
         } catch (e) {
           miniflare.log.error(e as Error);
-          EXIT("Could not start Miniflare.", 1);
+          CLEANUP();
+          throw new FatalError("Could not start Miniflare.", 1);
         }
       }
     )
