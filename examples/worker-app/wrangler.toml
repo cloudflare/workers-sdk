@@ -1,4 +1,4 @@
-name = "example-worker-app"
+name = "worker-app"
 compatibility_date = "2022-03-31"
 
 main = "src/index.js"

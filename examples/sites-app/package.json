@@ -1,5 +1,5 @@
 {
-  "name": "example-sites-app",
+  "name": "sites-app",
   "private": true,
   "version": "1.0.0",
   "dependencies": {
