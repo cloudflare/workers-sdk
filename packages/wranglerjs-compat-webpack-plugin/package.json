@@ -1,0 +1,28 @@
+{
+  "name": "wranglerjs-compat-webpack-plugin",
+  "version": "0.0.0",
+  "description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
+  "author": "wrangler@cloudflare.com",
+  "license": "MIT OR Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/cloudflare/wrangler/issues"
+  },
+  "homepage": "https://github.com/cloudflare/wrangler#readme",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "execa": "^6.1.0",
+    "rimraf": "^3.0.2",
+    "wrangler": "../wrangler"
+  },
+  "devDependencies": {
+    "@types/rimraf": "^3.0.2",
+    "@types/webpack": "^4.41.32",
+    "typescript": "^4.6.3",
+    "webpack": "^4.46.0"
+  },
+  "peerDependencies": {
+    "webpack": "^4.46.0"
+  }
+}
