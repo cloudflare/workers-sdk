@@ -24,7 +24,7 @@ export function Remote(props: {
   accountId: undefined | string;
   apiToken: undefined | string;
   bindings: CfWorkerInit["bindings"];
-  compatibilityDate: string | undefined;
+  compatibilityDate: string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;

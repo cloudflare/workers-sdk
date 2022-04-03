@@ -17,7 +17,7 @@ interface LocalProps {
   name: undefined | string;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
-  compatibilityDate: string | undefined;
+  compatibilityDate: string;
   compatibilityFlags: undefined | string[];
   bindings: CfWorkerInit["bindings"];
   assetPaths: undefined | AssetPaths;
