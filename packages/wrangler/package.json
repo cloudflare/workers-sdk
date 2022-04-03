@@ -37,7 +37,7 @@
   ],
   "dependencies": {
     "esbuild": "0.14.23",
-    "miniflare": "2.3.0",
+    "miniflare": "2.4.0",
     "path-to-regexp": "^6.2.0",
     "selfsigned": "^2.0.0",
     "semiver": "^1.1.0",
