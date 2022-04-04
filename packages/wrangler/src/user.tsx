@@ -226,6 +226,7 @@ import { readFileSync } from "./parse";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
+import type { Config } from "./config";
 
 /**
  * Try to read the API token from the environment.
@@ -1142,4 +1143,24 @@ export function ChooseAccount(props: {
       />
     </>
   );
+}
+
+/**
+ * Ensure that a user is logged in, and a valid account_id is available.
+ */
+export async function requireAuth(
+  config: Config,
+  isInteractive = true
+): Promise<string> {
+  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
+  if (!loggedIn) {
+    // didn't login, let's just quit
+    throw new Error("Did not login, quitting...");
+  }
+  const accountId = config.account_id || (await getAccountId(isInteractive));
+  if (!accountId) {
+    throw new Error("No account id found, quitting...");
+  }
+
+  return accountId;
 }

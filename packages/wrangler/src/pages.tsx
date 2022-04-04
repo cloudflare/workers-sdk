@@ -22,7 +22,7 @@ import { fetchResult } from "./cfetch";
 import React from "react";
 import { render } from "ink";
 import Table from "ink-table";
-import { requireAuth } from "./utils";
+import { requireAuth } from "./user";
 import { readConfig } from "./config";
 
 type ConfigPath = string | undefined;
@@ -1077,7 +1077,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           return yargs;
         },
         async (args) => {
-          const config = readConfig(args.config as ConfigPath);
+          const config = readConfig(args.config as ConfigPath, args);
           const accountId = await requireAuth(config);
           let projects = await fetchResult<any>(
             `/accounts/${accountId}/pages/projects`

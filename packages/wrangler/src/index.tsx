@@ -48,11 +48,10 @@ import {
   login,
   logout,
   listScopes,
-  initialise as initialiseUserConfig,
   validateScopeKeys,
+  requireAuth,
 } from "./user";
 import { whoami } from "./whoami";
-import { requireAuth } from "./utils";
 
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
