@@ -24,6 +24,7 @@ import { render } from "ink";
 import Table from "ink-table";
 import { requireAuth } from "./user";
 import { readConfig } from "./config";
+import { format } from "timeago.js";
 
 type ConfigPath = string | undefined;
 
@@ -1087,8 +1088,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             return {
               "Project Name": project.name,
               "Project Domains": `${project.domains.join(", ")}`,
-              "Git Provider": project.source ? "✅ Yes" : "❌ No",
-              "Last Modified": project.latest_deployment.modified_on,
+              "Git Provider": project.source ? "Yes" : "No",
+              "Last Modified": format(project.latest_deployment.modified_on),
             };
           });
           return render(<Table data={projects}></Table>);
