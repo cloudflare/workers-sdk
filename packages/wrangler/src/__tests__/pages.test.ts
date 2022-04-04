@@ -1,8 +1,8 @@
+import { mockAccountId } from "./helpers/mock-account-id";
+import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
-import { mockAccountId } from "./helpers/mock-account-id";
 import type { Project } from "../pages";
 
 describe("subcommand implicit help ran on incomplete command execution", () => {
@@ -72,7 +72,6 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
           requests.count++;
           expect(accountId).toEqual("some-account-id");
           expect(query.get("per_page")).toEqual("10");
-          expect(query.get("order")).toEqual("title");
           expect(query.get("page")).toEqual(`${requests.count}`);
           expect(init).toEqual({});
           const pageSize = Number(query.get("per_page"));
