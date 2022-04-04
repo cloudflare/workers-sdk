@@ -1,4 +1,4 @@
-import { mockAccountId } from "./helpers/mock-account-id";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -60,6 +60,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
 
   describe("project list", () => {
     mockAccountId();
+    mockApiToken();
 
     afterEach(() => {
       unsetAllMocks();
