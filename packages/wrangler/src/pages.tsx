@@ -28,10 +28,10 @@ import { format } from "timeago.js";
 
 type ConfigPath = string | undefined;
 
-type Project = {
+export type Project = {
   name: string;
   domains: Array<string>;
-  source: {
+  source?: {
     type: string;
   };
   latest_deployment: {
