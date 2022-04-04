@@ -883,11 +883,10 @@ export async function main(argv: string[]): Promise<void> {
             args["inspector-port"] ?? (await getPort({ port: 9229 }))
           }
           public={args["experimental-public"]}
-          compatibilityDate={
-            args["compatibility-date"] ||
-            config.compatibility_date ||
-            new Date().toISOString().substring(0, 10)
-          }
+          compatibilityDate={getDevCompatibilityDate(
+            config,
+            args["compatibility-date"]
+          )}
           compatibilityFlags={
             (args["compatibility-flags"] as string[]) ||
             config.compatibility_flags
@@ -1268,10 +1267,7 @@ export async function main(argv: string[]): Promise<void> {
           port={config.dev?.port}
           ip={config.dev.ip}
           public={undefined}
-          compatibilityDate={
-            config.compatibility_date ||
-            new Date().toISOString().substring(0, 10)
-          }
+          compatibilityDate={getDevCompatibilityDate(config)}
           compatibilityFlags={
             (args["compatibility-flags"] as string[]) ||
             config.compatibility_flags
@@ -2389,4 +2385,26 @@ export async function main(argv: string[]): Promise<void> {
     }
     throw e;
   }
+}
+
+function getDevCompatibilityDate(
+  config: Config,
+  compatibilityDate = config.compatibility_date
+) {
+  const currentDate = new Date().toISOString().substring(0, 10);
+  if (config.configPath !== undefined && compatibilityDate === undefined) {
+    console.warn(
+      `No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+        "Add one to your wrangler.toml file:\n" +
+        "```\n" +
+        `compatibility_date = "${currentDate}"\n` +
+        "```\n" +
+        "or pass it in your terminal:\n" +
+        "```\n" +
+        `--compatibility-date=${currentDate}\n` +
+        "```\n" +
+        "See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+    );
+  }
+  return compatibilityDate ?? currentDate;
 }

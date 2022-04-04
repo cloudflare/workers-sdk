@@ -20,6 +20,53 @@ describe("wrangler dev", () => {
     unsetAllMocks();
   });
 
+  describe("compatibility-date", () => {
+    it("should not warn if there is no wrangler.toml and no compatibility-date specified", async () => {
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should warn if there is a wrangler.toml but no compatibility-date", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        compatibility_date: undefined,
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      const currentDate = new Date().toISOString().substring(0, 10);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn.replaceAll(currentDate, "<current-date>"))
+        .toMatchInlineSnapshot(`
+        "No compatibility_date was specified. Using today's date: <current-date>.
+        Add one to your wrangler.toml file:
+        \`\`\`
+        compatibility_date = \\"<current-date>\\"
+        \`\`\`
+        or pass it in your terminal:
+        \`\`\`
+        --compatibility-date=<current-date>
+        \`\`\`
+        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not warn if there is a wrangler.toml but compatibility-date is specified at the command line", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        compatibility_date: undefined,
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --compatibility-date=2020-01-01");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
   describe("entry-points", () => {
     it("should error if there is no entry-point specified", async () => {
       writeWranglerToml();

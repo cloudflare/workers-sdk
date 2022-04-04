@@ -40,7 +40,7 @@ export type DevProps = {
   crons: Config["triggers"]["crons"];
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
-  compatibilityDate: undefined | string;
+  compatibilityDate: string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   build: {
