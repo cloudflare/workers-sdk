@@ -28,6 +28,17 @@ import { format } from "timeago.js";
 
 type ConfigPath = string | undefined;
 
+type Project = {
+  name: string;
+  domains: Array<string>;
+  source: {
+    type: string;
+  };
+  latest_deployment: {
+    modified_on: string;
+  };
+};
+
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
@@ -1080,11 +1091,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         async (args) => {
           const config = readConfig(args.config as ConfigPath, args);
           const accountId = await requireAuth(config);
-          let projects = await fetchResult<any>(
-            `/accounts/${accountId}/pages/projects`
-          );
 
-          projects = projects.map((project: any) => {
+          const projects: Array<Project> = await listProjects({ accountId });
+
+          const data = projects.map((project) => {
             return {
               "Project Name": project.name,
               "Project Domains": `${project.domains.join(", ")}`,
@@ -1092,7 +1102,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               "Last Modified": format(project.latest_deployment.modified_on),
             };
           });
-          return render(<Table data={projects}></Table>);
+          return render(<Table data={data}></Table>);
         }
       )
     );
@@ -1102,4 +1112,32 @@ const invalidAssetsFetch: typeof fetch = () => {
   throw new Error(
     "Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."
   );
+};
+
+const listProjects = async ({
+  accountId,
+}: {
+  accountId: string;
+}): Promise<Array<Project>> => {
+  const pageSize = 10;
+  let page = 1;
+  const results = [];
+  while (results.length % pageSize === 0) {
+    const json: Array<Project> = await fetchResult(
+      `/accounts/${accountId}/pages/projects`,
+      {},
+      new URLSearchParams({
+        per_page: pageSize.toString(),
+        order: "title",
+        direction: "asc",
+        page: page.toString(),
+      })
+    );
+    page++;
+    results.push(...json);
+    if (json.length < pageSize) {
+      break;
+    }
+  }
+  return results;
 };
