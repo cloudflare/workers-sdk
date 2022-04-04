@@ -1129,7 +1129,6 @@ const listProjects = async ({
       new URLSearchParams({
         per_page: pageSize.toString(),
         order: "title",
-        direction: "asc",
         page: page.toString(),
       })
     );

@@ -73,7 +73,6 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
           expect(accountId).toEqual("some-account-id");
           expect(query.get("per_page")).toEqual("10");
           expect(query.get("order")).toEqual("title");
-          expect(query.get("direction")).toEqual("asc");
           expect(query.get("page")).toEqual(`${requests.count}`);
           expect(init).toEqual({});
           const pageSize = Number(query.get("per_page"));
