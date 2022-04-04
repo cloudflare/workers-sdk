@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
-import makeModuleCollector from "./module-collection";
+import createModuleCollector from "./module-collection";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -26,11 +26,34 @@ export async function bundleWorker(
     jsxFragment: string | undefined;
     rules: Config["rules"];
     watch?: esbuild.WatchMode;
+    tsconfig: string | undefined;
   }
 ): Promise<BundleResult> {
-  const { serveAssetsFromWorker, jsxFactory, jsxFragment, rules, watch } =
-    options;
-  const moduleCollector = makeModuleCollector({ format: entry.format, rules });
+  const {
+    serveAssetsFromWorker,
+    jsxFactory,
+    jsxFragment,
+    rules,
+    watch,
+    tsconfig,
+  } = options;
+  const entryDirectory = path.dirname(entry.file);
+  const moduleCollector = createModuleCollector({
+    wrangler1xlegacyModuleReferences: {
+      rootDirectory: entryDirectory,
+      fileNames: new Set(
+        fs
+          .readdirSync(entryDirectory, { withFileTypes: true })
+          .filter(
+            (dirEntry) =>
+              dirEntry.isFile() && dirEntry.name !== path.basename(entry.file)
+          )
+          .map((dirEnt) => dirEnt.name)
+      ),
+    },
+    format: entry.format,
+    rules,
+  });
   const result = await esbuild.build({
     ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,
@@ -41,6 +64,11 @@ export async function bundleWorker(
     sourcemap: true,
     metafile: true,
     conditions: ["worker", "browser"],
+    ...(process.env.NODE_ENV && {
+      define: {
+        "process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+      },
+    }),
     loader: {
       ".js": "jsx",
       ".mjs": "jsx",
@@ -49,6 +77,7 @@ export async function bundleWorker(
     plugins: [moduleCollector.plugin],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),
+    ...(tsconfig && { tsconfig }),
     watch,
   });
 

@@ -27,6 +27,7 @@ type Props = {
   legacyEnv: boolean | undefined;
   jsxFactory: undefined | string;
   jsxFragment: undefined | string;
+  tsconfig: undefined | string;
   experimentalPublic: boolean;
 };
 
@@ -38,25 +39,20 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config, accountId } = props;
 
-  // TODO: should we automatically fallback to top level config if there is no matching environment??
-  const envRootObj = (props.env && config.env[props.env]) || config;
-
   assert(
-    envRootObj.compatibility_date || props.compatibilityDate,
+    props.compatibilityDate || config.compatibility_date,
     "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
-  const triggers = props.triggers || envRootObj.triggers?.crons;
+  const triggers = props.triggers || config.triggers?.crons;
   const routes =
-    props.routes ??
-    envRootObj.routes ??
-    (envRootObj.route ? [envRootObj.route] : []) ??
-    [];
+    props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 
-  const { workers_dev: deployToWorkersDev } = config;
+  // deployToWorkersDev defaults to true only if there aren't any routes defined
+  const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
 
-  const jsxFactory = props.jsxFactory || envRootObj.jsx_factory;
-  const jsxFragment = props.jsxFragment || envRootObj.jsx_fragment;
+  const jsxFactory = props.jsxFactory || config.jsx_factory;
+  const jsxFragment = props.jsxFragment || config.jsx_fragment;
 
   const scriptName = props.name;
   assert(
@@ -78,7 +74,7 @@ export default async function publish(props: Props): Promise<void> {
     if (props.experimentalPublic && format === "service-worker") {
       // TODO: check config too
       throw new Error(
-        "You cannot publish in the service worker format with a public directory."
+        "You cannot publish in the service-worker format with a public directory."
       );
     }
 
@@ -90,7 +86,13 @@ export default async function publish(props: Props): Promise<void> {
 
     if (config.text_blobs && format === "modules") {
       throw new Error(
-        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[build.upload.rules]` in your wrangler.toml"
+        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+      );
+    }
+
+    if (config.data_blobs && format === "modules") {
+      throw new Error(
+        "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
       );
     }
 
@@ -102,17 +104,40 @@ export default async function publish(props: Props): Promise<void> {
         jsxFactory,
         jsxFragment,
         rules: props.rules,
+        tsconfig: props.tsconfig ?? config.tsconfig,
       }
     );
+
+    // Some validation of durable objects + migrations
+    if (config.durable_objects.bindings.length > 0) {
+      // TODO: implement durable objects for service environments
+      if (!props.legacyEnv) {
+        throw new Error(
+          "Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739"
+        );
+      }
+
+      // intrinsic [durable_objects] implies [migrations]
+      const exportedDurableObjects = config.durable_objects.bindings.filter(
+        (binding) => !binding.script_name
+      );
+      if (exportedDurableObjects.length > 0 && config.migrations.length === 0) {
+        console.warn(
+          `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects.map(
+            (durable) => durable.class_name
+          )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
+        );
+      }
+    }
 
     const content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
     });
 
     // if config.migrations
-    // get current migration tag
     let migrations;
     if (config.migrations.length > 0) {
+      // get current migration tag
       const scripts = await fetchResult<
         { id: string; migration_tag: string }[]
       >(`/accounts/${accountId}/workers/scripts`);
@@ -132,15 +157,21 @@ export default async function publish(props: Props): Promise<void> {
             steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
           };
         } else {
-          migrations = {
-            old_tag: script.migration_tag,
-            new_tag: config.migrations[config.migrations.length - 1].tag,
-            steps: config.migrations
-              .slice(foundIndex + 1)
-              .map(({ tag: _tag, ...rest }) => rest),
-          };
+          if (foundIndex !== config.migrations.length - 1) {
+            // there are new migrations to send up
+            migrations = {
+              old_tag: script.migration_tag,
+              new_tag: config.migrations[config.migrations.length - 1].tag,
+              steps: config.migrations
+                .slice(foundIndex + 1)
+                .map(({ tag: _tag, ...rest }) => rest),
+            };
+          }
+          // else, we're up to date, no migrations to send
         }
       } else {
+        // first time publishing durable objects to this script,
+        // so we send all the migrations
         migrations = {
           new_tag: config.migrations[config.migrations.length - 1].tag,
           steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
@@ -160,12 +191,12 @@ export default async function publish(props: Props): Promise<void> {
     );
 
     const bindings: CfWorkerInit["bindings"] = {
-      kv_namespaces: (envRootObj.kv_namespaces || []).concat(
+      kv_namespaces: (config.kv_namespaces || []).concat(
         assets.namespace
           ? { binding: "__STATIC_CONTENT", id: assets.namespace }
           : []
       ),
-      vars: envRootObj.vars,
+      vars: config.vars,
       wasm_modules: config.wasm_modules,
       text_blobs: {
         ...config.text_blobs,
@@ -174,9 +205,10 @@ export default async function publish(props: Props): Promise<void> {
             __STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
           }),
       },
-      durable_objects: envRootObj.durable_objects,
-      r2_buckets: envRootObj.r2_buckets,
-      unsafe: envRootObj.unsafe?.bindings,
+      data_blobs: config.data_blobs,
+      durable_objects: config.durable_objects,
+      r2_buckets: config.r2_buckets,
+      unsafe: config.unsafe?.bindings,
     };
 
     if (assets.manifest) {
@@ -197,8 +229,9 @@ export default async function publish(props: Props): Promise<void> {
       bindings,
       migrations,
       modules,
-      compatibility_date: config.compatibility_date,
-      compatibility_flags: config.compatibility_flags,
+      compatibility_date: props.compatibilityDate ?? config.compatibility_date,
+      compatibility_flags:
+        props.compatibilityFlags ?? config.compatibility_flags,
       usage_model: config.usage_model,
     };
 

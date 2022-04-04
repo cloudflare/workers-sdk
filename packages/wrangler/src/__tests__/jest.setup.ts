@@ -5,7 +5,9 @@ import {
   getCloudflareAPIBaseURL,
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
+import openInBrowser from "../open-in-browser";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
+import { mockOpenInBrowser as mockOpenInBrowserForOAuthFlow } from "./helpers/mock-oauth-flow";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 
 jest.mock("ws", () => {
@@ -56,7 +58,7 @@ jest.mock("../dialogs");
   );
 });
 
-jest.mock("../dev", () => {
+jest.mock("../dev/dev", () => {
   const { useApp } = jest.requireActual("ink");
   const { useEffect } = jest.requireActual("react");
   return jest.fn().mockImplementation(() => {
@@ -67,3 +69,6 @@ jest.mock("../dev", () => {
     return null;
   });
 });
+
+jest.mock("../open-in-browser");
+(openInBrowser as jest.Mock).mockImplementation(mockOpenInBrowserForOAuthFlow);

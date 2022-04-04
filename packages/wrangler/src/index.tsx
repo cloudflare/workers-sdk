@@ -3,19 +3,22 @@ import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
+import chalk from "chalk";
 import { findUp } from "find-up";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
+import supportsColor from "supports-color";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import Dev from "./dev";
+import Dev from "./dev/dev";
 import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
+import { DeprecationError } from "./errors";
 import {
   getNamespaceId,
   listNamespaces,
@@ -30,7 +33,7 @@ import {
   unexpectedKeyValueProps,
 } from "./kv";
 import { getPackageManager } from "./package-manager";
-import { pages } from "./pages";
+import { pages, pagesBetaWarning } from "./pages";
 import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
@@ -81,25 +84,53 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
   return rules;
 }
 
-function isLegacyEnv(args: unknown, config: Config): boolean {
-  return (
-    (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
-    config.legacy_env
+function printWranglerBanner() {
+  // Let's not print this in tests
+  if (typeof jest !== "undefined") {
+    return;
+  }
+  const text = ` ⛅️ wrangler ${wranglerVersion} `;
+
+  console.log(
+    text +
+      "\n" +
+      (supportsColor.stdout
+        ? chalk.hex("#FF8800")("-".repeat(text.length))
+        : "-".repeat(text.length))
   );
+}
+
+function isLegacyEnv(args: unknown, config: Config): boolean {
+  return config.legacy_env;
 }
 
 function getScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ): string | undefined {
-  const shortScriptName = args.name ?? config.name;
-  if (!shortScriptName) {
-    return;
+  if (args.name && isLegacyEnv(args, config) && args.env) {
+    throw new CommandLineArgsError(
+      "In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
+        `
+    [env.${args.env}]
+    name = "${args.name}"
+    `
+    );
   }
 
-  return isLegacyEnv(args, config)
-    ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
-    : shortScriptName;
+  return args.name ?? config.name;
+}
+
+/**
+ * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler1
+ */
+function getLegacyScriptName(
+  args: { name: string | undefined; env: string | undefined },
+  config: Config
+) {
+  return args.name && args.env && isLegacyEnv(args, config)
+    ? `${args.name}-${args.env}`
+    : args.name ?? config.name;
 }
 
 /**
@@ -161,14 +192,10 @@ function demandOneOfOption(...options: string[]) {
 }
 
 class CommandLineArgsError extends Error {}
-class DeprecationError extends Error {
-  constructor(message: string) {
-    super(`DEPRECATION WARNING:\n${message}`);
-  }
-}
 
 export async function main(argv: string[]): Promise<void> {
   const wrangler = makeCLI(argv)
+    .strict()
     // We handle errors ourselves in a try-catch around `yargs.parse`.
     // If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
     // Otherwise we just log the error that was thrown without any "help info".
@@ -232,7 +259,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
       throw new DeprecationError(
-        "`wrangler generate` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler generate` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
       );
     }
   );
@@ -247,6 +274,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The name of your worker",
           type: "string",
         })
+        .option("type", {
+          describe: "The type of worker to create",
+          type: "string",
+          choices: ["rust", "javascript", "webpack"],
+          deprecated: true,
+        })
         .option("yes", {
           describe: 'Answer "yes" to any prompts for new projects',
           type: "boolean",
@@ -254,7 +287,8 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      if ("type" in args) {
+      printWranglerBanner();
+      if (args.type) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
           message +=
@@ -560,78 +594,8 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
       throw new DeprecationError(
-        "`wrangler build` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler build` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
       );
-    }
-  );
-
-  // login
-  wrangler.command(
-    // this needs scopes as an option?
-    "login",
-    false, // we don't need to show this in the menu
-    // "🔓 Login to Cloudflare",
-    (yargs) => {
-      // TODO: This needs some copy editing
-      // I mean, this entire app does, but this too.
-      return yargs
-        .option("scopes-list", {
-          describe: "List all the available OAuth scopes with descriptions",
-        })
-        .option("scopes", {
-          describe: "Pick the set of applicable OAuth scopes when logging in",
-          array: true,
-          type: "string",
-        });
-
-      // TODO: scopes
-    },
-    async (args) => {
-      if (args["scopes-list"]) {
-        listScopes();
-        return;
-      }
-      if (args.scopes) {
-        if (args.scopes.length === 0) {
-          // don't allow no scopes to be passed, that would be weird
-          listScopes();
-          return;
-        }
-        if (!validateScopeKeys(args.scopes)) {
-          throw new CommandLineArgsError(
-            `One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
-          );
-        }
-        await login({ scopes: args.scopes });
-        return;
-      }
-      await login();
-
-      // TODO: would be nice if it optionally saved login
-      // credentials inside node_modules/.cache or something
-      // this way you could have multiple users on a single machine
-    }
-  );
-
-  // logout
-  wrangler.command(
-    // this needs scopes as an option?
-    "logout",
-    false, // we don't need to show this in the menu
-    // "🚪 Logout from Cloudflare",
-    () => {},
-    async () => {
-      await logout();
-    }
-  );
-
-  // whoami
-  wrangler.command(
-    "whoami",
-    "🕵️  Retrieve your user info and test your auth config",
-    () => {},
-    async () => {
-      await whoami();
     }
   );
 
@@ -643,7 +607,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
       throw new DeprecationError(
-        "`wrangler config` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler config` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#config for alternatives"
       );
     }
   );
@@ -669,6 +633,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           describe: "Perform on a specific environment",
           type: "string",
+          alias: "e",
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -685,9 +650,8 @@ export async function main(argv: string[]): Promise<void> {
           default: true,
         })
         .option("ip", {
-          describe: "IP address to listen on",
+          describe: "IP address to listen on, defaults to `localhost`",
           type: "string",
-          default: "127.0.0.1",
         })
         .option("port", {
           describe: "Port to listen on",
@@ -744,6 +708,10 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The function that is called for each JSX fragment",
           type: "string",
         })
+        .option("tsconfig", {
+          describe: "Path to a custom tsconfig.json file",
+          type: "string",
+        })
         .option("local", {
           alias: "l",
           describe: "Run on my machine",
@@ -756,10 +724,11 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      const config = readConfig(
+      printWranglerBanner();
+      const configPath =
         (args.config as ConfigPath) ||
-          (args.script && findWranglerToml(path.dirname(args.script)))
-      );
+        (args.script && findWranglerToml(path.dirname(args.script)));
+      const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "dev");
 
       if (args["experimental-public"]) {
@@ -815,16 +784,6 @@ export async function main(argv: string[]): Promise<void> {
         return zones[0]?.id;
       }
 
-      const environments = config.env ?? {};
-      const envRootObj = args.env ? environments[args.env] || {} : config;
-
-      const hostLike =
-        args.host ||
-        config.dev.host ||
-        (args.routes && args.routes[0]) ||
-        envRootObj.route ||
-        (envRootObj.routes && envRootObj.routes[0]);
-
       // When we're given a host (in one of the above ways), we do 2 things:
       // - We try to extract a host from it
       // - We try to get a zone id from the host
@@ -835,27 +794,36 @@ export async function main(argv: string[]): Promise<void> {
       // get a zone id for it, by lopping off subdomains until we get a hit
       // from the API. That's it!
 
-      const host = typeof hostLike === "string" ? getHost(hostLike) : undefined;
+      let zone: { host: string; id: string } | undefined;
 
-      let zoneId: string | undefined;
-      const hostPieces = typeof host === "string" ? host.split(".") : undefined;
-
-      while (hostPieces && hostPieces.length > 1) {
-        zoneId = await getZoneId(hostPieces.join("."));
-        if (zoneId) break;
-        hostPieces.shift();
+      if (!args.local) {
+        const hostLike =
+          args.host ||
+          config.dev.host ||
+          (args.routes && args.routes[0]) ||
+          config.route ||
+          (config.routes && config.routes[0]);
+        const host =
+          typeof hostLike === "string" ? getHost(hostLike) : undefined;
+        let zoneId: string | undefined;
+        const hostPieces =
+          typeof host === "string" ? host.split(".") : undefined;
+        while (hostPieces && hostPieces.length > 1) {
+          zoneId = await getZoneId(hostPieces.join("."));
+          if (zoneId) break;
+          hostPieces.shift();
+        }
+        if (host && !zoneId) {
+          throw new Error(`Could not find zone for ${hostLike}`);
+        }
+        zone =
+          typeof zoneId === "string" && typeof host === "string"
+            ? {
+                host,
+                id: zoneId,
+              }
+            : undefined;
       }
-      if (host && !zoneId) {
-        throw new Error(`Could not find zone for ${hostLike}`);
-      }
-
-      const zone =
-        typeof zoneId === "string" && typeof host === "string"
-          ? {
-              host,
-              id: zoneId,
-            }
-          : undefined;
 
       const { waitUntilExit } = render(
         <Dev
@@ -865,10 +833,11 @@ export async function main(argv: string[]): Promise<void> {
           zone={zone}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(args, config)}
-          buildCommand={config.build || {}}
+          build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={args["jsx-factory"] || envRootObj?.jsx_factory}
-          jsxFragment={args["jsx-fragment"] || envRootObj?.jsx_fragment}
+          jsxFactory={args["jsx-factory"] || config.jsx_factory}
+          jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
+          tsconfig={args.tsconfig ?? config.tsconfig}
           upstreamProtocol={upstreamProtocol}
           localProtocol={
             // The typings are not quite clever enough to handle element accesses, only property accesses,
@@ -889,6 +858,7 @@ export async function main(argv: string[]): Promise<void> {
           port={
             args.port || config.dev?.port || (await getPort({ port: 8787 }))
           }
+          ip={args.ip || config.dev.ip}
           inspectorPort={
             args["inspector-port"] ?? (await getPort({ port: 9229 }))
           }
@@ -902,9 +872,9 @@ export async function main(argv: string[]): Promise<void> {
             (args["compatibility-flags"] as string[]) ||
             config.compatibility_flags
           }
-          usageModel={envRootObj.usage_model}
+          usageModel={config.usage_model}
           bindings={{
-            kv_namespaces: envRootObj.kv_namespaces?.map(
+            kv_namespaces: config.kv_namespaces?.map(
               ({ binding, preview_id, id: _id }) => {
                 // In `dev`, we make folks use a separate kv namespace called
                 // `preview_id` instead of `id` so that they don't
@@ -925,13 +895,15 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: envRootObj.vars,
+            vars: config.vars,
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
-            durable_objects: envRootObj.durable_objects,
-            r2_buckets: envRootObj.r2_buckets,
-            unsafe: envRootObj.unsafe?.bindings,
+            data_blobs: config.data_blobs,
+            durable_objects: config.durable_objects,
+            r2_buckets: config.r2_buckets,
+            unsafe: config.unsafe?.bindings,
           }}
+          crons={config.triggers.crons}
         />
       );
       await waitUntilExit();
@@ -947,6 +919,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           type: "string",
           describe: "Perform on a specific environment",
+          alias: "e",
         })
         .positional("script", {
           describe: "The path to an entry point for your worker",
@@ -1011,9 +984,14 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
+        })
+        .option("tsconfig", {
+          describe: "Path to a custom tsconfig.json file",
+          type: "string",
         });
     },
     async (args) => {
+      printWranglerBanner();
       if (args["experimental-public"]) {
         console.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
@@ -1025,10 +1003,10 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const config = readConfig(
+      const configPath =
         (args.config as ConfigPath) ||
-          (args.script && findWranglerToml(path.dirname(args.script)))
-      );
+        (args.script && findWranglerToml(path.dirname(args.script)));
+      const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
@@ -1059,6 +1037,7 @@ export async function main(argv: string[]): Promise<void> {
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
+        tsconfig: args.tsconfig,
         routes: args.routes,
         assetPaths,
         legacyEnv: isLegacyEnv(args, config),
@@ -1080,7 +1059,7 @@ export async function main(argv: string[]): Promise<void> {
           })
           // TODO: auto-detect if this should be json or pretty based on atty
           .option("format", {
-            default: "json",
+            default: "pretty",
             choices: ["json", "pretty"],
             describe: "The format of log entries",
           })
@@ -1115,6 +1094,7 @@ export async function main(argv: string[]): Promise<void> {
           .option("env", {
             type: "string",
             describe: "Perform on a specific environment",
+            alias: "e",
           })
           .option("debug", {
             type: "boolean",
@@ -1126,9 +1106,12 @@ export async function main(argv: string[]): Promise<void> {
       );
     },
     async (args) => {
-      const config = readConfig(args.config as ConfigPath);
+      if (args.format === "pretty") {
+        printWranglerBanner();
+      }
+      const config = readConfig(args.config as ConfigPath, args);
 
-      const scriptName = getScriptName(args, config);
+      const scriptName = getLegacyScriptName(args, config);
 
       if (!scriptName) {
         throw new Error("Missing script name");
@@ -1239,13 +1222,10 @@ export async function main(argv: string[]): Promise<void> {
           "***************************************************\n"
       );
 
-      const config = readConfig(args.config as ConfigPath);
+      const config = readConfig(args.config as ConfigPath, args);
       const entry = await getEntry({}, config, "dev");
 
       const accountId = await requireAuth(config);
-
-      const environments = config.env ?? {};
-      const envRootObj = args.env ? environments[args.env] || {} : config;
 
       const { waitUntilExit } = render(
         <Dev
@@ -1255,16 +1235,18 @@ export async function main(argv: string[]): Promise<void> {
           env={args.env}
           zone={undefined}
           legacyEnv={isLegacyEnv(args, config)}
-          buildCommand={config.build || {}}
+          build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
-          jsxFactory={envRootObj?.jsx_factory}
-          jsxFragment={envRootObj?.jsx_fragment}
+          jsxFactory={config.jsx_factory}
+          jsxFragment={config.jsx_fragment}
+          tsconfig={config.tsconfig}
           upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}
           port={config.dev?.port}
+          ip={config.dev.ip}
           public={undefined}
           compatibilityDate={
             config.compatibility_date ||
@@ -1276,7 +1258,7 @@ export async function main(argv: string[]): Promise<void> {
           }
           usageModel={config.usage_model}
           bindings={{
-            kv_namespaces: envRootObj.kv_namespaces?.map(
+            kv_namespaces: config.kv_namespaces?.map(
               ({ binding, preview_id, id: _id }) => {
                 // In `dev`, we make folks use a separate kv namespace called
                 // `preview_id` instead of `id` so that they don't
@@ -1297,13 +1279,15 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: envRootObj.vars,
+            vars: config.vars,
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
-            durable_objects: envRootObj.durable_objects,
-            r2_buckets: envRootObj.r2_buckets,
-            unsafe: envRootObj.unsafe?.bindings,
+            data_blobs: config.data_blobs,
+            durable_objects: config.durable_objects,
+            r2_buckets: config.r2_buckets,
+            unsafe: config.unsafe?.bindings,
           }}
+          crons={config.triggers.crons}
           inspectorPort={await getPort({ port: 9229 })}
         />
       );
@@ -1350,7 +1334,7 @@ export async function main(argv: string[]): Promise<void> {
           }
         )
         .command(
-          "delete",
+          "delete [id]",
           "Delete a route associated with a zone",
           (yargs) => {
             return yargs
@@ -1396,7 +1380,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       throw new DeprecationError(
-        "`wrangler subdomain` has been deprecated, please refer to TODO://some/path for alternatives"
+        "`wrangler subdomain` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#subdomain for alternatives"
       );
     }
   );
@@ -1425,12 +1409,14 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment",
+                alias: "e",
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            printWranglerBanner();
+            const config = readConfig(args.config as ConfigPath, args);
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1487,6 +1473,7 @@ export async function main(argv: string[]): Promise<void> {
                       r2_buckets: [],
                       wasm_modules: {},
                       text_blobs: {},
+                      data_blobs: {},
                       unsafe: [],
                     },
                     modules: [],
@@ -1527,6 +1514,7 @@ export async function main(argv: string[]): Promise<void> {
           "delete <key>",
           "Delete a secret variable from a script",
           (yargs) => {
+            printWranglerBanner();
             return yargs
               .positional("key", {
                 describe: "The variable name to be accessible in the script",
@@ -1540,12 +1528,13 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment",
+                alias: "e",
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1590,12 +1579,13 @@ export async function main(argv: string[]): Promise<void> {
                 type: "string",
                 describe:
                   "Binds the secret to the Worker of the specific environment.",
+                alias: "e",
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
 
-            const scriptName = getScriptName(args, config);
+            const scriptName = getLegacyScriptName(args, config);
             if (!scriptName) {
               throw new Error("Missing script name");
             }
@@ -1634,6 +1624,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1641,12 +1632,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            if (args._.length > 2) {
-              const extraArgs = args._.slice(2).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
+            printWranglerBanner();
 
             if (!isValidNamespaceBinding(args.namespace)) {
               throw new CommandLineArgsError(
@@ -1654,7 +1640,7 @@ export async function main(argv: string[]): Promise<void> {
               );
             }
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
             if (!config.name) {
               console.warn(
                 "No configured name present, using `worker` as a prefix for the title"
@@ -1691,7 +1677,7 @@ export async function main(argv: string[]): Promise<void> {
           "Outputs a list of all KV namespaces associated with your account id.",
           {},
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
 
             const accountId = await requireAuth(config);
 
@@ -1719,6 +1705,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1726,7 +1713,8 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            const config = readConfig(args.config as ConfigPath);
+            printWranglerBanner();
+            const config = readConfig(args.config as ConfigPath, args);
 
             let id;
             try {
@@ -1799,6 +1787,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1820,7 +1809,8 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
-            const config = readConfig(args.config as ConfigPath);
+            printWranglerBanner();
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
@@ -1865,6 +1855,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1879,7 +1870,7 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -1914,6 +1905,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1927,7 +1919,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
@@ -1957,6 +1949,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -1964,7 +1957,8 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            const config = readConfig(args.config as ConfigPath);
+            printWranglerBanner();
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
             console.log(
@@ -2011,6 +2005,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -2018,11 +2013,12 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
+            printWranglerBanner();
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
             const content = parseJSON(readFileSync(filename), filename);
 
@@ -2115,6 +2111,7 @@ export async function main(argv: string[]): Promise<void> {
               .option("env", {
                 type: "string",
                 describe: "Perform on a specific environment",
+                alias: "e",
               })
               .option("preview", {
                 type: "boolean",
@@ -2127,7 +2124,8 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            const config = readConfig(args.config as ConfigPath);
+            printWranglerBanner();
+            const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
             if (!args.force) {
@@ -2188,8 +2186,12 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) =>
-    pages(pagesYargs.command(subHelp))
+  wrangler.command(
+    "pages",
+    "⚡️ Configure Cloudflare Pages",
+    async (pagesYargs) => {
+      await pages(pagesYargs.command(subHelp).epilogue(pagesBetaWarning));
+    }
   );
 
   wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
@@ -2207,15 +2209,9 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            // We expect three values in `_`: `r2`, `bucket`, `create`.
-            if (args._.length > 3) {
-              const extraArgs = args._.slice(3).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
+            printWranglerBanner();
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
 
             const accountId = await requireAuth(config);
 
@@ -2226,7 +2222,7 @@ export async function main(argv: string[]): Promise<void> {
         );
 
         r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-          const config = readConfig(args.config as ConfigPath);
+          const config = readConfig(args.config as ConfigPath, args);
 
           const accountId = await requireAuth(config);
 
@@ -2244,15 +2240,9 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            // We expect three values in `_`: `r2`, `bucket`, `delete`.
-            if (args._.length > 3) {
-              const extraArgs = args._.slice(3).join(" ");
-              throw new CommandLineArgsError(
-                `Unexpected additional positional arguments "${extraArgs}".`
-              );
-            }
+            printWranglerBanner();
 
-            const config = readConfig(args.config as ConfigPath);
+            const config = readConfig(args.config as ConfigPath, args);
 
             const accountId = await requireAuth(config);
 
@@ -2264,6 +2254,81 @@ export async function main(argv: string[]): Promise<void> {
         return r2BucketYargs;
       });
   });
+
+  /**
+   * User Group: login, logout, and whoami
+   * TODO: group commands into User group similar to .group() for flags in yargs
+   */
+  // login
+  wrangler.command(
+    // this needs scopes as an option?
+    "login",
+    "🔓 Login to Cloudflare",
+    (yargs) => {
+      // TODO: This needs some copy editing
+      // I mean, this entire app does, but this too.
+      return yargs
+        .option("scopes-list", {
+          describe: "List all the available OAuth scopes with descriptions",
+        })
+        .option("scopes", {
+          describe: "Pick the set of applicable OAuth scopes when logging in",
+          array: true,
+          type: "string",
+        });
+
+      // TODO: scopes
+    },
+    async (args) => {
+      printWranglerBanner();
+      if (args["scopes-list"]) {
+        listScopes();
+        return;
+      }
+      if (args.scopes) {
+        if (args.scopes.length === 0) {
+          // don't allow no scopes to be passed, that would be weird
+          listScopes();
+          return;
+        }
+        if (!validateScopeKeys(args.scopes)) {
+          throw new CommandLineArgsError(
+            `One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+          );
+        }
+        await login({ scopes: args.scopes });
+        return;
+      }
+      await login();
+
+      // TODO: would be nice if it optionally saved login
+      // credentials inside node_modules/.cache or something
+      // this way you could have multiple users on a single machine
+    }
+  );
+
+  // logout
+  wrangler.command(
+    // this needs scopes as an option?
+    "logout",
+    "🚪 Logout from Cloudflare",
+    () => {},
+    async () => {
+      printWranglerBanner();
+      await logout();
+    }
+  );
+
+  // whoami
+  wrangler.command(
+    "whoami",
+    "🕵️  Retrieve your user info and test your auth config",
+    () => {},
+    async () => {
+      printWranglerBanner();
+      await whoami();
+    }
+  );
 
   wrangler
     .option("legacy-env", {
@@ -2282,7 +2347,6 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.exitProcess(false);
 
   try {
-    await initialiseUserConfig();
     await wrangler.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {

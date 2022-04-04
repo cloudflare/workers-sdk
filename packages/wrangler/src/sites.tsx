@@ -7,29 +7,27 @@ import {
   listNamespaceKeys,
   listNamespaces,
   putBulkKeyValue,
+  deleteBulkKeyValue,
 } from "./kv";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
-const ALWAYS_IGNORE = ["node_modules"];
-const HIDDEN_FILES_TO_INCLUDE = [
+const ALWAYS_IGNORE = new Set(["node_modules"]);
+const HIDDEN_FILES_TO_INCLUDE = new Set([
   ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
-];
+]);
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
   const files = await readdir(dirPath, { withFileTypes: true });
   for (const file of files) {
     // Skip files that we never want to process.
-    if (ALWAYS_IGNORE.some((p) => file.name === p)) {
+    if (ALWAYS_IGNORE.has(file.name)) {
       continue;
     }
     // Skip hidden files (starting with .) except for some special ones
-    if (
-      file.name.startsWith(".") &&
-      !HIDDEN_FILES_TO_INCLUDE.some((p) => file.name === p)
-    ) {
+    if (file.name.startsWith(".") && !HIDDEN_FILES_TO_INCLUDE.has(file.name)) {
       continue;
     }
     // TODO: follow symlinks??
@@ -129,32 +127,36 @@ export async function syncAssets(
   const keys = new Set(result.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
-  const upload: KeyValue[] = [];
+  const toUpload: KeyValue[] = [];
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
   const hasher = await xxhash();
 
-  // TODO: this can be more efficient by parallelising
-  for await (const file of getFilesInFolder(siteAssets.baseDirectory)) {
-    if (!include(file)) {
+  const assetDirectory = path.join(
+    siteAssets.baseDirectory,
+    siteAssets.assetDirectory
+  );
+  for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
+    const assetFile = path.relative(siteAssets.baseDirectory, absAssetFile);
+    if (!include(assetFile)) {
       continue;
     }
-    if (exclude(file)) {
+    if (exclude(assetFile)) {
       continue;
     }
 
-    await validateAssetSize(file);
-    console.log(`reading ${file}...`);
-    const content = await readFile(file, "base64");
+    await validateAssetSize(absAssetFile, assetFile);
+    console.log(`reading ${assetFile}...`);
+    const content = await readFile(absAssetFile, "base64");
 
-    const assetKey = await hashAsset(hasher, file, content);
+    const assetKey = hashAsset(hasher, assetFile, content);
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
     if (!keys.has(assetKey)) {
       console.log(`uploading as ${assetKey}...`);
-      upload.push({
+      toUpload.push({
         key: assetKey,
         value: content,
         base64: true,
@@ -162,9 +164,26 @@ export async function syncAssets(
     } else {
       console.log(`skipping - already uploaded`);
     }
-    manifest[path.relative(siteAssets.baseDirectory, file)] = assetKey;
+
+    // remove the key from the set so we know what we've already uploaded
+    keys.delete(assetKey);
+    manifest[path.relative(siteAssets.assetDirectory, absAssetFile)] = assetKey;
   }
-  await putBulkKeyValue(accountId, namespace, upload, () => {});
+
+  // keys now contains all the files we're deleting
+  for (const key of keys) {
+    console.log(`deleting ${key} from the asset store...`);
+  }
+
+  await Promise.all([
+    // upload all the new assets
+    putBulkKeyValue(accountId, namespace, toUpload, () => {}),
+    // delete all the unused assets
+    deleteBulkKeyValue(accountId, namespace, Array.from(keys), () => {}),
+  ]);
+
+  console.log("↗️  Done syncing assets");
+
   return { manifest, namespace };
 }
 
@@ -180,11 +199,14 @@ function createPatternMatcher(
   }
 }
 
-async function validateAssetSize(filePath: string) {
-  const { size } = await stat(filePath);
+async function validateAssetSize(
+  absFilePath: string,
+  relativeFilePath: string
+) {
+  const { size } = await stat(absFilePath);
   if (size > 25 * 1024 * 1024) {
     throw new Error(
-      `File ${filePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+      `File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
     );
   }
 }
@@ -210,8 +232,23 @@ function urlSafe(filePath: string): string {
  * Information about the assets that should be uploaded
  */
 export interface AssetPaths {
+  /**
+   * Absolute path to the root of the project.
+   *
+   * This is the directory containing wrangler.toml or cwd if no config.
+   */
   baseDirectory: string;
+  /**
+   * The path to the assets directory, relative to the `baseDirectory`.
+   */
+  assetDirectory: string;
+  /**
+   * An array of patterns that match files that should be uploaded.
+   */
   includePatterns: string[];
+  /**
+   * An array of patterns that match files that should not be uploaded.
+   */
   excludePatterns: string[];
 }
 
@@ -224,13 +261,18 @@ export interface AssetPaths {
  */
 export function getAssetPaths(
   config: Config,
-  baseDirectory = config.site?.bucket,
+  assetDirectory = config.site?.bucket,
   includePatterns = config.site?.include ?? [],
   excludePatterns = config.site?.exclude ?? []
 ): undefined | AssetPaths {
-  return baseDirectory
+  const baseDirectory = path.resolve(
+    path.dirname(config.configPath ?? "wrangler.toml")
+  );
+
+  return assetDirectory
     ? {
         baseDirectory,
+        assetDirectory,
         includePatterns,
         excludePatterns,
       }

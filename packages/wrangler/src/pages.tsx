@@ -10,6 +10,7 @@ import { getType } from "mime";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
+import { FatalError } from "./errors";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import type { Config } from "../pages/functions/routes";
@@ -31,16 +32,23 @@ type ConfigPath = string | undefined;
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
 
-const EXIT_CALLBACKS: (() => void)[] = [];
-const EXIT = (message?: string, code?: number) => {
-  if (message) console.log(message);
-  if (code) process.exitCode = code;
-  EXIT_CALLBACKS.forEach((callback) => callback());
-  process.exit(code);
+export const pagesBetaWarning =
+  "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+
+const CLEANUP_CALLBACKS: (() => void)[] = [];
+const CLEANUP = () => {
+  CLEANUP_CALLBACKS.forEach((callback) => callback());
+  RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
 };
 
-process.on("SIGINT", () => EXIT());
-process.on("SIGTERM", () => EXIT());
+process.on("SIGINT", () => {
+  CLEANUP();
+  process.exit();
+});
+process.on("SIGTERM", () => {
+  CLEANUP();
+  process.exit();
+});
 
 function isWindows() {
   return process.platform === "win32";
@@ -113,11 +121,13 @@ async function spawnProxyProcess({
   port?: number;
   command: (string | number)[];
 }): Promise<void | number> {
-  if (command.length === 0)
-    return EXIT(
+  if (command.length === 0) {
+    CLEANUP();
+    throw new FatalError(
       "Must specify a directory of static assets to serve or a command to run.",
       1
     );
+  }
 
   console.log(`Running ${command.join(" ")}...`);
   const proxy = spawn(
@@ -131,7 +141,7 @@ async function spawnProxyProcess({
       },
     }
   );
-  EXIT_CALLBACKS.push(() => {
+  CLEANUP_CALLBACKS.push(() => {
     proxy.kill();
   });
 
@@ -162,7 +172,8 @@ async function spawnProxyProcess({
       .filter((port) => port !== undefined)[0];
 
     if (port === undefined) {
-      return EXIT(
+      CLEANUP();
+      throw new FatalError(
         "Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
         1
       );
@@ -768,7 +779,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "Auto reload HTML pages when change is detected",
             },
             // TODO: Miniflare user options
-          });
+          })
+          .epilogue(pagesBetaWarning);
       },
       async ({
         local,
@@ -782,6 +794,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         "live-reload": liveReload,
         _: [_pages, _dev, ...remaining],
       }) => {
+        // Beta message for `wrangler pages <commands>` usage
+        console.log(pagesBetaWarning);
+
         if (!local) {
           console.error("Only local mode is supported at the moment.");
           return;
@@ -814,13 +829,15 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           console.log(`Compiling worker to "${scriptPath}"...`);
 
-          await buildFunctions({
-            scriptPath,
-            functionsDirectory,
-            sourcemap: true,
-            watch: true,
-            onEnd: () => scriptReadyResolve(),
-          });
+          try {
+            await buildFunctions({
+              scriptPath,
+              functionsDirectory,
+              sourcemap: true,
+              watch: true,
+              onEnd: () => scriptReadyResolve(),
+            });
+          } catch {}
 
           watch([functionsDirectory], {
             persistent: true,
@@ -904,7 +921,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           // User bindings
           bindings: {
             ...Object.fromEntries(
-              bindings.map((binding) => binding.toString().split("="))
+              bindings
+                .map((binding) => binding.toString().split("="))
+                .map(([key, ...values]) => [key, values.join("=")])
             ),
           },
 
@@ -967,13 +986,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             });
           }
 
-          EXIT_CALLBACKS.push(() => {
+          CLEANUP_CALLBACKS.push(() => {
             server.close();
             miniflare.dispose().catch((err) => miniflare.log.error(err));
           });
         } catch (e) {
           miniflare.log.error(e as Error);
-          EXIT("Could not start Miniflare.", 1);
+          CLEANUP();
+          throw new FatalError("Could not start Miniflare.", 1);
         }
       }
     )
@@ -1023,7 +1043,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 description:
                   "Watch for changes to the functions and automatically rebuild the Worker script",
               },
-            }),
+            })
+            .epilogue(pagesBetaWarning),
         async ({
           directory,
           "script-path": scriptPath,
@@ -1033,6 +1054,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           fallbackService,
           watch,
         }) => {
+          // Beta message for `wrangler pages <commands>` usage
+          console.log(pagesBetaWarning);
+
           await buildFunctions({
             scriptPath,
             outputConfigPath,

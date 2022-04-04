@@ -1,8 +1,21 @@
-## [WIP] Getting started with wrangler
+## Getting started with ⛅️ Wrangler
 
-In this document, we outline a few ways to get started on developing and publishing on the Cloudflare Workers® platform.
+`wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
-- zero config startup
-- `wrangler init`
-- meta frameworks like [remix](https://remix.run/), [Nuxt](https://v3.nuxtjs.org/docs/deployment/cloudflare/), etc
-- codesandbox/stackblitz/codespaces (todo)
+## Quick Start
+
+```sh
+# Make a javascript file
+$ echo "export default { fetch() { return new Response('hello world') } }" > index.js
+# try it out
+$ npx wrangler@beta dev index.js
+# and then publish it
+$ npx wrangler@beta publish index.js --name my-worker
+# visit https://my-worker.<your workers subdomain>.workers.dev
+```
+
+## Installation:
+
+```bash
+$ npm install wrangler@beta
+```

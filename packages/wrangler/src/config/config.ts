@@ -3,7 +3,7 @@ import type { Environment, RawEnvironment } from "./environment";
 /**
  * This is the static type definition for the configuration object.
  *
- * It reflects the configuration that you can write in wrangler.toml,
+ * It reflects a normalized and validated version of the configuration that you can write in wrangler.toml,
  * and optionally augment with arguments passed directly to wrangler.
  *
  * For more information about the configuration object, see the
@@ -20,22 +20,15 @@ import type { Environment, RawEnvironment } from "./environment";
  * - `@breaking`: the deprecation/optionality is a breaking change from wrangler 1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<Environment, DevConfig> & Environment;
+export type Config = ConfigFields<DevConfig> & Environment;
 
-export type RawConfig = Partial<ConfigFields<RawEnvironment, RawDevConfig>> &
+export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
   RawEnvironment &
-  DeprecatedConfigFields;
+  DeprecatedConfigFields &
+  EnvironmentMap;
 
-export interface ConfigFields<
-  Env extends RawEnvironment,
-  Dev extends RawDevConfig
-> {
+export interface ConfigFields<Dev extends RawDevConfig> {
   configPath: string | undefined;
-
-  /**
-   * The entrypoint/path to the JavaScript file that will be executed.
-   */
-  main: string | undefined;
 
   /**
    * A boolean to enable "legacy" style wrangler environments (from wrangler 1).
@@ -44,22 +37,6 @@ export interface ConfigFields<
    * to `true` to enable it.
    */
   legacy_env: boolean;
-
-  /**
-   * The `env` section defines overrides for the configuration for different environments.
-   *
-   * All environment fields can be specified at the top level of the config indicating the default environment settings.
-   *
-   * - Some fields are inherited and overridable in each environment.
-   * - But some are not inherited and must be explicitly specified in every environment, if they are specified at the top level.
-   *
-   * For more information, see the documentation at https://developers.cloudflare.com/workers/cli-wrangler/configuration#environments
-   *
-   * @default `{}`
-   */
-  env: {
-    [envName: string]: Env;
-  };
 
   /**
    * Options to configure the development server that your worker will use.
@@ -160,33 +137,22 @@ export interface ConfigFields<
     | undefined;
 
   /**
-   * Configures a custom build step to be run by Wrangler when building your Worker.
-   *
-   * Refer to the [custom builds documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration#build)
-   * for more details.
-   *
-   * @default {}
+   * A list of data files that your worker should be bound to. This is
+   * the "legacy" way of binding to a data file. ES module workers should
+   * do proper module imports.
    */
-  build: {
-    /** The command used to build your Worker. On Linux and macOS, the command is executed in the `sh` shell and the `cmd` shell for Windows. The `&&` and `||` shell operators may be used. */
-    command?: string;
-    /** The directory in which the command is executed. */
-    cwd?: string;
-    /** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
-    watch_dir?: string;
-    /**
-     * Deprecated field previously used to configure the build and upload of the script.
-     * @deprecated
-     */
-    upload?: DeprecatedUpload;
-  };
+  data_blobs:
+    | {
+        [key: string]: string;
+      }
+    | undefined;
 }
 
 export interface DevConfig {
   /**
    * IP address for the local dev server to listen on,
    *
-   * @default `127.0.0.1`
+   * @default `localhost`
    * @todo this needs to be implemented
    */
   ip: string;
@@ -244,36 +210,20 @@ export interface DeprecatedConfigFields {
   webpack_config?: string;
 }
 
-/**
- * Deprecated upload configuration.
- */
-export interface DeprecatedUpload {
+interface EnvironmentMap {
   /**
-   * The format of the Worker script.
+   * The `env` section defines overrides for the configuration for different environments.
    *
-   * @deprecated We infer the format automatically now.
-   */
-  format?: "modules" | "service-worker";
-
-  /**
-   * The directory you wish to upload your worker from,
-   * relative to the wrangler.toml file.
+   * All environment fields can be specified at the top level of the config indicating the default environment settings.
    *
-   * Defaults to the directory containing the wrangler.toml file.
+   * - Some fields are inherited and overridable in each environment.
+   * - But some are not inherited and must be explicitly specified in every environment, if they are specified at the top level.
    *
-   * @deprecated
-   */
-  dir?: string;
-
-  /**
-   * The path to the Worker script, relative to `upload.dir`.
+   * For more information, see the documentation at https://developers.cloudflare.com/workers/cli-wrangler/configuration#environments
    *
-   * @deprecated This will be replaced by a command line argument.
+   * @default `{}`
    */
-  main?: string;
-
-  /**
-   * @deprecated This is now defined at the top level `rules` field.
-   */
-  rules?: Environment["rules"];
+  env?: {
+    [envName: string]: RawEnvironment;
+  };
 }

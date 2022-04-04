@@ -25,6 +25,18 @@ async function run() {
       "import.meta.url": "import_meta_url",
     },
   });
+
+  // custom miniflare cli
+  await build({
+    entryPoints: ["./src/miniflare-cli/index.ts"],
+    bundle: true,
+    outfile: "./miniflare-dist/index.mjs",
+    platform: "node",
+    format: "esm",
+    minify: true,
+    external: ["miniflare", "@miniflare/core"],
+    sourcemap: true,
+  });
 }
 
 run().catch((e) => {

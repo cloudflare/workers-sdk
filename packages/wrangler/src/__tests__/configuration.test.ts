@@ -1,10 +1,17 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "../config/validation";
-import type { RawConfig, RawEnvironment } from "../config";
+import type {
+  ConfigFields,
+  RawDevConfig,
+  RawConfig,
+  RawEnvironment,
+} from "../config";
 
 describe("normalizeAndValidateConfig()", () => {
   it("should use defaults for empty configuration", () => {
-    const { config, diagnostics } = normalizeAndValidateConfig({}, undefined);
+    const { config, diagnostics } = normalizeAndValidateConfig({}, undefined, {
+      env: undefined,
+    });
 
     expect(config).toEqual({
       account_id: undefined,
@@ -17,7 +24,7 @@ describe("normalizeAndValidateConfig()", () => {
       compatibility_flags: [],
       configPath: undefined,
       dev: {
-        ip: "127.0.0.1",
+        ip: "localhost",
         local_protocol: "http",
         port: 8787,
         upstream_protocol: "https",
@@ -26,9 +33,9 @@ describe("normalizeAndValidateConfig()", () => {
       durable_objects: {
         bindings: [],
       },
-      env: {},
       jsx_factory: "React.createElement",
       jsx_fragment: "React.Fragment",
+      tsconfig: undefined,
       kv_namespaces: [],
       legacy_env: true,
       main: undefined,
@@ -49,7 +56,8 @@ describe("normalizeAndValidateConfig()", () => {
       usage_model: undefined,
       vars: {},
       wasm_modules: undefined,
-      workers_dev: true,
+      data_blobs: undefined,
+      workers_dev: undefined,
       zone_id: undefined,
     });
     expect(diagnostics.hasErrors()).toBe(false);
@@ -58,9 +66,7 @@ describe("normalizeAndValidateConfig()", () => {
 
   describe("top-level non-environment configuration", () => {
     it("should override config defaults with provided values", () => {
-      const main = "src/index.ts";
-      const expectedConfig: RawConfig = {
-        main,
+      const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
         legacy_env: true,
         dev: {
           ip: "255.255.255.255",
@@ -68,29 +74,21 @@ describe("normalizeAndValidateConfig()", () => {
           local_protocol: "https",
           upstream_protocol: "http",
         },
-        build: {
-          command: "COMMAND",
-          cwd: "CWD",
-          watch_dir: "WATCH_DIR",
-        },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
-      const resolvedMain = path.resolve(process.cwd(), main);
-      expect(config).toEqual(
-        expect.objectContaining({ ...expectedConfig, main: resolvedMain })
-      );
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should error on invalid top level fields", () => {
       const expectedConfig = {
-        main: 111,
         legacy_env: "FOO",
         dev: {
           ip: 222,
@@ -98,16 +96,12 @@ describe("normalizeAndValidateConfig()", () => {
           local_protocol: "wss",
           upstream_protocol: "ws",
         },
-        build: {
-          command: 555,
-          cwd: 666,
-          watch_dir: 777,
-        },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -116,11 +110,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"build.command\\" to be of type string but got 555.
-          - Expected \\"build.cwd\\" to be of type string but got 666.
-          - Expected \\"build.watch_dir\\" to be of type string but got 777.
           - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-          - Expected \\"main\\" to be a string but got 111
           - Expected \\"dev.ip\\" to be of type string but got 222.
           - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
           - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
@@ -130,65 +120,43 @@ describe("normalizeAndValidateConfig()", () => {
 
     it("should warn on and remove unexpected top level fields", () => {
       const expectedConfig = {
-        miniflare: {
-          host: "127.0.0.1",
+        unexpected: {
+          subkey: "some-value",
         },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
-        undefined
+        undefined,
+        { env: undefined }
+      );
+
+      expect("unexpected" in config).toBe(false);
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Unexpected fields found in top-level field: \\"unexpected\\""
+      `);
+    });
+
+    it("should ignore `miniflare` top level fields", () => {
+      const expectedConfig = {
+        miniflare: {
+          host: "localhost",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig as unknown as RawConfig,
+        undefined,
+        { env: undefined }
       );
 
       expect("miniflare" in config).toBe(false);
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Unexpected fields found in top-level field: \\"miniflare\\""
-      `);
-    });
-
-    it("should override build.upload config defaults with provided values and warn about deprecations", () => {
-      const expectedConfig: RawConfig = {
-        build: {
-          upload: {
-            dir: "src",
-            format: "modules",
-            main: "index.ts",
-            rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
-          },
-        },
-      };
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        path.resolve("project/wrangler.toml")
-      );
-
-      expect(config.main).toEqual(path.resolve("project/src/index.ts"));
-      expect(config.build.upload).toBeUndefined();
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(true);
-      expect(normalizePath(diagnostics.renderWarnings()))
-        .toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.format\\":
-            The format is inferred automatically from the code.
-          - DEPRECATION: \\"build.upload.main\\":
-            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-            Then add the top level \`main\` field to your configuration file:
-            \`\`\`
-            main = \\"src/index.ts\\"
-            \`\`\`
-          - DEPRECATION: \\"build.upload.dir\\":
-            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-            \`\`\`
-            [[rules]]
-            type = \\"Text\\"
-            globs = [ \\"GLOB\\" ]
-            fallthrough = true
-            \`\`\`"
+        "
       `);
     });
 
@@ -211,7 +179,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -238,7 +207,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -266,7 +236,8 @@ describe("normalizeAndValidateConfig()", () => {
 
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -285,7 +256,8 @@ describe("normalizeAndValidateConfig()", () => {
 
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -308,7 +280,8 @@ describe("normalizeAndValidateConfig()", () => {
 
         const { config, diagnostics } = normalizeAndValidateConfig(
           expectedConfig as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -330,7 +303,8 @@ describe("normalizeAndValidateConfig()", () => {
               "entry-point": "some/other/script.js",
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config.site).toMatchInlineSnapshot(`
@@ -365,7 +339,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        "project/wrangler.toml"
+        "project/wrangler.toml",
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -380,7 +355,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
-    it("should error on invalid `wasm_module` paths", () => {
+    it("should error on invalid `wasm_modules` paths", () => {
       const expectedConfig = {
         wasm_modules: {
           MODULE_1: 111,
@@ -390,7 +365,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
-        "project/wrangler.toml"
+        "project/wrangler.toml",
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -400,10 +376,10 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - Expected \\"wasm_modules['MODULE_1']\\" field to be a string but got 111.
-            - Expected \\"wasm_modules['MODULE_2']\\" field to be a string but got 222."
-        `);
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"wasm_modules['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"wasm_modules['MODULE_2']\\" to be of type string but got 222."
+      `);
     });
 
     it("should map `text_blobs` paths from relative to the config path to relative to the cwd", () => {
@@ -416,7 +392,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        "project/wrangler.toml"
+        "project/wrangler.toml",
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -441,7 +418,8 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig as unknown as RawConfig,
-        "project/wrangler.toml"
+        "project/wrangler.toml",
+        { env: undefined }
       );
 
       expect(config).toEqual(
@@ -451,10 +429,84 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - Expected \\"text_blobs['MODULE_1']\\" field to be a string but got 111.
-            - Expected \\"text_blobs['MODULE_2']\\" field to be a string but got 222."
-        `);
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
+      `);
+    });
+
+    it("should map `data_blobs` paths from relative to the config path to relative to the cwd", () => {
+      const expectedConfig: RawConfig = {
+        data_blobs: {
+          BLOB_1: "path/to/data1.bin",
+          BLOB_2: "data2.bin",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          data_blobs: {
+            BLOB_1: path.normalize("project/path/to/data1.bin"),
+            BLOB_2: path.normalize("project/data2.bin"),
+          },
+        })
+      );
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should error on invalid `data_blob` paths", () => {
+      const expectedConfig = {
+        data_blobs: {
+          MODULE_1: 111,
+          MODULE_2: 222,
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig as unknown as RawConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          data_blobs: {},
+        })
+      );
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
+        "Processing project/wrangler.toml configuration:
+          - Expected \\"data_blobs['MODULE_1']\\" to be of type string but got 111.
+          - Expected \\"data_blobs['MODULE_2']\\" to be of type string but got 222."
+      `);
+    });
+
+    it("should resolve tsconfig relative to wrangler.toml", async () => {
+      const expectedConfig: RawEnvironment = {
+        tsconfig: "path/to/some-tsconfig.json",
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          tsconfig: path.normalize("project/path/to/some-tsconfig.json"),
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     describe("(deprecated)", () => {
@@ -466,7 +518,8 @@ describe("normalizeAndValidateConfig()", () => {
 
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         // Note the `.not.` here...
@@ -491,18 +544,27 @@ describe("normalizeAndValidateConfig()", () => {
 
   describe("top-level environment configuration", () => {
     it("should override config defaults with provided values", () => {
-      const expectedConfig: RawConfig = {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
+
+      const expectedConfig: RawEnvironment = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main,
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
         vars: {
           VAR1: "VALUE_1",
           VAR2: "VALUE_2",
@@ -547,10 +609,13 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(config).toEqual(
+        expect.objectContaining({ ...expectedConfig, main: resolvedMain })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
@@ -559,7 +624,7 @@ describe("normalizeAndValidateConfig()", () => {
     });
 
     it("should error on invalid environment values", () => {
-      const expectedConfig: RawConfig = {
+      const expectedConfig: RawEnvironment = {
         name: 111,
         account_id: 222,
         compatibility_date: 333,
@@ -569,37 +634,146 @@ describe("normalizeAndValidateConfig()", () => {
         route: 888,
         jsx_factory: 999,
         jsx_fragment: 1000,
+        tsconfig: true,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
-      } as unknown as RawConfig;
+        main: 1333,
+        build: {
+          command: 1444,
+          cwd: 1555,
+          watch_dir: 1666,
+        },
+      } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         expectedConfig,
-        undefined
+        undefined,
+        { env: undefined }
       );
 
       expect(config).toEqual(expect.objectContaining(expectedConfig));
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" field to be a string but got 888.
-          - Expected \\"routes\\" field to be an array of strings but got [666,777].
-          - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
-          - Expected \\"account_id\\" field to be a string but got 222.
-          - Expected \\"compatibility_date\\" field to be a string but got 333.
-          - Expected \\"compatibility_flags\\" field to be an array of strings but got [444,555].
-          - Expected \\"jsx_factory\\" field to be a string but got 999.
-          - Expected \\"jsx_fragment\\" field to be a string but got 1000.
-          - Expected \\"name\\" field to be a string but got 111.
+          - Expected \\"route\\" to be of type string but got 888.
+          - Expected \\"routes\\" to be of type string array but got [666,777].
+          - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+          - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+          - Expected \\"build.command\\" to be of type string but got 1444.
+          - Expected \\"build.cwd\\" to be of type string but got 1555.
+          - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+          - Expected \\"account_id\\" to be of type string but got 222.
+          - Expected \\"compatibility_date\\" to be of type string but got 333.
+          - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+          - Expected \\"jsx_factory\\" to be of type string but got 999.
+          - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+          - Expected \\"tsconfig\\" to be of type string but got true.
+          - Expected \\"name\\" to be of type string but got 111.
+          - Expected \\"main\\" to be of type string but got 1333.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
+    });
+
+    it("should override build.upload config defaults with provided values and warn about deprecations", () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          upload: {
+            dir: "src",
+            format: "modules",
+            main: "index.ts",
+            rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        path.resolve("project/wrangler.toml"),
+        { env: undefined }
+      );
+
+      expect(config.main).toEqual(path.resolve("project/src/index.ts"));
+      expect(config.build.upload).toBeUndefined();
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(true);
+      expect(normalizePath(diagnostics.renderWarnings()))
+        .toMatchInlineSnapshot(`
+        "Processing project/wrangler.toml configuration:
+          - DEPRECATION: \\"build.upload.format\\":
+            The format is inferred automatically from the code.
+          - DEPRECATION: \\"build.upload.main\\":
+            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+            Then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"src/index.ts\\"
+            \`\`\`
+          - DEPRECATION: \\"build.upload.dir\\":
+            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
+          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+            \`\`\`
+            [[rules]]
+            type = \\"Text\\"
+            globs = [ \\"GLOB\\" ]
+            fallthrough = true
+            \`\`\`"
+      `);
+    });
+
+    it("should default custom build watch directories to src", () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          command: "execute some --build",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        { env: undefined }
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: "./src",
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+      const expectedConfig: RawEnvironment = {
+        build: {
+          command: "execute some --build",
+          watch_dir: "some/path",
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config.build).toEqual(
+        expect.objectContaining({
+          command: "execute some --build",
+          watch_dir: path.normalize("project/some/path"),
+        })
+      );
+
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     describe("durable_objects field", () => {
       it("should error if durable_objects is an array", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: [] } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -615,7 +789,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: "BAD" } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -631,7 +806,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: 999 } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -647,7 +823,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: null } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -663,7 +840,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is not defined", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: {} } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -679,7 +857,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: {} } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -697,7 +876,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -715,7 +895,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: 999 } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -733,7 +914,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { durable_objects: { bindings: null } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -764,7 +946,8 @@ describe("normalizeAndValidateConfig()", () => {
               ],
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -799,7 +982,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: {} } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -815,7 +999,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: "BAD" } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -831,7 +1016,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: 999 } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -847,7 +1033,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { kv_namespaces: null } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -874,7 +1061,8 @@ describe("normalizeAndValidateConfig()", () => {
               },
             ],
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -899,7 +1087,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: {} } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -915,7 +1104,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: "BAD" } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -931,7 +1121,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: 999 } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -947,7 +1138,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { r2_buckets: null } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -974,7 +1166,8 @@ describe("normalizeAndValidateConfig()", () => {
               },
             ],
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -999,7 +1192,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is an array", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: [] } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1018,7 +1212,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: "BAD" } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1037,7 +1232,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: 999 } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1056,7 +1252,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: null } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1075,7 +1272,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is not defined", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: {} } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1094,7 +1292,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: {} } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1115,7 +1314,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: "BAD" } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1136,7 +1336,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: 999 } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1157,7 +1358,8 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { unsafe: { bindings: null } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1191,7 +1393,8 @@ describe("normalizeAndValidateConfig()", () => {
               ],
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect(config).toEqual(
@@ -1235,7 +1438,8 @@ describe("normalizeAndValidateConfig()", () => {
 
         const { config, diagnostics } = normalizeAndValidateConfig(
           rawConfig,
-          undefined
+          undefined,
+          { env: undefined }
         );
 
         expect("experimental_services" in config).toBe(false);
@@ -1259,73 +1463,245 @@ describe("normalizeAndValidateConfig()", () => {
           `);
       });
     });
+
+    describe("route & routes fields", () => {
+      it("should error if both route and routes are specified", () => {
+        const rawConfig: RawConfig = {
+          route: "route1",
+          routes: ["route2", "route3"],
+        };
+
+        const { diagnostics } = normalizeAndValidateConfig(
+          rawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+        `);
+      });
+    });
   });
 
   describe("named environments", () => {
+    it("should warn if we specify an environment but there are no named environments", () => {
+      const rawConfig: RawConfig = {};
+      const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
+        env: "DEV",
+      });
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+        "
+      `);
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - No environment found in configuration with name \\"DEV\\".
+            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+
+            Consider adding an environment configuration section to the wrangler.toml file:
+            \`\`\`
+            [env.DEV]
+            \`\`\`
+        "
+      `);
+    });
+
+    it("should error if we specify an environment that does not match the named environments", () => {
+      const rawConfig: RawConfig = { env: { ENV1: {} } };
+      const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
+        env: "DEV",
+      });
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - No environment found in configuration with name \\"DEV\\".
+            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+            The available configured environment names are: [\\"ENV1\\"]
+
+            Consider adding an environment configuration section to the wrangler.toml file:
+            \`\`\`
+            [env.DEV]
+            \`\`\`
+        "
+      `);
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+        "
+      `);
+    });
+
     it("should use top-level values for inheritable config fields", () => {
-      const expectedConfig: RawConfig = {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
+      const rawConfig: RawConfig = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig.json",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main,
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
-        { ...expectedConfig, env: { DEV: {} } },
-        undefined
+        { ...rawConfig, env: { DEV: {} } },
+        undefined,
+        { env: "DEV" }
       );
 
-      expect(config.env.DEV).toEqual(expect.objectContaining(expectedConfig));
+      expect(config).toEqual(
+        expect.objectContaining({
+          ...rawConfig,
+          main: resolvedMain,
+          name: "NAME-DEV",
+        })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should override top-level values for inheritable config fields", () => {
-      const environment: RawEnvironment = {
+      const main = "src/index.ts";
+      const resolvedMain = path.resolve(process.cwd(), main);
+      const rawEnv: RawEnvironment = {
         name: "ENV_NAME",
         account_id: "ENV_ACCOUNT_ID",
         compatibility_date: "2022-02-02",
         compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
         workers_dev: true,
         routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
-        route: "ENV_ROUTE_3",
         jsx_factory: "ENV_JSX_FACTORY",
         jsx_fragment: "ENV_JSX_FRAGMENT",
+        tsconfig: "ENV_path/to/tsconfig.json",
         triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
         usage_model: "unbound",
+        main,
+        build: {
+          command: "ENV_COMMAND",
+          cwd: "ENV_CWD",
+          watch_dir: "ENV_WATCH_DIR",
+        },
       };
-      const expectedConfig: RawConfig = {
+      const rawConfig: RawConfig = {
         name: "NAME",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
         routes: ["ROUTE_1", "ROUTE_2"],
-        route: "ROUTE_3",
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
+        tsconfig: "path/to/tsconfig.json",
         triggers: { crons: ["CRON_1", "CRON_2"] },
         usage_model: "bundled",
+        main: "top-level.js",
+        build: {
+          command: "COMMAND",
+          cwd: "CWD",
+          watch_dir: "WATCH_DIR",
+        },
         env: {
-          ENV1: environment,
+          ENV1: rawEnv,
         },
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined
+        rawConfig,
+        undefined,
+        { env: "ENV1" }
       );
 
-      expect(config.env.ENV1).toEqual(expect.objectContaining(environment));
+      expect(config).toEqual(
+        expect.objectContaining({ ...rawEnv, main: resolvedMain })
+      );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    describe("non-legacy", () => {
+      it("should use top-level `name` field", () => {
+        const rawConfig: RawConfig = {
+          name: "NAME",
+          legacy_env: false,
+          env: { DEV: {} },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          rawConfig,
+          undefined,
+          { env: "DEV" }
+        );
+
+        expect(config.name).toEqual("NAME");
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
+        const rawConfig: RawConfig = {
+          legacy_env: false,
+          env: {
+            DEV: {
+              name: "ENV_NAME",
+            },
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          rawConfig,
+          undefined,
+          { env: "DEV" }
+        );
+
+        expect(config.name).toBeUndefined();
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+
+            - \\"env.DEV\\" environment configuration
+              - The \\"name\\" field is not allowed in named service environments.
+                Please remove the field from this environment."
+        `);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should error if top-level config and a named environment both contain a `name` field", () => {
+        const rawConfig: RawConfig = {
+          name: "NAME",
+          legacy_env: false,
+          env: {
+            DEV: {
+              name: "ENV_NAME",
+            },
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          rawConfig,
+          undefined,
+          { env: "DEV" }
+        );
+
+        expect(config.name).toEqual("NAME");
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+
+            - \\"env.DEV\\" environment configuration
+              - The \\"name\\" field is not allowed in named service environments.
+                Please remove the field from this environment."
+        `);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
     });
 
     it("should warn for non-inherited fields that are missing in environments", () => {
@@ -1351,10 +1727,11 @@ describe("normalizeAndValidateConfig()", () => {
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         rawConfig,
-        undefined
+        undefined,
+        { env: "ENV1" }
       );
 
-      expect(config.env.ENV1).toEqual(
+      expect(config).toEqual(
         expect.not.objectContaining({
           vars,
           durable_objects,
@@ -1397,30 +1774,44 @@ describe("normalizeAndValidateConfig()", () => {
         route: 888,
         jsx_factory: 999,
         jsx_fragment: 1000,
+        tsconfig: 123,
         triggers: { crons: [1111, 1222] },
         usage_model: "INVALID",
+        main: 1333,
+        build: {
+          command: 1444,
+          cwd: 1555,
+          watch_dir: 1666,
+        },
       } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
         { env: { ENV1: expectedConfig } },
-        undefined
+        undefined,
+        { env: "ENV1" }
       );
 
-      expect(config.env.ENV1).toEqual(expect.objectContaining(expectedConfig));
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" field to be a string but got 888.
-            - Expected \\"routes\\" field to be an array of strings but got [666,777].
-            - Expected \\"workers_dev\\" field to be a boolean but got \\"BAD\\".
-            - Expected \\"account_id\\" field to be a string but got 222.
-            - Expected \\"compatibility_date\\" field to be a string but got 333.
-            - Expected \\"compatibility_flags\\" field to be an array of strings but got [444,555].
-            - Expected \\"jsx_factory\\" field to be a string but got 999.
-            - Expected \\"jsx_fragment\\" field to be a string but got 1000.
-            - Expected \\"name\\" field to be a string but got 111.
+            - Expected \\"route\\" to be of type string but got 888.
+            - Expected \\"routes\\" to be of type string array but got [666,777].
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+            - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+            - Expected \\"build.command\\" to be of type string but got 1444.
+            - Expected \\"build.cwd\\" to be of type string but got 1555.
+            - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+            - Expected \\"account_id\\" to be of type string but got 222.
+            - Expected \\"compatibility_date\\" to be of type string but got 333.
+            - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+            - Expected \\"jsx_factory\\" to be of type string but got 999.
+            - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+            - Expected \\"tsconfig\\" to be of type string but got 123.
+            - Expected \\"name\\" to be of type string but got 111.
+            - Expected \\"main\\" to be of type string but got 1333.
             - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
     });
@@ -1429,10 +1820,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is an array", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ durable_objects: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1447,10 +1839,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ durable_objects: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1465,10 +1858,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ durable_objects: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1483,10 +1877,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ durable_objects: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1501,10 +1896,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if durable_objects.bindings is not defined", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ durable_objects: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1521,10 +1917,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { durable_objects: { bindings: {} } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -1543,10 +1940,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { durable_objects: { bindings: "BAD" } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -1565,10 +1963,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { durable_objects: { bindings: 999 } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -1587,10 +1986,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { durable_objects: { bindings: null } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -1624,10 +2024,11 @@ describe("normalizeAndValidateConfig()", () => {
               },
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -1661,10 +2062,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ kv_namespaces: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1679,10 +2081,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ kv_namespaces: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1697,10 +2100,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ kv_namespaces: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1715,10 +2119,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if kv_namespaces is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ kv_namespaces: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1748,10 +2153,11 @@ describe("normalizeAndValidateConfig()", () => {
               },
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             kv_namespaces: { bindings: expect.anything },
           })
@@ -1775,10 +2181,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is an object", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ r2_buckets: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1793,10 +2200,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ r2_buckets: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1811,10 +2219,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ r2_buckets: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1829,10 +2238,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if r2_buckets is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ r2_buckets: expect.anything })
         );
         expect(diagnostics.hasWarnings()).toBe(false);
@@ -1862,10 +2272,11 @@ describe("normalizeAndValidateConfig()", () => {
               },
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             r2_buckets: { bindings: expect.anything },
           })
@@ -1889,10 +2300,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is an array", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ unsafe: expect.anything })
         );
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1912,10 +2324,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is a string", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ unsafe: expect.anything })
         );
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1935,10 +2348,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is a number", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ unsafe: expect.anything })
         );
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1958,10 +2372,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe is null", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ unsafe: expect.anything })
         );
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1981,10 +2396,11 @@ describe("normalizeAndValidateConfig()", () => {
       it("should error if unsafe.bindings is not defined", () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           { env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({ unsafe: expect.anything })
         );
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2006,10 +2422,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { unsafe: { bindings: {} } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             unsafe: { bindings: expect.anything },
           })
@@ -2033,10 +2450,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { unsafe: { bindings: "BAD" } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             unsafe: { bindings: expect.anything },
           })
@@ -2060,10 +2478,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { unsafe: { bindings: 999 } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             unsafe: { bindings: expect.anything },
           })
@@ -2087,10 +2506,11 @@ describe("normalizeAndValidateConfig()", () => {
           {
             env: { ENV1: { unsafe: { bindings: null } } },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             unsafe: { bindings: expect.anything },
           })
@@ -2129,10 +2549,11 @@ describe("normalizeAndValidateConfig()", () => {
               },
             },
           } as unknown as RawConfig,
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect(config.env.ENV1).toEqual(
+        expect(config).toEqual(
           expect.not.objectContaining({
             durable_objects: { bindings: expect.anything },
           })
@@ -2181,12 +2602,13 @@ describe("normalizeAndValidateConfig()", () => {
               ENV1: environment,
             },
           },
-          undefined
+          undefined,
+          { env: "ENV1" }
         );
 
-        expect("experimental_services" in config.env.ENV1).toBe(false);
+        expect("experimental_services" in config).toBe(false);
         // Zone is not removed yet, since `route` commands might use it
-        expect(config.env.ENV1.zone_id).toEqual("ZONE_ID");
+        expect(config.zone_id).toEqual("ZONE_ID");
         expect(diagnostics.hasErrors()).toBe(false);
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2205,6 +2627,241 @@ describe("normalizeAndValidateConfig()", () => {
                 environment = \\"ENV\\"
                 \`\`\`"
         `);
+      });
+    });
+
+    describe("route & routes fields", () => {
+      it("should error if both route and routes are specified in the same environment", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV_ROUTE_1",
+          routes: ["ENV_ROUTE_2", "ENV_ROUTE_3"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          routes: ["ROUTE_1", "ROUTE_2"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: "ENV1" }
+        );
+
+        expect(config).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+
+            - \\"env.ENV1\\" environment configuration
+              - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+        `);
+      });
+
+      it("should error if both route and routes are specified in the top-level environment", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          routes: ["ROUTE_2", "ROUTE_3"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: "ENV1" }
+        );
+
+        expect(config).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
+
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+        `);
+      });
+
+      it("should not error if <env>.route and <top-level>.routes are specified", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV_ROUTE_1",
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          routes: ["ROUTE_1", "ROUTE_2"],
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: "ENV1" }
+        );
+
+        expect(config).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should not error if <env>.routes and <top-level>.route are specified", () => {
+        const environment: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV_ROUTE_1", "ENV_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment,
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: "ENV1" }
+        );
+
+        expect(config).toEqual(expect.objectContaining(environment));
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should not error if <env1>.route and <env2>.routes are specified", () => {
+        const environment1: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          routes: ["ENV1_ROUTE_1", "ENV2_ROUTE_2"],
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const environment2: RawEnvironment = {
+          name: "ENV_NAME",
+          account_id: "ENV_ACCOUNT_ID",
+          compatibility_date: "2022-02-02",
+          compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
+          workers_dev: true,
+          route: "ENV2_ROUTE_1",
+          jsx_factory: "ENV_JSX_FACTORY",
+          jsx_fragment: "ENV_JSX_FRAGMENT",
+          triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
+          usage_model: "unbound",
+        };
+        const expectedConfig: RawConfig = {
+          name: "NAME",
+          account_id: "ACCOUNT_ID",
+          compatibility_date: "2022-01-01",
+          compatibility_flags: ["FLAG1", "FLAG2"],
+          workers_dev: false,
+          route: "ROUTE_1",
+          jsx_factory: "JSX_FACTORY",
+          jsx_fragment: "JSX_FRAGMENT",
+          triggers: { crons: ["CRON_1", "CRON_2"] },
+          usage_model: "bundled",
+          env: {
+            ENV1: environment1,
+            ENV2: environment2,
+          },
+        };
+
+        const result1 = normalizeAndValidateConfig(expectedConfig, undefined, {
+          env: "ENV1",
+        });
+
+        expect(result1.config).toEqual(expect.objectContaining(environment1));
+        expect(result1.diagnostics.hasErrors()).toBe(false);
+        expect(result1.diagnostics.hasWarnings()).toBe(false);
+
+        const result2 = normalizeAndValidateConfig(expectedConfig, undefined, {
+          env: "ENV2",
+        });
+
+        expect(result2.config).toEqual(expect.objectContaining(environment2));
+        expect(result2.diagnostics.hasErrors()).toBe(false);
+        expect(result2.diagnostics.hasWarnings()).toBe(false);
       });
     });
   });

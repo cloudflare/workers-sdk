@@ -5,6 +5,7 @@ import { URL } from "node:url";
 import { useEffect, useRef, useState } from "react";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
+import { waitForPortToBeAvailable } from "./proxy";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
@@ -153,7 +154,14 @@ export default function useInspector(props: InspectorProps) {
    * of the component lifecycle. Convenient.
    */
   useEffect(() => {
-    server.listen(props.port);
+    async function startInspectorProxy() {
+      await waitForPortToBeAvailable(props.port, {
+        retryPeriod: 200,
+        timeout: 2000,
+      });
+      server.listen(props.port);
+    }
+    startInspectorProxy().catch((err) => console.error(err));
     return () => {
       server.close();
       // Also disconnect any open websockets/devtools connections

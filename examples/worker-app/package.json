@@ -1,0 +1,16 @@
+{
+  "name": "worker-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "npx jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "jest": {
+    "testRegex": ".*.test\\.[jt]sx?$",
+    "testEnvironment": "wrangler"
+  }
+}

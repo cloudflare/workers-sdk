@@ -36,7 +36,6 @@ describe("wrangler", () => {
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
@@ -46,6 +45,9 @@ describe("wrangler", () => {
           wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
           wrangler pages             ⚡️ Configure Cloudflare Pages
           wrangler r2                📦 Interact with an R2 store
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
+          wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -63,7 +65,7 @@ describe("wrangler", () => {
       await expect(
         runWrangler("invalid-command")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Unknown command: invalid-command."`
+        `"Unknown argument: invalid-command"`
       );
 
       expect(std.out).toMatchInlineSnapshot(`""`);
@@ -72,7 +74,6 @@ describe("wrangler", () => {
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
           wrangler dev [script]      👂 Start a local server for developing your worker
           wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
           wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
@@ -82,6 +83,9 @@ describe("wrangler", () => {
           wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
           wrangler pages             ⚡️ Configure Cloudflare Pages
           wrangler r2                📦 Interact with an R2 store
+          wrangler login             🔓 Login to Cloudflare
+          wrangler logout            🚪 Logout from Cloudflare
+          wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -89,7 +93,7 @@ describe("wrangler", () => {
           -v, --version     Show version number  [boolean]
               --legacy-env  Use legacy environments  [boolean]
 
-        Unknown command: invalid-command."
+        Unknown argument: invalid-command"
       `);
     });
   });
@@ -812,14 +816,6 @@ describe("wrangler", () => {
       expect(fs.existsSync("./wrangler.toml")).toBe(true);
     });
 
-    it("should error if `--type` is used", async () => {
-      await expect(
-        runWrangler("init --type")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"The --type option is no longer supported."`
-      );
-    });
-
     it("should error if `--type javascript` is used", async () => {
       await expect(
         runWrangler("init --type javascript")
@@ -849,14 +845,14 @@ describe("wrangler", () => {
     it("should throw an error if the deprecated command is used with positional arguments", async () => {
       await expect(runWrangler("preview GET")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
-              "DEPRECATION WARNING:
+              "DEPRECATION:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
             `);
-      await expect(runWrangler("preview GET 'Some Body'")).rejects
+      await expect(runWrangler(`preview GET "SomeBody"`)).rejects
         .toThrowErrorMatchingInlineSnapshot(`
-              "DEPRECATION WARNING:
+              "DEPRECATION:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
@@ -914,60 +910,78 @@ describe("wrangler", () => {
       await runWrangler("kv:key");
       await endEventLoop();
       expect(std.out).toMatchInlineSnapshot(`
-       "wrangler kv:key
+               "wrangler kv:key
 
-       🔑 Individually manage Workers KV key-value pairs
+               🔑 Individually manage Workers KV key-value pairs
 
-       Commands:
-         wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-         wrangler kv:key list               Outputs a list of all keys in a given namespace.
-         wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-         wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+               Commands:
+                 wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+                 wrangler kv:key list               Outputs a list of all keys in a given namespace.
+                 wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+                 wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
-       Flags:
-         -c, --config      Path to .toml configuration file  [string]
-         -h, --help        Show help  [boolean]
-         -v, --version     Show version number  [boolean]
-             --legacy-env  Use legacy environments  [boolean]"
-      `);
+               Flags:
+                 -c, --config      Path to .toml configuration file  [string]
+                 -h, --help        Show help  [boolean]
+                 -v, --version     Show version number  [boolean]
+                     --legacy-env  Use legacy environments  [boolean]"
+            `);
     });
 
     it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
       await runWrangler("kv:bulk");
       await endEventLoop();
       expect(std.out).toMatchInlineSnapshot(`
-       "wrangler kv:bulk
+               "wrangler kv:bulk
 
-       💪 Interact with multiple Workers KV key-value pairs at once
+               💪 Interact with multiple Workers KV key-value pairs at once
 
-       Commands:
-         wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-         wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
+               Commands:
+                 wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+                 wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-       Flags:
-         -c, --config      Path to .toml configuration file  [string]
-         -h, --help        Show help  [boolean]
-         -v, --version     Show version number  [boolean]
-             --legacy-env  Use legacy environments  [boolean]"
-      `);
+               Flags:
+                 -c, --config      Path to .toml configuration file  [string]
+                 -h, --help        Show help  [boolean]
+                 -v, --version     Show version number  [boolean]
+                     --legacy-env  Use legacy environments  [boolean]"
+            `);
     });
     it("no subcommand 'r2' should display a list of available subcommands", async () => {
       await runWrangler("r2");
       await endEventLoop();
       expect(std.out).toMatchInlineSnapshot(`
-       "wrangler r2
+               "wrangler r2
 
-       📦 Interact with an R2 store
+               📦 Interact with an R2 store
 
-       Commands:
-         wrangler r2 bucket  Manage R2 buckets
+               Commands:
+                 wrangler r2 bucket  Manage R2 buckets
 
-       Flags:
-         -c, --config      Path to .toml configuration file  [string]
-         -h, --help        Show help  [boolean]
-         -v, --version     Show version number  [boolean]
-             --legacy-env  Use legacy environments  [boolean]"
-      `);
+               Flags:
+                 -c, --config      Path to .toml configuration file  [string]
+                 -h, --help        Show help  [boolean]
+                 -v, --version     Show version number  [boolean]
+                     --legacy-env  Use legacy environments  [boolean]"
+            `);
+    });
+  });
+  describe("Deprecated commands", () => {
+    it("should print a deprecation message for 'generate'", async () => {
+      await runWrangler("generate").catch((err) => {
+        expect(err.message).toMatchInlineSnapshot(`
+          "DEPRECATION:
+          \`wrangler generate\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
+        `);
+      });
+    });
+    it("should print a deprecation message for 'build'", async () => {
+      await runWrangler("build").catch((err) => {
+        expect(err.message).toMatchInlineSnapshot(`
+          "DEPRECATION:
+          \`wrangler build\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
+        `);
+      });
     });
   });
 });

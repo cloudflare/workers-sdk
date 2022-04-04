@@ -19,16 +19,22 @@ import {
   validateOptionalTypedArray,
   validateRequiredProperty,
   validateTypedArray,
+  all,
+  isMutuallyExclusiveWith,
+  inheritableInLegacyEnvironments,
+  appendEnvName,
+  getBindingNames,
 } from "./validation-helpers";
+import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
-  Config,
+  RawEnvironment,
   DeprecatedUpload,
-  DevConfig,
-  RawConfig,
-  RawDevConfig,
-} from "./config";
-import type { RawEnvironment, Environment, Rule } from "./environment";
+  Environment,
+  Rule,
+} from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
+
+const ENGLISH = new Intl.ListFormat("en");
 
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
@@ -40,7 +46,8 @@ import type { ValidatorFn } from "./validation-helpers";
  */
 export function normalizeAndValidateConfig(
   rawConfig: RawConfig,
-  configPath: string | undefined
+  configPath: string | undefined,
+  args: unknown
 ): {
   config: Config;
   diagnostics: Diagnostics;
@@ -76,12 +83,6 @@ export function normalizeAndValidateConfig(
     true
   );
 
-  const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
-    diagnostics,
-    rawConfig,
-    rawConfig.build ?? {}
-  );
-
   validateOptionalProperty(
     diagnostics,
     "",
@@ -90,23 +91,79 @@ export function normalizeAndValidateConfig(
     "boolean"
   );
 
+  // TODO: set the default to false to turn on service environments as the default
+  const isLegacyEnv =
+    (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
+    rawConfig.legacy_env ??
+    true;
+
+  const topLevelEnv = normalizeAndValidateEnvironment(
+    diagnostics,
+    configPath,
+    rawConfig
+  );
+
+  //TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
+  const envName = (args as { env: string | undefined }).env;
+
+  let activeEnv = topLevelEnv;
+  if (envName !== undefined) {
+    const envDiagnostics = new Diagnostics(
+      `"env.${envName}" environment configuration`
+    );
+    const rawEnv = rawConfig.env?.[envName];
+    if (rawEnv !== undefined) {
+      activeEnv = normalizeAndValidateEnvironment(
+        envDiagnostics,
+        configPath,
+        rawEnv,
+        envName,
+        topLevelEnv,
+        isLegacyEnv,
+        rawConfig
+      );
+      diagnostics.addChild(envDiagnostics);
+    } else {
+      // An environment was specified, but no configuration for it was found.
+      // To cover any legacy environment cases, where the `envName` is used,
+      // Let's create a fake active environment with the specified `envName`.
+      activeEnv = normalizeAndValidateEnvironment(
+        envDiagnostics,
+        configPath,
+        {},
+        envName,
+        topLevelEnv,
+        isLegacyEnv,
+        rawConfig
+      );
+      const envNames = rawConfig.env
+        ? `The available configured environment names are: ${JSON.stringify(
+            Object.keys(rawConfig.env)
+          )}\n`
+        : "";
+      const message =
+        `No environment found in configuration with name "${envName}".\n` +
+        `Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
+        `${envNames}\n` +
+        `Consider adding an environment configuration section to the wrangler.toml file:\n` +
+        "```\n[env." +
+        envName +
+        "]\n```\n";
+
+      if (envNames.length > 0) {
+        diagnostics.errors.push(message);
+      } else {
+        // Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
+        diagnostics.warnings.push(message);
+      }
+    }
+  }
+
   // Process the top-level default environment configuration.
   const config: Config = {
     configPath,
-    main: normalizeAndValidateMainField(
-      diagnostics,
-      configPath,
-      rawConfig.main,
-      deprecatedUpload
-    ),
-    // TODO: set the default to false to turn on service environments as the default
-    legacy_env: rawConfig.legacy_env ?? true,
-    ...normalizeAndValidateEnvironment(
-      diagnostics,
-      rawConfig,
-      deprecatedUpload.rules
-    ),
-    env: {}, // Will be filled below by `normalizeAndValidateEnvironment()`.
+    legacy_env: isLegacyEnv,
+    ...activeEnv,
     dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
     migrations: normalizeAndValidateMigrations(
       diagnostics,
@@ -125,33 +182,21 @@ export function normalizeAndValidateConfig(
       "text_blobs",
       rawConfig.text_blobs
     ),
-    build,
+    data_blobs: normalizeAndValidateModulePaths(
+      diagnostics,
+      configPath,
+      "data_blobs",
+      rawConfig.data_blobs
+    ),
   };
 
-  // Process each of the specific environment configurations.
-  if (rawConfig.env !== undefined) {
-    for (const envName of Object.keys(rawConfig.env)) {
-      const envDiagnostics = new Diagnostics(
-        `"env.${envName}" environment configuration`
-      );
-      const environment = normalizeAndValidateEnvironment(
-        envDiagnostics,
-        rawConfig.env[envName] as RawEnvironment,
-        deprecatedUpload.rules,
-        envName,
-        config,
-        rawConfig
-      );
-      config.env[envName] = environment;
-      diagnostics.addChild(envDiagnostics);
-    }
-  }
+  validateBindingsHaveUniqueNames(diagnostics, config);
 
   validateAdditionalProperties(
     diagnostics,
     "top-level",
     Object.keys(rawConfig),
-    Object.keys(config)
+    [...Object.keys(config), "env", "miniflare"]
   );
 
   return { config, diagnostics };
@@ -162,8 +207,9 @@ export function normalizeAndValidateConfig(
  */
 function normalizeAndValidateBuild(
   diagnostics: Diagnostics,
-  rawConfig: RawConfig,
-  rawBuild: Config["build"]
+  rawEnv: RawEnvironment,
+  rawBuild: Config["build"],
+  configPath: string | undefined
 ): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
   const { command, cwd, watch_dir, upload, ...rest } = rawBuild;
   const deprecatedUpload: DeprecatedUpload = { ...upload };
@@ -181,13 +227,13 @@ function normalizeAndValidateBuild(
 
   deprecated(
     diagnostics,
-    rawConfig,
+    rawEnv,
     "build.upload.format",
     "The format is inferred automatically from the code.",
     true
   );
 
-  if (rawConfig.main !== undefined && rawBuild.upload?.main) {
+  if (rawEnv.main !== undefined && rawBuild.upload?.main) {
     diagnostics.errors.push(
       `Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.\n` +
         `They serve the same purpose: to point to the entry-point of your worker.\n` +
@@ -196,7 +242,7 @@ function normalizeAndValidateBuild(
   } else {
     deprecated(
       diagnostics,
-      rawConfig,
+      rawEnv,
       "build.upload.main",
       `Delete the \`build.upload.main\` and \`build.upload.dir\` fields.\n` +
         `Then add the top level \`main\` field to your configuration file:\n` +
@@ -211,24 +257,41 @@ function normalizeAndValidateBuild(
 
     deprecated(
       diagnostics,
-      rawConfig,
+      rawEnv,
       "build.upload.dir",
       `Use the top level "main" field or a command-line argument to specify the entry-point for the Worker.`,
       true
     );
   }
 
-  return { command, cwd, watch_dir, deprecatedUpload };
+  return {
+    command,
+    watch_dir:
+      // - `watch_dir` only matters when `command` is defined, so we apply
+      // a default only when `command` is defined
+      // - `configPath` will always be defined since `build` can only
+      // be configured in `wrangler.toml`, but who knows, that may
+      // change in the future, so we do a check anyway
+      command
+        ? configPath
+          ? path.relative(
+              process.cwd(),
+              path.join(path.dirname(configPath), watch_dir || "./src")
+            )
+          : watch_dir || "./src"
+        : watch_dir,
+    cwd,
+    deprecatedUpload,
+  };
 }
 
 /**
  * Validate the `main` field and return the normalized values.
  */
 function normalizeAndValidateMainField(
-  diagnostics: Diagnostics,
   configPath: string | undefined,
   rawMain: string | undefined,
-  deprecatedUpload: { dir?: string; main?: string }
+  deprecatedUpload: DeprecatedUpload | undefined
 ): string | undefined {
   const configDir = path.dirname(configPath ?? "wrangler.toml");
   if (rawMain !== undefined) {
@@ -236,13 +299,13 @@ function normalizeAndValidateMainField(
       const directory = path.resolve(configDir);
       return path.resolve(directory, rawMain);
     } else {
-      diagnostics.errors.push(
-        `Expected "main" to be a string but got ${JSON.stringify(rawMain)}`
-      );
-      return;
+      return rawMain;
     }
-  } else if (deprecatedUpload.main !== undefined) {
-    const directory = path.resolve(configDir, deprecatedUpload.dir || "./dist");
+  } else if (deprecatedUpload?.main !== undefined) {
+    const directory = path.resolve(
+      configDir,
+      deprecatedUpload?.dir || "./dist"
+    );
     return path.resolve(directory, deprecatedUpload.main);
   } else {
     return;
@@ -257,7 +320,7 @@ function normalizeAndValidateDev(
   rawDev: RawDevConfig
 ): DevConfig {
   const {
-    ip = "127.0.0.1",
+    ip = "localhost",
     port = 8787,
     local_protocol = "http",
     upstream_protocol = "https",
@@ -370,12 +433,12 @@ function normalizeAndValidateSite(
 }
 
 /**
- * Map the paths of the `wasm_modules` or `text_blobs` configuration to be relative to the current working directory.
+ * Map the paths of the `wasm_modules`, `text_blobs` or `data_blobs` configuration to be relative to the current working directory.
  */
 function normalizeAndValidateModulePaths(
   diagnostics: Diagnostics,
   configPath: string | undefined,
-  field: "wasm_modules" | "text_blobs",
+  field: "wasm_modules" | "text_blobs" | "data_blobs",
   rawMapping: Record<string, string> | undefined
 ): Record<string, string> | undefined {
   if (rawMapping === undefined) {
@@ -403,26 +466,28 @@ function normalizeAndValidateModulePaths(
  */
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
-  topLevelEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined
+  configPath: string | undefined,
+  topLevelEnv: RawEnvironment
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
  */
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
+  configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined,
   envName: string,
-  config: Config,
+  topLevelEnv: Environment,
+  isLegacyEnv: boolean,
   rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
   diagnostics: Diagnostics,
+  configPath: string | undefined,
   rawEnv: RawEnvironment,
-  deprecatedRules: Environment["rules"] | undefined,
   envName = "top level",
-  config?: Config | undefined,
+  topLevelEnv?: Environment | undefined,
+  isLegacyEnv?: boolean,
   rawConfig?: RawConfig | undefined
 ): Environment {
   deprecated(
@@ -463,7 +528,7 @@ function normalizeAndValidateEnvironment(
 
   const route = inheritable(
     diagnostics,
-    config,
+    topLevelEnv,
     rawEnv,
     "route",
     isString,
@@ -471,26 +536,33 @@ function normalizeAndValidateEnvironment(
   );
   const routes = inheritable(
     diagnostics,
-    config,
+    topLevelEnv,
     rawEnv,
     "routes",
-    isStringArray,
+    all(isStringArray, isMutuallyExclusiveWith(rawEnv, "route")),
     undefined
   );
   const workers_dev = inheritable(
     diagnostics,
-    config,
+    topLevelEnv,
     rawEnv,
     "workers_dev",
     isBoolean,
-    !(routes || route)
+    undefined
+  );
+
+  const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
+    diagnostics,
+    rawEnv,
+    rawEnv.build ?? topLevelEnv?.build ?? {},
+    configPath
   );
 
   const environment: Environment = {
     // Inherited fields
     account_id: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "account_id",
       isString,
@@ -498,7 +570,7 @@ function normalizeAndValidateEnvironment(
     ),
     compatibility_date: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "compatibility_date",
       isString,
@@ -506,7 +578,7 @@ function normalizeAndValidateEnvironment(
     ),
     compatibility_flags: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "compatibility_flags",
       isStringArray,
@@ -514,7 +586,7 @@ function normalizeAndValidateEnvironment(
     ),
     jsx_factory: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "jsx_factory",
       isString,
@@ -522,25 +594,52 @@ function normalizeAndValidateEnvironment(
     ),
     jsx_fragment: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "jsx_fragment",
       isString,
       "React.Fragment"
     ),
+    tsconfig: validateAndNormalizeTsconfig(
+      diagnostics,
+      topLevelEnv,
+      rawEnv,
+      configPath
+    ),
     rules: validateAndNormalizeRules(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
-      deprecatedRules,
+      deprecatedUpload?.rules,
       envName
     ),
-    name: inheritable(diagnostics, config, rawEnv, "name", isString, undefined),
+    name: inheritableInLegacyEnvironments(
+      diagnostics,
+      isLegacyEnv,
+      topLevelEnv,
+      rawEnv,
+      "name",
+      isString,
+      appendEnvName(envName),
+      undefined
+    ),
+    main: normalizeAndValidateMainField(
+      configPath,
+      inheritable(
+        diagnostics,
+        topLevelEnv,
+        rawEnv,
+        "main",
+        isString,
+        undefined
+      ),
+      deprecatedUpload
+    ),
     route,
     routes,
     triggers: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "triggers",
       isObjectWith("crons"),
@@ -548,17 +647,18 @@ function normalizeAndValidateEnvironment(
     ),
     usage_model: inheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawEnv,
       "usage_model",
       isOneOf("bundled", "unbound"),
       undefined
     ),
+    build,
     workers_dev,
     // Not inherited fields
     vars: notInheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawConfig,
       rawEnv,
       envName,
@@ -568,7 +668,7 @@ function normalizeAndValidateEnvironment(
     ),
     durable_objects: notInheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawConfig,
       rawEnv,
       envName,
@@ -580,7 +680,7 @@ function normalizeAndValidateEnvironment(
     ),
     kv_namespaces: notInheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawConfig,
       rawEnv,
       envName,
@@ -590,7 +690,7 @@ function normalizeAndValidateEnvironment(
     ),
     r2_buckets: notInheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawConfig,
       rawEnv,
       envName,
@@ -600,7 +700,7 @@ function normalizeAndValidateEnvironment(
     ),
     unsafe: notInheritable(
       diagnostics,
-      config,
+      topLevelEnv,
       rawConfig,
       rawEnv,
       envName,
@@ -616,14 +716,37 @@ function normalizeAndValidateEnvironment(
   return environment;
 }
 
+function validateAndNormalizeTsconfig(
+  diagnostics: Diagnostics,
+  topLevelEnv: Environment | undefined,
+  rawEnv: RawEnvironment,
+  configPath: string | undefined
+) {
+  const tsconfig = inheritable(
+    diagnostics,
+    topLevelEnv,
+    rawEnv,
+    "tsconfig",
+    isString,
+    undefined
+  );
+
+  return configPath && tsconfig
+    ? path.relative(
+        process.cwd(),
+        path.join(path.dirname(configPath), tsconfig)
+      )
+    : tsconfig;
+}
+
 const validateAndNormalizeRules = (
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  topLevelEnv: Environment | undefined,
   rawEnv: RawEnvironment,
   deprecatedRules: Rule[] | undefined,
   envName: string
 ): Rule[] => {
-  if (config === undefined) {
+  if (topLevelEnv === undefined) {
     // Only create errors/warnings for the top-level environment
     if (rawEnv.rules && deprecatedRules) {
       diagnostics.errors.push(
@@ -641,7 +764,7 @@ const validateAndNormalizeRules = (
 
   return inheritable(
     diagnostics,
-    config,
+    topLevelEnv,
     rawEnv,
     "rules",
     validateRules(envName),
@@ -812,14 +935,6 @@ const validateBindingsProperty =
     }
     return isValid;
   };
-
-/**
- * Get the names of the bindings collection in `value`.
- */
-const getBindingNames = (value: unknown): string[] =>
-  ((value as { bindings: { name: string }[] })?.bindings ?? []).map(
-    (binding) => binding.name
-  );
 
 /**
  * Check that the given field is a valid "durable_object" binding object.
@@ -1024,4 +1139,102 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
     isValid = false;
   }
   return isValid;
+};
+
+/**
+ * Check that bindings whose names might conflict, don't.
+ *
+ * We don't want to have, for example, a KV namespace named "DATA"
+ * and a Durable Object also named "DATA". Then it would be ambiguous
+ * what exactly would live at `env.DATA` (or in the case of service-workers,
+ * the `DATA` global).
+ */
+const validateBindingsHaveUniqueNames = (
+  diagnostics: Diagnostics,
+  {
+    durable_objects,
+    kv_namespaces,
+    r2_buckets,
+    text_blobs,
+    unsafe,
+    vars,
+    wasm_modules,
+    data_blobs,
+  }: Partial<Config>
+): boolean => {
+  let hasDuplicates = false;
+
+  const bindingsGroupedByType = {
+    "Durable Object": getBindingNames(durable_objects),
+    "KV Namespace": getBindingNames(kv_namespaces),
+    "R2 Bucket": getBindingNames(r2_buckets),
+    "Text Blob": getBindingNames(text_blobs),
+    Unsafe: getBindingNames(unsafe),
+    "Environment Variable": getBindingNames(vars),
+    "WASM Module": getBindingNames(wasm_modules),
+    "Data Blob": getBindingNames(data_blobs),
+  } as Record<string, string[]>;
+
+  const bindingsGroupedByName: Record<string, string[]> = {};
+
+  for (const bindingType in bindingsGroupedByType) {
+    const bindingNames = bindingsGroupedByType[bindingType];
+
+    for (const bindingName of bindingNames) {
+      if (!(bindingName in bindingsGroupedByName)) {
+        bindingsGroupedByName[bindingName] = [];
+      }
+
+      bindingsGroupedByName[bindingName].push(bindingType);
+    }
+  }
+
+  for (const bindingName in bindingsGroupedByName) {
+    const bindingTypes = bindingsGroupedByName[bindingName];
+    if (bindingTypes.length < 2) {
+      // there's only one (or zero) binding(s) with this name, which is fine, actually
+      continue;
+    }
+
+    hasDuplicates = true;
+
+    // there's two types of duplicates we want to look for:
+    // - bindings with the same name of the same type (e.g. two Durable Objects both named "OBJ")
+    // - bindings with the same name of different types (a KV namespace and DO both named "DATA")
+
+    const sameType = bindingTypes
+      // filter once to find duplicate binding types
+      .filter((type, i) => bindingTypes.indexOf(type) !== i)
+      // filter twice to only get _unique_ duplicate binding types
+      .filter(
+        (type, i, duplicateBindingTypes) =>
+          duplicateBindingTypes.indexOf(type) === i
+      );
+
+    const differentTypes = bindingTypes.filter(
+      (type, i) => bindingTypes.indexOf(type) === i
+    );
+
+    if (differentTypes.length > 1) {
+      // we have multiple different types using the same name
+      diagnostics.errors.push(
+        `${bindingName} assigned to ${ENGLISH.format(differentTypes)} bindings.`
+      );
+    }
+
+    sameType.forEach((bindingType) => {
+      diagnostics.errors.push(
+        `${bindingName} assigned to multiple ${bindingType} bindings.`
+      );
+    });
+  }
+
+  if (hasDuplicates) {
+    const problem =
+      "Bindings must have unique names, so that they can all be referenced in the worker.";
+    const resolution = "Please change your bindings to have unique names.";
+    diagnostics.errors.push(`${problem}\n${resolution}`);
+  }
+
+  return !hasDuplicates;
 };

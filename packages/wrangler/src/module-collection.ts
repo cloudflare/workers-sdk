@@ -28,9 +28,15 @@ export const DEFAULT_MODULE_RULES: Config["rules"] = [
   { type: "CompiledWasm", globs: ["**/*.wasm"] },
 ];
 
-export default function makeModuleCollector(props: {
+export default function createModuleCollector(props: {
   format: CfScriptFormat;
   rules?: Config["rules"];
+  // a collection of "legacy" style module references, which are just file names
+  // we will eventually deprecate this functionality, hence the verbose greppable name
+  wrangler1xlegacyModuleReferences: {
+    rootDirectory: string;
+    fileNames: Set<string>;
+  };
 }): {
   modules: CfModule[];
   plugin: esbuild.Plugin;
@@ -40,6 +46,10 @@ export default function makeModuleCollector(props: {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     ...DEFAULT_MODULE_RULES!,
   ];
+
+  // First, we want to add some validations to the module rules
+  // We want to warn if rules are accidentally configured in such a way that
+  // subsequent rules will never match because `fallthrough` hasn't been set
 
   const completedRuleLocations: Record<string, number> = {};
   let index = 0;
@@ -92,6 +102,84 @@ export default function makeModuleCollector(props: {
           modules.splice(0);
         });
 
+        // ~ start legacy module specifier support ~
+
+        // This section detects usage of "legacy" 1.x style module specifiers
+        // and modifies them so they "work" in wrangler v2, but with a warning
+
+        const rulesMatchers = rules.flatMap((rule) => {
+          return rule.globs.map((glob) => {
+            const regex = globToRegExp(glob);
+            return {
+              regex,
+              rule,
+            };
+          });
+        });
+
+        if (props.wrangler1xlegacyModuleReferences.fileNames.size > 0) {
+          build.onResolve(
+            {
+              filter: new RegExp(
+                "^(" +
+                  [...props.wrangler1xlegacyModuleReferences.fileNames].join(
+                    "|"
+                  ) +
+                  ")$"
+              ),
+            },
+            async (args: esbuild.OnResolveArgs) => {
+              if (
+                args.kind !== "import-statement" &&
+                args.kind !== "require-call"
+              ) {
+                return;
+              }
+              // In the future, this will simply throw an error
+              console.warn(
+                `Deprecation warning: detected a legacy module import in "./${path.relative(
+                  process.cwd(),
+                  args.importer
+                )}". This will stop working in the future. Replace references to "${
+                  args.path
+                }" with "./${args.path}";`
+              );
+
+              // take the file and massage it to a
+              // transportable/manageable format
+              const filePath = path.join(
+                props.wrangler1xlegacyModuleReferences.rootDirectory,
+                args.path
+              );
+              const fileContent = await readFile(filePath);
+              const fileHash = crypto
+                .createHash("sha1")
+                .update(fileContent)
+                .digest("hex");
+              const fileName = `./${fileHash}-${path.basename(args.path)}`;
+
+              const { rule } =
+                rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
+              if (rule) {
+                // add the module to the array
+                modules.push({
+                  name: fileName,
+                  content: fileContent,
+                  type: RuleTypeToModuleType[rule.type],
+                });
+                return {
+                  path: fileName, // change the reference to the changed module
+                  external: props.format === "modules", // mark it as external in the bundle
+                  namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
+                  watchFiles: [filePath], // we also add the file to esbuild's watch list
+                };
+              }
+            }
+          );
+        }
+
+        // ~ end legacy module specifier support ~
+
         rules?.forEach((rule) => {
           if (rule.type === "ESModule" || rule.type === "CommonJS") return; // TODO: we should treat these as js files, and use the jsx loader
 
@@ -133,10 +221,9 @@ export default function makeModuleCollector(props: {
                   return {
                     // We replace the the module with an identifier
                     // that we'll separately add to the form upload
-                    // as part of [wasm_modules]/[text_blobs]. This identifier has to be a valid
+                    // as part of [wasm_modules]/[text_blobs]/[data_blobs]. This identifier has to be a valid
                     // JS identifier, so we replace all non alphanumeric characters
                     // with an underscore.
-                    // TODO: what of "Data"?
                     contents: `export default ${args.path.replace(
                       /[^a-zA-Z0-9_$]/g,
                       "_"

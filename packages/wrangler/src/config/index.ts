@@ -3,7 +3,13 @@ import { parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { Config, RawConfig } from "./config";
 
-export type { Config, RawConfig } from "./config";
+export type {
+  Config,
+  RawConfig,
+  ConfigFields,
+  DevConfig,
+  RawDevConfig,
+} from "./config";
 export type {
   Environment,
   RawEnvironment,
@@ -13,7 +19,10 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig(configPath?: string): Config {
+export function readConfig(
+  configPath: string | undefined,
+  args: unknown
+): Config {
   let rawConfig: RawConfig = {};
   if (!configPath) {
     configPath = findWranglerToml();
@@ -27,7 +36,8 @@ export function readConfig(configPath?: string): Config {
   // Process the top-level configuration.
   const { config, diagnostics } = normalizeAndValidateConfig(
     rawConfig,
-    configPath
+    configPath,
+    args
   );
 
   if (diagnostics.hasWarnings()) {

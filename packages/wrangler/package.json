@@ -1,6 +1,6 @@
 {
   "name": "wrangler",
-  "version": "0.0.19",
+  "version": "0.0.24",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
   "bin": {
@@ -37,7 +37,7 @@
   ],
   "dependencies": {
     "esbuild": "0.14.23",
-    "miniflare": "2.3.0",
+    "miniflare": "2.4.0",
     "path-to-regexp": "^6.2.0",
     "selfsigned": "^2.0.0",
     "semiver": "^1.1.0",
@@ -59,6 +59,7 @@
     "@types/react": "^17.0.37",
     "@types/serve-static": "^1.13.10",
     "@types/signal-exit": "^3.0.1",
+    "@types/supports-color": "^8.1.1",
     "@types/ws": "^8.2.1",
     "@types/yargs": "^17.0.7",
     "chokidar": "^3.5.2",
@@ -87,8 +88,9 @@
     "react-error-boundary": "^3.1.4",
     "serve-static": "^1.14.1",
     "signal-exit": "^3.0.6",
+    "supports-color": "^9.2.1",
     "tmp-promise": "^3.0.3",
-    "undici": "4.13.0",
+    "undici": "^4.15.1",
     "ws": "^8.3.0",
     "yargs": "^17.3.0"
   },
@@ -97,13 +99,14 @@
     "bin",
     "pages",
     "miniflare-config-stubs",
+    "miniflare-dist",
     "wrangler-dist",
     "templates",
     "vendor",
     "import_meta_url.js"
   ],
   "scripts": {
-    "clean": "rm -rf wrangler-dist",
+    "clean": "rm -rf wrangler-dist miniflare-dist",
     "check:type": "tsc",
     "bundle": "node -r esbuild-register scripts/bundle.ts",
     "build": "npm run clean && npm run bundle",
@@ -120,10 +123,11 @@
     "testTimeout": 30000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port)"
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"
     ],
     "moduleNameMapper": {
-      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js"
+      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
+      "miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
     },
     "transform": {
       "^.+\\.c?(t|j)sx?$": [

@@ -1,4 +1,4 @@
-import type { Config, RawConfig } from "./config";
+import type { RawConfig } from "./config";
 import type { Diagnostics } from "./diagnostics";
 import type { Environment, RawEnvironment } from "./environment";
 
@@ -54,14 +54,82 @@ export function experimental<T extends object>(
  */
 export function inheritable<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  topLevelEnv: Environment | undefined,
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
+  defaultValue: Environment[K],
+  transformFn: TransformFn<Environment[K]> = (v) => v
+): Environment[K] {
+  validate(diagnostics, field, rawEnv[field], topLevelEnv);
+  return (
+    (rawEnv[field] as Environment[K]) ??
+    transformFn(topLevelEnv?.[field]) ??
+    defaultValue
+  );
+}
+
+/**
+ * Get an inheritable environment field, but only if we are in legacy environments
+ */
+export function inheritableInLegacyEnvironments<K extends keyof Environment>(
+  diagnostics: Diagnostics,
+  isLegacyEnv: boolean | undefined,
+  topLevelEnv: Environment | undefined,
+  rawEnv: RawEnvironment,
+  field: K,
+  validate: ValidatorFn,
+  transformFn: TransformFn<Environment[K]>,
   defaultValue: Environment[K]
 ): Environment[K] {
-  validate(diagnostics, field, rawEnv[field], config);
-  return (rawEnv[field] as Environment[K]) ?? config?.[field] ?? defaultValue;
+  return topLevelEnv === undefined || isLegacyEnv === true
+    ? inheritable(
+        diagnostics,
+        topLevelEnv,
+        rawEnv,
+        field,
+        validate,
+        defaultValue,
+        transformFn
+      )
+    : notAllowedInNamedServiceEnvironment(
+        diagnostics,
+        topLevelEnv,
+        rawEnv,
+        field
+      );
+}
+
+/**
+ * Type of function that is used to transform an inheritable environment field.
+ */
+type TransformFn<T> = (fieldValue: T | undefined) => T | undefined;
+
+/**
+ * Transform an environment field by appending current environment name to it.
+ */
+export const appendEnvName =
+  (envName: string): TransformFn<string | undefined> =>
+  (fieldValue) =>
+    fieldValue ? `${fieldValue}-${envName}` : undefined;
+
+/**
+ * Log an error if this named environment is trying to override the value in the top-level
+ * environment, which is not allow for this field.
+ */
+function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
+  diagnostics: Diagnostics,
+  topLevelEnv: Environment,
+  rawEnv: RawEnvironment,
+  field: K
+): Environment[K] {
+  if (field in rawEnv) {
+    diagnostics.errors.push(
+      `The "${field}" field is not allowed in named service environments.\n` +
+        `Please remove the field from this environment.`
+    );
+  }
+  return topLevelEnv[field];
 }
 
 /**
@@ -72,7 +140,7 @@ export function inheritable<K extends keyof Environment>(
  */
 export function notInheritable<K extends keyof Environment>(
   diagnostics: Diagnostics,
-  config: Config | undefined,
+  topLevelEnv: Environment | undefined,
   rawConfig: RawConfig | undefined,
   rawEnv: RawEnvironment,
   envName: string,
@@ -81,7 +149,7 @@ export function notInheritable<K extends keyof Environment>(
   defaultValue: Environment[K]
 ): Environment[K] {
   if (rawEnv[field] !== undefined) {
-    validate(diagnostics, field, rawEnv[field], config);
+    validate(diagnostics, field, rawEnv[field], topLevelEnv);
   } else {
     if (rawConfig?.[field] !== undefined) {
       diagnostics.warnings.push(
@@ -139,7 +207,7 @@ export type ValidatorFn = (
   diagnostics: Diagnostics,
   field: string,
   value: unknown,
-  config: Config | undefined
+  topLevelEnv: Environment | undefined
 ) => boolean;
 
 /**
@@ -148,7 +216,7 @@ export type ValidatorFn = (
 export const isString: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && typeof value !== "string") {
     diagnostics.errors.push(
-      `Expected "${field}" field to be a string but got ${JSON.stringify(
+      `Expected "${field}" to be of type string but got ${JSON.stringify(
         value
       )}.`
     );
@@ -166,7 +234,7 @@ export const isStringArray: ValidatorFn = (diagnostics, field, value) => {
     (!Array.isArray(value) || value.some((item) => typeof item !== "string"))
   ) {
     diagnostics.errors.push(
-      `Expected "${field}" field to be an array of strings but got ${JSON.stringify(
+      `Expected "${field}" to be of type string array but got ${JSON.stringify(
         value
       )}.`
     );
@@ -188,7 +256,7 @@ export const isObjectWith =
         !properties.every((prop) => prop in value))
     ) {
       diagnostics.errors.push(
-        `Expected "${field}" field to be an object containing properties ${properties} but got ${JSON.stringify(
+        `Expected "${field}" to be of type object, containing properties ${properties}, but got ${JSON.stringify(
           value
         )}.`
       );
@@ -215,12 +283,60 @@ export const isOneOf =
   };
 
 /**
+ * Aggregate multiple validator functions
+ */
+export const all = (...validations: ValidatorFn[]): ValidatorFn => {
+  return (diagnostics, field, value, config) => {
+    let passedValidations = true;
+
+    for (const validate of validations) {
+      if (!validate(diagnostics, field, value, config)) {
+        passedValidations = false;
+      }
+    }
+
+    return passedValidations;
+  };
+};
+
+/**
+ * Check that the field is mutually exclusive with a list of other fields.
+ *
+ * @param container the container of the fields to check against.
+ * @param fields the names of the fields to check against.
+ */
+export const isMutuallyExclusiveWith = <T extends RawEnvironment | RawConfig>(
+  container: T,
+  ...fields: (keyof T)[]
+): ValidatorFn => {
+  return (diagnostics, field, value) => {
+    if (value === undefined) {
+      return true;
+    }
+
+    for (const exclusiveWith of fields) {
+      if (container[exclusiveWith] !== undefined) {
+        diagnostics.errors.push(
+          `Expected exactly one of the following fields ${JSON.stringify([
+            field,
+            ...fields,
+          ])}.`
+        );
+        return false;
+      }
+    }
+
+    return true;
+  };
+};
+
+/**
  * Validate that the field is a boolean.
  */
 export const isBoolean: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && typeof value !== "boolean") {
     diagnostics.errors.push(
-      `Expected "${field}" field to be a boolean but got ${JSON.stringify(
+      `Expected "${field}" to be of type boolean but got ${JSON.stringify(
         value
       )}.`
     );
@@ -386,3 +502,53 @@ export const validateAdditionalProperties = (
   }
   return true;
 };
+
+/**
+ * Get the names of the bindings collection in `value`.
+ *
+ * Will return an empty array if it doesn't understand the value
+ * passed in, so another form of validation should be
+ * performed externally.
+ */
+export const getBindingNames = (value: unknown): string[] => {
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  if (isBindingList(value)) {
+    return value.bindings.map(({ name }) => name);
+  } else if (isNamespaceList(value)) {
+    return value.map(({ binding }) => binding);
+  } else if (isRecord(value)) {
+    return Object.keys(value);
+  } else {
+    return [];
+  }
+};
+
+const isBindingList = (
+  value: unknown
+): value is {
+  bindings: {
+    name: string;
+  }[];
+} =>
+  isRecord(value) &&
+  "bindings" in value &&
+  Array.isArray(value.bindings) &&
+  value.bindings.every(
+    (binding) =>
+      isRecord(binding) && "name" in binding && typeof binding.name === "string"
+  );
+
+const isNamespaceList = (value: unknown): value is { binding: string }[] =>
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      isRecord(entry) && "binding" in entry && typeof entry.binding === "string"
+  );
+
+const isRecord = (
+  value: unknown
+): value is Record<string | number | symbol, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);

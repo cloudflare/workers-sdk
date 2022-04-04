@@ -9,5 +9,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
+  "fixed": [["wrangler", "jest-environment-wrangler"]]
 }
