@@ -83,9 +83,35 @@ function useLocalWorker({
 
       const scriptPath = realpathSync(bundle.path);
 
-      const wasmBindings = { ...bindings.wasm_modules };
-      const textBlobBindings = { ...bindings.text_blobs };
-      const dataBlobBindings = { ...bindings.data_blobs };
+      // the wasm_modules/text_blobs/data_blobs bindings are
+      // relative to process.cwd(), but the actual worker bundle
+      // is in the temp output directory; so we rewrite the paths to be absolute,
+      // letting miniflare resolve them correctly
+
+      // wasm
+      const wasmBindings: Record<string, string> = {};
+      for (const [name, filePath] of Object.entries(
+        bindings.wasm_modules || {}
+      )) {
+        wasmBindings[name] = path.join(process.cwd(), filePath);
+      }
+
+      // text
+      const textBlobBindings: Record<string, string> = {};
+      for (const [name, filePath] of Object.entries(
+        bindings.text_blobs || {}
+      )) {
+        textBlobBindings[name] = path.join(process.cwd(), filePath);
+      }
+
+      // data
+      const dataBlobBindings: Record<string, string> = {};
+      for (const [name, filePath] of Object.entries(
+        bindings.data_blobs || {}
+      )) {
+        dataBlobBindings[name] = path.join(process.cwd(), filePath);
+      }
+
       if (format === "service-worker") {
         for (const { type, name } of bundle.modules) {
           if (type === "compiled-wasm") {
@@ -187,7 +213,7 @@ function useLocalWorker({
       });
 
       local.current.stdout?.on("data", (data: Buffer) => {
-        console.log(`${data.toString()}`);
+        process.stdout.write(data);
       });
 
       local.current.stderr?.on("data", (data: Buffer) => {

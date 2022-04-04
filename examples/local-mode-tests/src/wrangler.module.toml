@@ -1,3 +1,7 @@
 name = "local-mode-tests"
-main = "src/index.ts"
 compatibility_date = "2022-03-27"
+
+[vars]
+VAR1 = "value1"
+VAR2 = 123
+VAR3 = {abc = "def"}
