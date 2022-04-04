@@ -61,7 +61,7 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-                --env      Perform on a specific environment  [string]
+            -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
           Not enough non-option arguments: got 0, need at least 1"
@@ -72,7 +72,7 @@ describe("wrangler", () => {
         await expect(
           runWrangler("kv:namespace create abc def ghi")
         ).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"Unexpected additional positional arguments \\"def ghi\\"."`
+          `"Unknown arguments: def, ghi"`
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
@@ -90,10 +90,10 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-                --env      Perform on a specific environment  [string]
+            -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
-          Unexpected additional positional arguments \\"def ghi\\"."
+          Unknown arguments: def, ghi"
         `);
       });
 
@@ -120,7 +120,7 @@ describe("wrangler", () => {
                 --legacy-env  Use legacy environments  [boolean]
 
           Options:
-                --env      Perform on a specific environment  [string]
+            -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
 
           The namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number."
@@ -286,7 +286,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The name of the namespace to delete  [string]
                 --namespace-id  The id of the namespace to delete  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
 
           Not able to delete namespace.
@@ -480,7 +480,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
@@ -516,7 +516,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
@@ -552,7 +552,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
@@ -588,7 +588,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
@@ -624,7 +624,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The binding of the namespace to write to  [string]
                 --namespace-id  The id of the namespace to write to  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
@@ -673,26 +673,26 @@ describe("wrangler", () => {
 
     describe("list", () => {
       it("should list the keys of a namespace specified by namespace-id", async () => {
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [
+          { name: "key-1" },
+          { name: "key-2", expiration: 123456789 },
+          { name: "key-3", expiration_ttl: 666 },
+        ];
         mockKeyListRequest("some-namespace-id", keys);
         await runWrangler("kv:key list --namespace-id some-namespace-id");
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
               \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"expiration\\": 123456789
             },
             {
               \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"expiration_ttl\\": 666
             }
           ]"
         `);
@@ -700,7 +700,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a namespace specified by binding", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("bound-id", keys);
 
         await runWrangler("kv:key list --binding someBinding");
@@ -708,19 +708,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -728,26 +722,20 @@ describe("wrangler", () => {
 
       it("should list the keys of a preview namespace specified by binding", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("preview-bound-id", keys);
         await runWrangler("kv:key list --binding someBinding --preview");
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -755,7 +743,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a namespace specified by binding, in a given environment", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("env-bound-id", keys);
         await runWrangler(
           "kv:key list --binding someBinding --env some-environment"
@@ -764,19 +752,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -784,7 +766,7 @@ describe("wrangler", () => {
 
       it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
         writeWranglerConfig();
-        const keys = ["key-1", "key-2", "key-3"];
+        const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
         mockKeyListRequest("preview-env-bound-id", keys);
         await runWrangler(
           "kv:key list --binding someBinding --preview --env some-environment"
@@ -793,19 +775,13 @@ describe("wrangler", () => {
         expect(std.out).toMatchInlineSnapshot(`
           "[
             {
-              \\"name\\": \\"key-1\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-1\\"
             },
             {
-              \\"name\\": \\"key-2\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-2\\"
             },
             {
-              \\"name\\": \\"key-3\\",
-              \\"expiration\\": 123456789,
-              \\"metadata\\": {}
+              \\"name\\": \\"key-3\\"
             }
           ]"
         `);
@@ -822,9 +798,9 @@ describe("wrangler", () => {
         describe(`cursor - ${blankCursorValue}`, () => {
           it("should make multiple requests for paginated results", async () => {
             // Create a lot of mock keys, so that the fetch requests will be paginated
-            const keys: string[] = [];
+            const keys: NamespaceKeyInfo[] = [];
             for (let i = 0; i < 550; i++) {
-              keys.push("key-" + i);
+              keys.push({ name: "key-" + i });
             }
             // Ask for the keys in pages of size 100.
             const requests = mockKeyListRequest(
@@ -833,13 +809,9 @@ describe("wrangler", () => {
               100,
               blankCursorValue
             );
-            await runWrangler(
-              "kv:key list --namespace-id some-namespace-id --limit 100"
-            );
+            await runWrangler("kv:key list --namespace-id some-namespace-id");
             expect(std.err).toMatchInlineSnapshot(`""`);
-            expect(
-              JSON.parse(std.out).map((k: NamespaceKeyInfo) => k.name)
-            ).toEqual(keys);
+            expect(JSON.parse(std.out)).toEqual(keys);
             expect(requests.count).toEqual(6);
           });
         });
@@ -915,7 +887,7 @@ describe("wrangler", () => {
           "my-value"
         );
         await runWrangler(
-          "kv:key get my-key my-value --binding someBinding --env some-environment --preview false"
+          "kv:key get my-key --binding someBinding --env some-environment --preview false"
         );
         expect(std.out).toMatchInlineSnapshot(`"my-value"`);
         expect(std.err).toMatchInlineSnapshot(`""`);
@@ -945,7 +917,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Not enough non-option arguments: got 0, need at least 1"
@@ -976,7 +948,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Exactly one of the arguments binding and namespace-id is required"
@@ -1008,7 +980,7 @@ describe("wrangler", () => {
           Options:
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
-                --env           Perform on a specific environment  [string]
+            -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
 
           Arguments binding and namespace-id are mutually exclusive"

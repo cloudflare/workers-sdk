@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { readFileSync } from "node:fs";
 import patchConsole from "patch-console";
-import Dev from "../dev";
+import Dev from "../dev/dev";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,7 +9,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
-describe("Dev component", () => {
+describe("wrangler dev", () => {
   mockAccountId();
   mockApiToken();
   runInTempDir();
@@ -36,6 +36,57 @@ describe("Dev component", () => {
 
         [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       `);
+    });
+
+    it("should use `main` from the top-level environment", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `main` from a named environment", async () => {
+      writeWranglerToml({
+        env: {
+          ENV1: {
+            main: "index.js",
+          },
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --env=ENV1");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use `main` from a named environment, rather than the top-level", async () => {
+      writeWranglerToml({
+        main: "other.js",
+        env: {
+          ENV1: {
+            main: "index.js",
+          },
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --env=ENV1");
+      expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
+        /index\.js$/
+      );
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
 
@@ -135,7 +186,7 @@ describe("Dev component", () => {
       });
     });
 
-    it("should, in order, use args.host/config.dev.host/args.routes/config.route/config.routes", async () => {
+    it("should, in order, use args.host/config.dev.host/args.routes/(config.route|config.routes)", async () => {
       // This test might seem like it's testing implementation details, but let's be specific and consider it a spec
 
       fs.writeFileSync("index.js", `export default {};`);
@@ -158,7 +209,6 @@ describe("Dev component", () => {
       writeWranglerToml({
         main: "index.js",
         route: "https://4.some-host.com/some/path/*",
-        routes: ["http://5.some-host.com/some/path/*"],
       });
       await runWrangler("dev");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -172,7 +222,6 @@ describe("Dev component", () => {
       writeWranglerToml({
         main: "index.js",
         route: "https://4.some-host.com/some/path/*",
-        routes: ["http://5.some-host.com/some/path/*"],
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -189,7 +238,6 @@ describe("Dev component", () => {
           host: `2.some-host.com`,
         },
         route: "4.some-host.com/some/path/*",
-        routes: ["5.some-host.com/some/path/*"],
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
@@ -206,7 +254,6 @@ describe("Dev component", () => {
           host: `2.some-host.com`,
         },
         route: "4.some-host.com/some/path/*",
-        routes: ["5.some-host.com/some/path/*"],
       });
       await runWrangler(
         "dev --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
@@ -230,6 +277,15 @@ describe("Dev component", () => {
         `"Could not find zone for some-host.com"`
       );
     });
+
+    it("should not try to resolve a zone when starting in local mode", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --host some-host.com --local");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual(undefined);
+    });
   });
 
   describe("custom builds", () => {
@@ -247,11 +303,11 @@ describe("Dev component", () => {
       );
 
       // and the command would pass through
-      expect((Dev as jest.Mock).mock.calls[0][0].buildCommand).toEqual({
+      expect((Dev as jest.Mock).mock.calls[0][0].build).toEqual({
         command:
           "node -e \"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
         cwd: undefined,
-        watch_dir: undefined,
+        watch_dir: "src",
       });
       expect(std.out).toMatchInlineSnapshot(
         `"running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
@@ -355,7 +411,7 @@ describe("Dev component", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should use to `local_protocol` from `wrangler.toml`, if available", async () => {
+    it("should use `local_protocol` from `wrangler.toml`, if available", async () => {
       writeWranglerToml({
         main: "index.js",
         dev: {
@@ -386,6 +442,86 @@ describe("Dev component", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe("ip", () => {
+    it("should default ip to localhost", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use to `ip` from `wrangler.toml`, if available", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          ip: "0.0.0.0",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use --ip command line arg, if provided", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          ip: "1.1.1.1",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --ip=0.0.0.0");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe("durable_objects", () => {
+    it("should warn if there is one or more remote Durable Object", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        durable_objects: {
+          bindings: [
+            { name: "NAME_1", class_name: "CLASS_1" },
+            {
+              name: "NAME_2",
+              class_name: "CLASS_2",
+              script_name: "SCRIPT_A",
+            },
+            { name: "NAME_3", class_name: "CLASS_3" },
+            {
+              name: "NAME_4",
+              class_name: "CLASS_4",
+              script_name: "SCRIPT_B",
+            },
+          ],
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.
+        Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
+        Remote Durable Objects that are affected:
+        - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}"
+      `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });

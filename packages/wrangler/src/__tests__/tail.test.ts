@@ -134,7 +134,7 @@ describe("tail", () => {
 
     it("sends header filters without a query", async () => {
       const api = mockWebsocketAPIs();
-      await runWrangler("tail test-worker --header X-CUSTOM-HEADER ");
+      await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
       await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
         { header: { key: "X-CUSTOM-HEADER" } },
       ]);
@@ -142,9 +142,7 @@ describe("tail", () => {
 
     it("sends header filters with a query", async () => {
       const api = mockWebsocketAPIs();
-      await runWrangler(
-        "tail test-worker --header X-CUSTOM-HEADER:some-value "
-      );
+      await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
       await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
         { header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
       ]);
@@ -266,6 +264,82 @@ describe("tail", () => {
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
+    });
+
+    it("defaults to logging in pretty format", async () => {
+      // the same test as the one before, but without the --format flag
+      const api = mockWebsocketAPIs();
+      await runWrangler("tail test-worker");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock event timestamp]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
+      ).toMatchInlineSnapshot(`
+        "successfully created tail, expires at [mock expiration date]
+        Connected to test-worker, waiting for logs...
+        GET https://example.org/ - Ok @ [mock event timestamp]"
+      `);
+    });
+
+    it("logs console messages and exceptions", async () => {
+      const api = mockWebsocketAPIs();
+      await runWrangler("tail test-worker");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({
+        event,
+        logs: [
+          { message: ["some string"], level: "log", timestamp: 1234561 },
+          {
+            message: [{ complex: "object" }],
+            level: "log",
+            timestamp: 1234562,
+          },
+          { message: [1234], level: "error", timestamp: 1234563 },
+        ],
+        exceptions: [
+          { name: "Error", message: "some error", timestamp: 1234564 },
+          { name: "Error", message: { complex: "error" }, timestamp: 1234564 },
+        ],
+      });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock event timestamp]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
+      ).toMatchInlineSnapshot(`
+        "successfully created tail, expires at [mock expiration date]
+        Connected to test-worker, waiting for logs...
+        GET https://example.org/ - Ok @ [mock event timestamp]
+          (log) some string
+          (log) { complex: 'object' }
+          (error) 1234"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "  Error: some error
+          Error: { complex: 'error' }"
+      `);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
     });
 
     it("logs scheduled messages in pretty format", async () => {

@@ -20,7 +20,7 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
 export async function getEntry(
   args: { script?: string; format?: CfScriptFormat | undefined },
   config: Config,
-  command: string
+  command: "dev" | "publish"
 ): Promise<Entry> {
   let file: string;
   let directory = process.cwd();
@@ -46,8 +46,37 @@ export async function getEntry(
   const format = await guessWorkerFormat(
     file,
     directory,
-    args.format ?? config.build?.upload?.format
+    args.format ?? config.build?.upload?.format,
+    config.tsconfig
   );
+
+  const { localBindings, remoteBindings } =
+    partitionDurableObjectBindings(config);
+
+  if (command === "dev" && remoteBindings.length > 0) {
+    console.warn(
+      "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.\n" +
+        "Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.\n" +
+        "Remote Durable Objects that are affected:\n" +
+        remoteBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")
+    );
+  }
+
+  if (format === "service-worker" && localBindings.length > 0) {
+    const errorMessage =
+      "You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
+    const addScriptName =
+      "You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
+    const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
+    const migrateText =
+      "Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
+    const migrateUrl =
+      "https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
+    throw new Error(
+      `${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`
+    );
+  }
+
   return { file, directory, format };
 }
 
@@ -88,7 +117,8 @@ export async function runCustomBuild(
 export default async function guessWorkerFormat(
   entryFile: string,
   entryWorkingDirectory: string,
-  hint: CfScriptFormat | undefined
+  hint: CfScriptFormat | undefined,
+  tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
   const result = await esbuild.build({
     entryPoints: [entryFile],
@@ -97,6 +127,12 @@ export default async function guessWorkerFormat(
     bundle: false,
     format: "esm",
     write: false,
+    loader: {
+      ".js": "jsx",
+      ".mjs": "jsx",
+      ".cjs": "jsx",
+    },
+    ...(tsconfig && { tsconfig }),
   });
   // result.metafile is defined because of the `metafile: true` option above.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -114,14 +150,30 @@ export default async function guessWorkerFormat(
     "More than one entry-point found for generated bundle." +
       listEntryPoints(entryPoints)
   );
-  const guessedWorkerFormat =
-    entryPoints[0][1].exports.length > 0 ? "modules" : "service-worker";
+
+  let guessedWorkerFormat: CfScriptFormat;
+  const scriptExports = entryPoints[0][1].exports;
+  if (scriptExports.length > 0) {
+    if (scriptExports.includes("default")) {
+      guessedWorkerFormat = "modules";
+    } else {
+      console.warn(
+        `The entrypoint ${path.relative(
+          process.cwd(),
+          entryFile
+        )} has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using "service-worker" format...`
+      );
+      guessedWorkerFormat = "service-worker";
+    }
+  } else {
+    guessedWorkerFormat = "service-worker";
+  }
 
   if (hint) {
     if (hint !== guessedWorkerFormat) {
       if (hint === "service-worker") {
         throw new Error(
-          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have ES module exports. Please pass `--format modules`, or simply remove the configuration."
+          "You configured this worker to be a 'service-worker', but the file you are trying to build appears to have a `default` export like a module worker. Please pass `--format modules`, or simply remove the configuration."
         );
       } else {
         throw new Error(
@@ -156,4 +208,49 @@ export function fileExists(filePath: string): boolean {
     }
   }
   return false;
+}
+
+type DurableObjectBindings = Config["durable_objects"]["bindings"];
+
+/**
+ * Groups the durable object bindings into two lists:
+ * those that are defined locally and those that refer to a durable object defined in another script.
+ */
+function partitionDurableObjectBindings(config: Config): {
+  localBindings: DurableObjectBindings;
+  remoteBindings: DurableObjectBindings;
+} {
+  const localBindings: DurableObjectBindings = [];
+  const remoteBindings: DurableObjectBindings = [];
+  for (const binding of config.durable_objects.bindings) {
+    if (binding.script_name === undefined) {
+      localBindings.push(binding);
+    } else {
+      remoteBindings.push(binding);
+    }
+  }
+  return { localBindings, remoteBindings };
+}
+
+/**
+ * Generates some help text based on the Durable Object bindings in a given
+ * config indicating how the user can add a `script_name` field to bind an
+ * externally defined Durable Object.
+ */
+function generateAddScriptNameExamples(
+  localBindings: DurableObjectBindings
+): string {
+  function exampleScriptName(binding_name: string): string {
+    return `${binding_name.toLowerCase().replaceAll("_", "-")}-worker`;
+  }
+
+  return localBindings
+    .map(({ name, class_name }) => {
+      const script_name = exampleScriptName(name);
+      const currentBinding = `{ name = ${name}, class_name = ${class_name} }`;
+      const fixedBinding = `{ name = ${name}, class_name = ${class_name}, script_name = ${script_name} }`;
+
+      return `${currentBinding} ==> ${fixedBinding}`;
+    })
+    .join("\n");
 }

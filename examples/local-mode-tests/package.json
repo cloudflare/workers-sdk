@@ -1,0 +1,26 @@
+{
+  "name": "local-mode-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx jest --forceExit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "jest": {
+    "restoreMocks": true,
+    "testTimeout": 30000,
+    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
+    "transform": {
+      "^.+\\.c?(t|j)sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true
+        }
+      ]
+    }
+  }
+}

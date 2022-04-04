@@ -1,30 +1,30 @@
 import { render } from "ink-testing-library";
 import React from "react";
-import { initialise } from "../user";
+import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
-import { writeUserConfig } from "./helpers/mock-user";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {
   runInTempDir({ homedir: "./home" });
+  const std = mockConsoleMethods();
 
   it("should return undefined if there is no config file", async () => {
-    await initialise();
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
   });
 
   it("should return undefined if there is an empty config file", async () => {
-    writeUserConfig();
-    await initialise();
+    writeAuthConfigFile({});
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {
-    writeUserConfig("some-oauth-token");
+    writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+
     setMockResponse("/user", () => {
       return { email: "user@example.com" };
     });
@@ -36,7 +36,6 @@ describe("getUserInfo()", () => {
       ];
     });
 
-    await initialise();
     const userInfo = await getUserInfo();
 
     expect(userInfo).toEqual({
@@ -49,6 +48,16 @@ describe("getUserInfo()", () => {
         { name: "Account Three", id: "account-3" },
       ],
     });
+  });
+
+  it("should display a warning message if the config file contains a legacy api_token field", async () => {
+    writeAuthConfigFile({ api_token: "API_TOKEN" });
+    await getUserInfo();
+    expect(std.warn).toMatchInlineSnapshot(`
+      "It looks like you have used Wrangler 1's \`config\` command to login with an API token.
+      This is no longer supported in the current version of Wrangler.
+      If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
+    `);
   });
 });
 

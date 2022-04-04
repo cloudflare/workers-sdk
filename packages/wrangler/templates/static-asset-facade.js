@@ -41,7 +41,7 @@ export default {
       // if an error is thrown then serve from actual worker
       return worker.fetch(request);
       // TODO: throw here if worker is not available
-      // (which implies it may be a service worker)
+      // (which implies it may be a service-worker)
     }
   },
 };

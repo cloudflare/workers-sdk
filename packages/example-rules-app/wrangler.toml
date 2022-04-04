@@ -1,8 +1,0 @@
-name = "example-rules-app"
-compatibility_date = "2022-02-28"
-main = "src/index.ts"
-
-[[rules]]
-type = "Text"
-globs = ["**/*.md"]
-fallthrough = true

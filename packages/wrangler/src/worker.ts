@@ -75,7 +75,7 @@ interface CfKvNamespace {
 }
 
 /**
- * A binding to a wasm module (in service worker format)
+ * A binding to a wasm module (in service-worker format)
  */
 
 interface CfWasmModuleBindings {
@@ -83,10 +83,18 @@ interface CfWasmModuleBindings {
 }
 
 /**
- * A binding to a text blob (in service worker format)
+ * A binding to a text blob (in service-worker format)
  */
 
 interface CfTextBlobBindings {
+  [key: string]: string;
+}
+
+/**
+ * A binding to a data blob (in service-worker format)
+ */
+
+interface CfDataBlobBindings {
   [key: string]: string;
 }
 
@@ -146,6 +154,7 @@ export interface CfWorkerInit {
     kv_namespaces: CfKvNamespace[] | undefined;
     wasm_modules: CfWasmModuleBindings | undefined;
     text_blobs: CfTextBlobBindings | undefined;
+    data_blobs: CfDataBlobBindings | undefined;
     durable_objects: { bindings: CfDurableObject[] } | undefined;
     r2_buckets: CfR2Bucket[] | undefined;
     unsafe: CfUnsafeBinding[] | undefined;

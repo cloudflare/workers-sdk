@@ -207,7 +207,7 @@
 
 import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
+import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -222,6 +222,7 @@ import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import openInBrowser from "./open-in-browser";
+import { readFileSync } from "./parse";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -251,15 +252,43 @@ interface PKCECodes {
   codeVerifier: string;
 }
 
-interface State {
-  accessToken?: AccessToken; // persist
+/**
+ * The module level state of the authentication flow.
+ */
+interface State extends AuthTokens {
   authorizationCode?: string;
   codeChallenge?: string;
   codeVerifier?: string;
   hasAuthCodeBeenExchangedForAccessToken?: boolean;
-  refreshToken?: RefreshToken; // persist
   stateQueryParam?: string;
   scopes?: Scope[];
+}
+
+/**
+ * The tokens related to authentication.
+ */
+interface AuthTokens {
+  accessToken?: AccessToken;
+  refreshToken?: RefreshToken;
+  /** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+  apiToken?: string;
+}
+
+/**
+ * The path to the config file that holds user authentication data,
+ * relative to the user's home directory.
+ */
+export const USER_AUTH_CONFIG_FILE = ".wrangler/config/default.toml";
+
+/**
+ * The data that may be read from the `USER_CONFIG_FILE`.
+ */
+export interface UserAuthConfig {
+  oauth_token?: string;
+  refresh_token?: string;
+  expiration_time?: string;
+  /** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+  api_token?: string;
 }
 
 interface RefreshToken {
@@ -311,60 +340,74 @@ const TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
 const CALLBACK_URL = "http://localhost:8976/oauth/callback";
 const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
 
-const LocalState: State = {};
-let initialised = false;
+let LocalState: State = getAuthTokens();
 
-// we do this because we have some async stuff
-// TODO: this should just happen in the top level
-// and we should figure out how to do top level await
-export async function initialise(): Promise<void> {
+/**
+ * Compute the current auth tokens.
+ */
+function getAuthTokens(config?: UserAuthConfig): AuthTokens {
   // get refreshToken/accessToken from fs if exists
   try {
     // if the environment variable is available, use that
     const apiTokenFromEnv = getCloudflareAPITokenFromEnv();
     if (apiTokenFromEnv) {
-      LocalState.accessToken = {
-        value: apiTokenFromEnv,
-        expiry: "3021-12-31T23:59:59+00:00",
+      return {
+        accessToken: {
+          value: apiTokenFromEnv,
+          expiry: "3021-12-31T23:59:59+00:00",
+        },
       };
-      initialised = true;
-      return;
     }
 
-    const toml = TOML.parse(
-      await readFile(path.join(os.homedir(), ".wrangler/config/default.toml"), {
-        encoding: "utf-8",
-      })
-    );
-    const { oauth_token, refresh_token, expiration_time } = toml as {
-      oauth_token: string;
-      refresh_token: string;
-      expiration_time: string;
-    };
+    // otherwise try loading from the user auth config file.
+    const { oauth_token, refresh_token, expiration_time, api_token } =
+      config || readAuthConfigFile();
+
     if (oauth_token) {
-      LocalState.accessToken = { value: oauth_token, expiry: expiration_time };
+      return {
+        accessToken: {
+          value: oauth_token,
+          // If there is no `expiration_time` field then set it to an old date, to cause it to expire immediately.
+          expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
+        },
+        refreshToken: { value: refresh_token ?? "" },
+      };
+    } else if (api_token) {
+      return { apiToken: api_token };
+    } else {
+      return {};
     }
-    if (refresh_token) {
-      LocalState.refreshToken = { value: refresh_token };
-    }
-  } catch (err) {
-    // no config yet, let's chill
-    // console.error(err);
+  } catch {
+    return {};
   }
-  initialised = true;
 }
 
-// ugh. TODO: see fix from above.
-function throwIfNotInitialised() {
-  if (initialised === false) {
-    throw new Error(
-      "did you forget to call initialise() from the user module?"
-    );
-  }
+/**
+ * Run the initialisation of the auth state, in the case that something changed.
+ *
+ * This runs automatically whenever `writeAuthConfigFile` is run, so generally
+ * you won't need to call it yourself.
+ */
+export function reinitialiseAuthTokens(): void;
+
+/**
+ * Reinitialise auth state from an in-memory config, skipping
+ * over the part where we write a file and then read it back into memory
+ */
+export function reinitialiseAuthTokens(config: UserAuthConfig): void;
+
+export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
+  LocalState = getAuthTokens(config);
 }
 
 export function getAPIToken(): string | undefined {
-  throwIfNotInitialised();
+  if (LocalState.apiToken) {
+    console.warn(
+      "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
+        "This is no longer supported in the current version of Wrangler.\n" +
+        "If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
+    );
+  }
   return LocalState.accessToken?.value;
 }
 
@@ -578,8 +621,8 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
     `?response_type=code&` +
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
     `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    // @ts-expect-error we add offline_access manually
-    `scope=${encodeURIComponent(scopes.concat("offline_access").join(" "))}&` +
+    // we add offline_access manually for every request
+    `scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
     `state=${stateQueryParam}&` +
     `code_challenge=${encodeURIComponent(codeChallenge)}&` +
     `code_challenge_method=S256`
@@ -800,19 +843,28 @@ function generateRandomState(lengthOfState: number): string {
     .join("");
 }
 
-async function writeToConfigFile(tokenData: AccessContext) {
-  await mkdir(path.join(os.homedir(), ".wrangler/config/"), {
+/**
+ * Writes a a wrangler config file (auth credentials) to disk,
+ * and updates the user auth state with the new credentials.
+ */
+export function writeAuthConfigFile(config: UserAuthConfig) {
+  mkdirSync(path.join(os.homedir(), ".wrangler/config/"), {
     recursive: true,
   });
-  await writeFile(
-    path.join(os.homedir(), ".wrangler/config/default.toml"),
-    `
-oauth_token = "${tokenData.token?.value || ""}"
-refresh_token = "${tokenData.refreshToken?.value}"
-expiration_time = "${tokenData.token?.expiry}"
-`,
+  writeFileSync(
+    path.join(os.homedir(), USER_AUTH_CONFIG_FILE),
+    TOML.stringify(config as TOML.JsonMap),
     { encoding: "utf-8" }
   );
+
+  reinitialiseAuthTokens();
+}
+
+export function readAuthConfigFile(): UserAuthConfig {
+  const toml = TOML.parse(
+    readFileSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE))
+  );
+  return toml;
 }
 
 type LoginProps = {
@@ -824,20 +876,29 @@ export async function loginOrRefreshIfRequired(
 ): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
-  if (!LocalState.accessToken) {
+  if (!getAPIToken()) {
     // Not logged in.
     // If we are not interactive, we cannot ask the user to login
     return isInteractive && (await login());
   } else if (isAccessTokenExpired()) {
-    return await refreshToken();
+    // We're logged in, but the refresh token seems to have expired,
+    // so let's try to refresh it
+    const didRefresh = await refreshToken();
+    if (didRefresh) {
+      // The token was refreshed, so we're done here
+      return true;
+    } else {
+      // If the refresh token isn't valid, then we ask the user to login again
+      return isInteractive && (await login());
+    }
   } else {
     return true;
   }
 }
 
 export async function login(props?: LoginProps): Promise<boolean> {
+  console.log("Attempting to login via OAuth...");
   const urlToOpen = await getAuthURL(props?.scopes);
-  await openInBrowser(urlToOpen);
   let server: http.Server;
   let loginTimeoutHandle: NodeJS.Timeout;
   const timerPromise = new Promise<boolean>((resolve) => {
@@ -894,8 +955,12 @@ export async function login(props?: LoginProps): Promise<boolean> {
             finish(false, new ErrorNoAuthCode());
             return;
           } else {
-            const tokenData = await exchangeAuthCodeForAccessToken();
-            await writeToConfigFile(tokenData);
+            const exchange = await exchangeAuthCodeForAccessToken();
+            writeAuthConfigFile({
+              oauth_token: exchange.token?.value ?? "",
+              expiration_time: exchange.token?.expiry,
+              refresh_token: exchange.refreshToken?.value,
+            });
             res.writeHead(307, {
               Location:
                 "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
@@ -903,9 +968,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
             res.end(() => {
               finish(true);
             });
-            console.log(
-              `Successfully configured. You can find your configuration file at: ${os.homedir()}/.wrangler/config/default.toml`
-            );
+            console.log(`Successfully logged in.`);
 
             return;
           }
@@ -916,24 +979,30 @@ export async function login(props?: LoginProps): Promise<boolean> {
     server.listen(8976);
   });
 
+  await openInBrowser(urlToOpen);
+
   return Promise.race([timerPromise, loginPromise]);
 }
 
 /**
  * Checks to see if the access token has expired.
  */
-export function isAccessTokenExpired(): boolean {
-  throwIfNotInitialised();
+function isAccessTokenExpired(): boolean {
   const { accessToken } = LocalState;
   return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
-export async function refreshToken(): Promise<boolean> {
-  throwIfNotInitialised();
+async function refreshToken(): Promise<boolean> {
   // refresh
   try {
-    const refreshed = await exchangeRefreshTokenForAccessToken();
-    await writeToConfigFile(refreshed);
+    const {
+      token: { value: oauth_token, expiry: expiration_time } = {
+        value: "",
+        expiry: "",
+      },
+      refreshToken: { value: refresh_token } = {},
+    } = await exchangeRefreshTokenForAccessToken();
+    writeAuthConfigFile({ oauth_token, expiration_time, refresh_token });
     return true;
   } catch (err) {
     console.error(err);
@@ -942,10 +1011,28 @@ export async function refreshToken(): Promise<boolean> {
 }
 
 export async function logout(): Promise<void> {
-  throwIfNotInitialised();
-  if (!LocalState.refreshToken) {
-    console.log("Not logged in, exiting...");
-    return;
+  if (!LocalState.accessToken) {
+    if (!LocalState.refreshToken) {
+      console.log("Not logged in, exiting...");
+      return;
+    }
+
+    const body =
+      `client_id=${encodeURIComponent(CLIENT_ID)}&` +
+      `token_type_hint=refresh_token&` +
+      `token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
+
+    const response = await fetch(REVOKE_URL, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+    await response.text(); // blank text? would be nice if it was something meaningful
+    console.log(
+      "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
+    );
   }
   const body =
     `client_id=${encodeURIComponent(CLIENT_ID)}&` +
@@ -960,19 +1047,12 @@ export async function logout(): Promise<void> {
     },
   });
   await response.text(); // blank text? would be nice if it was something meaningful
-  console.log(
-    "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
-  );
-  // delete the file
-  await rm(path.join(os.homedir(), ".wrangler/config/default.toml"));
-  console.log(
-    `Removing ${os.homedir()}/.wrangler/config/default.toml.. success!`
-  );
+  rmSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE));
+  console.log(`Successfully logged out.`);
 }
 
-export function listScopes(): void {
-  throwIfNotInitialised();
-  console.log("💁 Available scopes:");
+export function listScopes(message = "💁 Available scopes:"): void {
+  console.log(message);
   const data = ScopeKeys.map((scope: Scope) => ({
     Scope: scope,
     Description: Scopes[scope],

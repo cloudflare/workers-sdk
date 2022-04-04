@@ -1,12 +1,12 @@
-## 🤠 wrangler
+## ⛅️ wrangler
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
 [(Read the full stack week launch blog post.)](https://blog.cloudflare.com/wrangler-v2-beta/)
 
-**DISCLAIMER**: This is a work in progress, and is NOT recommended for use in production. We are opening this preview for feedback from the community, and to openly share our [roadmap](https://github.com/cloudflare/wrangler2/issues/12) for the future. As such, expect APIs and documentation to change before the end of the preview.
+**DISCLAIMER**: This is a work in progress, and is NOT recommended for use in production. We are opening this preview for feedback from the community, and to openly share our [roadmap](https://github.com/cloudflare/wrangler2/milestones) for the future. As such, expect APIs and documentation to change before the end of the preview.
 
-Further, we will NOT do a general release until we are both feature complete, and have a full backward compatibility and incremental migration plan in place. For more details, follow the [parent roadmap issue](https://github.com/cloudflare/wrangler2/issues/12).
+Further, we will NOT do a general release until we are both feature complete, and have a full backward compatibility and incremental migration plan in place. For more details, follow the [2.0 milestone](https://github.com/cloudflare/wrangler2/milestone/1).
 
 ## Quick Start
 

@@ -52,6 +52,11 @@ interface EnvironmentInheritable {
   compatibility_flags: string[];
 
   /**
+   * The entrypoint/path to the JavaScript file that will be executed.
+   */
+  main: string | undefined;
+
+  /**
    * Whether we use <name>.<subdomain>.workers.dev to
    * test and deploy your worker.
    *
@@ -59,7 +64,7 @@ interface EnvironmentInheritable {
    * @breaking
    * @inheritable
    */
-  workers_dev: boolean;
+  workers_dev: boolean | undefined;
 
   /**
    * A list of routes that your worker should be published to.
@@ -81,6 +86,11 @@ interface EnvironmentInheritable {
    * @inheritable
    */
   route: string | undefined;
+
+  /**
+   * Path to a custom tsconfig
+   */
+  tsconfig: string | undefined;
 
   /**
    * The function to use to replace jsx syntax.
@@ -132,6 +142,28 @@ interface EnvironmentInheritable {
    * @inheritable
    */
   rules: Rule[];
+
+  /**
+   * Configures a custom build step to be run by Wrangler when building your Worker.
+   *
+   * Refer to the [custom builds documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration#build)
+   * for more details.
+   *
+   * @default {}
+   */
+  build: {
+    /** The command used to build your Worker. On Linux and macOS, the command is executed in the `sh` shell and the `cmd` shell for Windows. The `&&` and `||` shell operators may be used. */
+    command?: string;
+    /** The directory in which the command is executed. */
+    cwd?: string;
+    /** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
+    watch_dir?: string;
+    /**
+     * Deprecated field previously used to configure the build and upload of the script.
+     * @deprecated
+     */
+    upload?: DeprecatedUpload;
+  };
 
   /**
    * TODO: remove this as it has been deprecated.
@@ -275,6 +307,40 @@ interface EnvironmentDeprecated {
     /** The Service's environment */
     environment: string;
   }[];
+}
+
+/**
+ * Deprecated upload configuration.
+ */
+export interface DeprecatedUpload {
+  /**
+   * The format of the Worker script.
+   *
+   * @deprecated We infer the format automatically now.
+   */
+  format?: "modules" | "service-worker";
+
+  /**
+   * The directory you wish to upload your worker from,
+   * relative to the wrangler.toml file.
+   *
+   * Defaults to the directory containing the wrangler.toml file.
+   *
+   * @deprecated
+   */
+  dir?: string;
+
+  /**
+   * The path to the Worker script, relative to `upload.dir`.
+   *
+   * @deprecated This will be replaced by a command line argument.
+   */
+  main?: string;
+
+  /**
+   * @deprecated This is now defined at the top level `rules` field.
+   */
+  rules?: Environment["rules"];
 }
 
 /**

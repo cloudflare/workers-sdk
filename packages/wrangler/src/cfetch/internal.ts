@@ -1,6 +1,7 @@
-import { fetch } from "undici";
+import { fetch, Headers } from "undici";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
+import { reportError } from "../reporting";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
@@ -47,6 +48,7 @@ export async function fetchInternal<ResponseType>(
   try {
     return parseJSON(jsonText) as ResponseType;
   } catch (err) {
+    await reportError(err as Error);
     throw new ParseError({
       text: "Received a malformed response from the API",
       notes: [
@@ -72,7 +74,11 @@ function truncate(text: string, maxLength: number): string {
 function cloneHeaders(
   headers: HeadersInit | undefined
 ): Record<string, string> {
-  return { ...headers };
+  return headers instanceof Headers
+    ? Object.fromEntries(headers.entries())
+    : Array.isArray(headers)
+    ? Object.fromEntries(headers)
+    : { ...headers };
 }
 
 async function requireLoggedIn(): Promise<void> {
@@ -83,11 +89,11 @@ async function requireLoggedIn(): Promise<void> {
 }
 
 function requireApiToken(): string {
-  const apiToken = getAPIToken();
-  if (!apiToken) {
+  const authToken = getAPIToken();
+  if (!authToken) {
     throw new Error("No API token found.");
   }
-  return apiToken;
+  return authToken;
 }
 
 function addAuthorizationHeader(
