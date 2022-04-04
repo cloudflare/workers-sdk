@@ -14,16 +14,18 @@
     "build": "run-p build:*",
     "build:d.ts": "tsc",
     "build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "dependencies": {
+    "esbuild": "^0.14.31",
     "execa": "^6.1.0",
-    "rimraf": "^3.0.2",
-    "esbuild": "^0.14.31"
+    "rimraf": "^3.0.2"
   },
   "devDependencies": {
+    "@types/jest": "^27.4.1",
     "@types/rimraf": "^3.0.2",
     "@types/webpack": "^4.41.32",
+    "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^4.6.3",
     "webpack": "^4.46.0",
@@ -31,5 +33,28 @@
   },
   "peerDependencies": {
     "webpack": "^4.46.0"
+  },
+  "jest": {
+    "restoreMocks": true,
+    "testTimeout": 30000,
+    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
+    "transformIgnorePatterns": [
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"
+    ],
+    "moduleNameMapper": {
+      "clipboardy": "<rootDir>/../wrangler/src/__tests__/helpers/clipboardy-mock.js",
+      "miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
+    },
+    "transform": {
+      "^.+\\.c?(t|j)sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true
+        }
+      ]
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/../wrangler/src/__tests__/jest.setup.ts"
+    ]
   }
 }
