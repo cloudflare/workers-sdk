@@ -177,3 +177,4 @@ wrangler-dist/
 miniflare-dist
 packages/wrangler/wrangler.toml
 packages/prerelease-registry/_worker.js
+packages/wranglerjs-compat-webpack-plugin/lib

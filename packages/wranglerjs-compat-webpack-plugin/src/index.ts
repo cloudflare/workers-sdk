@@ -210,7 +210,11 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
       return;
     }
 
+    const warning = `wrangler 1 would automatically clone a simple worker into ${this.packageDir} for you if it detected a sites project with no worker component, but you should now include the worker yourself.`;
+    const heresTheTemplate = `You can clone the worker into ${this.packageDir} yourself:`;
     const template = "https://github.com/cloudflare/worker-sites-init";
+
+    console.warn(`${warning}\n${heresTheTemplate}\n${template}`);
 
     await execa("git", ["clone", "--depth", "1", template, this.packageDir]);
     await rm(path.resolve(this.packageDir, ".git"));

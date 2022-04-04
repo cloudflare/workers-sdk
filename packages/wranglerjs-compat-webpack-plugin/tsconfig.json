@@ -4,6 +4,12 @@
     "module": "ES2015",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "jsx": "react"
-  }
+    "skipLibCheck": true,
+    "jsx": "react",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "lib"
+  },
+  "include": ["src"]
 }
