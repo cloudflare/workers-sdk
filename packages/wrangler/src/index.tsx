@@ -46,11 +46,10 @@ import {
   logout,
   listScopes,
   initialise as initialiseUserConfig,
-  loginOrRefreshIfRequired,
-  getAccountId,
   validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
+import { requireAuth } from "./utils";
 
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
@@ -101,26 +100,6 @@ function getScriptName(
   return isLegacyEnv(args, config)
     ? `${shortScriptName}${args.env ? `-${args.env}` : ""}`
     : shortScriptName;
-}
-
-/**
- * Ensure that a user is logged in, and a valid account_id is available.
- */
-async function requireAuth(
-  config: Config,
-  isInteractive = true
-): Promise<string> {
-  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
-  if (!loggedIn) {
-    // didn't login, let's just quit
-    throw new Error("Did not login, quitting...");
-  }
-  const accountId = config.account_id || (await getAccountId(isInteractive));
-  if (!accountId) {
-    throw new Error("No account id found, quitting...");
-  }
-
-  return accountId;
 }
 
 /**

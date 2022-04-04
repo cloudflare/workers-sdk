@@ -17,6 +17,14 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback } from "yargs";
+import { fetchResult } from "./cfetch";
+import React from "react";
+import { render } from "ink";
+import Table from "ink-table";
+import { requireAuth } from "./utils";
+import { readConfig } from "./config";
+
+type ConfigPath = string | undefined;
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1033,6 +1041,33 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             fallbackService,
             watch,
           });
+        }
+      )
+    )
+    .command("project", false, (yargs) =>
+      yargs.command(
+        "list",
+        "List your Cloudflare Pages projects",
+        (yargs) => {
+          // TODO: Does this need any options?
+          return yargs;
+        },
+        async (args) => {
+          const config = readConfig(args.config as ConfigPath);
+          const accountId = await requireAuth(config);
+          let projects = await fetchResult<any>(
+            `/accounts/${accountId}/pages/projects`
+          );
+
+          projects = projects.map((project: any) => {
+            return {
+              "Project Name": project.name,
+              "Project Domains": `${project.domains.join(", ")}`,
+              Git: !!project.source,
+              "Last Modified": project.latest_deployment.modified_on,
+            };
+          });
+          return render(<Table data={projects}></Table>);
         }
       )
     );
