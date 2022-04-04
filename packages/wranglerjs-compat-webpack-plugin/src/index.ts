@@ -1,3 +1,30 @@
+/*
+ * This is a webpack plugin that aims to recreate the functionality of
+ * Wrangler 1's `type = wepback` setting for workers projects.
+ *
+ * It's kind of gross, and not good for _new_ projects, but it should work ok at
+ * getting people using Wrangler 1 with the inbuilt webpack 4 support migrated
+ * over to Wrangler 2. Combined with docs on ejecting webpack, the pain of
+ * losing 1's (tenuous at best) webpack support should be mostly mitigated.
+ *
+ * This plugin attempts to replicate Wrangler 1's behavior 1:1 (specifically,
+ * https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L39-L58)
+ * so it:
+ *
+ * - figures out where the actual worker is located, and saves that location as "package_dir" (https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/target.rs#L40-L50)
+ *   - if it's a sites project (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L161-L163)
+ *     - generates a worker if necessary (https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56)
+ *   - runs `npm install` (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L165)
+ *   - use the "main" file of {package_dir} as the entry if none is specified (https://github.com/cloudflare/wrangler/blob/master/src/upload/package.rs#L16-L27)
+ * - runs wranglerjs-equivalent webpack hooks that: (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L44)
+ *   - assert `target` is `webworker` (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L52-L60)
+ *   - assert `output.filename` is `worker.js` and `output.sourceMapFilename` is `worker.map.js` (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L62-L92)
+ *   - bundle all emitted JS into a single file (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L118-L121)
+ * - takes webpack output and writes it to disk (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L144)
+ *   - at `{package_dir}/worker` (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L35-L37)
+ *   - if there's WASM, adds some hardcoded js to import it (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L47-L64)
+ */
+
 import fs from "node:fs";
 import path from "node:path";
 import { execa } from "execa";
@@ -5,16 +32,30 @@ import rimraf from "rimraf";
 import { Plugin } from "webpack";
 import { readConfig } from "wrangler/src/config";
 
-import type { Compiler, Configuration as WebpackConfig } from "webpack";
+import type {
+  Compiler,
+  Configuration as WebpackConfig,
+  compilation as _compilation,
+} from "webpack";
 import type { Config as WranglerConfig } from "wrangler/src/config";
+type Compilation = _compilation.Compilation;
 
 const PLUGIN_NAME = "WranglerJsCompatWebpackPlugin";
+const WASM_IMPORT = `
+WebAssembly.instantiateStreaming =
+    async function instantiateStreaming(req, importObject) {
+  const module = WASM_MODULE;
+  return {
+    module,
+    instance: new WebAssembly.Instance(module, importObject)
+  }
+};
+`;
 
 export type WranglerJsCompatWebpackPluginArgs = {
   /**
    * Path to your wrangler configuration file (wrangler.toml).
-   * If omitted, an effort is made to find your file before
-   * erroring.
+   * If omitted, an effort is made to find your file.
    */
   pathToWranglerToml?: string;
   /**
@@ -26,7 +67,11 @@ export type WranglerJsCompatWebpackPluginArgs = {
 
 export class WranglerJsCompatWebpackPlugin extends Plugin {
   private readonly config: WranglerConfig;
-  private readonly packageDir: string;
+  private packageDir!: string; // set by this.setPackageDir
+  private output?: {
+    js: string;
+    wasm?: Buffer;
+  };
 
   constructor({
     pathToWranglerToml,
@@ -38,10 +83,70 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
       env: environment,
       "legacy-env": true,
     });
+  }
+
+  apply(compiler: Compiler): void {
+    // figure out where the actual worker is located, and save that location as this.packageDir
+    compiler.hooks.entryOption.tap(PLUGIN_NAME, this.setPackageDir);
+
+    // assert:
+    // - `target` is`webworker`
+    // - `output.filename` is `worker.js`
+    // - `output.sourceMapFilename` is`worker.map.js` if it exists
+    compiler.hooks.afterPlugins.tap(PLUGIN_NAME, this.checkOutputs);
+
+    // if it's a sites project, generate a worker if necessary.
+    // run `npm install` in this.packageDir
+    compiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, this.setupBuild);
+
+    // bundle all emitted JS into a single file
+    compiler.hooks.shouldEmit.tap(PLUGIN_NAME, this.bundleAssets);
+  }
+
+  /**
+   * Emulates behavior from [`Target::package_dir`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/target.rs#L40-L50).
+   *
+   * We encourage the user to specify the "context" and "entry" explicitly in
+   * their webpack config, since wrangler 1 kind of inferred that stuff but
+   * wrangler 2 is very hands-off for custom builds.
+   *
+   * This has to be a synchronous function that only returns something
+   * if it encounters an error. In webpack 4 `entryOption` is a
+   * [`SyncBailHook`](https://github.com/webpack/tapable#hook-types)
+   * ([docs](https://v4.webpack.js.org/api/compiler-hooks/#entryoption)).
+   *
+   * Docs on `context` and `entry` are [here](https://v4.webpack.js.org/configuration/entry-context/).
+   *
+   * @param context The base directory, an absolute path, for resolving entry points and loaders from configuration.
+   * @param entry The point or points where to start the application bundling process.
+   */
+  private setPackageDir(
+    context: WebpackConfig["context"],
+    entry: WebpackConfig["entry"]
+  ) {
+    if (context === undefined || entry === undefined) {
+      const weWouldGuess =
+        "With `type = webpack`, wrangler 1 would try to guess where your worker lives.";
+      const noLonger =
+        "Now that you're running webpack outside of wrangler, you need to specify this explicitly.";
+      const docsUrl = "https://v4.webpack.js.org/configuration/entry-context/";
+      console.warn(`${weWouldGuess}\n${noLonger}\n${docsUrl}`);
+    }
+
+    if (context === undefined) {
+      console.warn(
+        "You should set the `context` key in your webpack config to be the directory where your worker source code is."
+      );
+    }
+
+    if (entry === undefined) {
+      console.warn(
+        'You should set the `entry` key in your webpack config to be the entry point for you worker (e.g. "index.js")'
+      );
+    }
 
     if (this.config.site) {
       this.packageDir = path.resolve(
-        process.cwd(),
         this.config.site["entry-point"] || "workers-site"
       );
     } else {
@@ -49,22 +154,57 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
     }
   }
 
-  apply(compiler: Compiler): void {
-    compiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, this.setupBuild);
+  /**
+   * Mimics wrangler-js' [assertions for build output](https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L52-L92)
+   */
+  private checkOutputs({ options: { target, output } }: Compiler) {
+    if (target !== "webworker") {
+      throw new Error(
+        'You need to set `target` to "webworker" in your webpack config.'
+      );
+    }
+
+    if (output?.filename !== "worker.js") {
+      throw new Error(
+        'You need to set `output.filename` to "worker.js" in your webpack config.'
+      );
+    }
+
+    if (
+      output?.sourceMapFilename &&
+      output?.sourceMapFilename !== "worker.js.map"
+    ) {
+      throw new Error(
+        'You need to set `output.sourceMapFilename` to "worker.js.map" in your webpack config.'
+      );
+    }
   }
 
+  /**
+   * Partially equivalent to [`setup_build`](https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L154-L210)
+   * in wrangler 1, with the notable exception of preparing to run webpack
+   * since we now have the user do that.
+   */
   private async setupBuild() {
     if (this.config.site !== undefined) {
       await this.scaffoldSitesWorker();
     }
 
-    await execa("npm", ["install"], {
-      cwd: this.packageDir,
-    });
+    if (!fs.existsSync(path.join(this.packageDir, "node_modules"))) {
+      console.warn(
+        `Installing deps in ${this.packageDir}, but you should do this yourself...`
+      );
+      await execa("npm", ["install"], {
+        cwd: this.packageDir,
+      });
+    }
   }
 
-  /// Generate a sites-worker if one doesn't exist already
-  /// https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56
+  /**
+   * Generate a sites-worker if one doesn't exist already.
+   * equivalent to [`Site::scaffold_worker`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56)
+   * in wrangler 1.
+   */
   private async scaffoldSitesWorker() {
     if (fs.existsSync(this.packageDir)) {
       return;
@@ -75,8 +215,61 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
     await execa("git", ["clone", "--depth", "1", template, this.packageDir]);
     await rm(path.resolve(this.packageDir, ".git"));
   }
+
+  private bundleAssets({ assets }: Compilation) {
+    const jsAssets = getAssetsWithExtension(assets, "js");
+
+    if (jsAssets.length > 1) {
+      console.warn(
+        "Webpack emitted multiple javascript files. We'll combine them for you, but you should configure webpack to emit exactly one."
+      );
+    }
+
+    // https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L118-L121
+    this.output = {
+      js: jsAssets.reduce((acc: string, k) => {
+        const asset = assets[k];
+        return acc + asset.source();
+      }, ""),
+    };
+
+    const wasmAssets = getAssetsWithExtension(assets, "wasm");
+    if (wasmAssets.length > 0) {
+      this.output.wasm = assets[wasmAssets[0]];
+    }
+
+    this.writeOutput();
+
+    return false;
+  }
+
+  /**
+   * Mimics [`Bundle::write`](https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L34-L68)
+   */
+  private writeOutput() {
+    if (!this.output) {
+      throw new Error("This should only be called after bundling assets.");
+    }
+
+    fs.mkdirSync(path.join(this.packageDir, "worker"), { recursive: true });
+    if (this.output.wasm) {
+      fs.writeFileSync(
+        path.join(this.packageDir, "worker", "module.wasm"),
+        this.output.wasm
+      );
+      this.output.js = `${WASM_IMPORT}\n${this.output.js}`;
+    }
+
+    fs.writeFileSync(
+      path.join(this.packageDir, "worker", "script.js"),
+      this.output.js
+    );
+  }
 }
 
+/**
+ * Promise wrapper around rimraf
+ */
 function rm(
   pathToRemove: string,
   options?: rimraf.Options
@@ -93,4 +286,12 @@ function rm(
       ? rimraf(pathToRemove, options, callback)
       : rimraf(pathToRemove, callback);
   });
+}
+
+/**
+ * Gets all assets with a given extension
+ */
+function getAssetsWithExtension(assets: object, extension: string) {
+  const regex = new RegExp(`\\.${extension}$`);
+  return Object.keys(assets).filter((filename) => regex.test(filename));
 }
