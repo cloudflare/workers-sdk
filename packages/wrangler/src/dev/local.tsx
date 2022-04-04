@@ -60,11 +60,16 @@ function useLocalWorker({
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
   useEffect(() => {
+    const abortController = new AbortController();
     async function startLocalWorker() {
       if (!bundle || !format) return;
 
       // port for the worker
-      await waitForPortToBeAvailable(port, { retryPeriod: 200, timeout: 2000 });
+      await waitForPortToBeAvailable(port, {
+        retryPeriod: 200,
+        timeout: 2000,
+        abortSignal: abortController.signal,
+      });
 
       if (publicDirectory) {
         throw new Error(
@@ -249,6 +254,7 @@ function useLocalWorker({
     });
 
     return () => {
+      abortController.abort();
       if (local.current) {
         console.log("⎔ Shutting down local server.");
         local.current?.kill();
