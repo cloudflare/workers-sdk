@@ -17,6 +17,15 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback } from "yargs";
+import { fetchResult } from "./cfetch";
+import React from "react";
+import { render } from "ink";
+import Table from "ink-table";
+import { requireAuth } from "./utils";
+import { readConfig } from "./config";
+import { format } from "timeago.js";
+
+type ConfigPath = string | undefined;
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1033,6 +1042,70 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             fallbackService,
             watch,
           });
+        }
+      )
+    )
+    .command("deployment", false, (yargs) =>
+      yargs.command(
+        "list",
+        "List deployments in your Cloudflare Pages project",
+        (yargs) =>
+          yargs.options({
+            project: {
+              type: "string",
+              demandOption: true,
+              description:
+                "The name of the project you would like to list deployments for",
+            },
+          }),
+        async (args) => {
+          const config = readConfig(args.config as ConfigPath);
+          const accountId = await requireAuth(config);
+
+          type Deployment = {
+            environment: string;
+            deployment_trigger: {
+              metadata: {
+                commit_hash: string;
+              };
+            };
+            url: string;
+            latest_stage: {
+              status: string;
+              ended_on: string;
+            };
+            project_name: string;
+          };
+
+          const deployments: Array<Deployment> = await fetchResult(
+            `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+          );
+
+          const titleCase = (word: string) =>
+            word.charAt(0).toUpperCase() + word.slice(1);
+
+          const shortSha = (sha: string) => sha.slice(0, 7);
+
+          const getStatus = (deployment: Deployment) => {
+            // Return a pretty time since timestamp if successful otherwise the status
+            if (deployment.latest_stage.status === `success`) {
+              return format(deployment.latest_stage.ended_on);
+            }
+            return titleCase(deployment.latest_stage.status);
+          };
+
+          const data = deployments.map((deployment) => {
+            return {
+              Environment: titleCase(deployment.environment),
+              Source: shortSha(
+                deployment.deployment_trigger.metadata.commit_hash
+              ),
+              Deployment: deployment.url,
+              Status: getStatus(deployment),
+              Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+            };
+          });
+          return render(<Table data={data}></Table>);
         }
       )
     );

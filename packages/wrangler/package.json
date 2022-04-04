@@ -41,6 +41,7 @@
     "path-to-regexp": "^6.2.0",
     "selfsigned": "^2.0.0",
     "semiver": "^1.1.0",
+    "timeago.js": "^4.0.2",
     "xxhash-wasm": "^1.0.1"
   },
   "optionalDependencies": {
