@@ -1087,7 +1087,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             return {
               "Project Name": project.name,
               "Project Domains": `${project.domains.join(", ")}`,
-              Git: !!project.source,
+              "Git Provider": project.source ? "✅ Yes" : "❌ No",
               "Last Modified": project.latest_deployment.modified_on,
             };
           });
