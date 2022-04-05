@@ -48,9 +48,8 @@ import {
   login,
   logout,
   listScopes,
-  loginOrRefreshIfRequired,
-  getAccountId,
   validateScopeKeys,
+  requireAuth,
 } from "./user";
 import { whoami } from "./whoami";
 
@@ -131,26 +130,6 @@ function getLegacyScriptName(
   return args.name && args.env && isLegacyEnv(args, config)
     ? `${args.name}-${args.env}`
     : args.name ?? config.name;
-}
-
-/**
- * Ensure that a user is logged in, and a valid account_id is available.
- */
-async function requireAuth(
-  config: Config,
-  isInteractive = true
-): Promise<string> {
-  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
-  if (!loggedIn) {
-    // didn't login, let's just quit
-    throw new Error("Did not login, quitting...");
-  }
-  const accountId = config.account_id || (await getAccountId(isInteractive));
-  if (!accountId) {
-    throw new Error("No account id found, quitting...");
-  }
-
-  return accountId;
 }
 
 /**

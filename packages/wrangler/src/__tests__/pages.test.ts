@@ -1,6 +1,9 @@
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Project } from "../pages";
 
 describe("subcommand implicit help ran on incomplete command execution", () => {
   runInTempDir();
@@ -52,6 +55,78 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       expect(std.out).toMatchInlineSnapshot(
         `"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"`
       );
+    });
+  });
+
+  describe("project list", () => {
+    mockAccountId();
+    mockApiToken();
+
+    afterEach(() => {
+      unsetAllMocks();
+    });
+    function mockListRequest(projects: unknown[]) {
+      const requests = { count: 0 };
+      setMockResponse(
+        "/accounts/:accountId/pages/projects",
+        ([_url, accountId], init, query) => {
+          requests.count++;
+          expect(accountId).toEqual("some-account-id");
+          expect(query.get("per_page")).toEqual("10");
+          expect(query.get("page")).toEqual(`${requests.count}`);
+          expect(init).toEqual({});
+          const pageSize = Number(query.get("per_page"));
+          const page = Number(query.get("page"));
+          return projects.slice((page - 1) * pageSize, page * pageSize);
+        }
+      );
+      return requests;
+    }
+
+    it("should make request to list projects", async () => {
+      const projects: Project[] = [
+        {
+          name: "dogs",
+          domains: ["dogs.pages.dev"],
+          source: {
+            type: "github",
+          },
+          latest_deployment: {
+            modified_on: "2021-11-17T14:52:26.133835Z",
+          },
+        },
+        {
+          name: "cats",
+          domains: ["cats.pages.dev", "kitten.pages.dev"],
+          latest_deployment: {
+            modified_on: "2021-11-17T14:52:26.133835Z",
+          },
+        },
+      ];
+
+      const requests = mockListRequest(projects);
+      await runWrangler("pages project list");
+
+      expect(requests.count).toBe(1);
+    });
+
+    it("should make multiple requests for paginated results", async () => {
+      const projects: Project[] = [];
+      for (let i = 0; i < 15; i++) {
+        projects.push({
+          name: "dogs" + i,
+          domains: [i + "dogs.pages.dev"],
+          source: {
+            type: "github",
+          },
+          latest_deployment: {
+            modified_on: "2021-11-17T14:52:26.133835Z",
+          },
+        });
+      }
+      const requests = mockListRequest(projects);
+      await runWrangler("pages project list");
+      expect(requests.count).toEqual(2);
     });
   });
 });

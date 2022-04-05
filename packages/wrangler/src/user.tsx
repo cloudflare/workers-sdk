@@ -223,6 +223,7 @@ import { getCloudflareApiBaseUrl } from "./cfetch";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import openInBrowser from "./open-in-browser";
 import { readFileSync } from "./parse";
+import type { Config } from "./config";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -1142,4 +1143,24 @@ export function ChooseAccount(props: {
       />
     </>
   );
+}
+
+/**
+ * Ensure that a user is logged in, and a valid account_id is available.
+ */
+export async function requireAuth(
+  config: Config,
+  isInteractive = true
+): Promise<string> {
+  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
+  if (!loggedIn) {
+    // didn't login, let's just quit
+    throw new Error("Did not login, quitting...");
+  }
+  const accountId = config.account_id || (await getAccountId(isInteractive));
+  if (!accountId) {
+    throw new Error("No account id found, quitting...");
+  }
+
+  return accountId;
 }
