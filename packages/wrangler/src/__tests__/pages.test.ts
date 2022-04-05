@@ -65,7 +65,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
     afterEach(() => {
       unsetAllMocks();
     });
-    function mockListRequest(namespaces: unknown[]) {
+    function mockListRequest(projects: unknown[]) {
       const requests = { count: 0 };
       setMockResponse(
         "/accounts/:accountId/pages/projects",
