@@ -77,7 +77,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
           expect(init).toEqual({});
           const pageSize = Number(query.get("per_page"));
           const page = Number(query.get("page"));
-          return namespaces.slice((page - 1) * pageSize, page * pageSize);
+          return projects.slice((page - 1) * pageSize, page * pageSize);
         }
       );
       return requests;
