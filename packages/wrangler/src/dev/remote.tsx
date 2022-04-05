@@ -24,7 +24,7 @@ export function Remote(props: {
   accountId: undefined | string;
   apiToken: undefined | string;
   bindings: CfWorkerInit["bindings"];
-  compatibilityDate: string | undefined;
+  compatibilityDate: string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   env: string | undefined;
@@ -106,6 +106,7 @@ export function useWorker(props: {
   const startedRef = useRef(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
     async function start() {
       setToken(undefined); // reset token in case we're re-running
 
@@ -173,7 +174,8 @@ export function useWorker(props: {
             accountId,
             apiToken,
           },
-          { env: props.env, legacyEnv: props.legacyEnv, zone: props.zone }
+          { env: props.env, legacyEnv: props.legacyEnv, zone: props.zone },
+          abortController.signal
         )
       );
     }
@@ -182,6 +184,10 @@ export function useWorker(props: {
       // since it could recover after the developer fixes whatever's wrong
       console.error("remote worker:", err);
     });
+
+    return () => {
+      abortController.abort();
+    };
   }, [
     name,
     bundle,

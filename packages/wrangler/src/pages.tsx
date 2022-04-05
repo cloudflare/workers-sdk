@@ -6,27 +6,38 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { URL } from "node:url";
 import { watch } from "chokidar";
+import { render } from "ink";
+import Table from "ink-table";
 import { getType } from "mime";
+import React from "react";
+import { format } from "timeago.js";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
+import { fetchResult } from "./cfetch";
+import { readConfig } from "./config";
 import { FatalError } from "./errors";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
+import { requireAuth } from "./user";
 import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback } from "yargs";
-import { fetchResult } from "./cfetch";
-import React from "react";
-import { render } from "ink";
-import Table from "ink-table";
-import { requireAuth } from "./utils";
-import { readConfig } from "./config";
-import { format } from "timeago.js";
 
 type ConfigPath = string | undefined;
+
+export type Project = {
+  name: string;
+  domains: Array<string>;
+  source?: {
+    type: string;
+  };
+  latest_deployment: {
+    modified_on: string;
+  };
+};
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1069,6 +1080,29 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         }
       )
     )
+    .command("project", false, (yargs) =>
+      yargs.command(
+        "list",
+        "List your Cloudflare Pages projects",
+        () => {},
+        async (args) => {
+          const config = readConfig(args.config as ConfigPath, args);
+          const accountId = await requireAuth(config);
+
+          const projects: Array<Project> = await listProjects({ accountId });
+
+          const data = projects.map((project) => {
+            return {
+              "Project Name": project.name,
+              "Project Domains": `${project.domains.join(", ")}`,
+              "Git Provider": project.source ? "Yes" : "No",
+              "Last Modified": format(project.latest_deployment.modified_on),
+            };
+          });
+          render(<Table data={data}></Table>);
+        }
+      )
+    )
     .command("deployment", false, (yargs) =>
       yargs.command(
         "list",
@@ -1139,4 +1173,30 @@ const invalidAssetsFetch: typeof fetch = () => {
   throw new Error(
     "Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."
   );
+};
+
+const listProjects = async ({
+  accountId,
+}: {
+  accountId: string;
+}): Promise<Array<Project>> => {
+  const pageSize = 10;
+  let page = 1;
+  const results = [];
+  while (results.length % pageSize === 0) {
+    const json: Array<Project> = await fetchResult(
+      `/accounts/${accountId}/pages/projects`,
+      {},
+      new URLSearchParams({
+        per_page: pageSize.toString(),
+        page: page.toString(),
+      })
+    );
+    page++;
+    results.push(...json);
+    if (json.length < pageSize) {
+      break;
+    }
+  }
+  return results;
 };

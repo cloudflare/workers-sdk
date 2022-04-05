@@ -154,19 +154,26 @@ export default function useInspector(props: InspectorProps) {
    * of the component lifecycle. Convenient.
    */
   useEffect(() => {
+    const abortController = new AbortController();
     async function startInspectorProxy() {
       await waitForPortToBeAvailable(props.port, {
         retryPeriod: 200,
         timeout: 2000,
+        abortSignal: abortController.signal,
       });
       server.listen(props.port);
     }
-    startInspectorProxy().catch((err) => console.error(err));
+    startInspectorProxy().catch((err) => {
+      if ((err as { code: string }).code !== "ABORT_ERR") {
+        console.error(err);
+      }
+    });
     return () => {
       server.close();
       // Also disconnect any open websockets/devtools connections
       wsServer.clients.forEach((ws) => ws.close());
       wsServer.close();
+      abortController.abort();
     };
   }, [props.port, server, wsServer]);
 

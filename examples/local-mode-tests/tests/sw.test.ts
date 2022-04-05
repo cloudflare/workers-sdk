@@ -21,9 +21,23 @@ const isWindows = process.platform === "win32";
 let wranglerProcess: ChildProcess;
 
 beforeAll(async () => {
-  wranglerProcess = spawn("npx", ["wrangler", "dev", "--local"], {
-    shell: isWindows,
-  });
+  wranglerProcess = spawn(
+    "npx",
+    [
+      "wrangler",
+      "dev",
+      "src/sw.ts",
+      "--local",
+      "--config",
+      "src/wrangler.sw.toml",
+      "--port",
+      "9002",
+    ],
+    {
+      shell: isWindows,
+      stdio: "inherit",
+    }
+  );
 });
 
 afterAll(async () => {
@@ -40,7 +54,19 @@ afterAll(async () => {
 });
 
 it("renders", async () => {
-  const response = await waitUntilReady("http://localhost:8787/");
+  const response = await waitUntilReady("http://localhost:9002/");
   const text = await response.text();
-  expect(text).toContain("Hello World!");
+  expect(text).toMatchInlineSnapshot(`
+    "{
+      \\"VAR1\\": \\"value1\\",
+      \\"VAR2\\": 123,
+      \\"VAR3\\": {
+        \\"abc\\": \\"def\\"
+      },
+      \\"text\\": \\"Here be some text\\",
+      \\"data\\": \\"Here be some data\\",
+      \\"TEXT\\": \\"Here be some text\\",
+      \\"DATA\\": \\"Here be some data\\"
+    }"
+  `);
 });

@@ -5,7 +5,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "check:type": "tsc",
     "test": "npx jest --forceExit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.2.0"
   },
   "keywords": [],
   "author": "",

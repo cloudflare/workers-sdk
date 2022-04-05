@@ -40,7 +40,7 @@ export type DevProps = {
   crons: Config["triggers"]["crons"];
   public: undefined | string;
   assetPaths: undefined | AssetPaths;
-  compatibilityDate: undefined | string;
+  compatibilityDate: string;
   compatibilityFlags: undefined | string[];
   usageModel: undefined | "bundled" | "unbound";
   build: {
@@ -136,11 +136,16 @@ function InteractiveDevSession(props: InteractiveDevSessionProps) {
     <>
       <DevSession {...props} local={toggles.local} />
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
-        <Text>
-          {`B to open a browser, D to open Devtools, L to ${
-            toggles.local ? "turn off" : "turn on"
-          } local mode, C to clear console, X to exit`}
-        </Text>
+        <Text bold={true}>[b]</Text>
+        <Text> open a browser, </Text>
+        <Text bold={true}>[d]</Text>
+        <Text> open Devtools, </Text>
+        <Text bold={true}>[l]</Text>
+        <Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+        <Text bold={true}>[c]</Text>
+        <Text> clear console, </Text>
+        <Text bold={true}>[x]</Text>
+        <Text> to exit</Text>
       </Box>
     </>
   );
@@ -343,6 +348,7 @@ function useHotkeys(
 ) {
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
+  const { exit } = useApp();
   useInput(
     async (
       input,
@@ -380,7 +386,7 @@ function useHotkeys(
         // shut down
         case "q":
         case "x":
-          process.exit(0);
+          exit();
           break;
         default:
           // nothing?
