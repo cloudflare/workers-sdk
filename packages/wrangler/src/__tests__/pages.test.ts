@@ -3,7 +3,7 @@ import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Project } from "../pages";
+import type { Project, Deployment } from "../pages";
 
 describe("subcommand implicit help ran on incomplete command execution", () => {
   runInTempDir();
@@ -127,6 +127,54 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       const requests = mockListRequest(projects);
       await runWrangler("pages project list");
       expect(requests.count).toEqual(2);
+    });
+  });
+
+  describe("deployment list", () => {
+    mockAccountId();
+    mockApiToken();
+
+    afterEach(() => {
+      unsetAllMocks();
+    });
+    function mockListRequest(deployments: unknown[]) {
+      const requests = { count: 0 };
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/:project/deployments",
+        ([_url, accountId, project]) => {
+          requests.count++;
+          expect(project).toEqual("images");
+          expect(accountId).toEqual("some-account-id");
+          return deployments;
+        }
+      );
+      return requests;
+    }
+
+    it("should make request to list deployments", async () => {
+      const deployments: Deployment[] = [
+        {
+          id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
+          url: "https://87bbc8fe.images.pages.dev",
+          environment: "preview",
+          latest_stage: {
+            ended_on: "2021-11-17T14:52:26.133835Z",
+            status: "success",
+          },
+          deployment_trigger: {
+            metadata: {
+              branch: "main",
+              commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
+            },
+          },
+          project_name: "images",
+        },
+      ];
+
+      const requests = mockListRequest(deployments);
+      await runWrangler("pages deployments list --project=images");
+
+      expect(requests.count).toBe(1);
     });
   });
 });
