@@ -172,7 +172,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       ];
 
       const requests = mockListRequest(deployments);
-      await runWrangler("pages deployments list --project=images");
+      await runWrangler("pages deployment list --project=images");
 
       expect(requests.count).toBe(1);
     });
