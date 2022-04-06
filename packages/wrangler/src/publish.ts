@@ -41,7 +41,7 @@ export default async function publish(props: Props): Promise<void> {
 
   assert(
     props.compatibilityDate || config.compatibility_date,
-    "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility_date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+    "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility-date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
   );
 
   const triggers = props.triggers || config.triggers?.crons;
