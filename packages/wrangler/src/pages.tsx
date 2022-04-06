@@ -40,6 +40,7 @@ export type Project = {
 };
 
 export type Deployment = {
+  id: string;
   environment: string;
   deployment_trigger: {
     metadata: {
