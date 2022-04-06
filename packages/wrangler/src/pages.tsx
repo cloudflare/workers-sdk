@@ -39,6 +39,23 @@ export type Project = {
   };
 };
 
+export type Deployment = {
+  id: string;
+  environment: string;
+  deployment_trigger: {
+    metadata: {
+      commit_hash: string;
+      branch: string;
+    };
+  };
+  url: string;
+  latest_stage: {
+    status: string;
+    ended_on: string;
+  };
+  project_name: string;
+};
+
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
@@ -1097,6 +1114,57 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               "Project Domains": `${project.domains.join(", ")}`,
               "Git Provider": project.source ? "Yes" : "No",
               "Last Modified": format(project.latest_deployment.modified_on),
+            };
+          });
+          render(<Table data={data}></Table>);
+        }
+      )
+    )
+    .command("deployment", false, (yargs) =>
+      yargs.command(
+        "list",
+        "List deployments in your Cloudflare Pages project",
+        (yargs) =>
+          yargs.options({
+            project: {
+              type: "string",
+              demandOption: true,
+              description:
+                "The name of the project you would like to list deployments for",
+            },
+          }),
+        async (args) => {
+          const config = readConfig(args.config as ConfigPath, args);
+          const accountId = await requireAuth(config);
+
+          const deployments: Array<Deployment> = await fetchResult(
+            `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+          );
+
+          const titleCase = (word: string) =>
+            word.charAt(0).toUpperCase() + word.slice(1);
+
+          const shortSha = (sha: string) => sha.slice(0, 7);
+
+          const getStatus = (deployment: Deployment) => {
+            // Return a pretty time since timestamp if successful otherwise the status
+            if (deployment.latest_stage.status === `success`) {
+              return format(deployment.latest_stage.ended_on);
+            }
+            return titleCase(deployment.latest_stage.status);
+          };
+
+          const data = deployments.map((deployment) => {
+            return {
+              Environment: titleCase(deployment.environment),
+              Branch: deployment.deployment_trigger.metadata.branch,
+              Source: shortSha(
+                deployment.deployment_trigger.metadata.commit_hash
+              ),
+              Deployment: deployment.url,
+              Status: getStatus(deployment),
+              // TODO: Use a url shortener
+              Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
             };
           });
           render(<Table data={data}></Table>);
