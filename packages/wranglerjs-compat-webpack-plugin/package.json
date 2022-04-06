@@ -22,12 +22,18 @@
     "rimraf": "^3.0.2"
   },
   "devDependencies": {
+    "@octokit/core": "^3.6.0",
+    "@schemastore/package": "^0.0.6",
     "@types/jest": "^27.4.1",
     "@types/rimraf": "^3.0.2",
+    "@types/tar": "^6.1.1",
     "@types/webpack": "^4.41.32",
     "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
+    "tar": "^6.1.11",
+    "tosource": "^2.0.0-alpha.3",
     "typescript": "^4.6.3",
+    "undici": "^5.0.0",
     "webpack": "^4.46.0",
     "wrangler": "../wrangler"
   },

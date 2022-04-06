@@ -9,7 +9,8 @@
     "noEmit": false,
     "emitDeclarationOnly": true,
     "declaration": true,
-    "outDir": "lib"
+    "outDir": "lib",
+    "types": ["jest"]
   },
   "include": ["src"]
 }
