@@ -2,10 +2,10 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import * as TOML from "@iarna/toml";
 import * as Sentry from "@sentry/node";
 import prompts from "prompts";
 
+import { parseTOML } from "../parse";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -34,7 +34,7 @@ describe("Error Reporting", () => {
 
     await reportError(new Error("test error"), "testFalse");
 
-    const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
+    const { error_tracking_opt, error_tracking_opt_date } = parseTOML(
       await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 
@@ -50,7 +50,7 @@ describe("Error Reporting", () => {
     jest.spyOn(prompts, "prompt").mockResolvedValue({ sentryDecision: false });
     await reportError(new Error("test error"), "testFalse");
 
-    const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
+    const { error_tracking_opt, error_tracking_opt_date } = parseTOML(
       await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 
@@ -131,7 +131,7 @@ describe("Error Reporting", () => {
 
     await reportError(new Error("test error"), "testFalse");
 
-    const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
+    const { error_tracking_opt, error_tracking_opt_date } = parseTOML(
       await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
     );
 

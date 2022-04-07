@@ -75,7 +75,7 @@ type TomlError = Error & {
 /**
  * A wrapper around `TOML.parse` that throws a `ParseError`.
  */
-export function parseTOML(input: string, file?: string): object {
+export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
   try {
     return TOML.parse(input);
   } catch (err) {

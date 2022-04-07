@@ -34,7 +34,13 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages, pagesBetaWarning } from "./pages";
-import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
+import {
+  formatMessage,
+  ParseError,
+  parseJSON,
+  parseTOML,
+  readFileSync,
+} from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -467,7 +473,7 @@ export async function main(argv: string[]): Promise<void> {
       ) {
         if (isCreatingWranglerToml) {
           // rewrite wrangler.toml with main = "path/to/script"
-          const parsedWranglerToml = TOML.parse(
+          const parsedWranglerToml = parseTOML(
             readFileSync(wranglerTomlDestination)
           );
           fs.writeFileSync(

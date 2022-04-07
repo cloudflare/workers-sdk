@@ -222,7 +222,7 @@ import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import openInBrowser from "./open-in-browser";
-import { readFileSync } from "./parse";
+import { parseTOML, readFileSync } from "./parse";
 import type { Config } from "./config";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
@@ -862,7 +862,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-  const toml = TOML.parse(
+  const toml = parseTOML(
     readFileSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE))
   );
   return toml;

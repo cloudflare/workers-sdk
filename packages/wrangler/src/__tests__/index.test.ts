@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import * as TOML from "@iarna/toml";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
+import { parseTOML } from "../parse";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -105,7 +105,7 @@ describe("wrangler", () => {
         result: false,
       });
       await runWrangler("init");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      const parsed = parseTOML(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(typeof parsed.compatibility_date).toBe("string");
       expect(parsed.name).toContain("wrangler-tests");
       expect(fs.existsSync("./package.json")).toBe(false);
@@ -118,7 +118,7 @@ describe("wrangler", () => {
         result: false,
       });
       await runWrangler("init my-worker");
-      const parsed = TOML.parse(
+      const parsed = parseTOML(
         await fsp.readFile("./my-worker/wrangler.toml", "utf-8")
       );
       expect(typeof parsed.compatibility_date).toBe("string");
@@ -139,7 +139,7 @@ describe("wrangler", () => {
       });
       await runWrangler("init");
       expect(std.warn).toContain("wrangler.toml file already exists!");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      const parsed = parseTOML(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(parsed.compatibility_date).toBe("something-else");
     });
 
@@ -192,7 +192,7 @@ describe("wrangler", () => {
       );
       await runWrangler("init");
       expect(std.warn).toContain("wrangler.toml file already exists!");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
+      const parsed = parseTOML(await fsp.readFile("./wrangler.toml", "utf-8"));
       expect(parsed.compatibility_date).toBe("something-else");
     });
 
@@ -789,7 +789,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(true);
       expect(fs.existsSync("./my-worker/package.json")).toBe(true);
       expect(fs.existsSync("./my-worker/wrangler.toml")).toBe(true);
-      const parsedWranglerToml = TOML.parse(
+      const parsedWranglerToml = parseTOML(
         fs.readFileSync("./my-worker/wrangler.toml", "utf-8")
       );
       expect(parsedWranglerToml.main).toEqual("src/index.ts");
