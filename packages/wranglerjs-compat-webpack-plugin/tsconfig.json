@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "module": "ES2015",
+    "target": "ES2018",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -12,5 +13,6 @@
     "outDir": "lib",
     "types": ["jest"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/__tests__"]
 }

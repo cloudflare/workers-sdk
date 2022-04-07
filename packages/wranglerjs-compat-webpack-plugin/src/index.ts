@@ -25,11 +25,10 @@
  *   - if there's WASM, adds some hardcoded js to import it (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L47-L64)
  */
 
+import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { execa } from "execa";
 import rimraf from "rimraf";
-import { Plugin } from "webpack";
 import { readConfig } from "wrangler/src/config";
 
 import type {
@@ -65,7 +64,7 @@ export type WranglerJsCompatWebpackPluginArgs = {
   environment?: string;
 };
 
-export class WranglerJsCompatWebpackPlugin extends Plugin {
+export class WranglerJsCompatWebpackPlugin {
   private readonly config: WranglerConfig;
   private packageDir!: string; // set by this.setPackageDir
   private output?: {
@@ -76,9 +75,7 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
   constructor({
     pathToWranglerToml,
     environment,
-  }: WranglerJsCompatWebpackPluginArgs) {
-    super();
-
+  }: WranglerJsCompatWebpackPluginArgs = {}) {
     this.config = readConfig(pathToWranglerToml, {
       env: environment,
       "legacy-env": true,
@@ -87,20 +84,23 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
 
   apply(compiler: Compiler): void {
     // figure out where the actual worker is located, and save that location as this.packageDir
-    compiler.hooks.entryOption.tap(PLUGIN_NAME, this.setPackageDir);
+    compiler.hooks.entryOption.tap(PLUGIN_NAME, this.setPackageDir.bind(this));
 
     // assert:
     // - `target` is`webworker`
     // - `output.filename` is `worker.js`
     // - `output.sourceMapFilename` is`worker.map.js` if it exists
-    compiler.hooks.afterPlugins.tap(PLUGIN_NAME, this.checkOutputs);
+    compiler.hooks.afterPlugins.tap(PLUGIN_NAME, this.checkOutputs.bind(this));
 
     // if it's a sites project, generate a worker if necessary.
     // run `npm install` in this.packageDir
-    compiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, this.setupBuild);
+    compiler.hooks.beforeRun.tapPromise(
+      PLUGIN_NAME,
+      this.setupBuild.bind(this)
+    );
 
     // bundle all emitted JS into a single file
-    compiler.hooks.shouldEmit.tap(PLUGIN_NAME, this.bundleAssets);
+    compiler.hooks.shouldEmit.tap(PLUGIN_NAME, this.bundleAssets.bind(this));
   }
 
   /**
@@ -172,7 +172,8 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
 
     if (
       output?.sourceMapFilename &&
-      output?.sourceMapFilename !== "worker.js.map"
+      output?.sourceMapFilename !== "worker.js.map" &&
+      output?.sourceMapFilename !== "[file].map[query]" // ?
     ) {
       throw new Error(
         'You need to set `output.sourceMapFilename` to "worker.js.map" in your webpack config.'
@@ -194,7 +195,7 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
       console.warn(
         `Installing deps in ${this.packageDir}, but you should do this yourself...`
       );
-      await execa("npm", ["install"], {
+      child_process.spawnSync("npm", ["install"], {
         cwd: this.packageDir,
       });
     }
@@ -216,7 +217,13 @@ export class WranglerJsCompatWebpackPlugin extends Plugin {
 
     console.warn(`${warning}\n${heresTheTemplate}\n${template}`);
 
-    await execa("git", ["clone", "--depth", "1", template, this.packageDir]);
+    child_process.spawnSync("git", [
+      "clone",
+      "--depth",
+      "1",
+      template,
+      this.packageDir,
+    ]);
     await rm(path.resolve(this.packageDir, ".git"));
   }
 
@@ -299,3 +306,5 @@ function getAssetsWithExtension(assets: object, extension: string) {
   const regex = new RegExp(`\\.${extension}$`);
   return Object.keys(assets).filter((filename) => regex.test(filename));
 }
+
+export default WranglerJsCompatWebpackPlugin;
