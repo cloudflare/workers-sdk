@@ -59,6 +59,18 @@ function useLocalWorker({
   const local = useRef<ReturnType<typeof spawn>>();
   const removeSignalExitListener = useRef<() => void>();
   const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
+  // if we're using local persistence for data, we should use the cwd
+  // as an explicit path, or else it'll use the temp dir
+  // which disappears when dev ends
+  const localPersistencePathOrDisableLocalPersistence = enableLocalPersistence
+    ? // Maybe we could make the path configurable as well?
+      path.join(process.cwd(), "wrangler-local-state")
+    : // We have to explicitly choose not to use local persistence,
+      // since it defaults to true. That said, a benefit of just enabling
+      // it as is, would be that it would persist for all of
+      // `wrangler dev` surviving, which may be useful anyway.
+      // TODO: We should revisit this based on usage.
+      false;
   useEffect(() => {
     const abortController = new AbortController();
     async function startLocalWorker() {
@@ -160,14 +172,14 @@ function useLocalWorker({
         compatibilityDate,
         compatibilityFlags,
         kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
-        kvPersist: enableLocalPersistence,
+        kvPersist: localPersistencePathOrDisableLocalPersistence,
         durableObjects: Object.fromEntries(
           (bindings.durable_objects?.bindings ?? []).map<[string, string]>(
             (value) => [value.name, value.class_name]
           )
         ),
-        durableObjectsPersist: enableLocalPersistence,
-        cachePersist: enableLocalPersistence,
+        durableObjectsPersist: localPersistencePathOrDisableLocalPersistence,
+        cachePersist: localPersistencePathOrDisableLocalPersistence,
         sitePath: assetPaths?.assetDirectory
           ? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
           : undefined,
@@ -274,7 +286,7 @@ function useLocalWorker({
     bindings.vars,
     compatibilityDate,
     compatibilityFlags,
-    enableLocalPersistence,
+    localPersistencePathOrDisableLocalPersistence,
     assetPaths,
     publicDirectory,
     rules,
