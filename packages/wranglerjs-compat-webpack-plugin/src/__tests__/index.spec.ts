@@ -1,4 +1,3 @@
-import path from "path";
 import { execa } from "execa";
 import {
   mockAccountId,
@@ -10,11 +9,11 @@ import { runInTempDir } from "wrangler/src/__tests__/helpers/run-in-tmp";
 import { runWrangler as runWrangler2 } from "wrangler/src/__tests__/helpers/run-wrangler";
 import { writeWorkerSource } from "wrangler/src/__tests__/helpers/write-worker-source";
 import writeWranglerToml from "wrangler/src/__tests__/helpers/write-wrangler-toml";
+import { PATH_TO_PLUGIN } from "./helpers/constants";
 import { installWrangler1 } from "./helpers/install-wrangler";
 import { mockConfigDir } from "./helpers/mock-config-dir";
 import { mockSubDomainRequest } from "./helpers/mock-subdomain-request";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker-request";
-import { buildWebpackPlugin } from "./helpers/mock-webpack-plugin";
 import { runWrangler1 } from "./helpers/run-wrangler-1";
 import { writePackageJson } from "./helpers/write-package-json";
 import { writeWebpackConfig } from "./helpers/write-webpack-config";
@@ -24,7 +23,6 @@ mockApiToken();
 runInTempDir({ homedir: "./home" });
 mockConfigDir({ homedir: "./home" });
 const std = mockConsoleMethods();
-buildWebpackPlugin();
 
 beforeAll(async () => {
   await installWrangler1();
@@ -81,7 +79,7 @@ describe("basic webpack config", () => {
       dependencies: {
         webpack: "^4.46.0",
         "webpack-cli": "^4.9.2",
-        "wranglerjs-compat-webpack-plugin": path.resolve(__dirname, "..", ".."),
+        "wranglerjs-compat-webpack-plugin": PATH_TO_PLUGIN,
       },
     });
 

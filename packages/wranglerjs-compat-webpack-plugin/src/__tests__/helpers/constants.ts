@@ -15,3 +15,5 @@ export const CACHE_DIR = path.resolve(
 );
 
 export const PATH_TO_WRANGLER = path.join(CACHE_DIR, "wrangler1");
+
+export const PATH_TO_PLUGIN = path.resolve(__dirname, "..", "..", "..");
