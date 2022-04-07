@@ -4,6 +4,7 @@ import * as TOML from "@iarna/toml";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
+import { readFileSync } from "../parse";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -169,7 +170,7 @@ describe("wrangler", () => {
       );
 
       await runWrangler("init");
-      expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
+      expect(readFileSync("./wrangler.toml")).toMatchInlineSnapshot(
         `"compatibility_date=\\"something-else\\""`
       );
     });
@@ -213,9 +214,7 @@ describe("wrangler", () => {
       );
       await runWrangler("init");
       expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(packageJson.devDependencies).toEqual({
@@ -241,9 +240,7 @@ describe("wrangler", () => {
         }
       );
       await runWrangler("init my-worker");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./my-worker/package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./my-worker/package.json"));
       expect(packageJson.name).toBe("my-worker");
     });
 
@@ -270,9 +267,7 @@ describe("wrangler", () => {
       );
 
       await runWrangler("init");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
       expect(packageJson.name).toEqual("test");
       expect(packageJson.version).toEqual("1.0.0");
     });
@@ -300,9 +295,7 @@ describe("wrangler", () => {
       );
 
       await runWrangler("init");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
       expect(packageJson.name).toEqual("test");
       expect(packageJson.version).toEqual("1.0.0");
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
@@ -339,9 +332,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./package.json")).toBe(false);
       expect(fs.existsSync("../../package.json")).toBe(true);
 
-      const packageJson = JSON.parse(
-        fs.readFileSync("../../package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("../../package.json"));
       expect(packageJson).toMatchInlineSnapshot(`
         Object {
           "name": "test",
@@ -426,9 +417,7 @@ describe("wrangler", () => {
       await runWrangler("init");
 
       expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
 
       expect(fs.existsSync("./src/index.js")).toBe(false);
       expect(fs.existsSync("./src/index.ts")).toBe(true);
@@ -472,9 +461,7 @@ describe("wrangler", () => {
           },
         })
       );
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
       await runWrangler("init");
 
       expect(fs.existsSync("./src/index.js")).toBe(false);
@@ -514,9 +501,7 @@ describe("wrangler", () => {
       await runWrangler("init");
 
       expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
 
       expect(fs.existsSync("./src/index.js")).toBe(true);
       expect(fs.existsSync("./src/index.ts")).toBe(false);
@@ -559,9 +544,7 @@ describe("wrangler", () => {
           },
         })
       );
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+      const packageJson = JSON.parse(readFileSync("./package.json"));
       await runWrangler("init");
 
       expect(fs.existsSync("./src/index.js")).toBe(true);
@@ -600,7 +583,7 @@ describe("wrangler", () => {
       fs.writeFileSync("./src/index.js", PLACEHOLDER, "utf-8");
 
       await runWrangler("init");
-      expect(fs.readFileSync("./src/index.js", "utf-8")).toBe(PLACEHOLDER);
+      expect(readFileSync("./src/index.js")).toBe(PLACEHOLDER);
       expect(fs.existsSync("./src/index.ts")).toBe(false);
     });
 
@@ -627,7 +610,7 @@ describe("wrangler", () => {
 
       await runWrangler("init");
       expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.readFileSync("./src/index.ts", "utf-8")).toBe(PLACEHOLDER);
+      expect(readFileSync("./src/index.ts")).toBe(PLACEHOLDER);
     });
 
     it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
@@ -650,7 +633,7 @@ describe("wrangler", () => {
       const { config: tsconfigJson, error: tsConfigParseError } =
         parseConfigFileTextToJson(
           "./tsconfig.json",
-          fs.readFileSync("./tsconfig.json", "utf-8")
+          readFileSync("./tsconfig.json")
         );
       expect(tsConfigParseError).toBeUndefined();
       expect(tsconfigJson.compilerOptions.types).toEqual([
@@ -682,9 +665,7 @@ describe("wrangler", () => {
       );
 
       await runWrangler("init");
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("./tsconfig.json", "utf-8")
-      );
+      const tsconfigJson = JSON.parse(readFileSync("./tsconfig.json"));
       expect(tsconfigJson.compilerOptions).toEqual({});
     });
 
@@ -718,9 +699,7 @@ describe("wrangler", () => {
       );
 
       await runWrangler("init");
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("./tsconfig.json", "utf-8")
-      );
+      const tsconfigJson = JSON.parse(readFileSync("./tsconfig.json"));
       // unchanged tsconfig
       expect(tsconfigJson.compilerOptions).toEqual({});
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
@@ -754,9 +733,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./tsconfig.json")).toBe(false);
       expect(fs.existsSync("../../tsconfig.json")).toBe(true);
 
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("../../tsconfig.json", "utf-8")
-      );
+      const tsconfigJson = JSON.parse(readFileSync("../../tsconfig.json"));
       expect(tsconfigJson.compilerOptions).toEqual({});
     });
 
@@ -790,7 +767,7 @@ describe("wrangler", () => {
       expect(fs.existsSync("./my-worker/package.json")).toBe(true);
       expect(fs.existsSync("./my-worker/wrangler.toml")).toBe(true);
       const parsedWranglerToml = TOML.parse(
-        fs.readFileSync("./my-worker/wrangler.toml", "utf-8")
+        readFileSync("./my-worker/wrangler.toml")
       );
       expect(parsedWranglerToml.main).toEqual("src/index.ts");
       expect(std.out).toMatchInlineSnapshot(`

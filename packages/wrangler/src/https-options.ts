@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { homedir, networkInterfaces } from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { readFileSync } from "./parse";
 import type { Attributes, Options } from "selfsigned";
 
 // Most of this file has been borrowed from the implementation in Miniflare.
@@ -42,8 +43,8 @@ export async function getHttpsOptions() {
     return { key, cert };
   } else {
     return {
-      key: fs.readFileSync(keyPath, "utf8"),
-      cert: fs.readFileSync(certPath, "utf8"),
+      key: readFileSync(keyPath),
+      cert: readFileSync(certPath),
     };
   }
 }

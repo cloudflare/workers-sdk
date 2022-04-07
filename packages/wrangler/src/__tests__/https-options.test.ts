@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { resolve } from "node:path";
 import { getHttpsOptions } from "../https-options";
+import { readFileSync } from "../parse";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
@@ -31,13 +32,11 @@ describe("getHttpsOptions()", () => {
 
   it("should generate and cache new keys if none are cached", async () => {
     const result = await getHttpsOptions();
-    const key = fs.readFileSync(
-      resolve(os.homedir(), ".wrangler/local-cert/key.pem"),
-      "utf8"
+    const key = readFileSync(
+      resolve(os.homedir(), ".wrangler/local-cert/key.pem")
     );
-    const cert = fs.readFileSync(
-      resolve(os.homedir(), ".wrangler/local-cert/cert.pem"),
-      "utf8"
+    const cert = readFileSync(
+      resolve(os.homedir(), ".wrangler/local-cert/cert.pem")
     );
     expect(result.key).toEqual(key);
     expect(result.cert).toEqual(cert);
@@ -65,13 +64,11 @@ describe("getHttpsOptions()", () => {
     mockStatSync(/\.pem$/, { mtimeMs: new Date(2000).valueOf() });
 
     const result = await getHttpsOptions();
-    const key = fs.readFileSync(
-      resolve(os.homedir(), ".wrangler/local-cert/key.pem"),
-      "utf8"
+    const key = readFileSync(
+      resolve(os.homedir(), ".wrangler/local-cert/key.pem")
     );
-    const cert = fs.readFileSync(
-      resolve(os.homedir(), ".wrangler/local-cert/cert.pem"),
-      "utf8"
+    const cert = readFileSync(
+      resolve(os.homedir(), ".wrangler/local-cert/cert.pem")
     );
     expect(key).not.toEqual(ORIGINAL_KEY);
     expect(cert).not.toEqual(ORIGINAL_CERT);
