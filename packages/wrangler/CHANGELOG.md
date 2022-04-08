@@ -1,5 +1,116 @@
 # wrangler
 
+## 0.0.25
+
+### Patch Changes
+
+- [#752](https://github.com/cloudflare/wrangler2/pull/752) [`6d43e94`](https://github.com/cloudflare/wrangler2/commit/6d43e94fb8a739b918bcd808683651f78180dfd8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add a warning if `dev` is defaulting to the latest compatibility-date
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/741
+
+* [#767](https://github.com/cloudflare/wrangler2/pull/767) [`836ad59`](https://github.com/cloudflare/wrangler2/commit/836ad5910f2c3b5d6169f8f0f0e522710158f658) Thanks [@threepointone](https://github.com/threepointone)! - fix: use cwd for `--experiment-enable-local-persistence`
+
+  This sets up `--experiment-enable-local-persistence` to explicitly use `process.cwd() + wrangler-local-state` as a path to store values. Without it, local mode uses the temp dir that we use to bundle the worker, which gets wiped out on ending wrangler dev. In the future, based on usage, we may want to make the path configurable as well.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/766
+
+- [#723](https://github.com/cloudflare/wrangler2/pull/723) [`7942936`](https://github.com/cloudflare/wrangler2/commit/79429367f451d53a74413fd942053c3f732fe998) Thanks [@threepointone](https://github.com/threepointone)! - fix: spread tail messages when logging
+
+  Logged messages (via console, etc) would previously be logged as an array of values. This spreads it when logging to match what is expected.
+
+* [#756](https://github.com/cloudflare/wrangler2/pull/756) [`8e38442`](https://github.com/cloudflare/wrangler2/commit/8e384427a384fd32e7b1552e6edd898e8d4361a1) Thanks [@threepointone](https://github.com/threepointone)! - fix: resolve raw file bindings correctly in `wrangler dev` local mode
+
+  For `wasm_modules`/`text_blobs`/`data_blobs` in local mode, we need to rewrite the paths as absolute so that they're resolved correctly by miniflare. This also expands some coverage for local mode `wrangler dev`.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/740
+  Fixes https://github.com/cloudflare/wrangler2/issues/416
+
+- [#699](https://github.com/cloudflare/wrangler2/pull/699) [`ea8e701`](https://github.com/cloudflare/wrangler2/commit/ea8e7015776b7ac1e15cd14d436d57403a8c5127) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - polish: added logout and login to helpstring message.
+
+* [#728](https://github.com/cloudflare/wrangler2/pull/728) [`0873049`](https://github.com/cloudflare/wrangler2/commit/087304941d69b7bbabb40cfabcb553c631f1a23d) Thanks [@threepointone](https://github.com/threepointone)! - fix: only send durable object migrations when required
+
+  We had a bug where even if you'd published a script with migrations, we would still send a blank set of migrations on the next round. The api doesn't accept this, so the fix is to not do so. I also expanded test coverage for migrations.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/705
+
+- [#750](https://github.com/cloudflare/wrangler2/pull/750) [`b933641`](https://github.com/cloudflare/wrangler2/commit/b9336414c3c1ac20ba34d274042886ea802385d9) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.4.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.4.0)
+
+* [#763](https://github.com/cloudflare/wrangler2/pull/763) [`f72c943`](https://github.com/cloudflare/wrangler2/commit/f72c943e6f320fc1af93a9aab21fd93371d941df) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: Added the update check that will check the package once a day against the beta release, `distTag` can be changed later, then prints the latestbeta version to the user.
+
+  resolves #762
+
+- [#695](https://github.com/cloudflare/wrangler2/pull/695) [`48fa89b`](https://github.com/cloudflare/wrangler2/commit/48fa89b86d5b76b43cfd25035e914c32778eb80e) Thanks [@caass](https://github.com/caass)! - fix: stop wrangler spamming console after login
+
+  If a user hasn't logged in and then they run a command that needs a login they'll get bounced to the login flow.
+  The login flow (if completed) would write their shiny new OAuth2 credentials to disk, but wouldn't reload the
+  in-memory state. This led to issues like #693, where even though the user was logged in on-disk, wrangler
+  wouldn't be aware of it.
+
+  We now update the in-memory login state each time new credentials are written to disk.
+
+* [#734](https://github.com/cloudflare/wrangler2/pull/734) [`a1dadac`](https://github.com/cloudflare/wrangler2/commit/a1dadacbc2a994fb6cddd1cf8613a0dc3c69a49d) Thanks [@threepointone](https://github.com/threepointone)! - fix: exit dev if build fails on first run
+
+  Because of https://github.com/evanw/esbuild/issues/1037, we can't recover dev if esbuild fails on first run. The workaround is to end the process if it does so, until we have a better fix.
+
+  Reported in https://github.com/cloudflare/wrangler2/issues/731
+
+- [#757](https://github.com/cloudflare/wrangler2/pull/757) [`13e57cd`](https://github.com/cloudflare/wrangler2/commit/13e57cdca626cf0f38640c4aab1aa1ee1969312b) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - feature: Add wrangler pages project list
+
+  Adds a new command to list your projects in Cloudflare Pages.
+
+* [#745](https://github.com/cloudflare/wrangler2/pull/745) [`6bc3e85`](https://github.com/cloudflare/wrangler2/commit/6bc3e859346dda825eb58fd684260840f70a6259) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add hotkey to clear the console in `wrangler dev`
+
+  Closes #388
+
+- [#747](https://github.com/cloudflare/wrangler2/pull/747) [`db6b830`](https://github.com/cloudflare/wrangler2/commit/db6b830f217ce0ff7e12bbaee851688ee39d8734) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: remove `process.exit()` from the pages code
+
+  This enables simpler testing, as we do not have to spawn new child processes
+  to avoid the `process.exit()` from killing the jest process.
+
+  As part of the refactor, some of the `Error` classes have been moved to a
+  shared `errors.ts` file.
+
+* [#726](https://github.com/cloudflare/wrangler2/pull/726) [`c4e5dc3`](https://github.com/cloudflare/wrangler2/commit/c4e5dc332e8a31ea7e6d74861597d17b446eb68f) Thanks [@threepointone](https://github.com/threepointone)! - fix: assume a worker is a module worker only if it has a `default` export
+
+  This tweaks the logic that guesses worker formats to check whether a `default` export is defined on an entry point before assuming it's a module worker.
+
+- [#735](https://github.com/cloudflare/wrangler2/pull/735) [`c38ae3d`](https://github.com/cloudflare/wrangler2/commit/c38ae3dd36464522e13f32813123fd7b4deb6be3) Thanks [@threepointone](https://github.com/threepointone)! - `text_blobs`/Text module support for service worker format in local mode
+
+  This adds support for `text_blobs`/Text module support in local mode. Now that https://github.com/cloudflare/miniflare/pull/228 has landed in miniflare (thanks @caass!), we can use that in wrangler as well.
+
+* [#743](https://github.com/cloudflare/wrangler2/pull/743) [`ac5c48b`](https://github.com/cloudflare/wrangler2/commit/ac5c48b90f05b5464bb6bd3affdad3beba0c26a2) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement `[data_blobs]`
+
+  This implements `[data_blobs]` support for service-worker workers, as well as enabling Data module support for service-worker workers. `data_blob` is a supported binding type, but we never implemented support for it in v1. This implements support, and utilises it for supporting Data modules in service worker format. Implementation wise, it's incredibly similar to how we implemented `text_blobs`, with relevant changes.
+
+  Partial fix for https://github.com/cloudflare/wrangler2/issues/740 pending local mode support.
+
+- [#753](https://github.com/cloudflare/wrangler2/pull/753) [`cf432ac`](https://github.com/cloudflare/wrangler2/commit/cf432ac0150a205bd6a32f996d15a75515d269d6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: distinguish the command hotkeys in wrangler dev
+
+  Closes #354
+
+* [#746](https://github.com/cloudflare/wrangler2/pull/746) [`3e25dcb`](https://github.com/cloudflare/wrangler2/commit/3e25dcb377b29181ae0bf2210180f1b17c34f971) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: remove superfluous debugger log messages from local dev
+
+  Closes #387
+
+- [#758](https://github.com/cloudflare/wrangler2/pull/758) [`9bd95ce`](https://github.com/cloudflare/wrangler2/commit/9bd95cea7399bd3240a3fdb017c3abb33602f807) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - feature: Add wrangler pages deployment list
+
+  Renders a list of deployments in a Cloudflare Pages project
+
+* [#733](https://github.com/cloudflare/wrangler2/pull/733) [`91873e4`](https://github.com/cloudflare/wrangler2/commit/91873e422f0aaed5596b98f626484ccadc400c67) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - polish: improved visualization of the deprecation messages between serious and warnings with emojis. This also improves the delineation between messages.
+
+- [#738](https://github.com/cloudflare/wrangler2/pull/738) [`c04791c`](https://github.com/cloudflare/wrangler2/commit/c04791c0214601d6b1e767484c961a343f6c034a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add support for cron triggers in `dev --local` mode
+
+  Currently, I don't know if there is support for doing this in "remote" dev mode.
+
+  Resolves #737
+
+* [#732](https://github.com/cloudflare/wrangler2/pull/732) [`c63ea3d`](https://github.com/cloudflare/wrangler2/commit/c63ea3deb98bf862e8f87a366c4ea654ec503092) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: abort async operations in the `Remote` component to avoid unwanted side-effects
+  When the `Remote` component is unmounted, we now signal outstanding `fetch()` requests, and
+  `waitForPortToBeAvailable()` tasks to cancel them. This prevents unexpected requests from appearing
+  after the component has been unmounted, and also allows the process to exit cleanly without a delay.
+
+  fixes #375
+
 ## 0.0.24
 
 ### Patch Changes
