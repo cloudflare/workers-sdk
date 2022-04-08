@@ -16,6 +16,7 @@ export function mockUploadWorkerRequest(
     expectedMigrations?: CfWorkerInit["migrations"];
     env?: string;
     legacyEnv?: boolean;
+    expectedName?: string;
   } = {}
 ) {
   const {
@@ -29,6 +30,7 @@ export function mockUploadWorkerRequest(
     env = undefined,
     legacyEnv = false,
     expectedMigrations,
+    expectedName = "index.js",
   } = options;
   setMockResponse(
     env && !legacyEnv
@@ -46,7 +48,7 @@ export function mockUploadWorkerRequest(
       expect(queryParams.get("available_on_subdomain")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
-        expect(await (formBody.get("index.js") as File).text()).toMatch(
+        expect(await (formBody.get(expectedName) as File).text()).toMatch(
           expectedEntry
         );
       }
@@ -54,9 +56,9 @@ export function mockUploadWorkerRequest(
         formBody.get("metadata") as string
       ) as WorkerMetadata;
       if (expectedType === "esm") {
-        expect(metadata.main_module).toEqual("index.js");
+        expect(metadata.main_module).toEqual(expectedName);
       } else {
-        expect(metadata.body_part).toEqual("script.js"); // ? "index.js"
+        expect(metadata.body_part).toEqual(expectedName);
       }
       if ("expectedBindings" in options) {
         expect(metadata.bindings).toEqual(expectedBindings);

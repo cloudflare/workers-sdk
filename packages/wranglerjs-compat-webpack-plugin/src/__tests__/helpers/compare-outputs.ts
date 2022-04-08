@@ -1,6 +1,7 @@
+import childProcess from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import process from "node:process";
+import { Writable as WritableStream } from "node:stream";
 import { execa } from "execa";
 import { mockConsoleMethods } from "wrangler/src/__tests__/helpers/mock-console";
 import { runWrangler as runWrangler2 } from "wrangler/src/__tests__/helpers/run-wrangler";
@@ -9,6 +10,7 @@ import writeWranglerToml from "wrangler/src/__tests__/helpers/write-wrangler-tom
 import { PATH_TO_PLUGIN } from "./constants";
 import { mockSubDomainRequest } from "./mock-subdomain-request";
 import { mockUploadWorkerRequest } from "./mock-upload-worker-request";
+import { pipe } from "./pipe";
 import { runWrangler1 } from "./run-wrangler-1";
 import { writePackageJson } from "./write-package-json";
 import { writeWebpackConfig } from "./write-webpack-config";
@@ -16,6 +18,7 @@ import type { CoreProperties } from "@schemastore/package";
 import type { ExecaError, ExecaReturnValue } from "execa";
 import type webpack from "webpack";
 import type { RawConfig } from "wrangler/src/config";
+// import process from "node:process";
 
 type PartialWranglerConfig = Omit<RawConfig, "type" | "webpack_config">;
 type PartialWorker = Omit<
@@ -81,6 +84,7 @@ export async function compareOutputs({
 
   mockUploadWorkerRequest({
     expectedType: worker?.type,
+    expectedName: "script.js",
   });
   mockSubDomainRequest();
 
@@ -111,18 +115,43 @@ export async function compareOutputs({
     },
   });
 
-  await execa("npm", ["install"]);
+  await execa("npm", ["install"], {
+    cwd: wrangler2Dir,
+  });
 
-  let wrangler2result: Error | undefined;
+  let wrangler2result: Error | undefined = undefined;
+
+  // we need to capture webpack output
+  const stdout = new WritableStream({
+    write: pipe((message) => {
+      if (!message.includes("WARNING")) {
+        console.log(message);
+      } else {
+        const [output, warning] = message.split("WARNING");
+        console.log(output);
+        console.warn(`WARNING ${warning}`);
+      }
+    }),
+  });
+  const stderr = new WritableStream({
+    write: pipe(console.error),
+  });
+
   try {
-    await runWrangler2("publish");
+    await withCapturedChildProcessOutput(() => runWrangler2("publish"), {
+      stdout,
+      stderr,
+    });
   } catch (e) {
-    const error = e as Error;
-    if (isAssertionError(error)) {
-      throw error;
-    } else {
-      wrangler2result = error;
-    }
+    wrangler2result = e as Error;
+  } finally {
+    process.stdout.unpipe(stdout);
+    process.stderr.unpipe(stderr);
+  }
+
+  // an assertion failed, so we should throw
+  if (wrangler2result !== undefined && isAssertionError(wrangler2result)) {
+    throw wrangler2result;
   }
 
   const wrangler2 = {
@@ -157,3 +186,31 @@ const clearConsole = () => {
  */
 const isAssertionError = (e: Error) =>
   Object.prototype.hasOwnProperty.bind(e)("matcherResult");
+
+async function withCapturedChildProcessOutput<T>(
+  fn: () => T | Promise<T>,
+  { stdout, stderr }: { stdout: WritableStream; stderr: WritableStream }
+): Promise<T> {
+  const { spawn } = childProcess;
+  let process: childProcess.ChildProcess | undefined = undefined;
+  const childProcessMock = jest
+    .spyOn(childProcess, "spawn")
+    .mockImplementation((command, args, options) => {
+      process = spawn(command, args, options);
+      if (process.stdout !== null && process.stderr !== null) {
+        process.stdout.pipe(stdout);
+        process.stderr.pipe(stderr);
+      }
+      return process;
+    });
+
+  try {
+    return await fn();
+  } finally {
+    if (process.stdout !== null && process.stderr !== null) {
+      process.stdout.unpipe(stdout);
+      process.stderr.unpipe(stderr);
+    }
+    childProcessMock.mockRestore();
+  }
+}
