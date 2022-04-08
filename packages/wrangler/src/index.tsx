@@ -44,6 +44,7 @@ import {
   prettyPrintLogs,
   translateCLICommandToFilterMessage,
 } from "./tail";
+import { updateCheck } from "./update-check";
 import {
   login,
   logout,
@@ -83,12 +84,13 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
   return rules;
 }
 
-function printWranglerBanner() {
+async function printWranglerBanner() {
   // Let's not print this in tests
   if (typeof jest !== "undefined") {
     return;
   }
-  const text = ` ⛅️ wrangler ${wranglerVersion} `;
+
+  const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
 
   console.log(
     text +
@@ -286,7 +288,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args.type) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
@@ -723,7 +725,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       const configPath =
         (args.config as ConfigPath) ||
         (args.script && findWranglerToml(path.dirname(args.script)));
@@ -989,7 +991,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args["experimental-public"]) {
         console.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
@@ -1105,7 +1107,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     async (args) => {
       if (args.format === "pretty") {
-        printWranglerBanner();
+        await printWranglerBanner();
       }
       const config = readConfig(args.config as ConfigPath, args);
 
@@ -1408,7 +1410,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
 
             const scriptName = getLegacyScriptName(args, config);
@@ -1508,8 +1510,8 @@ export async function main(argv: string[]): Promise<void> {
         .command(
           "delete <key>",
           "Delete a secret variable from a script",
-          (yargs) => {
-            printWranglerBanner();
+          async (yargs) => {
+            await printWranglerBanner();
             return yargs
               .positional("key", {
                 describe: "The variable name to be accessible in the script",
@@ -1627,7 +1629,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             if (!isValidNamespaceBinding(args.namespace)) {
               throw new CommandLineArgsError(
@@ -1708,7 +1710,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
 
             let id;
@@ -1804,7 +1806,7 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
@@ -1952,7 +1954,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2008,7 +2010,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
@@ -2119,7 +2121,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2204,7 +2206,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             const config = readConfig(args.config as ConfigPath, args);
 
@@ -2235,7 +2237,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             const config = readConfig(args.config as ConfigPath, args);
 
@@ -2275,7 +2277,7 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: scopes
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args["scopes-list"]) {
         listScopes();
         return;
@@ -2309,7 +2311,7 @@ export async function main(argv: string[]): Promise<void> {
     "🚪 Logout from Cloudflare",
     () => {},
     async () => {
-      printWranglerBanner();
+      await printWranglerBanner();
       await logout();
     }
   );
@@ -2320,7 +2322,7 @@ export async function main(argv: string[]): Promise<void> {
     "🕵️  Retrieve your user info and test your auth config",
     () => {},
     async () => {
-      printWranglerBanner();
+      await printWranglerBanner();
       await whoami();
     }
   );
