@@ -21,9 +21,7 @@ export function buildWorker({
   onEnd = () => {},
 }: Options) {
   return build({
-    entryPoints: [
-      path.resolve(__dirname, "../pages/functions/template-worker.ts"),
-    ],
+    entryPoints: [path.resolve(__dirname, "./template-worker.ts")],
     inject: [routesModule],
     bundle: true,
     format: "esm",
