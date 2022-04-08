@@ -157,27 +157,39 @@ export class WranglerJsCompatWebpackPlugin {
   /**
    * Mimics wrangler-js' [assertions for build output](https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L52-L92)
    */
-  private checkOutputs({ options: { target, output } }: Compiler) {
-    if (target !== "webworker") {
-      throw new Error(
-        'You need to set `target` to "webworker" in your webpack config.'
+  private checkOutputs(compiler: Compiler) {
+    if (compiler.options.target !== "webworker") {
+      console.warn(
+        'You should set `target` to "webworker" in your webpack config.'
       );
+
+      compiler.options.target = "webworker";
     }
 
-    if (output?.filename !== "worker.js") {
-      throw new Error(
-        'You need to set `output.filename` to "worker.js" in your webpack config.'
+    if (compiler.options.output?.filename !== "worker.js") {
+      console.warn(
+        'You should set `output.filename` to "worker.js" in your webpack config.'
       );
+
+      compiler.options.output = {
+        ...compiler.options.output,
+        filename: "worker.js",
+      };
     }
 
     if (
-      output?.sourceMapFilename &&
-      output?.sourceMapFilename !== "worker.js.map" &&
-      output?.sourceMapFilename !== "[file].map[query]" // ?
+      compiler.options.output?.sourceMapFilename &&
+      compiler.options.output?.sourceMapFilename !== "worker.js.map" &&
+      compiler.options.output?.sourceMapFilename !== "[file].map[query]" // ?
     ) {
-      throw new Error(
-        'You need to set `output.sourceMapFilename` to "worker.js.map" in your webpack config.'
+      console.warn(
+        'You should set `output.sourceMapFilename` to "worker.js.map" in your webpack config.'
       );
+
+      compiler.options.output = {
+        ...compiler.options.output,
+        sourceMapFilename: "worker.js.map",
+      };
     }
   }
 

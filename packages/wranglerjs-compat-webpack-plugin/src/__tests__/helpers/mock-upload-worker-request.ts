@@ -56,7 +56,7 @@ export function mockUploadWorkerRequest(
       if (expectedType === "esm") {
         expect(metadata.main_module).toEqual("index.js");
       } else {
-        expect(metadata.body_part).toEqual("script.js"); // TODO: ???
+        expect(metadata.body_part).toEqual("script.js"); // ? "index.js"
       }
       if ("expectedBindings" in options) {
         expect(metadata.bindings).toEqual(expectedBindings);
