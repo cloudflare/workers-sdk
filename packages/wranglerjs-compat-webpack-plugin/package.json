@@ -14,7 +14,7 @@
   "scripts": {
     "build": "run-p build:*",
     "build:d.ts": "tsc",
-    "build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js --format=cjs",
+    "build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js --format=cjs --sourcemap",
     "test": "jest"
   },
   "dependencies": {
@@ -44,7 +44,7 @@
   },
   "jest": {
     "restoreMocks": true,
-    "testTimeout": 30000,
+    "testTimeout": 120000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
       "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"

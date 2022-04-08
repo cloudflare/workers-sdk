@@ -69,5 +69,6 @@ export const cleanMessage = (message: string): string =>
       /(Error: failed to execute `)(\S*node\S*) (\S*wranglerjs\S*) \S*(--output-file=)(\S+)(.+)/gm,
       '$1"node" "wranglerjs" "$4[file]"$6'
     )
+    .replaceAll("✨  ", "") // wrangler only does emojis on unix
     .replaceAll(/^Built at: .+$/gim, "Built at: [time]")
     .trim();

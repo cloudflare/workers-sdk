@@ -1,5 +1,6 @@
 import childProcess from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { Writable as WritableStream } from "node:stream";
 import { execa } from "execa";
@@ -68,6 +69,10 @@ export async function compareOutputs({
     } else {
       wrangler1result = error;
     }
+
+    if (os.platform() === "win32") {
+      throw error;
+    }
   }
 
   const wrangler1 = {
@@ -105,7 +110,7 @@ export async function compareOutputs({
     ...packageJson,
     scripts: {
       ...packageJson?.scripts,
-      build: "webpack",
+      build: "webpack --no-color",
     },
     dependencies: {
       ...packageJson?.dependencies,
@@ -138,10 +143,13 @@ export async function compareOutputs({
   });
 
   try {
-    await withCapturedChildProcessOutput(() => runWrangler2("publish"), {
-      stdout,
-      stderr,
-    });
+    await withCapturedChildProcessOutput(
+      async () => await runWrangler2("publish"),
+      {
+        stdout,
+        stderr,
+      }
+    );
   } catch (e) {
     wrangler2result = e as Error;
   } finally {

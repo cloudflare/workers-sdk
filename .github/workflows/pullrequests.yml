@@ -53,6 +53,13 @@ jobs:
           node-version: 16.7
           cache: "npm"
 
+      - name: Install Wrangler 1
+        uses: actions/cache@v3
+        id: wrangler-1-cache
+        with:
+          path: packages/wranglerjs-compat-webpack-plugin/src/__tests__/helpers/.wrangler-1-cache
+          key: ${{ matrix.os }}-wrangler-1-cache
+
       - name: Install NPM Dependencies
         run: npm ci
 

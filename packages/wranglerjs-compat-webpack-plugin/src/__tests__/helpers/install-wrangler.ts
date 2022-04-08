@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { Octokit } from "@octokit/core";
 import tar from "tar";
-import { PATH_TO_WRANGLER, CACHE_DIR } from "./constants";
+import {
+  PATH_TO_WRANGLER,
+  CACHE_DIR,
+  GITHUB_ARTIFACT_WRANGLER_BINARY_NAME,
+} from "./constants";
 
 /**
  * Installs wrangler 1 to node_modules/.cache by downloading
@@ -28,7 +32,11 @@ export async function installWrangler1() {
   // rust targets (and wrangler 1 releases) are named with "target triples",
   // which follow the form <architecture>-<os>-<toolchain>.
   // M1 fans love ~nodejs~ wrangler2 for its multi-platform support
-  let targetTriple: string;
+  let targetTriple:
+    | "x86_64-pc-windows-msvc"
+    | "x86_64-apple-darwin"
+    | "x86_64-unknown-linux-musl";
+
   switch (os.platform()) {
     case "win32":
       targetTriple = "x86_64-pc-windows-msvc";
@@ -61,7 +69,7 @@ export async function installWrangler1() {
   );
   const wranglerTarball = new Uint8Array(data as unknown as ArrayBuffer);
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir()));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-install"));
   const tarballPath = path.join(tempDir, "wrangler.tar.gz");
   fs.writeFileSync(tarballPath, wranglerTarball);
 
@@ -73,7 +81,11 @@ export async function installWrangler1() {
     cwd: tempDir,
   });
 
-  const wranglerBinaryPath = path.join(tempDir, "dist", "wrangler");
+  const wranglerBinaryPath = path.join(
+    tempDir,
+    "dist",
+    GITHUB_ARTIFACT_WRANGLER_BINARY_NAME
+  );
   fs.copyFileSync(wranglerBinaryPath, PATH_TO_WRANGLER);
   fs.chmodSync(PATH_TO_WRANGLER, "755");
 }
