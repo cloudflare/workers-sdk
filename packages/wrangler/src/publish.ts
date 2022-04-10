@@ -22,12 +22,12 @@ type Props = {
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
   assetPaths: AssetPaths | undefined;
-  triggers: (string | number)[] | undefined;
-  routes: (string | number)[] | undefined;
+  triggers: string[] | undefined;
+  routes: string[] | undefined;
   legacyEnv: boolean | undefined;
-  jsxFactory: undefined | string;
-  jsxFragment: undefined | string;
-  tsconfig: undefined | string;
+  jsxFactory: string | undefined;
+  jsxFragment: string | undefined;
+  tsconfig: string | undefined;
   experimentalPublic: boolean;
 };
 
@@ -302,11 +302,13 @@ export default async function publish(props: Props): Promise<void> {
     if (routes.length > 0) {
       deployments.push(
         fetchResult(`${workerUrl}/routes`, {
-          // TODO: PATCH will not delete previous routes on this script,
-          // whereas PUT will. We need to decide on the default behaviour
-          // and how to configure it.
+          // Note: PUT will delete previous routes on this script.
           method: "PUT",
-          body: JSON.stringify(routes.map((pattern) => ({ pattern }))),
+          body: JSON.stringify(
+            routes.map((route) =>
+              typeof route !== "object" ? { pattern: route } : route
+            )
+          ),
           headers: {
             "Content-Type": "application/json",
           },
@@ -314,10 +316,18 @@ export default async function publish(props: Props): Promise<void> {
           if (routes.length > 10) {
             return routes
               .slice(0, 9)
-              .map(String)
+              .map((route) =>
+                typeof route === "string"
+                  ? route
+                  : `${route.pattern} (zone: ${route.zone_id})`
+              )
               .concat([`...and ${routes.length - 10} more routes`]);
           }
-          return routes.map(String);
+          return routes.map((route) =>
+            typeof route === "string"
+              ? route
+              : `${route.pattern} (zone: ${route.zone_id})`
+          );
         })
       );
     }
@@ -327,15 +337,13 @@ export default async function publish(props: Props): Promise<void> {
     if (triggers && triggers.length) {
       deployments.push(
         fetchResult(`${workerUrl}/schedules`, {
-          // TODO: Unlike routes, this endpoint does not support PATCH.
-          // So technically, this will override any previous schedules.
-          // We should change the endpoint to support PATCH.
+          // Note: PUT will override previous schedules on this script.
           method: "PUT",
           body: JSON.stringify(triggers.map((cron) => ({ cron }))),
           headers: {
             "Content-Type": "application/json",
           },
-        }).then(() => triggers.map(String))
+        }).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
       );
     }
 

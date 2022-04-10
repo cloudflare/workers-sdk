@@ -553,7 +553,12 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
         workers_dev: false,
-        routes: ["ROUTE_1", "ROUTE_2"],
+        routes: [
+          "ROUTE_1",
+          "ROUTE_2",
+          { pattern: "ROUTE3", zone_id: "ZONE_ID_3" },
+          "ROUTE_4",
+        ],
         jsx_factory: "JSX_FACTORY",
         jsx_fragment: "JSX_FRAGMENT",
         tsconfig: "path/to/tsconfig",
@@ -630,7 +635,21 @@ describe("normalizeAndValidateConfig()", () => {
         compatibility_date: 333,
         compatibility_flags: [444, 555],
         workers_dev: "BAD",
-        routes: [666, 777],
+        routes: [
+          666,
+          777,
+          // this one's valid, but we add it here to make sure
+          // it doesn't get included in the error message
+          "example.com/*",
+          { pattern: 123, zone_id: "zone_id_1" },
+          { pattern: "route_2", zone_id: 123 },
+          { pattern: "route_3" },
+          { zone_id: "zone_id_4" },
+          { pattern: undefined },
+          { pattern: "route_5", zone_id: "zone_id_5", some_other_key: 123 },
+          // this one's valid too
+          { pattern: "route_6", zone_id: "zone_id_6" },
+        ],
         route: 888,
         jsx_factory: 999,
         jsx_fragment: 1000,
@@ -655,8 +674,8 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" to be of type string but got 888.
-          - Expected \\"routes\\" to be of type string array but got [666,777].
+          - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
+          - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777,{\\"pattern\\":123,\\"zone_id\\":\\"zone_id_1\\"},{\\"pattern\\":\\"route_2\\",\\"zone_id\\":123},{\\"pattern\\":\\"route_3\\"},{\\"zone_id\\":\\"zone_id_4\\"},{},{\\"pattern\\":\\"route_5\\",\\"zone_id\\":\\"zone_id_5\\",\\"some_other_key\\":123}].
           - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
           - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
           - Expected \\"build.command\\" to be of type string but got 1444.
@@ -1797,8 +1816,8 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be of type string but got 888.
-            - Expected \\"routes\\" to be of type string array but got [666,777].
+            - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
+            - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777].
             - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
             - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
             - Expected \\"build.command\\" to be of type string but got 1444.
