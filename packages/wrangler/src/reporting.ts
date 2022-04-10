@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import TOML from "@iarna/toml";
 import { RewriteFrames } from "@sentry/integrations";
 import {
   captureException,
@@ -15,6 +14,7 @@ import {
 import { execaSync } from "execa";
 import prompts from "prompts";
 import * as pkj from "../package.json";
+import { parseTOML } from "./parse";
 
 export function initReporting() {
   init({
@@ -118,7 +118,7 @@ async function reportingPermission() {
   )
     return undefined;
 
-  const reportingTOML = TOML.parse(
+  const reportingTOML = parseTOML(
     await readFile(path.join(os.homedir(), ".wrangler/config/reporting.toml"), {
       encoding: "utf-8",
     })
