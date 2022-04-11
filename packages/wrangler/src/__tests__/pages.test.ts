@@ -87,6 +87,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       const projects: Project[] = [
         {
           name: "dogs",
+          subdomain: "docs.pages.dev",
           domains: ["dogs.pages.dev"],
           source: {
             type: "github",
@@ -94,13 +95,18 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
           latest_deployment: {
             modified_on: "2021-11-17T14:52:26.133835Z",
           },
+          created_on: "2021-11-17T14:52:26.133835Z",
+          production_branch: "main",
         },
         {
           name: "cats",
-          domains: ["cats.pages.dev", "kitten.pages.dev"],
+          subdomain: "cats.pages.dev",
+          domains: ["cats.pages.dev", "kitten.com"],
           latest_deployment: {
             modified_on: "2021-11-17T14:52:26.133835Z",
           },
+          created_on: "2021-11-17T14:52:26.133835Z",
+          production_branch: "main",
         },
       ];
 
@@ -115,6 +121,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       for (let i = 0; i < 15; i++) {
         projects.push({
           name: "dogs" + i,
+          subdomain: i + "dogs.pages.dev",
           domains: [i + "dogs.pages.dev"],
           source: {
             type: "github",
@@ -122,11 +129,74 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
           latest_deployment: {
             modified_on: "2021-11-17T14:52:26.133835Z",
           },
+          created_on: "2021-11-17T14:52:26.133835Z",
+          production_branch: "main",
         });
       }
       const requests = mockListRequest(projects);
       await runWrangler("pages project list");
       expect(requests.count).toEqual(2);
+    });
+  });
+
+  describe("project create", () => {
+    mockAccountId();
+    mockApiToken();
+
+    afterEach(() => {
+      unsetAllMocks();
+    });
+
+    it("should create a project with a the default production branch", async () => {
+      setMockResponse(
+        "/accounts/:accountId/pages/projects",
+        ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+          expect(init.method).toEqual("POST");
+          const body = JSON.parse(init.body as string);
+          expect(body).toEqual({
+            name: "a-new-project",
+            production_branch: "production",
+          });
+          return {
+            name: "a-new-project",
+            subdomain: "a-new-project.pages.dev",
+            production_branch: "production",
+          };
+        }
+      );
+      await runWrangler("pages project create a-new-project");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Successfully created 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you complete a deployment.
+        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
+      `);
+    });
+
+    it("should create a project with a the default production branch", async () => {
+      setMockResponse(
+        "/accounts/:accountId/pages/projects",
+        ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+          expect(init.method).toEqual("POST");
+          const body = JSON.parse(init.body as string);
+          expect(body).toEqual({
+            name: "a-new-project",
+            production_branch: "main",
+          });
+          return {
+            name: "a-new-project",
+            subdomain: "a-new-project.pages.dev",
+            production_branch: "main",
+          };
+        }
+      );
+      await runWrangler(
+        "pages project create a-new-project --production-branch=main"
+      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Successfully created 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you complete a deployment.
+        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
+      `);
     });
   });
 

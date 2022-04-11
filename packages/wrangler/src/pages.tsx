@@ -30,13 +30,16 @@ type ConfigPath = string | undefined;
 
 export type Project = {
   name: string;
+  subdomain: string;
   domains: Array<string>;
   source?: {
     type: string;
   };
-  latest_deployment: {
+  latest_deployment?: {
     modified_on: string;
   };
+  created_on: string;
+  production_branch: string;
 };
 
 export type Deployment = {
@@ -1098,29 +1101,77 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       )
     )
     .command("project", false, (yargs) =>
-      yargs.command(
-        "list",
-        "List your Cloudflare Pages projects",
-        () => {},
-        async (args) => {
-          const config = readConfig(args.config as ConfigPath, args);
-          const accountId = await requireAuth(config);
+      yargs
+        .command(
+          "list",
+          "List your Cloudflare Pages projects",
+          () => {},
+          async (args) => {
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
 
-          const projects: Array<Project> = await listProjects({ accountId });
+            const projects: Array<Project> = await listProjects({ accountId });
 
-          const data = projects.map((project) => {
-            return {
-              "Project Name": project.name,
-              "Project Domains": `${project.domains.join(", ")}`,
-              "Git Provider": project.source ? "Yes" : "No",
-              "Last Modified": timeagoFormat(
-                project.latest_deployment.modified_on
-              ),
-            };
-          });
-          render(<Table data={data}></Table>);
-        }
-      )
+            const data = projects.map((project) => {
+              return {
+                "Project Name": project.name,
+                "Project Domains": `${project.domains.join(", ")}`,
+                "Git Provider": project.source ? "Yes" : "No",
+                "Last Modified": project.latest_deployment
+                  ? timeagoFormat(project.latest_deployment.modified_on)
+                  : timeagoFormat(project.created_on),
+              };
+            });
+            render(<Table data={data}></Table>);
+          }
+        )
+        .command(
+          "create [name]",
+          "Create a new Cloudflare Pages project",
+          (yargs) =>
+            yargs
+              .positional("name", {
+                type: "string",
+                demandOption: true,
+                description: "The name of your Pages project",
+              })
+              .options({
+                "production-branch": {
+                  type: "string",
+                  // TODO: Should we default to the current git branch?
+                  default: "production",
+                  description:
+                    "The name of the production branch of your project",
+                },
+              }),
+          async (args) => {
+            const { "production-branch": productionBranch, name } = args;
+
+            if (!name) {
+              throw new FatalError("Must specify a project name.", 1);
+            }
+
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
+
+            const { subdomain } = await fetchResult<Project>(
+              `/accounts/${accountId}/pages/projects`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  name,
+                  production_branch: productionBranch,
+                }),
+              }
+            );
+            console.log(
+              `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you complete a deployment.`
+            );
+            console.log(
+              `To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
+            );
+          }
+        )
     )
     .command("deployment", false, (yargs) =>
       yargs.command(
