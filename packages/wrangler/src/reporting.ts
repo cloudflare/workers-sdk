@@ -30,6 +30,12 @@ export function initReporting() {
       // from their worker during development
       return null;
     },
+    /**
+     * We want to prevent any user created code from sending Events to Sentry,
+     * which can be captured by "uncaughtExceptionMonitor" listener.
+     * Miniflare code runs on the same process as Wrangler, so we want to return `null`
+     * if "@miniflare" is present in the Event frames.
+     */
     beforeSend: (event) => {
       return !event.exception?.values?.some((value) =>
         value.stacktrace?.frames?.some((frame) =>
