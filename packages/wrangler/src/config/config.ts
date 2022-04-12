@@ -183,9 +183,9 @@ export interface DevConfig {
   upstream_protocol: "https" | "http";
 
   /**
-   * Host to forward requests to, defaults to the zone of project
+   * Host to forward requests to, defaults to the host of the first route of project
    */
-  host: string | undefined;
+  host: (string | { pattern: string; zone_id: string }) | undefined;
 }
 
 export type RawDevConfig = Partial<DevConfig>;

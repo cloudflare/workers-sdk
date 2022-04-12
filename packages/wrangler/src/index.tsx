@@ -648,8 +648,9 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
-          type: "array",
           alias: "compatibility-flag",
+          type: "string",
+          array: true,
         })
         .option("latest", {
           describe: "Use the latest version of the worker runtime",
@@ -671,7 +672,8 @@ export async function main(argv: string[]): Promise<void> {
         .option("routes", {
           describe: "Routes to upload",
           alias: "route",
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("host", {
           type: "string",
@@ -751,8 +753,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       const upstreamProtocol =
-        (args["upstream-protocol"] as "http" | "https") ||
-        config.dev.upstream_protocol;
+        args["upstream-protocol"] || config.dev.upstream_protocol;
       if (upstreamProtocol === "http") {
         console.warn(
           "Setting upstream-protocol to http is not currently implemented.\n" +
@@ -810,19 +811,29 @@ export async function main(argv: string[]): Promise<void> {
           (args.routes && args.routes[0]) ||
           config.route ||
           (config.routes && config.routes[0]);
+
+        let zoneId: string | undefined =
+          typeof hostLike === "object" ? hostLike.zone_id : undefined;
+
         const host =
-          typeof hostLike === "string" ? getHost(hostLike) : undefined;
-        let zoneId: string | undefined;
+          typeof hostLike === "string"
+            ? getHost(hostLike)
+            : typeof hostLike === "object"
+            ? getHost(hostLike.pattern)
+            : undefined;
+
         const hostPieces =
           typeof host === "string" ? host.split(".") : undefined;
-        while (hostPieces && hostPieces.length > 1) {
+
+        while (!zoneId && hostPieces && hostPieces.length > 1) {
           zoneId = await getZoneId(hostPieces.join("."));
-          if (zoneId) break;
           hostPieces.shift();
         }
+
         if (host && !zoneId) {
           throw new Error(`Could not find zone for ${hostLike}`);
         }
+
         zone =
           typeof zoneId === "string" && typeof host === "string"
             ? {
@@ -846,12 +857,7 @@ export async function main(argv: string[]): Promise<void> {
           jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
           tsconfig={args.tsconfig ?? config.tsconfig}
           upstreamProtocol={upstreamProtocol}
-          localProtocol={
-            // The typings are not quite clever enough to handle element accesses, only property accesses,
-            // so we need to cast here.
-            (args["local-protocol"] as "http" | "https") ||
-            config.dev.local_protocol
-          }
+          localProtocol={args["local-protocol"] || config.dev.local_protocol}
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }
@@ -875,8 +881,7 @@ export async function main(argv: string[]): Promise<void> {
             args["compatibility-date"]
           )}
           compatibilityFlags={
-            (args["compatibility-flags"] as string[]) ||
-            config.compatibility_flags
+            args["compatibility-flags"] || config.compatibility_flags
           }
           usageModel={config.usage_model}
           bindings={{
@@ -945,8 +950,9 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
-          type: "array",
           alias: "compatibility-flag",
+          type: "string",
+          array: true,
         })
         .option("latest", {
           describe: "Use the latest version of the worker runtime",
@@ -976,12 +982,14 @@ export async function main(argv: string[]): Promise<void> {
         .option("triggers", {
           describe: "cron schedules to attach",
           alias: ["schedule", "schedules"],
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("routes", {
           describe: "Routes to upload",
           alias: "route",
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",
@@ -1039,7 +1047,7 @@ export async function main(argv: string[]): Promise<void> {
         compatibilityDate: args.latest
           ? new Date().toISOString().substring(0, 10)
           : args["compatibility-date"],
-        compatibilityFlags: args["compatibility-flags"] as string[],
+        compatibilityFlags: args["compatibility-flags"],
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
@@ -1126,7 +1134,7 @@ export async function main(argv: string[]): Promise<void> {
       const accountId = await requireAuth(config);
 
       const cliFilters: TailCLIFilters = {
-        status: args.status as ("ok" | "error" | "canceled")[],
+        status: args.status as ("ok" | "error" | "canceled")[] | undefined,
         header: args.header,
         method: args.method,
         samplingRate: args["sampling-rate"],
@@ -1255,10 +1263,7 @@ export async function main(argv: string[]): Promise<void> {
           ip={config.dev.ip}
           public={undefined}
           compatibilityDate={getDevCompatibilityDate(config)}
-          compatibilityFlags={
-            (args["compatibility-flags"] as string[]) ||
-            config.compatibility_flags
-          }
+          compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
           bindings={{
             kv_namespaces: config.kv_namespaces?.map(
@@ -1493,7 +1498,7 @@ export async function main(argv: string[]): Promise<void> {
               return (
                 typeof e === "object" &&
                 e !== null &&
-                (e as { code: 10007 }).code === 10007
+                (e as { code: number }).code === 10007
               );
             }
 

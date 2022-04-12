@@ -218,6 +218,21 @@ describe("wrangler dev", () => {
       );
     });
 
+    it("should, when provided, use a configured zone_id", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        routes: [
+          { pattern: "https://some-domain.com/*", zone_id: "some-zone-id" },
+        ],
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
+        host: "some-domain.com",
+        id: "some-zone-id",
+      });
+    });
+
     it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
       writeWranglerToml({
         main: "index.js",

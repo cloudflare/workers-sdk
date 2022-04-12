@@ -462,6 +462,97 @@ function normalizeAndValidateModulePaths(
 }
 
 /**
+ * Check whether a value has the shape of a route, which can be a string
+ * or an object that looks like {pattern: string, zone_id: string }
+ */
+function isValidRouteValue(item: unknown): boolean {
+  return (
+    !!item &&
+    (typeof item === "string" ||
+      (typeof item === "object" &&
+        hasProperty(item, "pattern") &&
+        typeof item.pattern === "string" &&
+        hasProperty(item, "zone_id") &&
+        typeof item.zone_id === "string" &&
+        Object.keys(item).length === 2))
+  );
+}
+
+/**
+ * Validate that the field is a route.
+ */
+const isRoute: ValidatorFn = (diagnostics, field, value) => {
+  if (value !== undefined && !isValidRouteValue(value)) {
+    diagnostics.errors.push(
+      `Expected "${field}" to be either a string or an object with shape {pattern: string, zone_id: string}, but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Validate that the field is an array of routes.
+ */
+const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
+  if (value === undefined) {
+    return true;
+  }
+  if (!Array.isArray(value)) {
+    diagnostics.errors.push(
+      `Expected "${field}" to be an array but got ${JSON.stringify(value)}.`
+    );
+    return false;
+  }
+  const invalidRoutes = [];
+  for (const item of value) {
+    if (!isValidRouteValue(item)) {
+      invalidRoutes.push(item);
+    }
+  }
+  if (invalidRoutes.length > 0) {
+    diagnostics.errors.push(
+      `Expected "${field}" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: ${JSON.stringify(
+        invalidRoutes
+      )}.`
+    );
+  }
+  return invalidRoutes.length === 0;
+};
+
+function validateRoute(
+  diagnostics: Diagnostics,
+  topLevelEnv: Environment | undefined,
+  rawEnv: RawEnvironment
+): Config["route"] {
+  return inheritable(
+    diagnostics,
+    topLevelEnv,
+    rawEnv,
+    "route",
+    isRoute,
+    undefined
+  );
+}
+
+function validateRoutes(
+  diagnostics: Diagnostics,
+  topLevelEnv: Environment | undefined,
+  rawEnv: RawEnvironment
+): Config["routes"] {
+  return inheritable(
+    diagnostics,
+    topLevelEnv,
+    rawEnv,
+    "routes",
+    all(isRouteArray, isMutuallyExclusiveWith(rawEnv, "route")),
+    undefined
+  );
+}
+
+/**
  * Validate top-level environment configuration and return the normalized values.
  */
 function normalizeAndValidateEnvironment(
@@ -526,22 +617,10 @@ function normalizeAndValidateEnvironment(
 
   experimental(diagnostics, rawEnv, "unsafe");
 
-  const route = inheritable(
-    diagnostics,
-    topLevelEnv,
-    rawEnv,
-    "route",
-    isString,
-    undefined
-  );
-  const routes = inheritable(
-    diagnostics,
-    topLevelEnv,
-    rawEnv,
-    "routes",
-    all(isStringArray, isMutuallyExclusiveWith(rawEnv, "route")),
-    undefined
-  );
+  const route = validateRoute(diagnostics, topLevelEnv, rawEnv);
+
+  const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
+
   const workers_dev = inheritable(
     diagnostics,
     topLevelEnv,

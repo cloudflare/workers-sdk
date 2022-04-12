@@ -311,6 +311,91 @@ describe("publish", () => {
       await runWrangler("publish ./index");
     });
 
+    it("should publish to a route with a pattern/zone_id combo", async () => {
+      writeWranglerToml({
+        routes: [
+          "some-example.com/some-route/*",
+          { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+          "more-examples.com/*",
+        ],
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false });
+      mockUploadWorkerRequest({ expectedType: "esm" });
+      mockPublishRoutesRequest({
+        routes: [
+          "some-example.com/some-route/*",
+          { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+          "more-examples.com/*",
+        ],
+      });
+      await runWrangler("publish ./index");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          some-example.com/some-route/*
+          *a-boring-website.com (zone: 54sdf7fsda)
+          example.com/some-route/* (zone: JGHFHG654gjcj)
+          more-examples.com/*",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should publish to a route with a pattern/zone_id combo (service environments)", async () => {
+      writeWranglerToml({
+        env: {
+          staging: {
+            routes: [
+              "some-example.com/some-route/*",
+              { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+              { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+              "more-examples.com/*",
+            ],
+          },
+        },
+      });
+      mockSubDomainRequest();
+      writeWorkerSource();
+      mockUpdateWorkerRequest({
+        enabled: false,
+        env: "staging",
+        legacyEnv: false,
+      });
+      mockUploadWorkerRequest({
+        expectedType: "esm",
+        env: "staging",
+        legacyEnv: false,
+      });
+      mockPublishRoutesRequest({
+        routes: [
+          "some-example.com/some-route/*",
+          { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
+          "more-examples.com/*",
+        ],
+        env: "staging",
+        legacyEnv: false,
+      });
+      await runWrangler("publish ./index --legacy-env false --env staging");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (staging) (TIMINGS)
+        Published test-name (staging) (TIMINGS)
+          some-example.com/some-route/*
+          *a-boring-website.com (zone: 54sdf7fsda)
+          example.com/some-route/* (zone: JGHFHG654gjcj)
+          more-examples.com/*",
+          "warn": "",
+        }
+      `);
+    });
+
     it("should publish to legacy environment specific routes", async () => {
       writeWranglerToml({
         routes: ["example.com/some-route/*"],
@@ -3829,7 +3914,7 @@ function mockPublishRoutesRequest({
   env = undefined,
   legacyEnv = false,
 }: {
-  routes: string[];
+  routes: (string | { pattern: string; zone_id: string })[];
   env?: string | undefined;
   legacyEnv?: boolean | undefined;
 }) {
@@ -3849,7 +3934,9 @@ function mockPublishRoutesRequest({
       }
 
       expect(JSON.parse(body as string)).toEqual(
-        routes.map((pattern) => ({ pattern }))
+        routes.map((route) =>
+          typeof route !== "object" ? { pattern: route } : route
+        )
       );
       return null;
     }
