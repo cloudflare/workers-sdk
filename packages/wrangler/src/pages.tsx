@@ -2,10 +2,13 @@
 
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { URL } from "node:url";
+import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
+import FormData from "form-data";
 import { render } from "ink";
 import Table from "ink-table";
 import { getType } from "mime";
@@ -1170,6 +1173,175 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           render(<Table data={data}></Table>);
         }
       )
+    )
+    .command(
+      "publish [directory]",
+      "Compile a folder of Cloudflare Pages Functions into a single Worker",
+      (yargs) => {
+        return yargs
+          .positional("directory", {
+            type: "string",
+            default: "functions",
+            description: "The directory of Pages Functions",
+          })
+          .options({
+            project: {
+              type: "string",
+              // default: "_worker.js",
+              description:
+                "The name of the project you want to list deployments for",
+            },
+            branch: {
+              type: "string",
+              // default: "_worker.js",
+              description:
+                "The branch of the project you want to list deployments for",
+            },
+            "commit-hash": {
+              type: "string",
+              // default: "_worker.js",
+              description:
+                "The branch of the project you want to list deployments for",
+            },
+            "commit-message": {
+              type: "string",
+              // default: "_worker.js",
+              description:
+                "The branch of the project you want to list deployments for",
+            },
+            "commit-dirty": {
+              type: "boolean",
+              default: false,
+              description:
+                "The branch of the project you want to list deployments for",
+            },
+          });
+      },
+      async (args) => {
+        const {
+          directory,
+          project,
+          branch,
+          commitHash,
+          commitMessage,
+          commitDirty,
+        } = args;
+
+        console.log({
+          directory,
+          project,
+          branch,
+          commitHash,
+          commitMessage,
+          commitDirty,
+        });
+
+        const config = readConfig(args.config as ConfigPath, args);
+        const accountId = await requireAuth(config);
+
+        type File = {
+          content: Buffer;
+          metadata: Metadata;
+        };
+
+        type Metadata = {
+          sizeInBytes: number;
+          hash: string;
+        };
+
+        // Ignore some files including _worker
+
+        const walk = async (
+          dir: string,
+          fileMap: Map<string, File> = new Map(),
+          depth = 0
+        ) => {
+          const files = await readdir(dir);
+
+          await Promise.all(
+            files.map(async (file) => {
+              const filepath = join(dir, file);
+              const filestat = await stat(filepath);
+
+              if (filestat.isDirectory()) {
+                fileMap = await walk(filepath, fileMap, depth + 1);
+              } else {
+                let name;
+                if (depth) {
+                  name = join(...filepath.split(sep).slice(1));
+                } else {
+                  name = file;
+                }
+                const fileContent = await readFile(filepath);
+
+                const base64Content = fileContent.toString("base64");
+                const extension =
+                  name.split(".").length > 1
+                    ? name.split(".").at(-1) || ""
+                    : "";
+
+                const content = base64Content + extension;
+
+                console.log({
+                  content,
+                });
+
+                fileMap.set(name, {
+                  content: fileContent,
+                  metadata: {
+                    sizeInBytes: filestat.size,
+                    hash: hash(content).toString("hex"),
+                  },
+                });
+              }
+            })
+          );
+
+          return fileMap;
+        };
+
+        const fileMap = await walk(directory);
+
+        //
+        //
+        //
+        //
+        //
+
+        const uploadPromises: Array<Promise<any>> = [];
+
+        fileMap.forEach(async (file: File, name: string) => {
+          console.log(file, name);
+          const form = new FormData();
+          form.append("file", file.content.toString(), {
+            filename: name,
+          });
+
+          try {
+            const response = await fetchResult(
+              `/accounts/${accountId}/pages/projects/${project}/file`,
+              {
+                method: "post",
+                body: form.getBuffer().toString(),
+                headers: form.getHeaders(),
+              }
+            );
+
+            console.log(response);
+          } catch (err) {
+            console.log(err);
+          }
+        });
+
+        // Create a deployment
+
+        // try {
+        //   const responses = await Promise.all(uploadPromises);
+        //   console.log(responses);
+        // } catch (err) {
+        //   console.log(err);
+        // }
+      }
     );
 };
 

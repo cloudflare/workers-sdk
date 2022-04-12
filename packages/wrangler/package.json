@@ -36,7 +36,9 @@
     "cli"
   ],
   "dependencies": {
+    "blake3-wasm": "^2.1.5",
     "esbuild": "0.14.23",
+    "form-data": "^4.0.0",
     "miniflare": "2.4.0",
     "path-to-regexp": "^6.2.0",
     "selfsigned": "^2.0.0",

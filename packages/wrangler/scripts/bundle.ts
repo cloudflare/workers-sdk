@@ -15,6 +15,7 @@ async function run() {
     external: [
       "fsevents",
       "esbuild",
+      "blake3-wasm",
       "miniflare",
       "@miniflare/core",
       "selfsigned",
