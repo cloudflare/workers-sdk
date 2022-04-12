@@ -9,9 +9,11 @@ import { URL } from "node:url";
 import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
 import FormData from "form-data";
-import { render } from "ink";
+import { render, Text } from "ink";
+import Spinner from "ink-spinner";
 import Table from "ink-table";
 import { getType } from "mime";
+import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format } from "timeago.js";
 import { buildWorker } from "../pages/functions/buildWorker";
@@ -1227,14 +1229,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           commitDirty,
         } = args;
 
-        console.log({
-          directory,
-          project,
-          branch,
-          commitHash,
-          commitMessage,
-          commitDirty,
-        });
+        // console.log({
+        //   directory,
+        //   project,
+        //   branch,
+        //   commitHash,
+        //   commitMessage,
+        //   commitDirty,
+        // });
 
         const config = readConfig(args.config as ConfigPath, args);
         const accountId = await requireAuth(config);
@@ -1249,7 +1251,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           hash: string;
         };
 
-        // Ignore some files including _worker
+        // TODO: Ignore some files including redirects, headers and worker
 
         const walk = async (
           dir: string,
@@ -1282,10 +1284,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
                 const content = base64Content + extension;
 
-                console.log({
-                  content,
-                });
-
                 fileMap.set(name, {
                   content: fileContent,
                   metadata: {
@@ -1302,45 +1300,73 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
         const fileMap = await walk(directory);
 
-        //
-        //
-        //
-        //
-        //
+        const start = Date.now();
 
-        const uploadPromises: Array<Promise<any>> = [];
+        const files: Array<Promise<void>> = [];
 
-        fileMap.forEach(async (file: File, name: string) => {
-          console.log(file, name);
+        if (fileMap.size > 20000) {
+          throw new Error(
+            `Error: Pages only supports up to 20,000 files in a deployment at the moment\nTry a smaller project perhaps?`
+          );
+        }
+
+        let counter = 0;
+
+        const { rerender, unmount } = render(
+          <Progress done={counter} total={fileMap.size} />
+        );
+
+        fileMap.forEach((file: File, name: string) => {
+          if (file.metadata.sizeInBytes > 25 * 1024 * 1024) {
+            throw new Error(
+              `Error: Pages only supports files up to ${prettyBytes(
+                25 * 1024 * 1024
+              )} in size\n${name} is ${prettyBytes(
+                file.metadata.sizeInBytes
+              )} in size`
+            );
+          }
+
           const form = new FormData();
-          form.append("file", file.content.toString(), {
+          form.append("file", file.content, {
             filename: name,
           });
 
-          try {
-            const response = await fetchResult(
-              `/accounts/${accountId}/pages/projects/${project}/file`,
-              {
-                method: "post",
-                body: form.getBuffer().toString(),
-                headers: form.getHeaders(),
-              }
-            );
+          const promise = fetchResult<{ id: string }>(
+            `/accounts/${accountId}/pages/projects/${project}/file`,
+            {
+              method: "post",
+              body: form.getBuffer(),
+              headers: form.getHeaders(),
+            }
+          ).then((response) => {
+            counter++;
+            rerender(<Progress done={counter} total={fileMap.size} />);
+            if (response.id != file.metadata.hash) {
+              throw new Error(
+                `Looks like there was an issue uploading that ${name}. Try again perhaps?`
+              );
+            }
+          });
 
-            console.log(response);
-          } catch (err) {
-            console.log(err);
-          }
+          files.push(promise);
         });
 
-        // Create a deployment
+        await Promise.all(files);
 
-        // try {
-        //   const responses = await Promise.all(uploadPromises);
-        //   console.log(responses);
-        // } catch (err) {
-        //   console.log(err);
-        // }
+        unmount();
+
+        const uploadMs = Date.now() - start;
+
+        console.log(
+          `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
+        );
+
+        console.log(
+          `✨ Deployment complete! Take a peek over at ${"http://pages.dev"}`
+        );
+
+        // TODO: Create a deployment
       }
     );
 };
@@ -1376,3 +1402,27 @@ const listProjects = async ({
   }
   return results;
 };
+
+function formatTime(duration: number) {
+  return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+function Progress({ done, total }: { done: number; total: number }) {
+  return (
+    <>
+      <Text>
+        <Text color="green">
+          <Spinner type="dots" />
+          {/* <Spinner type="earth" /> */}
+        </Text>
+        {" Uploading... "}
+        {"("}
+        {done}
+        {"/"}
+        {total}
+        {")"}
+        {"\n"}
+      </Text>
+    </>
+  );
+}

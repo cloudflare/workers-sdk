@@ -45,10 +45,8 @@ export async function fetchInternal<ResponseType>(
     }
   );
 
-  console.log({ headers, resource, init });
   const jsonText = await response.text();
 
-  console.log({ jsonText });
   try {
     return parseJSON(jsonText) as ResponseType;
   } catch (err) {
