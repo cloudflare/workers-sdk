@@ -17,6 +17,7 @@ describe("wrangler", () => {
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
   const {
+    mockOAuthServerCallback,
     mockGrantAccessToken,
     mockGrantAuthorization,
     mockRevokeAuthorization,
@@ -24,6 +25,7 @@ describe("wrangler", () => {
 
   describe("login", () => {
     it("should should log in a user when `wrangler login` is run", async () => {
+      mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });
 

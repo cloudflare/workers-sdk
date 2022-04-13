@@ -26,7 +26,11 @@ describe("publish", () => {
   mockApiToken();
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
-  const { mockGrantAccessToken, mockGrantAuthorization } = mockOAuthFlow();
+  const {
+    mockOAuthServerCallback,
+    mockGrantAccessToken,
+    mockGrantAuthorization,
+  } = mockOAuthFlow();
 
   beforeEach(() => {
     // @ts-expect-error we're using a very simple setTimeout mock here
@@ -55,6 +59,7 @@ describe("publish", () => {
       mockSubDomainRequest();
       mockUploadWorkerRequest();
 
+      mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });
 
