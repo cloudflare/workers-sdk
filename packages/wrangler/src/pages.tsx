@@ -1223,20 +1223,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         const {
           directory,
           project,
-          branch,
-          commitHash,
-          commitMessage,
-          commitDirty,
+          // branch,
+          // commitHash,
+          // commitMessage,
+          // commitDirty,
         } = args;
 
-        // console.log({
-        //   directory,
-        //   project,
-        //   branch,
-        //   commitHash,
-        //   commitMessage,
-        //   commitDirty,
-        // });
+        // TODO: Add check for dirty git state if commitDirty is not true
 
         const config = readConfig(args.config as ConfigPath, args);
         const accountId = await requireAuth(config);
