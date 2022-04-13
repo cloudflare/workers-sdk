@@ -15,7 +15,7 @@ import Table from "ink-table";
 import { getType } from "mime";
 import prettyBytes from "pretty-bytes";
 import React from "react";
-import { format } from "timeago.js";
+import { format as timeagoFormat } from "timeago.js";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
@@ -1118,7 +1118,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               "Project Name": project.name,
               "Project Domains": `${project.domains.join(", ")}`,
               "Git Provider": project.source ? "Yes" : "No",
-              "Last Modified": format(project.latest_deployment.modified_on),
+              "Last Modified": timeagoFormat(
+                project.latest_deployment.modified_on
+              ),
             };
           });
           render(<Table data={data}></Table>);
@@ -1154,7 +1156,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           const getStatus = (deployment: Deployment) => {
             // Return a pretty time since timestamp if successful otherwise the status
             if (deployment.latest_stage.status === `success`) {
-              return format(deployment.latest_stage.ended_on);
+              return timeagoFormat(deployment.latest_stage.ended_on);
             }
             return titleCase(deployment.latest_stage.status);
           };

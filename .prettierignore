@@ -2,6 +2,7 @@ packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
 packages/wrangler/CHANGELOG.md
+packages/jest-environment-wrangler/CHANGELOG.md
 packages/examples/worker-app/dist/
 packages/examples/remix-pages-app/build
 packages/examples/remix-pages-app/public/

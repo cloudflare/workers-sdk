@@ -8,6 +8,13 @@ const originalCwd = process.cwd();
 export function runInTempDir({ homedir }: { homedir?: string } = {}) {
   let tmpDir: string;
 
+  beforeAll(() => {
+    if (tmpDir !== undefined) {
+      process.chdir(originalCwd);
+      fs.rmSync(tmpDir, { recursive: true });
+    }
+  });
+
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-tests"));
     process.chdir(tmpDir);

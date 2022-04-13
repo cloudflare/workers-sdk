@@ -34,7 +34,13 @@ import {
 } from "./kv";
 import { getPackageManager } from "./package-manager";
 import { pages, pagesBetaWarning } from "./pages";
-import { formatMessage, ParseError, parseJSON, readFileSync } from "./parse";
+import {
+  formatMessage,
+  ParseError,
+  parseJSON,
+  parseTOML,
+  readFileSync,
+} from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths } from "./sites";
@@ -44,6 +50,7 @@ import {
   prettyPrintLogs,
   translateCLICommandToFilterMessage,
 } from "./tail";
+import { updateCheck } from "./update-check";
 import {
   login,
   logout,
@@ -83,12 +90,13 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
   return rules;
 }
 
-function printWranglerBanner() {
+async function printWranglerBanner() {
   // Let's not print this in tests
   if (typeof jest !== "undefined") {
     return;
   }
-  const text = ` ⛅️ wrangler ${wranglerVersion} `;
+
+  const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
 
   console.log(
     text +
@@ -286,7 +294,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args.type) {
         let message = "The --type option is no longer supported.";
         if (args.type === "webpack") {
@@ -467,7 +475,7 @@ export async function main(argv: string[]): Promise<void> {
       ) {
         if (isCreatingWranglerToml) {
           // rewrite wrangler.toml with main = "path/to/script"
-          const parsedWranglerToml = TOML.parse(
+          const parsedWranglerToml = parseTOML(
             readFileSync(wranglerTomlDestination)
           );
           fs.writeFileSync(
@@ -640,8 +648,9 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
-          type: "array",
           alias: "compatibility-flag",
+          type: "string",
+          array: true,
         })
         .option("latest", {
           describe: "Use the latest version of the worker runtime",
@@ -663,7 +672,8 @@ export async function main(argv: string[]): Promise<void> {
         .option("routes", {
           describe: "Routes to upload",
           alias: "route",
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("host", {
           type: "string",
@@ -723,7 +733,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       const configPath =
         (args.config as ConfigPath) ||
         (args.script && findWranglerToml(path.dirname(args.script)));
@@ -743,8 +753,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       const upstreamProtocol =
-        (args["upstream-protocol"] as "http" | "https") ||
-        config.dev.upstream_protocol;
+        args["upstream-protocol"] || config.dev.upstream_protocol;
       if (upstreamProtocol === "http") {
         console.warn(
           "Setting upstream-protocol to http is not currently implemented.\n" +
@@ -802,19 +811,29 @@ export async function main(argv: string[]): Promise<void> {
           (args.routes && args.routes[0]) ||
           config.route ||
           (config.routes && config.routes[0]);
+
+        let zoneId: string | undefined =
+          typeof hostLike === "object" ? hostLike.zone_id : undefined;
+
         const host =
-          typeof hostLike === "string" ? getHost(hostLike) : undefined;
-        let zoneId: string | undefined;
+          typeof hostLike === "string"
+            ? getHost(hostLike)
+            : typeof hostLike === "object"
+            ? getHost(hostLike.pattern)
+            : undefined;
+
         const hostPieces =
           typeof host === "string" ? host.split(".") : undefined;
-        while (hostPieces && hostPieces.length > 1) {
+
+        while (!zoneId && hostPieces && hostPieces.length > 1) {
           zoneId = await getZoneId(hostPieces.join("."));
-          if (zoneId) break;
           hostPieces.shift();
         }
+
         if (host && !zoneId) {
           throw new Error(`Could not find zone for ${hostLike}`);
         }
+
         zone =
           typeof zoneId === "string" && typeof host === "string"
             ? {
@@ -838,12 +857,7 @@ export async function main(argv: string[]): Promise<void> {
           jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
           tsconfig={args.tsconfig ?? config.tsconfig}
           upstreamProtocol={upstreamProtocol}
-          localProtocol={
-            // The typings are not quite clever enough to handle element accesses, only property accesses,
-            // so we need to cast here.
-            (args["local-protocol"] as "http" | "https") ||
-            config.dev.local_protocol
-          }
+          localProtocol={args["local-protocol"] || config.dev.local_protocol}
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }
@@ -867,8 +881,7 @@ export async function main(argv: string[]): Promise<void> {
             args["compatibility-date"]
           )}
           compatibilityFlags={
-            (args["compatibility-flags"] as string[]) ||
-            config.compatibility_flags
+            args["compatibility-flags"] || config.compatibility_flags
           }
           usageModel={config.usage_model}
           bindings={{
@@ -937,8 +950,9 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
-          type: "array",
           alias: "compatibility-flag",
+          type: "string",
+          array: true,
         })
         .option("latest", {
           describe: "Use the latest version of the worker runtime",
@@ -968,12 +982,14 @@ export async function main(argv: string[]): Promise<void> {
         .option("triggers", {
           describe: "cron schedules to attach",
           alias: ["schedule", "schedules"],
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("routes", {
           describe: "Routes to upload",
           alias: "route",
-          type: "array",
+          type: "string",
+          array: true,
         })
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",
@@ -989,7 +1005,7 @@ export async function main(argv: string[]): Promise<void> {
         });
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args["experimental-public"]) {
         console.warn(
           "🚨  The --experimental-public field is experimental and will change in the future."
@@ -1031,7 +1047,7 @@ export async function main(argv: string[]): Promise<void> {
         compatibilityDate: args.latest
           ? new Date().toISOString().substring(0, 10)
           : args["compatibility-date"],
-        compatibilityFlags: args["compatibility-flags"] as string[],
+        compatibilityFlags: args["compatibility-flags"],
         triggers: args.triggers,
         jsxFactory: args["jsx-factory"],
         jsxFragment: args["jsx-fragment"],
@@ -1105,7 +1121,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     async (args) => {
       if (args.format === "pretty") {
-        printWranglerBanner();
+        await printWranglerBanner();
       }
       const config = readConfig(args.config as ConfigPath, args);
 
@@ -1118,7 +1134,7 @@ export async function main(argv: string[]): Promise<void> {
       const accountId = await requireAuth(config);
 
       const cliFilters: TailCLIFilters = {
-        status: args.status as ("ok" | "error" | "canceled")[],
+        status: args.status as ("ok" | "error" | "canceled")[] | undefined,
         header: args.header,
         method: args.method,
         samplingRate: args["sampling-rate"],
@@ -1247,10 +1263,7 @@ export async function main(argv: string[]): Promise<void> {
           ip={config.dev.ip}
           public={undefined}
           compatibilityDate={getDevCompatibilityDate(config)}
-          compatibilityFlags={
-            (args["compatibility-flags"] as string[]) ||
-            config.compatibility_flags
-          }
+          compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}
           bindings={{
             kv_namespaces: config.kv_namespaces?.map(
@@ -1408,7 +1421,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
 
             const scriptName = getLegacyScriptName(args, config);
@@ -1485,7 +1498,7 @@ export async function main(argv: string[]): Promise<void> {
               return (
                 typeof e === "object" &&
                 e !== null &&
-                (e as { code: 10007 }).code === 10007
+                (e as { code: number }).code === 10007
               );
             }
 
@@ -1508,8 +1521,8 @@ export async function main(argv: string[]): Promise<void> {
         .command(
           "delete <key>",
           "Delete a secret variable from a script",
-          (yargs) => {
-            printWranglerBanner();
+          async (yargs) => {
+            await printWranglerBanner();
             return yargs
               .positional("key", {
                 describe: "The variable name to be accessible in the script",
@@ -1627,7 +1640,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             if (!isValidNamespaceBinding(args.namespace)) {
               throw new CommandLineArgsError(
@@ -1708,7 +1721,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
 
             let id;
@@ -1804,7 +1817,7 @@ export async function main(argv: string[]): Promise<void> {
               .check(demandOneOfOption("value", "path"));
           },
           async ({ key, ttl, expiration, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
@@ -1952,7 +1965,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ key, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2008,7 +2021,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             // The simplest implementation I could think of.
             // This could be made more efficient with a streaming parser/uploader
             // but we'll do that in the future if needed.
@@ -2119,7 +2132,7 @@ export async function main(argv: string[]): Promise<void> {
               });
           },
           async ({ filename, ...args }) => {
-            printWranglerBanner();
+            await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
@@ -2204,7 +2217,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             const config = readConfig(args.config as ConfigPath, args);
 
@@ -2235,7 +2248,7 @@ export async function main(argv: string[]): Promise<void> {
             });
           },
           async (args) => {
-            printWranglerBanner();
+            await printWranglerBanner();
 
             const config = readConfig(args.config as ConfigPath, args);
 
@@ -2275,7 +2288,7 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: scopes
     },
     async (args) => {
-      printWranglerBanner();
+      await printWranglerBanner();
       if (args["scopes-list"]) {
         listScopes();
         return;
@@ -2309,7 +2322,7 @@ export async function main(argv: string[]): Promise<void> {
     "🚪 Logout from Cloudflare",
     () => {},
     async () => {
-      printWranglerBanner();
+      await printWranglerBanner();
       await logout();
     }
   );
@@ -2320,7 +2333,7 @@ export async function main(argv: string[]): Promise<void> {
     "🕵️  Retrieve your user info and test your auth config",
     () => {},
     async () => {
-      printWranglerBanner();
+      await printWranglerBanner();
       await whoami();
     }
   );

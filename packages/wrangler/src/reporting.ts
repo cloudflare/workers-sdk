@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import TOML from "@iarna/toml";
 import { RewriteFrames } from "@sentry/integrations";
 import {
   captureException,
@@ -15,6 +14,7 @@ import {
 import { execaSync } from "execa";
 import prompts from "prompts";
 import * as pkj from "../package.json";
+import { parseTOML } from "./parse";
 
 export function initReporting() {
   init({
@@ -29,6 +29,21 @@ export function initReporting() {
       // which can include unsanitized data that the user logs
       // from their worker during development
       return null;
+    },
+    /**
+     * We want to prevent any user created code from sending Events to Sentry,
+     * which can be captured by "uncaughtExceptionMonitor" listener.
+     * Miniflare code runs on the same process as Wrangler, so we want to return `null`
+     * if "@miniflare" is present in the Event frames.
+     */
+    beforeSend: (event) => {
+      return !event.exception?.values?.some((value) =>
+        value.stacktrace?.frames?.some((frame) =>
+          frame.module?.includes("@miniflare")
+        )
+      )
+        ? event
+        : null;
     },
     dsn: "https://5089b76bf8a64a9c949bf5c2b5e8003c@o51786.ingest.sentry.io/6190959",
     tracesSampleRate: 1.0,
@@ -118,7 +133,7 @@ async function reportingPermission() {
   )
     return undefined;
 
-  const reportingTOML = TOML.parse(
+  const reportingTOML = parseTOML(
     await readFile(path.join(os.homedir(), ".wrangler/config/reporting.toml"), {
       encoding: "utf-8",
     })
