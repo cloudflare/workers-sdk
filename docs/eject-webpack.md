@@ -34,16 +34,16 @@ You should remove the `type` and `webpack_config` keys from your `wrangler.toml`
 
 `wrangler` 2 drops support for project types, including `type = webpack` and configuration via the `webpack_config` key. If your webpack configuration does things beyond adding loaders for e.g. Typescript, you'll need to maintain your custom Webpack configuration. In the long term, you should [migrate to an external `[build]` process](custom-builds.md), but in the short term it's still possible to reproduce `wrangler` 1's build steps in newer versions of `wrangler` by following the steps below.
 
-1. Add [wrangler-js](https://www.npmjs.com/package/wrangler-js) as a `devDependency`
+1. Add [wranglerjs-compat-webpack-plugin](TODO: npm link) as a `devDependency`
 
-[wrangler-js](https://www.npmjs.com/package/wrangler-js), shipped as a separate library from [wrangler 1](https://www.npmjs.com/package/@cloudflare/wrangler/v/1.19.11), is a simple Node script that configures and executes [webpack 4](https://unpkg.com/browse/wrangler-js@0.1.11/package.json) for you. When you set `type = webpack`, wrangler 1 would execute this script for you. Now you'll have to execute it manually.
+[wrangler-js](https://www.npmjs.com/package/wrangler-js), shipped as a separate library from [wrangler 1](https://www.npmjs.com/package/@cloudflare/wrangler/v/1.19.11), is a simple Node script that configures and executes [webpack 4](https://unpkg.com/browse/wrangler-js@0.1.11/package.json) for you. When you set `type = webpack`, wrangler 1 would execute this script for you. We've ported the functionality over to a new package, [wranglerjs-compat-webpack-plugin](TODO: link), which you can use as a [webpack plugin](https://v4.webpack.js.org/configuration/plugins/).
 
 To do that, you'll need to add it as a dependency:
 
 ```sh
-npm install --save-dev wrangler-js
+npm install --save-dev webpack@^4.46.0 webpack-cli wranglerjs-compat-webpack-plugin
 # or
-yarn add --dev wrangler-js
+yarn add --dev webpack@4.46.0 webpack-cli wranglerjs-compat-webpack-plugin
 ```
 
 You should see this reflected in your package.json:
@@ -51,18 +51,33 @@ You should see this reflected in your package.json:
 ```json
 {
   "name": "my-worker",
-  "version": "2.0.0",
+  "version": "x.y.z",
   // ...
   "devDependencies": {
     // ...
-    "wrangler-js": "^0.1.11"
+    "wranglerjs-compat-webpack-plugin": "^x.y.z",
+    "webpack": "^4.46.0",
+    "webpack-cli": "^x.y.z"
   }
 }
 ```
 
-2. Add a build script your `package.json`
+2. Add [wranglerjs-compat-webpack-plugin] to `webpack.config.js`
 
-wrangler-js can be executed as a script, so you should add it to your package.json:
+Modify your `webpack.config.js` file to include the plugin you just installed.
+
+```js
+const {
+  WranglerJsCompatWebpackPlugin,
+} = require("wranglerjs-compat-webpack-plugin");
+
+module.exports = {
+  // ...
+  plugins: [new WranglerJsCompatWebpackPlugin()],
+};
+```
+
+2. Add a build script your `package.json`
 
 ```json
 {
@@ -70,7 +85,7 @@ wrangler-js can be executed as a script, so you should add it to your package.js
   "verion": "2.0.0",
   // ...
   "scripts": {
-    "build": "wrangler-js" // <-- Add this line!
+    "build": "webpack" // <-- Add this line!
     // ...
   }
 }
@@ -78,7 +93,7 @@ wrangler-js can be executed as a script, so you should add it to your package.js
 
 3. Remove unsupported entires from your `wrangler.toml`
 
-Remove the `type` and `webpack_config` keys from your `wrangler.toml`, as they're not supported anymore. You'll instead want to use the `[build]` key to run wrangler-js directly.
+Remove the `type` and `webpack_config` keys from your `wrangler.toml`, as they're not supported anymore.
 
 ```toml
 # Remove these!
@@ -86,12 +101,17 @@ type = "webpack"
 webpack_config = "webpack.config.js"
 ```
 
-If you have multiple webpack configurations (e.g. for different environments) you should comment them out for now, rather than removing them entirely. We'll need to know which config belongs to what in the next step.
+4. Tell wrangler how to bundle your worker
 
-4. Add a `[build]` entry to your `wrangler.toml`
+Wrangler no longer has any knowledge of how to build your worker, so you'll need to tell it how to call webpack and where to look for webpack's output. This translates into two fields:
 
-You'll need to call wrangler-js explicitly, which means you'll need to supply command-line args that wrangler 1 used to specify for you. wrangler-js accepts the following command line args:
+```toml
+main = "./worker/script.js" # by default, or whatever file webpack outputs
+[build]
+command = "npm run build" # or "yarn build"
+# ...
+```
 
-- `--webpack-config`
-  - This flag tells wrangler-js where to look for your webpack configuration. You MUST specify a path, relative to the project root.
-  - Example: `--webpack-config="path/to/webpack.config.js"`
+5. Test it out!
+
+Try running `npx wrangler publish`, and verify that things work as expected.
