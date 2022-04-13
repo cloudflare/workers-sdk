@@ -699,18 +699,6 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       };
       return accessContext;
     } catch (error) {
-      switch (error) {
-        case "invalid_grant":
-          console.warn(
-            "Expired! Auth code or refresh token needs to be renewed."
-          );
-          // alert("Redirecting to auth server to obtain a new auth grant code.");
-          // TODO: return refreshAuthCodeOrRefreshToken();
-          break;
-        default:
-          console.error(error);
-          break;
-      }
       if (typeof error === "string") {
         throw toErrorClass(error);
       } else {
