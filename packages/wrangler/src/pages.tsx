@@ -1244,7 +1244,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           hash: string;
         };
 
-        // TODO: Ignore some files including redirects, headers and worker
+        const IGNORE_LIST = [
+          "_worker.js",
+          "_redirects",
+          "_headers",
+          ".DS_Store",
+        ];
 
         const walk = async (
           dir: string,
@@ -1257,6 +1262,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             files.map(async (file) => {
               const filepath = join(dir, file);
               const filestat = await stat(filepath);
+
+              if (IGNORE_LIST.includes(file)) {
+                return;
+              }
 
               if (filestat.isDirectory()) {
                 fileMap = await walk(filepath, fileMap, depth + 1);
