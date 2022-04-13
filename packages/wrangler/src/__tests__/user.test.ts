@@ -4,6 +4,7 @@ import path from "node:path";
 import fetchMock from "jest-fetch-mock";
 import {
   readAuthConfigFile,
+  requireAuth,
   USER_AUTH_CONFIG_FILE,
   writeAuthConfigFile,
 } from "../user";
@@ -11,9 +12,10 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 
-describe("wrangler", () => {
+describe("User", () => {
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
   const {
@@ -21,6 +23,7 @@ describe("wrangler", () => {
     mockGrantAccessToken,
     mockGrantAuthorization,
     mockRevokeAuthorization,
+    mockExchangeRefreshTokenForAccessToken,
   } = mockOAuthFlow();
 
   describe("login", () => {
@@ -81,5 +84,42 @@ describe("wrangler", () => {
       const config = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
       expect(fs.existsSync(config)).toBeFalsy();
     });
+  });
+
+  // TODO: Improve OAuth mocking to handle `/token` endpoints from different calls
+  it("should report error message for failed token refresh", async () => {
+    mockOAuthServerCallback();
+    writeAuthConfigFile({
+      oauth_token: "hunter2",
+      refresh_token: "Order 66",
+    });
+    mockGrantAuthorization({ respondWith: "success" });
+
+    mockExchangeRefreshTokenForAccessToken({
+      respondWith: "badResponse",
+    });
+
+    // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
+    await expect(requireAuth({} as Config, false)).rejects.toThrowError();
+    expect(std.err).toContain(
+      `Error: <html> <body> This shouldn't be sent, but should be handled </body> </html>`
+    );
+  });
+
+  it("should confirm no error message when refresh is successful", async () => {
+    mockOAuthServerCallback();
+    writeAuthConfigFile({
+      oauth_token: "hunter2",
+      refresh_token: "Order 66",
+    });
+    mockGrantAuthorization({ respondWith: "success" });
+
+    mockExchangeRefreshTokenForAccessToken({
+      respondWith: "refreshSuccess",
+    });
+
+    // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
+    await expect(requireAuth({} as Config, false)).rejects.toThrowError();
+    expect(std.err).toContain("");
   });
 });
