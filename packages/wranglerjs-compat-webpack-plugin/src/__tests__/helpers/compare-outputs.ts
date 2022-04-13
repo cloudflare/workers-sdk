@@ -82,7 +82,7 @@ export async function compareOutputs({
       err: std.err,
       warn: std.warn,
     },
-    output: path.join(wrangler1Dir, "worker"),
+    output: walk(path.join(wrangler1Dir, "worker")),
   };
 
   clearConsole();
@@ -169,7 +169,7 @@ export async function compareOutputs({
       err: std.err,
       warn: std.warn,
     },
-    output: path.join(wrangler2Dir, "worker"),
+    output: walk(path.join(wrangler2Dir, "worker")),
   };
 
   return { wrangler1, wrangler2 };
@@ -188,13 +188,18 @@ const clearConsole = () => {
  * Jest errors aren't exported directly as a type, so this hacky garbage
  * checks if an error has a "matcherResult" property, which all jest errors
  * have.
- *
- * Useful if you need to check whether an assertion failed, or if your code
- * sucks.
  */
 const isAssertionError = (e: Error) =>
   Object.prototype.hasOwnProperty.bind(e)("matcherResult");
 
+/**
+ * Temporarily capture output of processes spawned by `child_process.spawn()`
+ * when the `fn` arg is called. All output will be piped through to the
+ * `stdout` and `stderr` args, which can be arbitrary streams.
+ *
+ * Useful for capturing output from webpack when called by wrangler 2.
+ * @returns the result of calling `fn`
+ */
 async function withCapturedChildProcessOutput<T>(
   fn: () => T | Promise<T>,
   { stdout, stderr }: { stdout: WritableStream; stderr: WritableStream }
@@ -222,3 +227,23 @@ async function withCapturedChildProcessOutput<T>(
     childProcessMock.mockRestore();
   }
 }
+
+/**
+ * Walk a directory, reading all files into an object keyed by their filenames
+ */
+function walk(dir: string): DirectoryContent {
+  const entries: DirectoryContent = {};
+
+  fs.readdirSync(dir).forEach((entry) => {
+    const entryPath = path.resolve(dir, entry);
+    if (fs.lstatSync(entryPath).isDirectory()) {
+      entries[entry] = walk(entryPath);
+    } else {
+      entries[entry] = fs.readFileSync(entryPath);
+    }
+  });
+
+  return entries;
+}
+
+type DirectoryContent = { [key: string]: Buffer | DirectoryContent };

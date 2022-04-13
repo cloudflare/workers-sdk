@@ -133,12 +133,6 @@ export class WranglerJsCompatWebpackPlugin {
       console.warn(`${weWouldGuess}\n${noLonger}\n${docsUrl}`);
     }
 
-    if (context === undefined) {
-      console.warn(
-        "You should set the `context` key in your webpack config to be the directory where your worker source code is."
-      );
-    }
-
     if (entry === undefined) {
       console.warn(
         'You should set the `entry` key in your webpack config to be the entry point for you worker (e.g. "index.js")'
@@ -159,37 +153,9 @@ export class WranglerJsCompatWebpackPlugin {
    */
   private checkOutputs(compiler: Compiler) {
     if (compiler.options.target !== "webworker") {
-      console.warn(
-        'You should set `target` to "webworker" in your webpack config.'
-      );
+      console.warn('Setting `target` to "webworker"...');
 
       compiler.options.target = "webworker";
-    }
-
-    if (compiler.options.output?.filename !== "worker.js") {
-      console.warn(
-        'You should set `output.filename` to "worker.js" in your webpack config.'
-      );
-
-      compiler.options.output = {
-        ...compiler.options.output,
-        filename: "worker.js",
-      };
-    }
-
-    if (
-      compiler.options.output?.sourceMapFilename &&
-      compiler.options.output?.sourceMapFilename !== "worker.js.map" &&
-      compiler.options.output?.sourceMapFilename !== "[file].map[query]" // ?
-    ) {
-      console.warn(
-        'You should set `output.sourceMapFilename` to "worker.js.map" in your webpack config.'
-      );
-
-      compiler.options.output = {
-        ...compiler.options.output,
-        sourceMapFilename: "worker.js.map",
-      };
     }
   }
 
@@ -204,9 +170,7 @@ export class WranglerJsCompatWebpackPlugin {
     }
 
     if (!fs.existsSync(path.join(this.packageDir, "node_modules"))) {
-      console.warn(
-        `Installing deps in ${this.packageDir}, but you should do this yourself...`
-      );
+      console.warn(`Running \`npm install\` in ${this.packageDir}...`);
       child_process.spawnSync("npm", ["install"], {
         cwd: this.packageDir,
       });
