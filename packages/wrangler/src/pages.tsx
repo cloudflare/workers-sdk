@@ -1278,6 +1278,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 } else {
                   name = file;
                 }
+
+                // TODO: Move this to later so we don't hold as much in memory
                 const fileContent = await readFile(filepath);
 
                 const base64Content = fileContent.toString("base64");
@@ -1335,6 +1337,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           form.append("file", file.content, {
             filename: name,
           });
+
+          // TODO: Consider a retry
 
           const promise = fetchResult<{ id: string }>(
             `/accounts/${accountId}/pages/projects/${project}/file`,
