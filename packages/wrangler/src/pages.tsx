@@ -1105,7 +1105,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         .command(
           "list",
           "List your Cloudflare Pages projects",
-          () => {},
+          (yargs) => yargs.epilogue(pagesBetaWarning),
           async (args) => {
             const config = readConfig(args.config as ConfigPath, args);
             const accountId = await requireAuth(config);
@@ -1143,7 +1143,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   description:
                     "The name of the production branch of your project",
                 },
-              }),
+              })
+              .epilogue(pagesBetaWarning),
           async (args) => {
             const { "production-branch": productionBranch, name } = args;
 
@@ -1172,57 +1173,62 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             );
           }
         )
+        .epilogue(pagesBetaWarning)
     )
     .command("deployment", false, (yargs) =>
-      yargs.command(
-        "list",
-        "List deployments in your Cloudflare Pages project",
-        (yargs) =>
-          yargs.options({
-            project: {
-              type: "string",
-              demandOption: true,
-              description:
-                "The name of the project you would like to list deployments for",
-            },
-          }),
-        async (args) => {
-          const config = readConfig(args.config as ConfigPath, args);
-          const accountId = await requireAuth(config);
+      yargs
+        .command(
+          "list",
+          "List deployments in your Cloudflare Pages project",
+          (yargs) =>
+            yargs
+              .options({
+                project: {
+                  type: "string",
+                  demandOption: true,
+                  description:
+                    "The name of the project you would like to list deployments for",
+                },
+              })
+              .epilogue(pagesBetaWarning),
+          async (args) => {
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
 
-          const deployments: Array<Deployment> = await fetchResult(
-            `/accounts/${accountId}/pages/projects/${args.project}/deployments`
-          );
+            const deployments: Array<Deployment> = await fetchResult(
+              `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+            );
 
-          const titleCase = (word: string) =>
-            word.charAt(0).toUpperCase() + word.slice(1);
+            const titleCase = (word: string) =>
+              word.charAt(0).toUpperCase() + word.slice(1);
 
-          const shortSha = (sha: string) => sha.slice(0, 7);
+            const shortSha = (sha: string) => sha.slice(0, 7);
 
-          const getStatus = (deployment: Deployment) => {
-            // Return a pretty time since timestamp if successful otherwise the status
-            if (deployment.latest_stage.status === `success`) {
-              return timeagoFormat(deployment.latest_stage.ended_on);
-            }
-            return titleCase(deployment.latest_stage.status);
-          };
-
-          const data = deployments.map((deployment) => {
-            return {
-              Environment: titleCase(deployment.environment),
-              Branch: deployment.deployment_trigger.metadata.branch,
-              Source: shortSha(
-                deployment.deployment_trigger.metadata.commit_hash
-              ),
-              Deployment: deployment.url,
-              Status: getStatus(deployment),
-              // TODO: Use a url shortener
-              Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+            const getStatus = (deployment: Deployment) => {
+              // Return a pretty time since timestamp if successful otherwise the status
+              if (deployment.latest_stage.status === `success`) {
+                return timeagoFormat(deployment.latest_stage.ended_on);
+              }
+              return titleCase(deployment.latest_stage.status);
             };
-          });
-          render(<Table data={data}></Table>);
-        }
-      )
+
+            const data = deployments.map((deployment) => {
+              return {
+                Environment: titleCase(deployment.environment),
+                Branch: deployment.deployment_trigger.metadata.branch,
+                Source: shortSha(
+                  deployment.deployment_trigger.metadata.commit_hash
+                ),
+                Deployment: deployment.url,
+                Status: getStatus(deployment),
+                // TODO: Use a url shortener
+                Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+              };
+            });
+            render(<Table data={data}></Table>);
+          }
+        )
+        .epilogue(pagesBetaWarning)
     );
 };
 

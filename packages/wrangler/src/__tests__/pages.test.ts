@@ -167,7 +167,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       );
       await runWrangler("pages project create a-new-project");
       expect(std.out).toMatchInlineSnapshot(`
-        "Successfully created 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you complete a deployment.
+        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
         To deploy a folder of assets, run 'wrangler pages publish [directory]'."
       `);
     });
@@ -194,7 +194,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
         "pages project create a-new-project --production-branch=main"
       );
       expect(std.out).toMatchInlineSnapshot(`
-        "Successfully created 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you complete a deployment.
+        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
         To deploy a folder of assets, run 'wrangler pages publish [directory]'."
       `);
     });
