@@ -52,6 +52,7 @@ describe("Pages Functions", () => {
 
   it("renders static pages", async () => {
     const response = await waitUntilReady("http://localhost:8789/");
+    expect(response.headers.get("x-custom")).toBe("header value");
     const text = await response.text();
     expect(text).toContain("Hello, world!");
   });
