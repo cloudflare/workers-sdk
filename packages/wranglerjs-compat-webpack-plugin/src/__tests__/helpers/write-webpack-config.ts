@@ -13,7 +13,6 @@ export function writeWebpackConfig(
   let stringified = "";
 
   if (usePlugin) {
-    // stringified += `debugger;\n`;
     stringified += `const { WranglerJsCompatWebpackPlugin } = require("wranglerjs-compat-webpack-plugin");\n`;
 
     config.plugins = config.plugins || [];

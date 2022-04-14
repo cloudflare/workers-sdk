@@ -8,9 +8,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "bugs": {
-    "url": "https://github.com/cloudflare/wrangler/issues"
+    "url": "https://github.com/cloudflare/wrangler2/issues"
   },
-  "homepage": "https://github.com/cloudflare/wrangler#readme",
+  "homepage": "https://github.com/cloudflare/wrangler2#readme",
   "scripts": {
     "build": "run-p build:*",
     "build:d.ts": "tsc",
@@ -38,9 +38,6 @@
     "undici": "^5.0.0",
     "webpack": "^4.46.0",
     "wrangler": "../wrangler"
-  },
-  "peerDependencies": {
-    "webpack": "^4.46.0"
   },
   "jest": {
     "restoreMocks": true,

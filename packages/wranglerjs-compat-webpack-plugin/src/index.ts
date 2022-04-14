@@ -187,7 +187,7 @@ export class WranglerJsCompatWebpackPlugin {
       return;
     }
 
-    const warning = `wrangler 1 would automatically clone a simple worker into ${this.packageDir} for you if it detected a sites project with no worker component, but you should now include the worker yourself.`;
+    const warning = `We're going to clone a simple worker into ${this.packageDir} for you since we detected a sites project with no worker component. To hide this warning, you should include the worker before building.`;
     const heresTheTemplate = `You can clone the worker into ${this.packageDir} yourself:`;
     const template = "https://github.com/cloudflare/worker-sites-init";
 

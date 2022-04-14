@@ -13,6 +13,7 @@ import { WranglerJsCompatWebpackPlugin } from "../";
 import { compareOutputs } from "./helpers/compare-outputs";
 import { installWrangler1 } from "./helpers/install-wrangler";
 import { mockConfigDir } from "./helpers/mock-config-dir";
+import { cleanMessage } from "./helpers/pipe";
 
 mockAccountId();
 mockApiToken();
@@ -36,13 +37,9 @@ describe("messaging", () => {
 
     await expect(runWebpack(config)).resolves.not.toThrow();
 
-    expect(std.out).toMatchInlineSnapshot(`""`);
-    expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(
-      std.warn
-        .replaceAll(process.cwd(), "[dir]")
-        .replaceAll(process.cwd().replaceAll("\\", "/"), "[dir]")
-    ).toMatchInlineSnapshot(`
+    expect(cleanMessage(std.out)).toMatchInlineSnapshot(`""`);
+    expect(cleanMessage(std.err)).toMatchInlineSnapshot(`""`);
+    expect(cleanMessage(std.warn)).toMatchInlineSnapshot(`
       "Setting \`target\` to \\"webworker\\"...
       Running \`npm install\` in [dir]..."
     `);
@@ -71,47 +68,46 @@ describe("wrangler 1 parity", () => {
     expect(wrangler2.result).not.toBeInstanceOf(Error);
 
     expect(wrangler1.output).toStrictEqual(wrangler2.output);
+
+    expect(wrangler1.std.out).toMatchInlineSnapshot(`
+      "up to date, audited 1 package in [timing]
+      found [some] vulnerabilities
+      Built successfully, built project size is 503 bytes."
+    `);
+    expect(wrangler1.std.err).toMatchInlineSnapshot(`""`);
+    expect(wrangler1.std.warn).toMatchInlineSnapshot(`""`);
+
+    expect(wrangler2.std.out).toMatchInlineSnapshot(`
+      "running: npm run build
+      > build
+      > webpack --no-color
+      Hash: e96932fc5c1ce19ddd05
+      Version: webpack 4.46.0
+      Time: [timing]
+      Built at: [time]
+        Asset        Size  Chunks  Chunk Names
+      main.js  1020 bytes       0  main
+      Entrypoint main = main.js
+      [0] ./index.js + 1 modules 163 bytes {0} [built]
+          | ./index.js 140 bytes [built]
+          | ./another.js 23 bytes [built]
+
+
+      Uploaded test-name (TIMINGS)
+      Published test-name (TIMINGS)
+        test-name.test-sub-domain.workers.dev"
+    `);
+    expect(wrangler2.std.err).toMatchInlineSnapshot(`""`);
+    expect(wrangler2.std.warn).toMatchInlineSnapshot(`
+      "WARNING  in configuration
+      The 'mode' option has not been set, webpack will fallback to 'production' for this value. Set 'mode' option to 'development' or 'production' to enable defaults for each environment.
+      You can also set it to 'none' to disable any default behavior. Learn more: https://webpack.js.org/configuration/mode/"
+    `);
   });
 
-  // TODO
-  it("works with webassembly", async () => {
-    return;
-    const { wrangler1, wrangler2 } = await compareOutputs({
-      webpackConfig: {
-        entry: "./index.js",
-        target: "webworker",
-      },
-      wranglerConfig: {
-        main: "./worker/script.js",
-      },
-      worker: { type: "sw" },
-    });
+  it.todo("works with webassembly");
 
-    expect(wrangler1.result).not.toBeInstanceOf(Error);
-    expect(wrangler2.result).not.toBeInstanceOf(Error);
-
-    expect(wrangler1.output).toStrictEqual(wrangler2.output);
-  });
-
-  // TODO
-  it("works with sites", async () => {
-    return;
-    const { wrangler1, wrangler2 } = await compareOutputs({
-      webpackConfig: {
-        entry: "./index.js",
-        target: "webworker",
-      },
-      wranglerConfig: {
-        main: "./worker/script.js",
-      },
-      worker: { type: "sw" },
-    });
-
-    expect(wrangler1.result).not.toBeInstanceOf(Error);
-    expect(wrangler2.result).not.toBeInstanceOf(Error);
-
-    expect(wrangler1.output).toStrictEqual(wrangler2.output);
-  });
+  it.todo("works with sites");
 });
 
 async function runWebpack(

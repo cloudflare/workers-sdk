@@ -61,7 +61,8 @@ export const cleanMessage = (message: string): string =>
   message
     .replaceAll(/^.*debugger.*$/gim, "") // remove debugger statements
     .replaceAll(/\d+ms/gm, "[timing]") // standardize timings
-    .replaceAll(process.cwd(), "[temp dir]") // standardize directories
+    .replaceAll(process.cwd(), "[dir]") // standardize directories
+    .replaceAll(process.cwd().replaceAll("\\", "/"), "[dir]")
     .replaceAll(PATH_TO_WRANGLER, "[wrangler 1]") // standardize calls to wrangler 1
     .replaceAll(/found .+ vulnerabilities/gm, "found [some] vulnerabilities") // vuln counts
     .replaceAll(

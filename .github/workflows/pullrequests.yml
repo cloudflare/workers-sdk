@@ -53,7 +53,7 @@ jobs:
           node-version: 16.7
           cache: "npm"
 
-      - name: Install Wrangler 1
+      - name: Restore Wrangler 1 from Cache
         uses: actions/cache@v3
         id: wrangler-1-cache
         with:

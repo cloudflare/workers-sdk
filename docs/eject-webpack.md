@@ -91,7 +91,7 @@ module.exports = {
 }
 ```
 
-3. Remove unsupported entires from your `wrangler.toml`
+3. Remove unsupported entries from your `wrangler.toml`
 
 Remove the `type` and `webpack_config` keys from your `wrangler.toml`, as they're not supported anymore.
 
