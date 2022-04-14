@@ -15,6 +15,7 @@ import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
@@ -3748,36 +3749,6 @@ export default{
     expect(std.warn).toMatchInlineSnapshot(`""`);
   });
 });
-
-/** Write a mock Worker script to disk. */
-function writeWorkerSource({
-  basePath = ".",
-  format = "js",
-  type = "esm",
-}: {
-  basePath?: string;
-  format?: "js" | "ts" | "jsx" | "tsx" | "mjs";
-  type?: "esm" | "sw";
-} = {}) {
-  if (basePath !== ".") {
-    fs.mkdirSync(basePath, { recursive: true });
-  }
-  fs.writeFileSync(
-    `${basePath}/index.${format}`,
-    type === "esm"
-      ? `import { foo } from "./another";
-      export default {
-        async fetch(request) {
-          return new Response('Hello' + foo);
-        },
-      };`
-      : `import { foo } from "./another";
-      addEventListener('fetch', event => {
-        event.respondWith(new Response('Hello' + foo));
-      })`
-  );
-  fs.writeFileSync(`${basePath}/another.${format}`, `export const foo = 100;`);
-}
 
 /** Write mock assets to the file system so they can be uploaded. */
 function writeAssets(assets: { filePath: string; content: string }[]) {
