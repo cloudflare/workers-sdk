@@ -1270,6 +1270,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 return;
               }
 
+              if (filestat.isSymbolicLink()) {
+                return;
+              }
+
               if (filestat.isDirectory()) {
                 fileMap = await walk(filepath, fileMap, depth + 1);
               } else {
