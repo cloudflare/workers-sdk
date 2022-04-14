@@ -1251,6 +1251,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           "_redirects",
           "_headers",
           ".DS_Store",
+          "node_modules",
         ];
 
         const walk = async (
