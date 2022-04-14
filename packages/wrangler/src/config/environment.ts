@@ -74,7 +74,13 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  routes: (string | { pattern: string; zone_id: string })[] | undefined;
+  routes:
+    | (
+        | string
+        | { pattern: string; zone_id: string }
+        | { pattern: string; zone_name: string }
+      )[]
+    | undefined;
 
   /**
    * A route that your worker should be published to. Literally
@@ -85,7 +91,13 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  route: (string | { pattern: string; zone_id: string }) | undefined;
+  route:
+    | (
+        | string
+        | { pattern: string; zone_id: string }
+        | { pattern: string; zone_name: string }
+      )
+    | undefined;
 
   /**
    * Path to a custom tsconfig

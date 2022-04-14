@@ -472,8 +472,11 @@ function isValidRouteValue(item: unknown): boolean {
       (typeof item === "object" &&
         hasProperty(item, "pattern") &&
         typeof item.pattern === "string" &&
-        hasProperty(item, "zone_id") &&
-        typeof item.zone_id === "string" &&
+        // it could have a zone_name
+        ((hasProperty(item, "zone_name") &&
+          typeof item.zone_name === "string") ||
+          // or a zone_id
+          (hasProperty(item, "zone_id") && typeof item.zone_id === "string")) &&
         Object.keys(item).length === 2))
   );
 }
@@ -484,7 +487,7 @@ function isValidRouteValue(item: unknown): boolean {
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && !isValidRouteValue(value)) {
     diagnostics.errors.push(
-      `Expected "${field}" to be either a string or an object with shape {pattern: string, zone_id: string}, but got ${JSON.stringify(
+      `Expected "${field}" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got ${JSON.stringify(
         value
       )}.`
     );
@@ -514,8 +517,10 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
   }
   if (invalidRoutes.length > 0) {
     diagnostics.errors.push(
-      `Expected "${field}" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: ${JSON.stringify(
-        invalidRoutes
+      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+        invalidRoutes,
+        null,
+        2
       )}.`
     );
   }

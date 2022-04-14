@@ -643,12 +643,17 @@ describe("normalizeAndValidateConfig()", () => {
           "example.com/*",
           { pattern: 123, zone_id: "zone_id_1" },
           { pattern: "route_2", zone_id: 123 },
+          { pattern: "route_2", zone_name: 123 },
           { pattern: "route_3" },
           { zone_id: "zone_id_4" },
+          { zone_name: "zone_name_4" },
           { pattern: undefined },
           { pattern: "route_5", zone_id: "zone_id_5", some_other_key: 123 },
+          { pattern: "route_5", zone_name: "zone_name_5", some_other_key: 123 },
           // this one's valid too
           { pattern: "route_6", zone_id: "zone_id_6" },
+          // as well as this one
+          { pattern: "route_6", zone_name: "zone_name_6" },
         ],
         route: 888,
         jsx_factory: 999,
@@ -674,8 +679,43 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
-          - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777,{\\"pattern\\":123,\\"zone_id\\":\\"zone_id_1\\"},{\\"pattern\\":\\"route_2\\",\\"zone_id\\":123},{\\"pattern\\":\\"route_3\\"},{\\"zone_id\\":\\"zone_id_4\\"},{},{\\"pattern\\":\\"route_5\\",\\"zone_id\\":\\"zone_id_5\\",\\"some_other_key\\":123}].
+          - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
+          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+              666,
+              777,
+              {
+                \\"pattern\\": 123,
+                \\"zone_id\\": \\"zone_id_1\\"
+              },
+              {
+                \\"pattern\\": \\"route_2\\",
+                \\"zone_id\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_2\\",
+                \\"zone_name\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_3\\"
+              },
+              {
+                \\"zone_id\\": \\"zone_id_4\\"
+              },
+              {
+                \\"zone_name\\": \\"zone_name_4\\"
+              },
+              {},
+              {
+                \\"pattern\\": \\"route_5\\",
+                \\"zone_id\\": \\"zone_id_5\\",
+                \\"some_other_key\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_5\\",
+                \\"zone_name\\": \\"zone_name_5\\",
+                \\"some_other_key\\": 123
+              }
+            ].
           - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
           - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
           - Expected \\"build.command\\" to be of type string but got 1444.
@@ -1816,8 +1856,11 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
-            - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777].
+            - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
+            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+                666,
+                777
+              ].
             - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
             - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
             - Expected \\"build.command\\" to be of type string but got 1444.
