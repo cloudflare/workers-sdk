@@ -1165,7 +1165,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               }
             );
             console.log(
-              `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you complete a deployment.`
+              `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
             );
             console.log(
               `To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
