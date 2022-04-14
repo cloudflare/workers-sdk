@@ -38,7 +38,11 @@ describe("messaging", () => {
 
     expect(std.out).toMatchInlineSnapshot(`""`);
     expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(std.warn.replaceAll(process.cwd(), "[dir]")).toMatchInlineSnapshot(`
+    expect(
+      std.warn
+        .replaceAll(process.cwd(), "[dir]")
+        .replaceAll(process.cwd().replaceAll("\\", "/"), "[dir]")
+    ).toMatchInlineSnapshot(`
       "Setting \`target\` to \\"webworker\\"...
       Running \`npm install\` in [dir]..."
     `);
