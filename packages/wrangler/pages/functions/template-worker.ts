@@ -89,7 +89,11 @@ export default {
     const data = {}; // arbitrary data the user can set between functions
     const next = async (input?: RequestInfo, init?: RequestInit) => {
       if (input !== undefined) {
-        request = new Request(input, init);
+        let url = input;
+        if (typeof input === "string") {
+          url = new URL(input, request.url).toString();
+        }
+        request = new Request(url, init);
       }
 
       const result = handlerIterator.next();
