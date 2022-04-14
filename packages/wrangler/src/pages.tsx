@@ -1191,25 +1191,21 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           .options({
             project: {
               type: "string",
-              // default: "_worker.js",
               description:
                 "The name of the project you want to list deployments for",
             },
             branch: {
               type: "string",
-              // default: "_worker.js",
               description:
                 "The branch of the project you want to list deployments for",
             },
             "commit-hash": {
               type: "string",
-              // default: "_worker.js",
               description:
                 "The branch of the project you want to list deployments for",
             },
             "commit-message": {
               type: "string",
-              // default: "_worker.js",
               description:
                 "The branch of the project you want to list deployments for",
             },
@@ -1222,16 +1218,53 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           });
       },
       async (args) => {
-        const {
-          directory,
-          project,
-          // branch,
-          // commitHash,
-          // commitMessage,
-          // commitDirty,
-        } = args;
+        const { directory, project, commitDirty } = args;
 
-        // TODO: Add check for dirty git state if commitDirty is not true
+        let { branch, commitHash, commitMessage } = args;
+
+        // We infer git info by default is not passed in
+
+        let isGitDir = true;
+        try {
+          execSync(`git rev-parse --is-inside-work-tree`, {
+            stdio: "ignore",
+          });
+        } catch (err) {
+          isGitDir = false;
+        }
+
+        let isGitDirty;
+
+        if (isGitDir) {
+          try {
+            isGitDirty = Boolean(
+              execSync(`git status --porcelain`).toString().length
+            );
+
+            if (!branch) {
+              branch = execSync(`git branch | grep " * "`)
+                .toString()
+                .replace("* ", "")
+                .trim();
+            }
+
+            if (!commitHash) {
+              commitHash = execSync(`git rev-parse HEAD`).toString().trim();
+            }
+
+            if (!commitMessage) {
+              commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
+                .toString()
+                .trim();
+            }
+          } catch (err) {}
+        }
+
+        if (isGitDir && isGitDirty && !commitDirty) {
+          throw new Error(
+            `Error: Your working directory is a git repo and has uncommitted changes\nTo ignore this and publish anyway, pass in --commit-dirty=true`
+          );
+        }
 
         const config = readConfig(args.config as ConfigPath, args);
         const accountId = await requireAuth(config);
