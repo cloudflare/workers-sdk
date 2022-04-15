@@ -3,6 +3,7 @@ import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
@@ -216,6 +217,8 @@ describe("tail", () => {
   });
 
   describe("printing", () => {
+    const { setIsTTY } = useMockIsTTY();
+
     it("logs request messages in JSON format", async () => {
       const api = mockWebsocketAPIs();
       await runWrangler("tail test-worker --format json");
@@ -266,8 +269,8 @@ describe("tail", () => {
       `);
     });
 
-    it("defaults to logging in pretty format", async () => {
-      // the same test as the one before, but without the --format flag
+    it("defaults to logging in pretty format when the output is a TTY", async () => {
+      setIsTTY(true);
       const api = mockWebsocketAPIs();
       await runWrangler("tail test-worker");
 
@@ -291,6 +294,20 @@ describe("tail", () => {
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
+    });
+
+    it("defaults to logging in json format when the output is not a TTY", async () => {
+      setIsTTY(false);
+
+      const api = mockWebsocketAPIs();
+      await runWrangler("tail test-worker");
+
+      const event = generateMockRequestEvent();
+      const message = generateMockEventMessage({ event });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(std.out).toMatch(deserializeToJson(serializedMessage));
     });
 
     it("logs console messages and exceptions", async () => {

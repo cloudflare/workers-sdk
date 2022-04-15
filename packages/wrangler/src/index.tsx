@@ -1071,7 +1071,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "string",
         })
         .option("format", {
-          default: "pretty",
+          default: process.stdout.isTTY ? "pretty" : "json",
           choices: ["json", "pretty"],
           describe: "The format of log entries",
         })
@@ -1155,9 +1155,11 @@ export async function main(argv: string[]): Promise<void> {
         args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
       }`;
 
-      console.log(
-        `successfully created tail, expires at ${expiration.toLocaleString()}`
-      );
+      if (args.format === "pretty") {
+        console.log(
+          `successfully created tail, expires at ${expiration.toLocaleString()}`
+        );
+      }
 
       onExit(async () => {
         tail.terminate();
@@ -1184,7 +1186,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      if (args.format === "pretty") {
+        console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      }
 
       tail.on("close", async () => {
         tail.terminate();
