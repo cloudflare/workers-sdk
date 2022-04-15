@@ -181,11 +181,7 @@ interface EnvironmentInheritable {
    * Minify the script before uploading.
    * @inheritable
    */
-<<<<<<< HEAD
-  minify?: boolean | undefined;
-=======
   minify: boolean | undefined;
->>>>>>> 6e0d95f (Added ESBuild minification in configuration minify=true, it can be added to specific environments or inherited from top-level and flags --minify which will minify script for publish and remote Dev.)
 
   /**
    * TODO: remove this as it has been deprecated.

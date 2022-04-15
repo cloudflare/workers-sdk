@@ -2177,7 +2177,7 @@ export default{
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
 
-    it("should utilize ESBuild minification on script when `--minify` is true (sw)", async () => {
+    it("should minify the script when `--minify` is true (sw)", async () => {
       writeWranglerToml({
         main: "./index.js",
       });
@@ -2206,7 +2206,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should utilize ESBuild minification on script when `minify` in config is true (esm)", async () => {
+    it("should minify the script when `minify` in config is true (esm)", async () => {
       writeWranglerToml({
         main: "./index.js",
         legacy_env: false,
@@ -2230,6 +2230,7 @@ export default{
       mockUploadWorkerRequest({
         env: "testEnv",
         expectedType: "esm",
+        legacyEnv: false,
         expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
       });
 
@@ -3851,7 +3852,7 @@ function writeAssets(assets: { filePath: string; content: string }[]) {
 function mockUploadWorkerRequest(
   options: {
     available_on_subdomain?: boolean;
-    expectedEntry?: string | RegExp;
+    expectedEntry?: string;
     expectedType?: "esm" | "sw";
     expectedBindings?: unknown;
     expectedModules?: Record<string, string>;

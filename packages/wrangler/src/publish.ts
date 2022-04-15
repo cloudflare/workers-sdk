@@ -29,7 +29,7 @@ type Props = {
   jsxFragment: string | undefined;
   tsconfig: string | undefined;
   experimentalPublic: boolean;
-  minify?: boolean;
+  minify: boolean | undefined;
 };
 
 function sleep(ms: number) {
@@ -55,8 +55,7 @@ export default async function publish(props: Props): Promise<void> {
   const jsxFactory = props.jsxFactory || config.jsx_factory;
   const jsxFragment = props.jsxFragment || config.jsx_fragment;
 
-  // minify defaults to false only if there are no flag or config defined
-  const minify = props.minify ?? config.minify ?? false;
+  const minify = props.minify ?? config.minify;
 
   const scriptName = props.name;
   assert(

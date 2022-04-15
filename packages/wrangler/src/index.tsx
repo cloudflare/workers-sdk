@@ -734,11 +734,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
         })
         .option("minify", {
-<<<<<<< HEAD
-          describe: "minify the script",
-=======
-          describe: "Utilize ESBuild minification on script",
->>>>>>> 6e0d95f (Added ESBuild minification in configuration minify=true, it can be added to specific environments or inherited from top-level and flags --minify which will minify script for publish and remote Dev.)
+          describe: "Minify the script",
           type: "boolean",
         });
     },
@@ -1019,7 +1015,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "string",
         })
         .option("minify", {
-          describe: "Utilize ESBuild minification on script",
+          describe: "Minify the script",
           type: "boolean",
         });
     },
@@ -1271,6 +1267,7 @@ export async function main(argv: string[]): Promise<void> {
           zone={undefined}
           legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
+          minify={undefined}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}

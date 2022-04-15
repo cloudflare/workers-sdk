@@ -27,7 +27,7 @@ export async function bundleWorker(
     rules: Config["rules"];
     watch?: esbuild.WatchMode;
     tsconfig: string | undefined;
-    minify?: boolean;
+    minify: boolean | undefined;
   }
 ): Promise<BundleResult> {
   const {
