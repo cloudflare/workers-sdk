@@ -43,7 +43,7 @@ export type DevProps = {
   compatibilityDate: string;
   compatibilityFlags: string[] | undefined;
   usageModel: "bundled" | "unbound" | undefined;
-  minify?: boolean;
+  minify?: boolean | undefined;
   build: {
     command?: string | undefined;
     cwd?: string | undefined;

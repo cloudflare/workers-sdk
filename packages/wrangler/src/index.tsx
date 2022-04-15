@@ -734,7 +734,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
         })
         .option("minify", {
-          describe: "Utilize ESBuild minification on script",
+          describe: "minify the script",
           type: "boolean",
         });
     },

@@ -181,7 +181,7 @@ interface EnvironmentInheritable {
    * Minify the script before uploading.
    * @inheritable
    */
-  minify: boolean | undefined;
+  minify?: boolean | undefined;
 
   /**
    * TODO: remove this as it has been deprecated.
