@@ -15,7 +15,7 @@
     "build": "run-p build:*",
     "build:d.ts": "tsc",
     "build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js --format=cjs --sourcemap",
-    "test": "jest"
+    "test:plugin": "jest"
   },
   "dependencies": {
     "esbuild": "^0.14.31",
