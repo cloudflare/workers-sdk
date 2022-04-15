@@ -813,13 +813,17 @@ export async function main(argv: string[]): Promise<void> {
           (config.routes && config.routes[0]);
 
         let zoneId: string | undefined =
-          typeof hostLike === "object" ? hostLike.zone_id : undefined;
+          typeof hostLike === "object" && "zone_id" in hostLike
+            ? hostLike.zone_id
+            : undefined;
 
         const host =
           typeof hostLike === "string"
             ? getHost(hostLike)
             : typeof hostLike === "object"
-            ? getHost(hostLike.pattern)
+            ? "zone_name" in hostLike
+              ? getHost(hostLike.zone_name)
+              : getHost(hostLike.pattern)
             : undefined;
 
         const hostPieces =

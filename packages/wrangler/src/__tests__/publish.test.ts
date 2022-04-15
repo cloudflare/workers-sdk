@@ -17,6 +17,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
 import type { CfWorkerInit } from "../worker";
@@ -317,11 +318,15 @@ describe("publish", () => {
       await runWrangler("publish ./index");
     });
 
-    it("should publish to a route with a pattern/zone_id combo", async () => {
+    it("should publish to a route with a pattern/{zone_id|zone_name} combo", async () => {
       writeWranglerToml({
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -333,6 +338,10 @@ describe("publish", () => {
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -344,21 +353,26 @@ describe("publish", () => {
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           some-example.com/some-route/*
-          *a-boring-website.com (zone: 54sdf7fsda)
-          example.com/some-route/* (zone: JGHFHG654gjcj)
+          *a-boring-website.com (zone id: 54sdf7fsda)
+          *another-boring-website.com (zone name: some-zone.com)
+          example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
           "warn": "",
         }
       `);
     });
 
-    it("should publish to a route with a pattern/zone_id combo (service environments)", async () => {
+    it("should publish to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
       writeWranglerToml({
         env: {
           staging: {
             routes: [
               "some-example.com/some-route/*",
               { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+              {
+                pattern: "*another-boring-website.com",
+                zone_name: "some-zone.com",
+              },
               { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
               "more-examples.com/*",
             ],
@@ -381,6 +395,10 @@ describe("publish", () => {
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -394,8 +412,9 @@ describe("publish", () => {
           "out": "Uploaded test-name (staging) (TIMINGS)
         Published test-name (staging) (TIMINGS)
           some-example.com/some-route/*
-          *a-boring-website.com (zone: 54sdf7fsda)
-          example.com/some-route/* (zone: JGHFHG654gjcj)
+          *a-boring-website.com (zone id: 54sdf7fsda)
+          *another-boring-website.com (zone name: some-zone.com)
+          example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
           "warn": "",
         }
@@ -3886,11 +3905,11 @@ function mockUpdateWorkerRequest({
 }
 
 function mockPublishRoutesRequest({
-  routes,
+  routes = [],
   env = undefined,
   legacyEnv = false,
 }: {
-  routes: (string | { pattern: string; zone_id: string })[];
+  routes: Config["routes"];
   env?: string | undefined;
   legacyEnv?: boolean | undefined;
 }) {

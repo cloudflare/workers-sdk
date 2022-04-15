@@ -319,14 +319,18 @@ export default async function publish(props: Props): Promise<void> {
               .map((route) =>
                 typeof route === "string"
                   ? route
-                  : `${route.pattern} (zone: ${route.zone_id})`
+                  : "zone_id" in route
+                  ? `${route.pattern} (zone id: ${route.zone_id})`
+                  : `${route.pattern} (zone name: ${route.zone_name})`
               )
               .concat([`...and ${routes.length - 10} more routes`]);
           }
           return routes.map((route) =>
             typeof route === "string"
               ? route
-              : `${route.pattern} (zone: ${route.zone_id})`
+              : "zone_id" in route
+              ? `${route.pattern} (zone id: ${route.zone_id})`
+              : `${route.pattern} (zone name: ${route.zone_name})`
           );
         })
       );

@@ -185,7 +185,7 @@ export interface DevConfig {
   /**
    * Host to forward requests to, defaults to the host of the first route of project
    */
-  host: (string | { pattern: string; zone_id: string }) | undefined;
+  host: Config["route"];
 }
 
 export type RawDevConfig = Partial<DevConfig>;
