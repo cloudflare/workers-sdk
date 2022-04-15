@@ -1071,59 +1071,56 @@ export async function main(argv: string[]): Promise<void> {
     "tail [name]",
     "🦚 Starts a log tailing session for a published Worker.",
     (yargs) => {
-      return (
-        yargs
-          .positional("name", {
-            describe: "Name of the worker",
-            type: "string",
-          })
-          // TODO: auto-detect if this should be json or pretty based on atty
-          .option("format", {
-            default: "pretty",
-            choices: ["json", "pretty"],
-            describe: "The format of log entries",
-          })
-          .option("status", {
-            choices: ["ok", "error", "canceled"],
-            describe: "Filter by invocation status",
-            array: true,
-          })
-          .option("header", {
-            type: "string",
-            describe: "Filter by HTTP header",
-          })
-          .option("method", {
-            type: "string",
-            describe: "Filter by HTTP method",
-            array: true,
-          })
-          .option("sampling-rate", {
-            type: "number",
-            describe: "Adds a percentage of requests to log sampling rate",
-          })
-          .option("search", {
-            type: "string",
-            describe: "Filter by a text match in console.log messages",
-          })
-          .option("ip", {
-            type: "string",
-            describe:
-              'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
-            array: true,
-          })
-          .option("env", {
-            type: "string",
-            describe: "Perform on a specific environment",
-            alias: "e",
-          })
-          .option("debug", {
-            type: "boolean",
-            hidden: true,
-            default: false,
-            describe:
-              "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
-          })
-      );
+      return yargs
+        .positional("name", {
+          describe: "Name of the worker",
+          type: "string",
+        })
+        .option("format", {
+          default: process.stdout.isTTY ? "pretty" : "json",
+          choices: ["json", "pretty"],
+          describe: "The format of log entries",
+        })
+        .option("status", {
+          choices: ["ok", "error", "canceled"],
+          describe: "Filter by invocation status",
+          array: true,
+        })
+        .option("header", {
+          type: "string",
+          describe: "Filter by HTTP header",
+        })
+        .option("method", {
+          type: "string",
+          describe: "Filter by HTTP method",
+          array: true,
+        })
+        .option("sampling-rate", {
+          type: "number",
+          describe: "Adds a percentage of requests to log sampling rate",
+        })
+        .option("search", {
+          type: "string",
+          describe: "Filter by a text match in console.log messages",
+        })
+        .option("ip", {
+          type: "string",
+          describe:
+            'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
+          array: true,
+        })
+        .option("env", {
+          type: "string",
+          describe: "Perform on a specific environment",
+          alias: "e",
+        })
+        .option("debug", {
+          type: "boolean",
+          hidden: true,
+          default: false,
+          describe:
+            "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
+        });
     },
     async (args) => {
       if (args.format === "pretty") {
@@ -1164,9 +1161,11 @@ export async function main(argv: string[]): Promise<void> {
         args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
       }`;
 
-      console.log(
-        `successfully created tail, expires at ${expiration.toLocaleString()}`
-      );
+      if (args.format === "pretty") {
+        console.log(
+          `successfully created tail, expires at ${expiration.toLocaleString()}`
+        );
+      }
 
       onExit(async () => {
         tail.terminate();
@@ -1193,7 +1192,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      if (args.format === "pretty") {
+        console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      }
 
       tail.on("close", async () => {
         tail.terminate();
