@@ -27,6 +27,7 @@ export async function bundleWorker(
     rules: Config["rules"];
     watch?: esbuild.WatchMode;
     tsconfig: string | undefined;
+    minify?: boolean;
   }
 ): Promise<BundleResult> {
   const {
@@ -36,6 +37,7 @@ export async function bundleWorker(
     rules,
     watch,
     tsconfig,
+    minify,
   } = options;
   const entryDirectory = path.dirname(entry.file);
   const moduleCollector = createModuleCollector({
@@ -62,6 +64,7 @@ export async function bundleWorker(
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
     sourcemap: true,
+    minify,
     metafile: true,
     conditions: ["worker", "browser"],
     ...(process.env.NODE_ENV && {

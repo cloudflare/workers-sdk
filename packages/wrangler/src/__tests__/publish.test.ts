@@ -2176,6 +2176,72 @@ export default{
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
+
+    it("should utilize ESBuild minification on script when `--minify` is true (sw)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        expectedEntry: 'fetch(){return new Response("hello Cpt Picard")',
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish index.js --minify");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should utilize ESBuild minification on script when `minify` in config is true (esm)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        legacy_env: false,
+        env: {
+          testEnv: {
+            minify: true,
+          },
+        },
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        env: "testEnv",
+        expectedType: "esm",
+        expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish -e testEnv index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (testEnv) (TIMINGS)
+        Published test-name (testEnv) (TIMINGS)
+          testEnv.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("durable object migrations", () => {
@@ -3785,7 +3851,7 @@ function writeAssets(assets: { filePath: string; content: string }[]) {
 function mockUploadWorkerRequest(
   options: {
     available_on_subdomain?: boolean;
-    expectedEntry?: string;
+    expectedEntry?: string | RegExp;
     expectedType?: "esm" | "sw";
     expectedBindings?: unknown;
     expectedModules?: Record<string, string>;

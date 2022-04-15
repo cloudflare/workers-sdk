@@ -178,6 +178,12 @@ interface EnvironmentInheritable {
   };
 
   /**
+   * Minify the script before uploading.
+   * @inheritable
+   */
+  minify: boolean | undefined;
+
+  /**
    * TODO: remove this as it has been deprecated.
    *
    * This is just here for now because the `route` commands use it.
