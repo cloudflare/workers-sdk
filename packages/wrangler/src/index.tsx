@@ -107,7 +107,9 @@ async function printWranglerBanner() {
   );
 }
 
-function isLegacyEnv(args: unknown, config: Config): boolean {
+function isLegacyEnv(config: Config): boolean {
+  // We only read from config here, because we've already accounted for
+  // args["legacy-env"] in https://github.com/cloudflare/wrangler2/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
   return config.legacy_env;
 }
 
@@ -115,7 +117,7 @@ function getScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ): string | undefined {
-  if (args.name && isLegacyEnv(args, config) && args.env) {
+  if (args.name && isLegacyEnv(config) && args.env) {
     throw new CommandLineArgsError(
       "In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
         `
@@ -135,7 +137,7 @@ function getLegacyScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ) {
-  return args.name && args.env && isLegacyEnv(args, config)
+  return args.name && args.env && isLegacyEnv(config)
     ? `${args.name}-${args.env}`
     : args.name ?? config.name;
 }
@@ -854,7 +856,7 @@ export async function main(argv: string[]): Promise<void> {
           env={args.env}
           zone={zone}
           rules={getRules(config)}
-          legacyEnv={isLegacyEnv(args, config)}
+          legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
@@ -1058,7 +1060,7 @@ export async function main(argv: string[]): Promise<void> {
         tsconfig: args.tsconfig,
         routes: args.routes,
         assetPaths,
-        legacyEnv: isLegacyEnv(args, config),
+        legacyEnv: isLegacyEnv(config),
         experimentalPublic: args["experimental-public"] !== undefined,
       });
     }
@@ -1155,11 +1157,11 @@ export async function main(argv: string[]): Promise<void> {
         accountId,
         scriptName,
         filters,
-        !isLegacyEnv(args, config) ? args.env : undefined
+        !isLegacyEnv(config) ? args.env : undefined
       );
 
       const scriptDisplayName = `${scriptName}${
-        args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+        args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
       }`;
 
       console.log(
@@ -1252,7 +1254,7 @@ export async function main(argv: string[]): Promise<void> {
           rules={getRules(config)}
           env={args.env}
           zone={undefined}
-          legacyEnv={isLegacyEnv(args, config)}
+          legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
@@ -1442,13 +1444,13 @@ export async function main(argv: string[]): Promise<void> {
 
             console.log(
               `🌀 Creating the secret for script ${scriptName} ${
-                args.env && !isLegacyEnv(args, config) ? `(${args.env})` : ""
+                args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
               }`
             );
 
             async function submitSecret() {
               const url =
-                !args.env || isLegacyEnv(args, config)
+                !args.env || isLegacyEnv(config)
                   ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                   : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
@@ -1466,7 +1468,7 @@ export async function main(argv: string[]): Promise<void> {
             const createDraftWorker = async () => {
               // TODO: log a warning
               await fetchResult(
-                !args["legacy-env"] && args.env
+                !isLegacyEnv(config) && args.env
                   ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
                   : `/accounts/${accountId}/workers/scripts/${scriptName}`,
                 {
@@ -1558,18 +1560,18 @@ export async function main(argv: string[]): Promise<void> {
                 `Are you sure you want to permanently delete the variable ${
                   args.key
                 } on the script ${scriptName}${
-                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                  args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
                 }?`
               )
             ) {
               console.log(
                 `🌀 Deleting the secret ${args.key} on script ${scriptName}${
-                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                  args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
                 }`
               );
 
               const url =
-                !args.env || isLegacyEnv(args, config)
+                !args.env || isLegacyEnv(config)
                   ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                   : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
@@ -1605,7 +1607,7 @@ export async function main(argv: string[]): Promise<void> {
             const accountId = await requireAuth(config);
 
             const url =
-              !args.env || isLegacyEnv(args, config)
+              !args.env || isLegacyEnv(config)
                 ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                 : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
