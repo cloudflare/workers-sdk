@@ -11,6 +11,10 @@ export function useMockIsTTY() {
     process.stdout.isTTY = isTTY;
   };
 
+  beforeEach(() => {
+    process.stdout.isTTY = ORIGINAL_ISTTY;
+  });
+
   afterEach(() => {
     process.stdout.isTTY = ORIGINAL_ISTTY;
   });
