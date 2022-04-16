@@ -3720,56 +3720,123 @@ export default{
         `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";"`
       );
     });
-  });
 
-  it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
-    writeWranglerToml();
-    fs.writeFileSync(
-      "./index.js",
-      `import WASM from 'index.wasm'; export default {};`
-    );
-    fs.writeFileSync("./index.wasm", "SOME WASM CONTENT");
-    mockSubDomainRequest();
-    mockUploadWorkerRequest({
-      expectedModules: {
-        "./94b240d0d692281e6467aa42043986e5c7eea034-index.wasm":
-          "SOME WASM CONTENT",
-      },
+    it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "./index.js",
+        `import WASM from 'index.wasm'; export default {};`
+      );
+      fs.writeFileSync("./index.wasm", "SOME WASM CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedModules: {
+          "./94b240d0d692281e6467aa42043986e5c7eea034-index.wasm":
+            "SOME WASM CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(
+        `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
+      );
     });
-    await runWrangler("publish index.js");
-    expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded test-name (TIMINGS)
-      Published test-name (TIMINGS)
-        test-name.test-sub-domain.workers.dev"
-    `);
-    expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(std.warn).toMatchInlineSnapshot(
-      `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
-    );
+
+    it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
+      // see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+
+      fs.writeFileSync(
+        "./index.js",
+        `import inner from './inner/index.js'; export default {};`
+      );
+      fs.mkdirSync("./inner", { recursive: true });
+      fs.writeFileSync("./inner/index.js", `export default 123`);
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+
+      await runWrangler(
+        "publish index.js --compatibility-date 2022-03-17 --name test-name"
+      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
   });
 
-  it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
-    // see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+  describe("tsconfig", () => {
+    it("should use compilerOptions.paths to resolve modules", async () => {
+      writeWranglerToml({
+        main: "index.ts",
+      });
+      fs.writeFileSync(
+        "index.ts",
+        `import { foo } from '~lib/foo'; export default { fetch() { return new Response(foo)} }`
+      );
+      fs.mkdirSync("lib", { recursive: true });
+      fs.writeFileSync("lib/foo.ts", `export const foo = 123;`);
+      fs.writeFileSync(
+        "tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            baseUrl: ".",
+            paths: {
+              "~lib/*": ["lib/*"],
+            },
+          },
+        })
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedEntry: "var foo = 123;", // make sure it imported the module correctly
+      });
+      await runWrangler("publish index.ts");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
 
-    fs.writeFileSync(
-      "./index.js",
-      `import inner from './inner/index.js'; export default {};`
-    );
-    fs.mkdirSync("./inner", { recursive: true });
-    fs.writeFileSync("./inner/index.js", `export default 123`);
-    mockSubDomainRequest();
-    mockUploadWorkerRequest();
-
-    await runWrangler(
-      "publish index.js --compatibility-date 2022-03-17 --name test-name"
-    );
-    expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded test-name (TIMINGS)
-      Published test-name (TIMINGS)
-        test-name.test-sub-domain.workers.dev"
-    `);
-    expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(std.warn).toMatchInlineSnapshot(`""`);
+    it("should output to target es2020 even if tsconfig says otherwise", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      fs.writeFileSync(
+        "tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            target: "es5",
+            module: "commonjs",
+          },
+        })
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedEntry: "export {", // just check that the export is preserved
+      });
+      await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
   });
 });
 
