@@ -24,7 +24,7 @@ describe("wrangler", () => {
   } = mockOAuthFlow();
 
   describe("login", () => {
-    it("should should log in a user when `wrangler login` is run", async () => {
+    it("should login a user when `wrangler login` is run", async () => {
       mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });
