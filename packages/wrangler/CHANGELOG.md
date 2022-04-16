@@ -1,5 +1,71 @@
 # wrangler
 
+## 0.0.26
+
+### Patch Changes
+
+- [#782](https://github.com/cloudflare/wrangler2/pull/782) [`34552d9`](https://github.com/cloudflare/wrangler2/commit/34552d94fb41b7e119fd39bd26fb77568866ecaa) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: Add 'pages create project [name]' command.
+
+  This command will create a Pages project with a given name, and optionally set its `--production-branch=[production]`.
+
+* [#772](https://github.com/cloudflare/wrangler2/pull/772) [`a852e32`](https://github.com/cloudflare/wrangler2/commit/a852e329d9f3df1da24ed9a5b617ff9cae2ebcde) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: We want to prevent any user created code from sending Events to Sentry,
+  which can be captured by `uncaughtExceptionMonitor` listener.
+  Miniflare code can run user code on the same process as Wrangler,
+  so we want to return `null` if `@miniflare` is present in the Event frames.
+
+- [#778](https://github.com/cloudflare/wrangler2/pull/778) [`85b0c31`](https://github.com/cloudflare/wrangler2/commit/85b0c31a852985e353e455d116358693509c6cd5) Thanks [@threepointone](https://github.com/threepointone)! - feat: optionally send zone_id with a route
+
+  This enables optionally passing a route as `{pattern: string, zone_id: string}`. There are scenarios where we need to explicitly pass a zone_id to the api, so this enables that.
+
+  Some nuance: The errors from the api aren't super useful when invalid values are passed, but that's something to further work on.
+
+  This also fixes some types in our cli parsing.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/774
+
+* [#797](https://github.com/cloudflare/wrangler2/pull/797) [`67fc4fc`](https://github.com/cloudflare/wrangler2/commit/67fc4fc68741df9054eb795ac93ef223866ffbe9) Thanks [@threepointone](https://github.com/threepointone)! - feat: optionally send `zone_name` with routes
+
+  A followup to https://github.com/cloudflare/wrangler2/pull/778, this lets you send an optional `zone_name` with routes. This is particularly useful when using ssl for saas (https://developers.cloudflare.com/ssl/ssl-for-saas/).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/793
+
+- [#813](https://github.com/cloudflare/wrangler2/pull/813) [`5c59f97`](https://github.com/cloudflare/wrangler2/commit/5c59f97bbd79db61992f48ac6b9ae6483a27b0d7) Thanks [@threepointone](https://github.com/threepointone)! - add a warning if service environments are being used.
+
+  Service environments are not ready for widespread usage, and their behaviour is going to change. This adds a warning if anyone uses them.
+
+  Closes https://github.com/cloudflare/wrangler2/issues/809
+
+* [#789](https://github.com/cloudflare/wrangler2/pull/789) [`5852bba`](https://github.com/cloudflare/wrangler2/commit/5852bbaf5d0b6f58a7e911818031d1c27a8df206) Thanks [@threepointone](https://github.com/threepointone)! - polish: don't log all errors when logging in
+
+  This removes a couple of logs we had for literally every error in our oauth flow. We throw the error and handle it separately anyway, so this is a safe cleanup.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/788
+
+- [#806](https://github.com/cloudflare/wrangler2/pull/806) [`b24aeb5`](https://github.com/cloudflare/wrangler2/commit/b24aeb5722370c2e04bce97a84a1fa1e55725d79) Thanks [@threepointone](https://github.com/threepointone)! - fix: check for updates on the right channel
+
+  This makes the update checker run on the channel that the version being used runs on.
+
+* [#807](https://github.com/cloudflare/wrangler2/pull/807) [`7e560e1`](https://github.com/cloudflare/wrangler2/commit/7e560e1ad967e32e68aa4e89701620b1327d8bd1) Thanks [@threepointone](https://github.com/threepointone)! - fix: read `isLegacyEnv` correctly
+
+  This fixes the signature for `isLegacyEnv()` since it doesn't use args, and we fix reading legacy_env correctly when creating a draft worker when creating a secret.
+
+- [#779](https://github.com/cloudflare/wrangler2/pull/779) [`664803e`](https://github.com/cloudflare/wrangler2/commit/664803e6636785103336333999c2ae784b60463f) Thanks [@threepointone](https://github.com/threepointone)! - chore: update packages
+
+  This updates some dependencies. Some highlights -
+
+  - updates to `@iarna/toml` means we can have mixed types for inline arrays, which is great for #774 / https://github.com/cloudflare/wrangler2/pull/778
+  - I also moved timeago.js to `devDependencies` since it already gets compiled into the bundle
+  - updates to `esbuild` brings along a number of smaller fixes for modern js
+
+* [#810](https://github.com/cloudflare/wrangler2/pull/810) [`0ce47a5`](https://github.com/cloudflare/wrangler2/commit/0ce47a587a029db9caa6e402ba3e7228ebb31c4c) Thanks [@caass](https://github.com/caass)! - Make `wrangler tail` TTY-aware, and stop printing non-JSON in JSON mode
+
+  Closes #493
+
+  2 quick fixes:
+
+  - Check `process.stdout.isTTY` at runtime to determine whether to default to "pretty" or "json" output for tailing.
+  - Only print messages like "Connected to {worker}" if in "pretty" mode (errors still throw strings)
+
 ## 0.0.25
 
 ### Patch Changes
