@@ -42,7 +42,7 @@ interface InspectorProps {
   /**
    * The websocket URL exposed by Workers that the inspector should connect to.
    */
-  inspectorUrl: undefined | string;
+  inspectorUrl: string | undefined;
   /**
    * Whether console statements and exceptions should be logged to the terminal.
    * (We don't log them in local mode because they're already getting

@@ -75,7 +75,7 @@ export function usePreviewServer({
   ip,
 }: {
   previewToken: CfPreviewToken | undefined;
-  publicRoot: undefined | string;
+  publicRoot: string | undefined;
   localProtocol: "https" | "http";
   localPort: number;
   ip: string;

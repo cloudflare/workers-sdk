@@ -28,7 +28,7 @@ export function useEsbuild({
 }: {
   entry: Entry;
   destination: string | undefined;
-  staticRoot: undefined | string;
+  staticRoot: string | undefined;
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
   rules: Config["rules"];

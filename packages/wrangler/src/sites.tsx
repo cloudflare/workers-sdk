@@ -264,7 +264,7 @@ export function getAssetPaths(
   assetDirectory = config.site?.bucket,
   includePatterns = config.site?.include ?? [],
   excludePatterns = config.site?.exclude ?? []
-): undefined | AssetPaths {
+): AssetPaths | undefined {
   const baseDirectory = path.resolve(
     path.dirname(config.configPath ?? "wrangler.toml")
   );
