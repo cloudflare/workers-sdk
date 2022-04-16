@@ -82,7 +82,7 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
-  transformFn: TransformFn<Environment[K]>,
+  transformFn: TransformFn<Environment[K]> = (v) => v,
   defaultValue: Environment[K]
 ): Environment[K] {
   return topLevelEnv === undefined || isLegacyEnv === true
