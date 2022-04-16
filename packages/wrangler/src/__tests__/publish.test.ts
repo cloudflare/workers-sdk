@@ -2176,6 +2176,73 @@ export default{
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
+
+    it("should minify the script when `--minify` is true (sw)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        expectedEntry: 'fetch(){return new Response("hello Cpt Picard")',
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish index.js --minify");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should minify the script when `minify` in config is true (esm)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        legacy_env: false,
+        env: {
+          testEnv: {
+            minify: true,
+          },
+        },
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        env: "testEnv",
+        expectedType: "esm",
+        legacyEnv: false,
+        expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish -e testEnv index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (testEnv) (TIMINGS)
+        Published test-name (testEnv) (TIMINGS)
+          testEnv.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("durable object migrations", () => {

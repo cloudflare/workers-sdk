@@ -732,6 +732,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("experimental-enable-local-persistence", {
           describe: "Enable persistence for this session (only for local mode)",
           type: "boolean",
+        })
+        .option("minify", {
+          describe: "Minify the script",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -857,6 +861,7 @@ export async function main(argv: string[]): Promise<void> {
           zone={zone}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(config)}
+          minify={args.minify ?? config.minify}
           build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
@@ -1008,6 +1013,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("tsconfig", {
           describe: "Path to a custom tsconfig.json file",
           type: "string",
+        })
+        .option("minify", {
+          describe: "Minify the script",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -1061,6 +1070,7 @@ export async function main(argv: string[]): Promise<void> {
         routes: args.routes,
         assetPaths,
         legacyEnv: isLegacyEnv(config),
+        minify: args.minify,
         experimentalPublic: args["experimental-public"] !== undefined,
       });
     }
@@ -1257,6 +1267,7 @@ export async function main(argv: string[]): Promise<void> {
           zone={undefined}
           legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
+          minify={undefined}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}

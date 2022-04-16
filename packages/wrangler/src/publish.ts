@@ -29,6 +29,7 @@ type Props = {
   jsxFragment: string | undefined;
   tsconfig: string | undefined;
   experimentalPublic: boolean;
+  minify: boolean | undefined;
 };
 
 function sleep(ms: number) {
@@ -53,6 +54,8 @@ export default async function publish(props: Props): Promise<void> {
 
   const jsxFactory = props.jsxFactory || config.jsx_factory;
   const jsxFragment = props.jsxFragment || config.jsx_fragment;
+
+  const minify = props.minify ?? config.minify;
 
   const scriptName = props.name;
   assert(
@@ -105,6 +108,7 @@ export default async function publish(props: Props): Promise<void> {
         jsxFragment,
         rules: props.rules,
         tsconfig: props.tsconfig ?? config.tsconfig,
+        minify,
       }
     );
 
