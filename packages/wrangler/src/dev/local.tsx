@@ -14,14 +14,14 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 
 interface LocalProps {
-  name: undefined | string;
+  name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   compatibilityDate: string;
-  compatibilityFlags: undefined | string[];
+  compatibilityFlags: string[] | undefined;
   bindings: CfWorkerInit["bindings"];
-  assetPaths: undefined | AssetPaths;
-  public: undefined | string;
+  assetPaths: AssetPaths | undefined;
+  public: string | undefined;
   port: number;
   ip: string;
   rules: Config["rules"];

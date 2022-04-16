@@ -143,7 +143,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  usage_model: undefined | "bundled" | "unbound";
+  usage_model: "bundled" | "unbound" | undefined;
 
   /**
    * An ordered list of rules that define which modules to import,

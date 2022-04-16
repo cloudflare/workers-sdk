@@ -28,25 +28,25 @@ export type DevProps = {
   ip: string;
   inspectorPort: number;
   rules: Config["rules"];
-  accountId: undefined | string;
+  accountId: string | undefined;
   initialMode: "local" | "remote";
-  jsxFactory: undefined | string;
-  jsxFragment: undefined | string;
+  jsxFactory: string | undefined;
+  jsxFragment: string | undefined;
   tsconfig: string | undefined;
   upstreamProtocol: "https" | "http";
   localProtocol: "https" | "http";
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
   crons: Config["triggers"]["crons"];
-  public: undefined | string;
-  assetPaths: undefined | AssetPaths;
+  public: string | undefined;
+  assetPaths: AssetPaths | undefined;
   compatibilityDate: string;
-  compatibilityFlags: undefined | string[];
-  usageModel: undefined | "bundled" | "unbound";
+  compatibilityFlags: string[] | undefined;
+  usageModel: "bundled" | "unbound" | undefined;
   build: {
-    command?: undefined | string;
-    cwd?: undefined | string;
-    watch_dir?: undefined | string;
+    command?: string | undefined;
+    cwd?: string | undefined;
+    watch_dir?: string | undefined;
   };
   env: string | undefined;
   legacyEnv: boolean;
@@ -223,9 +223,9 @@ function useTmpDir(): string | undefined {
 function useCustomBuild(
   expectedEntry: Entry,
   build: {
-    command?: undefined | string;
-    cwd?: undefined | string;
-    watch_dir?: undefined | string;
+    command?: string | undefined;
+    cwd?: string | undefined;
+    watch_dir?: string | undefined;
   }
 ): void {
   useEffect(() => {

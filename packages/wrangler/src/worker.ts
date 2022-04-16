@@ -145,7 +145,7 @@ export interface CfWorkerInit {
   /**
    * The list of additional modules.
    */
-  modules: undefined | CfModule[];
+  modules: CfModule[] | undefined;
   /**
    * All the bindings
    */
@@ -159,10 +159,10 @@ export interface CfWorkerInit {
     r2_buckets: CfR2Bucket[] | undefined;
     unsafe: CfUnsafeBinding[] | undefined;
   };
-  migrations: undefined | CfDurableObjectMigrations;
+  migrations: CfDurableObjectMigrations | undefined;
   compatibility_date: string | undefined;
-  compatibility_flags: undefined | string[];
-  usage_model: undefined | "bundled" | "unbound";
+  compatibility_flags: string[] | undefined;
+  usage_model: "bundled" | "unbound" | undefined;
 }
 
 export interface CfWorkerContext {
