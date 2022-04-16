@@ -97,6 +97,13 @@ export function normalizeAndValidateConfig(
     rawConfig.legacy_env ??
     true;
 
+  // TODO: remove this once service environments goes GA.
+  if (!isLegacyEnv) {
+    console.warn(
+      "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+    );
+  }
+
   const topLevelEnv = normalizeAndValidateEnvironment(
     diagnostics,
     configPath,

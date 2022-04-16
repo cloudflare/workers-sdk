@@ -244,14 +244,16 @@ describe("publish", () => {
         mockUploadWorkerRequest({
           legacyEnv: false,
         });
-        await runWrangler("publish index.js");
+        await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
           "Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(
+          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+        );
       });
 
       it("publishes as an environment when provided", async () => {
@@ -269,7 +271,9 @@ describe("publish", () => {
             some-env.test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(
+          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+        );
       });
     });
   });
@@ -416,7 +420,7 @@ describe("publish", () => {
           *another-boring-website.com (zone name: some-zone.com)
           example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
-          "warn": "",
+          "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
         }
       `);
     });
@@ -2374,7 +2378,7 @@ export default{
 
           [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.",
             "out": "",
-            "warn": "",
+            "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
           }
         `);
       });
