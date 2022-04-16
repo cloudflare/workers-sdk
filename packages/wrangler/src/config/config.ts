@@ -153,7 +153,6 @@ export interface DevConfig {
    * IP address for the local dev server to listen on,
    *
    * @default `localhost`
-   * @todo this needs to be implemented
    */
   ip: string;
 
@@ -168,7 +167,6 @@ export interface DevConfig {
    * Protocol that local wrangler dev server listens to requests on.
    *
    * @default `http`
-   * @todo this needs to be implemented
    */
   local_protocol: "http" | "https";
 
@@ -179,6 +177,7 @@ export interface DevConfig {
    * See https://github.com/cloudflare/wrangler2/issues/583
    *
    * @default `https`
+   * @todo this needs to be implemented https://github.com/cloudflare/wrangler2/issues/583
    */
   upstream_protocol: "https" | "http";
 
