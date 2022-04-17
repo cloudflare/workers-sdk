@@ -63,6 +63,7 @@ export async function bundleWorker(
     outdir: destination,
     external: ["__STATIC_CONTENT_MANIFEST"],
     format: "esm",
+    target: "es2020",
     sourcemap: true,
     minify,
     metafile: true,
