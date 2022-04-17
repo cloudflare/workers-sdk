@@ -659,12 +659,14 @@ function normalizeAndValidateEnvironment(
 
   const environment: Environment = {
     // Inherited fields
-    account_id: inheritable(
+    account_id: inheritableInLegacyEnvironments(
       diagnostics,
+      isLegacyEnv,
       topLevelEnv,
       rawEnv,
       "account_id",
       isString,
+      undefined,
       undefined
     ),
     compatibility_date: inheritable(

@@ -1763,6 +1763,61 @@ describe("normalizeAndValidateConfig()", () => {
       });
     });
 
+    it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
+      const rawConfig: RawConfig = {
+        legacy_env: false,
+        env: {
+          DEV: {
+            account_id: "some_account_id",
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        rawConfig,
+        undefined,
+        { env: "DEV" }
+      );
+
+      expect(config.account_id).toBeUndefined();
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+
+          - \\"env.DEV\\" environment configuration
+            - The \\"account_id\\" field is not allowed in named service environments.
+              Please remove the field from this environment."
+      `);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should error if top-level config and a named environment both contain a `account_id` field", () => {
+      const rawConfig: RawConfig = {
+        account_id: "ACCOUNT_ID",
+        legacy_env: false,
+        env: {
+          DEV: {
+            account_id: "ENV_ACCOUNT_ID",
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        rawConfig,
+        undefined,
+        { env: "DEV" }
+      );
+
+      expect(config.account_id).toEqual("ACCOUNT_ID");
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+
+          - \\"env.DEV\\" environment configuration
+            - The \\"account_id\\" field is not allowed in named service environments.
+              Please remove the field from this environment."
+      `);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
     it("should warn for non-inherited fields that are missing in environments", () => {
       const vars: RawConfig["vars"] = {
         FOO: "foo",
