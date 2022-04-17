@@ -196,6 +196,7 @@ function useLocalWorker({
         sourceMap: true,
         logUnhandledRejections: true,
         crons,
+        envPath: true,
       };
 
       // The path to the Miniflare CLI assumes that this file is being run from
