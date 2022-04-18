@@ -98,7 +98,11 @@ you can create workers.dev subdomain on your Workers dashboard
 
 ### generate:
 
-(TODO: a guide on using degit)
+Replaced with the standalone tool [degit](https://github.com/Rich-Harris/degit).
+
+Install: `npm install -g degit`
+
+Use: `npx degit https://github.com/cloudflare/durable-objects-template counter-example4`
 
 ### route:
 
