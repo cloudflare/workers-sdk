@@ -182,7 +182,9 @@ export function useWorker(props: {
     start().catch((err) => {
       // we want to log the error, but not end the process
       // since it could recover after the developer fixes whatever's wrong
-      console.error("remote worker:", err);
+      if ((err as { code: string }).code !== "ABORT_ERR") {
+        console.error("remote worker:", err);
+      }
     });
 
     return () => {
