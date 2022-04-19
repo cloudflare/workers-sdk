@@ -139,7 +139,7 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
-    it("should ignore `miniflare` top level fields", () => {
+    it("should report a deprecation warning if `miniflare` appears at the top level", () => {
       const expectedConfig = {
         miniflare: {
           host: "localhost",
@@ -156,7 +156,8 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-        "
+          - 🦺 DEPRECATION: \\"miniflare\\":
+            Wrangler does not use configuration in the \`miniflare\` section. Unless you are using the Miniflare binary directly you can remove this section."
       `);
     });
 

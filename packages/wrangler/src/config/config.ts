@@ -207,6 +207,12 @@ export interface DeprecatedConfigFields {
    * @breaking
    */
   webpack_config?: string;
+
+  /**
+   * Configuration only used by a standalone use of the miniflare binary.
+   * @deprecated
+   */
+  miniflare?: unknown;
 }
 
 interface EnvironmentMap {
