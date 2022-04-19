@@ -49,3 +49,7 @@ Either serves a static build asset directory, or proxies itself in front of a co
 Builds and runs functions from a `./functions` directory or uses a `_worker.js` file inside the static build asset directory.
 
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/pages/platform/functions#develop-and-preview-locally) or run `wrangler pages dev --help`.
+
+## Documentation
+
+For the latest Wrangler documentation, [click here](https://6b05b6e1.cloudflare-docs-7ou.pages.dev/workers/wrangler/).
