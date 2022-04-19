@@ -110,7 +110,7 @@ export default {
         // https://fetch.spec.whatwg.org/#null-body-status
         return new Response(
           [101, 204, 205, 304].includes(response.status) ? null : response.body,
-          response
+          { ...response, headers: new Headers([...response.headers.entries()]) }
         );
       } else if (__FALLBACK_SERVICE__) {
         // There are no more handlers so finish with the fallback service (`env.ASSETS.fetch` in Pages' case)
