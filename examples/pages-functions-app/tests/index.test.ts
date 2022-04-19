@@ -87,4 +87,10 @@ describe("Pages Functions", () => {
     const text = await response.text();
     expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
   });
+
+  it("can override the incoming request with next() parameters", async () => {
+    const response = await waitUntilReady("http://localhost:8789/next");
+    const text = await response.text();
+    expect(text).toContain("<h1>An asset</h1>");
+  });
 });
