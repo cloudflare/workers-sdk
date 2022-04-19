@@ -61,6 +61,15 @@ export function normalizeAndValidateConfig(
   deprecated(
     diagnostics,
     rawConfig,
+    "miniflare",
+    "Wrangler does not use configuration in the `miniflare` section. Unless you are using Miniflare directly you can remove this section.",
+    true,
+    "😶 UNUSED"
+  );
+
+  deprecated(
+    diagnostics,
+    rawConfig,
     "type",
     "DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
     true
@@ -80,7 +89,8 @@ export function normalizeAndValidateConfig(
     `site.entry-point`,
     `The \`site.entry-point\` config field is no longer used.\nThe entry-point should be specified via the command line or the \`main\` config field.`,
     false,
-    true
+    "🚨 NO LONGER SUPPORTED",
+    "error"
   );
 
   validateOptionalProperty(
@@ -211,7 +221,7 @@ export function normalizeAndValidateConfig(
     diagnostics,
     "top-level",
     Object.keys(rawConfig),
-    [...Object.keys(config), "env", "miniflare"]
+    [...Object.keys(config), "env"]
   );
 
   return { config, diagnostics };
