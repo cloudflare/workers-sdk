@@ -23,6 +23,8 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
 
       Commands:
         wrangler pages dev [directory] [-- command]  🧑‍💻 Develop your full-stack Pages application locally
+        wrangler pages project                       ⚡️ Interact with your Pages projects
+        wrangler pages deployment                    🚀 Interact with the deployments of a project
 
       Flags:
         -c, --config      Path to .toml configuration file  [string]
