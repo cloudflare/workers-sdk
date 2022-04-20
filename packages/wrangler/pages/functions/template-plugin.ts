@@ -89,7 +89,7 @@ function* executeRequest(request: Request, relativePathname: string) {
         yield {
           handler,
           params: matchResult.params as Params,
-          path: mountMatchResult.path,
+          path: matchResult.path,
         };
       }
       break;
@@ -114,7 +114,7 @@ export default function (pluginArgs) {
 
       const result = handlerIterator.next();
       // Note we can't use `!result.done` because this doesn't narrow to the correct type
-      if (result.done == false) {
+      if (result.done === false) {
         const { handler, params, path } = result.value;
         const context = {
           request,
