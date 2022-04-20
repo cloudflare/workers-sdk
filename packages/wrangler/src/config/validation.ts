@@ -24,6 +24,7 @@ import {
   inheritableInLegacyEnvironments,
   appendEnvName,
   getBindingNames,
+  isValidName,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -730,7 +731,7 @@ function normalizeAndValidateEnvironment(
       topLevelEnv,
       rawEnv,
       "name",
-      isString,
+      isValidName,
       appendEnvName(envName),
       undefined
     ),
