@@ -3943,6 +3943,42 @@ export default{
       `);
     });
   });
+
+  describe("--outdir", () => {
+    it("should generate built assets at --outdir if specified", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await runWrangler("publish index.js --outdir some-dir");
+      expect(fs.existsSync("some-dir/index.js")).toBe(true);
+      expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+  });
+
+  describe("--dry-run", () => {
+    it("should not publish the worker if --dry-run is specified", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      await runWrangler("publish index.js --dry-run");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "",
+        }
+      `);
+    });
+  });
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

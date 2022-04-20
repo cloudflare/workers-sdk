@@ -126,7 +126,8 @@ export function useWorker(props: {
         // concept of service environments for kv namespaces yet).
         name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
         assetPaths,
-        true
+        true,
+        false
       ); // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");

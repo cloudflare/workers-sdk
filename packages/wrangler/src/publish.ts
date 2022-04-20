@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
@@ -30,6 +30,8 @@ type Props = {
   tsconfig: string | undefined;
   experimentalPublic: boolean;
   minify: boolean | undefined;
+  outDir: string | undefined;
+  dryRun: boolean | undefined;
 };
 
 function sleep(ms: number) {
@@ -68,40 +70,59 @@ export default async function publish(props: Props): Promise<void> {
     "A [site] definition requires a `bucket` field with a path to the site's public directory."
   );
 
-  const destination = await tmp.dir({ unsafeCleanup: true });
+  if (props.outDir) {
+    // we're using a custom output directory,
+    // so let's first ensure it exists
+    mkdirSync(props.outDir, { recursive: true });
+    // add a README
+    const readmePath = path.join(props.outDir, "README.md");
+    writeFileSync(
+      readmePath,
+      `This folder contains the built output assets for the worker "${scriptName}" generated at ${new Date().toISOString()}.`
+    );
+  }
+
+  const destination = props.outDir ?? (await tmp.dir({ unsafeCleanup: true }));
+  const envName = props.env ?? "production";
+
+  const start = Date.now();
+  const notProd = !props.legacyEnv && props.env;
+  const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
+  const workerUrl = notProd
+    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+    : `/accounts/${accountId}/workers/scripts/${scriptName}`;
+
+  let available_on_subdomain; // we'll set this later
+
+  const { format } = props.entry;
+
+  if (props.experimentalPublic && format === "service-worker") {
+    throw new Error(
+      "You cannot publish in the service-worker format with a public directory."
+    );
+  }
+
+  if (config.wasm_modules && format === "modules") {
+    throw new Error(
+      "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
+    );
+  }
+
+  if (config.text_blobs && format === "modules") {
+    throw new Error(
+      "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+    );
+  }
+
+  if (config.data_blobs && format === "modules") {
+    throw new Error(
+      "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+    );
+  }
   try {
-    const envName = props.env ?? "production";
-
-    const { format } = props.entry;
-
-    if (props.experimentalPublic && format === "service-worker") {
-      // TODO: check config too
-      throw new Error(
-        "You cannot publish in the service-worker format with a public directory."
-      );
-    }
-
-    if (config.wasm_modules && format === "modules") {
-      throw new Error(
-        "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
-      );
-    }
-
-    if (config.text_blobs && format === "modules") {
-      throw new Error(
-        "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
-      );
-    }
-
-    if (config.data_blobs && format === "modules") {
-      throw new Error(
-        "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
-      );
-    }
-
     const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
       props.entry,
-      destination.path,
+      typeof destination === "string" ? destination : destination.path,
       {
         serveAssetsFromWorker: props.experimentalPublic,
         jsxFactory,
@@ -191,7 +212,8 @@ export default async function publish(props: Props): Promise<void> {
       // concept of service environments for kv namespaces yet).
       scriptName + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
       props.assetPaths,
-      false
+      false,
+      props.dryRun
     );
 
     const bindings: CfWorkerInit["bindings"] = {
@@ -239,139 +261,144 @@ export default async function publish(props: Props): Promise<void> {
       usage_model: config.usage_model,
     };
 
-    const start = Date.now();
-    const notProd = !props.legacyEnv && props.env;
-    const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-    const workerUrl = notProd
-      ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-      : `/accounts/${accountId}/workers/scripts/${scriptName}`;
-
-    // Upload the script so it has time to propagate.
-    const { available_on_subdomain } = await fetchResult<{
-      available_on_subdomain: boolean;
-    }>(
-      workerUrl,
-      {
-        method: "PUT",
-        body: createWorkerUploadForm(worker),
-      },
-      new URLSearchParams({ include_subdomain_availability: "true" })
-    );
-
-    const uploadMs = Date.now() - start;
-    const deployments: Promise<string[]>[] = [];
-
-    if (deployToWorkersDev) {
-      // Deploy to a subdomain of `workers.dev`
-      const userSubdomain = await getSubdomain(accountId);
-      const scriptURL =
-        props.legacyEnv || !props.env
-          ? `${scriptName}.${userSubdomain}.workers.dev`
-          : `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-      if (!available_on_subdomain) {
-        // Enable the `workers.dev` subdomain.
-        deployments.push(
-          fetchResult(`${workerUrl}/subdomain`, {
-            method: "POST",
-            body: JSON.stringify({ enabled: true }),
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-            .then(() => [scriptURL])
-            // Add a delay when the subdomain is first created.
-            // This is to prevent an issue where a negative cache-hit
-            // causes the subdomain to be unavailable for 30 seconds.
-            // This is a temporary measure until we fix this on the edge.
-            .then(async (url) => {
-              await sleep(3000);
-              return url;
-            })
-        );
-      } else {
-        deployments.push(Promise.resolve([scriptURL]));
-      }
-    } else {
-      // Disable the workers.dev deployment
-      if (available_on_subdomain) {
-        await fetchResult(`${workerUrl}/subdomain`, {
-          method: "POST",
-          body: JSON.stringify({ enabled: false }),
-          headers: {
-            "Content-Type": "application/json",
+    if (!props.dryRun) {
+      // Upload the script so it has time to propagate.
+      // We can also now tell whether available_on_subdomain is set
+      available_on_subdomain = (
+        await fetchResult<{ available_on_subdomain: boolean }>(
+          workerUrl,
+          {
+            method: "PUT",
+            body: createWorkerUploadForm(worker),
           },
-        });
-      }
-    }
-
-    console.log("Uploaded", workerName, formatTime(uploadMs));
-
-    // Update routing table for the script.
-    if (routes.length > 0) {
-      deployments.push(
-        fetchResult(`${workerUrl}/routes`, {
-          // Note: PUT will delete previous routes on this script.
-          method: "PUT",
-          body: JSON.stringify(
-            routes.map((route) =>
-              typeof route !== "object" ? { pattern: route } : route
-            )
-          ),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }).then(() => {
-          if (routes.length > 10) {
-            return routes
-              .slice(0, 9)
-              .map((route) =>
-                typeof route === "string"
-                  ? route
-                  : "zone_id" in route
-                  ? `${route.pattern} (zone id: ${route.zone_id})`
-                  : `${route.pattern} (zone name: ${route.zone_name})`
-              )
-              .concat([`...and ${routes.length - 10} more routes`]);
-          }
-          return routes.map((route) =>
-            typeof route === "string"
-              ? route
-              : "zone_id" in route
-              ? `${route.pattern} (zone id: ${route.zone_id})`
-              : `${route.pattern} (zone name: ${route.zone_name})`
-          );
-        })
-      );
-    }
-
-    // Configure any schedules for the script.
-    // TODO: rename this to `schedules`?
-    if (triggers && triggers.length) {
-      deployments.push(
-        fetchResult(`${workerUrl}/schedules`, {
-          // Note: PUT will override previous schedules on this script.
-          method: "PUT",
-          body: JSON.stringify(triggers.map((cron) => ({ cron }))),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
-      );
-    }
-
-    const targets = await Promise.all(deployments);
-    const deployMs = Date.now() - start - uploadMs;
-
-    if (deployments.length > 0) {
-      console.log("Published", workerName, formatTime(deployMs));
-      for (const target of targets.flat()) {
-        console.log(" ", target);
-      }
-    } else {
-      console.log("No publish targets for", workerName, formatTime(deployMs));
+          new URLSearchParams({ include_subdomain_availability: "true" })
+        )
+      ).available_on_subdomain;
     }
   } finally {
-    await destination.cleanup();
+    if (typeof destination !== "string") {
+      // this means we're using a temp dir,
+      // so let's clean up before we proceed
+      await destination.cleanup();
+    }
+  }
+
+  if (props.dryRun) {
+    console.log(`--dry-run: exiting now.`);
+    return;
+  }
+
+  const uploadMs = Date.now() - start;
+  const deployments: Promise<string[]>[] = [];
+
+  if (deployToWorkersDev) {
+    // Deploy to a subdomain of `workers.dev`
+    const userSubdomain = await getSubdomain(accountId);
+    const scriptURL =
+      props.legacyEnv || !props.env
+        ? `${scriptName}.${userSubdomain}.workers.dev`
+        : `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
+    if (!available_on_subdomain) {
+      // Enable the `workers.dev` subdomain.
+      deployments.push(
+        fetchResult(`${workerUrl}/subdomain`, {
+          method: "POST",
+          body: JSON.stringify({ enabled: true }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then(() => [scriptURL])
+          // Add a delay when the subdomain is first created.
+          // This is to prevent an issue where a negative cache-hit
+          // causes the subdomain to be unavailable for 30 seconds.
+          // This is a temporary measure until we fix this on the edge.
+          .then(async (url) => {
+            await sleep(3000);
+            return url;
+          })
+      );
+    } else {
+      deployments.push(Promise.resolve([scriptURL]));
+    }
+  } else {
+    if (available_on_subdomain) {
+      // Disable the workers.dev deployment
+      await fetchResult(`${workerUrl}/subdomain`, {
+        method: "POST",
+        body: JSON.stringify({ enabled: false }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
+  console.log("Uploaded", workerName, formatTime(uploadMs));
+
+  // Update routing table for the script.
+  if (routes.length > 0) {
+    deployments.push(
+      fetchResult(`${workerUrl}/routes`, {
+        // Note: PUT will delete previous routes on this script.
+        method: "PUT",
+        body: JSON.stringify(
+          routes.map((route) =>
+            typeof route !== "object" ? { pattern: route } : route
+          )
+        ),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(() => {
+        if (routes.length > 10) {
+          return routes
+            .slice(0, 9)
+            .map((route) =>
+              typeof route === "string"
+                ? route
+                : "zone_id" in route
+                ? `${route.pattern} (zone id: ${route.zone_id})`
+                : `${route.pattern} (zone name: ${route.zone_name})`
+            )
+            .concat([`...and ${routes.length - 10} more routes`]);
+        }
+        return routes.map((route) =>
+          typeof route === "string"
+            ? route
+            : "zone_id" in route
+            ? `${route.pattern} (zone id: ${route.zone_id})`
+            : `${route.pattern} (zone name: ${route.zone_name})`
+        );
+      })
+    );
+  }
+
+  // Configure any schedules for the script.
+  // TODO: rename this to `schedules`?
+  if (triggers && triggers.length) {
+    deployments.push(
+      fetchResult(`${workerUrl}/schedules`, {
+        // Note: PUT will override previous schedules on this script.
+        method: "PUT",
+        body: JSON.stringify(triggers.map((cron) => ({ cron }))),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
+    );
+  }
+
+  const targets = await Promise.all(deployments);
+  const deployMs = Date.now() - start - uploadMs;
+
+  if (deployments.length > 0) {
+    console.log("Published", workerName, formatTime(deployMs));
+    for (const target of targets.flat()) {
+      console.log(" ", target);
+    }
+  } else {
+    console.log("No publish targets for", workerName, formatTime(deployMs));
   }
 }
 
