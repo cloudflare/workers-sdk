@@ -661,8 +661,27 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       "Content-Type": "application/x-www-form-urlencoded",
     },
   });
+
   if (response.status >= 400) {
-    throw await response.json();
+    let tokenExchangeResErr = undefined;
+
+    try {
+      tokenExchangeResErr = await response.text();
+      tokenExchangeResErr = JSON.parse(tokenExchangeResErr);
+    } catch (e) {
+      // If it can't parse to JSON ignore the error
+    }
+
+    if (tokenExchangeResErr !== undefined) {
+      // We will throw the parsed error if it parsed correctly, otherwise we throw an unknown error.
+      throw typeof tokenExchangeResErr === "string"
+        ? new Error(tokenExchangeResErr)
+        : tokenExchangeResErr;
+    } else {
+      throw new ErrorUnknown(
+        "Failed to parse Error from exchangeRefreshTokenForAccessToken"
+      );
+    }
   } else {
     try {
       const json = (await response.json()) as TokenResponse;

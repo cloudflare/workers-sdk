@@ -105,11 +105,56 @@ export const mockOAuthFlow = () => {
     return outcome;
   };
 
+  const mockExchangeRefreshTokenForAccessToken = ({
+    respondWith,
+  }: {
+    respondWith: "refreshSuccess" | "refreshError" | "badResponse";
+  }) => {
+    fetchMock.mockOnceIf(
+      "https://dash.cloudflare.com/oauth2/token",
+      async () => {
+        switch (respondWith) {
+          case "refreshSuccess":
+            return {
+              status: 200,
+              body: JSON.stringify({
+                access_token: "access_token_success_mock",
+                expires_in: 1701,
+                refresh_token: "refresh_token_sucess_mock",
+                scope: "scope_success_mock",
+                token_type: "bearer",
+              }),
+            };
+          case "refreshError":
+            return {
+              status: 400,
+              body: JSON.stringify({
+                error: "invalid_request",
+                error_description: "error_description_mock",
+                error_hint: "error_hint_mock",
+                error_verbose: "error_verbose_mock",
+                status_code: 400,
+              }),
+            };
+          case "badResponse":
+            return {
+              status: 400,
+              body: `<html> <body> This shouldn't be sent, but should be handled </body> </html>`,
+            };
+
+          default:
+            return "Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`";
+        }
+      }
+    );
+  };
+
   return {
     mockOAuthServerCallback,
     mockGrantAuthorization,
     mockRevokeAuthorization,
     mockGrantAccessToken,
+    mockExchangeRefreshTokenForAccessToken,
   };
 };
 
