@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
@@ -92,5 +92,21 @@ describe("Pages Functions", () => {
     const response = await waitUntilReady("http://localhost:8789/next");
     const text = await response.text();
     expect(text).toContain("<h1>An asset</h1>");
+  });
+
+  it("can mount a plugin", async () => {
+    // Middleware
+    let response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/some-page"
+    );
+    let text = await response.text();
+    expect(text).toContain("<footer>Set from a Plugin!</footer>");
+
+    // Fixed page
+    response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/fixed"
+    );
+    text = await response.text();
+    expect(text).toContain("I'm a fixed response");
   });
 });
