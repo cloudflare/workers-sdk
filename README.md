@@ -23,7 +23,7 @@ $ npx wrangler@beta publish index.js --name my-worker
 ## Installation:
 
 ```bash
-$ npm install wrangler@beta
+$ npm install wrangler@beta --save-dev
 ```
 
 ## Commands
