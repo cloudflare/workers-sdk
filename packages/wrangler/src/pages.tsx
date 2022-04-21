@@ -11,6 +11,7 @@ import Table from "ink-table";
 import { getType } from "mime";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
+import { buildPlugin } from "../pages/functions/buildPlugin";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
@@ -694,7 +695,7 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
 const RUNNING_BUILDERS: BuildResult[] = [];
 
 async function buildFunctions({
-  scriptPath,
+  outfile,
   outputConfigPath,
   functionsDirectory,
   minify = false,
@@ -702,8 +703,9 @@ async function buildFunctions({
   fallbackService = "ASSETS",
   watch = false,
   onEnd,
+  plugin = false,
 }: {
-  scriptPath: string;
+  outfile: string;
   outputConfigPath?: string;
   functionsDirectory: string;
   minify?: boolean;
@@ -711,6 +713,7 @@ async function buildFunctions({
   fallbackService?: string;
   watch?: boolean;
   onEnd?: () => void;
+  plugin?: boolean;
 }) {
   RUNNING_BUILDERS.forEach(
     (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -737,17 +740,30 @@ async function buildFunctions({
     outfile: routesModule,
   });
 
-  RUNNING_BUILDERS.push(
-    await buildWorker({
-      routesModule,
-      outfile: scriptPath,
-      minify,
-      sourcemap,
-      fallbackService,
-      watch,
-      onEnd,
-    })
-  );
+  if (plugin) {
+    RUNNING_BUILDERS.push(
+      await buildPlugin({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        watch,
+        onEnd,
+      })
+    );
+  } else {
+    RUNNING_BUILDERS.push(
+      await buildWorker({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        fallbackService,
+        watch,
+        onEnd,
+      })
+    );
+  }
 }
 
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
@@ -856,13 +872,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         );
 
         if (usingFunctions) {
-          const scriptPath = join(tmpdir(), "./functionsWorker.js");
+          const outfile = join(tmpdir(), "./functionsWorker.js");
 
-          console.log(`Compiling worker to "${scriptPath}"...`);
+          console.log(`Compiling worker to "${outfile}"...`);
 
           try {
             await buildFunctions({
-              scriptPath,
+              outfile,
               functionsDirectory,
               sourcemap: true,
               watch: true,
@@ -875,7 +891,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ignoreInitial: true,
           }).on("all", async () => {
             await buildFunctions({
-              scriptPath,
+              outfile,
               functionsDirectory,
               sourcemap: true,
               watch: true,
@@ -884,7 +900,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           });
 
           miniflareArgs = {
-            scriptPath,
+            scriptPath: outfile,
           };
         } else {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1042,7 +1058,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "The directory of Pages Functions",
             })
             .options({
-              "script-path": {
+              outfile: {
                 type: "string",
                 default: "_worker.js",
                 description: "The location of the output Worker script",
@@ -1074,28 +1090,35 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 description:
                   "Watch for changes to the functions and automatically rebuild the Worker script",
               },
+              plugin: {
+                type: "boolean",
+                default: false,
+                description: "Build a plugin rather than a Worker script",
+              },
             })
             .epilogue(pagesBetaWarning),
         async ({
           directory,
-          "script-path": scriptPath,
+          outfile,
           "output-config-path": outputConfigPath,
           minify,
           sourcemap,
           fallbackService,
           watch,
+          plugin,
         }) => {
           // Beta message for `wrangler pages <commands>` usage
           console.log(pagesBetaWarning);
 
           await buildFunctions({
-            scriptPath,
+            outfile,
             outputConfigPath,
             functionsDirectory: directory,
             minify,
             sourcemap,
             fallbackService,
             watch,
+            plugin,
           });
         }
       )

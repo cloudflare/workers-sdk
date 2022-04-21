@@ -21,6 +21,7 @@ export function isHTTPMethod(
 
 export type RoutesCollection = Array<{
   routePath: UrlPath;
+  mountPath: UrlPath;
   method?: HTTPMethod;
   modules: string[];
   middlewares: string[];
@@ -33,6 +34,7 @@ export type Config = {
 
 export type RouteConfig = {
   routePath: UrlPath;
+  mountPath: UrlPath;
   method?: HTTPMethod;
   middleware?: string | string[];
   module?: string | string[];
@@ -113,9 +115,11 @@ export function parseConfig(config: Config, baseDir: string) {
     });
   }
 
-  for (const { routePath, method, ...props } of config.routes ?? []) {
+  for (const { routePath, mountPath, method, ...props } of config.routes ??
+    []) {
     routes.push({
       routePath,
+      mountPath,
       method,
       middlewares: parseModuleIdentifiers(props.middleware),
       modules: parseModuleIdentifiers(props.module),
@@ -141,6 +145,7 @@ export const routes = [
     .map(
       (route) => `  {
       routePath: "${route.routePath}",
+      mountPath: "${route.mountPath}",
       method: "${route.method}",
       middlewares: [${route.middlewares.join(", ")}],
       modules: [${route.modules.join(", ")}],

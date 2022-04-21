@@ -53,6 +53,7 @@ export async function generateConfigFromFileTree({
           let routePath = path
             .relative(baseDir, filepath)
             .slice(0, -ext.length);
+          let mountPath = path.dirname(routePath);
 
           if (isIndexFile || isMiddlewareFile) {
             routePath = path.dirname(routePath);
@@ -61,17 +62,24 @@ export async function generateConfigFromFileTree({
           if (routePath === ".") {
             routePath = "";
           }
+          if (mountPath === ".") {
+            mountPath = "";
+          }
 
           routePath = `${baseURL}/${routePath}`;
+          mountPath = `${baseURL}/${mountPath}`;
 
           routePath = routePath.replace(/\[\[([^\]]+)\]\]/g, ":$1*"); // transform [[id]] => :id*
           routePath = routePath.replaceAll(/\[([^\]]+)\]/g, ":$1"); // transform [id] => :id
+          mountPath = mountPath.replace(/\[\[([^\]]+)\]\]/g, ":$1*"); // transform [[id]] => :id*
+          mountPath = mountPath.replaceAll(/\[([^\]]+)\]/g, ":$1"); // transform [id] => :id
 
           // These are used as module specifiers so UrlPaths are okay to use even on Windows
           const modulePath = toUrlPath(path.relative(baseDir, filepath));
 
           const routeEntry: RouteConfig = {
             routePath: toUrlPath(routePath),
+            mountPath: toUrlPath(mountPath),
             method: method.toUpperCase() as HTTPMethod,
             [isMiddlewareFile ? "middleware" : "module"]: [
               `${modulePath}:${exportName}`,
