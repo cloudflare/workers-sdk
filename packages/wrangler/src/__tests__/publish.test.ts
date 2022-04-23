@@ -1584,7 +1584,26 @@ export default{
         workers_dev: true,
       });
       writeWorkerSource();
-      mockUploadWorkerRequest();
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not try to enable the workers.dev domain if it has been enabled before", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({ available_on_subdomain: true });
       mockSubDomainRequest();
 
       await runWrangler("publish ./index");
@@ -1604,6 +1623,25 @@ export default{
       writeWorkerSource();
       mockUploadWorkerRequest();
       mockUpdateWorkerRequest({ enabled: false });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        No publish targets for test-name (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not try to disable the workers.dev domain if it is not already available", async () => {
+      writeWranglerToml({
+        workers_dev: false,
+      });
+      writeWorkerSource();
+      mockSubDomainRequest("test-sub-domain", false);
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+
+      // note the lack of a mock for the subdomain disable request
 
       await runWrangler("publish ./index");
 
@@ -3955,7 +3993,7 @@ function mockUploadWorkerRequest(
       if (!legacyEnv) {
         expect(envName).toEqual(env);
       }
-      expect(queryParams.get("available_on_subdomain")).toEqual("true");
+      expect(queryParams.get("include_subdomain_availability")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
         expect(await (formBody.get("index.js") as File).text()).toMatch(
