@@ -1,6 +1,6 @@
 export class DeprecationError extends Error {
   constructor(message: string) {
-    super(`🦺 DEPRECATION:\n${message}`);
+    super(`⚠️  DEPRECATION:\n${message}`);
   }
 }
 
