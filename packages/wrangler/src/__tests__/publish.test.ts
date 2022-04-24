@@ -557,7 +557,7 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - 🦺 DEPRECATION: \\"build.upload.main\\":
+          - ⚠️  DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
@@ -589,13 +589,13 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing ../wrangler.toml configuration:
-          - 🦺 DEPRECATION: \\"build.upload.main\\":
+          - ⚠️  DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"foo/index.js\\"
             \`\`\`
-          - 🦺 DEPRECATION: \\"build.upload.dir\\":
+          - ⚠️  DEPRECATION: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
       `);
     });
