@@ -89,9 +89,10 @@ export async function runCustomBuild(
     console.log("running:", build.command);
     await execaCommand(build.command, {
       shell: true,
-      stdout: "pipe",
-      stderr: "pipe",
-      timeout: 1000 * 30,
+      // we keep these two as "inherit" so that
+      // logs are still visible.
+      stdout: "inherit",
+      stderr: "inherit",
       ...(build.cwd && { cwd: build.cwd }),
     });
 
