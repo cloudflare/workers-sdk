@@ -1,22 +1,26 @@
 import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
-import fetchMock from "jest-fetch-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler secret", () => {
   const std = mockConsoleMethods();
+  const { mockGetMemberships } = mockOAuthFlow();
+  const { setIsTTY } = useMockIsTTY();
   runInTempDir();
   mockAccountId();
   mockApiToken();
 
   afterEach(() => {
     unsetAllMocks();
+    setIsTTY(true);
   });
 
   describe("put", () => {
@@ -169,6 +173,10 @@ describe("wrangler secret", () => {
         mockAccountId({ accountId: null });
 
         it("should error if a user has no account", async () => {
+          mockGetMemberships({
+            success: false,
+            result: [],
+          });
           await expect(
             runWrangler("secret put the-key --name script-name")
           ).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -196,28 +204,25 @@ describe("wrangler secret", () => {
         });
 
         it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
-          // This is a mock response for the request to the CF API memberships of the current user.
-          fetchMock.doMockOnce(async () => {
-            return {
-              body: JSON.stringify({
-                success: true,
-                result: [
-                  {
-                    id: "1",
-                    account: { id: "account-id-1", name: "account-name-1" },
-                  },
-                  {
-                    id: "2",
-                    account: { id: "account-id-2", name: "account-name-2" },
-                  },
-                  {
-                    id: "3",
-                    account: { id: "account-id-3", name: "account-name-3" },
-                  },
-                ],
-              }),
-            };
+          setIsTTY(false);
+          mockGetMemberships({
+            success: true,
+            result: [
+              {
+                id: "1",
+                account: { id: "account-id-1", name: "account-name-1" },
+              },
+              {
+                id: "2",
+                account: { id: "account-id-2", name: "account-name-2" },
+              },
+              {
+                id: "3",
+                account: { id: "account-id-3", name: "account-name-3" },
+              },
+            ],
           });
+
           await expect(runWrangler("secret put the-key --name script-name"))
             .rejects.toThrowErrorMatchingInlineSnapshot(`
                   "More than one account available but unable to select one in non-interactive mode.

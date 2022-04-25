@@ -1485,9 +1485,9 @@ export async function main(argv: string[]): Promise<void> {
               throw new Error("Missing script name");
             }
 
-            const isInteractive = process.stdin.isTTY;
-            const accountId = await requireAuth(config, isInteractive);
+            const accountId = await requireAuth(config);
 
+            const isInteractive = process.stdin.isTTY;
             const secretValue = isInteractive
               ? await prompt("Enter a secret value:", "password")
               : await readFromStdin();

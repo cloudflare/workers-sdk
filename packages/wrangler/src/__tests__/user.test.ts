@@ -9,6 +9,7 @@ import {
   writeAuthConfigFile,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -25,6 +26,8 @@ describe("User", () => {
     mockRevokeAuthorization,
     mockExchangeRefreshTokenForAccessToken,
   } = mockOAuthFlow();
+
+  const { setIsTTY } = useMockIsTTY();
 
   describe("login", () => {
     it("should login a user when `wrangler login` is run", async () => {
@@ -88,6 +91,7 @@ describe("User", () => {
 
   // TODO: Improve OAuth mocking to handle `/token` endpoints from different calls
   it("should handle errors for failed token refresh", async () => {
+    setIsTTY(false);
     mockOAuthServerCallback();
     writeAuthConfigFile({
       oauth_token: "hunter2",
@@ -101,13 +105,14 @@ describe("User", () => {
 
     // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
     await expect(
-      requireAuth({} as Config, false)
+      requireAuth({} as Config)
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `"Did not login, quitting..."`
     );
   });
 
   it("should confirm no error message when refresh is successful", async () => {
+    setIsTTY(false);
     mockOAuthServerCallback();
     writeAuthConfigFile({
       oauth_token: "hunter2",
@@ -120,7 +125,7 @@ describe("User", () => {
     });
 
     // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-    await expect(requireAuth({} as Config, false)).rejects.toThrowError();
+    await expect(requireAuth({} as Config)).rejects.toThrowError();
     expect(std.err).toContain("");
   });
 });

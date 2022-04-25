@@ -11,6 +11,7 @@ import {
   unsetMockFetchKVGetValues,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -27,11 +28,13 @@ describe("publish", () => {
   mockAccountId();
   mockApiToken();
   runInTempDir({ homedir: "./home" });
+  const { setIsTTY } = useMockIsTTY();
   const std = mockConsoleMethods();
   const {
     mockOAuthServerCallback,
     mockGrantAccessToken,
     mockGrantAuthorization,
+    mockGetMemberships,
   } = mockOAuthFlow();
 
   beforeEach(() => {
@@ -39,6 +42,7 @@ describe("publish", () => {
     jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
       setImmediate(fn);
     });
+    setIsTTY(true);
   });
 
   afterEach(() => {
@@ -56,6 +60,7 @@ describe("publish", () => {
     });
 
     it("drops a user into the login flow if they're unauthenticated", async () => {
+      // Should not throw missing Errors in TTY environment
       writeWranglerToml();
       writeWorkerSource();
       mockSubDomainRequest();
@@ -115,6 +120,127 @@ describe("publish", () => {
         "
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    describe("non-TTY", () => {
+      const ENV_COPY = process.env;
+
+      afterEach(() => {
+        process.env = ENV_COPY;
+      });
+
+      it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
+        process.env = {
+          CLOUDFLARE_API_TOKEN: "123456789",
+        };
+        setIsTTY(false);
+        writeWranglerToml({
+          account_id: "some-account-id",
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest();
+        mockOAuthServerCallback();
+
+        await runWrangler("publish index.js");
+
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
+        process.env = {
+          CLOUDFLARE_API_TOKEN: "hunter2",
+          CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+        };
+        setIsTTY(false);
+        writeWranglerToml();
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest();
+        mockOAuthServerCallback();
+        mockGetMemberships({
+          success: true,
+          result: [],
+        });
+
+        await runWrangler("publish index.js");
+
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should throw an error in non-TTY if 'account_id' & 'CLOUDFLARE_ACCOUNT_ID' is missing", async () => {
+        setIsTTY(false);
+        process.env = {
+          CLOUDFLARE_API_TOKEN: "hunter2",
+          CLOUDFLARE_ACCOUNT_ID: undefined,
+        };
+        writeWranglerToml({
+          account_id: undefined,
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest();
+        mockOAuthServerCallback();
+        mockGetMemberships({
+          success: true,
+          result: [
+            { id: "IG-88", account: { id: "1701", name: "enterprise" } },
+            { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+          ],
+        });
+
+        await expect(runWrangler("publish index.js")).rejects
+          .toMatchInlineSnapshot(`
+                [Error: More than one account available but unable to select one in non-interactive mode.
+                Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+                Available accounts are ("<name>" - "<id>"):
+                  "enterprise" - "1701")
+                  "enterprise-nx" - "nx01")]
+              `);
+      });
+
+      it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
+        setIsTTY(false);
+        writeWranglerToml({
+          account_id: undefined,
+        });
+        process.env = {
+          CLOUDFLARE_API_TOKEN: undefined,
+          CLOUDFLARE_ACCOUNT_ID: "badwolf",
+        };
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest();
+        mockOAuthServerCallback();
+        mockGetMemberships({
+          success: true,
+          result: [
+            { id: "IG-88", account: { id: "1701", name: "enterprise" } },
+            { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+          ],
+        });
+
+        await expect(runWrangler("publish index.js")).rejects.toThrowError();
+
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing 'CLOUDFLARE_API_TOKEN' from non-TTY environment, please see docs for more info: TBD[0m
+
+
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mDid not login, quitting...[0m
+
+          "
+        `);
+      });
     });
   });
 

@@ -410,7 +410,22 @@ export function getAPIToken(): string | undefined {
         "If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
     );
   }
-  return LocalState.accessToken?.value;
+
+  const localAPIToken = getCloudflareAPITokenFromEnv();
+
+  if (
+    !process.stdout.isTTY &&
+    !localAPIToken &&
+    !LocalState.accessToken?.value
+  ) {
+    logger.error(
+      "Missing 'CLOUDFLARE_API_TOKEN' from non-TTY environment, please see docs for more info: TBD"
+    );
+
+    return;
+  }
+
+  return localAPIToken ?? LocalState.accessToken?.value;
 }
 
 interface AccessContext {
@@ -1157,10 +1172,10 @@ export function ChooseAccount(props: {
 /**
  * Ensure that a user is logged in, and a valid account_id is available.
  */
-export async function requireAuth(
-  config: { account_id?: string },
-  isInteractive = true
-): Promise<string> {
+export async function requireAuth(config: {
+  account_id?: string;
+}): Promise<string> {
+  const isInteractive = process.stdin.isTTY;
   const loggedIn = await loginOrRefreshIfRequired(isInteractive);
   if (!loggedIn) {
     // didn't login, let's just quit
