@@ -5,10 +5,10 @@ import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
+import { cwd } from "node:process";
 import { URL } from "node:url";
 import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
-import FormData from "form-data";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
@@ -16,6 +16,7 @@ import { getType } from "mime";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
+import { File, FormData } from "undici";
 import { buildPlugin } from "../pages/functions/buildPlugin";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
@@ -818,7 +819,8 @@ const createDeployment: CommandModule<
           description:
             "The branch of the project you want to list deployments for",
         },
-      });
+      })
+      .epilogue(pagesBetaWarning);
   },
   handler: async (args) => {
     const { directory, project } = args;
@@ -934,6 +936,14 @@ const createDeployment: CommandModule<
 
             const content = base64Content + extension;
 
+            if (filestat.size > 25 * 1024 * 1024) {
+              throw new Error(
+                `Error: Pages only supports files up to ${prettyBytes(
+                  25 * 1024 * 1024
+                )} in size\n${name} is ${prettyBytes(filestat.size)} in size`
+              );
+            }
+
             fileMap.set(name, {
               content: fileContent,
               metadata: {
@@ -967,20 +977,11 @@ const createDeployment: CommandModule<
     );
 
     fileMap.forEach((file: File, name: string) => {
-      if (file.metadata.sizeInBytes > 25 * 1024 * 1024) {
-        throw new Error(
-          `Error: Pages only supports files up to ${prettyBytes(
-            25 * 1024 * 1024
-          )} in size\n${name} is ${prettyBytes(
-            file.metadata.sizeInBytes
-          )} in size`
-        );
-      }
-
       const form = new FormData();
-      form.append("file", file.content, {
-        filename: name,
-      });
+      form.append(
+        "file",
+        new File([new Uint8Array(file.content.buffer)], name)
+      );
 
       // TODO: Consider a retry
 
@@ -988,8 +989,7 @@ const createDeployment: CommandModule<
         `/accounts/${accountId}/pages/projects/${project}/file`,
         {
           method: "POST",
-          body: form.getBuffer(),
-          headers: form.getHeaders(),
+          body: form,
         }
       ).then((response) => {
         counter++;
@@ -1016,7 +1016,17 @@ const createDeployment: CommandModule<
 
     const formData = new FormData();
 
-    // TODO: Manifest
+    formData.append(
+      "manifest",
+      JSON.stringify(
+        Object.fromEntries(
+          [...fileMap.entries()].map(([fileName, file]) => [
+            fileName,
+            file.metadata.hash,
+          ])
+        )
+      )
+    );
 
     if (branch) {
       formData.append("branch", branch);
@@ -1034,14 +1044,57 @@ const createDeployment: CommandModule<
       formData.append("commit_dirty", commitDirty);
     }
 
-    // TODO: _headers, _redirects, _worker.js
+    let builtFunctions: string | undefined = undefined;
+    const functionsDirectory = join(cwd(), "functions");
+    if (existsSync(functionsDirectory)) {
+      const outfile = join(tmpdir(), "./functionsWorker.js");
+
+      await new Promise((resolve) =>
+        buildFunctions({
+          outfile,
+          functionsDirectory,
+          onEnd: () => resolve(null),
+        })
+      );
+
+      builtFunctions = readFileSync(outfile, "utf-8");
+    }
+
+    let _headers: string | undefined,
+      _redirects: string | undefined,
+      _workerJS: string | undefined;
+
+    try {
+      _headers = readFileSync(join(directory, "_headers"), "utf-8");
+    } catch {}
+
+    try {
+      _redirects = readFileSync(join(directory, "_redirects"), "utf-8");
+    } catch {}
+
+    try {
+      _workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
+    } catch {}
+
+    if (_headers) {
+      formData.append("_headers", new File([_headers], "_headers"));
+    }
+
+    if (_redirects) {
+      formData.append("_redirects", new File([_redirects], "_redirects"));
+    }
+
+    if (builtFunctions) {
+      formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
+    } else if (_workerJS) {
+      formData.append("_worker.js", new File([_workerJS], "_worker.js"));
+    }
 
     const deploymentResponse = await fetchResult<Deployment>(
       `/accounts/${accountId}/pages/projects/${project}/deployment`,
       {
         method: "POST",
-        body: formData.getBuffer(),
-        headers: formData.getHeaders(),
+        body: formData,
       }
     );
 
@@ -1483,68 +1536,72 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         )
         .epilogue(pagesBetaWarning)
     )
-    .command("deployment", false, (yargs) =>
-      yargs
-        .command(
-          "list",
-          "List deployments in your Cloudflare Pages project",
-          (yargs) =>
-            yargs.options({
-              project: {
-                type: "string",
-                demandOption: true,
-                description:
-                  "The name of the project you would like to list deployments for",
-              },
-            }),
-          async (args) => {
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
+    .command(
+      "deployment",
+      "🚀 Interact with the deployments of a project",
+      (yargs) =>
+        yargs
+          .command(
+            "list",
+            "List deployments in your Cloudflare Pages project",
+            (yargs) =>
+              yargs
+                .options({
+                  project: {
+                    type: "string",
+                    demandOption: true,
+                    description:
+                      "The name of the project you would like to list deployments for",
+                  },
+                })
+                .epilogue(pagesBetaWarning),
+            async (args) => {
+              const config = readConfig(args.config as ConfigPath, args);
+              const accountId = await requireAuth(config);
 
-            const deployments: Array<Deployment> = await fetchResult(
-              `/accounts/${accountId}/pages/projects/${args.project}/deployments`
-            );
+              const deployments: Array<Deployment> = await fetchResult(
+                `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+              );
 
-            const titleCase = (word: string) =>
-              word.charAt(0).toUpperCase() + word.slice(1);
+              const titleCase = (word: string) =>
+                word.charAt(0).toUpperCase() + word.slice(1);
 
-            const shortSha = (sha: string) => sha.slice(0, 7);
+              const shortSha = (sha: string) => sha.slice(0, 7);
 
-            const getStatus = (deployment: Deployment) => {
-              // Return a pretty time since timestamp if successful otherwise the status
-              if (deployment.latest_stage.status === `success`) {
-                return timeagoFormat(deployment.latest_stage.ended_on);
-              }
-              return titleCase(deployment.latest_stage.status);
-            };
-
-            const data = deployments.map((deployment) => {
-              return {
-                Environment: titleCase(deployment.environment),
-                Branch: deployment.deployment_trigger.metadata.branch,
-                Source: shortSha(
-                  deployment.deployment_trigger.metadata.commit_hash
-                ),
-                Deployment: deployment.url,
-                Status: getStatus(deployment),
-                // TODO: Use a url shortener
-                Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+              const getStatus = (deployment: Deployment) => {
+                // Return a pretty time since timestamp if successful otherwise the status
+                if (deployment.latest_stage.status === `success`) {
+                  return timeagoFormat(deployment.latest_stage.ended_on);
+                }
+                return titleCase(deployment.latest_stage.status);
               };
-            });
-            render(<Table data={data}></Table>);
-          }
-        )
-        .command({
-          command: "create [directory]",
-          ...createDeployment,
-        } as CommandModule)
-        .epilogue(pagesBetaWarning)
+
+              const data = deployments.map((deployment) => {
+                return {
+                  Environment: titleCase(deployment.environment),
+                  Branch: deployment.deployment_trigger.metadata.branch,
+                  Source: shortSha(
+                    deployment.deployment_trigger.metadata.commit_hash
+                  ),
+                  Deployment: deployment.url,
+                  Status: getStatus(deployment),
+                  // TODO: Use a url shortener
+                  Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+                };
+              });
+              render(<Table data={data}></Table>);
+            }
+          )
+          .command({
+            command: "create [directory]",
+            ...createDeployment,
+          } as CommandModule)
+          .epilogue(pagesBetaWarning)
     )
     .command({
       command: "publish [directory]",
       ...createDeployment,
-    } as CommandModule)
-    .epilogue(pagesBetaWarning);
+    } as CommandModule);
 };
 
 const invalidAssetsFetch: typeof fetch = () => {

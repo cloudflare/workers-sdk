@@ -44,9 +44,7 @@ export async function fetchInternal<ResponseType>(
       headers,
     }
   );
-
   const jsonText = await response.text();
-
   try {
     return parseJSON(jsonText) as ResponseType;
   } catch (err) {

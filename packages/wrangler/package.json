@@ -37,12 +37,9 @@
   ],
   "dependencies": {
     "blake3-wasm": "^2.1.5",
-    "esbuild": "0.14.23",
-    "form-data": "^4.0.0",
-    "ink-spinner": "^4.0.3",
+    "esbuild": "0.14.34",
     "miniflare": "2.4.0",
     "path-to-regexp": "^6.2.0",
-    "pretty-bytes": "^6.0.0",
     "selfsigned": "^2.0.1",
     "semiver": "^1.1.0",
     "xxhash-wasm": "^1.0.1"
@@ -79,6 +76,7 @@
     "ignore": "^5.2.0",
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.1",
+    "ink-spinner": "^4.0.3",
     "ink-table": "^3.0.0",
     "ink-testing-library": "^2.1.0",
     "ink-text-input": "^4.0.3",
@@ -86,6 +84,7 @@
     "jest-websocket-mock": "^2.3.0",
     "mime": "^3.0.0",
     "open": "^8.4.0",
+    "pretty-bytes": "^6.0.0",
     "prompts": "^2.4.2",
     "react": "^17.0.2",
     "react-error-boundary": "^3.1.4",
@@ -128,7 +127,7 @@
     "testTimeout": 30000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
