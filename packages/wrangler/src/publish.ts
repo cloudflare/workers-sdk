@@ -247,13 +247,15 @@ export default async function publish(props: Props): Promise<void> {
       : `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
     // Upload the script so it has time to propagate.
-    const { available_on_subdomain } = await fetchResult(
+    const { available_on_subdomain } = await fetchResult<{
+      available_on_subdomain: boolean;
+    }>(
       workerUrl,
       {
         method: "PUT",
         body: createWorkerUploadForm(worker),
       },
-      new URLSearchParams({ available_on_subdomain: "true" })
+      new URLSearchParams({ include_subdomain_availability: "true" })
     );
 
     const uploadMs = Date.now() - start;
@@ -291,13 +293,15 @@ export default async function publish(props: Props): Promise<void> {
       }
     } else {
       // Disable the workers.dev deployment
-      await fetchResult(`${workerUrl}/subdomain`, {
-        method: "POST",
-        body: JSON.stringify({ enabled: false }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      if (available_on_subdomain) {
+        await fetchResult(`${workerUrl}/subdomain`, {
+          method: "POST",
+          body: JSON.stringify({ enabled: false }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
     }
 
     console.log("Uploaded", workerName, formatTime(uploadMs));
