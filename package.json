@@ -36,8 +36,8 @@
     "check": "run-p check:* --aggregate-output --continue-on-error",
     "check:type": "npm run check:type --workspaces --if-present",
     "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
-    "check:format": "prettier packages/** .changeset docs --check --ignore-unknown",
-    "build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler",
+    "check:format": "prettier packages/** .changeset --check --ignore-unknown",
+    "build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler && npm run build --workspace=pages-plugin-example",
     "test": "npm run test --workspaces --if-present",
     "prettify": "prettier packages/** --write --ignore-unknown"
   },

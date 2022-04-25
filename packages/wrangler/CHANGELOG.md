@@ -1,5 +1,161 @@
 # wrangler
 
+## 0.0.27
+
+### Patch Changes
+
+- [#838](https://github.com/cloudflare/wrangler2/pull/838) [`9c025c4`](https://github.com/cloudflare/wrangler2/commit/9c025c41b89e744e2d1a228baf6d24a0e7defe55) Thanks [@threepointone](https://github.com/threepointone)! - fix: remove timeout on custom builds, and make sure logs are visible
+
+  This removes the timeout we have for custom builds. We shouldn't be applying this timeout anyway, since it doesn't block wrangler, just the user themselves. Further, in https://github.com/cloudflare/wrangler2/pull/759, we changed the custom build's process stdout/stderr config to "pipe" to pass tests, however that meant we wouldn't see logs in the terminal anymore. This patch removes the timeout, and brings back proper logging for custom builds.
+
+* [#349](https://github.com/cloudflare/wrangler2/pull/349) [`9d04a68`](https://github.com/cloudflare/wrangler2/commit/9d04a6866099e77a93a50dfd33d6e7707e4d9e9c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: rename `--script-path` to `--outfile` for `wrangler pages functions build` command.
+
+- [#836](https://github.com/cloudflare/wrangler2/pull/836) [`28e3b17`](https://github.com/cloudflare/wrangler2/commit/28e3b1756009df462b6f25c1fb1b0fa567e7ca67) Thanks [@threepointone](https://github.com/threepointone)! - fix: toggle `workers.dev` subdomains only when required
+
+  This fix -
+
+  - passes the correct query param to check whether a workers.dev subdomain has already been published/enabled
+  - thus enabling it only when it's not been enabled
+  - it also disables it only when it's explicitly knows it's already been enabled
+
+  The effect of this is that publishes are much faster.
+
+* [#794](https://github.com/cloudflare/wrangler2/pull/794) [`ee3475f`](https://github.com/cloudflare/wrangler2/commit/ee3475fc4204335f3659e9a045524e8dc9dc6b2c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: Error messaging from failed login would dump a `JSON.parse` error in some situations. Added a fallback if `.json` fails to parse
+  it will attempt `.text()` then throw result. If both attempts to parse fail it will throw an `UnknownError` with a message showing where
+  it originated.
+
+  resolves #539
+
+- [#840](https://github.com/cloudflare/wrangler2/pull/840) [`32f6108`](https://github.com/cloudflare/wrangler2/commit/32f6108a6427e542d45bd14f85e2f2d4e4a79f1c) Thanks [@threepointone](https://github.com/threepointone)! - fix: make wrangler work on node v18
+
+  There's some interference between our data fetching library `undici` and node 18's new `fetch` and co. (powered by `undici` internally) which replaces the filename of `File`s attached to `FormData`s with a generic `blob` (likely this code - https://github.com/nodejs/undici/blob/615f6170f4bd39630224c038d1ea5bf505d292af/lib/fetch/formdata.js#L246-L250). It's still not clear why it does so, and it's hard to make an isolated example of this.
+
+  Regardless, disabling the new `fetch` functionality makes `undici` use its own base classes, avoiding the problem for now, and unblocking our release. We'll keep investigating and look for a proper fix.
+
+  Unblocks https://github.com/cloudflare/wrangler2/issues/834
+
+* [#824](https://github.com/cloudflare/wrangler2/pull/824) [`62af4b6`](https://github.com/cloudflare/wrangler2/commit/62af4b6603f56a046e00688c94a0fe8d760891a3) Thanks [@threepointone](https://github.com/threepointone)! - feat: `publish --dry-run`
+
+  It can be useful to do a dry run of publishing. Developers want peace of mind that a project will compile before actually publishing to live servers. Combined with `--outdir`, this is also useful for testing the output of `publish`. Further, it gives developers a chance to upload our generated sourcemap to a service like sentry etc, so that errors from the worker can be mapped against actual source code, but before the service actually goes live.
+
+- [#798](https://github.com/cloudflare/wrangler2/pull/798) [`feecc18`](https://github.com/cloudflare/wrangler2/commit/feecc18b1bfec271dc595cba0c57ee6af8213af3) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Allows `next()` to take just a pathname with Pages Functions.
+
+* [#839](https://github.com/cloudflare/wrangler2/pull/839) [`f2d6de6`](https://github.com/cloudflare/wrangler2/commit/f2d6de6364b42305f70c40058155a0aecab5c2a5) Thanks [@threepointone](https://github.com/threepointone)! - fix: persist dev experimental storage state in feature specific dirs
+
+  With `--experimental-enable-local-persistence` in `dev`, we were clobbering a single folder with data from kv/do/cache. This patch gives individual folders for them. It also enables persistence even when this is not true, but that stays only for the length of a session, and cleans itself up when the dev session ends.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/830
+
+- [#820](https://github.com/cloudflare/wrangler2/pull/820) [`60c409a`](https://github.com/cloudflare/wrangler2/commit/60c409a9478ae0ab51a40da0c7c9fa0d9a5917ca) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: display a warning if the user has a `miniflare` section in their `wrangler.toml`.
+
+  Closes #799
+
+* [#796](https://github.com/cloudflare/wrangler2/pull/796) [`3e0db3b`](https://github.com/cloudflare/wrangler2/commit/3e0db3baf6f6a3eb5b4b947e1a2fb46cbd5a7095) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Makes Response Headers object mutable after a call to `next()` in Pages Functions
+
+- [#814](https://github.com/cloudflare/wrangler2/pull/814) [`51fea7c`](https://github.com/cloudflare/wrangler2/commit/51fea7c53bc17f43c8674044517bdbff6b77188f) Thanks [@threepointone](https://github.com/threepointone)! - fix: disallow setting account_id in named service environments
+
+  Much like https://github.com/cloudflare/wrangler2/pull/641, we don't want to allow setting account_id with named service environments. This is so that we use the same account_id for multiple environments, and have them group together in the dashboard.
+
+* [#823](https://github.com/cloudflare/wrangler2/pull/823) [`4a00910`](https://github.com/cloudflare/wrangler2/commit/4a00910f2c689620566d650cb0f1709d72cc0dcd) Thanks [@threepointone](https://github.com/threepointone)! - fix: don't log an error when `wrangler dev` is cancelled early
+
+  We currently log an `AbortError` with a stack if we exit `wrangler dev`'s startup process before it's done. This fix skips logging that error (since it's not an exception).
+
+  Test plan:
+
+  ```
+  cd packages/wrangler
+  npm run build
+  cd ../../examples/workers-chat-demo
+  npx wrangler dev
+  # hit [x] as soon as the hotkey shortcut bar shows
+  ```
+
+- [#815](https://github.com/cloudflare/wrangler2/pull/815) [`025c722`](https://github.com/cloudflare/wrangler2/commit/025c722b30005c701c459327b86a63ac05e0f59b) Thanks [@threepointone](https://github.com/threepointone)! - fix: ensure that bundle is generated to es2020 target
+
+  The default tsconfig generated by tsc uses `target: "es5"`, which we don't support. This fix ensures that we output es2020 modules, even if tsconfig asks otherwise.
+
+* [#349](https://github.com/cloudflare/wrangler2/pull/349) [`9d04a68`](https://github.com/cloudflare/wrangler2/commit/9d04a6866099e77a93a50dfd33d6e7707e4d9e9c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: Adds a `--plugin` option to `wrangler pages functions build` which compiles a Pages Plugin. More information about Pages Plugins can be found [here](https://developers.cloudflare.com/pages/platform/functions/plugins/). This wrangler build is required for both the development of, and inclusion of, plugins.
+
+- [#822](https://github.com/cloudflare/wrangler2/pull/822) [`4302172`](https://github.com/cloudflare/wrangler2/commit/43021725380a1c914c93774ad5251580ee13d730) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Add help messages for `wrangler pages project` and `wrangler pages deployment`
+
+* [#837](https://github.com/cloudflare/wrangler2/pull/837) [`206b9a5`](https://github.com/cloudflare/wrangler2/commit/206b9a5ac93eddc9b26ad18438258e1f68fbdd91) Thanks [@threepointone](https://github.com/threepointone)! - polish: replace 🦺 with ⚠️
+
+  I got some feedback that the construction worker jacket (?) icon for deprecations is confusing, especially because it's an uncommon icon and not very big in the terminal. This patch replaces it with a more familiar warning symbol.
+
+- [#824](https://github.com/cloudflare/wrangler2/pull/824) [`62af4b6`](https://github.com/cloudflare/wrangler2/commit/62af4b6603f56a046e00688c94a0fe8d760891a3) Thanks [@threepointone](https://github.com/threepointone)! - feat: `publish --outdir <path>`
+
+  It can be useful to introspect built assets. A leading usecase is to upload the sourcemap that we generate to services like sentry etc, so that errors from the worker can be mapped against actual source code. We introduce a `--outdir` cli arg to specify a path to generate built assets at, which doesn't get cleaned up after publishing. We are _not_ adding this to `wrangler.toml` just yet, but could in the future if it looks appropriate there.
+
+* [#811](https://github.com/cloudflare/wrangler2/pull/811) [`8c2c7b7`](https://github.com/cloudflare/wrangler2/commit/8c2c7b738cb7519c3b0e10d1c2a138db74342c7a) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: Added `minify` as a configuration option and a cli arg, which will minify code for `dev` and `publish`
+
+  resolves #785
+
+## 0.0.26
+
+### Patch Changes
+
+- [#782](https://github.com/cloudflare/wrangler2/pull/782) [`34552d9`](https://github.com/cloudflare/wrangler2/commit/34552d94fb41b7e119fd39bd26fb77568866ecaa) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: Add 'pages create project [name]' command.
+
+  This command will create a Pages project with a given name, and optionally set its `--production-branch=[production]`.
+
+* [#772](https://github.com/cloudflare/wrangler2/pull/772) [`a852e32`](https://github.com/cloudflare/wrangler2/commit/a852e329d9f3df1da24ed9a5b617ff9cae2ebcde) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: We want to prevent any user created code from sending Events to Sentry,
+  which can be captured by `uncaughtExceptionMonitor` listener.
+  Miniflare code can run user code on the same process as Wrangler,
+  so we want to return `null` if `@miniflare` is present in the Event frames.
+
+- [#778](https://github.com/cloudflare/wrangler2/pull/778) [`85b0c31`](https://github.com/cloudflare/wrangler2/commit/85b0c31a852985e353e455d116358693509c6cd5) Thanks [@threepointone](https://github.com/threepointone)! - feat: optionally send zone_id with a route
+
+  This enables optionally passing a route as `{pattern: string, zone_id: string}`. There are scenarios where we need to explicitly pass a zone_id to the api, so this enables that.
+
+  Some nuance: The errors from the api aren't super useful when invalid values are passed, but that's something to further work on.
+
+  This also fixes some types in our cli parsing.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/774
+
+* [#797](https://github.com/cloudflare/wrangler2/pull/797) [`67fc4fc`](https://github.com/cloudflare/wrangler2/commit/67fc4fc68741df9054eb795ac93ef223866ffbe9) Thanks [@threepointone](https://github.com/threepointone)! - feat: optionally send `zone_name` with routes
+
+  A followup to https://github.com/cloudflare/wrangler2/pull/778, this lets you send an optional `zone_name` with routes. This is particularly useful when using ssl for saas (https://developers.cloudflare.com/ssl/ssl-for-saas/).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/793
+
+- [#813](https://github.com/cloudflare/wrangler2/pull/813) [`5c59f97`](https://github.com/cloudflare/wrangler2/commit/5c59f97bbd79db61992f48ac6b9ae6483a27b0d7) Thanks [@threepointone](https://github.com/threepointone)! - add a warning if service environments are being used.
+
+  Service environments are not ready for widespread usage, and their behaviour is going to change. This adds a warning if anyone uses them.
+
+  Closes https://github.com/cloudflare/wrangler2/issues/809
+
+* [#789](https://github.com/cloudflare/wrangler2/pull/789) [`5852bba`](https://github.com/cloudflare/wrangler2/commit/5852bbaf5d0b6f58a7e911818031d1c27a8df206) Thanks [@threepointone](https://github.com/threepointone)! - polish: don't log all errors when logging in
+
+  This removes a couple of logs we had for literally every error in our oauth flow. We throw the error and handle it separately anyway, so this is a safe cleanup.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/788
+
+- [#806](https://github.com/cloudflare/wrangler2/pull/806) [`b24aeb5`](https://github.com/cloudflare/wrangler2/commit/b24aeb5722370c2e04bce97a84a1fa1e55725d79) Thanks [@threepointone](https://github.com/threepointone)! - fix: check for updates on the right channel
+
+  This makes the update checker run on the channel that the version being used runs on.
+
+* [#807](https://github.com/cloudflare/wrangler2/pull/807) [`7e560e1`](https://github.com/cloudflare/wrangler2/commit/7e560e1ad967e32e68aa4e89701620b1327d8bd1) Thanks [@threepointone](https://github.com/threepointone)! - fix: read `isLegacyEnv` correctly
+
+  This fixes the signature for `isLegacyEnv()` since it doesn't use args, and we fix reading legacy_env correctly when creating a draft worker when creating a secret.
+
+- [#779](https://github.com/cloudflare/wrangler2/pull/779) [`664803e`](https://github.com/cloudflare/wrangler2/commit/664803e6636785103336333999c2ae784b60463f) Thanks [@threepointone](https://github.com/threepointone)! - chore: update packages
+
+  This updates some dependencies. Some highlights -
+
+  - updates to `@iarna/toml` means we can have mixed types for inline arrays, which is great for #774 / https://github.com/cloudflare/wrangler2/pull/778
+  - I also moved timeago.js to `devDependencies` since it already gets compiled into the bundle
+  - updates to `esbuild` brings along a number of smaller fixes for modern js
+
+* [#810](https://github.com/cloudflare/wrangler2/pull/810) [`0ce47a5`](https://github.com/cloudflare/wrangler2/commit/0ce47a587a029db9caa6e402ba3e7228ebb31c4c) Thanks [@caass](https://github.com/caass)! - Make `wrangler tail` TTY-aware, and stop printing non-JSON in JSON mode
+
+  Closes #493
+
+  2 quick fixes:
+
+  - Check `process.stdout.isTTY` at runtime to determine whether to default to "pretty" or "json" output for tailing.
+  - Only print messages like "Connected to {worker}" if in "pretty" mode (errors still throw strings)
+
 ## 0.0.25
 
 ### Patch Changes

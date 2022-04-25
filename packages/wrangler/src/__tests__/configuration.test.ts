@@ -139,7 +139,7 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
-    it("should ignore `miniflare` top level fields", () => {
+    it("should report a deprecation warning if `miniflare` appears at the top level", () => {
       const expectedConfig = {
         miniflare: {
           host: "localhost",
@@ -156,7 +156,8 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-        "
+          - 😶 UNUSED: \\"miniflare\\":
+            Wrangler does not use configuration in the \`miniflare\` section. Unless you are using Miniflare directly you can remove this section."
       `);
     });
 
@@ -533,9 +534,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - 🦺 DEPRECATION: \\"type\\":
+            - ⚠️  DEPRECATION: \\"type\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-            - 🦺 DEPRECATION: \\"webpack_config\\":
+            - ⚠️  DEPRECATION: \\"webpack_config\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
         `);
       });
@@ -643,12 +644,17 @@ describe("normalizeAndValidateConfig()", () => {
           "example.com/*",
           { pattern: 123, zone_id: "zone_id_1" },
           { pattern: "route_2", zone_id: 123 },
+          { pattern: "route_2", zone_name: 123 },
           { pattern: "route_3" },
           { zone_id: "zone_id_4" },
+          { zone_name: "zone_name_4" },
           { pattern: undefined },
           { pattern: "route_5", zone_id: "zone_id_5", some_other_key: 123 },
+          { pattern: "route_5", zone_name: "zone_name_5", some_other_key: 123 },
           // this one's valid too
           { pattern: "route_6", zone_id: "zone_id_6" },
+          // as well as this one
+          { pattern: "route_6", zone_name: "zone_name_6" },
         ],
         route: 888,
         jsx_factory: 999,
@@ -674,8 +680,43 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
-          - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777,{\\"pattern\\":123,\\"zone_id\\":\\"zone_id_1\\"},{\\"pattern\\":\\"route_2\\",\\"zone_id\\":123},{\\"pattern\\":\\"route_3\\"},{\\"zone_id\\":\\"zone_id_4\\"},{},{\\"pattern\\":\\"route_5\\",\\"zone_id\\":\\"zone_id_5\\",\\"some_other_key\\":123}].
+          - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
+          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+              666,
+              777,
+              {
+                \\"pattern\\": 123,
+                \\"zone_id\\": \\"zone_id_1\\"
+              },
+              {
+                \\"pattern\\": \\"route_2\\",
+                \\"zone_id\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_2\\",
+                \\"zone_name\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_3\\"
+              },
+              {
+                \\"zone_id\\": \\"zone_id_4\\"
+              },
+              {
+                \\"zone_name\\": \\"zone_name_4\\"
+              },
+              {},
+              {
+                \\"pattern\\": \\"route_5\\",
+                \\"zone_id\\": \\"zone_id_5\\",
+                \\"some_other_key\\": 123
+              },
+              {
+                \\"pattern\\": \\"route_5\\",
+                \\"zone_name\\": \\"zone_name_5\\",
+                \\"some_other_key\\": 123
+              }
+            ].
           - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
           - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
           - Expected \\"build.command\\" to be of type string but got 1444.
@@ -718,15 +759,15 @@ describe("normalizeAndValidateConfig()", () => {
       expect(normalizePath(diagnostics.renderWarnings()))
         .toMatchInlineSnapshot(`
         "Processing project/wrangler.toml configuration:
-          - 🦺 DEPRECATION: \\"build.upload.format\\":
+          - ⚠️  DEPRECATION: \\"build.upload.format\\":
             The format is inferred automatically from the code.
-          - 🦺 DEPRECATION: \\"build.upload.main\\":
+          - ⚠️  DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"src/index.ts\\"
             \`\`\`
-          - 🦺 DEPRECATION: \\"build.upload.dir\\":
+          - ⚠️  DEPRECATION: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
           - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
             \`\`\`
@@ -1468,9 +1509,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - 🦺 DEPRECATION: \\"zone_id\\":
+            - ⚠️  DEPRECATION: \\"zone_id\\":
               This is unnecessary since we can deduce this from routes directly.
-            - 🦺 DEPRECATION: \\"experimental_services\\":
+            - ⚠️  DEPRECATION: \\"experimental_services\\":
               The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
               \`\`\`
               [[unsafe.bindings]]
@@ -1723,6 +1764,61 @@ describe("normalizeAndValidateConfig()", () => {
       });
     });
 
+    it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
+      const rawConfig: RawConfig = {
+        legacy_env: false,
+        env: {
+          DEV: {
+            account_id: "some_account_id",
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        rawConfig,
+        undefined,
+        { env: "DEV" }
+      );
+
+      expect(config.account_id).toBeUndefined();
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+
+          - \\"env.DEV\\" environment configuration
+            - The \\"account_id\\" field is not allowed in named service environments.
+              Please remove the field from this environment."
+      `);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
+    it("should error if top-level config and a named environment both contain a `account_id` field", () => {
+      const rawConfig: RawConfig = {
+        account_id: "ACCOUNT_ID",
+        legacy_env: false,
+        env: {
+          DEV: {
+            account_id: "ENV_ACCOUNT_ID",
+          },
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        rawConfig,
+        undefined,
+        { env: "DEV" }
+      );
+
+      expect(config.account_id).toEqual("ACCOUNT_ID");
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+
+          - \\"env.DEV\\" environment configuration
+            - The \\"account_id\\" field is not allowed in named service environments.
+              Please remove the field from this environment."
+      `);
+      expect(diagnostics.hasWarnings()).toBe(false);
+    });
+
     it("should warn for non-inherited fields that are missing in environments", () => {
       const vars: RawConfig["vars"] = {
         FOO: "foo",
@@ -1816,8 +1912,11 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be either a string or an object with shape {pattern: string, zone_id: string}, but got 888.
-            - Expected \\"routes\\" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: [666,777].
+            - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
+            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+                666,
+                777
+              ].
             - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
             - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
             - Expected \\"build.command\\" to be of type string but got 1444.
@@ -2634,9 +2733,9 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"env.ENV1\\" environment configuration
-              - 🦺 DEPRECATION: \\"zone_id\\":
+              - ⚠️  DEPRECATION: \\"zone_id\\":
                 This is unnecessary since we can deduce this from routes directly.
-              - 🦺 DEPRECATION: \\"experimental_services\\":
+              - ⚠️  DEPRECATION: \\"experimental_services\\":
                 The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
                 \`\`\`
                 [[unsafe.bindings]]

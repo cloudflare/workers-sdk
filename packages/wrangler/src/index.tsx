@@ -107,7 +107,9 @@ async function printWranglerBanner() {
   );
 }
 
-function isLegacyEnv(args: unknown, config: Config): boolean {
+function isLegacyEnv(config: Config): boolean {
+  // We only read from config here, because we've already accounted for
+  // args["legacy-env"] in https://github.com/cloudflare/wrangler2/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
   return config.legacy_env;
 }
 
@@ -115,7 +117,7 @@ function getScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ): string | undefined {
-  if (args.name && isLegacyEnv(args, config) && args.env) {
+  if (args.name && isLegacyEnv(config) && args.env) {
     throw new CommandLineArgsError(
       "In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
         `
@@ -135,7 +137,7 @@ function getLegacyScriptName(
   args: { name: string | undefined; env: string | undefined },
   config: Config
 ) {
-  return args.name && args.env && isLegacyEnv(args, config)
+  return args.name && args.env && isLegacyEnv(config)
     ? `${args.name}-${args.env}`
     : args.name ?? config.name;
 }
@@ -636,6 +638,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("format", {
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
+          deprecated: true,
         })
         .option("env", {
           describe: "Perform on a specific environment",
@@ -730,6 +733,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("experimental-enable-local-persistence", {
           describe: "Enable persistence for this session (only for local mode)",
           type: "boolean",
+        })
+        .option("minify", {
+          describe: "Minify the script",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -813,13 +820,17 @@ export async function main(argv: string[]): Promise<void> {
           (config.routes && config.routes[0]);
 
         let zoneId: string | undefined =
-          typeof hostLike === "object" ? hostLike.zone_id : undefined;
+          typeof hostLike === "object" && "zone_id" in hostLike
+            ? hostLike.zone_id
+            : undefined;
 
         const host =
           typeof hostLike === "string"
             ? getHost(hostLike)
             : typeof hostLike === "object"
-            ? getHost(hostLike.pattern)
+            ? "zone_name" in hostLike
+              ? getHost(hostLike.zone_name)
+              : getHost(hostLike.pattern)
             : undefined;
 
         const hostPieces =
@@ -850,7 +861,8 @@ export async function main(argv: string[]): Promise<void> {
           env={args.env}
           zone={zone}
           rules={getRules(config)}
-          legacyEnv={isLegacyEnv(args, config)}
+          legacyEnv={isLegacyEnv(config)}
+          minify={args.minify ?? config.minify}
           build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
@@ -940,9 +952,14 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Name of the worker",
           type: "string",
         })
+        .option("outdir", {
+          describe: "Output directory for the bundled worker",
+          type: "string",
+        })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
+          deprecated: true,
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -1002,6 +1019,14 @@ export async function main(argv: string[]): Promise<void> {
         .option("tsconfig", {
           describe: "Path to a custom tsconfig.json file",
           type: "string",
+        })
+        .option("minify", {
+          describe: "Minify the script",
+          type: "boolean",
+        })
+        .option("dry-run", {
+          describe: "Don't actually publish",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -1054,8 +1079,11 @@ export async function main(argv: string[]): Promise<void> {
         tsconfig: args.tsconfig,
         routes: args.routes,
         assetPaths,
-        legacyEnv: isLegacyEnv(args, config),
+        legacyEnv: isLegacyEnv(config),
+        minify: args.minify,
         experimentalPublic: args["experimental-public"] !== undefined,
+        outDir: args.outdir,
+        dryRun: args.dryRun,
       });
     }
   );
@@ -1065,59 +1093,56 @@ export async function main(argv: string[]): Promise<void> {
     "tail [name]",
     "🦚 Starts a log tailing session for a published Worker.",
     (yargs) => {
-      return (
-        yargs
-          .positional("name", {
-            describe: "Name of the worker",
-            type: "string",
-          })
-          // TODO: auto-detect if this should be json or pretty based on atty
-          .option("format", {
-            default: "pretty",
-            choices: ["json", "pretty"],
-            describe: "The format of log entries",
-          })
-          .option("status", {
-            choices: ["ok", "error", "canceled"],
-            describe: "Filter by invocation status",
-            array: true,
-          })
-          .option("header", {
-            type: "string",
-            describe: "Filter by HTTP header",
-          })
-          .option("method", {
-            type: "string",
-            describe: "Filter by HTTP method",
-            array: true,
-          })
-          .option("sampling-rate", {
-            type: "number",
-            describe: "Adds a percentage of requests to log sampling rate",
-          })
-          .option("search", {
-            type: "string",
-            describe: "Filter by a text match in console.log messages",
-          })
-          .option("ip", {
-            type: "string",
-            describe:
-              'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
-            array: true,
-          })
-          .option("env", {
-            type: "string",
-            describe: "Perform on a specific environment",
-            alias: "e",
-          })
-          .option("debug", {
-            type: "boolean",
-            hidden: true,
-            default: false,
-            describe:
-              "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
-          })
-      );
+      return yargs
+        .positional("name", {
+          describe: "Name of the worker",
+          type: "string",
+        })
+        .option("format", {
+          default: process.stdout.isTTY ? "pretty" : "json",
+          choices: ["json", "pretty"],
+          describe: "The format of log entries",
+        })
+        .option("status", {
+          choices: ["ok", "error", "canceled"],
+          describe: "Filter by invocation status",
+          array: true,
+        })
+        .option("header", {
+          type: "string",
+          describe: "Filter by HTTP header",
+        })
+        .option("method", {
+          type: "string",
+          describe: "Filter by HTTP method",
+          array: true,
+        })
+        .option("sampling-rate", {
+          type: "number",
+          describe: "Adds a percentage of requests to log sampling rate",
+        })
+        .option("search", {
+          type: "string",
+          describe: "Filter by a text match in console.log messages",
+        })
+        .option("ip", {
+          type: "string",
+          describe:
+            'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
+          array: true,
+        })
+        .option("env", {
+          type: "string",
+          describe: "Perform on a specific environment",
+          alias: "e",
+        })
+        .option("debug", {
+          type: "boolean",
+          hidden: true,
+          default: false,
+          describe:
+            "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
+        });
     },
     async (args) => {
       if (args.format === "pretty") {
@@ -1151,16 +1176,18 @@ export async function main(argv: string[]): Promise<void> {
         accountId,
         scriptName,
         filters,
-        !isLegacyEnv(args, config) ? args.env : undefined
+        !isLegacyEnv(config) ? args.env : undefined
       );
 
       const scriptDisplayName = `${scriptName}${
-        args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+        args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
       }`;
 
-      console.log(
-        `successfully created tail, expires at ${expiration.toLocaleString()}`
-      );
+      if (args.format === "pretty") {
+        console.log(
+          `successfully created tail, expires at ${expiration.toLocaleString()}`
+        );
+      }
 
       onExit(async () => {
         tail.terminate();
@@ -1187,7 +1214,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      if (args.format === "pretty") {
+        console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+      }
 
       tail.on("close", async () => {
         tail.terminate();
@@ -1248,8 +1277,9 @@ export async function main(argv: string[]): Promise<void> {
           rules={getRules(config)}
           env={args.env}
           zone={undefined}
-          legacyEnv={isLegacyEnv(args, config)}
+          legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
+          minify={undefined}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}
@@ -1438,13 +1468,13 @@ export async function main(argv: string[]): Promise<void> {
 
             console.log(
               `🌀 Creating the secret for script ${scriptName} ${
-                args.env && !isLegacyEnv(args, config) ? `(${args.env})` : ""
+                args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
               }`
             );
 
             async function submitSecret() {
               const url =
-                !args.env || isLegacyEnv(args, config)
+                !args.env || isLegacyEnv(config)
                   ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                   : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
@@ -1462,7 +1492,7 @@ export async function main(argv: string[]): Promise<void> {
             const createDraftWorker = async () => {
               // TODO: log a warning
               await fetchResult(
-                !args["legacy-env"] && args.env
+                !isLegacyEnv(config) && args.env
                   ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
                   : `/accounts/${accountId}/workers/scripts/${scriptName}`,
                 {
@@ -1554,18 +1584,18 @@ export async function main(argv: string[]): Promise<void> {
                 `Are you sure you want to permanently delete the variable ${
                   args.key
                 } on the script ${scriptName}${
-                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                  args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
                 }?`
               )
             ) {
               console.log(
                 `🌀 Deleting the secret ${args.key} on script ${scriptName}${
-                  args.env && !isLegacyEnv(args, config) ? ` (${args.env})` : ""
+                  args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
                 }`
               );
 
               const url =
-                !args.env || isLegacyEnv(args, config)
+                !args.env || isLegacyEnv(config)
                   ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                   : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
@@ -1601,7 +1631,7 @@ export async function main(argv: string[]): Promise<void> {
             const accountId = await requireAuth(config);
 
             const url =
-              !args.env || isLegacyEnv(args, config)
+              !args.env || isLegacyEnv(config)
                 ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                 : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 

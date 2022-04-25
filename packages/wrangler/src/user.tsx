@@ -661,8 +661,27 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       "Content-Type": "application/x-www-form-urlencoded",
     },
   });
+
   if (response.status >= 400) {
-    throw await response.json();
+    let tokenExchangeResErr = undefined;
+
+    try {
+      tokenExchangeResErr = await response.text();
+      tokenExchangeResErr = JSON.parse(tokenExchangeResErr);
+    } catch (e) {
+      // If it can't parse to JSON ignore the error
+    }
+
+    if (tokenExchangeResErr !== undefined) {
+      // We will throw the parsed error if it parsed correctly, otherwise we throw an unknown error.
+      throw typeof tokenExchangeResErr === "string"
+        ? new Error(tokenExchangeResErr)
+        : tokenExchangeResErr;
+    } else {
+      throw new ErrorUnknown(
+        "Failed to parse Error from exchangeRefreshTokenForAccessToken"
+      );
+    }
   } else {
     try {
       const json = (await response.json()) as TokenResponse;
@@ -699,18 +718,6 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
       };
       return accessContext;
     } catch (error) {
-      switch (error) {
-        case "invalid_grant":
-          console.warn(
-            "Expired! Auth code or refresh token needs to be renewed."
-          );
-          // alert("Redirecting to auth server to obtain a new auth grant code.");
-          // TODO: return refreshAuthCodeOrRefreshToken();
-          break;
-        default:
-          console.error(error);
-          break;
-      }
       if (typeof error === "string") {
         throw toErrorClass(error);
       } else {

@@ -74,7 +74,13 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  routes: (string | { pattern: string; zone_id: string })[] | undefined;
+  routes:
+    | (
+        | string
+        | { pattern: string; zone_id: string }
+        | { pattern: string; zone_name: string }
+      )[]
+    | undefined;
 
   /**
    * A route that your worker should be published to. Literally
@@ -85,7 +91,13 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  route: (string | { pattern: string; zone_id: string }) | undefined;
+  route:
+    | (
+        | string
+        | { pattern: string; zone_id: string }
+        | { pattern: string; zone_name: string }
+      )
+    | undefined;
 
   /**
    * Path to a custom tsconfig
@@ -131,7 +143,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  usage_model: undefined | "bundled" | "unbound";
+  usage_model: "bundled" | "unbound" | undefined;
 
   /**
    * An ordered list of rules that define which modules to import,
@@ -164,6 +176,12 @@ interface EnvironmentInheritable {
      */
     upload?: DeprecatedUpload;
   };
+
+  /**
+   * Minify the script before uploading.
+   * @inheritable
+   */
+  minify: boolean | undefined;
 
   /**
    * TODO: remove this as it has been deprecated.

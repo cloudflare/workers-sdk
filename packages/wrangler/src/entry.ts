@@ -89,9 +89,10 @@ export async function runCustomBuild(
     console.log("running:", build.command);
     await execaCommand(build.command, {
       shell: true,
+      // we keep these two as "inherit" so that
+      // logs are still visible.
       stdout: "inherit",
       stderr: "inherit",
-      timeout: 1000 * 30,
       ...(build.cwd && { cwd: build.cwd }),
     });
 
@@ -126,6 +127,7 @@ export default async function guessWorkerFormat(
     metafile: true,
     bundle: false,
     format: "esm",
+    target: "es2020",
     write: false,
     loader: {
       ".js": "jsx",

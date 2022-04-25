@@ -8,4 +8,4 @@ packages/examples/remix-pages-app/build
 packages/examples/remix-pages-app/public/
 packages/prerelease-registry/_worker.js
 packages/jest-environment-wrangler/dist/
-
+packages/wranglerjs-compat-webpack-plugin/lib

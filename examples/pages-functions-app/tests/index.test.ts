@@ -52,6 +52,7 @@ describe("Pages Functions", () => {
 
   it("renders static pages", async () => {
     const response = await waitUntilReady("http://localhost:8789/");
+    expect(response.headers.get("x-custom")).toBe("header value");
     const text = await response.text();
     expect(text).toContain("Hello, world!");
   });
@@ -85,5 +86,27 @@ describe("Pages Functions", () => {
     );
     const text = await response.text();
     expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
+  });
+
+  it("can override the incoming request with next() parameters", async () => {
+    const response = await waitUntilReady("http://localhost:8789/next");
+    const text = await response.text();
+    expect(text).toContain("<h1>An asset</h1>");
+  });
+
+  it("can mount a plugin", async () => {
+    // Middleware
+    let response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/some-page"
+    );
+    let text = await response.text();
+    expect(text).toContain("<footer>Set from a Plugin!</footer>");
+
+    // Fixed page
+    response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/fixed"
+    );
+    text = await response.text();
+    expect(text).toContain("I'm a fixed response");
   });
 });

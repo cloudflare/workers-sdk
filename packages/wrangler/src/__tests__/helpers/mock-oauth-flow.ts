@@ -1,46 +1,53 @@
-import { ChildProcess } from "child_process";
 import fetchMock from "jest-fetch-mock";
 import { Request } from "undici";
-const { fetch } = jest.requireActual("undici") as {
-  fetch: (input: string) => Promise<unknown>;
-};
+import openInBrowser from "../../open-in-browser";
+import { mockHttpServer } from "./mock-http-server";
 
 // the response to send when wrangler wants an oauth grant
 let oauthGrantResponse: GrantResponseOptions | "timeout" = {};
 
 /**
- * A mock implementation for `openInBrowser` that sends an oauth grant response
- * to wrangler. Use it like this:
- *
- * ```js
- * jest.mock("../open-in-browser");
- * (openInBrowser as jest.Mock).mockImplementation(mockOpenInBrowser);
- * ```
- */
-export const mockOpenInBrowser = async (url: string, ..._args: unknown[]) => {
-  const { searchParams } = new URL(url);
-  if (oauthGrantResponse === "timeout") {
-    throw "unimplemented";
-  } else {
-    const queryParams = toQueryParams(oauthGrantResponse, searchParams);
-    // don't await this -- it will block the rest of the login flow
-    fetch(`${searchParams.get("redirect_uri")}?${queryParams}`).catch((e) => {
-      throw new Error(
-        "Failed to send OAuth Grant to wrangler, maybe the server was closed?",
-        e as Error
-      );
-    });
-    return new ChildProcess();
-  }
-};
-
-/**
  * Functions to help with mocking various parts of the OAuth Flow
  */
 export const mockOAuthFlow = () => {
+  const fetchHttp = mockHttpServer();
+
   afterEach(() => {
     fetchMock.resetMocks();
   });
+
+  /**
+   * Mock out the callback from a browser to our HttpServer.
+   *
+   * This function will override `openInBrowser()` so that instead of opening a browser window
+   * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
+   * we have created as part of the call to `mockOAuthFlow()`.
+   */
+  const mockOAuthServerCallback = () => {
+    (
+      openInBrowser as jest.MockedFunction<typeof openInBrowser>
+    ).mockImplementation(async (url: string) => {
+      // We don't support the grant response timing out.
+      if (oauthGrantResponse === "timeout") {
+        throw "unimplemented";
+      }
+
+      // Create a fake callback request that would be created by the OAuth server
+      const { searchParams } = new URL(url);
+      const queryParams = toQueryParams(oauthGrantResponse, searchParams);
+      const request = new Request(
+        `${searchParams.get("redirect_uri")}?${queryParams}`
+      );
+
+      // Trigger the mock HttpServer to handle this fake request to continue the OAuth flow.
+      fetchHttp(request).catch((e) => {
+        throw new Error(
+          "Failed to send OAuth Grant to wrangler, maybe the server was closed?",
+          e as Error
+        );
+      });
+    });
+  };
 
   const mockGrantAuthorization = ({
     respondWith,
@@ -98,10 +105,56 @@ export const mockOAuthFlow = () => {
     return outcome;
   };
 
+  const mockExchangeRefreshTokenForAccessToken = ({
+    respondWith,
+  }: {
+    respondWith: "refreshSuccess" | "refreshError" | "badResponse";
+  }) => {
+    fetchMock.mockOnceIf(
+      "https://dash.cloudflare.com/oauth2/token",
+      async () => {
+        switch (respondWith) {
+          case "refreshSuccess":
+            return {
+              status: 200,
+              body: JSON.stringify({
+                access_token: "access_token_success_mock",
+                expires_in: 1701,
+                refresh_token: "refresh_token_sucess_mock",
+                scope: "scope_success_mock",
+                token_type: "bearer",
+              }),
+            };
+          case "refreshError":
+            return {
+              status: 400,
+              body: JSON.stringify({
+                error: "invalid_request",
+                error_description: "error_description_mock",
+                error_hint: "error_hint_mock",
+                error_verbose: "error_verbose_mock",
+                status_code: 400,
+              }),
+            };
+          case "badResponse":
+            return {
+              status: 400,
+              body: `<html> <body> This shouldn't be sent, but should be handled </body> </html>`,
+            };
+
+          default:
+            return "Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`";
+        }
+      }
+    );
+  };
+
   return {
+    mockOAuthServerCallback,
     mockGrantAuthorization,
     mockRevokeAuthorization,
     mockGrantAccessToken,
+    mockExchangeRefreshTokenForAccessToken,
   };
 };
 

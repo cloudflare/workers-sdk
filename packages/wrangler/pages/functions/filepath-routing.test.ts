@@ -143,6 +143,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "authors/[authorId]/todos/[todoId].ts:onRequestPost",
               ],
+              "mountPath": "/base/authors/:authorId/todos",
               "routePath": "/base/authors/:authorId/todos/:todoId",
             },
             Object {
@@ -150,6 +151,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "cats/[[breed]]/blah.ts:onRequestPost",
               ],
+              "mountPath": "/base/cats/:breed*",
               "routePath": "/base/cats/:breed*/blah",
             },
             Object {
@@ -157,6 +159,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "cats/[[breed]]/[[name]].ts:onRequestPost",
               ],
+              "mountPath": "/base/cats/:breed*",
               "routePath": "/base/cats/:breed*/:name*",
             },
             Object {
@@ -164,6 +167,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "todos/[id].ts:onRequestDelete",
               ],
+              "mountPath": "/base/todos",
               "routePath": "/base/todos/:id",
             },
             Object {
@@ -171,6 +175,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "todos/[id].ts:onRequestPost",
               ],
+              "mountPath": "/base/todos",
               "routePath": "/base/todos/:id",
             },
             Object {
@@ -178,6 +183,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "books/[[title]].ts:onRequestPost",
               ],
+              "mountPath": "/base/books",
               "routePath": "/base/books/:title*",
             },
             Object {
@@ -185,6 +191,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "bar.ts:onRequestDelete",
               ],
+              "mountPath": "/base/",
               "routePath": "/base/bar",
             },
             Object {
@@ -192,6 +199,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "bar.ts:onRequestPut",
               ],
+              "mountPath": "/base/",
               "routePath": "/base/bar",
             },
             Object {
@@ -199,6 +207,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "foo.ts:onRequestGet",
               ],
+              "mountPath": "/base/",
               "routePath": "/base/foo",
             },
             Object {
@@ -206,6 +215,7 @@ describe("filepath-routing", () => {
               "module": Array [
                 "foo.ts:onRequestPost",
               ],
+              "mountPath": "/base/",
               "routePath": "/base/foo",
             },
           ],
@@ -218,6 +228,7 @@ describe("filepath-routing", () => {
 function routeConfig(routePath: string, method?: string): RouteConfig {
   return {
     routePath: toUrlPath(routePath),
+    mountPath: toUrlPath("/"),
     method: method as HTTPMethod,
   };
 }

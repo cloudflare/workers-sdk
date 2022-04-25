@@ -61,6 +61,15 @@ export function normalizeAndValidateConfig(
   deprecated(
     diagnostics,
     rawConfig,
+    "miniflare",
+    "Wrangler does not use configuration in the `miniflare` section. Unless you are using Miniflare directly you can remove this section.",
+    true,
+    "😶 UNUSED"
+  );
+
+  deprecated(
+    diagnostics,
+    rawConfig,
     "type",
     "DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
     true
@@ -80,7 +89,8 @@ export function normalizeAndValidateConfig(
     `site.entry-point`,
     `The \`site.entry-point\` config field is no longer used.\nThe entry-point should be specified via the command line or the \`main\` config field.`,
     false,
-    true
+    "🚨 NO LONGER SUPPORTED",
+    "error"
   );
 
   validateOptionalProperty(
@@ -91,11 +101,26 @@ export function normalizeAndValidateConfig(
     "boolean"
   );
 
+  validateOptionalProperty(
+    diagnostics,
+    "",
+    "minify",
+    rawConfig.minify,
+    "boolean"
+  );
+
   // TODO: set the default to false to turn on service environments as the default
   const isLegacyEnv =
     (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
     rawConfig.legacy_env ??
     true;
+
+  // TODO: remove this once service environments goes GA.
+  if (!isLegacyEnv) {
+    console.warn(
+      "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+    );
+  }
 
   const topLevelEnv = normalizeAndValidateEnvironment(
     diagnostics,
@@ -196,7 +221,7 @@ export function normalizeAndValidateConfig(
     diagnostics,
     "top-level",
     Object.keys(rawConfig),
-    [...Object.keys(config), "env", "miniflare"]
+    [...Object.keys(config), "env"]
   );
 
   return { config, diagnostics };
@@ -472,8 +497,11 @@ function isValidRouteValue(item: unknown): boolean {
       (typeof item === "object" &&
         hasProperty(item, "pattern") &&
         typeof item.pattern === "string" &&
-        hasProperty(item, "zone_id") &&
-        typeof item.zone_id === "string" &&
+        // it could have a zone_name
+        ((hasProperty(item, "zone_name") &&
+          typeof item.zone_name === "string") ||
+          // or a zone_id
+          (hasProperty(item, "zone_id") && typeof item.zone_id === "string")) &&
         Object.keys(item).length === 2))
   );
 }
@@ -484,7 +512,7 @@ function isValidRouteValue(item: unknown): boolean {
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && !isValidRouteValue(value)) {
     diagnostics.errors.push(
-      `Expected "${field}" to be either a string or an object with shape {pattern: string, zone_id: string}, but got ${JSON.stringify(
+      `Expected "${field}" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got ${JSON.stringify(
         value
       )}.`
     );
@@ -514,8 +542,10 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
   }
   if (invalidRoutes.length > 0) {
     diagnostics.errors.push(
-      `Expected "${field}" to be an array of either strings or objects with the shape {pattern: string, zone_id: string}, but these weren't valid: ${JSON.stringify(
-        invalidRoutes
+      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+        invalidRoutes,
+        null,
+        2
       )}.`
     );
   }
@@ -639,12 +669,14 @@ function normalizeAndValidateEnvironment(
 
   const environment: Environment = {
     // Inherited fields
-    account_id: inheritable(
+    account_id: inheritableInLegacyEnvironments(
       diagnostics,
+      isLegacyEnv,
       topLevelEnv,
       rawEnv,
       "account_id",
       isString,
+      undefined,
       undefined
     ),
     compatibility_date: inheritable(
@@ -790,6 +822,7 @@ function normalizeAndValidateEnvironment(
       }
     ),
     zone_id: rawEnv.zone_id,
+    minify: rawEnv.minify,
   };
 
   return environment;

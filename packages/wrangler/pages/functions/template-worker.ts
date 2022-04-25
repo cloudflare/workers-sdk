@@ -6,6 +6,7 @@ type Params<P extends string = string> = Record<P, string | string[]>;
 
 type EventContext<Env, P extends string, Data> = {
   request: Request;
+  functionPath: string;
   waitUntil: (promise: Promise<unknown>) => void;
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
   env: Env & { ASSETS: { fetch: typeof fetch } };
@@ -22,6 +23,7 @@ declare type PagesFunction<
 
 type RouteHandler = {
   routePath: string;
+  mountPath: string;
   method?: HTTPMethod;
   modules: PagesFunction[];
   middlewares: PagesFunction[];
@@ -42,7 +44,7 @@ type WorkerContext = {
   waitUntil: (promise: Promise<unknown>) => void;
 };
 
-function* executeRequest(request: Request, _env: FetchEnv) {
+function* executeRequest(request: Request) {
   const requestPath = new URL(request.url).pathname;
 
   // First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
@@ -52,12 +54,15 @@ function* executeRequest(request: Request, _env: FetchEnv) {
     }
 
     const routeMatcher = match(route.routePath, { end: false });
+    const mountMatcher = match(route.mountPath, { end: false });
     const matchResult = routeMatcher(requestPath);
-    if (matchResult) {
+    const mountMatchResult = mountMatcher(requestPath);
+    if (matchResult && mountMatchResult) {
       for (const handler of route.middlewares.flat()) {
         yield {
           handler,
           params: matchResult.params as Params,
+          path: mountMatchResult.path,
         };
       }
     }
@@ -70,12 +75,15 @@ function* executeRequest(request: Request, _env: FetchEnv) {
     }
 
     const routeMatcher = match(route.routePath, { end: true });
+    const mountMatcher = match(route.mountPath, { end: false });
     const matchResult = routeMatcher(requestPath);
-    if (matchResult && route.modules.length) {
+    const mountMatchResult = mountMatcher(requestPath);
+    if (matchResult && mountMatchResult && route.modules.length) {
       for (const handler of route.modules.flat()) {
         yield {
           handler,
           params: matchResult.params as Params,
+          path: matchResult.path,
         };
       }
       break;
@@ -85,19 +93,24 @@ function* executeRequest(request: Request, _env: FetchEnv) {
 
 export default {
   async fetch(request: Request, env: FetchEnv, workerContext: WorkerContext) {
-    const handlerIterator = executeRequest(request, env);
+    const handlerIterator = executeRequest(request);
     const data = {}; // arbitrary data the user can set between functions
     const next = async (input?: RequestInfo, init?: RequestInit) => {
       if (input !== undefined) {
-        request = new Request(input, init);
+        let url = input;
+        if (typeof input === "string") {
+          url = new URL(input, request.url).toString();
+        }
+        request = new Request(url, init);
       }
 
       const result = handlerIterator.next();
       // Note we can't use `!result.done` because this doesn't narrow to the correct type
-      if (result.done == false) {
-        const { handler, params } = result.value;
+      if (result.done === false) {
+        const { handler, params, path } = result.value;
         const context = {
           request: new Request(request.clone()),
+          functionPath: path,
           next,
           params,
           data,
@@ -110,7 +123,7 @@ export default {
         // https://fetch.spec.whatwg.org/#null-body-status
         return new Response(
           [101, 204, 205, 304].includes(response.status) ? null : response.body,
-          response
+          { ...response, headers: new Headers([...response.headers.entries()]) }
         );
       } else if (__FALLBACK_SERVICE__) {
         // There are no more handlers so finish with the fallback service (`env.ASSETS.fetch` in Pages' case)

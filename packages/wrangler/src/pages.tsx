@@ -16,6 +16,7 @@ import { getType } from "mime";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
+import { buildPlugin } from "../pages/functions/buildPlugin";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
@@ -35,13 +36,16 @@ type ConfigPath = string | undefined;
 
 export type Project = {
   name: string;
+  subdomain: string;
   domains: Array<string>;
   source?: {
     type: string;
   };
-  latest_deployment: {
+  latest_deployment?: {
     modified_on: string;
   };
+  created_on: string;
+  production_branch: string;
 };
 
 export type Deployment = {
@@ -696,7 +700,7 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
 const RUNNING_BUILDERS: BuildResult[] = [];
 
 async function buildFunctions({
-  scriptPath,
+  outfile,
   outputConfigPath,
   functionsDirectory,
   minify = false,
@@ -704,8 +708,9 @@ async function buildFunctions({
   fallbackService = "ASSETS",
   watch = false,
   onEnd,
+  plugin = false,
 }: {
-  scriptPath: string;
+  outfile: string;
   outputConfigPath?: string;
   functionsDirectory: string;
   minify?: boolean;
@@ -713,6 +718,7 @@ async function buildFunctions({
   fallbackService?: string;
   watch?: boolean;
   onEnd?: () => void;
+  plugin?: boolean;
 }) {
   RUNNING_BUILDERS.forEach(
     (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -739,17 +745,30 @@ async function buildFunctions({
     outfile: routesModule,
   });
 
-  RUNNING_BUILDERS.push(
-    await buildWorker({
-      routesModule,
-      outfile: scriptPath,
-      minify,
-      sourcemap,
-      fallbackService,
-      watch,
-      onEnd,
-    })
-  );
+  if (plugin) {
+    RUNNING_BUILDERS.push(
+      await buildPlugin({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        watch,
+        onEnd,
+      })
+    );
+  } else {
+    RUNNING_BUILDERS.push(
+      await buildWorker({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        fallbackService,
+        watch,
+        onEnd,
+      })
+    );
+  }
 }
 
 interface CreateDeploymentArgs {
@@ -1138,13 +1157,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         );
 
         if (usingFunctions) {
-          const scriptPath = join(tmpdir(), "./functionsWorker.js");
+          const outfile = join(tmpdir(), "./functionsWorker.js");
 
-          console.log(`Compiling worker to "${scriptPath}"...`);
+          console.log(`Compiling worker to "${outfile}"...`);
 
           try {
             await buildFunctions({
-              scriptPath,
+              outfile,
               functionsDirectory,
               sourcemap: true,
               watch: true,
@@ -1157,7 +1176,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ignoreInitial: true,
           }).on("all", async () => {
             await buildFunctions({
-              scriptPath,
+              outfile,
               functionsDirectory,
               sourcemap: true,
               watch: true,
@@ -1166,7 +1185,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           });
 
           miniflareArgs = {
-            scriptPath,
+            scriptPath: outfile,
           };
         } else {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1324,7 +1343,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "The directory of Pages Functions",
             })
             .options({
-              "script-path": {
+              outfile: {
                 type: "string",
                 default: "_worker.js",
                 description: "The location of the output Worker script",
@@ -1356,56 +1375,113 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 description:
                   "Watch for changes to the functions and automatically rebuild the Worker script",
               },
+              plugin: {
+                type: "boolean",
+                default: false,
+                description: "Build a plugin rather than a Worker script",
+              },
             })
             .epilogue(pagesBetaWarning),
         async ({
           directory,
-          "script-path": scriptPath,
+          outfile,
           "output-config-path": outputConfigPath,
           minify,
           sourcemap,
           fallbackService,
           watch,
+          plugin,
         }) => {
           // Beta message for `wrangler pages <commands>` usage
           console.log(pagesBetaWarning);
 
           await buildFunctions({
-            scriptPath,
+            outfile,
             outputConfigPath,
             functionsDirectory: directory,
             minify,
             sourcemap,
             fallbackService,
             watch,
+            plugin,
           });
         }
       )
     )
-    .command("project", false, (yargs) =>
-      yargs.command(
-        "list",
-        "List your Cloudflare Pages projects",
-        () => {},
-        async (args) => {
-          const config = readConfig(args.config as ConfigPath, args);
-          const accountId = await requireAuth(config);
+    .command("project", "⚡️ Interact with your Pages projects", (yargs) =>
+      yargs
+        .command(
+          "list",
+          "List your Cloudflare Pages projects",
+          (yargs) => yargs.epilogue(pagesBetaWarning),
+          async (args) => {
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
 
-          const projects: Array<Project> = await listProjects({ accountId });
+            const projects: Array<Project> = await listProjects({ accountId });
 
-          const data = projects.map((project) => {
-            return {
-              "Project Name": project.name,
-              "Project Domains": `${project.domains.join(", ")}`,
-              "Git Provider": project.source ? "Yes" : "No",
-              "Last Modified": timeagoFormat(
-                project.latest_deployment.modified_on
-              ),
-            };
-          });
-          render(<Table data={data}></Table>);
-        }
-      )
+            const data = projects.map((project) => {
+              return {
+                "Project Name": project.name,
+                "Project Domains": `${project.domains.join(", ")}`,
+                "Git Provider": project.source ? "Yes" : "No",
+                "Last Modified": project.latest_deployment
+                  ? timeagoFormat(project.latest_deployment.modified_on)
+                  : timeagoFormat(project.created_on),
+              };
+            });
+            render(<Table data={data}></Table>);
+          }
+        )
+        .command(
+          "create [name]",
+          "Create a new Cloudflare Pages project",
+          (yargs) =>
+            yargs
+              .positional("name", {
+                type: "string",
+                demandOption: true,
+                description: "The name of your Pages project",
+              })
+              .options({
+                "production-branch": {
+                  type: "string",
+                  // TODO: Should we default to the current git branch?
+                  default: "production",
+                  description:
+                    "The name of the production branch of your project",
+                },
+              })
+              .epilogue(pagesBetaWarning),
+          async (args) => {
+            const { "production-branch": productionBranch, name } = args;
+
+            if (!name) {
+              throw new FatalError("Must specify a project name.", 1);
+            }
+
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
+
+            const { subdomain } = await fetchResult<Project>(
+              `/accounts/${accountId}/pages/projects`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  name,
+                  production_branch: productionBranch,
+                }),
+              }
+            );
+            console.log(
+              `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
+            );
+            console.log(
+              `To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
+            );
+          }
+        )
+        .epilogue(pagesBetaWarning)
     )
     .command("deployment", false, (yargs) =>
       yargs
@@ -1462,11 +1538,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           command: "create [directory]",
           ...createDeployment,
         } as CommandModule)
+        .epilogue(pagesBetaWarning)
     )
     .command({
       command: "publish [directory]",
       ...createDeployment,
-    } as CommandModule);
+    } as CommandModule)
+    .epilogue(pagesBetaWarning);
 };
 
 const invalidAssetsFetch: typeof fetch = () => {

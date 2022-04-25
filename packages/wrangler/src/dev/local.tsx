@@ -14,14 +14,14 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 
 interface LocalProps {
-  name: undefined | string;
+  name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
   compatibilityDate: string;
-  compatibilityFlags: undefined | string[];
+  compatibilityFlags: string[] | undefined;
   bindings: CfWorkerInit["bindings"];
-  assetPaths: undefined | AssetPaths;
-  public: undefined | string;
+  assetPaths: AssetPaths | undefined;
+  public: string | undefined;
   port: number;
   ip: string;
   rules: Config["rules"];
@@ -62,15 +62,13 @@ function useLocalWorker({
   // if we're using local persistence for data, we should use the cwd
   // as an explicit path, or else it'll use the temp dir
   // which disappears when dev ends
-  const localPersistencePathOrDisableLocalPersistence = enableLocalPersistence
+  const localPersistencePath = enableLocalPersistence
     ? // Maybe we could make the path configurable as well?
       path.join(process.cwd(), "wrangler-local-state")
-    : // We have to explicitly choose not to use local persistence,
-      // since it defaults to true. That said, a benefit of just enabling
-      // it as is, would be that it would persist for all of
-      // `wrangler dev` surviving, which may be useful anyway.
-      // TODO: We should revisit this based on usage.
-      false;
+    : // We otherwise choose null, but choose true later
+      // so that it's persisted in the temp dir across a dev session
+      // even when we change source and reload
+      null;
   useEffect(() => {
     const abortController = new AbortController();
     async function startLocalWorker() {
@@ -172,14 +170,28 @@ function useLocalWorker({
         compatibilityDate,
         compatibilityFlags,
         kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
-        kvPersist: localPersistencePathOrDisableLocalPersistence,
         durableObjects: Object.fromEntries(
           (bindings.durable_objects?.bindings ?? []).map<[string, string]>(
             (value) => [value.name, value.class_name]
           )
         ),
-        durableObjectsPersist: localPersistencePathOrDisableLocalPersistence,
-        cachePersist: localPersistencePathOrDisableLocalPersistence,
+        ...(localPersistencePath
+          ? {
+              kvPersist: path.join(localPersistencePath, "kv"),
+              durableObjectsPersist: path.join(localPersistencePath, "do"),
+              cachePersist: path.join(localPersistencePath, "cache"),
+            }
+          : {
+              // We mark these as true, so that they'll
+              // persist in the temp directory.
+              // This means they'll persist across a dev session,
+              // even if we change source and reload,
+              // and be deleted when the dev session ends
+              durableObjectsPersist: true,
+              cachePersist: true,
+              kvPersist: true,
+            }),
+
         sitePath: assetPaths?.assetDirectory
           ? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
           : undefined,
@@ -286,7 +298,7 @@ function useLocalWorker({
     bindings.vars,
     compatibilityDate,
     compatibilityFlags,
-    localPersistencePathOrDisableLocalPersistence,
+    localPersistencePath,
     assetPaths,
     publicDirectory,
     rules,

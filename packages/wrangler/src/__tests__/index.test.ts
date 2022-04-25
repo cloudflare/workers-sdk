@@ -845,14 +845,14 @@ describe("wrangler", () => {
     it("should throw an error if the deprecated command is used with positional arguments", async () => {
       await expect(runWrangler("preview GET")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
-              "🦺 DEPRECATION:
+              "⚠️  DEPRECATION:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
             `);
       await expect(runWrangler(`preview GET "SomeBody"`)).rejects
         .toThrowErrorMatchingInlineSnapshot(`
-              "🦺 DEPRECATION:
+              "⚠️  DEPRECATION:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
@@ -970,7 +970,7 @@ describe("wrangler", () => {
     it("should print a deprecation message for 'generate'", async () => {
       await runWrangler("generate").catch((err) => {
         expect(err.message).toMatchInlineSnapshot(`
-          "🦺 DEPRECATION:
+          "⚠️  DEPRECATION:
           \`wrangler generate\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
         `);
       });
@@ -978,7 +978,7 @@ describe("wrangler", () => {
     it("should print a deprecation message for 'build'", async () => {
       await runWrangler("build").catch((err) => {
         expect(err.message).toMatchInlineSnapshot(`
-          "🦺 DEPRECATION:
+          "⚠️  DEPRECATION:
           \`wrangler build\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
         `);
       });

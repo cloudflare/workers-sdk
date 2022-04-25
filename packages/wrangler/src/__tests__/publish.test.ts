@@ -15,7 +15,9 @@ import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
 import type { CfWorkerInit } from "../worker";
@@ -26,7 +28,11 @@ describe("publish", () => {
   mockApiToken();
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
-  const { mockGrantAccessToken, mockGrantAuthorization } = mockOAuthFlow();
+  const {
+    mockOAuthServerCallback,
+    mockGrantAccessToken,
+    mockGrantAuthorization,
+  } = mockOAuthFlow();
 
   beforeEach(() => {
     // @ts-expect-error we're using a very simple setTimeout mock here
@@ -55,6 +61,7 @@ describe("publish", () => {
       mockSubDomainRequest();
       mockUploadWorkerRequest();
 
+      mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });
 
@@ -237,14 +244,16 @@ describe("publish", () => {
         mockUploadWorkerRequest({
           legacyEnv: false,
         });
-        await runWrangler("publish index.js");
+        await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
           "Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(
+          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+        );
       });
 
       it("publishes as an environment when provided", async () => {
@@ -262,7 +271,9 @@ describe("publish", () => {
             some-env.test-name.test-sub-domain.workers.dev"
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(
+          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+        );
       });
     });
   });
@@ -311,11 +322,15 @@ describe("publish", () => {
       await runWrangler("publish ./index");
     });
 
-    it("should publish to a route with a pattern/zone_id combo", async () => {
+    it("should publish to a route with a pattern/{zone_id|zone_name} combo", async () => {
       writeWranglerToml({
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -327,6 +342,10 @@ describe("publish", () => {
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -338,21 +357,26 @@ describe("publish", () => {
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           some-example.com/some-route/*
-          *a-boring-website.com (zone: 54sdf7fsda)
-          example.com/some-route/* (zone: JGHFHG654gjcj)
+          *a-boring-website.com (zone id: 54sdf7fsda)
+          *another-boring-website.com (zone name: some-zone.com)
+          example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
           "warn": "",
         }
       `);
     });
 
-    it("should publish to a route with a pattern/zone_id combo (service environments)", async () => {
+    it("should publish to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
       writeWranglerToml({
         env: {
           staging: {
             routes: [
               "some-example.com/some-route/*",
               { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+              {
+                pattern: "*another-boring-website.com",
+                zone_name: "some-zone.com",
+              },
               { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
               "more-examples.com/*",
             ],
@@ -375,6 +399,10 @@ describe("publish", () => {
         routes: [
           "some-example.com/some-route/*",
           { pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
+          {
+            pattern: "*another-boring-website.com",
+            zone_name: "some-zone.com",
+          },
           { pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
           "more-examples.com/*",
         ],
@@ -388,10 +416,11 @@ describe("publish", () => {
           "out": "Uploaded test-name (staging) (TIMINGS)
         Published test-name (staging) (TIMINGS)
           some-example.com/some-route/*
-          *a-boring-website.com (zone: 54sdf7fsda)
-          example.com/some-route/* (zone: JGHFHG654gjcj)
+          *a-boring-website.com (zone id: 54sdf7fsda)
+          *another-boring-website.com (zone name: some-zone.com)
+          example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
-          "warn": "",
+          "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
         }
       `);
     });
@@ -528,7 +557,7 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing wrangler.toml configuration:
-          - 🦺 DEPRECATION: \\"build.upload.main\\":
+          - ⚠️  DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
@@ -560,13 +589,13 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "Processing ../wrangler.toml configuration:
-          - 🦺 DEPRECATION: \\"build.upload.main\\":
+          - ⚠️  DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"foo/index.js\\"
             \`\`\`
-          - 🦺 DEPRECATION: \\"build.upload.dir\\":
+          - ⚠️  DEPRECATION: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
       `);
     });
@@ -1555,7 +1584,26 @@ export default{
         workers_dev: true,
       });
       writeWorkerSource();
-      mockUploadWorkerRequest();
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+      mockSubDomainRequest();
+      mockUpdateWorkerRequest({ enabled: true });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not try to enable the workers.dev domain if it has been enabled before", async () => {
+      writeWranglerToml({
+        workers_dev: true,
+      });
+      writeWorkerSource();
+      mockUploadWorkerRequest({ available_on_subdomain: true });
       mockSubDomainRequest();
 
       await runWrangler("publish ./index");
@@ -1575,6 +1623,25 @@ export default{
       writeWorkerSource();
       mockUploadWorkerRequest();
       mockUpdateWorkerRequest({ enabled: false });
+
+      await runWrangler("publish ./index");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        No publish targets for test-name (TIMINGS)"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should not try to disable the workers.dev domain if it is not already available", async () => {
+      writeWranglerToml({
+        workers_dev: false,
+      });
+      writeWorkerSource();
+      mockSubDomainRequest("test-sub-domain", false);
+      mockUploadWorkerRequest({ available_on_subdomain: false });
+
+      // note the lack of a mock for the subdomain disable request
 
       await runWrangler("publish ./index");
 
@@ -2147,6 +2214,73 @@ export default{
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
+
+    it("should minify the script when `--minify` is true (sw)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        expectedEntry: 'fetch(){return new Response("hello Cpt Picard")',
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish index.js --minify");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should minify the script when `minify` in config is true (esm)", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        legacy_env: false,
+        env: {
+          testEnv: {
+            minify: true,
+          },
+        },
+      });
+      fs.writeFileSync(
+        "./index.js",
+        `export
+        default {
+          fetch() {
+            return new Response(     "hello Cpt Picard"     )
+                  }
+            }
+        `
+      );
+
+      mockUploadWorkerRequest({
+        env: "testEnv",
+        expectedType: "esm",
+        legacyEnv: false,
+        expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
+      });
+
+      mockSubDomainRequest();
+      await runWrangler("publish -e testEnv index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (testEnv) (TIMINGS)
+        Published test-name (testEnv) (TIMINGS)
+          testEnv.test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("durable object migrations", () => {
@@ -2349,7 +2483,7 @@ export default{
 
           [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.",
             "out": "",
-            "warn": "",
+            "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
           }
         `);
       });
@@ -3691,88 +3825,161 @@ export default{
         `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";"`
       );
     });
-  });
 
-  it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
-    writeWranglerToml();
-    fs.writeFileSync(
-      "./index.js",
-      `import WASM from 'index.wasm'; export default {};`
-    );
-    fs.writeFileSync("./index.wasm", "SOME WASM CONTENT");
-    mockSubDomainRequest();
-    mockUploadWorkerRequest({
-      expectedModules: {
-        "./94b240d0d692281e6467aa42043986e5c7eea034-index.wasm":
-          "SOME WASM CONTENT",
-      },
+    it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "./index.js",
+        `import WASM from 'index.wasm'; export default {};`
+      );
+      fs.writeFileSync("./index.wasm", "SOME WASM CONTENT");
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedModules: {
+          "./94b240d0d692281e6467aa42043986e5c7eea034-index.wasm":
+            "SOME WASM CONTENT",
+        },
+      });
+      await runWrangler("publish index.js");
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(
+        `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
+      );
     });
-    await runWrangler("publish index.js");
-    expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded test-name (TIMINGS)
-      Published test-name (TIMINGS)
-        test-name.test-sub-domain.workers.dev"
-    `);
-    expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(std.warn).toMatchInlineSnapshot(
-      `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
-    );
+
+    it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
+      // see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+
+      fs.writeFileSync(
+        "./index.js",
+        `import inner from './inner/index.js'; export default {};`
+      );
+      fs.mkdirSync("./inner", { recursive: true });
+      fs.writeFileSync("./inner/index.js", `export default 123`);
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+
+      await runWrangler(
+        "publish index.js --compatibility-date 2022-03-17 --name test-name"
+      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+    });
   });
 
-  it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
-    // see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+  describe("tsconfig", () => {
+    it("should use compilerOptions.paths to resolve modules", async () => {
+      writeWranglerToml({
+        main: "index.ts",
+      });
+      fs.writeFileSync(
+        "index.ts",
+        `import { foo } from '~lib/foo'; export default { fetch() { return new Response(foo)} }`
+      );
+      fs.mkdirSync("lib", { recursive: true });
+      fs.writeFileSync("lib/foo.ts", `export const foo = 123;`);
+      fs.writeFileSync(
+        "tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            baseUrl: ".",
+            paths: {
+              "~lib/*": ["lib/*"],
+            },
+          },
+        })
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedEntry: "var foo = 123;", // make sure it imported the module correctly
+      });
+      await runWrangler("publish index.ts");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
 
-    fs.writeFileSync(
-      "./index.js",
-      `import inner from './inner/index.js'; export default {};`
-    );
-    fs.mkdirSync("./inner", { recursive: true });
-    fs.writeFileSync("./inner/index.js", `export default 123`);
-    mockSubDomainRequest();
-    mockUploadWorkerRequest();
+    it("should output to target es2020 even if tsconfig says otherwise", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      fs.writeFileSync(
+        "tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            target: "es5",
+            module: "commonjs",
+          },
+        })
+      );
+      mockSubDomainRequest();
+      mockUploadWorkerRequest({
+        expectedEntry: "export {", // just check that the export is preserved
+      });
+      await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+  });
 
-    await runWrangler(
-      "publish index.js --compatibility-date 2022-03-17 --name test-name"
-    );
-    expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded test-name (TIMINGS)
-      Published test-name (TIMINGS)
-        test-name.test-sub-domain.workers.dev"
-    `);
-    expect(std.err).toMatchInlineSnapshot(`""`);
-    expect(std.warn).toMatchInlineSnapshot(`""`);
+  describe("--outdir", () => {
+    it("should generate built assets at --outdir if specified", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await runWrangler("publish index.js --outdir some-dir");
+      expect(fs.existsSync("some-dir/index.js")).toBe(true);
+      expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+  });
+
+  describe("--dry-run", () => {
+    it("should not publish the worker if --dry-run is specified", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      await runWrangler("publish index.js --dry-run");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "",
+        }
+      `);
+    });
   });
 });
-
-/** Write a mock Worker script to disk. */
-function writeWorkerSource({
-  basePath = ".",
-  format = "js",
-  type = "esm",
-}: {
-  basePath?: string;
-  format?: "js" | "ts" | "jsx" | "tsx" | "mjs";
-  type?: "esm" | "sw";
-} = {}) {
-  if (basePath !== ".") {
-    fs.mkdirSync(basePath, { recursive: true });
-  }
-  fs.writeFileSync(
-    `${basePath}/index.${format}`,
-    type === "esm"
-      ? `import { foo } from "./another";
-      export default {
-        async fetch(request) {
-          return new Response('Hello' + foo);
-        },
-      };`
-      : `import { foo } from "./another";
-      addEventListener('fetch', event => {
-        event.respondWith(new Response('Hello' + foo));
-      })`
-  );
-  fs.writeFileSync(`${basePath}/another.${format}`, `export const foo = 100;`);
-}
 
 /** Write mock assets to the file system so they can be uploaded. */
 function writeAssets(assets: { filePath: string; content: string }[]) {
@@ -3822,7 +4029,7 @@ function mockUploadWorkerRequest(
       if (!legacyEnv) {
         expect(envName).toEqual(env);
       }
-      expect(queryParams.get("available_on_subdomain")).toEqual("true");
+      expect(queryParams.get("include_subdomain_availability")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
         expect(await (formBody.get("index.js") as File).text()).toMatch(
@@ -3910,11 +4117,11 @@ function mockUpdateWorkerRequest({
 }
 
 function mockPublishRoutesRequest({
-  routes,
+  routes = [],
   env = undefined,
   legacyEnv = false,
 }: {
-  routes: (string | { pattern: string; zone_id: string })[];
+  routes: Config["routes"];
   env?: string | undefined;
   legacyEnv?: boolean | undefined;
 }) {

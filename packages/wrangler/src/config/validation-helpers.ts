@@ -14,16 +14,13 @@ export function deprecated<T extends object>(
   fieldPath: DeepKeyOf<T>,
   message: string,
   remove: boolean,
-  breaking = false
+  title = "⚠️  DEPRECATION",
+  type: "warning" | "error" = "warning"
 ): void {
-  const diagonsticMessage = breaking
-    ? `🚨 NO LONGER SUPPORTED: "${fieldPath}":\n${message}`
-    : `🦺 DEPRECATION: "${fieldPath}":\n${message}`;
+  const diagnosticMessage = `${title}: "${fieldPath}":\n${message}`;
   const result = unwindPropertyPath(config, fieldPath);
   if (result !== undefined && result.field in result.container) {
-    (breaking ? diagnostics.errors : diagnostics.warnings).push(
-      diagonsticMessage
-    );
+    diagnostics[`${type}s`].push(diagnosticMessage);
     if (remove) {
       delete (result.container as Record<string, unknown>)[result.field];
     }
@@ -82,7 +79,7 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
   rawEnv: RawEnvironment,
   field: K,
   validate: ValidatorFn,
-  transformFn: TransformFn<Environment[K]>,
+  transformFn: TransformFn<Environment[K]> = (v) => v,
   defaultValue: Environment[K]
 ): Environment[K] {
   return topLevelEnv === undefined || isLegacyEnv === true

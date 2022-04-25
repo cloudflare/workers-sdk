@@ -15,18 +15,18 @@ export function Remote(props: {
   name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
-  public: undefined | string;
-  assetPaths: undefined | AssetPaths;
+  public: string | undefined;
+  assetPaths: AssetPaths | undefined;
   port: number;
   ip: string;
   localProtocol: "https" | "http";
   inspectorPort: number;
-  accountId: undefined | string;
-  apiToken: undefined | string;
+  accountId: string | undefined;
+  apiToken: string | undefined;
   bindings: CfWorkerInit["bindings"];
   compatibilityDate: string;
-  compatibilityFlags: undefined | string[];
-  usageModel: undefined | "bundled" | "unbound";
+  compatibilityFlags: string[] | undefined;
+  usageModel: "bundled" | "unbound" | undefined;
   env: string | undefined;
   legacyEnv: boolean | undefined;
   zone: { id: string; host: string } | undefined;
@@ -75,11 +75,11 @@ export function useWorker(props: {
   accountId: string;
   apiToken: string;
   bindings: CfWorkerInit["bindings"];
-  assetPaths: undefined | AssetPaths;
+  assetPaths: AssetPaths | undefined;
   port: number;
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
-  usageModel: undefined | "bundled" | "unbound";
+  usageModel: "bundled" | "unbound" | undefined;
   env: string | undefined;
   legacyEnv: boolean | undefined;
   zone: { id: string; host: string } | undefined;
@@ -126,7 +126,8 @@ export function useWorker(props: {
         // concept of service environments for kv namespaces yet).
         name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
         assetPaths,
-        true
+        true,
+        false
       ); // TODO: cancellable?
 
       const content = await readFile(bundle.path, "utf-8");
@@ -182,7 +183,9 @@ export function useWorker(props: {
     start().catch((err) => {
       // we want to log the error, but not end the process
       // since it could recover after the developer fixes whatever's wrong
-      console.error("remote worker:", err);
+      if ((err as { code: string }).code !== "ABORT_ERR") {
+        console.error("remote worker:", err);
+      }
     });
 
     return () => {

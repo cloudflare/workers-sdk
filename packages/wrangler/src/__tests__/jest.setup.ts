@@ -5,9 +5,7 @@ import {
   getCloudflareAPIBaseURL,
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
-import openInBrowser from "../open-in-browser";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
-import { mockOpenInBrowser as mockOpenInBrowserForOAuthFlow } from "./helpers/mock-oauth-flow";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 
 jest.mock("ws", () => {
@@ -70,5 +68,6 @@ jest.mock("../dev/dev", () => {
   });
 });
 
+// Make sure that we don't accidentally try to open a browser window when running tests.
+// We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
 jest.mock("../open-in-browser");
-(openInBrowser as jest.Mock).mockImplementation(mockOpenInBrowserForOAuthFlow);
