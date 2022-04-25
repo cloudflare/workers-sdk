@@ -105,7 +105,8 @@ export async function syncAssets(
   accountId: string,
   scriptName: string,
   siteAssets: AssetPaths | undefined,
-  preview: boolean
+  preview: boolean,
+  dryRun: boolean | undefined
 ): Promise<{
   manifest: { [filePath: string]: string } | undefined;
   namespace: string | undefined;
@@ -114,17 +115,23 @@ export async function syncAssets(
     return { manifest: undefined, namespace: undefined };
   }
 
+  if (dryRun) {
+    console.log("(note: doing a dry run, not uploading or deleting anything.)");
+    return { manifest: undefined, namespace: undefined };
+  }
+
   const title = `__${scriptName}-workers_sites_assets${
     preview ? "_preview" : ""
   }`;
+
   const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
     title,
     accountId
   );
 
   // let's get all the keys in this namespace
-  const result = await listNamespaceKeys(accountId, namespace);
-  const keys = new Set(result.map((x) => x.name));
+  const namespaceKeysResponse = await listNamespaceKeys(accountId, namespace);
+  const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
   const toUpload: KeyValue[] = [];
@@ -154,7 +161,7 @@ export async function syncAssets(
     validateAssetKey(assetKey);
 
     // now put each of the files into kv
-    if (!keys.has(assetKey)) {
+    if (!namespaceKeys.has(assetKey)) {
       console.log(`uploading as ${assetKey}...`);
       toUpload.push({
         key: assetKey,
@@ -166,12 +173,12 @@ export async function syncAssets(
     }
 
     // remove the key from the set so we know what we've already uploaded
-    keys.delete(assetKey);
+    namespaceKeys.delete(assetKey);
     manifest[path.relative(siteAssets.assetDirectory, absAssetFile)] = assetKey;
   }
 
   // keys now contains all the files we're deleting
-  for (const key of keys) {
+  for (const key of namespaceKeys) {
     console.log(`deleting ${key} from the asset store...`);
   }
 
@@ -179,7 +186,12 @@ export async function syncAssets(
     // upload all the new assets
     putBulkKeyValue(accountId, namespace, toUpload, () => {}),
     // delete all the unused assets
-    deleteBulkKeyValue(accountId, namespace, Array.from(keys), () => {}),
+    deleteBulkKeyValue(
+      accountId,
+      namespace,
+      Array.from(namespaceKeys),
+      () => {}
+    ),
   ]);
 
   console.log("↗️  Done syncing assets");

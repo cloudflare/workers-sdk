@@ -638,6 +638,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("format", {
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
+          deprecated: true,
         })
         .option("env", {
           describe: "Perform on a specific environment",
@@ -951,9 +952,14 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Name of the worker",
           type: "string",
         })
+        .option("outdir", {
+          describe: "Output directory for the bundled worker",
+          type: "string",
+        })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
           describe: "Choose an entry type",
+          deprecated: true,
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
@@ -1017,6 +1023,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("minify", {
           describe: "Minify the script",
           type: "boolean",
+        })
+        .option("dry-run", {
+          describe: "Don't actually publish",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -1072,6 +1082,8 @@ export async function main(argv: string[]): Promise<void> {
         legacyEnv: isLegacyEnv(config),
         minify: args.minify,
         experimentalPublic: args["experimental-public"] !== undefined,
+        outDir: args.outdir,
+        dryRun: args.dryRun,
       });
     }
   );
