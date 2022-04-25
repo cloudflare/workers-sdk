@@ -29,7 +29,7 @@ import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
-import type { BuilderCallback } from "yargs";
+import type { BuilderCallback, CommandModule } from "yargs";
 
 type ConfigPath = string | undefined;
 
@@ -752,6 +752,286 @@ async function buildFunctions({
   );
 }
 
+interface CreateDeploymentArgs {
+  directory: string;
+  project?: string;
+  branch?: string;
+  commitHash?: string;
+  commitMessage?: string;
+  commitDirty?: boolean;
+}
+
+const createDeployment: CommandModule<
+  CreateDeploymentArgs,
+  CreateDeploymentArgs
+> = {
+  describe: "🆙 Publish a directory of static assets as a Pages deployment",
+  builder: (yargs) => {
+    return yargs
+      .positional("directory", {
+        type: "string",
+        default: "functions",
+        description: "The directory of Pages Functions",
+      })
+      .options({
+        project: {
+          type: "string",
+          description:
+            "The name of the project you want to list deployments for",
+        },
+        branch: {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-hash": {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-message": {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-dirty": {
+          type: "boolean",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+      });
+  },
+  handler: async (args) => {
+    const { directory, project } = args;
+    let { branch, commitHash, commitMessage, commitDirty } = args;
+
+    // TODO: Project picker #821
+
+    // We infer git info by default is not passed in
+
+    let isGitDir = true;
+    try {
+      execSync(`git rev-parse --is-inside-work-tree`, {
+        stdio: "ignore",
+      });
+    } catch (err) {
+      isGitDir = false;
+    }
+
+    let isGitDirty = false;
+
+    if (isGitDir) {
+      try {
+        isGitDirty = Boolean(
+          execSync(`git status --porcelain`).toString().length
+        );
+
+        if (!branch) {
+          branch = execSync(`git branch | grep " * "`)
+            .toString()
+            .replace("* ", "")
+            .trim();
+        }
+
+        if (!commitHash) {
+          commitHash = execSync(`git rev-parse HEAD`).toString().trim();
+        }
+
+        if (!commitMessage) {
+          commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
+            .toString()
+            .trim();
+        }
+      } catch (err) {}
+
+      if (isGitDirty && !commitDirty) {
+        console.warn(
+          `Warning: Your working directory is a git repo and has uncommitted changes\nTo silense this warning, pass in --commit-dirty=true`
+        );
+      }
+
+      if (commitDirty === undefined) {
+        commitDirty = isGitDirty;
+      }
+    }
+
+    const config = readConfig(args.config as ConfigPath, args);
+    const accountId = await requireAuth(config);
+
+    type File = {
+      content: Buffer;
+      metadata: Metadata;
+    };
+
+    type Metadata = {
+      sizeInBytes: number;
+      hash: string;
+    };
+
+    const IGNORE_LIST = [
+      "_worker.js",
+      "_redirects",
+      "_headers",
+      ".DS_Store",
+      "node_modules",
+    ];
+
+    const walk = async (
+      dir: string,
+      fileMap: Map<string, File> = new Map(),
+      depth = 0
+    ) => {
+      const files = await readdir(dir);
+
+      await Promise.all(
+        files.map(async (file) => {
+          const filepath = join(dir, file);
+          const filestat = await stat(filepath);
+
+          if (IGNORE_LIST.includes(file)) {
+            return;
+          }
+
+          if (filestat.isSymbolicLink()) {
+            return;
+          }
+
+          if (filestat.isDirectory()) {
+            fileMap = await walk(filepath, fileMap, depth + 1);
+          } else {
+            let name;
+            if (depth) {
+              name = join(...filepath.split(sep).slice(1));
+            } else {
+              name = file;
+            }
+
+            // TODO: Move this to later so we don't hold as much in memory
+            const fileContent = await readFile(filepath);
+
+            const base64Content = fileContent.toString("base64");
+            const extension =
+              name.split(".").length > 1 ? name.split(".").at(-1) || "" : "";
+
+            const content = base64Content + extension;
+
+            fileMap.set(name, {
+              content: fileContent,
+              metadata: {
+                sizeInBytes: filestat.size,
+                hash: hash(content).toString("hex"),
+              },
+            });
+          }
+        })
+      );
+
+      return fileMap;
+    };
+
+    const fileMap = await walk(directory);
+
+    const start = Date.now();
+
+    const files: Array<Promise<void>> = [];
+
+    if (fileMap.size > 20000) {
+      throw new Error(
+        `Error: Pages only supports up to 20,000 files in a deployment at the moment\nTry a smaller project perhaps?`
+      );
+    }
+
+    let counter = 0;
+
+    const { rerender, unmount } = render(
+      <Progress done={counter} total={fileMap.size} />
+    );
+
+    fileMap.forEach((file: File, name: string) => {
+      if (file.metadata.sizeInBytes > 25 * 1024 * 1024) {
+        throw new Error(
+          `Error: Pages only supports files up to ${prettyBytes(
+            25 * 1024 * 1024
+          )} in size\n${name} is ${prettyBytes(
+            file.metadata.sizeInBytes
+          )} in size`
+        );
+      }
+
+      const form = new FormData();
+      form.append("file", file.content, {
+        filename: name,
+      });
+
+      // TODO: Consider a retry
+
+      const promise = fetchResult<{ id: string }>(
+        `/accounts/${accountId}/pages/projects/${project}/file`,
+        {
+          method: "POST",
+          body: form.getBuffer(),
+          headers: form.getHeaders(),
+        }
+      ).then((response) => {
+        counter++;
+        rerender(<Progress done={counter} total={fileMap.size} />);
+        if (response.id != file.metadata.hash) {
+          throw new Error(
+            `Looks like there was an issue uploading that ${name}. Try again perhaps?`
+          );
+        }
+      });
+
+      files.push(promise);
+    });
+
+    await Promise.all(files);
+
+    unmount();
+
+    const uploadMs = Date.now() - start;
+
+    console.log(
+      `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
+    );
+
+    const formData = new FormData();
+
+    // TODO: Manifest
+
+    if (branch) {
+      formData.append("branch", branch);
+    }
+
+    if (commitMessage) {
+      formData.append("commit_message", commitMessage);
+    }
+
+    if (commitHash) {
+      formData.append("commit_hash", commitHash);
+    }
+
+    if (commitDirty !== undefined) {
+      formData.append("commit_dirty", commitDirty);
+    }
+
+    // TODO: _headers, _redirects, _worker.js
+
+    const deploymentResponse = await fetchResult<Deployment>(
+      `/accounts/${accountId}/pages/projects/${project}/deployment`,
+      {
+        method: "POST",
+        body: formData.getBuffer(),
+        headers: formData.getHeaders(),
+      }
+    );
+
+    console.log(
+      `✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
+    );
+  },
+};
+
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
@@ -1128,293 +1408,65 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
       )
     )
     .command("deployment", false, (yargs) =>
-      yargs.command(
-        "list",
-        "List deployments in your Cloudflare Pages project",
-        (yargs) =>
-          yargs.options({
-            project: {
-              type: "string",
-              demandOption: true,
-              description:
-                "The name of the project you would like to list deployments for",
-            },
-          }),
-        async (args) => {
-          const config = readConfig(args.config as ConfigPath, args);
-          const accountId = await requireAuth(config);
+      yargs
+        .command(
+          "list",
+          "List deployments in your Cloudflare Pages project",
+          (yargs) =>
+            yargs.options({
+              project: {
+                type: "string",
+                demandOption: true,
+                description:
+                  "The name of the project you would like to list deployments for",
+              },
+            }),
+          async (args) => {
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
 
-          const deployments: Array<Deployment> = await fetchResult(
-            `/accounts/${accountId}/pages/projects/${args.project}/deployments`
-          );
+            const deployments: Array<Deployment> = await fetchResult(
+              `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+            );
 
-          const titleCase = (word: string) =>
-            word.charAt(0).toUpperCase() + word.slice(1);
+            const titleCase = (word: string) =>
+              word.charAt(0).toUpperCase() + word.slice(1);
 
-          const shortSha = (sha: string) => sha.slice(0, 7);
+            const shortSha = (sha: string) => sha.slice(0, 7);
 
-          const getStatus = (deployment: Deployment) => {
-            // Return a pretty time since timestamp if successful otherwise the status
-            if (deployment.latest_stage.status === `success`) {
-              return timeagoFormat(deployment.latest_stage.ended_on);
-            }
-            return titleCase(deployment.latest_stage.status);
-          };
-
-          const data = deployments.map((deployment) => {
-            return {
-              Environment: titleCase(deployment.environment),
-              Branch: deployment.deployment_trigger.metadata.branch,
-              Source: shortSha(
-                deployment.deployment_trigger.metadata.commit_hash
-              ),
-              Deployment: deployment.url,
-              Status: getStatus(deployment),
-              // TODO: Use a url shortener
-              Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+            const getStatus = (deployment: Deployment) => {
+              // Return a pretty time since timestamp if successful otherwise the status
+              if (deployment.latest_stage.status === `success`) {
+                return timeagoFormat(deployment.latest_stage.ended_on);
+              }
+              return titleCase(deployment.latest_stage.status);
             };
-          });
-          render(<Table data={data}></Table>);
-        }
-      )
-    )
-    .command(
-      "publish [directory]",
-      "Compile a folder of Cloudflare Pages Functions into a single Worker",
-      (yargs) => {
-        return yargs
-          .positional("directory", {
-            type: "string",
-            default: "functions",
-            description: "The directory of Pages Functions",
-          })
-          .options({
-            project: {
-              type: "string",
-              description:
-                "The name of the project you want to list deployments for",
-            },
-            branch: {
-              type: "string",
-              description:
-                "The branch of the project you want to list deployments for",
-            },
-            "commit-hash": {
-              type: "string",
-              description:
-                "The branch of the project you want to list deployments for",
-            },
-            "commit-message": {
-              type: "string",
-              description:
-                "The branch of the project you want to list deployments for",
-            },
-            "commit-dirty": {
-              type: "boolean",
-              default: false,
-              description:
-                "The branch of the project you want to list deployments for",
-            },
-          });
-      },
-      async (args) => {
-        const { directory, project, commitDirty } = args;
 
-        let { branch, commitHash, commitMessage } = args;
-
-        // We infer git info by default is not passed in
-
-        let isGitDir = true;
-        try {
-          execSync(`git rev-parse --is-inside-work-tree`, {
-            stdio: "ignore",
-          });
-        } catch (err) {
-          isGitDir = false;
-        }
-
-        let isGitDirty;
-
-        if (isGitDir) {
-          try {
-            isGitDirty = Boolean(
-              execSync(`git status --porcelain`).toString().length
-            );
-
-            if (!branch) {
-              branch = execSync(`git branch | grep " * "`)
-                .toString()
-                .replace("* ", "")
-                .trim();
-            }
-
-            if (!commitHash) {
-              commitHash = execSync(`git rev-parse HEAD`).toString().trim();
-            }
-
-            if (!commitMessage) {
-              commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
-                .toString()
-                .trim();
-            }
-          } catch (err) {}
-        }
-
-        if (isGitDir && isGitDirty && !commitDirty) {
-          throw new Error(
-            `Error: Your working directory is a git repo and has uncommitted changes\nTo ignore this and publish anyway, pass in --commit-dirty=true`
-          );
-        }
-
-        const config = readConfig(args.config as ConfigPath, args);
-        const accountId = await requireAuth(config);
-
-        type File = {
-          content: Buffer;
-          metadata: Metadata;
-        };
-
-        type Metadata = {
-          sizeInBytes: number;
-          hash: string;
-        };
-
-        const IGNORE_LIST = [
-          "_worker.js",
-          "_redirects",
-          "_headers",
-          ".DS_Store",
-          "node_modules",
-        ];
-
-        const walk = async (
-          dir: string,
-          fileMap: Map<string, File> = new Map(),
-          depth = 0
-        ) => {
-          const files = await readdir(dir);
-
-          await Promise.all(
-            files.map(async (file) => {
-              const filepath = join(dir, file);
-              const filestat = await stat(filepath);
-
-              if (IGNORE_LIST.includes(file)) {
-                return;
-              }
-
-              if (filestat.isSymbolicLink()) {
-                return;
-              }
-
-              if (filestat.isDirectory()) {
-                fileMap = await walk(filepath, fileMap, depth + 1);
-              } else {
-                let name;
-                if (depth) {
-                  name = join(...filepath.split(sep).slice(1));
-                } else {
-                  name = file;
-                }
-
-                // TODO: Move this to later so we don't hold as much in memory
-                const fileContent = await readFile(filepath);
-
-                const base64Content = fileContent.toString("base64");
-                const extension =
-                  name.split(".").length > 1
-                    ? name.split(".").at(-1) || ""
-                    : "";
-
-                const content = base64Content + extension;
-
-                fileMap.set(name, {
-                  content: fileContent,
-                  metadata: {
-                    sizeInBytes: filestat.size,
-                    hash: hash(content).toString("hex"),
-                  },
-                });
-              }
-            })
-          );
-
-          return fileMap;
-        };
-
-        const fileMap = await walk(directory);
-
-        const start = Date.now();
-
-        const files: Array<Promise<void>> = [];
-
-        if (fileMap.size > 20000) {
-          throw new Error(
-            `Error: Pages only supports up to 20,000 files in a deployment at the moment\nTry a smaller project perhaps?`
-          );
-        }
-
-        let counter = 0;
-
-        const { rerender, unmount } = render(
-          <Progress done={counter} total={fileMap.size} />
-        );
-
-        fileMap.forEach((file: File, name: string) => {
-          if (file.metadata.sizeInBytes > 25 * 1024 * 1024) {
-            throw new Error(
-              `Error: Pages only supports files up to ${prettyBytes(
-                25 * 1024 * 1024
-              )} in size\n${name} is ${prettyBytes(
-                file.metadata.sizeInBytes
-              )} in size`
-            );
+            const data = deployments.map((deployment) => {
+              return {
+                Environment: titleCase(deployment.environment),
+                Branch: deployment.deployment_trigger.metadata.branch,
+                Source: shortSha(
+                  deployment.deployment_trigger.metadata.commit_hash
+                ),
+                Deployment: deployment.url,
+                Status: getStatus(deployment),
+                // TODO: Use a url shortener
+                Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+              };
+            });
+            render(<Table data={data}></Table>);
           }
-
-          const form = new FormData();
-          form.append("file", file.content, {
-            filename: name,
-          });
-
-          // TODO: Consider a retry
-
-          const promise = fetchResult<{ id: string }>(
-            `/accounts/${accountId}/pages/projects/${project}/file`,
-            {
-              method: "post",
-              body: form.getBuffer(),
-              headers: form.getHeaders(),
-            }
-          ).then((response) => {
-            counter++;
-            rerender(<Progress done={counter} total={fileMap.size} />);
-            if (response.id != file.metadata.hash) {
-              throw new Error(
-                `Looks like there was an issue uploading that ${name}. Try again perhaps?`
-              );
-            }
-          });
-
-          files.push(promise);
-        });
-
-        await Promise.all(files);
-
-        unmount();
-
-        const uploadMs = Date.now() - start;
-
-        console.log(
-          `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
-        );
-
-        console.log(
-          `✨ Deployment complete! Take a peek over at ${"http://pages.dev"}`
-        );
-
-        // TODO: Create a deployment
-      }
-    );
+        )
+        .command({
+          command: "create [directory]",
+          ...createDeployment,
+        } as CommandModule)
+    )
+    .command({
+      command: "publish [directory]",
+      ...createDeployment,
+    } as CommandModule);
 };
 
 const invalidAssetsFetch: typeof fetch = () => {
@@ -1457,17 +1509,8 @@ function Progress({ done, total }: { done: number; total: number }) {
   return (
     <>
       <Text>
-        <Text color="green">
-          <Spinner type="dots" />
-          {/* <Spinner type="earth" /> */}
-        </Text>
-        {" Uploading... "}
-        {"("}
-        {done}
-        {"/"}
-        {total}
-        {")"}
-        {"\n"}
+        <Spinner type="earth" />
+        {` Uploading... (${done}/${total})\n`}
       </Text>
     </>
   );
