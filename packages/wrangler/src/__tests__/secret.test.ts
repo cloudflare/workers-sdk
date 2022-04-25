@@ -4,7 +4,6 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
-import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -13,14 +12,13 @@ import { runWrangler } from "./helpers/run-wrangler";
 describe("wrangler secret", () => {
   const std = mockConsoleMethods();
   const { mockGetMemberships } = mockOAuthFlow();
-  const { setIsTTY } = useMockIsTTY();
+
   runInTempDir();
   mockAccountId();
   mockApiToken();
 
   afterEach(() => {
     unsetAllMocks();
-    setIsTTY(true);
   });
 
   describe("put", () => {
@@ -180,7 +178,7 @@ describe("wrangler secret", () => {
           await expect(
             runWrangler("secret put the-key --name script-name")
           ).rejects.toThrowErrorMatchingInlineSnapshot(
-            `"No account id found, quitting..."`
+            `"Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."`
           );
         });
 
@@ -204,7 +202,6 @@ describe("wrangler secret", () => {
         });
 
         it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
-          setIsTTY(false);
           mockGetMemberships({
             success: true,
             result: [

@@ -60,7 +60,6 @@ describe("publish", () => {
     });
 
     it("drops a user into the login flow if they're unauthenticated", async () => {
-      // Should not throw missing Errors in TTY environment
       writeWranglerToml();
       writeWorkerSource();
       mockSubDomainRequest();
@@ -178,7 +177,7 @@ describe("publish", () => {
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
-      it("should throw an error in non-TTY if 'account_id' & 'CLOUDFLARE_ACCOUNT_ID' is missing", async () => {
+      it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
         setIsTTY(false);
         process.env = {
           CLOUDFLARE_API_TOKEN: "hunter2",
@@ -233,10 +232,33 @@ describe("publish", () => {
         await expect(runWrangler("publish index.js")).rejects.toThrowError();
 
         expect(std.err).toMatchInlineSnapshot(`
-          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing 'CLOUDFLARE_API_TOKEN' from non-TTY environment, please see docs for more info: TBD[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mIn a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.[0m
 
+          "
+        `);
+      });
+      it("should throw error with no account ID provided and no members retrieved", async () => {
+        setIsTTY(false);
+        writeWranglerToml({
+          account_id: undefined,
+        });
+        process.env = {
+          CLOUDFLARE_API_TOKEN: "picard",
+          CLOUDFLARE_ACCOUNT_ID: undefined,
+        };
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest();
+        mockOAuthServerCallback();
+        mockGetMemberships({
+          success: false,
+          result: [],
+        });
 
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mDid not login, quitting...[0m
+        await expect(runWrangler("publish index.js")).rejects.toThrowError();
+
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.[0m
 
           "
         `);

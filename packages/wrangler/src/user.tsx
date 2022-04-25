@@ -418,11 +418,9 @@ export function getAPIToken(): string | undefined {
     !localAPIToken &&
     !LocalState.accessToken?.value
   ) {
-    logger.error(
-      "Missing 'CLOUDFLARE_API_TOKEN' from non-TTY environment, please see docs for more info: TBD"
+    throw new Error(
+      "In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
     );
-
-    return;
   }
 
   return localAPIToken ?? LocalState.accessToken?.value;
@@ -1142,6 +1140,11 @@ export async function getAccountId(
             .join("\n")
       );
     }
+  } else {
+    if (!isInteractive)
+      throw new Error(
+        `Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.`
+      );
   }
   return accountId;
 }

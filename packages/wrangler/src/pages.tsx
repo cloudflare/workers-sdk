@@ -842,11 +842,11 @@ const createDeployment: CommandModule<
     const config = getConfigCache<PagesConfigCache>(
       PAGES_CONFIG_CACHE_FILENAME
     );
-    const isInteractive = process.stdin.isTTY;
-    const accountId = await requireAuth(config, isInteractive);
+    const accountId = await requireAuth(config);
 
     projectName ??= config.project_name;
 
+    const isInteractive = process.stdin.isTTY;
     if (!projectName && isInteractive) {
       const existingOrNew = await new Promise<"new" | "existing">((resolve) => {
         const { unmount } = render(
@@ -1605,8 +1605,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             const config = getConfigCache<PagesConfigCache>(
               PAGES_CONFIG_CACHE_FILENAME
             );
-            const isInteractive = process.stdin.isTTY;
-            const accountId = await requireAuth(config, isInteractive);
+
+            const accountId = await requireAuth(config);
 
             const projects: Array<Project> = await listProjects({ accountId });
 
@@ -1650,9 +1650,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             const config = getConfigCache<PagesConfigCache>(
               PAGES_CONFIG_CACHE_FILENAME
             );
-            const isInteractive = process.stdin.isTTY;
-            const accountId = await requireAuth(config, isInteractive);
+            const accountId = await requireAuth(config);
 
+            const isInteractive = process.stdin.isTTY;
             if (!projectName && isInteractive) {
               projectName = await prompt("Enter the name of your new project:");
             }
@@ -1735,11 +1735,11 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               const config = getConfigCache<PagesConfigCache>(
                 PAGES_CONFIG_CACHE_FILENAME
               );
-              const isInteractive = process.stdin.isTTY;
-              const accountId = await requireAuth(config, isInteractive);
+              const accountId = await requireAuth(config);
 
               projectName ??= config.project_name;
 
+              const isInteractive = process.stdin.isTTY;
               if (!projectName && isInteractive) {
                 const projects = await listProjects({ accountId });
                 projectName = await new Promise((resolve) => {
