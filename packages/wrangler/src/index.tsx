@@ -2399,8 +2399,7 @@ export async function main(argv: string[]): Promise<void> {
       logger.error(formatMessage(e));
     } else {
       logger.error(e instanceof Error ? e.message : e);
-      logger.error("");
-      logger.error(
+      logger.log(
         `${fgGreenColor}%s${resetColor}`,
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );

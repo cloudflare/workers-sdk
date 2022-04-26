@@ -63,7 +63,9 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✖  [39mNot enough non-option arguments: got 0, need at least 1"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+          "
         `);
       });
 
@@ -91,7 +93,9 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✖  [39mUnknown arguments: def, ghi"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+
+          "
         `);
       });
 
@@ -120,7 +124,9 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✖  [39mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number."
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
+
+          "
         `);
       });
 
@@ -285,8 +291,10 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to delete  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-          [31m✖  [39mNot able to delete namespace.
-          [31m✖  [39mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.
+          A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+
+          "
         `);
       });
 
@@ -481,7 +489,9 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✖  [39mNot enough non-option arguments: got 0, need at least 1"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+          "
         `);
       });
 
@@ -516,7 +526,9 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✖  [39mExactly one of the arguments binding and namespace-id is required"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+
+          "
         `);
       });
 
@@ -551,7 +563,9 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✖  [39mArguments binding and namespace-id are mutually exclusive"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+
+          "
         `);
       });
 
@@ -586,7 +600,9 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✖  [39mExactly one of the arguments value and path is required"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
+
+          "
         `);
       });
 
@@ -621,7 +637,9 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✖  [39mArguments value and path are mutually exclusive"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
+
+          "
         `);
       });
 
@@ -633,11 +651,14 @@ describe("wrangler", () => {
           `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✖  [39mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
-          [31m✖  [39m
-          [31m✖  [39m[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+
+          "
         `);
       });
 
@@ -652,11 +673,14 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✖  [39msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.
-          [31m✖  [39m
-          [31m✖  [39m[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
+
+          "
         `);
         expect(requests.count).toEqual(0);
       });
@@ -816,11 +840,14 @@ describe("wrangler", () => {
           `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✖  [39mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
-          [31m✖  [39m
-          [31m✖  [39m[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+
+          "
         `);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
       });
     });
 
@@ -910,7 +937,9 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✖  [39mNot enough non-option arguments: got 0, need at least 1"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+          "
         `);
       });
 
@@ -940,7 +969,9 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✖  [39mExactly one of the arguments binding and namespace-id is required"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+
+          "
         `);
       });
 
@@ -971,7 +1002,9 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✖  [39mArguments binding and namespace-id are mutually exclusive"
+          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+
+          "
         `);
       });
 
@@ -982,11 +1015,14 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✖  [39mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
-          [31m✖  [39m
-          [31m✖  [39m[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+
+          "
         `);
       });
     });
@@ -1046,9 +1082,9 @@ describe("wrangler", () => {
         );
 
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✖  [39mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
-          [31m✖  [39m
-          [31m✖  [39m[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+
+          "
         `);
       });
 
@@ -1151,7 +1187,10 @@ describe("wrangler", () => {
                 "Unexpected JSON input from \\"keys.json\\".
                 Expected an array of key-value objects but got type \\"object\\"."
               `);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -1185,10 +1224,15 @@ describe("wrangler", () => {
                 The item at index 3 is {\\"value\\":\\"someValue\\"}"
               `);
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m⚠  [39mUnexpected key-value properties in \\"keys.json\\".
-          [33m⚠  [39mThe item at index 4 contains unexpected properties: [\\"invalid\\"]."
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".
+          The item at index 4 contains unexpected properties: [\\"invalid\\"].[0m
+
+          "
         `);
       });
     });
@@ -1320,7 +1364,10 @@ describe("wrangler", () => {
                 Expected an array of strings but got:
                 12354"
               `);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -1342,7 +1389,10 @@ describe("wrangler", () => {
                 The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
                 The item at index 3 is type: \\"object\\" - null"
               `);
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
     });

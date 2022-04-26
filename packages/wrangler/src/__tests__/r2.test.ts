@@ -81,7 +81,9 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-            [31m✖  [39mNot enough non-option arguments: got 0, need at least 1"
+            [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+            "
           `);
         });
 
@@ -105,7 +107,9 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-            [31m✖  [39mUnknown arguments: def, ghi"
+            [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+
+            "
           `);
         });
 
@@ -155,7 +159,9 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-            [31m✖  [39mNot enough non-option arguments: got 0, need at least 1"
+            [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+            "
           `);
         });
 
@@ -179,7 +185,9 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-            [31m✖  [39mUnknown arguments: def, ghi"
+            [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+
+            "
           `);
         });
 

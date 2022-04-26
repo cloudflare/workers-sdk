@@ -13,8 +13,16 @@ describe("logger", () => {
 
     expect(std.debug).toMatchInlineSnapshot(`"This is a debug message"`);
     expect(std.out).toMatchInlineSnapshot(`"This is a log message"`);
-    expect(std.warn).toMatchInlineSnapshot(`"[33m⚠  [39mThis is a warn message"`);
-    expect(std.err).toMatchInlineSnapshot(`"[31m✖  [39mThis is a error message"`);
+    expect(std.warn).toMatchInlineSnapshot(`
+      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+
+      "
+    `);
+    expect(std.err).toMatchInlineSnapshot(`
+      "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+      "
+    `);
   });
 
   describe("loggerLevel=debug", () => {
@@ -27,8 +35,16 @@ describe("logger", () => {
 
       expect(std.debug).toMatchInlineSnapshot(`"This is a debug message"`);
       expect(std.out).toMatchInlineSnapshot(`"This is a log message"`);
-      expect(std.warn).toMatchInlineSnapshot(`"[33m⚠  [39mThis is a warn message"`);
-      expect(std.err).toMatchInlineSnapshot(`"[31m✖  [39mThis is a error message"`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+
+        "
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+        "
+      `);
     });
   });
 
@@ -42,8 +58,16 @@ describe("logger", () => {
 
       expect(std.debug).toMatchInlineSnapshot(`""`);
       expect(std.out).toMatchInlineSnapshot(`"This is a log message"`);
-      expect(std.warn).toMatchInlineSnapshot(`"[33m⚠  [39mThis is a warn message"`);
-      expect(std.err).toMatchInlineSnapshot(`"[31m✖  [39mThis is a error message"`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+
+        "
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+        "
+      `);
     });
   });
 
@@ -57,8 +81,16 @@ describe("logger", () => {
 
       expect(std.debug).toMatchInlineSnapshot(`""`);
       expect(std.out).toMatchInlineSnapshot(`""`);
-      expect(std.warn).toMatchInlineSnapshot(`"[33m⚠  [39mThis is a warn message"`);
-      expect(std.err).toMatchInlineSnapshot(`"[31m✖  [39mThis is a error message"`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+
+        "
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+        "
+      `);
     });
   });
 
@@ -73,7 +105,11 @@ describe("logger", () => {
       expect(std.debug).toMatchInlineSnapshot(`""`);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
-      expect(std.err).toMatchInlineSnapshot(`"[31m✖  [39mThis is a error message"`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+        "
+      `);
     });
   });
 });

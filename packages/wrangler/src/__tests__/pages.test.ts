@@ -49,7 +49,8 @@ describe("pages", () => {
 
       expect(std.out).toMatchInlineSnapshot(`
         "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
-        "
+
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
 
@@ -58,7 +59,8 @@ describe("pages", () => {
 
       expect(std.out).toMatchInlineSnapshot(`
         "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
-        "
+
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
   });

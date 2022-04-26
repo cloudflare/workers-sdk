@@ -54,9 +54,11 @@ describe("getUserInfo()", () => {
     writeAuthConfigFile({ api_token: "API_TOKEN" });
     await getUserInfo();
     expect(std.warn).toMatchInlineSnapshot(`
-      "[33m⚠  [39mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.
-      [33m⚠  [39mThis is no longer supported in the current version of Wrangler.
-      [33m⚠  [39mIf you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
+      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.
+      This is no longer supported in the current version of Wrangler.
+      If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable.[0m
+
+      "
     `);
   });
 });

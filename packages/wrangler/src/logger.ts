@@ -1,5 +1,5 @@
 import { format } from "node:util";
-import c from "ansi-colors";
+import { formatMessagesSync } from "esbuild";
 
 const LOGGER_LEVELS = {
   error: 0,
@@ -20,22 +20,25 @@ class Logger {
 
   private doLog(messageLevel: LoggerLevel, args: unknown[]) {
     if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-      const message = format(...args).replaceAll(
-        /^/gm,
-        this.getLevelSymbol(messageLevel)
-      );
-      console[messageLevel](message);
+      console[messageLevel](this.formatMessage(messageLevel, format(...args)));
     }
   }
 
-  private getLevelSymbol(messageLevel: LoggerLevel): string {
-    switch (messageLevel) {
-      case "error":
-        return c.red("✖  ");
-      case "warn":
-        return c.yellow("⚠  ");
-      default:
-        return "";
+  formatMessage(level: LoggerLevel, text: string): string {
+    let kind: "error" | "warning" | undefined;
+    if (level === "error") {
+      kind = "error";
+    } else if (level === "warn") {
+      kind = "warning";
+    }
+    if (kind) {
+      return formatMessagesSync([{ text }], {
+        color: true,
+        kind,
+        terminalWidth: process.stdout.columns,
+      })[0].replace(/^X /, "✘ ");
+    } else {
+      return text;
     }
   }
 }
