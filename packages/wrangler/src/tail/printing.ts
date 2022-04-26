@@ -1,3 +1,4 @@
+import { logger } from "../logger";
 import type { RequestEvent, ScheduledEvent, TailEventMessage } from ".";
 import type { Outcome } from "./filters";
 import type WebSocket from "ws";
@@ -12,25 +13,25 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
     ).toLocaleString();
     const outcome = prettifyOutcome(eventMessage.outcome);
 
-    console.log(`"${cronPattern}" @ ${datetime} - ${outcome}`);
+    logger.log(`"${cronPattern}" @ ${datetime} - ${outcome}`);
   } else {
     const requestMethod = eventMessage.event.request.method.toUpperCase();
     const url = eventMessage.event.request.url;
     const outcome = prettifyOutcome(eventMessage.outcome);
     const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
 
-    console.log(`${requestMethod} ${url} - ${outcome} @ ${datetime}`);
+    logger.log(`${requestMethod} ${url} - ${outcome} @ ${datetime}`);
   }
 
   if (eventMessage.logs.length > 0) {
     eventMessage.logs.forEach(({ level, message }) => {
-      console.log(`  (${level})`, ...message);
+      logger.log(`  (${level})`, ...message);
     });
   }
 
   if (eventMessage.exceptions.length > 0) {
     eventMessage.exceptions.forEach(({ name, message }) => {
-      console.error(`  ${name}:`, message);
+      logger.error(`  ${name}:`, message);
     });
   }
 }

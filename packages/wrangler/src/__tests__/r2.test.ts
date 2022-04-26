@@ -81,8 +81,7 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Not enough non-option arguments: got 0, need at least 1"
+            ✖  Not enough non-option arguments: got 0, need at least 1"
           `);
         });
 
@@ -106,8 +105,7 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Unknown arguments: def, ghi"
+            ✖  Unknown arguments: def, ghi"
           `);
         });
 
@@ -157,8 +155,7 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Not enough non-option arguments: got 0, need at least 1"
+            ✖  Not enough non-option arguments: got 0, need at least 1"
           `);
         });
 
@@ -182,8 +179,7 @@ describe("wrangler", () => {
               -h, --help        Show help  [boolean]
               -v, --version     Show version number  [boolean]
                   --legacy-env  Use legacy environments  [boolean]
-
-            Unknown arguments: def, ghi"
+            ✖  Unknown arguments: def, ghi"
           `);
         });
 

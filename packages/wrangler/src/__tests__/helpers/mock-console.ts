@@ -5,11 +5,15 @@ import * as util from "node:util";
  * assert on the values they're called with in our tests.
  */
 
-let logSpy: jest.SpyInstance,
+let debugSpy: jest.SpyInstance,
+  logSpy: jest.SpyInstance,
   errorSpy: jest.SpyInstance,
   warnSpy: jest.SpyInstance;
 
 const std = {
+  get debug() {
+    return normalizeOutput(debugSpy);
+  },
   get out() {
     return normalizeOutput(logSpy);
   },
@@ -35,11 +39,13 @@ function captureCalls(spy: jest.SpyInstance): string {
 
 export function mockConsoleMethods() {
   beforeEach(() => {
+    debugSpy = jest.spyOn(console, "debug").mockImplementation();
     logSpy = jest.spyOn(console, "log").mockImplementation();
     errorSpy = jest.spyOn(console, "error").mockImplementation();
     warnSpy = jest.spyOn(console, "warn").mockImplementation();
   });
   afterEach(() => {
+    debugSpy.mockRestore();
     logSpy.mockRestore();
     errorSpy.mockRestore();
     warnSpy.mockRestore();

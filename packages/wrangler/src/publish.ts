@@ -6,6 +6,7 @@ import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
+import { logger } from "./logger";
 import { syncAssets } from "./sites";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
@@ -147,7 +148,7 @@ export default async function publish(props: Props): Promise<void> {
         (binding) => !binding.script_name
       );
       if (exportedDurableObjects.length > 0 && config.migrations.length === 0) {
-        console.warn(
+        logger.warn(
           `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects.map(
             (durable) => durable.class_name
           )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
@@ -173,7 +174,7 @@ export default async function publish(props: Props): Promise<void> {
           (migration) => migration.tag === script.migration_tag
         );
         if (foundIndex === -1) {
-          console.warn(
+          logger.warn(
             `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already deleted it. Applying all available migrations to the script...`
           );
           migrations = {
@@ -284,7 +285,7 @@ export default async function publish(props: Props): Promise<void> {
   }
 
   if (props.dryRun) {
-    console.log(`--dry-run: exiting now.`);
+    logger.log(`--dry-run: exiting now.`);
     return;
   }
 
@@ -334,7 +335,7 @@ export default async function publish(props: Props): Promise<void> {
     }
   }
 
-  console.log("Uploaded", workerName, formatTime(uploadMs));
+  logger.log("Uploaded", workerName, formatTime(uploadMs));
 
   // Update routing table for the script.
   if (routes.length > 0) {
@@ -393,12 +394,12 @@ export default async function publish(props: Props): Promise<void> {
   const deployMs = Date.now() - start - uploadMs;
 
   if (deployments.length > 0) {
-    console.log("Published", workerName, formatTime(deployMs));
+    logger.log("Published", workerName, formatTime(deployMs));
     for (const target of targets.flat()) {
-      console.log(" ", target);
+      logger.log(" ", target);
     }
   } else {
-    console.log("No publish targets for", workerName, formatTime(deployMs));
+    logger.log("No publish targets for", workerName, formatTime(deployMs));
   }
 }
 

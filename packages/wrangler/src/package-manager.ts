@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { execa, execaCommandSync } from "execa";
+import { logger } from "./logger";
 
 export interface PackageManager {
   cwd: string;
@@ -16,26 +17,26 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
 
   if (hasNpmLock) {
     if (hasNpm) {
-      console.log(
+      logger.log(
         "Using npm as package manager, as there is already a package-lock.json file."
       );
       return { ...NpmPackageManager, cwd };
     } else if (hasYarn) {
-      console.log("Using yarn as package manager.");
-      console.warn(
+      logger.log("Using yarn as package manager.");
+      logger.warn(
         "There is already a package-lock.json file but could not find npm on the PATH."
       );
       return { ...YarnPackageManager, cwd };
     }
   } else if (hasYarnLock) {
     if (hasYarn) {
-      console.log(
+      logger.log(
         "Using yarn as package manager, as there is already a yarn.lock file."
       );
       return { ...YarnPackageManager, cwd };
     } else if (hasNpm) {
-      console.log("Using npm as package manager.");
-      console.warn(
+      logger.log("Using npm as package manager.");
+      logger.warn(
         "There is already a yarn.lock file but could not find yarn on the PATH."
       );
       return { ...NpmPackageManager, cwd };
@@ -43,10 +44,10 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
   }
 
   if (hasNpm) {
-    console.log("Using npm as package manager.");
+    logger.log("Using npm as package manager.");
     return { ...NpmPackageManager, cwd };
   } else if (hasYarn) {
-    console.log("Using yarn as package manager.");
+    logger.log("Using yarn as package manager.");
     return { ...YarnPackageManager, cwd };
   } else {
     throw new Error(

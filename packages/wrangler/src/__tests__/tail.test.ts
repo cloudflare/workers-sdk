@@ -263,7 +263,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
@@ -289,7 +289,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         \\"* * * * *\\" @ [mock timestamp string] - Ok"
       `);
@@ -316,7 +316,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
@@ -372,7 +372,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]
           (log) some string
@@ -380,8 +380,8 @@ describe("tail", () => {
           (error) 1234"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "  Error: some error
-          Error: { complex: 'error' }"
+        "[31m✖  [39m  Error: some error
+        [31m✖  [39m  Error: { complex: 'error' }"
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });

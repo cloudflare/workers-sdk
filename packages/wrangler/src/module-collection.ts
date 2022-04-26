@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
+import { logger } from "./logger";
 import type { Config, ConfigModuleRuleType } from "./config";
 import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
@@ -58,7 +59,7 @@ export default function createModuleCollector(props: {
     if (rule.type in completedRuleLocations) {
       if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
         if (index < (props.rules || []).length) {
-          console.warn(
+          logger.warn(
             `The module rule at position ${index} (${JSON.stringify(
               rule
             )}) has the same type as a previous rule (at position ${
@@ -68,7 +69,7 @@ export default function createModuleCollector(props: {
             )}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.`
           );
         } else {
-          console.warn(
+          logger.warn(
             `The default module rule ${JSON.stringify(
               rule
             )} has the same type as a previous rule (at position ${
@@ -136,8 +137,8 @@ export default function createModuleCollector(props: {
                 return;
               }
               // In the future, this will simply throw an error
-              console.warn(
-                `Deprecation warning: detected a legacy module import in "./${path.relative(
+              logger.warn(
+                `DEPRECATION: detected a legacy module import in "./${path.relative(
                   process.cwd(),
                   args.importer
                 )}". This will stop working in the future. Replace references to "${

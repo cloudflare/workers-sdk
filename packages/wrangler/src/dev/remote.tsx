@@ -4,6 +4,7 @@ import path from "node:path";
 import { useState, useEffect, useRef } from "react";
 import { createWorkerPreview } from "../create-worker-preview";
 import useInspector from "../inspect";
+import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import type { CfPreviewToken } from "../create-worker-preview";
@@ -115,7 +116,7 @@ export function useWorker(props: {
       if (!startedRef.current) {
         startedRef.current = true;
       } else {
-        console.log("⎔ Detected changes, restarted server.");
+        logger.log("⎔ Detected changes, restarted server.");
       }
 
       const assets = await syncAssets(
@@ -184,7 +185,7 @@ export function useWorker(props: {
       // we want to log the error, but not end the process
       // since it could recover after the developer fixes whatever's wrong
       if ((err as { code: string }).code !== "ABORT_ERR") {
-        console.error("remote worker:", err);
+        logger.error("Error on remote worker:", err);
       }
     });
 

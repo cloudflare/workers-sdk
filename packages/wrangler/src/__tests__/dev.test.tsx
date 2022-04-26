@@ -40,16 +40,16 @@ describe("wrangler dev", () => {
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn.replaceAll(currentDate, "<current-date>"))
         .toMatchInlineSnapshot(`
-        "No compatibility_date was specified. Using today's date: <current-date>.
-        Add one to your wrangler.toml file:
-        \`\`\`
-        compatibility_date = \\"<current-date>\\"
-        \`\`\`
-        or pass it in your terminal:
-        \`\`\`
-        --compatibility-date=<current-date>
-        \`\`\`
-        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+        "⚠  No compatibility_date was specified. Using today's date: <current-date>.
+        ⚠  Add one to your wrangler.toml file:
+        ⚠  \`\`\`
+        ⚠  compatibility_date = \\"<current-date>\\"
+        ⚠  \`\`\`
+        ⚠  or pass it in your terminal:
+        ⚠  \`\`\`
+        ⚠  --compatibility-date=<current-date>
+        ⚠  \`\`\`
+        ⚠  See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -79,9 +79,9 @@ describe("wrangler dev", () => {
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
 
@@ -389,7 +389,7 @@ describe("wrangler dev", () => {
         watch_dir: "src",
       });
       expect(std.out).toMatchInlineSnapshot(
-        `"running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
+        `"Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
       );
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -411,7 +411,7 @@ describe("wrangler dev", () => {
         `);
 
         expect(std.out).toMatchInlineSnapshot(
-          `"running: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js"`
+          `"Running custom build: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js"`
         );
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -431,13 +431,14 @@ describe("wrangler dev", () => {
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
       );
-      expect(std.out).toMatchInlineSnapshot(
-        `"running: node -e \\"console.log('custom build');\\""`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Running custom build: node -e \\"console.log('custom build');\\"
+        "
+      `);
       expect(std.err).toMatchInlineSnapshot(`
-        "Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -469,9 +470,9 @@ describe("wrangler dev", () => {
       );
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Setting upstream-protocol to http is not currently implemented.
-        If this is required in your project, please add your use case to the following issue:
-        https://github.com/cloudflare/wrangler2/issues/583."
+        "⚠  Setting upstream-protocol to http is not currently implemented.
+        ⚠  If this is required in your project, please add your use case to the following issue:
+        ⚠  https://github.com/cloudflare/wrangler2/issues/583."
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -595,11 +596,11 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.
-        Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
-        Remote Durable Objects that are affected:
-        - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}"
+        "⚠  WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
+        ⚠  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
+        ⚠  Remote Durable Objects that are affected:
+        ⚠  - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+        ⚠  - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });

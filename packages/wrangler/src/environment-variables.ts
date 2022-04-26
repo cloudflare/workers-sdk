@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Create a function used to access an environment variable.
  *
@@ -21,7 +23,7 @@ export function getEnvironmentVariableFactory({
       if (!hasWarned) {
         // Only show the warning once.
         hasWarned = true;
-        console.warn(
+        logger.warn(
           `Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
         );
       }

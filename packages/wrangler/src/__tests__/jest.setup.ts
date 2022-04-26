@@ -6,7 +6,16 @@ import {
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { MockWebSocket } from "./helpers/mock-web-socket";
+
+// For tests let's just agree to pretend we are not running in a TTY environment.
+// This ensures consistency between running tests:
+// - locally with `run test-watch`,
+// - locally (in parallel) using `run test`,
+// - and also in the CI actions.
+// eslint-disable-next-line react-hooks/rules-of-hooks
+useMockIsTTY().setIsTTY(false);
 
 jest.mock("ws", () => {
   return {

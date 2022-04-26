@@ -2,6 +2,7 @@ import { Box, Text, useInput, render } from "ink";
 import TextInput from "ink-text-input";
 import * as React from "react";
 import { useState } from "react";
+import { logger } from "./logger";
 type ConfirmProps = {
   text: string;
   onConfirm: (answer: boolean) => void;
@@ -13,7 +14,7 @@ function Confirm(props: ConfirmProps) {
     } else if (input === "n") {
       props.onConfirm(false);
     } else {
-      console.log("Unrecognised input");
+      logger.warn("Unrecognised input:", input);
     }
   });
   return (

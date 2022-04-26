@@ -221,6 +221,7 @@ import React from "react";
 import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
 import { getEnvironmentVariableFactory } from "./environment-variables";
+import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
 import type { Config } from "./config";
@@ -403,7 +404,7 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 
 export function getAPIToken(): string | undefined {
   if (LocalState.apiToken) {
-    console.warn(
+    logger.warn(
       "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
         "This is no longer supported in the current version of Wrangler.\n" +
         "If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
@@ -596,8 +597,8 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 
   const stateQueryParam = query.state;
   if (stateQueryParam !== state.stateQueryParam) {
-    console.warn(
-      "state query string parameter doesn't match the one sent! Possible malicious activity somewhere."
+    logger.warn(
+      "Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
     );
     throw new ErrorInvalidReturnedStateParam();
   }
@@ -646,7 +647,7 @@ type TokenResponse =
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
   if (!LocalState.refreshToken) {
-    console.warn("No refresh token is present.");
+    logger.warn("No refresh token is present.");
   }
 
   const body =
@@ -734,9 +735,9 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
   const { authorizationCode, codeVerifier = "" } = LocalState;
 
   if (!codeVerifier) {
-    console.warn("No code verifier is being sent.");
+    logger.warn("No code verifier is being sent.");
   } else if (!authorizationCode) {
-    console.warn("No authorization grant code is being passed.");
+    logger.warn("No authorization grant code is being passed.");
   }
 
   const body =
@@ -757,7 +758,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
     const { error } = (await response.json()) as { error: string };
     // .catch((_) => ({ error: "invalid_json" }));
     if (error === "invalid_grant") {
-      console.log("Expired! Auth code or refresh token needs to be renewed.");
+      logger.log("Expired! Auth code or refresh token needs to be renewed.");
       // alert("Redirecting to auth server to obtain a new auth grant code.");
       // TODO: return refreshAuthCodeOrRefreshToken();
     }
@@ -905,13 +906,13 @@ export async function loginOrRefreshIfRequired(
 }
 
 export async function login(props?: LoginProps): Promise<boolean> {
-  console.log("Attempting to login via OAuth...");
+  logger.log("Attempting to login via OAuth...");
   const urlToOpen = await getAuthURL(props?.scopes);
   let server: http.Server;
   let loginTimeoutHandle: NodeJS.Timeout;
   const timerPromise = new Promise<boolean>((resolve) => {
     loginTimeoutHandle = setTimeout(() => {
-      console.error(
+      logger.error(
         "Timed out waiting for authorization code, please try again."
       );
       server.close();
@@ -947,7 +948,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
               res.end(() => {
                 finish(false);
               });
-              console.log(
+              logger.error(
                 "Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
                   "If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable"
               );
@@ -976,7 +977,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
             res.end(() => {
               finish(true);
             });
-            console.log(`Successfully logged in.`);
+            logger.log(`Successfully logged in.`);
 
             return;
           }
@@ -1020,7 +1021,7 @@ async function refreshToken(): Promise<boolean> {
 export async function logout(): Promise<void> {
   if (!LocalState.accessToken) {
     if (!LocalState.refreshToken) {
-      console.log("Not logged in, exiting...");
+      logger.log("Not logged in, exiting...");
       return;
     }
 
@@ -1037,7 +1038,7 @@ export async function logout(): Promise<void> {
       },
     });
     await response.text(); // blank text? would be nice if it was something meaningful
-    console.log(
+    logger.log(
       "💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
     );
   }
@@ -1055,11 +1056,11 @@ export async function logout(): Promise<void> {
   });
   await response.text(); // blank text? would be nice if it was something meaningful
   rmSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE));
-  console.log(`Successfully logged out.`);
+  logger.log(`Successfully logged out.`);
 }
 
 export function listScopes(message = "💁 Available scopes:"): void {
-  console.log(message);
+  logger.log(message);
   const data = ScopeKeys.map((scope: Scope) => ({
     Scope: scope,
     Description: Scopes[scope],

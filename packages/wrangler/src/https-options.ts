@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { homedir, networkInterfaces } from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
 
 // Most of this file has been borrowed from the implementation in Miniflare.
@@ -26,7 +27,7 @@ export async function getHttpsOptions() {
     hasCertificateExpired(keyPath, certPath);
 
   if (regenerate) {
-    console.log("Generating new self-signed certificate...");
+    logger.log("Generating new self-signed certificate...");
     const { key, cert } = await generateCertificate();
     try {
       // Write certificate files so we can reuse them later.
@@ -35,7 +36,7 @@ export async function getHttpsOptions() {
       fs.writeFileSync(certPath, cert, "utf8");
     } catch (e) {
       const message = e instanceof Error ? e.message : `${e}`;
-      console.warn(
+      logger.warn(
         `Unable to cache generated self-signed certificate in ${certDirectory}.\n${message}`
       );
     }

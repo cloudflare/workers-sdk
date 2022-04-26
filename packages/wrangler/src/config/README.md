@@ -48,7 +48,7 @@ This function will return:
 - a `Diagnostics` object, which contains any errors or warnings from the validation process
 
 The field values may have been parsed directly from the `RawConfig`, inherited into a named environment from the top-level environment, or given a default value.
-Generally, if there are any warnings they should be presented to the user via `console.warn()` messages,
+Generally, if there are any warnings they should be presented to the user via `logger.warn()` messages,
 and if there are any errors then an `Error` should be thrown describing these errors.
 
 The `Diagnostics` object is hierarchical: each `Diagnostics` instance can contain a collection of child `Diagnostics` instance.

@@ -97,8 +97,8 @@ describe("getHttpsOptions()", () => {
       `"Generating new self-signed certificate..."`
     );
     expect(std.warn).toMatchInlineSnapshot(`
-      "Unable to cache generated self-signed certificate in home/.wrangler/local-cert.
-      ERROR: Cannot write file"
+      "⚠  Unable to cache generated self-signed certificate in home/.wrangler/local-cert.
+      ⚠  ERROR: Cannot write file"
     `);
     expect(std.err).toMatchInlineSnapshot(`""`);
   });

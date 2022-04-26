@@ -5,6 +5,7 @@ import WebSocket from "faye-websocket";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
+import { logger } from "./logger";
 import { reportError } from "./reporting";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type {
@@ -92,7 +93,7 @@ export function usePreviewServer({
       createProxyServer(localProtocol)
         .then((proxy) => setProxyServer(proxy))
         .catch(async (err) => {
-          console.error("Failed to create proxy server.", err);
+          logger.error("Failed to create proxy server:", err);
           await reportError(err);
         });
     }
@@ -301,11 +302,11 @@ export function usePreviewServer({
     })
       .then(() => {
         proxyServer.listen(port, ip);
-        console.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
+        logger.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
       })
       .catch((err) => {
         if ((err as { code: string }).code !== "ABORT_ERR") {
-          console.error(`⬣ Failed to start server: ${err}`);
+          logger.error(`Failed to start server: ${err}`);
         }
       });
 
@@ -352,7 +353,7 @@ async function createProxyServer(
   return server
     .on("request", function (req, res) {
       // log all requests
-      console.log(
+      logger.log(
         new Date().toLocaleTimeString(),
         req.method,
         req.url,
@@ -361,7 +362,7 @@ async function createProxyServer(
     })
     .on("upgrade", (req) => {
       // log all websocket connections
-      console.log(
+      logger.log(
         new Date().toLocaleTimeString(),
         req.method,
         req.url,
@@ -371,7 +372,7 @@ async function createProxyServer(
     })
     .on("error", (err) => {
       // log all connection errors
-      console.error(new Date().toLocaleTimeString(), err);
+      logger.error(new Date().toLocaleTimeString(), err);
     });
 }
 

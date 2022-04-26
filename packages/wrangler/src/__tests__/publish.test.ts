@@ -108,9 +108,9 @@ describe("publish", () => {
           test-name.test-sub-domain.workers.dev"
       `);
       expect(std.warn).toMatchInlineSnapshot(`
-        "It looks like you have used Wrangler 1's \`config\` command to login with an API token.
-        This is no longer supported in the current version of Wrangler.
-        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
+        "⚠  It looks like you have used Wrangler 1's \`config\` command to login with an API token.
+        ⚠  This is no longer supported in the current version of Wrangler.
+        ⚠  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\` environment variable."
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -187,15 +187,15 @@ describe("publish", () => {
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-          "Processing wrangler.toml configuration:
-            - No environment found in configuration with name \\"some-env\\".
-              Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
-
-              Consider adding an environment configuration section to the wrangler.toml file:
-              \`\`\`
-              [env.some-env]
-              \`\`\`
-          "
+          "⚠  Processing wrangler.toml configuration:
+          ⚠    - No environment found in configuration with name \\"some-env\\".
+          ⚠      Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+          ⚠
+          ⚠      Consider adding an environment configuration section to the wrangler.toml file:
+          ⚠      \`\`\`
+          ⚠      [env.some-env]
+          ⚠      \`\`\`
+          ⚠  "
         `);
       });
 
@@ -252,7 +252,7 @@ describe("publish", () => {
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(
-          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+          `"⚠  Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
         );
       });
 
@@ -272,7 +272,7 @@ describe("publish", () => {
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(
-          `"Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
+          `"⚠  Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."`
         );
       });
     });
@@ -353,6 +353,7 @@ describe("publish", () => {
       await runWrangler("publish ./index");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -412,6 +413,7 @@ describe("publish", () => {
       await runWrangler("publish ./index --legacy-env false --env staging");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (staging) (TIMINGS)
         Published test-name (staging) (TIMINGS)
@@ -420,7 +422,7 @@ describe("publish", () => {
           *another-boring-website.com (zone name: some-zone.com)
           example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
-          "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
+          "warn": "⚠  Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
         }
       `);
     });
@@ -556,13 +558,13 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - ⚠️  DEPRECATION: \\"build.upload.main\\":
-            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-            Then add the top level \`main\` field to your configuration file:
-            \`\`\`
-            main = \\"dist/index.js\\"
-            \`\`\`"
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - DEPRECATION: \\"build.upload.main\\":
+        ⚠      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+        ⚠      Then add the top level \`main\` field to your configuration file:
+        ⚠      \`\`\`
+        ⚠      main = \\"dist/index.js\\"
+        ⚠      \`\`\`"
       `);
     });
 
@@ -588,15 +590,15 @@ describe("publish", () => {
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing ../wrangler.toml configuration:
-          - ⚠️  DEPRECATION: \\"build.upload.main\\":
-            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-            Then add the top level \`main\` field to your configuration file:
-            \`\`\`
-            main = \\"foo/index.js\\"
-            \`\`\`
-          - ⚠️  DEPRECATION: \\"build.upload.dir\\":
-            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
+        "⚠  Processing ../wrangler.toml configuration:
+        ⚠    - DEPRECATION: \\"build.upload.main\\":
+        ⚠      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+        ⚠      Then add the top level \`main\` field to your configuration file:
+        ⚠      \`\`\`
+        ⚠      main = \\"foo/index.js\\"
+        ⚠      \`\`\`
+        ⚠    - DEPRECATION: \\"build.upload.dir\\":
+        ⚠      Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker."
       `);
     });
 
@@ -734,10 +736,10 @@ export default{
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"site.bucket\\" is a required field.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Processing wrangler.toml configuration:
+        ✖    - \\"site.bucket\\" is a required field.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -769,23 +771,23 @@ export default{
       await expect(runWrangler("publish ./index.js")).rejects
         .toThrowErrorMatchingInlineSnapshot(`
               "Processing wrangler.toml configuration:
-                - 🚨 NO LONGER SUPPORTED: \\"site.entry-point\\":
+                - NO LONGER SUPPORTED: \\"site.entry-point\\":
                   The \`site.entry-point\` config field is no longer used.
                   The entry-point should be specified via the command line or the \`main\` config field."
             `);
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - 🚨 NO LONGER SUPPORTED: \\"site.entry-point\\":
-            The \`site.entry-point\` config field is no longer used.
-            The entry-point should be specified via the command line or the \`main\` config field.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Processing wrangler.toml configuration:
+        ✖    - NO LONGER SUPPORTED: \\"site.entry-point\\":
+        ✖      The \`site.entry-point\` config field is no longer used.
+        ✖      The entry-point should be specified via the command line or the \`main\` config field.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - Unexpected fields found in site field: \\"entry-point\\""
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - Unexpected fields found in site field: \\"entry-point\\""
       `);
     });
 
@@ -802,9 +804,9 @@ export default{
 
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
   });
@@ -835,10 +837,10 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -891,10 +893,10 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -941,10 +943,10 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -989,10 +991,10 @@ export default{
       await runWrangler("publish --env some-env --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
@@ -1038,10 +1040,10 @@ export default{
       await runWrangler("publish --env some-env --legacy-env true");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
@@ -1082,10 +1084,10 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        skipping - already uploaded
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
+        "Reading assets/file-1.txt...
+        Skipping - already uploaded.
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1123,8 +1125,8 @@ export default{
       await runWrangler("publish --site-include file-1.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1162,8 +1164,8 @@ export default{
       await runWrangler("publish --site-exclude file-2.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1202,8 +1204,8 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1242,8 +1244,8 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1282,8 +1284,8 @@ export default{
       await runWrangler("publish --site-include file-1.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1322,8 +1324,8 @@ export default{
       await runWrangler("publish --site-exclude file-2.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        uploading as assets/file-1.2ca234f380.txt...
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1364,8 +1366,8 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/directory-1/file-1.txt...
-        uploading as assets/directory-1/file-1.2ca234f380.txt...
+        "Reading assets/directory-1/file-1.txt...
+        Uploading as assets/directory-1/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1410,8 +1412,8 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/.well-known/file-2.txt...
-        uploading as assets/.well-known/file-2.5938485188.txt...
+        "Reading assets/.well-known/file-2.txt...
+        Uploading as assets/.well-known/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1457,13 +1459,14 @@ export default{
       );
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/large-file.txt...
-        uploading as assets/large-file.0ea0637a45.txt..."
+        "Reading assets/large-file.txt...
+        Uploading as assets/large-file.0ea0637a45.txt...
+        "
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
 
@@ -1495,13 +1498,14 @@ export default{
         `"The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
       );
 
-      expect(std.out).toMatchInlineSnapshot(
-        `"reading assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt..."`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Reading assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt...
+        "
+      `);
       expect(std.err).toMatchInlineSnapshot(`
-        "The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
     });
 
@@ -1547,12 +1551,12 @@ export default{
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "reading assets/file-1.txt...
-        skipping - already uploaded
-        reading assets/file-2.txt...
-        uploading as assets/file-2.5938485188.txt...
-        deleting assets/file-3.somehash.txt from the asset store...
-        deleting assets/file-4.anotherhash.txt from the asset store...
+        "Reading assets/file-1.txt...
+        Skipping - already uploaded.
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
+        Deleting assets/file-3.somehash.txt from the asset store...
+        Deleting assets/file-4.anotherhash.txt from the asset store...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2157,7 +2161,7 @@ export default{
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+        "Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2181,7 +2185,7 @@ export default{
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "running: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+          "Running custom build: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -2204,13 +2208,14 @@ export default{
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
       );
-      expect(std.out).toMatchInlineSnapshot(
-        `"running: node -e \\"console.log('custom build');\\""`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Running custom build: node -e \\"console.log('custom build');\\"
+        "
+      `);
       expect(std.err).toMatchInlineSnapshot(`
-        "Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -2304,7 +2309,7 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(
-        `"In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."`
+        `"⚠  In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."`
       );
     });
 
@@ -2409,6 +2414,7 @@ export default{
       await runWrangler("publish index.js");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2445,6 +2451,7 @@ export default{
       await runWrangler("publish index.js");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2479,11 +2486,12 @@ export default{
         );
         expect(std).toMatchInlineSnapshot(`
           Object {
-            "err": "Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739
-
-          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.",
+            "debug": "",
+            "err": "✖  Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739
+          ✖
+          ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m",
             "out": "",
-            "warn": "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
+            "warn": "⚠  Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.",
           }
         `);
       });
@@ -2643,8 +2651,8 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time."
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time."
       `);
     });
 
@@ -2731,19 +2739,19 @@ export default{
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-          - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-          - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
-          - Bindings must have unique names, so that they can all be referenced in the worker.
-            Please change your bindings to have unique names.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Processing wrangler.toml configuration:
+        ✖    - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
+        ✖    - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
+        ✖    - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+        ✖    - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
+        ✖    - Bindings must have unique names, so that they can all be referenced in the worker.
+        ✖      Please change your bindings to have unique names.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time."
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time."
       `);
     });
 
@@ -2822,19 +2830,19 @@ export default{
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-          - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-          - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-          - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-          - Bindings must have unique names, so that they can all be referenced in the worker.
-            Please change your bindings to have unique names.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Processing wrangler.toml configuration:
+        ✖    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+        ✖    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+        ✖    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+        ✖    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+        ✖    - Bindings must have unique names, so that they can all be referenced in the worker.
+        ✖      Please change your bindings to have unique names.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time."
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time."
       `);
     });
 
@@ -2949,21 +2957,21 @@ export default{
             `);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-          - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-          - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-          - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-          - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
-          - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-          - Bindings must have unique names, so that they can all be referenced in the worker.
-            Please change your bindings to have unique names.
-
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "✖  Processing wrangler.toml configuration:
+        ✖    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+        ✖    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+        ✖    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+        ✖    - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+        ✖    - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
+        ✖    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+        ✖    - Bindings must have unique names, so that they can all be referenced in the worker.
+        ✖      Please change your bindings to have unique names.
+        ✖
+        ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time."
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time."
       `);
     });
 
@@ -3012,10 +3020,10 @@ export default{
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-                  "You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
-
-                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-              `);
+          "✖  You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code
+          ✖
+          ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -3140,9 +3148,9 @@ export default{
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-          "You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
-
-          [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+          "✖  You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
+          ✖
+          ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -3240,10 +3248,10 @@ export default{
         );
         expect(std.out).toMatchInlineSnapshot(`""`);
         expect(std.err).toMatchInlineSnapshot(`
-                  "You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
-
-                  [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
-              `);
+          "✖  You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml
+          ✖
+          ✖  [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
 
@@ -3521,9 +3529,9 @@ export default{
               `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-                  "Processing wrangler.toml configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+          "⚠  Processing wrangler.toml configuration:
+          ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time."
+        `);
       });
       it("should warn if using unsafe bindings already handled by wrangler", async () => {
         writeWranglerToml({
@@ -3557,13 +3565,13 @@ export default{
               `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-                  "Processing wrangler.toml configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time.
-                    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
-                      - The binding type \\"plain_text\\" is directly supported by wrangler.
-                        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
-                        For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
-              `);
+          "⚠  Processing wrangler.toml configuration:
+          ⚠    - \\"unsafe\\" fields are experimental and may change or break at any time.
+          ⚠    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+          ⚠      - The binding type \\"plain_text\\" is directly supported by wrangler.
+          ⚠        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is supported by wrangler for optimal support.
+          ⚠        For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
+        `);
       });
     });
   });
@@ -3658,14 +3666,14 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Processing wrangler.toml configuration:
-          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-            \`\`\`
-            [[rules]]
-            type = \\"Text\\"
-            globs = [ \\"**/*.file\\" ]
-            fallthrough = true
-            \`\`\`"
+        "⚠  Processing wrangler.toml configuration:
+        ⚠    - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+        ⚠      \`\`\`
+        ⚠      [[rules]]
+        ⚠      type = \\"Text\\"
+        ⚠      globs = [ \\"**/*.file\\" ]
+        ⚠      fallthrough = true
+        ⚠      \`\`\`"
       `);
     });
 
@@ -3757,8 +3765,8 @@ export default{
       );
       // and the warnings because fallthrough was not explicitly set
       expect(std.warn).toMatchInlineSnapshot(`
-        "The module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.
-        The default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning."
+        "⚠  The module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.
+        ⚠  The default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning."
       `);
     });
 
@@ -3822,7 +3830,7 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(
-        `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";"`
+        `"⚠  DEPRECATION: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";"`
       );
     });
 
@@ -3848,7 +3856,7 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(
-        `"Deprecation warning: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
+        `"⚠  DEPRECATION: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";"`
       );
     });
 
@@ -3906,6 +3914,7 @@ export default{
       await runWrangler("publish index.ts");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -3934,6 +3943,7 @@ export default{
       await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -3955,6 +3965,7 @@ export default{
       expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -3972,6 +3983,7 @@ export default{
       await runWrangler("publish index.js --dry-run");
       expect(std).toMatchInlineSnapshot(`
         Object {
+          "debug": "",
           "err": "",
           "out": "--dry-run: exiting now.",
           "warn": "",

@@ -32,6 +32,7 @@ import {
   isKeyValue,
   unexpectedKeyValueProps,
 } from "./kv";
+import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { pages, pagesBetaWarning } from "./pages";
 import {
@@ -81,8 +82,8 @@ function getRules(config: Config): Config["rules"] {
   }
 
   if (config.build?.upload?.rules) {
-    console.warn(
-      `Deprecation notice: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+    logger.warn(
+      `DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
 
 ${TOML.stringify({ rules: config.build.upload.rules })}`
     );
@@ -98,7 +99,7 @@ async function printWranglerBanner() {
 
   const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
 
-  console.log(
+  logger.log(
     text +
       "\n" +
       (supportsColor.stdout
@@ -324,7 +325,7 @@ export async function main(argv: string[]): Promise<void> {
       const workerName =
         args.name || path.basename(path.resolve(process.cwd()));
       if (fs.existsSync(wranglerTomlDestination)) {
-        console.warn(`${wranglerTomlDestination} file already exists!`);
+        logger.warn(`${wranglerTomlDestination} file already exists!`);
         const shouldContinue = await confirm(
           "Do you want to continue initializing this project?"
         );
@@ -342,7 +343,7 @@ export async function main(argv: string[]): Promise<void> {
               compatibility_date: compatibilityDate,
             }) + "\n"
           );
-          console.log(`✨ Successfully created wrangler.toml`);
+          logger.log(`✨ Successfully created wrangler.toml`);
           justCreatedWranglerToml = true;
         } catch (err) {
           throw new Error(
@@ -379,7 +380,7 @@ export async function main(argv: string[]): Promise<void> {
             ) + "\n"
           );
           await packageManager.install();
-          console.log(`✨ Created package.json`);
+          logger.log(`✨ Created package.json`);
           pathToPackageJson = path.join(creationDirectory, "package.json");
         } else {
           return;
@@ -404,7 +405,7 @@ export async function main(argv: string[]): Promise<void> {
             ));
           if (shouldInstall) {
             await packageManager.addDevDeps(`wrangler@${wranglerVersion}`);
-            console.log(`✨ Installed wrangler`);
+            logger.log(`✨ Installed wrangler`);
           }
         }
       }
@@ -425,7 +426,7 @@ export async function main(argv: string[]): Promise<void> {
             "typescript"
           );
 
-          console.log(
+          logger.log(
             `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
           );
           pathToTSConfig = path.join(creationDirectory, "tsconfig.json");
@@ -453,7 +454,7 @@ export async function main(argv: string[]): Promise<void> {
             // it could be complicated in existing projects
             // and we don't want to break them. Instead, we simply
             // tell the user that they need to update their tsconfig.json
-            console.log(
+            logger.log(
               `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in your tsconfig.json`
             );
           }
@@ -512,21 +513,21 @@ export async function main(argv: string[]): Promise<void> {
               2
             ) + "\n"
           );
-          console.log(
+          logger.log(
             `\nTo start developing your Worker, run \`${
               isNamedWorker ? `cd ${args.name} && ` : ""
             }npm start\``
           );
-          console.log(
+          logger.log(
             `To publish your Worker to the Internet, run \`npm run publish\``
           );
         } else {
-          console.log(
+          logger.log(
             `\nTo start developing your Worker, run \`npx wrangler dev\`${
               isCreatingWranglerToml ? "" : ` ${scriptPath}`
             }`
           );
-          console.log(
+          logger.log(
             `To publish your Worker to the Internet, run \`npx wrangler publish\`${
               isCreatingWranglerToml ? "" : ` ${scriptPath}`
             }`
@@ -553,7 +554,7 @@ export async function main(argv: string[]): Promise<void> {
               readFileSync(path.join(__dirname, "../templates/new-worker.ts"))
             );
 
-            console.log(`✨ Created src/index.ts`);
+            logger.log(`✨ Created src/index.ts`);
 
             await writePackageJsonScriptsAndUpdateWranglerToml(
               shouldWritePackageJsonScripts,
@@ -577,7 +578,7 @@ export async function main(argv: string[]): Promise<void> {
               readFileSync(path.join(__dirname, "../templates/new-worker.js"))
             );
 
-            console.log(`✨ Created src/index.js`);
+            logger.log(`✨ Created src/index.js`);
 
             await writePackageJsonScriptsAndUpdateWranglerToml(
               shouldWritePackageJsonScripts,
@@ -748,21 +749,21 @@ export async function main(argv: string[]): Promise<void> {
       const entry = await getEntry(args, config, "dev");
 
       if (args["experimental-public"]) {
-        console.warn(
-          "🚨  The --experimental-public field is experimental and will change in the future."
+        logger.warn(
+          "The --experimental-public field is experimental and will change in the future."
         );
       }
 
       if (args.public) {
         throw new Error(
-          "🚨  The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+          "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
         );
       }
 
       const upstreamProtocol =
         args["upstream-protocol"] || config.dev.upstream_protocol;
       if (upstreamProtocol === "http") {
-        console.warn(
+        logger.warn(
           "Setting upstream-protocol to http is not currently implemented.\n" +
             "If this is required in your project, please add your use case to the following issue:\n" +
             "https://github.com/cloudflare/wrangler2/issues/583."
@@ -1032,13 +1033,13 @@ export async function main(argv: string[]): Promise<void> {
     async (args) => {
       await printWranglerBanner();
       if (args["experimental-public"]) {
-        console.warn(
-          "🚨  The --experimental-public field is experimental and will change in the future."
+        logger.warn(
+          "The --experimental-public field is experimental and will change in the future."
         );
       }
       if (args.public) {
         throw new Error(
-          "🚨  The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+          "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
         );
       }
 
@@ -1049,8 +1050,8 @@ export async function main(argv: string[]): Promise<void> {
       const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
-        console.warn(
-          "⚠️  Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+        logger.warn(
+          "Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
         );
       }
 
@@ -1184,8 +1185,8 @@ export async function main(argv: string[]): Promise<void> {
       }`;
 
       if (args.format === "pretty") {
-        console.log(
-          `successfully created tail, expires at ${expiration.toLocaleString()}`
+        logger.log(
+          `Successfully created tail, expires at ${expiration.toLocaleString()}`
         );
       }
 
@@ -1215,7 +1216,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       if (args.format === "pretty") {
-        console.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+        logger.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
       }
 
       tail.on("close", async () => {
@@ -1258,7 +1259,7 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       // Delegate to `wrangler dev`
-      console.warn(
+      logger.warn(
         "***************************************************\n" +
           "The `wrangler preview` command has been deprecated.\n" +
           "Attempting to run `wrangler dev` instead.\n" +
@@ -1466,7 +1467,7 @@ export async function main(argv: string[]): Promise<void> {
               ? await prompt("Enter a secret value:", "password")
               : await readFromStdin();
 
-            console.log(
+            logger.log(
               `🌀 Creating the secret for script ${scriptName} ${
                 args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
               }`
@@ -1545,7 +1546,7 @@ export async function main(argv: string[]): Promise<void> {
               }
             }
 
-            console.log(`✨ Success! Uploaded secret ${args.key}`);
+            logger.log(`✨ Success! Uploaded secret ${args.key}`);
           }
         )
         .command(
@@ -1588,7 +1589,7 @@ export async function main(argv: string[]): Promise<void> {
                 }?`
               )
             ) {
-              console.log(
+              logger.log(
                 `🌀 Deleting the secret ${args.key} on script ${scriptName}${
                   args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
                 }`
@@ -1600,7 +1601,7 @@ export async function main(argv: string[]): Promise<void> {
                   : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
               await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
-              console.log(`✨ Success! Deleted secret ${args.key}`);
+              logger.log(`✨ Success! Deleted secret ${args.key}`);
             }
           }
         )
@@ -1635,7 +1636,7 @@ export async function main(argv: string[]): Promise<void> {
                 ? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
                 : `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-            console.log(JSON.stringify(await fetchResult(url), null, "  "));
+            logger.log(JSON.stringify(await fetchResult(url), null, "  "));
           }
         );
     }
@@ -1680,7 +1681,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const config = readConfig(args.config as ConfigPath, args);
             if (!config.name) {
-              console.warn(
+              logger.warn(
                 "No configured name present, using `worker` as a prefix for the title"
               );
             }
@@ -1694,16 +1695,16 @@ export async function main(argv: string[]): Promise<void> {
 
             // TODO: generate a binding name stripping non alphanumeric chars
 
-            console.log(`🌀 Creating namespace with title "${title}"`);
+            logger.log(`🌀 Creating namespace with title "${title}"`);
             const namespaceId = await createNamespace(accountId, title);
 
-            console.log("✨ Success!");
+            logger.log("✨ Success!");
             const envString = args.env ? ` under [env.${args.env}]` : "";
             const previewString = args.preview ? "preview_" : "";
-            console.log(
+            logger.log(
               `Add the following to your configuration file in your kv_namespaces array${envString}:`
             );
-            console.log(
+            logger.log(
               `{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
             );
 
@@ -1721,7 +1722,7 @@ export async function main(argv: string[]): Promise<void> {
 
             // TODO: we should show bindings if they exist for given ids
 
-            console.log(
+            logger.log(
               JSON.stringify(await listNamespaces(accountId), null, "  ")
             );
           }
@@ -1857,12 +1858,12 @@ export async function main(argv: string[]): Promise<void> {
                 args.value!;
 
             if (args.path) {
-              console.log(
-                `writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}`
+              logger.log(
+                `Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}.`
               );
             } else {
-              console.log(
-                `writing the value "${value}" to key "${key}" on namespace ${namespaceId}`
+              logger.log(
+                `Writing the value "${value}" to key "${key}" on namespace ${namespaceId}.`
               );
             }
 
@@ -1918,7 +1919,7 @@ export async function main(argv: string[]): Promise<void> {
               namespaceId,
               prefix
             );
-            console.log(JSON.stringify(results, undefined, 2));
+            logger.log(JSON.stringify(results, undefined, 2));
           }
         )
         .command(
@@ -1962,7 +1963,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            console.log(await getKeyValue(accountId, namespaceId, key));
+            logger.log(await getKeyValue(accountId, namespaceId, key));
           }
         )
         .command(
@@ -1999,8 +2000,8 @@ export async function main(argv: string[]): Promise<void> {
             const config = readConfig(args.config as ConfigPath, args);
             const namespaceId = getNamespaceId(args, config);
 
-            console.log(
-              `deleting the key "${key}" on namespace ${namespaceId}`
+            logger.log(
+              `Deleting the key "${key}" on namespace ${namespaceId}.`
             );
 
             const accountId = await requireAuth(config);
@@ -2093,7 +2094,7 @@ export async function main(argv: string[]): Promise<void> {
               }
             }
             if (warnings.length > 0) {
-              console.warn(
+              logger.warn(
                 `Unexpected key-value properties in "${filename}".\n` +
                   warnings.join("\n")
               );
@@ -2120,11 +2121,11 @@ export async function main(argv: string[]): Promise<void> {
               namespaceId,
               content,
               (index, total) => {
-                console.log(`Uploaded ${index} of ${total}.`);
+                logger.log(`Uploaded ${index} of ${total}.`);
               }
             );
 
-            console.log("Success!");
+            logger.log("Success!");
           }
         )
         .command(
@@ -2171,7 +2172,7 @@ export async function main(argv: string[]): Promise<void> {
                 `Are you sure you want to delete all the keys read from "${filename}" from kv-namespace with id "${namespaceId}"?`
               );
               if (!result) {
-                console.log(`Not deleting keys read from "${filename}".`);
+                logger.log(`Not deleting keys read from "${filename}".`);
                 return;
               }
             }
@@ -2214,11 +2215,11 @@ export async function main(argv: string[]): Promise<void> {
               namespaceId,
               content,
               (index, total) => {
-                console.log(`Deleted ${index} of ${total}.`);
+                logger.log(`Deleted ${index} of ${total}.`);
               }
             );
 
-            console.log("Success!");
+            logger.log("Success!");
           }
         );
     }
@@ -2253,9 +2254,9 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            console.log(`Creating bucket ${args.name}.`);
+            logger.log(`Creating bucket ${args.name}.`);
             await createR2Bucket(accountId, args.name);
-            console.log(`Created bucket ${args.name}.`);
+            logger.log(`Created bucket ${args.name}.`);
           }
         );
 
@@ -2264,7 +2265,7 @@ export async function main(argv: string[]): Promise<void> {
 
           const accountId = await requireAuth(config);
 
-          console.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
+          logger.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
         });
 
         r2BucketYargs.command(
@@ -2284,9 +2285,9 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            console.log(`Deleting bucket ${args.name}.`);
+            logger.log(`Deleting bucket ${args.name}.`);
             await deleteR2Bucket(accountId, args.name);
-            console.log(`Deleted bucket ${args.name}.`);
+            logger.log(`Deleted bucket ${args.name}.`);
           }
         );
         return r2BucketYargs;
@@ -2387,20 +2388,19 @@ export async function main(argv: string[]): Promise<void> {
   try {
     await wrangler.parse();
   } catch (e) {
+    logger.log(""); // Just adds a bit of space
     if (e instanceof CommandLineArgsError) {
       wrangler.showHelp("error");
-      console.error(""); // Just adds a bit of space
-      console.error(e.message);
+      logger.error(e.message);
     } else if (e instanceof ParseError) {
-      console.error("");
       e.notes.push({
         text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
       });
-      console.error(formatMessage(e));
+      logger.error(formatMessage(e));
     } else {
-      console.error(e instanceof Error ? e.message : e);
-      console.error(""); // Just adds a bit of space
-      console.error(
+      logger.error(e instanceof Error ? e.message : e);
+      logger.error("");
+      logger.error(
         `${fgGreenColor}%s${resetColor}`,
         "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
       );
@@ -2415,7 +2415,7 @@ function getDevCompatibilityDate(
 ) {
   const currentDate = new Date().toISOString().substring(0, 10);
   if (config.configPath !== undefined && compatibilityDate === undefined) {
-    console.warn(
+    logger.warn(
       `No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
         "Add one to your wrangler.toml file:\n" +
         "```\n" +

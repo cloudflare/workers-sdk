@@ -323,7 +323,7 @@ describe("normalizeAndValidateConfig()", () => {
         `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - 🚨 NO LONGER SUPPORTED: \\"site.entry-point\\":
+            - NO LONGER SUPPORTED: \\"site.entry-point\\":
               The \`site.entry-point\` config field is no longer used.
               The entry-point should be specified via the command line or the \`main\` config field."
         `);
@@ -534,9 +534,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - ⚠️  DEPRECATION: \\"type\\":
+            - DEPRECATION: \\"type\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-            - ⚠️  DEPRECATION: \\"webpack_config\\":
+            - DEPRECATION: \\"webpack_config\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
         `);
       });
@@ -832,15 +832,15 @@ describe("normalizeAndValidateConfig()", () => {
       expect(normalizePath(diagnostics.renderWarnings()))
         .toMatchInlineSnapshot(`
         "Processing project/wrangler.toml configuration:
-          - ⚠️  DEPRECATION: \\"build.upload.format\\":
+          - DEPRECATION: \\"build.upload.format\\":
             The format is inferred automatically from the code.
-          - ⚠️  DEPRECATION: \\"build.upload.main\\":
+          - DEPRECATION: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"src/index.ts\\"
             \`\`\`
-          - ⚠️  DEPRECATION: \\"build.upload.dir\\":
+          - DEPRECATION: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
           - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
             \`\`\`
@@ -1582,9 +1582,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - ⚠️  DEPRECATION: \\"zone_id\\":
+            - DEPRECATION: \\"zone_id\\":
               This is unnecessary since we can deduce this from routes directly.
-            - ⚠️  DEPRECATION: \\"experimental_services\\":
+            - DEPRECATION: \\"experimental_services\\":
               The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
               \`\`\`
               [[unsafe.bindings]]
@@ -2806,9 +2806,9 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"env.ENV1\\" environment configuration
-              - ⚠️  DEPRECATION: \\"zone_id\\":
+              - DEPRECATION: \\"zone_id\\":
                 This is unnecessary since we can deduce this from routes directly.
-              - ⚠️  DEPRECATION: \\"experimental_services\\":
+              - DEPRECATION: \\"experimental_services\\":
                 The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
                 \`\`\`
                 [[unsafe.bindings]]

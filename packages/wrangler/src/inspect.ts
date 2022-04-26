@@ -5,6 +5,7 @@ import { URL } from "node:url";
 import { useEffect, useRef, useState } from "react";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
+import { logger } from "./logger";
 import { waitForPortToBeAvailable } from "./proxy";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
@@ -134,7 +135,7 @@ export default function useInspector(props: InspectorProps) {
   wsServer.on("connection", (ws: WebSocket) => {
     if (wsServer.clients.size > 1) {
       /** We only want to have one active Devtools instance at a time. */
-      console.error(
+      logger.error(
         "Tried to open a new devtools window when a previous one was already open."
       );
       ws.close(1013, "Too many clients; only one can be connected at a time");
@@ -165,7 +166,7 @@ export default function useInspector(props: InspectorProps) {
     }
     startInspectorProxy().catch((err) => {
       if ((err as { code: string }).code !== "ABORT_ERR") {
-        console.error(err);
+        logger.error("Failed to start inspector:", err);
       }
     });
     return () => {
@@ -254,9 +255,7 @@ export default function useInspector(props: InspectorProps) {
           const evt = JSON.parse(event.data);
           if (evt.method === "Runtime.exceptionThrown") {
             const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
-            console.error(
-              "🚨", // cheesy, but it works
-              // maybe we could use color here too.
+            logger.error(
               params.exceptionDetails.text,
               params.exceptionDetails.exception?.description ?? ""
             );
@@ -268,7 +267,7 @@ export default function useInspector(props: InspectorProps) {
           }
         } else {
           // We should never get here, but who know is 2022...
-          console.error("unrecognised devtools event:", event);
+          logger.error("Unrecognised devtools event:", event);
         }
       });
     }
@@ -287,7 +286,7 @@ export default function useInspector(props: InspectorProps) {
     });
 
     ws.on("unexpected-response", () => {
-      console.log("waiting for connection...");
+      logger.log("Waiting for connection...");
       /**
        * This usually means the worker is not "ready" yet
        * so we'll just retry the connection process
@@ -393,7 +392,7 @@ export default function useInspector(props: InspectorProps) {
            * happens on the first request. Maybe we should buffer
            * these messages too?
            */
-          console.error(e);
+          logger.error(e);
         }
       }
     }
@@ -618,7 +617,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
         break;
     }
   } else {
-    console.warn(`Unsupported console method: ${method}`);
-    console.log("console event:", evt);
+    logger.warn(`Unsupported console method: ${method}`);
+    logger.warn("console event:", evt);
   }
 }

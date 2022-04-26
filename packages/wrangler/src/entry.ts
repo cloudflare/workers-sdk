@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
+import { logger } from "./logger";
 import type { Config } from "./config";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
@@ -54,8 +55,8 @@ export async function getEntry(
     partitionDurableObjectBindings(config);
 
   if (command === "dev" && remoteBindings.length > 0) {
-    console.warn(
-      "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.\n" +
+    logger.warn(
+      "WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.\n" +
         "Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.\n" +
         "Remote Durable Objects that are affected:\n" +
         remoteBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")
@@ -86,7 +87,7 @@ export async function runCustomBuild(
 ) {
   if (build?.command) {
     // TODO: add a deprecation message here?
-    console.log("running:", build.command);
+    logger.log("Running custom build:", build.command);
     await execaCommand(build.command, {
       shell: true,
       // we keep these two as "inherit" so that
@@ -159,7 +160,7 @@ export default async function guessWorkerFormat(
     if (scriptExports.includes("default")) {
       guessedWorkerFormat = "modules";
     } else {
-      console.warn(
+      logger.warn(
         `The entrypoint ${path.relative(
           process.cwd(),
           entryFile

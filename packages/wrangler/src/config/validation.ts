@@ -1,5 +1,6 @@
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { logger } from "../logger";
 import { Diagnostics } from "./diagnostics";
 import {
   deprecated,
@@ -90,7 +91,7 @@ export function normalizeAndValidateConfig(
     `site.entry-point`,
     `The \`site.entry-point\` config field is no longer used.\nThe entry-point should be specified via the command line or the \`main\` config field.`,
     false,
-    "🚨 NO LONGER SUPPORTED",
+    "NO LONGER SUPPORTED",
     "error"
   );
 
@@ -118,7 +119,7 @@ export function normalizeAndValidateConfig(
 
   // TODO: remove this once service environments goes GA.
   if (!isLegacyEnv) {
-    console.warn(
+    logger.warn(
       "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
     );
   }

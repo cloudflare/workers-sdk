@@ -24,6 +24,7 @@ import { writeRoutesModule } from "../pages/functions/routes";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { FatalError } from "./errors";
+import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import { requireAuth } from "./user";
@@ -146,7 +147,7 @@ function getPort(pid: number) {
     const match = matches[0];
     if (match) return parseInt(match[1]);
   } catch (thrown) {
-    console.error(
+    logger.error(
       `Error scanning for ports of process with PID ${pid}: ${thrown}`
     );
   }
@@ -167,7 +168,7 @@ async function spawnProxyProcess({
     );
   }
 
-  console.log(`Running ${command.join(" ")}...`);
+  logger.log(`Running ${command.join(" ")}...`);
   const proxy = spawn(
     command[0].toString(),
     command.slice(1).map((value) => value.toString()),
@@ -184,25 +185,25 @@ async function spawnProxyProcess({
   });
 
   proxy.stdout.on("data", (data) => {
-    console.log(`[proxy]: ${data}`);
+    logger.log(`[proxy]: ${data}`);
   });
 
   proxy.stderr.on("data", (data) => {
-    console.error(`[proxy]: ${data}`);
+    logger.error(`[proxy]: ${data}`);
   });
 
   proxy.on("close", (code) => {
-    console.error(`Proxy exited with status ${code}.`);
+    logger.error(`Proxy exited with status ${code}.`);
   });
 
   // Wait for proxy process to start...
   while (!proxy.pid) {}
 
   if (port === undefined) {
-    console.log(
+    logger.log(
       `Sleeping ${SECONDS_TO_WAIT_FOR_PROXY} seconds to allow proxy process to start before attempting to automatically determine port...`
     );
-    console.log("To skip, specify the proxy port with --proxy.");
+    logger.log("To skip, specify the proxy port with --proxy.");
     await sleep(SECONDS_TO_WAIT_FOR_PROXY * 1000);
 
     port = getPids(proxy.pid)
@@ -216,7 +217,7 @@ async function spawnProxyProcess({
         1
       );
     } else {
-      console.log(`Automatically determined the proxy port to be ${port}.`);
+      logger.log(`Automatically determined the proxy port to be ${port}.`);
     }
   }
 
@@ -483,12 +484,12 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   }).on("change", (path) => {
     switch (path) {
       case headersFile: {
-        console.log("_headers modified. Re-evaluating...");
+        logger.log("_headers modified. Re-evaluating...");
         headersMatcher = generateHeadersMatcher(headersFile);
         break;
       }
       case redirectsFile: {
-        console.log("_redirects modified. Re-evaluating...");
+        logger.log("_redirects modified. Re-evaluating...");
         redirectsMatcher = generateRedirectsMatcher(redirectsFile);
         break;
       }
@@ -1180,10 +1181,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         _: [_pages, _dev, ...remaining],
       }) => {
         // Beta message for `wrangler pages <commands>` usage
-        console.log(pagesBetaWarning);
+        logger.log(pagesBetaWarning);
 
         if (!local) {
-          console.error("Only local mode is supported at the moment.");
+          logger.error("Only local mode is supported at the moment.");
           return;
         }
 
@@ -1212,7 +1213,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         if (usingFunctions) {
           const outfile = join(tmpdir(), "./functionsWorker.js");
 
-          console.log(`Compiling worker to "${outfile}"...`);
+          logger.log(`Compiling worker to "${outfile}"...`);
 
           try {
             await buildFunctions({
@@ -1254,7 +1255,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               scriptPath,
             };
           } else {
-            console.log("No functions. Shimming...");
+            logger.log("No functions. Shimming...");
             miniflareArgs = {
               // TODO: The fact that these request/response hacks are necessary is ridiculous.
               // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
@@ -1321,7 +1322,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   url.host = `localhost:${proxyPort}`;
                   return await fetch(url, request);
                 } catch (thrown) {
-                  console.error(`Could not proxy request: ${thrown}`);
+                  logger.error(`Could not proxy request: ${thrown}`);
 
                   // TODO: Pretty error page
                   return new Response(
@@ -1333,7 +1334,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 try {
                   return await assetsFetch(request);
                 } catch (thrown) {
-                  console.error(`Could not serve static asset: ${thrown}`);
+                  logger.error(`Could not serve static asset: ${thrown}`);
 
                   // TODO: Pretty error page
                   return new Response(
@@ -1356,7 +1357,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         try {
           // `startServer` might throw if user code contains errors
           const server = await miniflare.startServer();
-          console.log(`Serving at http://localhost:${port}/`);
+          logger.log(`Serving at http://localhost:${port}/`);
 
           if (process.env.BROWSER !== "none") {
             await openInBrowser(`http://localhost:${port}/`);
@@ -1446,7 +1447,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           plugin,
         }) => {
           // Beta message for `wrangler pages <commands>` usage
-          console.log(pagesBetaWarning);
+          logger.log(pagesBetaWarning);
 
           await buildFunctions({
             outfile,
@@ -1526,10 +1527,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 }),
               }
             );
-            console.log(
+            logger.log(
               `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
             );
-            console.log(
+            logger.log(
               `To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
             );
           }
