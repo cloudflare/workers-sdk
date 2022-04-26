@@ -77,7 +77,7 @@ describe("guess worker format", () => {
     );
     expect(guess).toBe("service-worker");
     expect(std.warn).toMatchInlineSnapshot(
-      `"⚠  The entrypoint index.ts has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format..."`
+      `"[33m⚠  [39mThe entrypoint index.ts has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format..."`
     );
   });
 });

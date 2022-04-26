@@ -92,7 +92,7 @@ describe("wrangler", () => {
           -h, --help        Show help  [boolean]
           -v, --version     Show version number  [boolean]
               --legacy-env  Use legacy environments  [boolean]
-        ✖  Unknown argument: invalid-command"
+        [31m✖  [39mUnknown argument: invalid-command"
       `);
     });
   });

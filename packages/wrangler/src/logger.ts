@@ -1,5 +1,5 @@
 import { format } from "node:util";
-import chalk from "chalk";
+import c from "ansi-colors";
 
 const LOGGER_LEVELS = {
   error: 0,
@@ -31,9 +31,9 @@ class Logger {
   private getLevelSymbol(messageLevel: LoggerLevel): string {
     switch (messageLevel) {
       case "error":
-        return process.stdout.isTTY ? chalk.red("✖  ") : "✖  ";
+        return c.red("✖  ");
       case "warn":
-        return process.stdout.isTTY ? chalk.yellow("⚠  ") : "⚠  ";
+        return c.yellow("⚠  ");
       default:
         return "";
     }
