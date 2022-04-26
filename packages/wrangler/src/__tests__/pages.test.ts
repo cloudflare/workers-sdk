@@ -1,11 +1,13 @@
+import { writeFileSync } from "node:fs";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Project, Deployment } from "../pages";
+import type { File, FormData } from "undici";
 
-describe("subcommand implicit help ran on incomplete command execution", () => {
+describe("pages", () => {
   runInTempDir();
   const std = mockConsoleMethods();
   function endEventLoop() {
@@ -25,6 +27,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
         wrangler pages dev [directory] [-- command]  🧑‍💻 Develop your full-stack Pages application locally
         wrangler pages project                       ⚡️ Interact with your Pages projects
         wrangler pages deployment                    🚀 Interact with the deployments of a project
+        wrangler pages publish [directory]           🆙 Publish a directory of static assets as a Pages deployment
 
       Flags:
         -c, --config      Path to .toml configuration file  [string]
@@ -49,8 +52,6 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       );
     });
 
-    // Note that `wrangler pages functions` does nothing...
-
     it("should display for pages:functions:build", async () => {
       await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
@@ -67,6 +68,7 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
     afterEach(() => {
       unsetAllMocks();
     });
+
     function mockListRequest(projects: unknown[]) {
       const requests = { count: 0 };
       setMockResponse(
@@ -247,6 +249,102 @@ describe("subcommand implicit help ran on incomplete command execution", () => {
       await runWrangler("pages deployment list --project=images");
 
       expect(requests.count).toBe(1);
+    });
+  });
+
+  describe("deployment create", () => {
+    let actualProcessEnvCI: string | undefined;
+
+    mockAccountId();
+    mockApiToken();
+    runInTempDir();
+
+    beforeEach(() => {
+      actualProcessEnvCI = process.env.CI;
+      process.env.CI = "true";
+    });
+
+    afterEach(() => {
+      unsetAllMocks();
+      process.env.CI = actualProcessEnvCI;
+    });
+
+    it("should be aliased with 'wrangler pages publish'", async () => {
+      await runWrangler("pages publish --help");
+      await endEventLoop();
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "wrangler pages publish [directory]
+
+        🆙 Publish a directory of static assets as a Pages deployment
+
+        Positionals:
+          directory  The directory of Pages Functions  [string] [default: \\"functions\\"]
+
+        Flags:
+          -c, --config      Path to .toml configuration file  [string]
+          -h, --help        Show help  [boolean]
+          -v, --version     Show version number  [boolean]
+              --legacy-env  Use legacy environments  [boolean]
+
+        Options:
+              --project         The name of the project you want to list deployments for  [string]
+              --branch          The branch of the project you want to list deployments for  [string]
+              --commit-hash     The branch of the project you want to list deployments for  [string]
+              --commit-message  The branch of the project you want to list deployments for  [string]
+              --commit-dirty    The branch of the project you want to list deployments for  [boolean]
+
+        🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+      `);
+    });
+
+    it("should upload a directory of files", async () => {
+      writeFileSync("logo.png", "foobar");
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/file",
+        async ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+          expect(init.method).toEqual("POST");
+          const body = init.body as FormData;
+          const logoPNGFile = body.get("file") as File;
+          expect(await logoPNGFile.text()).toEqual("foobar");
+          expect(logoPNGFile.name).toEqual("logo.png");
+
+          return {
+            id: "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+          };
+        }
+      );
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployment",
+        async ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+          expect(init.method).toEqual("POST");
+          const body = init.body as FormData;
+          const manifest = JSON.parse(body.get("manifest") as string);
+          expect(manifest).toMatchInlineSnapshot(`
+            Object {
+              "logo.png": "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+            }
+          `);
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      await runWrangler("pages publish . --project=foo");
+
+      // TODO: Unmounting somehow loses this output
+
+      // expect(std.out).toMatchInlineSnapshot(`
+      //   "✨ Success! Uploaded 1 files (TIMINGS)
+
+      //   ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      // `);
     });
   });
 });

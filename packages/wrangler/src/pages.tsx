@@ -2,15 +2,21 @@
 
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
+import { cwd } from "node:process";
 import { URL } from "node:url";
+import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
-import { render } from "ink";
+import { render, Text } from "ink";
+import Spinner from "ink-spinner";
 import Table from "ink-table";
 import { getType } from "mime";
+import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
+import { File, FormData } from "undici";
 import { buildPlugin } from "../pages/functions/buildPlugin";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
@@ -25,7 +31,7 @@ import type { Config } from "../pages/functions/routes";
 import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
-import type { BuilderCallback } from "yargs";
+import type { BuilderCallback, CommandModule } from "yargs";
 
 type ConfigPath = string | undefined;
 
@@ -766,6 +772,338 @@ async function buildFunctions({
   }
 }
 
+interface CreateDeploymentArgs {
+  directory: string;
+  project?: string;
+  branch?: string;
+  commitHash?: string;
+  commitMessage?: string;
+  commitDirty?: boolean;
+}
+
+const createDeployment: CommandModule<
+  CreateDeploymentArgs,
+  CreateDeploymentArgs
+> = {
+  describe: "🆙 Publish a directory of static assets as a Pages deployment",
+  builder: (yargs) => {
+    return yargs
+      .positional("directory", {
+        type: "string",
+        default: "functions",
+        description: "The directory of Pages Functions",
+      })
+      .options({
+        project: {
+          type: "string",
+          description:
+            "The name of the project you want to list deployments for",
+        },
+        branch: {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-hash": {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-message": {
+          type: "string",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+        "commit-dirty": {
+          type: "boolean",
+          description:
+            "The branch of the project you want to list deployments for",
+        },
+      })
+      .epilogue(pagesBetaWarning);
+  },
+  handler: async (args) => {
+    const { directory, project } = args;
+    let { branch, commitHash, commitMessage, commitDirty } = args;
+
+    // TODO: Project picker #821
+
+    // We infer git info by default is not passed in
+
+    let isGitDir = true;
+    try {
+      execSync(`git rev-parse --is-inside-work-tree`, {
+        stdio: "ignore",
+      });
+    } catch (err) {
+      isGitDir = false;
+    }
+
+    let isGitDirty = false;
+
+    if (isGitDir) {
+      try {
+        isGitDirty = Boolean(
+          execSync(`git status --porcelain`).toString().length
+        );
+
+        if (!branch) {
+          branch = execSync(`git branch | grep " * "`)
+            .toString()
+            .replace("* ", "")
+            .trim();
+        }
+
+        if (!commitHash) {
+          commitHash = execSync(`git rev-parse HEAD`).toString().trim();
+        }
+
+        if (!commitMessage) {
+          commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
+            .toString()
+            .trim();
+        }
+      } catch (err) {}
+
+      if (isGitDirty && !commitDirty) {
+        console.warn(
+          `Warning: Your working directory is a git repo and has uncommitted changes\nTo silense this warning, pass in --commit-dirty=true`
+        );
+      }
+
+      if (commitDirty === undefined) {
+        commitDirty = isGitDirty;
+      }
+    }
+
+    const config = readConfig(args.config as ConfigPath, args);
+    const accountId = await requireAuth(config);
+
+    type File = {
+      content: Buffer;
+      metadata: Metadata;
+    };
+
+    type Metadata = {
+      sizeInBytes: number;
+      hash: string;
+    };
+
+    const IGNORE_LIST = [
+      "_worker.js",
+      "_redirects",
+      "_headers",
+      ".DS_Store",
+      "node_modules",
+    ];
+
+    const walk = async (
+      dir: string,
+      fileMap: Map<string, File> = new Map(),
+      depth = 0
+    ) => {
+      const files = await readdir(dir);
+
+      await Promise.all(
+        files.map(async (file) => {
+          const filepath = join(dir, file);
+          const filestat = await stat(filepath);
+
+          if (IGNORE_LIST.includes(file)) {
+            return;
+          }
+
+          if (filestat.isSymbolicLink()) {
+            return;
+          }
+
+          if (filestat.isDirectory()) {
+            fileMap = await walk(filepath, fileMap, depth + 1);
+          } else {
+            let name;
+            if (depth) {
+              name = join(...filepath.split(sep).slice(1));
+            } else {
+              name = file;
+            }
+
+            // TODO: Move this to later so we don't hold as much in memory
+            const fileContent = await readFile(filepath);
+
+            const base64Content = fileContent.toString("base64");
+            const extension =
+              name.split(".").length > 1 ? name.split(".").at(-1) || "" : "";
+
+            const content = base64Content + extension;
+
+            if (filestat.size > 25 * 1024 * 1024) {
+              throw new Error(
+                `Error: Pages only supports files up to ${prettyBytes(
+                  25 * 1024 * 1024
+                )} in size\n${name} is ${prettyBytes(filestat.size)} in size`
+              );
+            }
+
+            fileMap.set(name, {
+              content: fileContent,
+              metadata: {
+                sizeInBytes: filestat.size,
+                hash: hash(content).toString("hex"),
+              },
+            });
+          }
+        })
+      );
+
+      return fileMap;
+    };
+
+    const fileMap = await walk(directory);
+
+    const start = Date.now();
+
+    const files: Array<Promise<void>> = [];
+
+    if (fileMap.size > 20000) {
+      throw new Error(
+        `Error: Pages only supports up to 20,000 files in a deployment at the moment\nTry a smaller project perhaps?`
+      );
+    }
+
+    let counter = 0;
+
+    const { rerender, unmount } = render(
+      <Progress done={counter} total={fileMap.size} />
+    );
+
+    fileMap.forEach((file: File, name: string) => {
+      const form = new FormData();
+      form.append(
+        "file",
+        new File([new Uint8Array(file.content.buffer)], name)
+      );
+
+      // TODO: Consider a retry
+
+      const promise = fetchResult<{ id: string }>(
+        `/accounts/${accountId}/pages/projects/${project}/file`,
+        {
+          method: "POST",
+          body: form,
+        }
+      ).then((response) => {
+        counter++;
+        rerender(<Progress done={counter} total={fileMap.size} />);
+        if (response.id != file.metadata.hash) {
+          throw new Error(
+            `Looks like there was an issue uploading that ${name}. Try again perhaps?`
+          );
+        }
+      });
+
+      files.push(promise);
+    });
+
+    await Promise.all(files);
+
+    unmount();
+
+    const uploadMs = Date.now() - start;
+
+    console.log(
+      `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
+    );
+
+    const formData = new FormData();
+
+    formData.append(
+      "manifest",
+      JSON.stringify(
+        Object.fromEntries(
+          [...fileMap.entries()].map(([fileName, file]) => [
+            fileName,
+            file.metadata.hash,
+          ])
+        )
+      )
+    );
+
+    if (branch) {
+      formData.append("branch", branch);
+    }
+
+    if (commitMessage) {
+      formData.append("commit_message", commitMessage);
+    }
+
+    if (commitHash) {
+      formData.append("commit_hash", commitHash);
+    }
+
+    if (commitDirty !== undefined) {
+      formData.append("commit_dirty", commitDirty);
+    }
+
+    let builtFunctions: string | undefined = undefined;
+    const functionsDirectory = join(cwd(), "functions");
+    if (existsSync(functionsDirectory)) {
+      const outfile = join(tmpdir(), "./functionsWorker.js");
+
+      await new Promise((resolve) =>
+        buildFunctions({
+          outfile,
+          functionsDirectory,
+          onEnd: () => resolve(null),
+        })
+      );
+
+      builtFunctions = readFileSync(outfile, "utf-8");
+    }
+
+    let _headers: string | undefined,
+      _redirects: string | undefined,
+      _workerJS: string | undefined;
+
+    try {
+      _headers = readFileSync(join(directory, "_headers"), "utf-8");
+    } catch {}
+
+    try {
+      _redirects = readFileSync(join(directory, "_redirects"), "utf-8");
+    } catch {}
+
+    try {
+      _workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
+    } catch {}
+
+    if (_headers) {
+      formData.append("_headers", new File([_headers], "_headers"));
+    }
+
+    if (_redirects) {
+      formData.append("_redirects", new File([_redirects], "_redirects"));
+    }
+
+    if (builtFunctions) {
+      formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
+    } else if (_workerJS) {
+      formData.append("_worker.js", new File([_workerJS], "_worker.js"));
+    }
+
+    const deploymentResponse = await fetchResult<Deployment>(
+      `/accounts/${accountId}/pages/projects/${project}/deployment`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    console.log(
+      `✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
+    );
+  },
+};
+
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
@@ -1254,8 +1592,16 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               render(<Table data={data}></Table>);
             }
           )
+          .command({
+            command: "create [directory]",
+            ...createDeployment,
+          } as CommandModule)
           .epilogue(pagesBetaWarning)
-    );
+    )
+    .command({
+      command: "publish [directory]",
+      ...createDeployment,
+    } as CommandModule);
 };
 
 const invalidAssetsFetch: typeof fetch = () => {
@@ -1289,3 +1635,18 @@ const listProjects = async ({
   }
   return results;
 };
+
+function formatTime(duration: number) {
+  return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+function Progress({ done, total }: { done: number; total: number }) {
+  return (
+    <>
+      <Text>
+        <Spinner type="earth" />
+        {` Uploading... (${done}/${total})\n`}
+      </Text>
+    </>
+  );
+}
