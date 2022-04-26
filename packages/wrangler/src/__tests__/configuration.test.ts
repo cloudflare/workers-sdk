@@ -549,7 +549,7 @@ describe("normalizeAndValidateConfig()", () => {
       const resolvedMain = path.resolve(process.cwd(), main);
 
       const expectedConfig: RawEnvironment = {
-        name: "NAME",
+        name: "mock-name",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
@@ -728,9 +728,82 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"jsx_factory\\" to be of type string but got 999.
           - Expected \\"jsx_fragment\\" to be of type string but got 1000.
           - Expected \\"tsconfig\\" to be of type string but got true.
-          - Expected \\"name\\" to be of type string but got 111.
+          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
           - Expected \\"main\\" to be of type string but got 1333.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
+      `);
+    });
+
+    it("should error on invalid `name` value with spaces", () => {
+      const expectedConfig: RawEnvironment = {
+        name: "NCC 1701 D",
+      } as unknown as RawEnvironment;
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        { env: undefined }
+      );
+
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
+      `);
+    });
+
+    it("should be valid `name` with underscores", () => {
+      const expectedConfig: RawEnvironment = {
+        name: "enterprise_nx_01",
+      } as unknown as RawEnvironment;
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        { env: undefined }
+      );
+
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(diagnostics.hasErrors()).toBe(false);
+    });
+
+    it("should error on invalid `name` value with special characters", () => {
+      const expectedConfig: RawEnvironment = {
+        name: "Thy'lek-Shran",
+      } as unknown as RawEnvironment;
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        { env: undefined }
+      );
+
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
+      `);
+    });
+
+    it("should error on invalid `name` value with only special characters", () => {
+      const expectedConfig: RawEnvironment = {
+        name: "!@#$%^&*(()",
+      } as unknown as RawEnvironment;
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        undefined,
+        { env: undefined }
+      );
+
+      expect(config).toEqual(expect.objectContaining(expectedConfig));
+      expect(diagnostics.hasWarnings()).toBe(false);
+      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
       `);
     });
 
@@ -1489,7 +1562,7 @@ describe("normalizeAndValidateConfig()", () => {
           zone_id: "ZONE_ID",
           experimental_services: [
             {
-              name: "NAME",
+              name: "mock-name",
               service: "SERVICE",
               environment: "ENV",
             },
@@ -1515,7 +1588,7 @@ describe("normalizeAndValidateConfig()", () => {
               The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
               \`\`\`
               [[unsafe.bindings]]
-              name = \\"NAME\\"
+              name = \\"mock-name\\"
               type = \\"service\\"
               service = \\"SERVICE\\"
               environment = \\"ENV\\"
@@ -1595,7 +1668,7 @@ describe("normalizeAndValidateConfig()", () => {
       const main = "src/index.ts";
       const resolvedMain = path.resolve(process.cwd(), main);
       const rawConfig: RawConfig = {
-        name: "NAME",
+        name: "mock-name",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
@@ -1615,16 +1688,16 @@ describe("normalizeAndValidateConfig()", () => {
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
-        { ...rawConfig, env: { DEV: {} } },
+        { ...rawConfig, env: { dev: {} } },
         undefined,
-        { env: "DEV" }
+        { env: "dev" }
       );
 
       expect(config).toEqual(
         expect.objectContaining({
           ...rawConfig,
           main: resolvedMain,
-          name: "NAME-DEV",
+          name: "mock-name-dev",
         })
       );
       expect(diagnostics.hasErrors()).toBe(false);
@@ -1635,7 +1708,7 @@ describe("normalizeAndValidateConfig()", () => {
       const main = "src/index.ts";
       const resolvedMain = path.resolve(process.cwd(), main);
       const rawEnv: RawEnvironment = {
-        name: "ENV_NAME",
+        name: "mock-env-name",
         account_id: "ENV_ACCOUNT_ID",
         compatibility_date: "2022-02-02",
         compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -1654,7 +1727,7 @@ describe("normalizeAndValidateConfig()", () => {
         },
       };
       const rawConfig: RawConfig = {
-        name: "NAME",
+        name: "mock-name",
         account_id: "ACCOUNT_ID",
         compatibility_date: "2022-01-01",
         compatibility_flags: ["FLAG1", "FLAG2"],
@@ -1692,7 +1765,7 @@ describe("normalizeAndValidateConfig()", () => {
     describe("non-legacy", () => {
       it("should use top-level `name` field", () => {
         const rawConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           legacy_env: false,
           env: { DEV: {} },
         };
@@ -1703,7 +1776,7 @@ describe("normalizeAndValidateConfig()", () => {
           { env: "DEV" }
         );
 
-        expect(config.name).toEqual("NAME");
+        expect(config.name).toEqual("mock-name");
         expect(diagnostics.hasErrors()).toBe(false);
         expect(diagnostics.hasWarnings()).toBe(false);
       });
@@ -1713,7 +1786,7 @@ describe("normalizeAndValidateConfig()", () => {
           legacy_env: false,
           env: {
             DEV: {
-              name: "ENV_NAME",
+              name: "mock-env-name",
             },
           },
         };
@@ -1737,11 +1810,11 @@ describe("normalizeAndValidateConfig()", () => {
 
       it("should error if top-level config and a named environment both contain a `name` field", () => {
         const rawConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           legacy_env: false,
           env: {
             DEV: {
-              name: "ENV_NAME",
+              name: "mock-env-name",
             },
           },
         };
@@ -1752,7 +1825,7 @@ describe("normalizeAndValidateConfig()", () => {
           { env: "DEV" }
         );
 
-        expect(config.name).toEqual("NAME");
+        expect(config.name).toEqual("mock-name");
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -1928,7 +2001,7 @@ describe("normalizeAndValidateConfig()", () => {
             - Expected \\"jsx_factory\\" to be of type string but got 999.
             - Expected \\"jsx_fragment\\" to be of type string but got 1000.
             - Expected \\"tsconfig\\" to be of type string but got 123.
-            - Expected \\"name\\" to be of type string but got 111.
+            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
             - Expected \\"main\\" to be of type string but got 1333.
             - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
       `);
@@ -2707,7 +2780,7 @@ describe("normalizeAndValidateConfig()", () => {
           zone_id: "ZONE_ID",
           experimental_services: [
             {
-              name: "NAME",
+              name: "mock-name",
               service: "SERVICE",
               environment: "ENV",
             },
@@ -2739,7 +2812,7 @@ describe("normalizeAndValidateConfig()", () => {
                 The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
                 \`\`\`
                 [[unsafe.bindings]]
-                name = \\"NAME\\"
+                name = \\"mock-name\\"
                 type = \\"service\\"
                 service = \\"SERVICE\\"
                 environment = \\"ENV\\"
@@ -2751,7 +2824,7 @@ describe("normalizeAndValidateConfig()", () => {
     describe("route & routes fields", () => {
       it("should error if both route and routes are specified in the same environment", () => {
         const environment: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2764,7 +2837,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const expectedConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           account_id: "ACCOUNT_ID",
           compatibility_date: "2022-01-01",
           compatibility_flags: ["FLAG1", "FLAG2"],
@@ -2799,7 +2872,7 @@ describe("normalizeAndValidateConfig()", () => {
 
       it("should error if both route and routes are specified in the top-level environment", () => {
         const environment: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2811,7 +2884,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const expectedConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           account_id: "ACCOUNT_ID",
           compatibility_date: "2022-01-01",
           compatibility_flags: ["FLAG1", "FLAG2"],
@@ -2845,7 +2918,7 @@ describe("normalizeAndValidateConfig()", () => {
 
       it("should not error if <env>.route and <top-level>.routes are specified", () => {
         const environment: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2857,7 +2930,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const expectedConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           account_id: "ACCOUNT_ID",
           compatibility_date: "2022-01-01",
           compatibility_flags: ["FLAG1", "FLAG2"],
@@ -2885,7 +2958,7 @@ describe("normalizeAndValidateConfig()", () => {
 
       it("should not error if <env>.routes and <top-level>.route are specified", () => {
         const environment: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2897,7 +2970,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const expectedConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           account_id: "ACCOUNT_ID",
           compatibility_date: "2022-01-01",
           compatibility_flags: ["FLAG1", "FLAG2"],
@@ -2925,7 +2998,7 @@ describe("normalizeAndValidateConfig()", () => {
 
       it("should not error if <env1>.route and <env2>.routes are specified", () => {
         const environment1: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2937,7 +3010,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const environment2: RawEnvironment = {
-          name: "ENV_NAME",
+          name: "mock-env-name",
           account_id: "ENV_ACCOUNT_ID",
           compatibility_date: "2022-02-02",
           compatibility_flags: ["ENV_FLAG1", "ENV_FLAG2"],
@@ -2949,7 +3022,7 @@ describe("normalizeAndValidateConfig()", () => {
           usage_model: "unbound",
         };
         const expectedConfig: RawConfig = {
-          name: "NAME",
+          name: "mock-name",
           account_id: "ACCOUNT_ID",
           compatibility_date: "2022-01-01",
           compatibility_flags: ["FLAG1", "FLAG2"],

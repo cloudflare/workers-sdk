@@ -150,11 +150,11 @@ describe("wrangler", () => {
       });
 
       it("should create a namespace using configured worker name", async () => {
-        writeFileSync("./wrangler.toml", 'name = "otherWorker"', "utf-8");
-        mockCreateRequest("otherWorker-UnitTestNamespace");
+        writeFileSync("./wrangler.toml", 'name = "other-worker"', "utf-8");
+        mockCreateRequest("other-worker-UnitTestNamespace");
         await runWrangler("kv:namespace create UnitTestNamespace");
         expect(std.out).toMatchInlineSnapshot(`
-            "🌀 Creating namespace with title \\"otherWorker-UnitTestNamespace\\"
+            "🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
             ✨ Success!
             Add the following to your configuration file in your kv_namespaces array:
             { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
@@ -1365,7 +1365,7 @@ function writeWranglerConfig() {
   writeFileSync(
     "./wrangler.toml",
     [
-      'name = "otherWorker"',
+      'name = "other-worker"',
       "kv_namespaces = [",
       '  { binding = "someBinding", id = "bound-id", preview_id = "preview-bound-id" }',
       "]",
