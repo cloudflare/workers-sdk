@@ -10,6 +10,14 @@ const LOGGER_LEVELS = {
 
 type LoggerLevel = keyof typeof LOGGER_LEVELS;
 
+/** A map from LOGGER_LEVEL to the error `kind` needed by `formatMessagesSync()`. */
+const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
+  error: "error",
+  warn: "warning",
+  log: undefined,
+  debug: undefined,
+} as const;
+
 class Logger {
   constructor(public loggerLevel: LoggerLevel = "log") {}
 
@@ -25,18 +33,13 @@ class Logger {
   }
 
   formatMessage(level: LoggerLevel, text: string): string {
-    let kind: "error" | "warning" | undefined;
-    if (level === "error") {
-      kind = "error";
-    } else if (level === "warn") {
-      kind = "warning";
-    }
+    const kind = LOGGER_LEVEL_FORMAT_TYPE_MAP[level];
     if (kind) {
       return formatMessagesSync([{ text }], {
         color: true,
         kind,
         terminalWidth: process.stdout.columns,
-      })[0].replace(/^X /, "✘ ");
+      })[0];
     } else {
       return text;
     }

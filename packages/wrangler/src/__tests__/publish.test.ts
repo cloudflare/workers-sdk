@@ -753,7 +753,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
           - \\"site.bucket\\" is a required field.[0m
 
         "
@@ -798,7 +798,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
           - NO LONGER SUPPORTED: \\"site.entry-point\\":
             The \`site.entry-point\` config field is no longer used.
             The entry-point should be specified via the command line or the \`main\` config field.[0m
@@ -829,7 +829,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.[0m
 
         "
       `);
@@ -1490,7 +1490,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mFile assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
         "
       `);
@@ -1530,7 +1530,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
 
         "
       `);
@@ -2241,7 +2241,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"[0m
 
         "
       `);
@@ -2517,7 +2517,7 @@ export default{
         expect(std).toMatchInlineSnapshot(`
           Object {
             "debug": "",
-            "err": "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mPublishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739[0m
+            "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mPublishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739[0m
 
           ",
             "out": "
@@ -2777,7 +2777,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
           - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
           - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
           - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
@@ -2873,7 +2873,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
           - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
           - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
           - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
@@ -3005,7 +3005,7 @@ export default{
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
           - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
           - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
           - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
@@ -3073,7 +3073,7 @@ export default{
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code[0m
 
           "
         `);
@@ -3204,7 +3204,7 @@ export default{
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
           "
         `);
@@ -3307,7 +3307,7 @@ export default{
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
           "
         `);

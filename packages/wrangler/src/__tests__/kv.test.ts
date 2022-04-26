@@ -63,7 +63,7 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -93,7 +93,7 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
           "
         `);
@@ -124,7 +124,7 @@ describe("wrangler", () => {
           Options:
             -e, --env      Perform on a specific environment  [string]
                 --preview  Interact with a preview namespace  [boolean]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
 
           "
         `);
@@ -291,7 +291,7 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to delete  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.
           A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
           "
@@ -489,7 +489,7 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -526,7 +526,7 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
           "
         `);
@@ -563,7 +563,7 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
           "
         `);
@@ -600,7 +600,7 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
 
           "
         `);
@@ -637,7 +637,7 @@ describe("wrangler", () => {
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
                 --path          Read value from the file at a given path  [string]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
 
           "
         `);
@@ -656,7 +656,7 @@ describe("wrangler", () => {
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
           "
         `);
@@ -678,7 +678,7 @@ describe("wrangler", () => {
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
 
           "
         `);
@@ -840,7 +840,7 @@ describe("wrangler", () => {
           `"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
         );
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
           "
         `);
@@ -937,7 +937,7 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -969,7 +969,7 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
           "
         `);
@@ -1002,7 +1002,7 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
           "
         `);
@@ -1020,7 +1020,7 @@ describe("wrangler", () => {
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
           "
         `);
@@ -1082,7 +1082,7 @@ describe("wrangler", () => {
         );
 
         expect(std.err).toMatchInlineSnapshot(`
-          "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
           "
         `);

@@ -19,7 +19,7 @@ describe("logger", () => {
       "
     `);
     expect(std.err).toMatchInlineSnapshot(`
-      "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+      "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
       "
     `);
@@ -41,7 +41,7 @@ describe("logger", () => {
         "
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
         "
       `);
@@ -64,7 +64,7 @@ describe("logger", () => {
         "
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
         "
       `);
@@ -87,7 +87,7 @@ describe("logger", () => {
         "
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
         "
       `);
@@ -106,7 +106,7 @@ describe("logger", () => {
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
         "
       `);

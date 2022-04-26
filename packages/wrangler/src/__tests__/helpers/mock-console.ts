@@ -26,8 +26,8 @@ const std = {
 };
 
 function normalizeOutput(spy: jest.SpyInstance): string {
-  return stripTrailingWhitespace(
-    normalizeSlashes(stripTimings(captureCalls(spy)))
+  return normalizeErrorMarkers(
+    stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
   );
 }
 
@@ -51,6 +51,15 @@ export function mockConsoleMethods() {
     warnSpy.mockRestore();
   });
   return std;
+}
+
+/**
+ * Normalize error `X` markers.
+ *
+ * Windows gets a different character.
+ */
+function normalizeErrorMarkers(str: string): string {
+  return str.replaceAll("✘", "X");
 }
 
 /**

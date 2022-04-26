@@ -380,10 +380,10 @@ describe("tail", () => {
           (error) 1234"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
 
 
-        [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
+        [31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
 
         "
       `);
