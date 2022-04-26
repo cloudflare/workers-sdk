@@ -1013,7 +1013,6 @@ async function refreshToken(): Promise<boolean> {
     writeAuthConfigFile({ oauth_token, expiration_time, refresh_token });
     return true;
   } catch (err) {
-    console.error(err);
     return false;
   }
 }

@@ -87,7 +87,7 @@ describe("User", () => {
   });
 
   // TODO: Improve OAuth mocking to handle `/token` endpoints from different calls
-  it("should report error message for failed token refresh", async () => {
+  it("should handle errors for failed token refresh", async () => {
     mockOAuthServerCallback();
     writeAuthConfigFile({
       oauth_token: "hunter2",
@@ -100,9 +100,10 @@ describe("User", () => {
     });
 
     // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-    await expect(requireAuth({} as Config, false)).rejects.toThrowError();
-    expect(std.err).toContain(
-      `Error: <html> <body> This shouldn't be sent, but should be handled </body> </html>`
+    await expect(
+      requireAuth({} as Config, false)
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Did not login, quitting..."`
     );
   });
 
