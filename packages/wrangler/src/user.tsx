@@ -246,6 +246,15 @@ const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * Try to read the Wrangler oauth callback URL from the environment.
+ */
+ const getWranglerOauthCallbackBaseURL = getEnvironmentVariableFactory({
+  variableName: "WRANGLER_OAUTH_CALLBACK_BASE_URL",
+  defaultValue: "http://localhost:8976"
+});
+
+
+/**
  * An implementation of rfc6749#section-4.1 and rfc7636.
  */
 
@@ -339,7 +348,7 @@ export function validateScopeKeys(
 const CLIENT_ID = "54d11594-84e4-41aa-b438-e81b8fa78ee7";
 const AUTH_URL = "https://dash.cloudflare.com/oauth2/auth";
 const TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
-const CALLBACK_URL = "http://localhost:8976/oauth/callback";
+const CALLBACK_URL = `${getWranglerOauthCallbackBaseURL()}/oauth/callback`
 const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
 
 let LocalState: State = getAuthTokens();
