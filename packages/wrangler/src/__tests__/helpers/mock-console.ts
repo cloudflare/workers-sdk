@@ -5,11 +5,15 @@ import * as util from "node:util";
  * assert on the values they're called with in our tests.
  */
 
-let logSpy: jest.SpyInstance,
+let debugSpy: jest.SpyInstance,
+  logSpy: jest.SpyInstance,
   errorSpy: jest.SpyInstance,
   warnSpy: jest.SpyInstance;
 
 const std = {
+  get debug() {
+    return normalizeOutput(debugSpy);
+  },
   get out() {
     return normalizeOutput(logSpy);
   },
@@ -22,8 +26,8 @@ const std = {
 };
 
 function normalizeOutput(spy: jest.SpyInstance): string {
-  return stripTrailingWhitespace(
-    normalizeSlashes(stripTimings(captureCalls(spy)))
+  return normalizeErrorMarkers(
+    stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
   );
 }
 
@@ -35,16 +39,27 @@ function captureCalls(spy: jest.SpyInstance): string {
 
 export function mockConsoleMethods() {
   beforeEach(() => {
+    debugSpy = jest.spyOn(console, "debug").mockImplementation();
     logSpy = jest.spyOn(console, "log").mockImplementation();
     errorSpy = jest.spyOn(console, "error").mockImplementation();
     warnSpy = jest.spyOn(console, "warn").mockImplementation();
   });
   afterEach(() => {
+    debugSpy.mockRestore();
     logSpy.mockRestore();
     errorSpy.mockRestore();
     warnSpy.mockRestore();
   });
   return std;
+}
+
+/**
+ * Normalize error `X` markers.
+ *
+ * Windows gets a different character.
+ */
+function normalizeErrorMarkers(str: string): string {
+  return str.replaceAll("✘", "X");
 }
 
 /**

@@ -14,7 +14,7 @@ export function deprecated<T extends object>(
   fieldPath: DeepKeyOf<T>,
   message: string,
   remove: boolean,
-  title = "⚠️  DEPRECATION",
+  title = "DEPRECATION",
   type: "warning" | "error" = "warning"
 ): void {
   const diagnosticMessage = `${title}: "${fieldPath}":\n${message}`;

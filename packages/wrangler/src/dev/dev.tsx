@@ -9,6 +9,7 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import { runCustomBuild } from "../entry";
+import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { reportError } from "../reporting";
 import { getAPIToken } from "../user";
@@ -212,7 +213,9 @@ function useTmpDir(): string | undefined {
       setDirectory(dir);
       return;
     } catch (err) {
-      console.error("failed to create tmp dir");
+      logger.error(
+        "Failed to create temporary directory to store built files."
+      );
       handleError(err);
     }
     return () => {
@@ -239,9 +242,9 @@ function useCustomBuild(
         ignoreInitial: true,
       }).on("all", (_event, filePath) => {
         //TODO: we should buffer requests to the proxy until this completes
-        console.log(`The file ${filePath} changed, restarting build...`);
+        logger.log(`The file ${filePath} changed, restarting build...`);
         runCustomBuild(expectedEntry.file, build).catch((err) => {
-          console.error("Custom build failed:", err);
+          logger.error("Custom build failed:", err);
         });
       });
     }
@@ -288,12 +291,12 @@ function useTunnel(toggle: boolean) {
         try {
           await commandExists("cloudflared");
         } catch (e) {
-          console.error(
+          logger.warn(
             "To share your worker on the Internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
           );
           return;
         }
-        console.log("⎔ Starting a tunnel...");
+        logger.log("⎔ Starting a tunnel...");
         tunnel.current = spawn("cloudflared", [
           "tunnel",
           "--url",
@@ -304,30 +307,30 @@ function useTunnel(toggle: boolean) {
 
         tunnel.current.on("close", (code) => {
           if (code) {
-            console.log(`Tunnel process exited with code ${code}`);
+            logger.log(`Tunnel process exited with code ${code}`);
           }
         });
 
         removeSignalExitListener.current = onExit((_code, _signal) => {
-          console.log("⎔ Shutting down local tunnel.");
+          logger.log("⎔ Shutting down local tunnel.");
           tunnel.current?.kill();
           tunnel.current = undefined;
         });
 
         const hostName = await findTunnelHostname();
         await clipboardy.write(hostName);
-        console.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
+        logger.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
       }
     }
 
     startTunnel().catch(async (err) => {
-      console.error("tunnel:", err);
+      logger.error("tunnel:", err);
       await reportError(err);
     });
 
     return () => {
       if (tunnel.current) {
-        console.log("⎔ Shutting down tunnel.");
+        logger.log("⎔ Shutting down tunnel.");
         tunnel.current?.kill();
         tunnel.current = undefined;
         removeSignalExitListener.current && removeSignalExitListener.current();

@@ -263,7 +263,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
@@ -289,7 +289,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         \\"* * * * *\\" @ [mock timestamp string] - Ok"
       `);
@@ -316,7 +316,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]"
       `);
@@ -372,7 +372,7 @@ describe("tail", () => {
             "[mock expiration date]"
           )
       ).toMatchInlineSnapshot(`
-        "successfully created tail, expires at [mock expiration date]
+        "Successfully created tail, expires at [mock expiration date]
         Connected to test-worker, waiting for logs...
         GET https://example.org/ - Ok @ [mock event timestamp]
           (log) some string
@@ -380,8 +380,12 @@ describe("tail", () => {
           (error) 1234"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "  Error: some error
-          Error: { complex: 'error' }"
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
+
+
+        [31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
+
+        "
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });

@@ -1,4 +1,5 @@
 import { findUpSync } from "find-up";
+import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { Config, RawConfig } from "./config";
@@ -41,7 +42,7 @@ export function readConfig(
   );
 
   if (diagnostics.hasWarnings()) {
-    console.warn(diagnostics.renderWarnings());
+    logger.warn(diagnostics.renderWarnings());
   }
   if (diagnostics.hasErrors()) {
     throw new Error(diagnostics.renderErrors());

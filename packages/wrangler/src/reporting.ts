@@ -14,6 +14,7 @@ import {
 import { execaSync } from "execa";
 import prompts from "prompts";
 import * as pkj from "../package.json";
+import { logger } from "./logger";
 import { parseTOML } from "./parse";
 
 export function initReporting() {
@@ -75,7 +76,7 @@ async function appendReportingDecision(userInput: "true" | "false") {
       "utf-8"
     );
   } catch (err) {
-    console.warn(
+    logger.warn(
       `Unable to create wrangler's error reporting configuration file at ${reportingConfigLocation}: `,
       err
     );

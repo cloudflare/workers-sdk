@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker } from "../bundle";
+import { logger } from "../logger";
 import type { Config } from "../config";
 import type { Entry } from "../entry";
 import type { CfModule } from "../worker";
@@ -44,7 +45,7 @@ export function useEsbuild({
 
     const watchMode: WatchMode = {
       async onRebuild(error) {
-        if (error) console.error("watch build failed:", error);
+        if (error) logger.error("Watch build failed:", error);
         else {
           // nothing really changes here, so let's increment the id
           // to change the return object's identity

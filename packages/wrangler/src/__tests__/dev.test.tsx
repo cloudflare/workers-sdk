@@ -40,7 +40,7 @@ describe("wrangler dev", () => {
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn.replaceAll(currentDate, "<current-date>"))
         .toMatchInlineSnapshot(`
-        "No compatibility_date was specified. Using today's date: <current-date>.
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.
         Add one to your wrangler.toml file:
         \`\`\`
         compatibility_date = \\"<current-date>\\"
@@ -49,7 +49,9 @@ describe("wrangler dev", () => {
         \`\`\`
         --compatibility-date=<current-date>
         \`\`\`
-        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.[0m
+
+        "
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -77,11 +79,14 @@ describe("wrangler dev", () => {
         `"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
       );
 
-      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.out).toMatchInlineSnapshot(`
+        "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+      `);
       expect(std.err).toMatchInlineSnapshot(`
-        "Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.[0m
 
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "
       `);
     });
 
@@ -389,7 +394,7 @@ describe("wrangler dev", () => {
         watch_dir: "src",
       });
       expect(std.out).toMatchInlineSnapshot(
-        `"running: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
+        `"Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\""`
       );
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -411,7 +416,7 @@ describe("wrangler dev", () => {
         `);
 
         expect(std.out).toMatchInlineSnapshot(
-          `"running: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js"`
+          `"Running custom build: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js"`
         );
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -431,13 +436,15 @@ describe("wrangler dev", () => {
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
       );
-      expect(std.out).toMatchInlineSnapshot(
-        `"running: node -e \\"console.log('custom build');\\""`
-      );
-      expect(std.err).toMatchInlineSnapshot(`
-        "Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"
+      expect(std.out).toMatchInlineSnapshot(`
+        "Running custom build: node -e \\"console.log('custom build');\\"
 
-        [32m%s[0m If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"[0m
+
+        "
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
     });
@@ -469,9 +476,11 @@ describe("wrangler dev", () => {
       );
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "Setting upstream-protocol to http is not currently implemented.
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.
         If this is required in your project, please add your use case to the following issue:
-        https://github.com/cloudflare/wrangler2/issues/583."
+        https://github.com/cloudflare/wrangler2/issues/583.[0m
+
+        "
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -595,11 +604,13 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "WARNING: You have Durable Object bindings, which are not defined locally in the worker being developed.
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
         Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
         Remote Durable Objects that are affected:
         - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}"
+        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}[0m
+
+        "
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });

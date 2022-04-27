@@ -47,17 +47,21 @@ describe("pages", () => {
         `"Must specify a directory of static assets to serve or a command to run."`
       );
 
-      expect(std.out).toMatchInlineSnapshot(
-        `"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+      `);
     });
 
     it("should display for pages:functions:build", async () => {
       await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
-      expect(std.out).toMatchInlineSnapshot(
-        `"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+      `);
     });
   });
 

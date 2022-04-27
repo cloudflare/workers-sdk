@@ -9,6 +9,7 @@ import {
   putBulkKeyValue,
   deleteBulkKeyValue,
 } from "./kv";
+import { logger } from "./logger";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { XXHashAPI } from "xxhash-wasm";
@@ -82,7 +83,7 @@ async function createKVNamespaceIfNotAlreadyExisting(
 
   // else we make the namespace
   const id = await createNamespace(accountId, title);
-  console.log(`🌀 Created namespace for Workers Site "${title}"`);
+  logger.log(`🌀 Created namespace for Workers Site "${title}"`);
 
   return {
     created: true,
@@ -116,7 +117,7 @@ export async function syncAssets(
   }
 
   if (dryRun) {
-    console.log("(note: doing a dry run, not uploading or deleting anything.)");
+    logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
     return { manifest: undefined, namespace: undefined };
   }
 
@@ -154,7 +155,7 @@ export async function syncAssets(
     }
 
     await validateAssetSize(absAssetFile, assetFile);
-    console.log(`reading ${assetFile}...`);
+    logger.log(`Reading ${assetFile}...`);
     const content = await readFile(absAssetFile, "base64");
 
     const assetKey = hashAsset(hasher, assetFile, content);
@@ -162,14 +163,14 @@ export async function syncAssets(
 
     // now put each of the files into kv
     if (!namespaceKeys.has(assetKey)) {
-      console.log(`uploading as ${assetKey}...`);
+      logger.log(`Uploading as ${assetKey}...`);
       toUpload.push({
         key: assetKey,
         value: content,
         base64: true,
       });
     } else {
-      console.log(`skipping - already uploaded`);
+      logger.log(`Skipping - already uploaded.`);
     }
 
     // remove the key from the set so we know what we've already uploaded
@@ -179,7 +180,7 @@ export async function syncAssets(
 
   // keys now contains all the files we're deleting
   for (const key of namespaceKeys) {
-    console.log(`deleting ${key} from the asset store...`);
+    logger.log(`Deleting ${key} from the asset store...`);
   }
 
   await Promise.all([
@@ -194,7 +195,7 @@ export async function syncAssets(
     ),
   ]);
 
-  console.log("↗️  Done syncing assets");
+  logger.log("↗️  Done syncing assets");
 
   return { manifest, namespace };
 }

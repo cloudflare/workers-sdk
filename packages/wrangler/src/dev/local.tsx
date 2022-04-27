@@ -5,6 +5,7 @@ import path from "node:path";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import useInspector from "../inspect";
+import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
@@ -219,7 +220,7 @@ function useLocalWorker({
       );
       const optionsArg = JSON.stringify(options, null);
 
-      console.log("⎔ Starting a local server...");
+      logger.log("⎔ Starting a local server...");
       local.current = spawn(
         "node",
         [
@@ -237,7 +238,7 @@ function useLocalWorker({
 
       local.current.on("close", (code) => {
         if (code) {
-          console.log(`Miniflare process exited with code ${code}`);
+          logger.log(`Miniflare process exited with code ${code}`);
         }
       });
 
@@ -257,30 +258,30 @@ function useLocalWorker({
 
       local.current.on("exit", (code) => {
         if (code) {
-          console.error(`Miniflare process exited with code ${code}`);
+          logger.error(`Miniflare process exited with code ${code}`);
         }
       });
 
       local.current.on("error", (error: Error) => {
-        console.error(`Miniflare process failed to spawn`);
-        console.error(error);
+        logger.error(`Miniflare process failed to spawn`);
+        logger.error(error);
       });
 
       removeSignalExitListener.current = onExit((_code, _signal) => {
-        console.log("⎔ Shutting down local server.");
+        logger.log("⎔ Shutting down local server.");
         local.current?.kill();
         local.current = undefined;
       });
     }
 
     startLocalWorker().catch((err) => {
-      console.error("local worker:", err);
+      logger.error("local worker:", err);
     });
 
     return () => {
       abortController.abort();
       if (local.current) {
-        console.log("⎔ Shutting down local server.");
+        logger.log("⎔ Shutting down local server.");
         local.current?.kill();
         local.current = undefined;
         removeSignalExitListener.current && removeSignalExitListener.current();
