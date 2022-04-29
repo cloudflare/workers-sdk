@@ -25,10 +25,20 @@ const requestContextCheckOptions = async (): Promise<
   // check that there's an implementation of AsyncLocalStorage
   let hasAsyncLocalStorage = true;
   try {
+    // ripped from  the example here https://nodejs.org/api/async_context.html#class-asynclocalstorage
     const { AsyncLocalStorage } = await import("node:async_hooks");
     const storage = new AsyncLocalStorage();
-    storage.run(undefined, () => {
-      storage.getStore();
+    const STORED_VALUE = "some-stored-value";
+
+    const testStorage = () => {
+      const value = storage.getStore();
+      return value === STORED_VALUE;
+    };
+
+    storage.run("some-stored-value", () => {
+      setImmediate(() => {
+        hasAsyncLocalStorage = testStorage();
+      });
     });
   } catch (e) {
     hasAsyncLocalStorage = false;
@@ -59,7 +69,7 @@ async function main() {
     }).argv;
 
   const logLevel = LogLevel[args.log ?? "INFO"];
-  const config = {
+  const config: MiniflareOptions = {
     ...JSON.parse((args._[0] as string) ?? "{}"),
     ...(await requestContextCheckOptions()),
     log: new Log(logLevel),
