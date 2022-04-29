@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 
 let cacheMessageShown = false;
@@ -14,9 +14,7 @@ const showCacheMessage = () => {
   }
 };
 
-export const getConfigCache = <T extends Record<string, unknown>>(
-  fileName: string
-): Partial<T> => {
+export const getConfigCache = <T>(fileName: string): Partial<T> => {
   try {
     const configCacheLocation = join(cacheFolder, fileName);
     const configCache = JSON.parse(readFileSync(configCacheLocation, "utf-8"));
@@ -27,7 +25,7 @@ export const getConfigCache = <T extends Record<string, unknown>>(
   }
 };
 
-export const saveToConfigCache = <T extends Record<string, unknown>>(
+export const saveToConfigCache = <T>(
   fileName: string,
   newValues: Partial<T>
 ) => {
@@ -40,4 +38,8 @@ export const saveToConfigCache = <T extends Record<string, unknown>>(
     JSON.stringify({ ...existingValues, ...newValues }, null, 2)
   );
   showCacheMessage();
+};
+
+export const purgeConfigCaches = () => {
+  rmSync(cacheFolder, { recursive: true });
 };
