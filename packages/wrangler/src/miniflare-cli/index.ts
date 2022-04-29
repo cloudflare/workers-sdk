@@ -27,31 +27,14 @@ const requestContextCheckOptions = async (): Promise<
   try {
     // ripped from  the example here https://nodejs.org/api/async_context.html#class-asynclocalstorage
     const { AsyncLocalStorage } = await import("node:async_hooks");
-    const storage = new AsyncLocalStorage();
-    const STORED_VALUE = "some-stored-value";
+    const storage = new AsyncLocalStorage<string>();
 
-    const testStorage = () => {
-      const value = storage.getStore();
-      return value === STORED_VALUE;
-    };
-
-    storage.run("some-stored-value", () => {
-      setImmediate(() => {
-        hasAsyncLocalStorage = testStorage();
-      });
+    hasAsyncLocalStorage = storage.run("some-value", () => {
+      return storage.getStore() === "some-value";
     });
   } catch (e) {
     hasAsyncLocalStorage = false;
   }
-
-  // // check if we're running in a webcontainer
-  // const runningInWebContainer = "webcontainer" in process.versions;
-
-  // // check if we're running in CodeSandbox
-  // const runningInCodeSandbox = process.env.CODESANDBOX_SSE === "true";
-
-  // const canUseRequestContextChecks =
-  //   hasAsyncLocalStorage && !runningInWebContainer && !runningInCodeSandbox;
 
   return {
     globalAsyncIO: hasAsyncLocalStorage,
