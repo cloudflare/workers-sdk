@@ -33,6 +33,7 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback, CommandModule } from "yargs";
+import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 
 type ConfigPath = string | undefined;
 
@@ -1287,6 +1288,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ? await generateAssetsFetch(directory)
             : invalidAssetsFetch;
 
+        const requestContextCheckOptions =
+          await getRequestContextCheckOptions();
+
         const miniflare = new Miniflare({
           port,
           watch: true,
@@ -1351,6 +1355,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           cachePersist: true,
           liveReload,
 
+          ...requestContextCheckOptions,
           ...miniflareArgs,
         });
 
