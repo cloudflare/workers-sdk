@@ -25,6 +25,7 @@ import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
+import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import { requireAuth } from "./user";
@@ -33,7 +34,6 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback, CommandModule } from "yargs";
-import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 
 type ConfigPath = string | undefined;
 
