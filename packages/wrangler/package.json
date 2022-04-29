@@ -101,11 +101,8 @@
   "files": [
     "src",
     "bin",
-    "pages",
-    "miniflare-config-stubs",
     "miniflare-dist",
     "wrangler-dist",
-    "templates",
     "vendor",
     "import_meta_url.js"
   ],
@@ -134,6 +131,9 @@
       "miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
     },
     "transform": {
+      "\\.template\\.[jt]s(on)?$": [
+        "./scripts/file-loader-transform"
+      ],
       "^.+\\.c?(t|j)sx?$": [
         "esbuild-jest",
         {

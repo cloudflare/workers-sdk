@@ -1,6 +1,10 @@
 import { resolve } from "node:path";
 import { build } from "esbuild";
 
+// See scripts/file-loader-transform.ts to understand what is happening here.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const templatePluginPath = require("./plugin.template.ts");
+
 type Options = {
   routesModule: string;
   outfile: string;
@@ -19,7 +23,7 @@ export function buildPlugin({
   onEnd = () => {},
 }: Options) {
   return build({
-    entryPoints: [resolve(__dirname, "../pages/functions/template-plugin.ts")],
+    entryPoints: [resolve(__dirname, templatePluginPath)],
     inject: [routesModule],
     bundle: true,
     format: "esm",

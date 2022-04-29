@@ -7,6 +7,10 @@ import type { Config } from "./config";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
+// See scripts/file-loader-transform.ts to understand what is happening here.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const staticAssetFacadePath = require("../templates/static-asset-facade.template.js");
+
 type BundleResult = {
   modules: CfModule[];
   resolvedEntryPointPath: string;
@@ -132,10 +136,7 @@ function getEntryPoint(
     return {
       stdin: {
         contents: fs
-          .readFileSync(
-            path.join(__dirname, "../templates/static-asset-facade.js"),
-            "utf8"
-          )
+          .readFileSync(path.join(__dirname, staticAssetFacadePath), "utf8")
           .replace("__ENTRY_POINT__", entryFile),
         sourcefile: "static-asset-facade.js",
         resolveDir: path.dirname(entryFile),

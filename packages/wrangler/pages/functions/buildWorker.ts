@@ -1,6 +1,10 @@
 import path from "node:path";
 import { build } from "esbuild";
 
+// See scripts/file-loader-transform.ts to understand what is happening here.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const templateWorkerPath = require("./worker.template.ts");
+
 type Options = {
   routesModule: string;
   outfile: string;
@@ -21,9 +25,7 @@ export function buildWorker({
   onEnd = () => {},
 }: Options) {
   return build({
-    entryPoints: [
-      path.resolve(__dirname, "../pages/functions/template-worker.ts"),
-    ],
+    entryPoints: [path.resolve(__dirname, templateWorkerPath)],
     inject: [routesModule],
     bundle: true,
     format: "esm",

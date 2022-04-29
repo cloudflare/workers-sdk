@@ -25,6 +25,14 @@ async function run() {
     define: {
       "import.meta.url": "import_meta_url",
     },
+    // `.template.*` files are external source files that will be loaded at runtime to be included in generated Workers.
+    // So we mark them as type "file" so that esbuild copies them into the build directory and replaces the import
+    // in the code with the path to the copied file.
+    loader: {
+      ".template.js": "file",
+      ".template.ts": "file",
+      ".template.json": "file",
+    },
   });
 
   // custom miniflare cli

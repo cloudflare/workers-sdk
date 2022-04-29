@@ -67,6 +67,13 @@ import type { RawData } from "ws";
 import type { CommandModule } from "yargs";
 import type Yargs from "yargs";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const newWorkerJSTemplatePath = require("../templates/new-worker.template.js");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const newWorkerTSTemplatePath = require("../templates/new-worker.template.ts");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const tsconfigTemplatePath = require("../templates/tsconfig.template.json");
+
 type ConfigPath = string | undefined;
 
 const resetColor = "\x1b[0m";
@@ -419,7 +426,7 @@ export async function main(argv: string[]): Promise<void> {
           isTypescriptProject = true;
           await writeFile(
             path.join(creationDirectory, "./tsconfig.json"),
-            readFileSync(path.join(__dirname, "../templates/tsconfig.json"))
+            readFileSync(path.resolve(__dirname, tsconfigTemplatePath))
           );
           await packageManager.addDevDeps(
             "@cloudflare/workers-types",
@@ -551,7 +558,7 @@ export async function main(argv: string[]): Promise<void> {
             });
             await writeFile(
               path.join(creationDirectory, "./src/index.ts"),
-              readFileSync(path.join(__dirname, "../templates/new-worker.ts"))
+              readFileSync(path.resolve(__dirname, newWorkerTSTemplatePath))
             );
 
             logger.log(`✨ Created src/index.ts`);
@@ -575,7 +582,7 @@ export async function main(argv: string[]): Promise<void> {
             });
             await writeFile(
               path.join(path.join(creationDirectory, "./src/index.js")),
-              readFileSync(path.join(__dirname, "../templates/new-worker.js"))
+              readFileSync(path.resolve(__dirname, newWorkerJSTemplatePath))
             );
 
             logger.log(`✨ Created src/index.js`);
