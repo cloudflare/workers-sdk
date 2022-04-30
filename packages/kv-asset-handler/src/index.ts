@@ -31,6 +31,7 @@ const getAssetFromKVDefaultOptions: Partial<Options> = {
   defaultMimeType: 'text/plain',
   defaultDocument: 'index.html',
   pathIsEncoded: false,
+  defaultETag: 'strong',
 }
 
 function assignOptions(options?: Partial<Options>): Options {
@@ -193,14 +194,17 @@ const getAssetFromKV = async (event: Evt, options?: Partial<Options>): Promise<R
   // is invalid, returns an empty string (instead of null) to prevent the
   // the potentially disastrous scenario where the value of the Etag resp
   // header is "null". Could be modified in future to base64 encode etc
-  const formatETag = (entityId: any = pathKey, validatorType: string = 'strong') => {
+  const formatETag = (entityId: any = pathKey, validatorType: string = options.defaultETag) => {
     if (!entityId) {
       return ''
     }
     switch (validatorType) {
       case 'weak':
         if (!entityId.startsWith('W/')) {
-          return `W/${entityId}`
+          if (entityId.startsWith(`"`) && entityId.endsWith(`"`)) {
+            return `W/${entityId}`
+          }
+          return `W/"${entityId}"`
         }
         return entityId
       case 'strong':
@@ -277,7 +281,7 @@ const getAssetFromKV = async (event: Evt, options?: Partial<Options>): Promise<R
       response.headers.set('Content-Length', String(body.byteLength))
       // set etag before cache insertion
       if (!response.headers.has('etag')) {
-        response.headers.set('etag', formatETag(pathKey, 'strong'))
+        response.headers.set('etag', formatETag(pathKey))
       }
       // determine Cloudflare cache behavior
       response.headers.set('Cache-Control', `max-age=${options.cacheControl.edgeTTL}`)
@@ -288,7 +292,7 @@ const getAssetFromKV = async (event: Evt, options?: Partial<Options>): Promise<R
   response.headers.set('Content-Type', mimeType)
 
   if (response.status === 304) {
-    let etag = formatETag(response.headers.get('etag'), 'strong')
+    let etag = formatETag(response.headers.get('etag'))
     let ifNoneMatch = cacheKey.headers.get('if-none-match')
     let proxyCacheStatus = response.headers.get('CF-Cache-Status')
     if (etag) {

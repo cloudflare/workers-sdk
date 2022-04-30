@@ -28,6 +28,7 @@ The Cloudflare Workers Discord server is an active place where Workers users get
       - [`bypassCache`](#bypasscache)
     - [`ASSET_NAMESPACE` (required for ES Modules)](#asset_namespace-required-for-es-modules)
     - [`ASSET_MANIFEST` (required for ES Modules)](#asset_manifest-required-for-es-modules)
+    - [`defaultETag`](#defaultetag-optional)
 
 * [Helper functions](#helper-functions)
   - [`mapRequestToAsset`](#maprequesttoasset-1)
@@ -281,6 +282,13 @@ If you are serving a static site and would like to use extensionless HTML files 
 type: string
 
 This is the default document that will be concatenated for requests ends in `'/'` or without a valid mime type like `'/about'` or `'/about.me'`. The default value is `'index.html'`.
+
+#### `defaultETag` (optional)
+
+type: `'strong' | 'weak'`
+
+This determines the format of the response [ETag header](https://developer.mozilla.org/docs/Web/HTTP/Headers/ETag). If the resource is in the cache, the ETag will always be weakened before being returned.
+The default value is `'strong'`.
 
 # Helper functions
 

@@ -14,6 +14,7 @@ export type Options = {
   defaultMimeType: string
   defaultDocument: string
   pathIsEncoded: boolean
+  defaultETag: 'strong' | 'weak'
 }
 
 export class KVError extends Error {
