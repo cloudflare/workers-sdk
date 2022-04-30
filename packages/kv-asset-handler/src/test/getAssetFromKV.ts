@@ -451,6 +451,42 @@ test('getAssetFromKV when resource in cache, etag should be weakened before retu
     t.fail('Response was undefined')
   }
 })
+test('getAssetFromKV should support weak etag override of resource', async (t) => {
+  mockRequestScope()
+  const resourceKey = 'key1.png'
+  const resourceVersion = JSON.parse(mockManifest())[resourceKey]
+  const req1 = new Request(`https://blah-weak.com/${resourceKey}`, {
+    headers: {
+      'if-none-match': `W/"${resourceVersion}"`,
+    },
+  })
+  const req2 = new Request(`https://blah-weak.com/${resourceKey}`, {
+    headers: {
+      'if-none-match': `"${resourceVersion}"`,
+    },
+  })
+  const req3 = new Request(`https://blah-weak.com/${resourceKey}`, {
+    headers: {
+      'if-none-match': `"${resourceVersion}-another-version"`,
+    },
+  })
+  const event1 = getEvent(req1)
+  const event2 = getEvent(req2)
+  const event3 = getEvent(req3)
+  const res1 = await getAssetFromKV(event1, { defaultETag: 'weak' })
+  const res2 = await getAssetFromKV(event2, { defaultETag: 'weak' })
+  const res3 = await getAssetFromKV(event3, { defaultETag: 'weak' })
+  if (res1 && res2 && res3) {
+    t.is(res1.headers.get('cf-cache-status'), 'MISS')
+    t.is(res1.headers.get('etag'), req1.headers.get('if-none-match'))
+    t.is(res2.headers.get('cf-cache-status'), 'REVALIDATED')
+    t.is(res2.headers.get('etag'), `W/${req2.headers.get('if-none-match')}`)
+    t.is(res3.headers.get('cf-cache-status'), 'MISS')
+    t.not(res3.headers.get('etag'), req2.headers.get('if-none-match'))
+  } else {
+    t.fail('Response was undefined')
+  }
+})
 
 test('getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK', async (t) => {
   const resourceKey = 'cache.html'
