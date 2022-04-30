@@ -31,6 +31,7 @@ type Props = {
   tsconfig: string | undefined;
   experimentalPublic: boolean;
   minify: boolean | undefined;
+  nodeCompat: boolean | undefined;
   outDir: string | undefined;
   dryRun: boolean | undefined;
 };
@@ -59,6 +60,13 @@ export default async function publish(props: Props): Promise<void> {
   const jsxFragment = props.jsxFragment || config.jsx_fragment;
 
   const minify = props.minify ?? config.minify;
+
+  const nodeCompat = props.nodeCompat ?? config.node_compat;
+  if (nodeCompat) {
+    logger.warn(
+      "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+    );
+  }
 
   const scriptName = props.name;
   assert(
@@ -131,6 +139,7 @@ export default async function publish(props: Props): Promise<void> {
         rules: props.rules,
         tsconfig: props.tsconfig ?? config.tsconfig,
         minify,
+        nodeCompat,
       }
     );
 

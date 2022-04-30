@@ -27,6 +27,7 @@ export function useEsbuild({
   serveAssetsFromWorker,
   tsconfig,
   minify,
+  nodeCompat,
 }: {
   entry: Entry;
   destination: string | undefined;
@@ -37,6 +38,7 @@ export function useEsbuild({
   serveAssetsFromWorker: boolean;
   tsconfig: string | undefined;
   minify: boolean | undefined;
+  nodeCompat: boolean | undefined;
 }): EsbuildBundle | undefined {
   const [bundle, setBundle] = useState<EsbuildBundle>();
   const { exit } = useApp();
@@ -73,6 +75,7 @@ export function useEsbuild({
           watch: watchMode,
           tsconfig,
           minify,
+          nodeCompat,
         });
 
       // Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -109,6 +112,7 @@ export function useEsbuild({
     tsconfig,
     exit,
     minify,
+    nodeCompat,
   ]);
   return bundle;
 }

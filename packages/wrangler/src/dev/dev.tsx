@@ -45,6 +45,7 @@ export type DevProps = {
   compatibilityFlags: string[] | undefined;
   usageModel: "bundled" | "unbound" | undefined;
   minify: boolean | undefined;
+  nodeCompat: boolean | undefined;
   build: {
     command?: string | undefined;
     cwd?: string | undefined;
@@ -100,6 +101,7 @@ export function DevImplementation(props: DevProps): JSX.Element {
     serveAssetsFromWorker: !!props.public,
     tsconfig: props.tsconfig,
     minify: props.minify,
+    nodeCompat: props.nodeCompat,
   });
 
   // only load the UI if we're running in a supported environment

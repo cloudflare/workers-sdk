@@ -111,6 +111,14 @@ export function normalizeAndValidateConfig(
     "boolean"
   );
 
+  validateOptionalProperty(
+    diagnostics,
+    "",
+    "node_compat",
+    rawConfig.node_compat,
+    "boolean"
+  );
+
   // TODO: set the default to false to turn on service environments as the default
   const isLegacyEnv =
     (args as { "legacy-env": boolean | undefined })["legacy-env"] ??
@@ -825,6 +833,7 @@ function normalizeAndValidateEnvironment(
     ),
     zone_id: rawEnv.zone_id,
     minify: rawEnv.minify,
+    node_compat: rawEnv.node_compat,
   };
 
   return environment;

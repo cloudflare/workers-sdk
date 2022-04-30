@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
+import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import createModuleCollector from "./module-collection";
 import type { Config } from "./config";
@@ -28,6 +30,7 @@ export async function bundleWorker(
     watch?: esbuild.WatchMode;
     tsconfig: string | undefined;
     minify: boolean | undefined;
+    nodeCompat: boolean | undefined;
   }
 ): Promise<BundleResult> {
   const {
@@ -38,6 +41,7 @@ export async function bundleWorker(
     watch,
     tsconfig,
     minify,
+    nodeCompat,
   } = options;
   const entryDirectory = path.dirname(entry.file);
   const moduleCollector = createModuleCollector({
@@ -71,6 +75,7 @@ export async function bundleWorker(
     ...(process.env.NODE_ENV && {
       define: {
         "process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+        ...(nodeCompat ? { global: "globalThis" } : {}),
       },
     }),
     loader: {
@@ -78,7 +83,12 @@ export async function bundleWorker(
       ".mjs": "jsx",
       ".cjs": "jsx",
     },
-    plugins: [moduleCollector.plugin],
+    plugins: [
+      moduleCollector.plugin,
+      ...(nodeCompat
+        ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+        : []),
+    ],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),
     ...(tsconfig && { tsconfig }),

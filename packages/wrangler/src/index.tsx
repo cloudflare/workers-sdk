@@ -738,6 +738,10 @@ export async function main(argv: string[]): Promise<void> {
         .option("minify", {
           describe: "Minify the script",
           type: "boolean",
+        })
+        .option("node-compat", {
+          describe: "Enable node.js compaitibility",
+          type: "boolean",
         });
     },
     async (args) => {
@@ -855,6 +859,13 @@ export async function main(argv: string[]): Promise<void> {
             : undefined;
       }
 
+      const nodeCompat = args.nodeCompat ?? config.node_compat;
+      if (nodeCompat) {
+        logger.warn(
+          "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+        );
+      }
+
       const { waitUntilExit } = render(
         <Dev
           name={getScriptName(args, config)}
@@ -864,6 +875,7 @@ export async function main(argv: string[]): Promise<void> {
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(config)}
           minify={args.minify ?? config.minify}
+          nodeCompat={nodeCompat}
           build={config.build || {}}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={args["jsx-factory"] || config.jsx_factory}
@@ -1025,6 +1037,10 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Minify the script",
           type: "boolean",
         })
+        .option("node-compat", {
+          describe: "Enable node.js compaitibility",
+          type: "boolean",
+        })
         .option("dry-run", {
           describe: "Don't actually publish",
           type: "boolean",
@@ -1082,6 +1098,7 @@ export async function main(argv: string[]): Promise<void> {
         assetPaths,
         legacyEnv: isLegacyEnv(config),
         minify: args.minify,
+        nodeCompat: args.nodeCompat,
         experimentalPublic: args["experimental-public"] !== undefined,
         outDir: args.outdir,
         dryRun: args.dryRun,
@@ -1281,6 +1298,7 @@ export async function main(argv: string[]): Promise<void> {
           legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
           minify={undefined}
+          nodeCompat={config.node_compat}
           initialMode={args.local ? "local" : "remote"}
           jsxFactory={config.jsx_factory}
           jsxFragment={config.jsx_fragment}
