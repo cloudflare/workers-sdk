@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
+import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
@@ -775,6 +776,58 @@ describe("init", () => {
       await runWrangler("init");
       expect(fs.readFileSync("./src/index.js", "utf-8")).toBe(PLACEHOLDER);
       expect(fs.existsSync("./src/index.ts")).toBe(false);
+    });
+  });
+
+  describe("worker names", () => {
+    it("should create a worker with a given name", async () => {
+      await runWrangler("init my-worker -y");
+
+      const parsed = TOML.parse(
+        await fsp.readFile("./my-worker/wrangler.toml", "utf-8")
+      );
+
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toBe("my-worker");
+    });
+
+    it('should create a worker with the name of the current directory if "name" is .', async () => {
+      await runWrangler("init . -y");
+
+      const parsed = TOML.parse(await fsp.readFile("wrangler.toml", "utf-8"));
+
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toBe(path.basename(process.cwd()).toLowerCase());
+      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
+      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+    });
+
+    it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
+      await runWrangler("init path/to/worker -y");
+
+      const parsed = TOML.parse(
+        await fsp.readFile("path/to/worker/wrangler.toml", "utf-8")
+      );
+
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toBe("worker");
+      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
+      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+    });
+
+    it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
+      await runWrangler("init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y");
+      const parsed = TOML.parse(
+        await fsp.readFile(
+          "WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml",
+          "utf-8"
+        )
+      );
+
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toBe("weird_w0rkr_n4m3-js-tsx-tar-gz");
+      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
+      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
     });
   });
 });
