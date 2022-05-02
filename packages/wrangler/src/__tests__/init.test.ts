@@ -27,7 +27,7 @@ describe("init", () => {
 
   const std = mockConsoleMethods();
 
-  describe("command options", () => {
+  describe("options", () => {
     it("should initialize with no interactive prompts if `--yes` is used", async () => {
       await runWrangler("init --yes");
 
