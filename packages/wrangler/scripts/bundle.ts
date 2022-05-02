@@ -18,8 +18,11 @@ async function run() {
       "blake3-wasm",
       "miniflare",
       "@miniflare/core",
+      // todo - bundle miniflare too
       "selfsigned",
-    ], // todo - bundle miniflare too
+      "@esbuild-plugins/node-globals-polyfill",
+      "@esbuild-plugins/node-modules-polyfill",
+    ],
     sourcemap: true,
     inject: [path.join(__dirname, "../import_meta_url.js")],
     define: {

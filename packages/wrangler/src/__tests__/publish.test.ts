@@ -4064,6 +4064,47 @@ export default{
       `);
     });
   });
+
+  describe("--node-compat", () => {
+    it("should warn when using node compatibility mode", async () => {
+      writeWranglerToml();
+      writeWorkerSource();
+      await runWrangler("publish index.js --node-compat --dry-run");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+        ",
+        }
+      `);
+    });
+
+    it("should polyfill node builtins when enabled", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "index.js",
+        `
+      import path from 'path';
+      console.log(path.join("some/path/to", "a/file.txt"));
+      export default {}
+      `
+      );
+      await runWrangler("publish index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+        ",
+        }
+      `);
+    });
+  });
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

@@ -184,6 +184,11 @@ interface EnvironmentInheritable {
   minify: boolean | undefined;
 
   /**
+   * Add polyfills for node builtin modules and globals
+   */
+  node_compat: boolean | undefined;
+
+  /**
    * TODO: remove this as it has been deprecated.
    *
    * This is just here for now because the `route` commands use it.
