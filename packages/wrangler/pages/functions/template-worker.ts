@@ -19,6 +19,25 @@ declare type PagesFunction<
   P extends string = string,
   Data extends Record<string, unknown> = Record<string, unknown>
 > = (context: EventContext<Env, P, Data>) => Response | Promise<Response>;
+
+declare class Headers {
+  constructor(init?: HeadersInit);
+  get(name: string): string | null;
+  getAll(name: string): string[];
+  has(name: string): boolean;
+  set(name: string, value: string): void;
+  append(name: string, value: string): void;
+  delete(name: string): void;
+  forEach<This = unknown>(
+    callback: (this: This, key: string, value: string, parent: Headers) => void,
+    thisArg?: This
+  ): void;
+  entries(): IterableIterator<[key: string, value: string]>;
+  keys(): IterableIterator<string>;
+  values(): IterableIterator<string>;
+  [Symbol.iterator](): IterableIterator<[key: string, value: string]>;
+}
+
 /* end @cloudflare/workers-types */
 
 type RouteHandler = {
@@ -91,6 +110,25 @@ function* executeRequest(request: Request) {
   }
 }
 
+// With a regular get on multiple set-cookies headers, they get concatenated
+// which browsers have a very hard time parsing. The fetch spec has added getAll
+// to Headers, which only works on set-cookie headers, but will return them
+// as an array, so they can be passed on as multiple headers.
+function copyHeaders(headers: Headers) {
+  const cookies = headers.getAll("set-cookie");
+  const newHeaders = new Headers([...headers.entries()]);
+  if (cookies.length > 1) {
+    cookies.forEach((cookie, index) => {
+      if (index === 0) {
+        newHeaders.set("set-cookie", cookie);
+      } else {
+        newHeaders.append("set-cookie", cookie);
+      }
+    });
+  }
+  return newHeaders;
+}
+
 export default {
   async fetch(request: Request, env: FetchEnv, workerContext: WorkerContext) {
     const handlerIterator = executeRequest(request);
@@ -123,7 +161,7 @@ export default {
         // https://fetch.spec.whatwg.org/#null-body-status
         return new Response(
           [101, 204, 205, 304].includes(response.status) ? null : response.body,
-          { ...response, headers: new Headers([...response.headers.entries()]) }
+          { ...response, headers: copyHeaders(response.headers as Headers) }
         );
       } else if (__FALLBACK_SERVICE__) {
         // There are no more handlers so finish with the fallback service (`env.ASSETS.fetch` in Pages' case)
