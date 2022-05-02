@@ -2389,7 +2389,7 @@ export default{
         `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
       );
       mockSubDomainRequest();
-      mockScriptData({ scripts: [] }); // no previously uploaded scripts at all
+      mockLegacyScriptData({ scripts: [] }); // no previously uploaded scripts at all
       mockUploadWorkerRequest({
         expectedMigrations: {
           new_tag: "v2",
@@ -2428,7 +2428,9 @@ export default{
         `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
       );
       mockSubDomainRequest();
-      mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
+      mockLegacyScriptData({
+        scripts: [{ id: "test-name", migration_tag: "v1" }],
+      });
       mockUploadWorkerRequest({
         expectedMigrations: {
           old_tag: "v1",
@@ -2473,7 +2475,9 @@ export default{
         `export class SomeClass{}; export class SomeOtherClass{}; export class YetAnotherClass{}; export default {};`
       );
       mockSubDomainRequest();
-      mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v3" }] });
+      mockLegacyScriptData({
+        scripts: [{ id: "test-name", migration_tag: "v3" }],
+      });
       mockUploadWorkerRequest({
         expectedMigrations: undefined,
       });
@@ -2492,7 +2496,7 @@ export default{
     });
 
     describe("service environments", () => {
-      it("should error when using service environments + durable objects", async () => {
+      it("should publish all migrations on first publish", async () => {
         writeWranglerToml({
           durable_objects: {
             bindings: [
@@ -2500,28 +2504,200 @@ export default{
               { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
             ],
           },
-          migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
+          migrations: [
+            { tag: "v1", new_classes: ["SomeClass"] },
+            { tag: "v2", new_classes: ["SomeOtherClass"] },
+          ],
         });
         fs.writeFileSync(
           "index.js",
           `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
         );
-
         mockSubDomainRequest();
+        mockServiceScriptData({}); // no scripts at all
+        mockUploadWorkerRequest({
+          legacyEnv: false,
+          expectedMigrations: {
+            new_tag: "v2",
+            steps: [
+              { new_classes: ["SomeClass"] },
+              { new_classes: ["SomeOtherClass"] },
+            ],
+          },
+        });
 
-        await expect(
-          runWrangler("publish index.js --legacy-env false")
-        ).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"Publishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739"`
+        await runWrangler("publish index.js --legacy-env false");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+
+          "
+        `);
+      });
+
+      it("should publish all migrations on first publish (--env)", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              { name: "SOMENAME", class_name: "SomeClass" },
+              { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+            ],
+          },
+          env: {
+            xyz: {
+              durable_objects: {
+                bindings: [
+                  { name: "SOMENAME", class_name: "SomeClass" },
+                  { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+                ],
+              },
+            },
+          },
+          migrations: [
+            { tag: "v1", new_classes: ["SomeClass"] },
+            { tag: "v2", new_classes: ["SomeOtherClass"] },
+          ],
+        });
+        fs.writeFileSync(
+          "index.js",
+          `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
         );
+        mockSubDomainRequest();
+        mockServiceScriptData({ env: "xyz" }); // no scripts at all
+        mockUploadWorkerRequest({
+          legacyEnv: false,
+          env: "xyz",
+          expectedMigrations: {
+            new_tag: "v2",
+            steps: [
+              { new_classes: ["SomeClass"] },
+              { new_classes: ["SomeOtherClass"] },
+            ],
+          },
+        });
+
+        await runWrangler("publish index.js --legacy-env false --env xyz");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Uploaded test-name (xyz) (TIMINGS)
+          Published test-name (xyz) (TIMINGS)
+            xyz.test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+
+          "
+        `);
+      });
+
+      it("should use a script's current migration tag when publishing migrations", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              { name: "SOMENAME", class_name: "SomeClass" },
+              { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+            ],
+          },
+          migrations: [
+            { tag: "v1", new_classes: ["SomeClass"] },
+            { tag: "v2", new_classes: ["SomeOtherClass"] },
+          ],
+        });
+        fs.writeFileSync(
+          "index.js",
+          `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+        );
+        mockSubDomainRequest();
+        mockServiceScriptData({
+          script: { id: "test-name", migration_tag: "v1" },
+        });
+        mockUploadWorkerRequest({
+          legacyEnv: false,
+          expectedMigrations: {
+            old_tag: "v1",
+            new_tag: "v2",
+            steps: [
+              {
+                new_classes: ["SomeOtherClass"],
+              },
+            ],
+          },
+        });
+
+        await runWrangler("publish index.js --legacy-env false");
         expect(std).toMatchInlineSnapshot(`
           Object {
             "debug": "",
-            "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mPublishing Durable Objects to a service environment is not currently supported. This is being tracked at https://github.com/cloudflare/wrangler2/issues/739[0m
+            "err": "",
+            "out": "Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev",
+            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           ",
-            "out": "
-          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m",
+          }
+        `);
+      });
+
+      it("should use an environment's current migration tag when publishing migrations", async () => {
+        writeWranglerToml({
+          durable_objects: {
+            bindings: [
+              { name: "SOMENAME", class_name: "SomeClass" },
+              { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+            ],
+          },
+          env: {
+            xyz: {
+              durable_objects: {
+                bindings: [
+                  { name: "SOMENAME", class_name: "SomeClass" },
+                  { name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+                ],
+              },
+            },
+          },
+          migrations: [
+            { tag: "v1", new_classes: ["SomeClass"] },
+            { tag: "v2", new_classes: ["SomeOtherClass"] },
+          ],
+        });
+        fs.writeFileSync(
+          "index.js",
+          `export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+        );
+        mockSubDomainRequest();
+        mockServiceScriptData({
+          script: { id: "test-name", migration_tag: "v1" },
+          env: "xyz",
+        });
+        mockUploadWorkerRequest({
+          legacyEnv: false,
+          env: "xyz",
+          expectedMigrations: {
+            old_tag: "v1",
+            new_tag: "v2",
+            steps: [
+              {
+                new_classes: ["SomeOtherClass"],
+              },
+            ],
+          },
+        });
+
+        await runWrangler("publish index.js --legacy-env false --env xyz");
+        expect(std).toMatchInlineSnapshot(`
+          Object {
+            "debug": "",
+            "err": "",
+            "out": "Uploaded test-name (xyz) (TIMINGS)
+          Published test-name (xyz) (TIMINGS)
+            xyz.test-name.test-sub-domain.workers.dev",
             "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           ",
@@ -2674,7 +2850,7 @@ export default{
         ],
       });
       mockSubDomainRequest();
-      mockScriptData({ scripts: [] });
+      mockLegacyScriptData({ scripts: [] });
 
       await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
       expect(std.out).toMatchInlineSnapshot(`
@@ -3434,7 +3610,9 @@ export default{
           `export class ExampleDurableObject {}; export default{};`
         );
         mockSubDomainRequest();
-        mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
+        mockLegacyScriptData({
+          scripts: [{ id: "test-name", migration_tag: "v1" }],
+        });
         mockUploadWorkerRequest({
           expectedBindings: [
             {
@@ -3508,7 +3686,9 @@ export default{
           `export class ExampleDurableObject {}; export default{};`
         );
         mockSubDomainRequest();
-        mockScriptData({ scripts: [{ id: "test-name", migration_tag: "v1" }] });
+        mockLegacyScriptData({
+          scripts: [{ id: "test-name", migration_tag: "v1" }],
+        });
         mockUploadWorkerRequest({
           expectedType: "esm",
           expectedBindings: [
@@ -4353,7 +4533,7 @@ function mockDeleteUnusedAssetsRequest(
 
 type LegacyScriptInfo = { id: string; migration_tag?: string };
 
-function mockScriptData(options: { scripts: LegacyScriptInfo[] }) {
+function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
   const { scripts } = options;
   setMockResponse(
     "/accounts/:accountId/workers/scripts",
@@ -4363,4 +4543,60 @@ function mockScriptData(options: { scripts: LegacyScriptInfo[] }) {
       return scripts;
     }
   );
+}
+
+type DurableScriptInfo = { id: string; migration_tag?: string };
+
+function mockServiceScriptData(options: {
+  script?: DurableScriptInfo;
+  scriptName?: string;
+  env?: string;
+}) {
+  const { script } = options;
+  if (options.env) {
+    if (!script) {
+      setMockRawResponse(
+        "/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+        "GET",
+        () => {
+          return createFetchResult(null, false, [
+            { code: 10092, message: "workers.api.error.environment_not_found" },
+          ]);
+        }
+      );
+      return;
+    }
+    setMockResponse(
+      "/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+      "GET",
+      ([_url, accountId, scriptName, envName]) => {
+        expect(accountId).toEqual("some-account-id");
+        expect(scriptName).toEqual(options.scriptName || "test-name");
+        expect(envName).toEqual(options.env);
+        return { script };
+      }
+    );
+  } else {
+    if (!script) {
+      setMockRawResponse(
+        "/accounts/:accountId/workers/services/:scriptName",
+        "GET",
+        () => {
+          return createFetchResult(null, false, [
+            { code: 10090, message: "workers.api.error.service_not_found" },
+          ]);
+        }
+      );
+      return;
+    }
+    setMockResponse(
+      "/accounts/:accountId/workers/services/:scriptName",
+      "GET",
+      ([_url, accountId, scriptName]) => {
+        expect(accountId).toEqual("some-account-id");
+        expect(scriptName).toEqual(options.scriptName || "test-name");
+        return { default_environment: { script } };
+      }
+    );
+  }
 }

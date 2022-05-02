@@ -1050,7 +1050,7 @@ const validateBindingsProperty =
           diagnostics.warnings.push(
             `The following bindings are at the top level, but not on "env.${envName}".\n` +
               `This is not what you probably want, since "${field}" configuration is not inherited by environments.\n` +
-              `Please add a binding for each to "${fieldPath}.bindings".` +
+              `Please add a binding for each to "${fieldPath}.bindings":\n` +
               missingBindings.map((name) => `- ${name}`).join("\n")
           );
         }
