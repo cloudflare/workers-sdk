@@ -311,6 +311,10 @@ export async function main(argv: string[]): Promise<void> {
       // TODO: make sure args.name is a valid identifier for a worker name
 
       const creationDirectory = path.join(process.cwd(), args.name ?? "");
+      const workerName = path
+        .basename(creationDirectory)
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9\-_]/gm, "-");
 
       const packageManager = await getPackageManager(creationDirectory);
 
@@ -322,8 +326,7 @@ export async function main(argv: string[]): Promise<void> {
         "./wrangler.toml"
       );
       let justCreatedWranglerToml = false;
-      const workerName =
-        args.name || path.basename(path.resolve(process.cwd()));
+
       if (fs.existsSync(wranglerTomlDestination)) {
         logger.warn(`${wranglerTomlDestination} file already exists!`);
         const shouldContinue = await confirm(
@@ -335,6 +338,7 @@ export async function main(argv: string[]): Promise<void> {
       } else {
         await mkdir(creationDirectory, { recursive: true });
         const compatibilityDate = new Date().toISOString().substring(0, 10);
+
         try {
           await writeFile(
             wranglerTomlDestination,
@@ -343,6 +347,7 @@ export async function main(argv: string[]): Promise<void> {
               compatibility_date: compatibilityDate,
             }) + "\n"
           );
+
           logger.log(`✨ Successfully created wrangler.toml`);
           justCreatedWranglerToml = true;
         } catch (err) {
@@ -379,6 +384,7 @@ export async function main(argv: string[]): Promise<void> {
               "  "
             ) + "\n"
           );
+
           await packageManager.install();
           logger.log(`✨ Created package.json`);
           pathToPackageJson = path.join(creationDirectory, "package.json");
