@@ -25,6 +25,7 @@ import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
+import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import { requireAuth } from "./user";
@@ -1287,6 +1288,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             ? await generateAssetsFetch(directory)
             : invalidAssetsFetch;
 
+        const requestContextCheckOptions =
+          await getRequestContextCheckOptions();
+
         const miniflare = new Miniflare({
           port,
           watch: true,
@@ -1351,6 +1355,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           cachePersist: true,
           liveReload,
 
+          ...requestContextCheckOptions,
           ...miniflareArgs,
         });
 

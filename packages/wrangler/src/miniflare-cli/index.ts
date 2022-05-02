@@ -2,6 +2,7 @@ import { Log, LogLevel, Miniflare } from "miniflare";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { enumKeys } from "./enum-keys";
+import { getRequestContextCheckOptions } from "./request-context";
 
 async function main() {
   const args = await yargs(hideBin(process.argv))
@@ -12,8 +13,10 @@ async function main() {
     }).argv;
 
   const logLevel = LogLevel[args.log ?? "INFO"];
+  const requestContextCheckOptions = await getRequestContextCheckOptions();
   const config = {
     ...JSON.parse((args._[0] as string) ?? "{}"),
+    ...requestContextCheckOptions,
     log: new Log(logLevel),
   };
 
