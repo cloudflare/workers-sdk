@@ -132,7 +132,7 @@ export default function (pluginArgs) {
         // https://fetch.spec.whatwg.org/#null-body-status
         return new Response(
           [101, 204, 205, 304].includes(response.status) ? null : response.body,
-          response
+          { ...response, headers: new Headers(response.headers) }
         );
       } else {
         return next();
