@@ -918,7 +918,7 @@
   For example:
 
   ```bash
-  npx wrangler@beta pages dev -- npm run dev
+  npx wrangler pages dev -- npm run dev
   ```
 
   Previously the args after `--` were being dropped.

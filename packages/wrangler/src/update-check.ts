@@ -7,7 +7,7 @@ export async function updateCheck(): Promise<string> {
   try {
     // default cache for update check is 1 day
     update = await checkForUpdate(pkg, {
-      distTag: pkg.version.startsWith("0.0.0") ? "alpha" : "beta", // TODO: change this after https://github.com/cloudflare/wrangler2/pull/805 lands
+      distTag: pkg.version.startsWith("0.0.0") ? "beta" : "latest",
     });
   } catch (err) {
     // ignore error

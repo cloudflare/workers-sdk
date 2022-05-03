@@ -7,7 +7,7 @@ on:
 jobs:
   prerelease:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Build & Publish an alpha release to NPM
+    name: Build & Publish a beta release to NPM
     runs-on: ubuntu-latest
 
     steps:
@@ -39,14 +39,14 @@ jobs:
       - name: Check for errors
         run: npm run check
 
-      - name: Publish Alpha to NPM
-        run: npm publish --tag alpha
+      - name: Publish Beta to NPM
+        run: npm publish --tag beta
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         working-directory: packages/wrangler
 
       - name: Get Package Version
-        run: echo "WRANGLER_VERSION=$(npm view wrangler@alpha version)" >> $GITHUB_ENV
+        run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV
         working-directory: packages/wrangler
       # The Sourcemap rewrite script is necessary due to how Sentry handles Events, Sourcemaps and sourcemapping URLs, all of which need to reference each other.
       # The script will rewrite the sourcemap URLs to point to the correct location of the sourcemap and what the Event is being processed (with RewriteFrames)

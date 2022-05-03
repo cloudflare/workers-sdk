@@ -14,16 +14,16 @@ Further, we will NOT do a general release until we are both feature complete, an
 # Make a javascript file
 $ echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
-$ npx wrangler@beta dev index.js
+$ npx wrangler dev index.js
 # and then publish it
-$ npx wrangler@beta publish index.js --name my-worker
+$ npx wrangler publish index.js --name my-worker
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
 ## Installation:
 
 ```bash
-$ npm install wrangler@beta
+$ npm install wrangler --save-dev
 ```
 
 ## Commands
