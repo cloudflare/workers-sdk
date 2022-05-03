@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import { readFileSync } from "node:fs";
 import patchConsole from "patch-console";
 import Dev from "../dev/dev";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -382,7 +381,7 @@ describe("wrangler dev", () => {
 
       await runWrangler("dev index.js");
 
-      expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(
+      expect(fs.readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(
         `"export default { fetch(){ return new Response(123) } }"`
       );
 
@@ -410,7 +409,7 @@ describe("wrangler dev", () => {
 
         await runWrangler("dev index.js");
 
-        expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(`
+        expect(fs.readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(`
           "export default { fetch(){ return new Response(123) } }
           "
         `);
