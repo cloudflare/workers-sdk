@@ -1,5 +1,69 @@
 # wrangler
 
+## 0.0.28
+
+### Patch Changes
+
+- [#843](https://github.com/cloudflare/wrangler2/pull/843) [`da12cc5`](https://github.com/cloudflare/wrangler2/commit/da12cc55a571eb30480fb21324002f682137b836) Thanks [@threepointone](https://github.com/threepointone)! - fix: `site.entry-point` is no longer a hard deprecation
+
+  To make migration of v1 projects easier, Sites projects should still work, including the `entry-point` field (which currently errors out). This enables `site.entry-point` as a valid entry point, with a deprecation warning.
+
+* [#848](https://github.com/cloudflare/wrangler2/pull/848) [`0a79d75`](https://github.com/cloudflare/wrangler2/commit/0a79d75e6aba11a3f0d5a7490f1b75c9f3e80ea8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - polish: improve consistency of warnings and errors
+
+  Related to #377
+
+- [#877](https://github.com/cloudflare/wrangler2/pull/877) [`97f945f`](https://github.com/cloudflare/wrangler2/commit/97f945fd3544eaba3f6bc4df2e5487049ea32817) Thanks [@caass](https://github.com/caass)! - Treat the "name" parameter in `wrangler init` as a path.
+
+  This means that running `wrangler init .` will create a worker in the current directory,
+  and the worker's name will be the name of the current directory.
+
+  You can also run `wrangler init path/to/my-worker` and a worker will be created at
+  `[CWD]/path/to/my-worker` with the name `my-worker`,
+
+* [#851](https://github.com/cloudflare/wrangler2/pull/851) [`277b254`](https://github.com/cloudflare/wrangler2/commit/277b25421175b4efc803cd68ef543cb55b07c114) Thanks [@threepointone](https://github.com/threepointone)! - polish: do not log the error object when refreshing a token fails
+
+  We handle the error anyway (by doing a fresh login) which has its own logging and messaging. In the future we should add a DEBUG mode that logs all requests/errors/warnings, but that's for later.
+
+- [#869](https://github.com/cloudflare/wrangler2/pull/869) [`f1423bf`](https://github.com/cloudflare/wrangler2/commit/f1423bf6399655d5c186c4849f23bb2196e4fcec) Thanks [@threepointone](https://github.com/threepointone)! - feat: experimental `--node-compat` / `config.node_compat`
+
+  This adds an experimental node.js compatibility mode. It can be enabled by adding `node_compat = true` in `wrangler.toml`, or by passing `--node-compat` as a command line arg for `dev`/`publish` commands. This is currently powered by `@esbuild-plugins/node-globals-polyfill` (which in itself is powered by `rollup-plugin-node-polyfills`).
+
+  We'd previously added this, and then removed it because the quality of the polyfills isn't great. We're reintroducing it regardless so we can start getting feedback on its usage, and it sets up a foundation for replacing it with our own, hopefully better maintained polyfills.
+
+  Of particular note, this means that what we promised in https://blog.cloudflare.com/announcing-stripe-support-in-workers/ now actually works.
+
+  This patch also addresses some dependency issues, specifically leftover entries in package-lock.json.
+
+* [#790](https://github.com/cloudflare/wrangler2/pull/790) [`331c659`](https://github.com/cloudflare/wrangler2/commit/331c65979295320b37cbf1f995f4acfc28630702) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - feature: Adds 'wrangler pages publish' (alias 'wrangler pages deployment create') command.
+
+- [#866](https://github.com/cloudflare/wrangler2/pull/866) [`8b227fc`](https://github.com/cloudflare/wrangler2/commit/8b227fc97e50abe36651b4a6c029b9ada404dc1f) Thanks [@caass](https://github.com/caass)! - Add a runtime check for `wrangler dev` local mode to avoid erroring in environments with no `AsyncLocalStorage` class
+
+  Certain runtime APIs are only available to workers during the "request context",
+  which is any code that returns after receiving a request and before returning
+  a response.
+
+  Miniflare emulates this behavior by using an [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html#class-asynclocalstorage) and
+  [checking at runtime](https://github.com/cloudflare/miniflare/blob/master/packages/shared/src/context.ts#L21-L36)
+  to see if you're using those APIs during the request context.
+
+  In certain environments `AsyncLocalStorage` is unavailable, such as in a
+  [webcontainer](https://github.com/stackblitz/webcontainer-core).
+  This function figures out if we're able to run those "request context" checks
+  and returns [a set of options](https://miniflare.dev/core/standards#global-functionality-limits)
+  that indicate to miniflare whether to run the checks or not.
+
+* [#829](https://github.com/cloudflare/wrangler2/pull/829) [`f08aac5`](https://github.com/cloudflare/wrangler2/commit/f08aac5dc1894ceaa84fc8b1a0c3d898dbbbe028) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: Add validation to the `name` field in configuration.
+  The validation will warn users that the field can only be "type string,
+  alphanumeric, underscores, and lowercase with dashes only" using the same RegEx as the backend
+
+  resolves #795 #775
+
+- [#868](https://github.com/cloudflare/wrangler2/pull/868) [`6ecb1c1`](https://github.com/cloudflare/wrangler2/commit/6ecb1c128bde5c8f8d7403278f07cc0e991c16a0) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement service environments + durable objects
+
+  Now that the APIs for getting migrations tags of services works as expected, this lands support for publishing durable objects to service environments, including migrations. It also removes the error we used to throw when attempting to use service envs + durable objects.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/739
+
 ## 0.0.27
 
 ### Patch Changes
