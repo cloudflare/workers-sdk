@@ -85,16 +85,6 @@ export function normalizeAndValidateConfig(
     true
   );
 
-  deprecated(
-    diagnostics,
-    rawConfig,
-    `site.entry-point`,
-    `The \`site.entry-point\` config field is no longer used.\nThe entry-point should be specified via the command line or the \`main\` config field.`,
-    false,
-    "NO LONGER SUPPORTED",
-    "error"
-  );
-
   validateOptionalProperty(
     diagnostics,
     "",
@@ -204,7 +194,12 @@ export function normalizeAndValidateConfig(
       diagnostics,
       rawConfig.migrations ?? []
     ),
-    site: normalizeAndValidateSite(diagnostics, rawConfig.site),
+    site: normalizeAndValidateSite(
+      diagnostics,
+      configPath,
+      rawConfig,
+      activeEnv.main
+    ),
     wasm_modules: normalizeAndValidateModulePaths(
       diagnostics,
       configPath,
@@ -454,15 +449,80 @@ function normalizeAndValidateMigrations(
  */
 function normalizeAndValidateSite(
   diagnostics: Diagnostics,
-  rawSite: Config["site"]
+  configPath: string | undefined,
+  rawConfig: RawConfig,
+  mainEntryPoint: string | undefined
 ): Config["site"] {
-  if (rawSite !== undefined) {
-    const { bucket, include = [], exclude = [], ...rest } = rawSite;
-    validateAdditionalProperties(diagnostics, "site", Object.keys(rest), []);
+  if (rawConfig?.site !== undefined) {
+    const { bucket, include = [], exclude = [], ...rest } = rawConfig.site;
+
+    validateAdditionalProperties(diagnostics, "site", Object.keys(rest), [
+      "entry-point",
+    ]);
     validateRequiredProperty(diagnostics, "site", "bucket", bucket, "string");
     validateTypedArray(diagnostics, "sites.include", include, "string");
     validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
-    return { bucket, include, exclude };
+    validateOptionalProperty(
+      diagnostics,
+      "site",
+      "entry-point",
+      rawConfig.site["entry-point"],
+      "string"
+    );
+
+    deprecated(
+      diagnostics,
+      rawConfig,
+      `site.entry-point`,
+      `Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:\n` +
+        `\`\`\`\n` +
+        `main = "${path.join(
+          String(rawConfig.site["entry-point"]) || "workers-site",
+          path.extname(String(rawConfig.site["entry-point"]) || "workers-site")
+            ? ""
+            : "index.js"
+        )}"\n` +
+        `\`\`\``,
+      false,
+      undefined,
+      "warning"
+    );
+
+    let siteEntryPoint = rawConfig.site["entry-point"];
+
+    if (!mainEntryPoint && !siteEntryPoint) {
+      // this means that we're defaulting to "workers-site"
+      // so let's add the deprecation warning
+      diagnostics.warnings.push(
+        `Because you've defined a [site] configuration, we're defaulting to "workers-site" for the deprecated \`site.entry-point\`field.\n` +
+          `Add the top level \`main\` field to your configuration file:\n` +
+          `\`\`\`\n` +
+          `main = "workers-site/index.js"\n` +
+          `\`\`\``
+      );
+      siteEntryPoint = "workers-site";
+    } else if (mainEntryPoint && siteEntryPoint) {
+      diagnostics.errors.push(
+        `Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.\n` +
+          `They serve the same purpose: to point to the entry-point of your worker.\n` +
+          `Delete the deprecated \`site.entry-point\` field from your config.`
+      );
+    }
+
+    if (configPath && siteEntryPoint) {
+      // rewrite the path to be relative to the working directory
+      siteEntryPoint = path.relative(
+        process.cwd(),
+        path.join(path.dirname(configPath), siteEntryPoint)
+      );
+    }
+
+    return {
+      bucket,
+      "entry-point": siteEntryPoint,
+      include,
+      exclude,
+    };
   }
   return undefined;
 }

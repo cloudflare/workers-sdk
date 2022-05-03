@@ -29,9 +29,17 @@ export async function getEntry(
     // If the script name comes from the command line it is relative to the current working directory.
     file = path.resolve(args.script);
   } else if (config.main === undefined) {
-    throw new Error(
-      `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
-    );
+    if (config.site?.["entry-point"]) {
+      directory = path.resolve(path.dirname(config.configPath ?? "."));
+      file = path.extname(config.site?.["entry-point"])
+        ? path.resolve(config.site?.["entry-point"])
+        : // site.entry-point could be a directory
+          path.resolve(config.site?.["entry-point"], "index.js");
+    } else {
+      throw new Error(
+        `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
+      );
+    }
   } else {
     directory = path.resolve(path.dirname(config.configPath ?? "."));
     file = path.resolve(directory, config.main);

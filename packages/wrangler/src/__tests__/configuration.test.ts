@@ -1,5 +1,6 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "../config/validation";
+import { normalizeSlashes } from "./helpers/mock-console";
 import type {
   ConfigFields,
   RawDevConfig,
@@ -230,8 +231,9 @@ describe("normalizeAndValidateConfig()", () => {
         const expectedConfig: RawConfig = {
           site: {
             bucket: "BUCKET",
-            include: ["INCLUDE_1", "INCLUDE_2"],
+            "entry-point": "my-site",
             exclude: ["EXCLUDE_1", "EXCLUDE_2"],
+            include: ["INCLUDE_1", "INCLUDE_2"],
           },
         };
 
@@ -243,13 +245,24 @@ describe("normalizeAndValidateConfig()", () => {
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
         expect(diagnostics.hasErrors()).toBe(false);
-        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
+
+        expect(normalizeSlashes(diagnostics.renderWarnings()))
+          .toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - DEPRECATION: \\"site.entry-point\\":
+              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+              \`\`\`
+              main = \\"my-site/index.js\\"
+              \`\`\`"
+        `);
       });
 
       it("should error if `site` config is missing `bucket`", () => {
         const expectedConfig: RawConfig = {
           // @ts-expect-error we're intentionally passing an invalid configuration here
           site: {
+            "entry-point": "workers-site",
             include: ["INCLUDE_1", "INCLUDE_2"],
             exclude: ["EXCLUDE_1", "EXCLUDE_2"],
           },
@@ -262,18 +275,30 @@ describe("normalizeAndValidateConfig()", () => {
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.hasErrors()).toBe(true);
+
+        expect(normalizeSlashes(diagnostics.renderWarnings()))
+          .toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - DEPRECATION: \\"site.entry-point\\":
+              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+              \`\`\`
+              main = \\"workers-site/index.js\\"
+              \`\`\`"
+        `);
+
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
             - \\"site.bucket\\" is a required field."
         `);
-        expect(diagnostics.hasWarnings()).toBe(false);
       });
 
       it("should error on invalid `site` values", () => {
         const expectedConfig = {
           site: {
             bucket: "BUCKET",
+            "entry-point": 111,
             include: [222, 333],
             exclude: [444, 555],
           },
@@ -286,17 +311,28 @@ describe("normalizeAndValidateConfig()", () => {
         );
 
         expect(config).toEqual(expect.objectContaining(expectedConfig));
-        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
             - Expected \\"sites.include.[0]\\" to be of type string but got 222.
             - Expected \\"sites.include.[1]\\" to be of type string but got 333.
             - Expected \\"sites.exclude.[0]\\" to be of type string but got 444.
-            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555."
+            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555.
+            - Expected \\"site.entry-point\\" to be of type string but got 111."
+        `);
+
+        expect(normalizeSlashes(diagnostics.renderWarnings()))
+          .toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - DEPRECATION: \\"site.entry-point\\":
+              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+              \`\`\`
+              main = \\"111/index.js\\"
+              \`\`\`"
         `);
       });
 
-      it("should error with a deprecation warning if entry-point is defined", async () => {
+      it("should log a deprecation warning if entry-point is defined", async () => {
         const { config, diagnostics } = normalizeAndValidateConfig(
           {
             site: {
@@ -311,21 +347,22 @@ describe("normalizeAndValidateConfig()", () => {
         expect(config.site).toMatchInlineSnapshot(`
           Object {
             "bucket": "some/path",
+            "entry-point": "some/other/script.js",
             "exclude": Array [],
             "include": Array [],
           }
         `);
         expect(diagnostics.hasWarnings()).toBe(true);
-        expect(diagnostics.hasErrors()).toBe(true);
-        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        expect(diagnostics.hasErrors()).toBe(false);
+
+        expect(normalizeSlashes(diagnostics.renderWarnings()))
+          .toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - Unexpected fields found in site field: \\"entry-point\\""
-        `);
-        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - NO LONGER SUPPORTED: \\"site.entry-point\\":
-              The \`site.entry-point\` config field is no longer used.
-              The entry-point should be specified via the command line or the \`main\` config field."
+            - DEPRECATION: \\"site.entry-point\\":
+              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+              \`\`\`
+              main = \\"some/other/script.js\\"
+              \`\`\`"
         `);
       });
     });

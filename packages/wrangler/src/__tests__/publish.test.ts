@@ -10,7 +10,7 @@ import {
   unsetAllMocks,
   unsetMockFetchKVGetValues,
 } from "./helpers/mock-cfetch";
-import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -758,10 +758,19 @@ export default{
 
         "
       `);
-      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+          - Because you've defined a [site] configuration, we're defaulting to \\"workers-site\\" for the deprecated \`site.entry-point\`field.
+            Add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"workers-site/index.js\\"
+            \`\`\`[0m
+
+        "
+      `);
     });
 
-    it("should error if there is a `site.entry-point` configuration", async () => {
+    it("should warn if there is a `site.entry-point` configuration", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
         { filePath: "assets/file-2.txt", content: "Content of file-2" },
@@ -784,33 +793,99 @@ export default{
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      await runWrangler("publish ./index.js");
 
-      await expect(runWrangler("publish ./index.js")).rejects
-        .toThrowErrorMatchingInlineSnapshot(`
-              "Processing wrangler.toml configuration:
-                - NO LONGER SUPPORTED: \\"site.entry-point\\":
-                  The \`site.entry-point\` config field is no longer used.
-                  The entry-point should be specified via the command line or the \`main\` config field."
-            `);
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+          - DEPRECATION: \\"site.entry-point\\":
+            Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"index.js\\"
+            \`\`\`[0m
+
+        ",
+        }
+      `);
+    });
+
+    it("should resolve site.entry-point relative to wrangler.toml", async () => {
+      const assets = [
+        { filePath: "assets/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      fs.mkdirSync("my-site");
+      process.chdir("my-site");
+      writeWranglerToml({
+        site: {
+          bucket: "assets",
+          "entry-point": "my-entry",
+        },
+      });
+      fs.mkdirSync("my-entry");
+      fs.writeFileSync("my-entry/index.js", "export default {}");
+      writeAssets(assets);
+      process.chdir("..");
+      mockUploadWorkerRequest();
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      await runWrangler("publish --config ./my-site/wrangler.toml");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        "Reading assets/file-1.txt...
+        Uploading as assets/file-1.2ca234f380.txt...
+        Reading assets/file-2.txt...
+        Uploading as assets/file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
       `);
-      expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:
-          - NO LONGER SUPPORTED: \\"site.entry-point\\":
-            The \`site.entry-point\` config field is no longer used.
-            The entry-point should be specified via the command line or the \`main\` config field.[0m
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:
+          - DEPRECATION: \\"site.entry-point\\":
+            Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+            \`\`\`
+            main = \\"my-entry/index.js\\"
+            \`\`\`[0m
 
         "
       `);
-      expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
-          - Unexpected fields found in site field: \\"entry-point\\"[0m
+    });
 
-        "
-      `);
+    it("should error if both main and site.entry-point are specified", async () => {
+      writeWranglerToml({
+        main: "some-entry",
+        site: {
+          bucket: "some-bucket",
+          "entry-point": "./index.js",
+        },
+      });
+
+      await expect(runWrangler("publish")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Processing wrangler.toml configuration:
+                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
+                  They serve the same purpose: to point to the entry-point of your worker.
+                  Delete the deprecated \`site.entry-point\` field from your config."
+            `);
     });
 
     it("should error if there is no entry-point specified", async () => {
