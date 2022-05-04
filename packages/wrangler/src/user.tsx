@@ -220,15 +220,14 @@ import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
+import { purgeConfigCaches } from "./config-cache";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
-import type { Config } from "./config";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
-import { purgeConfigCaches } from "./config-cache";
 
 /**
  * Try to read the API token from the environment.

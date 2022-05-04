@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 
 let cacheMessageShown = false;

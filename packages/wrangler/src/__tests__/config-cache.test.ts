@@ -1,31 +1,36 @@
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
+interface PagesConfigCache {
+  account_id: string;
+  pages_project_name: string;
+}
+
 describe("config cache", () => {
   runInTempDir();
 
   const pagesConfigCacheFilename = "pages-config-cache.json";
 
   it("should return an empty config if no file exists", () => {
-    expect(getConfigCache(pagesConfigCacheFilename)).toMatchInlineSnapshot(
-      `Object {}`
-    );
+    expect(
+      getConfigCache<PagesConfigCache>(pagesConfigCacheFilename)
+    ).toMatchInlineSnapshot(`Object {}`);
   });
 
   it("should read and write values without overriding old ones", () => {
-    saveToConfigCache(pagesConfigCacheFilename, {
+    saveToConfigCache<PagesConfigCache>(pagesConfigCacheFilename, {
       account_id: "some-account-id",
       pages_project_name: "foo",
     });
-    expect(getConfigCache(pagesConfigCacheFilename).account_id).toEqual(
-      "some-account-id"
-    );
+    expect(
+      getConfigCache<PagesConfigCache>(pagesConfigCacheFilename).account_id
+    ).toEqual("some-account-id");
 
-    saveToConfigCache(pagesConfigCacheFilename, {
+    saveToConfigCache<PagesConfigCache>(pagesConfigCacheFilename, {
       pages_project_name: "bar",
     });
-    expect(getConfigCache(pagesConfigCacheFilename).account_id).toEqual(
-      "some-account-id"
-    );
+    expect(
+      getConfigCache<PagesConfigCache>(pagesConfigCacheFilename).account_id
+    ).toEqual("some-account-id");
   });
 });

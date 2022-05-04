@@ -155,32 +155,7 @@ describe("pages", () => {
       unsetAllMocks();
     });
 
-    it("should create a project with a the default production branch", async () => {
-      setMockResponse(
-        "/accounts/:accountId/pages/projects",
-        ([_url, accountId], init) => {
-          expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
-          const body = JSON.parse(init.body as string);
-          expect(body).toEqual({
-            name: "a-new-project",
-            production_branch: "production",
-          });
-          return {
-            name: "a-new-project",
-            subdomain: "a-new-project.pages.dev",
-            production_branch: "production",
-          };
-        }
-      );
-      await runWrangler("pages project create a-new-project");
-      expect(std.out).toMatchInlineSnapshot(`
-        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
-        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
-      `);
-    });
-
-    it("should create a project with a the default production branch", async () => {
+    it("should create a project with a production branch", async () => {
       setMockResponse(
         "/accounts/:accountId/pages/projects",
         ([_url, accountId], init) => {
@@ -316,7 +291,7 @@ describe("pages", () => {
           expect(logoPNGFile.name).toEqual("logo.png");
 
           return {
-            id: "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+            id: "2082190357cfd3617ccfe04f340c6247",
           };
         }
       );
@@ -330,7 +305,7 @@ describe("pages", () => {
           const manifest = JSON.parse(body.get("manifest") as string);
           expect(manifest).toMatchInlineSnapshot(`
             Object {
-              "logo.png": "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+              "logo.png": "2082190357cfd3617ccfe04f340c6247",
             }
           `);
 
