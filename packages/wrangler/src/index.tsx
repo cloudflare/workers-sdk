@@ -83,7 +83,7 @@ function getRules(config: Config): Config["rules"] {
 
   if (config.build?.upload?.rules) {
     logger.warn(
-      `DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+      `Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
 
 ${TOML.stringify({ rules: config.build.upload.rules })}`
     );

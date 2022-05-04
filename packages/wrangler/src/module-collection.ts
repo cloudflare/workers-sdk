@@ -138,7 +138,7 @@ export default function createModuleCollector(props: {
               }
               // In the future, this will simply throw an error
               logger.warn(
-                `DEPRECATION: detected a legacy module import in "./${path.relative(
+                `Deprecation: detected a legacy module import in "./${path.relative(
                   process.cwd(),
                   args.importer
                 )}". This will stop working in the future. Replace references to "${
