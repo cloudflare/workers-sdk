@@ -291,8 +291,9 @@ describe("wrangler", () => {
                 --namespace-id  The id of the namespace to delete  [string]
             -e, --env           Perform on a specific environment  [string]
                 --preview       Interact with a preview namespace  [boolean]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.
-          A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
+
+            A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
           "
         `);
@@ -1229,8 +1230,9 @@ describe("wrangler", () => {
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".
-          The item at index 4 contains unexpected properties: [\\"invalid\\"].[0m
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+
+            The item at index 4 contains unexpected properties: [\\"invalid\\"].
 
           "
         `);

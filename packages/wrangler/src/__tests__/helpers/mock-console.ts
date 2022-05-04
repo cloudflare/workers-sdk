@@ -1,4 +1,5 @@
 import * as util from "node:util";
+import { logger } from "../../logger";
 
 /**
  * We use this module to mock console methods, and optionally
@@ -39,6 +40,7 @@ function captureCalls(spy: jest.SpyInstance): string {
 
 export function mockConsoleMethods() {
   beforeEach(() => {
+    logger.columns = 100;
     debugSpy = jest.spyOn(console, "debug").mockImplementation();
     logSpy = jest.spyOn(console, "log").mockImplementation();
     errorSpy = jest.spyOn(console, "error").mockImplementation();

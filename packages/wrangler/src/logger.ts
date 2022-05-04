@@ -21,6 +21,8 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 class Logger {
   constructor(public loggerLevel: LoggerLevel = "log") {}
 
+  columns = process.stdout.columns;
+
   debug = (...args: unknown[]) => this.doLog("debug", args);
   log = (...args: unknown[]) => this.doLog("log", args);
   warn = (...args: unknown[]) => this.doLog("warn", args);
@@ -32,16 +34,24 @@ class Logger {
     }
   }
 
-  formatMessage(level: LoggerLevel, text: string): string {
+  private formatMessage(level: LoggerLevel, message: string): string {
     const kind = LOGGER_LEVEL_FORMAT_TYPE_MAP[level];
     if (kind) {
-      return formatMessagesSync([{ text }], {
+      // Format the message using the esbuild formatter.
+      // The first line of the message is the main `text`,
+      // subsequent lines are put into the `notes`.
+      const [firstLine, ...otherLines] = message.split("\n");
+      const notes =
+        otherLines.length > 0
+          ? otherLines.map((text) => ({ text }))
+          : undefined;
+      return formatMessagesSync([{ text: firstLine, notes }], {
         color: true,
         kind,
-        terminalWidth: process.stdout.columns,
+        terminalWidth: this.columns,
       })[0];
     } else {
-      return text;
+      return message;
     }
   }
 }

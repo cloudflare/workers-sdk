@@ -40,16 +40,17 @@ describe("wrangler dev", () => {
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn.replaceAll(currentDate, "<current-date>"))
         .toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.
-        Add one to your wrangler.toml file:
-        \`\`\`
-        compatibility_date = \\"<current-date>\\"
-        \`\`\`
-        or pass it in your terminal:
-        \`\`\`
-        --compatibility-date=<current-date>
-        \`\`\`
-        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+
+          Add one to your wrangler.toml file:
+          \`\`\`
+          compatibility_date = \\"<current-date>\\"
+          \`\`\`
+          or pass it in your terminal:
+          \`\`\`
+          --compatibility-date=<current-date>
+          \`\`\`
+          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates[0m for more information.
 
         "
       `);
@@ -476,9 +477,10 @@ describe("wrangler dev", () => {
       );
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.
-        If this is required in your project, please add your use case to the following issue:
-        https://github.com/cloudflare/wrangler2/issues/583.[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.[0m
+
+          If this is required in your project, please add your use case to the following issue:
+          [4mhttps://github.com/cloudflare/wrangler2/issues/583[0m.
 
         "
       `);
@@ -604,11 +606,13 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
-        Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
-        Remote Durable Objects that are affected:
-        - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-        - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
+
+          Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
+          live instances.
+          Remote Durable Objects that are affected:
+          - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+          - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
 
         "
       `);
