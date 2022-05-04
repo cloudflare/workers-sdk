@@ -155,32 +155,7 @@ describe("pages", () => {
       unsetAllMocks();
     });
 
-    it("should create a project with a the default production branch", async () => {
-      setMockResponse(
-        "/accounts/:accountId/pages/projects",
-        ([_url, accountId], init) => {
-          expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
-          const body = JSON.parse(init.body as string);
-          expect(body).toEqual({
-            name: "a-new-project",
-            production_branch: "production",
-          });
-          return {
-            name: "a-new-project",
-            subdomain: "a-new-project.pages.dev",
-            production_branch: "production",
-          };
-        }
-      );
-      await runWrangler("pages project create a-new-project");
-      expect(std.out).toMatchInlineSnapshot(`
-        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
-        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
-      `);
-    });
-
-    it("should create a project with a the default production branch", async () => {
+    it("should create a project with a production branch", async () => {
       setMockResponse(
         "/accounts/:accountId/pages/projects",
         ([_url, accountId], init) => {
@@ -250,7 +225,7 @@ describe("pages", () => {
       ];
 
       const requests = mockListRequest(deployments);
-      await runWrangler("pages deployment list --project=images");
+      await runWrangler("pages deployment list --project-name=images");
 
       expect(requests.count).toBe(1);
     });
@@ -292,7 +267,7 @@ describe("pages", () => {
               --legacy-env  Use legacy environments  [boolean]
 
         Options:
-              --project         The name of the project you want to list deployments for  [string]
+              --project-name    The name of the project you want to list deployments for  [string]
               --branch          The branch of the project you want to list deployments for  [string]
               --commit-hash     The branch of the project you want to list deployments for  [string]
               --commit-message  The branch of the project you want to list deployments for  [string]
@@ -316,7 +291,7 @@ describe("pages", () => {
           expect(logoPNGFile.name).toEqual("logo.png");
 
           return {
-            id: "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+            id: "2082190357cfd3617ccfe04f340c6247",
           };
         }
       );
@@ -330,7 +305,7 @@ describe("pages", () => {
           const manifest = JSON.parse(body.get("manifest") as string);
           expect(manifest).toMatchInlineSnapshot(`
             Object {
-              "logo.png": "2082190357cfd3617ccfe04f340c6247d4b47484797840635feb491447bcd81c",
+              "logo.png": "2082190357cfd3617ccfe04f340c6247",
             }
           `);
 
@@ -340,7 +315,7 @@ describe("pages", () => {
         }
       );
 
-      await runWrangler("pages publish . --project=foo");
+      await runWrangler("pages publish . --project-name=foo");
 
       // TODO: Unmounting somehow loses this output
 

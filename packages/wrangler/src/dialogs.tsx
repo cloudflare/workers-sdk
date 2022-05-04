@@ -43,12 +43,13 @@ export function confirm(text: string): Promise<boolean> {
 
 type PromptProps = {
   text: string;
+  defaultValue?: string;
   type?: "text" | "password";
   onSubmit: (text: string) => void;
 };
 
 function Prompt(props: PromptProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(props.defaultValue || "");
 
   return (
     <Box>
@@ -65,11 +66,16 @@ function Prompt(props: PromptProps) {
   );
 }
 
-export async function prompt(text: string, type: "text" | "password" = "text") {
+export async function prompt(
+  text: string,
+  type: "text" | "password" = "text",
+  defaultValue?: string
+): Promise<string> {
   return new Promise((resolve) => {
     const { unmount } = render(
       <Prompt
         text={text}
+        defaultValue={defaultValue}
         type={type}
         onSubmit={(inputText) => {
           unmount();

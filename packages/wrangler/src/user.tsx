@@ -220,11 +220,11 @@ import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
+import { purgeConfigCaches } from "./config-cache";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
-import type { Config } from "./config";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -979,6 +979,8 @@ export async function login(props?: LoginProps): Promise<boolean> {
             });
             logger.log(`Successfully logged in.`);
 
+            purgeConfigCaches();
+
             return;
           }
         }
@@ -1156,7 +1158,7 @@ export function ChooseAccount(props: {
  * Ensure that a user is logged in, and a valid account_id is available.
  */
 export async function requireAuth(
-  config: Config,
+  config: { account_id?: string },
   isInteractive = true
 ): Promise<string> {
   const loggedIn = await loginOrRefreshIfRequired(isInteractive);

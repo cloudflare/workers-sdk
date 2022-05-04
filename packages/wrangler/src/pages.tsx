@@ -10,6 +10,7 @@ import { URL } from "node:url";
 import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
 import { render, Text } from "ink";
+import SelectInput from "ink-select-input";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
 import { getType } from "mime";
@@ -22,7 +23,8 @@ import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { getConfigCache, saveToConfigCache } from "./config-cache";
+import { prompt } from "./dialogs";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
 import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
@@ -34,8 +36,6 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback, CommandModule } from "yargs";
-
-type ConfigPath = string | undefined;
 
 export type Project = {
   name: string;
@@ -67,6 +67,13 @@ export type Deployment = {
   };
   project_name: string;
 };
+
+interface PagesConfigCache {
+  account_id?: string;
+  project_name?: string;
+}
+
+const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -776,7 +783,7 @@ async function buildFunctions({
 
 interface CreateDeploymentArgs {
   directory: string;
-  project?: string;
+  projectName?: string;
   branch?: string;
   commitHash?: string;
   commitMessage?: string;
@@ -796,7 +803,7 @@ const createDeployment: CommandModule<
         description: "The directory of Pages Functions",
       })
       .options({
-        project: {
+        "project-name": {
           type: "string",
           description:
             "The name of the project you want to list deployments for",
@@ -824,11 +831,130 @@ const createDeployment: CommandModule<
       })
       .epilogue(pagesBetaWarning);
   },
-  handler: async (args) => {
-    const { directory, project } = args;
-    let { branch, commitHash, commitMessage, commitDirty } = args;
+  handler: async ({
+    directory,
+    projectName,
+    branch,
+    commitHash,
+    commitMessage,
+    commitDirty,
+  }) => {
+    const config = getConfigCache<PagesConfigCache>(
+      PAGES_CONFIG_CACHE_FILENAME
+    );
+    const isInteractive = process.stdin.isTTY;
+    const accountId = await requireAuth(config, isInteractive);
 
-    // TODO: Project picker #821
+    projectName ??= config.project_name;
+
+    if (!projectName && isInteractive) {
+      const existingOrNew = await new Promise<"new" | "existing">((resolve) => {
+        const { unmount } = render(
+          <>
+            <Text>
+              No project selected. Would you like to create one or use an
+              existing project?
+            </Text>
+            <SelectInput
+              items={[
+                {
+                  key: "new",
+                  label: "Create a new project",
+                  value: "new",
+                },
+                {
+                  key: "existing",
+                  label: "Use an existing project",
+                  value: "existing",
+                },
+              ]}
+              onSelect={async (selected) => {
+                resolve(selected.value as "new" | "existing");
+                unmount();
+              }}
+            />
+          </>
+        );
+      });
+
+      switch (existingOrNew) {
+        case "existing": {
+          const projects = (await listProjects({ accountId })).filter(
+            (project) => !project.source
+          );
+          projectName = await new Promise((resolve) => {
+            const { unmount } = render(
+              <>
+                <Text>Select a project:</Text>
+                <SelectInput
+                  items={projects.map((project) => ({
+                    key: project.name,
+                    label: project.name,
+                    value: project,
+                  }))}
+                  onSelect={async (selected) => {
+                    resolve(selected.value.name);
+                    unmount();
+                  }}
+                />
+              </>
+            );
+          });
+          break;
+        }
+        case "new": {
+          projectName = await prompt("Enter the name of your new project:");
+
+          if (!projectName) {
+            throw new FatalError("Must specify a project name.", 1);
+          }
+
+          let isGitDir = true;
+          try {
+            execSync(`git rev-parse --is-inside-work-tree`, {
+              stdio: "ignore",
+            });
+          } catch (err) {
+            isGitDir = false;
+          }
+
+          const productionBranch = await prompt(
+            "Enter the production branch name:",
+            "text",
+            isGitDir
+              ? execSync(`git branch | grep "* "`)
+                  .toString()
+                  .replace("* ", "")
+                  .trim()
+              : "production"
+          );
+
+          if (!productionBranch) {
+            throw new FatalError("Must specify a production branch.", 1);
+          }
+
+          await fetchResult<Project>(`/accounts/${accountId}/pages/projects`, {
+            method: "POST",
+            body: JSON.stringify({
+              name: projectName,
+              production_branch: productionBranch,
+            }),
+          });
+
+          saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+            account_id: accountId,
+            project_name: projectName,
+          });
+
+          logger.log(`✨ Successfully created the '${projectName}' project.`);
+          break;
+        }
+      }
+    }
+
+    if (!projectName) {
+      throw new FatalError("Must specify a project name.", 1);
+    }
 
     // We infer git info by default is not passed in
 
@@ -850,7 +976,7 @@ const createDeployment: CommandModule<
         );
 
         if (!branch) {
-          branch = execSync(`git branch | grep " * "`)
+          branch = execSync(`git branch | grep "* "`)
             .toString()
             .replace("* ", "")
             .trim();
@@ -868,7 +994,7 @@ const createDeployment: CommandModule<
       } catch (err) {}
 
       if (isGitDirty && !commitDirty) {
-        console.warn(
+        logger.warn(
           `Warning: Your working directory is a git repo and has uncommitted changes\nTo silense this warning, pass in --commit-dirty=true`
         );
       }
@@ -877,9 +1003,6 @@ const createDeployment: CommandModule<
         commitDirty = isGitDirty;
       }
     }
-
-    const config = readConfig(args.config as ConfigPath, args);
-    const accountId = await requireAuth(config);
 
     type File = {
       content: Buffer;
@@ -950,7 +1073,7 @@ const createDeployment: CommandModule<
               content: fileContent,
               metadata: {
                 sizeInBytes: filestat.size,
-                hash: hash(content).toString("hex"),
+                hash: hash(content).toString("hex").slice(0, 32),
               },
             });
           }
@@ -988,7 +1111,7 @@ const createDeployment: CommandModule<
       // TODO: Consider a retry
 
       const promise = fetchResult<{ id: string }>(
-        `/accounts/${accountId}/pages/projects/${project}/file`,
+        `/accounts/${accountId}/pages/projects/${projectName}/file`,
         {
           method: "POST",
           body: form,
@@ -998,7 +1121,7 @@ const createDeployment: CommandModule<
         rerender(<Progress done={counter} total={fileMap.size} />);
         if (response.id != file.metadata.hash) {
           throw new Error(
-            `Looks like there was an issue uploading that ${name}. Try again perhaps?`
+            `Looks like there was an issue uploading '${name}'. Try again perhaps?`
           );
         }
       });
@@ -1012,7 +1135,7 @@ const createDeployment: CommandModule<
 
     const uploadMs = Date.now() - start;
 
-    console.log(
+    logger.log(
       `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
     );
 
@@ -1093,14 +1216,19 @@ const createDeployment: CommandModule<
     }
 
     const deploymentResponse = await fetchResult<Deployment>(
-      `/accounts/${accountId}/pages/projects/${project}/deployment`,
+      `/accounts/${accountId}/pages/projects/${projectName}/deployment`,
       {
         method: "POST",
         body: formData,
       }
     );
 
-    console.log(
+    saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+      account_id: accountId,
+      project_name: projectName,
+    });
+
+    logger.log(
       `✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
     );
   },
@@ -1473,9 +1601,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           "list",
           "List your Cloudflare Pages projects",
           (yargs) => yargs.epilogue(pagesBetaWarning),
-          async (args) => {
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
+          async () => {
+            const config = getConfigCache<PagesConfigCache>(
+              PAGES_CONFIG_CACHE_FILENAME
+            );
+            const isInteractive = process.stdin.isTTY;
+            const accountId = await requireAuth(config, isInteractive);
 
             const projects: Array<Project> = await listProjects({ accountId });
 
@@ -1489,15 +1620,20 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   : timeagoFormat(project.created_on),
               };
             });
+
+            saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+              account_id: accountId,
+            });
+
             render(<Table data={data}></Table>);
           }
         )
         .command(
-          "create [name]",
+          "create [project-name]",
           "Create a new Cloudflare Pages project",
           (yargs) =>
             yargs
-              .positional("name", {
+              .positional("project-name", {
                 type: "string",
                 demandOption: true,
                 description: "The name of your Pages project",
@@ -1505,35 +1641,70 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               .options({
                 "production-branch": {
                   type: "string",
-                  // TODO: Should we default to the current git branch?
-                  default: "production",
                   description:
                     "The name of the production branch of your project",
                 },
               })
               .epilogue(pagesBetaWarning),
-          async (args) => {
-            const { "production-branch": productionBranch, name } = args;
+          async ({ productionBranch, projectName }) => {
+            const config = getConfigCache<PagesConfigCache>(
+              PAGES_CONFIG_CACHE_FILENAME
+            );
+            const isInteractive = process.stdin.isTTY;
+            const accountId = await requireAuth(config, isInteractive);
 
-            if (!name) {
+            if (!projectName && isInteractive) {
+              projectName = await prompt("Enter the name of your new project:");
+            }
+
+            if (!projectName) {
               throw new FatalError("Must specify a project name.", 1);
             }
 
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
+            if (!productionBranch && isInteractive) {
+              let isGitDir = true;
+              try {
+                execSync(`git rev-parse --is-inside-work-tree`, {
+                  stdio: "ignore",
+                });
+              } catch (err) {
+                isGitDir = false;
+              }
+
+              productionBranch = await prompt(
+                "Enter the production branch name:",
+                "text",
+                isGitDir
+                  ? execSync(`git branch | grep "* "`)
+                      .toString()
+                      .replace("* ", "")
+                      .trim()
+                  : "production"
+              );
+            }
+
+            if (!productionBranch) {
+              throw new FatalError("Must specify a production branch.", 1);
+            }
 
             const { subdomain } = await fetchResult<Project>(
               `/accounts/${accountId}/pages/projects`,
               {
                 method: "POST",
                 body: JSON.stringify({
-                  name,
+                  name: projectName,
                   production_branch: productionBranch,
                 }),
               }
             );
+
+            saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+              account_id: accountId,
+              project_name: projectName,
+            });
+
             logger.log(
-              `✨ Successfully created the '${name}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
+              `✨ Successfully created the '${projectName}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
             );
             logger.log(
               `To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
@@ -1553,20 +1724,50 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             (yargs) =>
               yargs
                 .options({
-                  project: {
+                  "project-name": {
                     type: "string",
-                    demandOption: true,
                     description:
                       "The name of the project you would like to list deployments for",
                   },
                 })
                 .epilogue(pagesBetaWarning),
-            async (args) => {
-              const config = readConfig(args.config as ConfigPath, args);
-              const accountId = await requireAuth(config);
+            async ({ projectName }) => {
+              const config = getConfigCache<PagesConfigCache>(
+                PAGES_CONFIG_CACHE_FILENAME
+              );
+              const isInteractive = process.stdin.isTTY;
+              const accountId = await requireAuth(config, isInteractive);
+
+              projectName ??= config.project_name;
+
+              if (!projectName && isInteractive) {
+                const projects = await listProjects({ accountId });
+                projectName = await new Promise((resolve) => {
+                  const { unmount } = render(
+                    <>
+                      <Text>Select a project:</Text>
+                      <SelectInput
+                        items={projects.map((project) => ({
+                          key: project.name,
+                          label: project.name,
+                          value: project,
+                        }))}
+                        onSelect={async (selected) => {
+                          resolve(selected.value.name);
+                          unmount();
+                        }}
+                      />
+                    </>
+                  );
+                });
+              }
+
+              if (!projectName) {
+                throw new FatalError("Must specify a project name.", 1);
+              }
 
               const deployments: Array<Deployment> = await fetchResult(
-                `/accounts/${accountId}/pages/projects/${args.project}/deployments`
+                `/accounts/${accountId}/pages/projects/${projectName}/deployments`
               );
 
               const titleCase = (word: string) =>
@@ -1595,6 +1796,11 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                   Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
                 };
               });
+
+              saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+                account_id: accountId,
+              });
+
               render(<Table data={data}></Table>);
             }
           )
