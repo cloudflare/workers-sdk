@@ -1,5 +1,71 @@
 # wrangler
 
+## 0.0.29
+
+### Patch Changes
+
+- [#897](https://github.com/cloudflare/wrangler2/pull/897) [`d0801b7`](https://github.com/cloudflare/wrangler2/commit/d0801b77c3d10526041e1962679b2fd2283a8ac4) Thanks [@threepointone](https://github.com/threepointone)! - polish: tweak the message when `.dev.vars` is used
+
+  This tweaks the mssage when a `.dev.vars` file is used so that it doesn't imply that the user has to copy the values from it into their `wrangler.toml`.
+
+* [#880](https://github.com/cloudflare/wrangler2/pull/880) [`aad1418`](https://github.com/cloudflare/wrangler2/commit/aad1418a388edddc2096c20b48fb37cdff7c51ff) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Stop unnecessarily amalgamating duplicate headers in Pages Functions
+
+  Previously, `set-cookie` multiple headers would be combined because of unexpected behavior in [the spec](https://github.com/whatwg/fetch/pull/1346).
+
+- [#892](https://github.com/cloudflare/wrangler2/pull/892) [`b08676a`](https://github.com/cloudflare/wrangler2/commit/b08676a64df933eeb38439a6e7a5094b4d3c34f7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Adds the leading slash to Pages deployment manifests that the API expects, and fixes manifest generation on Windows machines.
+
+* [#852](https://github.com/cloudflare/wrangler2/pull/852) [`6283ad5`](https://github.com/cloudflare/wrangler2/commit/6283ad54bf77547b6fbb49cababb996bccadfd6e) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: non-TTY check for required variables
+  Added a check in non-TTY environments for `account_id`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. If `account_id` exists in `wrangler.toml`
+  then `CLOUDFLARE_ACCOUNT_ID` is not needed in non-TTY scope. The `CLOUDFLARE_API_TOKEN` is necessary in non-TTY scope and will always error if missing.
+
+  resolves #827
+
+- [#893](https://github.com/cloudflare/wrangler2/pull/893) [`5bf17ca`](https://github.com/cloudflare/wrangler2/commit/5bf17ca81fd9627f4f7486607b1283aab2da30fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: remove bold font from additional lines of warnings and errors
+
+  Previously, when a warning or error was logged, the entire message
+  was formatted in bold font. This change makes only the first line of
+  the message bold, and the rest is formatted with a normal font.
+
+* [#894](https://github.com/cloudflare/wrangler2/pull/894) [`57c1354`](https://github.com/cloudflare/wrangler2/commit/57c1354f92a9f4bf400120d5c607a5838febca76) Thanks [@threepointone](https://github.com/threepointone)! - polish: s/DO NOT USE THIS/ Ignored
+
+  Followup to https://github.com/cloudflare/wrangler2/pull/888, this replaces some more scary capitals with a more chill word.
+
+- [#893](https://github.com/cloudflare/wrangler2/pull/893) [`5bf17ca`](https://github.com/cloudflare/wrangler2/commit/5bf17ca81fd9627f4f7486607b1283aab2da30fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add bold to the `Deprecated` warning title
+
+* [#882](https://github.com/cloudflare/wrangler2/pull/882) [`1ad7570`](https://github.com/cloudflare/wrangler2/commit/1ad757026814cebab67910a136d7be5c95c7bae6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for reading build time env variables from a `.env` file
+
+  This change will automatically load up a `.env` file, if found, and apply its
+  values to the current environment. An example would be to provide a specific
+  CLOUDFLARE_ACCOUNT_ID value.
+
+  Related to cloudflare#190
+
+- [#887](https://github.com/cloudflare/wrangler2/pull/887) [`2bb4d30`](https://github.com/cloudflare/wrangler2/commit/2bb4d30e0c50ec1c3d9d821c768fc711e8be4ca9) Thanks [@threepointone](https://github.com/threepointone)! - polish: accept Enter as a valid key in confirm dialogs
+
+  Instead of logging "Unrecognised input" when hitting return/enter in a confirm dialog, we should accept it as a confirmation. This patch also makes the default choice "y" bold in the dialog.
+
+* [#891](https://github.com/cloudflare/wrangler2/pull/891) [`bae5ba4`](https://github.com/cloudflare/wrangler2/commit/bae5ba451811f7ec37f7355463aab9163b4299f8) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Adds interactive prompts for the 'wrangler pages publish' and related commands.
+
+  Additionally, those commands now read from `node_modules/.cache/wrangler/pages.json` to persist users' account IDs and project names.
+
+- [#888](https://github.com/cloudflare/wrangler2/pull/888) [`b77aa38`](https://github.com/cloudflare/wrangler2/commit/b77aa38e01d743d05f3f6e79a5786fb46bbdafc4) Thanks [@threepointone](https://github.com/threepointone)! - polish: s/DEPRECATION/Deprecation
+
+  This removes the scary uppercase from DEPRECATION warnings. It also moves the service environment usage warning into `diagnostics` instead of logging it directly.
+
+* [#879](https://github.com/cloudflare/wrangler2/pull/879) [`f694313`](https://github.com/cloudflare/wrangler2/commit/f6943132a04f17af68e2070756d1ec2aa2bdf0be) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: read `vars` overrides from a local file for `wrangler dev`
+
+  The `vars` bindings can be specified in the `wrangler.toml` configuration file.
+  But "secret" `vars` are usually only provided at the server -
+  either by creating them in the Dashboard UI, or using the `wrangler secret` command.
+
+  It is useful during development, to provide these types of variable locally.
+  When running `wrangler dev` we will look for a file called `.dev.vars`, situated
+  next to the `wrangler.toml` file (or in the current working directory if there is no
+  `wrangler.toml`). Any values in this file, formatted like a `dotenv` file, will add to
+  or override `vars` bindings provided in the `wrangler.toml`.
+
+  Related to #190
+
 ## 0.0.28
 
 ### Patch Changes
