@@ -305,7 +305,7 @@ describe("pages", () => {
           const manifest = JSON.parse(body.get("manifest") as string);
           expect(manifest).toMatchInlineSnapshot(`
             Object {
-              "logo.png": "2082190357cfd3617ccfe04f340c6247",
+              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
             }
           `);
 

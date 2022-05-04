@@ -1047,7 +1047,7 @@ const createDeployment: CommandModule<
           } else {
             let name;
             if (depth) {
-              name = join(...filepath.split(sep).slice(1));
+              name = filepath.split(sep).slice(1).join("/");
             } else {
               name = file;
             }
@@ -1146,7 +1146,7 @@ const createDeployment: CommandModule<
       JSON.stringify(
         Object.fromEntries(
           [...fileMap.entries()].map(([fileName, file]) => [
-            fileName,
+            `/${fileName}`,
             file.metadata.hash,
           ])
         )
