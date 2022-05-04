@@ -65,23 +65,25 @@ export function normalizeAndValidateConfig(
     "miniflare",
     "Wrangler does not use configuration in the `miniflare` section. Unless you are using Miniflare directly you can remove this section.",
     true,
-    "😶 UNUSED"
+    "😶 Ignored"
   );
 
   deprecated(
     diagnostics,
     rawConfig,
     "type",
-    "DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
-    true
+    "Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
+    true,
+    "😶 Ignored"
   );
 
   deprecated(
     diagnostics,
     rawConfig,
     "webpack_config",
-    "DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
-    true
+    "Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
+    true,
+    "😶 Ignored"
   );
 
   validateOptionalProperty(
