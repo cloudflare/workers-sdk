@@ -1073,7 +1073,7 @@ const createDeployment: CommandModule<
               content: fileContent,
               metadata: {
                 sizeInBytes: filestat.size,
-                hash: hash(content).toString("hex"),
+                hash: hash(content).toString("hex").slice(0, 32),
               },
             });
           }
@@ -1121,7 +1121,7 @@ const createDeployment: CommandModule<
         rerender(<Progress done={counter} total={fileMap.size} />);
         if (response.id != file.metadata.hash) {
           throw new Error(
-            `Looks like there was an issue uploading that ${name}. Try again perhaps?`
+            `Looks like there was an issue uploading '${name}'. Try again perhaps?`
           );
         }
       });
