@@ -658,7 +658,56 @@ describe("wrangler dev", () => {
         UNQUOTED: "unquoted value", // Note that whitespace is trimmed
       });
       expect(std.out).toMatchInlineSnapshot(
-        `"Add vars defined in \\".dev.vars\\" to the \\"vars\\" bindings."`
+        `"Using vars defined in \\".dev.vars\\"."`
+      );
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should read dev vars from a --dev-vars", async () => {
+      // The same test as before, but this time with a --dev-vars path
+      fs.writeFileSync("index.js", `export default {};`);
+
+      const localVarsEnvContent = dedent`
+      # Preceding comment
+      VAR_1="var #1 value" # End of line comment
+      VAR_3="var #3 value"
+      VAR_MULTI_LINE_1="A: line 1
+      line 2"
+      VAR_MULTI_LINE_2="B: line 1\\nline 2"
+      EMPTY=
+      UNQUOTED= unquoted value
+      `;
+      fs.mkdirSync("path/to", { recursive: true });
+      fs.writeFileSync("path/to/more-vars.env", localVarsEnvContent, "utf8");
+
+      writeWranglerToml({
+        main: "index.js",
+        vars: {
+          VAR_1: "original value 1",
+          VAR_2: "original value 2", // should not get overridden
+          VAR_3: "original value 3",
+          VAR_MULTI_LINE_1: "original multi-line 1",
+          VAR_MULTI_LINE_2: "original multi-line 2",
+          EMPTY: "original empty",
+          UNQUOTED: "original unquoted",
+        },
+      });
+      await runWrangler("dev --dev-vars path/to/more-vars.env");
+      const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+        .calls[0][0].bindings.vars;
+
+      expect(varBindings).toEqual({
+        VAR_1: "var #1 value",
+        VAR_2: "original value 2",
+        VAR_3: "var #3 value",
+        VAR_MULTI_LINE_1: "A: line 1\nline 2",
+        VAR_MULTI_LINE_2: "B: line 1\nline 2",
+        EMPTY: "",
+        UNQUOTED: "unquoted value", // Note that whitespace is trimmed
+      });
+      expect(std.out).toMatchInlineSnapshot(
+        `"Using vars defined in \\"path/to/more-vars.env\\"."`
       );
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);

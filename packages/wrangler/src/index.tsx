@@ -736,11 +736,14 @@ export async function main(argv: string[]): Promise<void> {
           alias: "l",
           describe: "Run on my machine",
           type: "boolean",
-          default: false, // I bet this will a point of contention. We'll revisit it.
         })
         .option("experimental-enable-local-persistence", {
           describe: "Enable persistence for this session (only for local mode)",
           type: "boolean",
+        })
+        .option("dev-vars", {
+          describe: "Path to a custom .dev.vars file",
+          type: "string",
         })
         .option("minify", {
           describe: "Minify the script",
@@ -938,7 +941,7 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: getVarsForDev(config),
+            vars: getVarsForDev(config, args.devVars),
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
             data_blobs: config.data_blobs,

@@ -19,20 +19,28 @@ import type { Config } from "../config";
  * Any values in this file, formatted like a `dotenv` file, will add to or override `vars`
  * bindings provided in the `wrangler.toml`.
  */
-export function getVarsForDev(config: Config): Config["vars"] {
+export function getVarsForDev(
+  config: Config,
+  customPathToDevVars: string | undefined
+): Config["vars"] {
   const configDir = path.resolve(path.dirname(config.configPath ?? "."));
-  const devVarsPath = path.resolve(configDir, ".dev.vars");
+  const devVarsPath = customPathToDevVars
+    ? path.resolve(customPathToDevVars)
+    : path.resolve(configDir, ".dev.vars");
   if (fs.existsSync(devVarsPath)) {
     const devVarsRelativePath = path.relative(process.cwd(), devVarsPath);
-    logger.log(
-      `Add vars defined in "${devVarsRelativePath}" to the "vars" bindings.`
-    );
+    logger.log(`Using vars defined in "${devVarsRelativePath}".`);
     const devVars = dotenv.parse(fs.readFileSync(devVarsPath, "utf8"));
     return {
       ...config.vars,
       ...devVars,
     };
   } else {
+    if (customPathToDevVars) {
+      throw new Error(
+        `Could not find custom .dev.vars file "${customPathToDevVars}"`
+      );
+    }
     return config.vars;
   }
 }
