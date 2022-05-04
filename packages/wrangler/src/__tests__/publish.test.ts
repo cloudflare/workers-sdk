@@ -256,7 +256,8 @@ describe("publish", () => {
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           "
         `);
@@ -278,7 +279,8 @@ describe("publish", () => {
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           "
         `);
@@ -430,7 +432,8 @@ describe("publish", () => {
           *another-boring-website.com (zone name: some-zone.com)
           example.com/some-route/* (zone id: JGHFHG654gjcj)
           more-examples.com/*",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
         ",
         }
@@ -569,7 +572,7 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.main\\":
+          - Deprecation: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
@@ -603,13 +606,13 @@ describe("publish", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.main\\":
+          - Deprecation: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"foo/index.js\\"
             \`\`\`
-          - DEPRECATION: \\"build.upload.dir\\":
+          - Deprecation: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.[0m
 
         "
@@ -808,7 +811,7 @@ export default{
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
-          - DEPRECATION: \\"site.entry-point\\":
+          - Deprecation: \\"site.entry-point\\":
             Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"index.js\\"
@@ -860,7 +863,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:
-          - DEPRECATION: \\"site.entry-point\\":
+          - Deprecation: \\"site.entry-point\\":
             Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"my-entry/index.js\\"
@@ -2609,7 +2612,8 @@ export default{
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           "
         `);
@@ -2664,7 +2668,8 @@ export default{
         `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
-          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           "
         `);
@@ -2712,7 +2717,8 @@ export default{
             "out": "Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev",
-            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           ",
           }
@@ -2773,7 +2779,8 @@ export default{
             "out": "Uploaded test-name (xyz) (TIMINGS)
           Published test-name (xyz) (TIMINGS)
             xyz.test-name.test-sub-domain.workers.dev",
-            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mService environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
+            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION.[0m
 
           ",
           }
@@ -3985,7 +3992,7 @@ export default{
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:
-          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+          - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
             \`\`\`
             [[rules]]
             type = \\"Text\\"
@@ -4154,7 +4161,7 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATION: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";[0m
 
         "
       `);
@@ -4182,7 +4189,7 @@ export default{
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATION: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";[0m
 
         "
       `);

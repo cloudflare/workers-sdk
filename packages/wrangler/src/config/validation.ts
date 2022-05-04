@@ -1,6 +1,5 @@
 import path from "node:path";
 import TOML from "@iarna/toml";
-import { logger } from "../logger";
 import { Diagnostics } from "./diagnostics";
 import {
   deprecated,
@@ -117,8 +116,8 @@ export function normalizeAndValidateConfig(
 
   // TODO: remove this once service environments goes GA.
   if (!isLegacyEnv) {
-    logger.warn(
-      "Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+    diagnostics.warnings.push(
+      "Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
     );
   }
 
@@ -937,7 +936,7 @@ const validateAndNormalizeRules = (
       );
     } else if (deprecatedRules) {
       diagnostics.warnings.push(
-        `DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:\n` +
+        `Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:\n` +
           "```\n" +
           TOML.stringify({ rules: deprecatedRules }) +
           "```"

@@ -250,7 +250,7 @@ describe("normalizeAndValidateConfig()", () => {
         expect(normalizeSlashes(diagnostics.renderWarnings()))
           .toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"site.entry-point\\":
+            - Deprecation: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
               \`\`\`
               main = \\"my-site/index.js\\"
@@ -281,7 +281,7 @@ describe("normalizeAndValidateConfig()", () => {
         expect(normalizeSlashes(diagnostics.renderWarnings()))
           .toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"site.entry-point\\":
+            - Deprecation: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
               \`\`\`
               main = \\"workers-site/index.js\\"
@@ -324,7 +324,7 @@ describe("normalizeAndValidateConfig()", () => {
         expect(normalizeSlashes(diagnostics.renderWarnings()))
           .toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"site.entry-point\\":
+            - Deprecation: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
               \`\`\`
               main = \\"111/index.js\\"
@@ -358,7 +358,7 @@ describe("normalizeAndValidateConfig()", () => {
         expect(normalizeSlashes(diagnostics.renderWarnings()))
           .toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"site.entry-point\\":
+            - Deprecation: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
               \`\`\`
               main = \\"some/other/script.js\\"
@@ -571,9 +571,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"type\\":
+            - Deprecation: \\"type\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-            - DEPRECATION: \\"webpack_config\\":
+            - Deprecation: \\"webpack_config\\":
               DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
         `);
       });
@@ -869,17 +869,17 @@ describe("normalizeAndValidateConfig()", () => {
       expect(normalizePath(diagnostics.renderWarnings()))
         .toMatchInlineSnapshot(`
         "Processing project/wrangler.toml configuration:
-          - DEPRECATION: \\"build.upload.format\\":
+          - Deprecation: \\"build.upload.format\\":
             The format is inferred automatically from the code.
-          - DEPRECATION: \\"build.upload.main\\":
+          - Deprecation: \\"build.upload.main\\":
             Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
             Then add the top level \`main\` field to your configuration file:
             \`\`\`
             main = \\"src/index.ts\\"
             \`\`\`
-          - DEPRECATION: \\"build.upload.dir\\":
+          - Deprecation: \\"build.upload.dir\\":
             Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-          - DEPRECATION: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+          - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
             \`\`\`
             [[rules]]
             type = \\"Text\\"
@@ -1619,9 +1619,9 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - DEPRECATION: \\"zone_id\\":
+            - Deprecation: \\"zone_id\\":
               This is unnecessary since we can deduce this from routes directly.
-            - DEPRECATION: \\"experimental_services\\":
+            - Deprecation: \\"experimental_services\\":
               The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
               \`\`\`
               [[unsafe.bindings]]
@@ -1815,7 +1815,11 @@ describe("normalizeAndValidateConfig()", () => {
 
         expect(config.name).toEqual("mock-name");
         expect(diagnostics.hasErrors()).toBe(false);
-        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+        `);
       });
 
       it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
@@ -1835,6 +1839,12 @@ describe("normalizeAndValidateConfig()", () => {
         );
 
         expect(config.name).toBeUndefined();
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -1842,7 +1852,6 @@ describe("normalizeAndValidateConfig()", () => {
               - The \\"name\\" field is not allowed in named service environments.
                 Please remove the field from this environment."
         `);
-        expect(diagnostics.hasWarnings()).toBe(false);
       });
 
       it("should error if top-level config and a named environment both contain a `name` field", () => {
@@ -1863,6 +1872,12 @@ describe("normalizeAndValidateConfig()", () => {
         );
 
         expect(config.name).toEqual("mock-name");
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -1870,7 +1885,6 @@ describe("normalizeAndValidateConfig()", () => {
               - The \\"name\\" field is not allowed in named service environments.
                 Please remove the field from this environment."
         `);
-        expect(diagnostics.hasWarnings()).toBe(false);
       });
     });
 
@@ -1890,7 +1904,12 @@ describe("normalizeAndValidateConfig()", () => {
         { env: "DEV" }
       );
 
+      expect(diagnostics.hasWarnings()).toBe(true);
       expect(config.account_id).toBeUndefined();
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+      `);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
 
@@ -1898,7 +1917,6 @@ describe("normalizeAndValidateConfig()", () => {
             - The \\"account_id\\" field is not allowed in named service environments.
               Please remove the field from this environment."
       `);
-      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should error if top-level config and a named environment both contain a `account_id` field", () => {
@@ -1919,6 +1937,12 @@ describe("normalizeAndValidateConfig()", () => {
       );
 
       expect(config.account_id).toEqual("ACCOUNT_ID");
+      expect(diagnostics.hasErrors()).toBe(true);
+      expect(diagnostics.hasWarnings()).toBe(true);
+      expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+        "Processing wrangler configuration:
+          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+      `);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
 
@@ -1926,7 +1950,6 @@ describe("normalizeAndValidateConfig()", () => {
             - The \\"account_id\\" field is not allowed in named service environments.
               Please remove the field from this environment."
       `);
-      expect(diagnostics.hasWarnings()).toBe(false);
     });
 
     it("should warn for non-inherited fields that are missing in environments", () => {
@@ -2843,9 +2866,9 @@ describe("normalizeAndValidateConfig()", () => {
           "Processing wrangler configuration:
 
             - \\"env.ENV1\\" environment configuration
-              - DEPRECATION: \\"zone_id\\":
+              - Deprecation: \\"zone_id\\":
                 This is unnecessary since we can deduce this from routes directly.
-              - DEPRECATION: \\"experimental_services\\":
+              - Deprecation: \\"experimental_services\\":
                 The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
                 \`\`\`
                 [[unsafe.bindings]]
