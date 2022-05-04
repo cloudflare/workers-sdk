@@ -10,6 +10,7 @@ import { URL } from "node:url";
 import { hash } from "blake3-wasm";
 import { watch } from "chokidar";
 import { render, Text } from "ink";
+import SelectInput from "ink-select-input";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
 import { getType } from "mime";
@@ -22,7 +23,8 @@ import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
 import { writeRoutesModule } from "../pages/functions/routes";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { getConfigCache, saveToConfigCache } from "./config-cache";
+import { prompt } from "./dialogs";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
 import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
@@ -34,9 +36,6 @@ import type { Headers, Request, fetch } from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback, CommandModule } from "yargs";
-import { getConfigCache, saveToConfigCache } from "./config-cache";
-
-type ConfigPath = string | undefined;
 
 export type Project = {
   name: string;
@@ -848,10 +847,114 @@ const createDeployment: CommandModule<
 
     projectName ??= config.project_name;
 
+    if (!projectName && isInteractive) {
+      const existingOrNew = await new Promise<"new" | "existing">((resolve) => {
+        const { unmount } = render(
+          <>
+            <Text>
+              No project selected. Would you like to create one or use an
+              existing project?
+            </Text>
+            <SelectInput
+              items={[
+                {
+                  key: "new",
+                  label: "Create a new project",
+                  value: "new",
+                },
+                {
+                  key: "existing",
+                  label: "Use an existing project",
+                  value: "existing",
+                },
+              ]}
+              onSelect={async (selected) => {
+                resolve(selected.value as "new" | "existing");
+                unmount();
+              }}
+            />
+          </>
+        );
+      });
+
+      switch (existingOrNew) {
+        case "existing": {
+          const projects = (await listProjects({ accountId })).filter(
+            (project) => !project.source
+          );
+          projectName = await new Promise((resolve) => {
+            const { unmount } = render(
+              <>
+                <Text>Select a project:</Text>
+                <SelectInput
+                  items={projects.map((project) => ({
+                    key: project.name,
+                    label: project.name,
+                    value: project,
+                  }))}
+                  onSelect={async (selected) => {
+                    resolve(selected.value.name);
+                    unmount();
+                  }}
+                />
+              </>
+            );
+          });
+          break;
+        }
+        case "new": {
+          projectName = await prompt("Enter the name of your new project:");
+
+          if (!projectName) {
+            throw new FatalError("Must specify a project name.", 1);
+          }
+
+          let isGitDir = true;
+          try {
+            execSync(`git rev-parse --is-inside-work-tree`, {
+              stdio: "ignore",
+            });
+          } catch (err) {
+            isGitDir = false;
+          }
+
+          const productionBranch = await prompt(
+            "Enter the production branch name:",
+            "text",
+            isGitDir
+              ? execSync(`git branch | grep " * "`)
+                  .toString()
+                  .replace("* ", "")
+                  .trim()
+              : "production"
+          );
+
+          if (!productionBranch) {
+            throw new FatalError("Must specify a production branch.", 1);
+          }
+
+          await fetchResult<Project>(`/accounts/${accountId}/pages/projects`, {
+            method: "POST",
+            body: JSON.stringify({
+              name: projectName,
+              production_branch: productionBranch,
+            }),
+          });
+
+          saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+            account_id: accountId,
+            project_name: projectName,
+          });
+
+          console.log(`✨ Successfully created the '${projectName}' project.`);
+          break;
+        }
+      }
+    }
+
     if (!projectName) {
       throw new FatalError("Must specify a project name.", 1);
     }
-    // TODO: Project picker #821
 
     // We infer git info by default is not passed in
 
@@ -1538,8 +1641,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               .options({
                 "production-branch": {
                   type: "string",
-                  // TODO: Should we default to the current git branch?
-                  default: "production",
                   description:
                     "The name of the production branch of your project",
                 },
@@ -1552,8 +1653,38 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             const isInteractive = process.stdin.isTTY;
             const accountId = await requireAuth(config, isInteractive);
 
+            if (!projectName && isInteractive) {
+              projectName = await prompt("Enter the name of your new project:");
+            }
+
             if (!projectName) {
               throw new FatalError("Must specify a project name.", 1);
+            }
+
+            if (!productionBranch && isInteractive) {
+              let isGitDir = true;
+              try {
+                execSync(`git rev-parse --is-inside-work-tree`, {
+                  stdio: "ignore",
+                });
+              } catch (err) {
+                isGitDir = false;
+              }
+
+              productionBranch = await prompt(
+                "Enter the production branch name:",
+                "text",
+                isGitDir
+                  ? execSync(`git branch | grep " * "`)
+                      .toString()
+                      .replace("* ", "")
+                      .trim()
+                  : "production"
+              );
+            }
+
+            if (!productionBranch) {
+              throw new FatalError("Must specify a production branch.", 1);
             }
 
             const { subdomain } = await fetchResult<Project>(
@@ -1609,6 +1740,28 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
               projectName ??= config.project_name;
 
+              if (!projectName && isInteractive) {
+                const projects = await listProjects({ accountId });
+                projectName = await new Promise((resolve) => {
+                  const { unmount } = render(
+                    <>
+                      <Text>Select a project:</Text>
+                      <SelectInput
+                        items={projects.map((project) => ({
+                          key: project.name,
+                          label: project.name,
+                          value: project,
+                        }))}
+                        onSelect={async (selected) => {
+                          resolve(selected.value.name);
+                          unmount();
+                        }}
+                      />
+                    </>
+                  );
+                });
+              }
+
               if (!projectName) {
                 throw new FatalError("Must specify a project name.", 1);
               }
@@ -1646,7 +1799,6 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
               saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
                 account_id: accountId,
-                project_name: projectName,
               });
 
               render(<Table data={data}></Table>);

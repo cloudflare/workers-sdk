@@ -250,7 +250,7 @@ describe("pages", () => {
       ];
 
       const requests = mockListRequest(deployments);
-      await runWrangler("pages deployment list --project=images");
+      await runWrangler("pages deployment list --project-name=images");
 
       expect(requests.count).toBe(1);
     });
@@ -292,7 +292,7 @@ describe("pages", () => {
               --legacy-env  Use legacy environments  [boolean]
 
         Options:
-              --project         The name of the project you want to list deployments for  [string]
+              --project-name    The name of the project you want to list deployments for  [string]
               --branch          The branch of the project you want to list deployments for  [string]
               --commit-hash     The branch of the project you want to list deployments for  [string]
               --commit-message  The branch of the project you want to list deployments for  [string]
@@ -340,7 +340,7 @@ describe("pages", () => {
         }
       );
 
-      await runWrangler("pages publish . --project=foo");
+      await runWrangler("pages publish . --project-name=foo");
 
       // TODO: Unmounting somehow loses this output
 

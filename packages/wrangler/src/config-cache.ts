@@ -41,5 +41,5 @@ export const saveToConfigCache = <T>(
 };
 
 export const purgeConfigCaches = () => {
-  rmSync(cacheFolder, { recursive: true });
+  rmSync(cacheFolder, { recursive: true, force: true });
 };
