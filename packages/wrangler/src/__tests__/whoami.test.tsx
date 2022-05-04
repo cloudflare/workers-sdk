@@ -4,12 +4,18 @@ import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { setMockResponse } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
+  const { setIsTTY } = useMockIsTTY();
+
+  beforeEach(() => {
+    setIsTTY(true);
+  });
 
   it("should return undefined if there is no config file", async () => {
     const userInfo = await getUserInfo();

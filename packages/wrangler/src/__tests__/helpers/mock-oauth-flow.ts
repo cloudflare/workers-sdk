@@ -1,5 +1,6 @@
 import fetchMock from "jest-fetch-mock";
 import { Request } from "undici";
+import { getCloudflareApiBaseUrl } from "../../cfetch";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
 
@@ -85,6 +86,28 @@ export const mockOAuthFlow = () => {
     return outcome;
   };
 
+  const mockGetMemberships = (args: {
+    success: boolean;
+    result: { id: string; account: { id: string; name: string } }[];
+  }) => {
+    const outcome = {
+      actual: new Request("https://example.org"),
+      expected: new Request(`${getCloudflareApiBaseUrl()}/memberships`, {
+        method: "GET",
+      }),
+    };
+
+    fetchMock.mockIf(outcome.expected.url, async (req) => {
+      outcome.actual = req;
+      return {
+        status: 200,
+        body: JSON.stringify(args),
+      };
+    });
+
+    return outcome;
+  };
+
   const mockGrantAccessToken = ({
     respondWith,
   }: {
@@ -150,10 +173,11 @@ export const mockOAuthFlow = () => {
   };
 
   return {
-    mockOAuthServerCallback,
-    mockGrantAuthorization,
-    mockRevokeAuthorization,
+    mockGetMemberships,
     mockGrantAccessToken,
+    mockGrantAuthorization,
+    mockOAuthServerCallback,
+    mockRevokeAuthorization,
     mockExchangeRefreshTokenForAccessToken,
   };
 };

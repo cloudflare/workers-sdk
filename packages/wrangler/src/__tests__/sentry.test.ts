@@ -7,26 +7,27 @@ import * as Sentry from "@sentry/node";
 import prompts from "prompts";
 
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 const { reportError } = jest.requireActual("../reporting");
 
 describe("Error Reporting", () => {
+  const { setIsTTY } = useMockIsTTY();
+
   runInTempDir({ homedir: "./home" });
   mockConsoleMethods();
   const reportingTOMLPath = ".wrangler/config/reporting.toml";
 
-  const originalTTY = process.stdout.isTTY;
   beforeEach(() => {
     jest.mock("@sentry/node");
     jest.spyOn(Sentry, "captureException");
-    process.stdout.isTTY = true;
+    setIsTTY(true);
   });
 
   afterEach(() => {
     jest.unmock("@sentry/node");
     jest.clearAllMocks();
-    process.stdout.isTTY = originalTTY;
   });
 
   it("should confirm user will allow error reporting usage", async () => {
@@ -127,20 +128,15 @@ describe("Error Reporting", () => {
   });
 
   it("should not prompt in non-TTY environment", async () => {
-    process.stdout.isTTY = false;
-
+    setIsTTY(false);
     await reportError(new Error("test error"), "testFalse");
 
-    const { error_tracking_opt, error_tracking_opt_date } = TOML.parse(
-      await fsp.readFile(path.join(os.homedir(), reportingTOMLPath), "utf-8")
-    );
-
-    expect(error_tracking_opt).toBe(false);
-    expect(error_tracking_opt_date).toBeTruthy();
+    expect(
+      fs.existsSync(path.join(os.homedir(), reportingTOMLPath, "utf-8"))
+    ).toBe(false);
 
     expect(Sentry.captureException).not.toHaveBeenCalledWith(
       new Error("test error")
     );
-    process.stdout.isTTY = originalTTY;
   });
 });

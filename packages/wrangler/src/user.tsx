@@ -410,7 +410,20 @@ export function getAPIToken(): string | undefined {
         "If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
     );
   }
-  return LocalState.accessToken?.value;
+
+  const localAPIToken = getCloudflareAPITokenFromEnv();
+
+  if (
+    !process.stdout.isTTY &&
+    !localAPIToken &&
+    !LocalState.accessToken?.value
+  ) {
+    throw new Error(
+      "In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
+    );
+  }
+
+  return localAPIToken ?? LocalState.accessToken?.value;
 }
 
 interface AccessContext {
@@ -1127,6 +1140,11 @@ export async function getAccountId(
             .join("\n")
       );
     }
+  } else {
+    if (!isInteractive)
+      throw new Error(
+        `Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.`
+      );
   }
   return accountId;
 }
@@ -1157,10 +1175,10 @@ export function ChooseAccount(props: {
 /**
  * Ensure that a user is logged in, and a valid account_id is available.
  */
-export async function requireAuth(
-  config: { account_id?: string },
-  isInteractive = true
-): Promise<string> {
+export async function requireAuth(config: {
+  account_id?: string;
+}): Promise<string> {
+  const isInteractive = process.stdin.isTTY;
   const loggedIn = await loginOrRefreshIfRequired(isInteractive);
   if (!loggedIn) {
     // didn't login, let's just quit

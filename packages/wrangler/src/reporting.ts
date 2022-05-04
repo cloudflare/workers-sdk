@@ -93,7 +93,8 @@ function exceptionTransaction(error: Error, origin = "") {
 }
 
 export async function reportError(err: Error, origin = "") {
-  if (!process.stdout.isTTY) return await appendReportingDecision("false");
+  // If the user has not opted in to error reporting, we don't want to do anything in CI or non-interactive environments
+  if (!process.stdout.isTTY) return;
 
   const errorTrackingOpt = await reportingPermission();
 
