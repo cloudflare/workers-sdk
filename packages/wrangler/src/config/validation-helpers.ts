@@ -17,7 +17,9 @@ export function deprecated<T extends object>(
   title = "Deprecation",
   type: "warning" | "error" = "warning"
 ): void {
-  const diagnosticMessage = `${title}: "${fieldPath}":\n${message}`;
+  const BOLD = "\x1b[1m";
+  const NORMAL = "\x1b[0m";
+  const diagnosticMessage = `${BOLD}${title}${NORMAL}: "${fieldPath}":\n${message}`;
   const result = unwindPropertyPath(config, fieldPath);
   if (result !== undefined && result.field in result.container) {
     diagnostics[`${type}s`].push(diagnosticMessage);
