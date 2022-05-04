@@ -583,7 +583,7 @@ describe("publish", () => {
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-            - Deprecation: \\"build.upload.main\\":
+            - [1mDeprecation[0m: \\"build.upload.main\\":
               Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
               Then add the top level \`main\` field to your configuration file:
               \`\`\`
@@ -618,13 +618,13 @@ describe("publish", () => {
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
 
-            - Deprecation: \\"build.upload.main\\":
+            - [1mDeprecation[0m: \\"build.upload.main\\":
               Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
               Then add the top level \`main\` field to your configuration file:
               \`\`\`
               main = \\"foo/index.js\\"
               \`\`\`
-            - Deprecation: \\"build.upload.dir\\":
+            - [1mDeprecation[0m: \\"build.upload.dir\\":
               Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the
           Worker.
 
@@ -828,7 +828,7 @@ export default{
           test-name.test-sub-domain.workers.dev",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-            - Deprecation: \\"site.entry-point\\":
+            - [1mDeprecation[0m: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
           file:
               \`\`\`
@@ -882,7 +882,7 @@ export default{
       expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:[0m
 
-            - Deprecation: \\"site.entry-point\\":
+            - [1mDeprecation[0m: \\"site.entry-point\\":
               Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
           file:
               \`\`\`
