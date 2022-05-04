@@ -16,6 +16,7 @@ import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
+import { getVarsForDev } from "./dev/dev-vars";
 import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
@@ -746,7 +747,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
         })
         .option("node-compat", {
-          describe: "Enable node.js compaitibility",
+          describe: "Enable node.js compatibility",
           type: "boolean",
         });
     },
@@ -937,7 +938,7 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
-            vars: config.vars,
+            vars: getVarsForDev(config),
             wasm_modules: config.wasm_modules,
             text_blobs: config.text_blobs,
             data_blobs: config.data_blobs,
@@ -1044,7 +1045,7 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
         })
         .option("node-compat", {
-          describe: "Enable node.js compaitibility",
+          describe: "Enable node.js compatibility",
           type: "boolean",
         })
         .option("dry-run", {

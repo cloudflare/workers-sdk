@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import { readFileSync } from "node:fs";
 import patchConsole from "patch-console";
+import dedent from "ts-dedent";
 import Dev from "../dev/dev";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
@@ -382,7 +382,7 @@ describe("wrangler dev", () => {
 
       await runWrangler("dev index.js");
 
-      expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(
+      expect(fs.readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(
         `"export default { fetch(){ return new Response(123) } }"`
       );
 
@@ -410,7 +410,7 @@ describe("wrangler dev", () => {
 
         await runWrangler("dev index.js");
 
-        expect(readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(`
+        expect(fs.readFileSync("index.js", "utf-8")).toMatchInlineSnapshot(`
           "export default { fetch(){ return new Response(123) } }
           "
         `);
@@ -612,6 +612,55 @@ describe("wrangler dev", () => {
 
         "
       `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe(".dev.vars", () => {
+    it("should override `vars` bindings from `wrangler.toml` with values in `.dev.vars`", async () => {
+      fs.writeFileSync("index.js", `export default {};`);
+
+      const localVarsEnvContent = dedent`
+      # Preceding comment
+      VAR_1="var #1 value" # End of line comment
+      VAR_3="var #3 value"
+      VAR_MULTI_LINE_1="A: line 1
+      line 2"
+      VAR_MULTI_LINE_2="B: line 1\\nline 2"
+      EMPTY=
+      UNQUOTED= unquoted value
+      `;
+      fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
+
+      writeWranglerToml({
+        main: "index.js",
+        vars: {
+          VAR_1: "original value 1",
+          VAR_2: "original value 2", // should not get overridden
+          VAR_3: "original value 3",
+          VAR_MULTI_LINE_1: "original multi-line 1",
+          VAR_MULTI_LINE_2: "original multi-line 2",
+          EMPTY: "original empty",
+          UNQUOTED: "original unquoted",
+        },
+      });
+      await runWrangler("dev");
+      const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+        .calls[0][0].bindings.vars;
+
+      expect(varBindings).toEqual({
+        VAR_1: "var #1 value",
+        VAR_2: "original value 2",
+        VAR_3: "var #3 value",
+        VAR_MULTI_LINE_1: "A: line 1\nline 2",
+        VAR_MULTI_LINE_2: "B: line 1\nline 2",
+        EMPTY: "",
+        UNQUOTED: "unquoted value", // Note that whitespace is trimmed
+      });
+      expect(std.out).toMatchInlineSnapshot(
+        `"Add vars defined in \\".dev.vars\\" to the \\"vars\\" bindings."`
+      );
+      expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
