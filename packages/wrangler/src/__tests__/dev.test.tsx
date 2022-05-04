@@ -658,7 +658,7 @@ describe("wrangler dev", () => {
         UNQUOTED: "unquoted value", // Note that whitespace is trimmed
       });
       expect(std.out).toMatchInlineSnapshot(
-        `"Add vars defined in \\".dev.vars\\" to the \\"vars\\" bindings."`
+        `"Using vars defined in .dev.vars"`
       );
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);

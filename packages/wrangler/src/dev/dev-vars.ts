@@ -24,9 +24,7 @@ export function getVarsForDev(config: Config): Config["vars"] {
   const devVarsPath = path.resolve(configDir, ".dev.vars");
   if (fs.existsSync(devVarsPath)) {
     const devVarsRelativePath = path.relative(process.cwd(), devVarsPath);
-    logger.log(
-      `Add vars defined in "${devVarsRelativePath}" to the "vars" bindings.`
-    );
+    logger.log(`Using vars defined in ${devVarsRelativePath}`);
     const devVars = dotenv.parse(fs.readFileSync(devVarsPath, "utf8"));
     return {
       ...config.vars,
