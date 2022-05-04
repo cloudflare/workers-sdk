@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { Box, Text, useInput, render } from "ink";
 import TextInput from "ink-text-input";
 import * as React from "react";
@@ -8,8 +9,8 @@ type ConfirmProps = {
   onConfirm: (answer: boolean) => void;
 };
 function Confirm(props: ConfirmProps) {
-  useInput((input: string) => {
-    if (input === "y") {
+  useInput((input: string, key) => {
+    if (input === "y" || key.return === true) {
       props.onConfirm(true);
     } else if (input === "n") {
       props.onConfirm(false);
@@ -19,7 +20,9 @@ function Confirm(props: ConfirmProps) {
   });
   return (
     <Box>
-      <Text>{props.text} (y/n) </Text>
+      <Text>
+        {props.text} ({chalk.bold("y")}/n)
+      </Text>
     </Box>
   );
 }
