@@ -5,9 +5,9 @@
   "description": "Monorepo for wrangler and associated packages",
   "license": "MIT OR Apache-2.0",
   "bugs": {
-    "url": "https://github.com/cloudflare/wrangler/issues"
+    "url": "https://github.com/cloudflare/wrangler2/issues"
   },
-  "homepage": "https://github.com/cloudflare/wrangler#readme",
+  "homepage": "https://github.com/cloudflare/wrangler2#readme",
   "workspaces": [
     "packages/*",
     "examples/*"
