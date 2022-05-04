@@ -922,7 +922,7 @@ const createDeployment: CommandModule<
             "Enter the production branch name:",
             "text",
             isGitDir
-              ? execSync(`git branch | grep " * "`)
+              ? execSync(`git branch | grep "* "`)
                   .toString()
                   .replace("* ", "")
                   .trim()
@@ -976,7 +976,7 @@ const createDeployment: CommandModule<
         );
 
         if (!branch) {
-          branch = execSync(`git branch | grep " * "`)
+          branch = execSync(`git branch | grep "* "`)
             .toString()
             .replace("* ", "")
             .trim();
@@ -1675,7 +1675,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 "Enter the production branch name:",
                 "text",
                 isGitDir
-                  ? execSync(`git branch | grep " * "`)
+                  ? execSync(`git branch | grep "* "`)
                       .toString()
                       .replace("* ", "")
                       .trim()
