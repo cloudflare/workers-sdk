@@ -946,7 +946,7 @@ const createDeployment: CommandModule<
             project_name: projectName,
           });
 
-          console.log(`✨ Successfully created the '${projectName}' project.`);
+          logger.log(`✨ Successfully created the '${projectName}' project.`);
           break;
         }
       }
@@ -994,7 +994,7 @@ const createDeployment: CommandModule<
       } catch (err) {}
 
       if (isGitDirty && !commitDirty) {
-        console.warn(
+        logger.warn(
           `Warning: Your working directory is a git repo and has uncommitted changes\nTo silense this warning, pass in --commit-dirty=true`
         );
       }
@@ -1135,7 +1135,7 @@ const createDeployment: CommandModule<
 
     const uploadMs = Date.now() - start;
 
-    console.log(
+    logger.log(
       `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
     );
 
@@ -1228,7 +1228,7 @@ const createDeployment: CommandModule<
       project_name: projectName,
     });
 
-    console.log(
+    logger.log(
       `✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
     );
   },
