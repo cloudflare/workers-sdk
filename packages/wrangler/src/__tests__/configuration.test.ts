@@ -157,7 +157,7 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - 😶 UNUSED: \\"miniflare\\":
+          - 😶 Ignored: \\"miniflare\\":
             Wrangler does not use configuration in the \`miniflare\` section. Unless you are using Miniflare directly you can remove this section."
       `);
     });
@@ -571,10 +571,10 @@ describe("normalizeAndValidateConfig()", () => {
         expect(diagnostics.hasWarnings()).toBe(true);
         expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
-            - Deprecation: \\"type\\":
-              DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-            - Deprecation: \\"webpack_config\\":
-              DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
+            - 😶 Ignored: \\"type\\":
+              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
+            - 😶 Ignored: \\"webpack_config\\":
+              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
         `);
       });
     });
