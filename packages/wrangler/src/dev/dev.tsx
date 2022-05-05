@@ -11,7 +11,6 @@ import { fetch } from "undici";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { reportError } from "../reporting";
 import { getAPIToken } from "../user";
 import { Local } from "./local";
 import { Remote } from "./remote";
@@ -327,7 +326,6 @@ function useTunnel(toggle: boolean) {
 
     startTunnel().catch(async (err) => {
       logger.error("tunnel:", err);
-      await reportError(err);
     });
 
     return () => {
