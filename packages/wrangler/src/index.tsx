@@ -212,8 +212,9 @@ export async function main(argv: string[]): Promise<void> {
     // Otherwise we just log the error that was thrown without any "help info".
     .showHelpOnFail(false)
     .fail((msg, error) => {
-      if (!error) {
-        // If there is only a `msg` then this came from yargs own validation, so wrap in a `CommandLineArgsError`.
+      if (!error || error.name === "YError") {
+        // If there is no error or the error is a "YError", then this came from yargs own validation
+        // Wrap it in a `CommandLineArgsError` so that we can handle it appropriately further up.
         error = new CommandLineArgsError(msg);
       }
       throw error;
@@ -642,6 +643,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("name", {
           describe: "Name of the worker",
           type: "string",
+          requiresArg: true,
         })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
@@ -651,16 +653,19 @@ export async function main(argv: string[]): Promise<void> {
         .option("env", {
           describe: "Perform on a specific environment",
           type: "string",
+          requiresArg: true,
           alias: "e",
         })
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
           type: "string",
+          requiresArg: true,
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
           alias: "compatibility-flag",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("latest", {
@@ -671,6 +676,7 @@ export async function main(argv: string[]): Promise<void> {
         .option("ip", {
           describe: "IP address to listen on, defaults to `localhost`",
           type: "string",
+          requiresArg: true,
         })
         .option("port", {
           describe: "Port to listen on",
@@ -684,10 +690,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Routes to upload",
           alias: "route",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("host", {
           type: "string",
+          requiresArg: true,
           describe:
             "Host to forward requests to, defaults to the zone of project",
         })
@@ -698,21 +706,25 @@ export async function main(argv: string[]): Promise<void> {
         .option("experimental-public", {
           describe: "Static assets to be served",
           type: "string",
+          requiresArg: true,
         })
         .option("site", {
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
+          requiresArg: true,
         })
         .option("site-include", {
           describe:
             "Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("site-exclude", {
           describe:
             "Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("upstream-protocol", {
@@ -723,14 +735,17 @@ export async function main(argv: string[]): Promise<void> {
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",
           type: "string",
+          requiresArg: true,
         })
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
+          requiresArg: true,
         })
         .option("tsconfig", {
           describe: "Path to a custom tsconfig.json file",
           type: "string",
+          requiresArg: true,
         })
         .option("local", {
           alias: "l",
@@ -961,20 +976,24 @@ export async function main(argv: string[]): Promise<void> {
       return yargs
         .option("env", {
           type: "string",
+          requiresArg: true,
           describe: "Perform on a specific environment",
           alias: "e",
         })
         .positional("script", {
           describe: "The path to an entry point for your worker",
           type: "string",
+          requiresArg: true,
         })
         .option("name", {
           describe: "Name of the worker",
           type: "string",
+          requiresArg: true,
         })
         .option("outdir", {
           describe: "Output directory for the bundled worker",
           type: "string",
+          requiresArg: true,
         })
         .option("format", {
           choices: ["modules", "service-worker"] as const,
@@ -984,11 +1003,13 @@ export async function main(argv: string[]): Promise<void> {
         .option("compatibility-date", {
           describe: "Date to use for compatibility checks",
           type: "string",
+          requiresArg: true,
         })
         .option("compatibility-flags", {
           describe: "Flags to use for compatibility checks",
           alias: "compatibility-flag",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("latest", {
@@ -999,46 +1020,55 @@ export async function main(argv: string[]): Promise<void> {
         .option("experimental-public", {
           describe: "Static assets to be served",
           type: "string",
+          requiresArg: true,
         })
         .option("site", {
           describe: "Root folder of static assets for Workers Sites",
           type: "string",
+          requiresArg: true,
         })
         .option("site-include", {
           describe:
             "Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("site-exclude", {
           describe:
             "Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("triggers", {
           describe: "cron schedules to attach",
           alias: ["schedule", "schedules"],
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("routes", {
           describe: "Routes to upload",
           alias: "route",
           type: "string",
+          requiresArg: true,
           array: true,
         })
         .option("jsx-factory", {
           describe: "The function that is called for each JSX element",
           type: "string",
+          requiresArg: true,
         })
         .option("jsx-fragment", {
           describe: "The function that is called for each JSX fragment",
           type: "string",
+          requiresArg: true,
         })
         .option("tsconfig", {
           describe: "Path to a custom tsconfig.json file",
           type: "string",
+          requiresArg: true,
         })
         .option("minify", {
           describe: "Minify the script",
@@ -1135,10 +1165,12 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("header", {
           type: "string",
+          requiresArg: true,
           describe: "Filter by HTTP header",
         })
         .option("method", {
           type: "string",
+          requiresArg: true,
           describe: "Filter by HTTP method",
           array: true,
         })
@@ -1148,16 +1180,19 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("search", {
           type: "string",
+          requiresArg: true,
           describe: "Filter by a text match in console.log messages",
         })
         .option("ip", {
           type: "string",
+          requiresArg: true,
           describe:
             'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
           array: true,
         })
         .option("env", {
           type: "string",
+          requiresArg: true,
           describe: "Perform on a specific environment",
           alias: "e",
         })
@@ -1266,6 +1301,7 @@ export async function main(argv: string[]): Promise<void> {
         })
         .option("env", {
           type: "string",
+          requiresArg: true,
           describe: "Perform on a specific environment",
         })
         .option("watch", {
@@ -1373,10 +1409,12 @@ export async function main(argv: string[]): Promise<void> {
             return yargs
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
               })
               .option("zone", {
                 type: "string",
+                requiresArg: true,
                 describe: "Zone id",
               })
               .positional("zone", {
@@ -1408,10 +1446,12 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("zone", {
                 type: "string",
+                requiresArg: true,
                 describe: "zone id",
               })
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
               });
           },
@@ -1468,9 +1508,11 @@ export async function main(argv: string[]): Promise<void> {
               .option("name", {
                 describe: "Name of the worker",
                 type: "string",
+                requiresArg: true,
               })
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe:
                   "Binds the secret to the Worker of the specific environment",
                 alias: "e",
@@ -1587,9 +1629,11 @@ export async function main(argv: string[]): Promise<void> {
               .option("name", {
                 describe: "Name of the worker",
                 type: "string",
+                requiresArg: true,
               })
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe:
                   "Binds the secret to the Worker of the specific environment",
                 alias: "e",
@@ -1638,9 +1682,11 @@ export async function main(argv: string[]): Promise<void> {
               .option("name", {
                 describe: "Name of the worker",
                 type: "string",
+                requiresArg: true,
               })
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe:
                   "Binds the secret to the Worker of the specific environment.",
                 alias: "e",
@@ -1687,6 +1733,7 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -1759,15 +1806,18 @@ export async function main(argv: string[]): Promise<void> {
             return yargs
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to delete",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to delete",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -1841,15 +1891,18 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The binding of the namespace to write to",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to write to",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -1868,6 +1921,7 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("path", {
                 type: "string",
+                requiresArg: true,
                 describe: "Read value from the file at a given path",
               })
               .check(demandOneOfOption("value", "path"));
@@ -1909,15 +1963,18 @@ export async function main(argv: string[]): Promise<void> {
             return yargs
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to list",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to list",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -1929,6 +1986,7 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("prefix", {
                 type: "string",
+                requiresArg: true,
                 describe: "A prefix to filter listed keys",
               });
           },
@@ -1959,15 +2017,18 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to get from",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to get from",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -2003,15 +2064,18 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to delete from",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to delete from",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -2059,15 +2123,18 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to insert values into",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to insert values into",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -2165,15 +2232,18 @@ export async function main(argv: string[]): Promise<void> {
               })
               .option("binding", {
                 type: "string",
+                requiresArg: true,
                 describe: "The name of the namespace to delete from",
               })
               .option("namespace-id", {
                 type: "string",
+                requiresArg: true,
                 describe: "The id of the namespace to delete from",
               })
               .check(demandOneOfOption("binding", "namespace-id"))
               .option("env", {
                 type: "string",
+                requiresArg: true,
                 describe: "Perform on a specific environment",
                 alias: "e",
               })
@@ -2339,6 +2409,7 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Pick the set of applicable OAuth scopes when logging in",
           array: true,
           type: "string",
+          requiresArg: true,
         });
 
       // TODO: scopes
@@ -2403,6 +2474,7 @@ export async function main(argv: string[]): Promise<void> {
       alias: "c",
       describe: "Path to .toml configuration file",
       type: "string",
+      requiresArg: true,
     });
 
   wrangler.group(["config", "help", "version", "legacy-env"], "Flags:");
