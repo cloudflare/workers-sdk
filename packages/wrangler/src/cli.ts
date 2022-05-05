@@ -2,16 +2,7 @@ import "dotenv/config"; // Grab locally specified env params from a `.env` file.
 import process from "process";
 import { hideBin } from "yargs/helpers";
 import { FatalError } from "./errors";
-import { reportError, initReporting } from "./reporting";
 import { main } from ".";
-
-try {
-  initReporting();
-} catch (error) {}
-
-process.on("uncaughtExceptionMonitor", async (err, origin) => {
-  await reportError(err, origin);
-});
 
 main(hideBin(process.argv)).catch((e) => {
   // The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.

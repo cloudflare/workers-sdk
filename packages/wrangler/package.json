@@ -52,9 +52,6 @@
   },
   "devDependencies": {
     "@iarna/toml": "^3.0.0",
-    "@sentry/cli": "^1.71.0",
-    "@sentry/integrations": "^6.17.6",
-    "@sentry/node": "^6.17.6",
     "@types/command-exists": "^1.2.0",
     "@types/glob-to-regexp": "0.4.1",
     "@types/mime": "^2.0.3",

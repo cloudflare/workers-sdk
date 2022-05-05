@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
 import { logger } from "./logger";
-import { reportError } from "./reporting";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type {
   IncomingHttpHeaders,
@@ -94,7 +93,6 @@ export function usePreviewServer({
         .then((proxy) => setProxyServer(proxy))
         .catch(async (err) => {
           logger.error("Failed to create proxy server:", err);
-          await reportError(err);
         });
     }
   }, [proxyServer, localProtocol]);
