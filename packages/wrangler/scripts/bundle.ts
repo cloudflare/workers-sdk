@@ -11,7 +11,7 @@ async function run() {
     outdir: "./wrangler-dist",
     platform: "node",
     format: "cjs",
-    // minify: true, // TODO: enable this again
+    minify: true,
     external: [
       "fsevents",
       "esbuild",
@@ -23,7 +23,7 @@ async function run() {
       "@esbuild-plugins/node-globals-polyfill",
       "@esbuild-plugins/node-modules-polyfill",
     ],
-    sourcemap: true,
+    sourcemap: process.env.SOURCEMAPS !== "false",
     inject: [path.join(__dirname, "../import_meta_url.js")],
     define: {
       "import.meta.url": "import_meta_url",
@@ -39,7 +39,7 @@ async function run() {
     format: "esm",
     minify: true,
     external: ["miniflare", "@miniflare/core"],
-    sourcemap: true,
+    sourcemap: process.env.SOURCEMAPS !== "false",
   });
 }
 
