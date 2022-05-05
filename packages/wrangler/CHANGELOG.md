@@ -1,5 +1,29 @@
 # wrangler
 
+## 0.0.30
+
+### Patch Changes
+
+- [#902](https://github.com/cloudflare/wrangler2/pull/902) [`daed3c3`](https://github.com/cloudflare/wrangler2/commit/daed3c3d09c7416ef46a8f12e9c2c1ec9ff5cbd3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: show error if a string option is used without a value
+
+  Fixes #883
+
+* [#901](https://github.com/cloudflare/wrangler2/pull/901) [`b246066`](https://github.com/cloudflare/wrangler2/commit/b24606696a18bb2183072b9a1e0e0dc57371791c) Thanks [@threepointone](https://github.com/threepointone)! - chore: minify bundle, don't ship sourcemaps
+
+  We haven't found much use for sourcemaps in production, and we should probably minify the bundle anyway. This will also remove an dev only warnings react used to log.
+
+- [#904](https://github.com/cloudflare/wrangler2/pull/904) [`641cdad`](https://github.com/cloudflare/wrangler2/commit/641cdadb5168af7b5be042ccc394ddf501e8475d) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Adds 'assets:' loader for Pages Functions.
+
+  This lets users and Plugin authors include a folder of static assets in Pages Functions.
+
+  ```ts
+  export { onRequest } from "assets:../folder/of/static/assets";
+  ```
+
+  More information in [our docs](https://developers.cloudflare.com/pages/platform/functions/plugins/).
+
+* [#905](https://github.com/cloudflare/wrangler2/pull/905) [`c57ff0e`](https://github.com/cloudflare/wrangler2/commit/c57ff0e3fdd8c13156e6f9973fba30da56694ce2) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - chore: removed Sentry and related reporting code. Automated reporting of Wrangler errors will be reimplemented after further planning.
+
 ## 0.0.29
 
 ### Patch Changes
