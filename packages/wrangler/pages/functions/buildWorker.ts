@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises";
+import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { build } from "esbuild";
 import { nanoid } from "nanoid";
@@ -60,23 +60,41 @@ export function buildWorker({
         },
       },
       {
-        name: "Static assets",
+        name: "Assets",
         setup(pluginBuild) {
           const identifiers = new Map<string, string>();
 
           pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-            const path = resolve(
+            const directory = resolve(
               args.resolveDir,
               args.path.slice("assets:".length)
             );
+
+            const exists = await access(directory)
+              .then(() => true)
+              .catch(() => false);
+
+            const isDirectory =
+              exists && (await lstat(directory)).isDirectory();
+
+            if (!isDirectory) {
+              return {
+                errors: [
+                  {
+                    text: `'${directory}' does not exist or is not a directory.`,
+                  },
+                ],
+              };
+            }
+
             // TODO: Consider hashing the contents rather than using a unique identifier every time?
-            identifiers.set(path, nanoid());
+            identifiers.set(directory, nanoid());
             if (!buildOutputDirectory) {
               console.warn(
                 "You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
               );
             }
-            return { path, namespace: "assets" };
+            return { path: directory, namespace: "assets" };
           });
 
           pluginBuild.onLoad(
