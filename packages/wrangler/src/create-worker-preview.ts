@@ -2,6 +2,7 @@ import { URL } from "node:url";
 import { fetch } from "undici";
 import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
+import { logger } from "./logger";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 
 /**
@@ -66,9 +67,9 @@ async function sessionToken(
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
   const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
-  const { inspector_websocket, token } = (await (
+  const { inspector_websocket, prewarm, token } = (await (
     await fetch(exchange_url, { signal: abortSignal })
-  ).json()) as { inspector_websocket: string; token: string };
+  ).json()) as { inspector_websocket: string; token: string; prewarm: string };
   const { host } = new URL(inspector_websocket);
   const query = `cf_workers_preview_token=${token}`;
 
@@ -76,9 +77,7 @@ async function sessionToken(
     value: token,
     host,
     inspectorUrl: new URL(`${inspector_websocket}?${query}`),
-    prewarmUrl: new URL(
-      `https://${host}/cdn-cgi/workers/preview/prewarm?${query}`
-    ),
+    prewarmUrl: new URL(prewarm),
   };
 }
 
@@ -165,9 +164,12 @@ export async function createWorkerPreview(
   const response = await fetch(token.prewarmUrl.href, {
     method: "POST",
     signal: abortSignal,
+    headers: {
+      "cf-workers-preview-token": token.value,
+    },
   });
   if (!response.ok) {
-    // console.error("worker failed to prewarm: ", response.statusText);
+    logger.warn("worker failed to prewarm: ", response.statusText);
   }
   return token;
 }
