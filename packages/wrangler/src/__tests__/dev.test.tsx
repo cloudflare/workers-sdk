@@ -668,6 +668,65 @@ describe("wrangler dev", () => {
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
+
+  describe("site", () => {
+    it("should error if --site is used with no value", async () => {
+      await expect(
+        runWrangler("dev --site")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Not enough arguments following: site"`
+      );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "wrangler dev [script]
+
+        👂 Start a local server for developing your worker
+
+        Positionals:
+          script  The path to an entry point for your worker  [string]
+
+        Flags:
+          -c, --config      Path to .toml configuration file  [string]
+          -h, --help        Show help  [boolean]
+          -v, --version     Show version number  [boolean]
+              --legacy-env  Use legacy environments  [boolean]
+
+        Options:
+              --name                                       Name of the worker  [string]
+              --format                                     Choose an entry type  [deprecated] [choices: \\"modules\\", \\"service-worker\\"]
+          -e, --env                                        Perform on a specific environment  [string]
+              --compatibility-date                         Date to use for compatibility checks  [string]
+              --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
+              --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+              --ip                                         IP address to listen on, defaults to \`localhost\`  [string]
+              --port                                       Port to listen on  [number]
+              --inspector-port                             Port for devtools to connect to  [number]
+              --routes, --route                            Routes to upload  [array]
+              --host                                       Host to forward requests to, defaults to the zone of project  [string]
+              --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+              --experimental-public                        Static assets to be served  [string]
+              --site                                       Root folder of static assets for Workers Sites  [string]
+              --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
+              --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
+              --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+              --jsx-factory                                The function that is called for each JSX element  [string]
+              --jsx-fragment                               The function that is called for each JSX fragment  [string]
+              --tsconfig                                   Path to a custom tsconfig.json file  [string]
+          -l, --local                                      Run on my machine  [boolean] [default: false]
+              --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
+              --minify                                     Minify the script  [boolean]
+              --node-compat                                Enable node.js compatibility  [boolean]
+        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
+
+        ",
+          "out": "",
+          "warn": "",
+        }
+      `);
+    });
+  });
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
