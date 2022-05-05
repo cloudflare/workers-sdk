@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { access, lstat } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 import { build } from "esbuild";
 
 type Options = {
@@ -48,6 +49,42 @@ export function buildPlugin({
               onEnd();
             }
           });
+        },
+      },
+      {
+        name: "Assets",
+        setup(pluginBuild) {
+          if (pluginBuild.initialOptions.outfile) {
+            const outdir = dirname(pluginBuild.initialOptions.outfile);
+
+            pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+              const directory = resolve(
+                args.resolveDir,
+                args.path.slice("assets:".length)
+              );
+
+              const exists = await access(directory)
+                .then(() => true)
+                .catch(() => false);
+
+              const isDirectory =
+                exists && (await lstat(directory)).isDirectory();
+
+              if (!isDirectory) {
+                return {
+                  errors: [
+                    {
+                      text: `'${directory}' does not exist or is not a directory.`,
+                    },
+                  ],
+                };
+              }
+
+              const path = `assets:./${relative(outdir, directory)}`;
+
+              return { path, external: true, namespace: "assets" };
+            });
+          }
         },
       },
     ],
