@@ -4,7 +4,7 @@ import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { cwd } from "node:process";
 import { URL } from "node:url";
 import { hash } from "blake3-wasm";
@@ -719,6 +719,7 @@ async function buildFunctions({
   watch = false,
   onEnd,
   plugin = false,
+  buildOutputDirectory,
 }: {
   outfile: string;
   outputConfigPath?: string;
@@ -729,6 +730,7 @@ async function buildFunctions({
   watch?: boolean;
   onEnd?: () => void;
   plugin?: boolean;
+  buildOutputDirectory?: string;
 }) {
   RUNNING_BUILDERS.forEach(
     (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -776,6 +778,7 @@ async function buildFunctions({
         fallbackService,
         watch,
         onEnd,
+        buildOutputDirectory,
       })
     );
   }
@@ -1004,6 +1007,23 @@ const createDeployment: CommandModule<
       }
     }
 
+    let builtFunctions: string | undefined = undefined;
+    const functionsDirectory = join(cwd(), "functions");
+    if (existsSync(functionsDirectory)) {
+      const outfile = join(tmpdir(), "./functionsWorker.js");
+
+      await new Promise((resolve) =>
+        buildFunctions({
+          outfile,
+          functionsDirectory,
+          onEnd: () => resolve(null),
+          buildOutputDirectory: dirname(outfile),
+        })
+      );
+
+      builtFunctions = readFileSync(outfile, "utf-8");
+    }
+
     type File = {
       content: Buffer;
       metadata: Metadata;
@@ -1167,22 +1187,6 @@ const createDeployment: CommandModule<
 
     if (commitDirty !== undefined) {
       formData.append("commit_dirty", commitDirty);
-    }
-
-    let builtFunctions: string | undefined = undefined;
-    const functionsDirectory = join(cwd(), "functions");
-    if (existsSync(functionsDirectory)) {
-      const outfile = join(tmpdir(), "./functionsWorker.js");
-
-      await new Promise((resolve) =>
-        buildFunctions({
-          outfile,
-          functionsDirectory,
-          onEnd: () => resolve(null),
-        })
-      );
-
-      builtFunctions = readFileSync(outfile, "utf-8");
     }
 
     let _headers: string | undefined,
@@ -1351,6 +1355,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               sourcemap: true,
               watch: true,
               onEnd: () => scriptReadyResolve(),
+              buildOutputDirectory: directory,
             });
           } catch {}
 
@@ -1364,6 +1369,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               sourcemap: true,
               watch: true,
               onEnd: () => scriptReadyResolve(),
+              buildOutputDirectory: directory,
             });
           });
 
@@ -1591,6 +1597,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             fallbackService,
             watch,
             plugin,
+            buildOutputDirectory: dirname(outfile),
           });
         }
       )

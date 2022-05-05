@@ -1,5 +1,7 @@
-import path from "node:path";
+import { cp, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { build } from "esbuild";
+import { nanoid } from "nanoid";
 
 type Options = {
   routesModule: string;
@@ -9,6 +11,7 @@ type Options = {
   fallbackService?: string;
   watch?: boolean;
   onEnd?: () => void;
+  buildOutputDirectory?: string;
 };
 
 export function buildWorker({
@@ -19,11 +22,10 @@ export function buildWorker({
   fallbackService = "ASSETS",
   watch = false,
   onEnd = () => {},
+  buildOutputDirectory,
 }: Options) {
   return build({
-    entryPoints: [
-      path.resolve(__dirname, "../pages/functions/template-worker.ts"),
-    ],
+    entryPoints: [resolve(__dirname, "../pages/functions/template-worker.ts")],
     inject: [routesModule],
     bundle: true,
     format: "esm",
@@ -55,6 +57,62 @@ export function buildWorker({
               onEnd();
             }
           });
+        },
+      },
+      {
+        name: "Static assets",
+        setup(pluginBuild) {
+          const identifiers = new Map<string, string>();
+
+          pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+            const path = resolve(
+              args.resolveDir,
+              args.path.slice("assets:".length)
+            );
+            // TODO: Consider hashing the contents rather than using a unique identifier every time?
+            identifiers.set(path, nanoid());
+            if (!buildOutputDirectory) {
+              console.warn(
+                "You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
+              );
+            }
+            return { path, namespace: "assets" };
+          });
+
+          pluginBuild.onLoad(
+            { filter: /.*/, namespace: "assets" },
+            async (args) => {
+              const identifier = identifiers.get(args.path);
+
+              if (buildOutputDirectory) {
+                const staticAssetsOutputDirectory = join(
+                  buildOutputDirectory,
+                  "cdn-cgi",
+                  "pages-plugins",
+                  identifier as string
+                );
+                await rm(staticAssetsOutputDirectory, {
+                  force: true,
+                  recursive: true,
+                });
+                await cp(args.path, staticAssetsOutputDirectory, {
+                  force: true,
+                  recursive: true,
+                });
+
+                return {
+                  // TODO: Watch args.path for changes and re-copy when updated
+                  contents: `export const onRequest = ({ request, env, functionPath }) => {
+                    const url = new URL(request.url)
+                    const relativePathname = url.pathname.split(functionPath)[1] || "/";
+                    url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname
+                    request = new Request(url.toString(), request)
+                    return env.ASSETS.fetch(request)
+                  }`,
+                };
+              }
+            }
+          );
         },
       },
     ],

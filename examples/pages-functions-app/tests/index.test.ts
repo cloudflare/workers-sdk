@@ -109,4 +109,19 @@ describe("Pages Functions", () => {
     text = await response.text();
     expect(text).toContain("I'm a fixed response");
   });
+
+  it("can import static assets", async () => {
+    let response = await waitUntilReady("http://localhost:8789/static");
+    let text = await response.text();
+    expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
+
+    // from a Plugin
+    response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/static"
+    );
+    text = await response.text();
+    expect(text).toContain(
+      "<h1>Hello from a static asset brought from a Plugin!</h1>"
+    );
+  });
 });

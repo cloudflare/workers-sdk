@@ -7,7 +7,8 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "public/"
   ],
   "scripts": {
     "build": "npx wrangler pages functions build --plugin --outfile=index.js"

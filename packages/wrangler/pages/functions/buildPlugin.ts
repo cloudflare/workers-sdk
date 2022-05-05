@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { build } from "esbuild";
 
 type Options = {
@@ -48,6 +48,22 @@ export function buildPlugin({
               onEnd();
             }
           });
+        },
+      },
+      {
+        name: "Static assets",
+        setup(pluginBuild) {
+          if (pluginBuild.initialOptions.outfile) {
+            const outdir = dirname(pluginBuild.initialOptions.outfile);
+
+            pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+              const path = `assets:./${relative(
+                outdir,
+                resolve(args.resolveDir, args.path.slice("assets:".length))
+              )}`;
+              return { path, external: true, namespace: "assets" };
+            });
+          }
         },
       },
     ],
