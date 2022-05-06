@@ -77,8 +77,9 @@ interface EnvironmentInheritable {
   routes:
     | (
         | string
-        | { pattern: string; zone_id: string }
-        | { pattern: string; zone_name: string }
+        | { pattern: string; zone_id: string; custom_domain?: boolean }
+        | { pattern: string; zone_name: string; custom_domain?: boolean }
+        | { pattern: string; custom_domain: boolean }
       )[]
     | undefined;
 
@@ -94,8 +95,9 @@ interface EnvironmentInheritable {
   route:
     | (
         | string
-        | { pattern: string; zone_id: string }
-        | { pattern: string; zone_name: string }
+        | { pattern: string; zone_id: string; custom_domain?: boolean }
+        | { pattern: string; zone_name: string; custom_domain?: boolean }
+        | { pattern: string; custom_domain: boolean }
       )
     | undefined;
 

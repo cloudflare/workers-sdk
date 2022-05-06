@@ -40,6 +40,28 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function renderRoute(route: Exclude<Config["routes"], undefined>[number]): string {
+  let result = "";
+  if (typeof route === "string") {
+    result = route;
+  } else {
+    result = route.pattern;
+    const isCustomDomain = !!("custom_domain" in route && route.custom_domain);
+    if (isCustomDomain && "zone_id" in route) {
+      result += ` (custom domain - zone id: ${route.zone_id})`;
+    } else if (isCustomDomain && "zone_name" in route) {
+      result += ` (custom domain - zone id: ${route.zone_name})`;
+    } else if (isCustomDomain) {
+      result += ` (custom domain)`;
+    } else if ("zone_id" in route) {
+      result += ` (zone id: ${route.zone_id})`;
+    } else if ("zone_name" in route) {
+      result += ` (zone id: ${route.zone_name})`;
+    }
+  }
+  return result;
+}
+
 export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config, accountId } = props;
@@ -393,22 +415,10 @@ export default async function publish(props: Props): Promise<void> {
         if (routes.length > 10) {
           return routes
             .slice(0, 9)
-            .map((route) =>
-              typeof route === "string"
-                ? route
-                : "zone_id" in route
-                ? `${route.pattern} (zone id: ${route.zone_id})`
-                : `${route.pattern} (zone name: ${route.zone_name})`
-            )
+            .map((route) => renderRoute(route))
             .concat([`...and ${routes.length - 10} more routes`]);
         }
-        return routes.map((route) =>
-          typeof route === "string"
-            ? route
-            : "zone_id" in route
-            ? `${route.pattern} (zone id: ${route.zone_id})`
-            : `${route.pattern} (zone name: ${route.zone_name})`
-        );
+        return routes.map((route) => renderRoute(route));
       })
     );
   }
