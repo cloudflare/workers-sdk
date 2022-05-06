@@ -67,7 +67,10 @@ describe("wrangler", () => {
           ).rejects.toThrowErrorMatchingInlineSnapshot(
             `"Not enough non-option arguments: got 0, need at least 1"`
           );
-          expect(std.out).toMatchInlineSnapshot(`""`);
+          expect(std.out).toMatchInlineSnapshot(`
+            "
+            "
+          `);
           expect(std.err).toMatchInlineSnapshot(`
             "wrangler r2 bucket create <name>
 
@@ -93,7 +96,10 @@ describe("wrangler", () => {
           ).rejects.toThrowErrorMatchingInlineSnapshot(
             `"Unknown arguments: def, ghi"`
           );
-          expect(std.out).toMatchInlineSnapshot(`""`);
+          expect(std.out).toMatchInlineSnapshot(`
+            "
+            "
+          `);
           expect(std.err).toMatchInlineSnapshot(`
             "wrangler r2 bucket create <name>
 
@@ -145,7 +151,10 @@ describe("wrangler", () => {
           ).rejects.toThrowErrorMatchingInlineSnapshot(
             `"Not enough non-option arguments: got 0, need at least 1"`
           );
-          expect(std.out).toMatchInlineSnapshot(`""`);
+          expect(std.out).toMatchInlineSnapshot(`
+            "
+            "
+          `);
           expect(std.err).toMatchInlineSnapshot(`
             "wrangler r2 bucket delete <name>
 
@@ -171,7 +180,10 @@ describe("wrangler", () => {
           ).rejects.toThrowErrorMatchingInlineSnapshot(
             `"Unknown arguments: def, ghi"`
           );
-          expect(std.out).toMatchInlineSnapshot(`""`);
+          expect(std.out).toMatchInlineSnapshot(`
+            "
+            "
+          `);
           expect(std.err).toMatchInlineSnapshot(`
             "wrangler r2 bucket delete <name>
 

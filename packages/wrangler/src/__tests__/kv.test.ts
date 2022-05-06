@@ -45,7 +45,10 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"Not enough non-option arguments: got 0, need at least 1"`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:namespace create <namespace>
 
@@ -75,7 +78,10 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"Unknown arguments: def, ghi"`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:namespace create <namespace>
 
@@ -106,7 +112,10 @@ describe("wrangler", () => {
           `"The namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number."`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:namespace create <namespace>
 
@@ -466,7 +475,10 @@ describe("wrangler", () => {
           `"Not enough non-option arguments: got 0, need at least 1"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key put <key> [value]
 
@@ -503,7 +515,10 @@ describe("wrangler", () => {
           `"Exactly one of the arguments binding and namespace-id is required"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key put <key> [value]
 
@@ -540,7 +555,10 @@ describe("wrangler", () => {
           `"Arguments binding and namespace-id are mutually exclusive"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key put <key> [value]
 
@@ -577,7 +595,10 @@ describe("wrangler", () => {
           `"Exactly one of the arguments value and path is required"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key put <key> [value]
 
@@ -614,7 +635,10 @@ describe("wrangler", () => {
           `"Arguments value and path are mutually exclusive"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key put <key> [value]
 
@@ -918,7 +942,10 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"Not enough non-option arguments: got 0, need at least 1"`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key get <key>
 
@@ -950,7 +977,10 @@ describe("wrangler", () => {
         ).rejects.toThrowErrorMatchingInlineSnapshot(
           `"Exactly one of the arguments binding and namespace-id is required"`
         );
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key get <key>
 
@@ -983,7 +1013,10 @@ describe("wrangler", () => {
           `"Arguments binding and namespace-id are mutually exclusive"`
         );
 
-        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          "
+        `);
         expect(std.err).toMatchInlineSnapshot(`
           "wrangler kv:key get <key>
 

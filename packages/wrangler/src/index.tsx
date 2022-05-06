@@ -2534,6 +2534,7 @@ export async function main(argv: string[]): Promise<void> {
     logger.log(""); // Just adds a bit of space
     if (e instanceof CommandLineArgsError) {
       wrangler.showHelp("error");
+      logger.log(""); // Add a bit of space.
       logger.error(e.message);
     } else if (e instanceof ParseError) {
       e.notes.push({

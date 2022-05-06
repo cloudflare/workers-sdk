@@ -62,7 +62,10 @@ describe("wrangler", () => {
         `"Unknown argument: invalid-command"`
       );
 
-      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.out).toMatchInlineSnapshot(`
+        "
+        "
+      `);
       expect(std.err).toMatchInlineSnapshot(`
         "wrangler
 

@@ -721,7 +721,8 @@ describe("wrangler dev", () => {
         [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
 
         ",
-          "out": "",
+          "out": "
+        ",
           "warn": "",
         }
       `);
