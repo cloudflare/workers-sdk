@@ -264,14 +264,19 @@ export async function main(argv: string[]): Promise<void> {
           default: "worker",
         })
         .positional("template", {
-          describe: "a link to a GitHub template",
+          describe: "The URL of a GitHub template",
           default: "https://github.com/cloudflare/worker-template",
         });
     },
-    () => {
+    (generateArgs) => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
       throw new DeprecationError(
-        "`wrangler generate` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
+        "`wrangler generate` has been deprecated.\n" +
+          "Try running `wrangler init` to generate a basic Worker, or cloning the template repository instead:\n\n" +
+          "```\n" +
+          `git clone ${generateArgs.template}\n` +
+          "```\n\n" +
+          "Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
       );
     }
   );

@@ -226,7 +226,14 @@ describe("wrangler", () => {
       await runWrangler("generate").catch((err) => {
         expect(err.message).toMatchInlineSnapshot(`
           "Deprecation:
-          \`wrangler generate\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
+          \`wrangler generate\` has been deprecated.
+          Try running \`wrangler init\` to generate a basic Worker, or cloning the template repository instead:
+
+          \`\`\`
+          git clone https://github.com/cloudflare/worker-template
+          \`\`\`
+
+          Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
         `);
       });
     });
