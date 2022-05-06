@@ -925,10 +925,7 @@ const createDeployment: CommandModule<
             "Enter the production branch name:",
             "text",
             isGitDir
-              ? execSync(`git branch | grep "* "`)
-                  .toString()
-                  .replace("* ", "")
-                  .trim()
+              ? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
               : "production"
           );
 
@@ -1681,9 +1678,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 "Enter the production branch name:",
                 "text",
                 isGitDir
-                  ? execSync(`git branch | grep "* "`)
+                  ? execSync(`git rev-parse --abbrev-ref HEAD`)
                       .toString()
-                      .replace("* ", "")
                       .trim()
                   : "production"
               );
