@@ -290,6 +290,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The type of worker to create",
           type: "string",
           choices: ["rust", "javascript", "webpack"],
+          hidden: true,
+          deprecated: true,
+        })
+        .option("site", {
+          hidden: true,
+          type: "boolean",
           deprecated: true,
         })
         .option("yes", {
@@ -307,6 +313,18 @@ export async function main(argv: string[]): Promise<void> {
             "\nIf you wish to use webpack then you will need to create a custom build.";
           // TODO: Add a link to docs
         }
+        throw new CommandLineArgsError(message);
+      }
+      if (args.site) {
+        const message =
+          "The --site option is no longer supported.\n" +
+          "If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
+          "```\n" +
+          "git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site\n" +
+          "cd my-site\n" +
+          "```\n\n" +
+          "Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
+          "Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
         throw new CommandLineArgsError(message);
       }
 
