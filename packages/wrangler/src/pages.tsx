@@ -979,9 +979,8 @@ const createDeployment: CommandModule<
         );
 
         if (!branch) {
-          branch = execSync(`git branch | grep "* "`)
+          branch = execSync(`git rev-parse --abbrev-ref HEAD`)
             .toString()
-            .replace("* ", "")
             .trim();
         }
 
