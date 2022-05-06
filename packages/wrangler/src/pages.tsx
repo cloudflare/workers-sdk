@@ -1109,9 +1109,9 @@ const createDeployment: CommandModule<
 
     const files: Array<Promise<void>> = [];
 
-    if (fileMap.size > 20000) {
+    if (fileMap.size > 1000) {
       throw new Error(
-        `Error: Pages only supports up to 20,000 files in a deployment at the moment\nTry a smaller project perhaps?`
+        `Error: Pages only supports up to 1,000 files in a deployment at the moment.\nTry a smaller project perhaps?`
       );
     }
 
