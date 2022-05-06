@@ -715,14 +715,32 @@ describe("wrangler dev", () => {
               --jsx-fragment                               The function that is called for each JSX fragment  [string]
               --tsconfig                                   Path to a custom tsconfig.json file  [string]
           -l, --local                                      Run on my machine  [boolean] [default: false]
-              --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
               --minify                                     Minify the script  [boolean]
               --node-compat                                Enable node.js compatibility  [boolean]
+              --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
+              --inspect                                    Enable dev tools  [deprecated] [boolean]
         [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
 
         ",
           "out": "",
           "warn": "",
+        }
+      `);
+    });
+  });
+
+  describe("--inspect", () => {
+    it("should warn if --inspect is used", async () => {
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js --inspect");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
+
+        ",
         }
       `);
     });

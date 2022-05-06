@@ -753,10 +753,6 @@ export async function main(argv: string[]): Promise<void> {
           type: "boolean",
           default: false, // I bet this will a point of contention. We'll revisit it.
         })
-        .option("experimental-enable-local-persistence", {
-          describe: "Enable persistence for this session (only for local mode)",
-          type: "boolean",
-        })
         .option("minify", {
           describe: "Minify the script",
           type: "boolean",
@@ -764,6 +760,15 @@ export async function main(argv: string[]): Promise<void> {
         .option("node-compat", {
           describe: "Enable node.js compatibility",
           type: "boolean",
+        })
+        .option("experimental-enable-local-persistence", {
+          describe: "Enable persistence for this session (only for local mode)",
+          type: "boolean",
+        })
+        .option("inspect", {
+          describe: "Enable dev tools",
+          type: "boolean",
+          deprecated: true,
         });
     },
     async (args) => {
@@ -773,6 +778,12 @@ export async function main(argv: string[]): Promise<void> {
         (args.script && findWranglerToml(path.dirname(args.script)));
       const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "dev");
+
+      if (args.inspect) {
+        logger.warn(
+          "Passing --inspect is unnecessary, now you can always connect to devtools."
+        );
+      }
 
       if (args["experimental-public"]) {
         logger.warn(
