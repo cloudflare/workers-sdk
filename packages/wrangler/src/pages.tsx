@@ -1216,7 +1216,7 @@ const createDeployment: CommandModule<
     }
 
     const deploymentResponse = await fetchResult<Deployment>(
-      `/accounts/${accountId}/pages/projects/${projectName}/deployment`,
+      `/accounts/${accountId}/pages/projects/${projectName}/deployments`,
       {
         method: "POST",
         body: formData,

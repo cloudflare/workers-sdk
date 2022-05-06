@@ -297,7 +297,7 @@ describe("pages", () => {
       );
 
       setMockResponse(
-        "/accounts/:accountId/pages/projects/foo/deployment",
+        "/accounts/:accountId/pages/projects/foo/deployments",
         async ([_url, accountId], init) => {
           expect(accountId).toEqual("some-account-id");
           expect(init.method).toEqual("POST");
