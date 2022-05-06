@@ -1290,7 +1290,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
   if (typeof value !== "object" || value === null) {
     diagnostics.errors.push(
-      `"kv_namespaces" bindings should be objects, but got ${JSON.stringify(
+      `"r2_buckets" bindings should be objects, but got ${JSON.stringify(
         value
       )}`
     );

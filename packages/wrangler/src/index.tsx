@@ -958,7 +958,21 @@ export async function main(argv: string[]): Promise<void> {
             text_blobs: config.text_blobs,
             data_blobs: config.data_blobs,
             durable_objects: config.durable_objects,
-            r2_buckets: config.r2_buckets,
+            r2_buckets: config.r2_buckets?.map(
+              ({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+                // same idea as kv namespace preview id,
+                // same copy-on-write TODO
+                if (!preview_bucket_name) {
+                  throw new Error(
+                    `In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+                  );
+                }
+                return {
+                  binding,
+                  bucket_name: preview_bucket_name,
+                };
+              }
+            ),
             unsafe: config.unsafe?.bindings,
           }}
           crons={config.triggers.crons}
@@ -1384,7 +1398,21 @@ export async function main(argv: string[]): Promise<void> {
             text_blobs: config.text_blobs,
             data_blobs: config.data_blobs,
             durable_objects: config.durable_objects,
-            r2_buckets: config.r2_buckets,
+            r2_buckets: config.r2_buckets?.map(
+              ({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+                // same idea as kv namespace preview id,
+                // same copy-on-write TODO
+                if (!preview_bucket_name) {
+                  throw new Error(
+                    `In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+                  );
+                }
+                return {
+                  binding,
+                  bucket_name: preview_bucket_name,
+                };
+              }
+            ),
             unsafe: config.unsafe?.bindings,
           }}
           crons={config.triggers.crons}
