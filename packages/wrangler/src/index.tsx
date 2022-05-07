@@ -320,13 +320,20 @@ export async function main(argv: string[]): Promise<void> {
         }
         throw new CommandLineArgsError(message);
       }
+
+      const creationDirectory = path.resolve(process.cwd(), args.name ?? "");
+
       if (args.site) {
+        const gitDirectory =
+          creationDirectory !== process.cwd()
+            ? path.basename(creationDirectory)
+            : "my-site";
         const message =
           "The --site option is no longer supported.\n" +
           "If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
           "```\n" +
-          "git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site\n" +
-          "cd my-site\n" +
+          `git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
+          `cd ${gitDirectory}\n` +
           "```\n\n" +
           "Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
           "Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
@@ -334,8 +341,6 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       // TODO: make sure args.name is a valid identifier for a worker name
-
-      const creationDirectory = path.join(process.cwd(), args.name ?? "");
       const workerName = path
         .basename(creationDirectory)
         .toLowerCase()
