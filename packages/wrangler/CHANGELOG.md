@@ -1,5 +1,50 @@
 # wrangler
 
+## 0.0.31
+
+### Patch Changes
+
+- [#916](https://github.com/cloudflare/wrangler2/pull/916) [`4ef5fbb`](https://github.com/cloudflare/wrangler2/commit/4ef5fbbb2866de403cb613b742ef2042d12feebd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: display and error and help for `wrangler init --site`
+
+  The `--site` option is no longer supported.
+  This change adds information about how to create a new Sites project
+  by cloning a repository.
+  It also adds links to the Worker Sites and Cloudflare Pages docs.
+
+* [#908](https://github.com/cloudflare/wrangler2/pull/908) [`f8dd31e`](https://github.com/cloudflare/wrangler2/commit/f8dd31e322774180b371c6af15b4bfbd92a58284) Thanks [@threepointone](https://github.com/threepointone)! - fix: fix isolate prewarm logic for `wrangler dev`
+
+  When calling `wrangler dev`, we make a request to a special URL that "prewarms" the isolate running our Worker so that we can attach devtools etc to it before actually making a request. We'd implemented it wrongly, and because we'd silenced its errors, we weren't catching it. This patch fixes the logic (based on wrangler 1.x's implementation) and enables logging errors when the prewarm request fails.
+
+  As a result, profiling starts working again as expected. Fixes https://github.com/cloudflare/wrangler2/issues/907
+
+- [#919](https://github.com/cloudflare/wrangler2/pull/919) [`13078e1`](https://github.com/cloudflare/wrangler2/commit/13078e147f49c5054fc87dc4ab5a5f2028b93f5a) Thanks [@threepointone](https://github.com/threepointone)! - fix: don't crash when tail event is null
+
+  Sometime the "event" on a tail can be null. This patch makes sure we don't crash when that happens. Fixes https://github.com/cloudflare/wrangler2/issues/918
+
+* [#913](https://github.com/cloudflare/wrangler2/pull/913) [`dfeed74`](https://github.com/cloudflare/wrangler2/commit/dfeed74ee4c07d1e3c2e1b91ad5ccaa68fc9c120) Thanks [@threepointone](https://github.com/threepointone)! - polish: add a deprecation warning to `--inspect` on `dev`
+
+  We have a blogposts and docs that says you need to pass `--inspect` to use devtools and/or profile your Worker. In wrangler v2, we don't need to pass the flag anymore. Using it right now will throw an error, so this patch makes it a simple warning instead.
+
+- [#916](https://github.com/cloudflare/wrangler2/pull/916) [`4ef5fbb`](https://github.com/cloudflare/wrangler2/commit/4ef5fbbb2866de403cb613b742ef2042d12feebd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add some space after the CLI help message when there is an error
+
+* [#920](https://github.com/cloudflare/wrangler2/pull/920) [`57cf221`](https://github.com/cloudflare/wrangler2/commit/57cf221179661a5a6dd448086cdd019fac55e822) Thanks [@threepointone](https://github.com/threepointone)! - chore: don't minify bundles
+
+  When errors in wrangler happen, it's hard to tell where the error is coming from in a minified bundle. This patch removes the minification. We still set `process.env.NODE_ENV = 'production'` in the bundle so we don't run dev-only paths in things like React.
+
+  This adds about 2 mb to the bundle, but imo it's worth it.
+
+- [#916](https://github.com/cloudflare/wrangler2/pull/916) [`4ef5fbb`](https://github.com/cloudflare/wrangler2/commit/4ef5fbbb2866de403cb613b742ef2042d12feebd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update the `generate` command to provide better deprecation messaging
+
+* [#914](https://github.com/cloudflare/wrangler2/pull/914) [`9903526`](https://github.com/cloudflare/wrangler2/commit/9903526d03891dadfbe0d75dd21dcc0e118f9f73) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: Ensure getting git branch doesn't fail on Windows
+
+- [#917](https://github.com/cloudflare/wrangler2/pull/917) [`94d3d6d`](https://github.com/cloudflare/wrangler2/commit/94d3d6d3efa525f31b1c519067cce9f88fb8490b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Hit correct endpoint for 'wrangler pages publish'
+
+* [#910](https://github.com/cloudflare/wrangler2/pull/910) [`fe0344d`](https://github.com/cloudflare/wrangler2/commit/fe0344d894fa65a623966710914ef21f542341e1) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: support preview buckets for r2 bindings
+
+  Allows wrangler2 to perform preview & dev sessions with a different bucket than the published worker's binding.
+
+  This matches kv's preview_id behavior, and brings the wrangler2 implementation in sync with wrangler1.
+
 ## 0.0.30
 
 ### Patch Changes
