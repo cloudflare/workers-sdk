@@ -11,7 +11,6 @@ async function run() {
     outdir: "./wrangler-dist",
     platform: "node",
     format: "cjs",
-    minify: true,
     external: [
       "fsevents",
       "esbuild",
@@ -27,6 +26,7 @@ async function run() {
     inject: [path.join(__dirname, "../import_meta_url.js")],
     define: {
       "import.meta.url": "import_meta_url",
+      "process.env.NODE_ENV": '"production"',
     },
   });
 
@@ -37,9 +37,11 @@ async function run() {
     outfile: "./miniflare-dist/index.mjs",
     platform: "node",
     format: "esm",
-    minify: true,
     external: ["miniflare", "@miniflare/core"],
     sourcemap: process.env.SOURCEMAPS !== "false",
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
   });
 }
 
