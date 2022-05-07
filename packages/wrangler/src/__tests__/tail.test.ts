@@ -295,6 +295,31 @@ describe("tail", () => {
       `);
     });
 
+    it("should not crash when the tail message has a void event", async () => {
+      const api = mockWebsocketAPIs();
+      await runWrangler("tail test-worker --format pretty");
+
+      const message = generateMockEventMessage({ event: null });
+      const serializedMessage = serialize(message);
+
+      api.ws.send(serializedMessage);
+      expect(
+        std.out
+          .replace(
+            new Date(mockEventTimestamp).toLocaleString(),
+            "[mock timestamp string]"
+          )
+          .replace(
+            mockTailExpiration.toLocaleString(),
+            "[mock expiration date]"
+          )
+      ).toMatchInlineSnapshot(`
+        "Successfully created tail, expires at [mock expiration date]
+        Connected to test-worker, waiting for logs...
+        [missing request] - Ok @ [mock timestamp string]"
+      `);
+    });
+
     it("defaults to logging in pretty format when the output is a TTY", async () => {
       setIsTTY(true);
       const api = mockWebsocketAPIs();
@@ -414,7 +439,8 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
     // This isn't a problem outside of testing since deserialization
     // works just fine and wrangler never _sends_ any event messages,
     // it only receives them.
-    const request = (message.event as RequestEvent).request;
+    const request = ((message.event as RequestEvent | undefined | null) || {})
+      .request;
     const stringified = JSON.stringify(message, (key, value) => {
       if (key !== "request") {
         return value;
@@ -422,9 +448,9 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
 
       return {
         ...request,
-        url: request.url,
-        headers: request.headers,
-        method: request.method,
+        url: request?.url,
+        headers: request?.headers,
+        method: request?.method,
       };
     });
 
@@ -439,9 +465,9 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
  * @returns whether event is a ScheduledEvent (true) or a RequestEvent
  */
 function isScheduled(
-  event: ScheduledEvent | RequestEvent
+  event: ScheduledEvent | RequestEvent | undefined | null
 ): event is ScheduledEvent {
-  return "cron" in event;
+  return Boolean(event && "cron" in event);
 }
 
 /**
@@ -607,15 +633,19 @@ function mockWebsocketAPIs(env?: string, legacyEnv = false): MockAPI {
  * @param opts Any specific parts of the message to use instead of defaults
  * @returns a `TailEventMessage` that wrangler can process and display
  */
-function generateMockEventMessage(
-  opts?: Partial<TailEventMessage>
-): TailEventMessage {
+function generateMockEventMessage({
+  outcome = "ok",
+  exceptions = [],
+  logs = [],
+  eventTimestamp = mockEventTimestamp,
+  event = generateMockRequestEvent(),
+}: Partial<TailEventMessage>): TailEventMessage {
   return {
-    outcome: opts?.outcome || "ok",
-    exceptions: opts?.exceptions || [],
-    logs: opts?.logs || [],
-    eventTimestamp: opts?.eventTimestamp || mockEventTimestamp,
-    event: opts?.event || generateMockRequestEvent(),
+    outcome,
+    exceptions,
+    logs,
+    eventTimestamp,
+    event,
   };
 }
 
