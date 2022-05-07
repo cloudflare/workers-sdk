@@ -179,7 +179,7 @@ export type TailEventMessage = {
    * Until workers-types exposes individual types for export, we'll have
    * to just re-define these types ourselves.
    */
-  event: RequestEvent | ScheduledEvent;
+  event: RequestEvent | ScheduledEvent | undefined | null;
 };
 
 /**

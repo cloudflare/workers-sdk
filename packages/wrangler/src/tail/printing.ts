@@ -15,12 +15,16 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
     logger.log(`"${cronPattern}" @ ${datetime} - ${outcome}`);
   } else {
-    const requestMethod = eventMessage.event.request.method.toUpperCase();
-    const url = eventMessage.event.request.url;
+    const requestMethod = eventMessage.event?.request.method.toUpperCase();
+    const url = eventMessage.event?.request.url;
     const outcome = prettifyOutcome(eventMessage.outcome);
     const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
 
-    logger.log(`${requestMethod} ${url} - ${outcome} @ ${datetime}`);
+    logger.log(
+      url
+        ? `${requestMethod} ${url} - ${outcome} @ ${datetime}`
+        : `[missing request] - ${outcome} @ ${datetime}`
+    );
   }
 
   if (eventMessage.logs.length > 0) {
@@ -41,9 +45,9 @@ export function jsonPrintLogs(data: WebSocket.RawData): void {
 }
 
 function isScheduledEvent(
-  event: RequestEvent | ScheduledEvent
+  event: RequestEvent | ScheduledEvent | undefined | null
 ): event is ScheduledEvent {
-  return "cron" in event;
+  return Boolean(event && "cron" in event);
 }
 
 function prettifyOutcome(outcome: Outcome): string {
