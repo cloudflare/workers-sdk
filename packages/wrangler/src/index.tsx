@@ -264,14 +264,19 @@ export async function main(argv: string[]): Promise<void> {
           default: "worker",
         })
         .positional("template", {
-          describe: "a link to a GitHub template",
+          describe: "The URL of a GitHub template",
           default: "https://github.com/cloudflare/worker-template",
         });
     },
-    () => {
+    (generateArgs) => {
       // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
       throw new DeprecationError(
-        "`wrangler generate` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#generate for alternatives"
+        "`wrangler generate` has been deprecated.\n" +
+          "Try running `wrangler init` to generate a basic Worker, or cloning the template repository instead:\n\n" +
+          "```\n" +
+          `git clone ${generateArgs.template}\n` +
+          "```\n\n" +
+          "Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
       );
     }
   );
@@ -290,6 +295,12 @@ export async function main(argv: string[]): Promise<void> {
           describe: "The type of worker to create",
           type: "string",
           choices: ["rust", "javascript", "webpack"],
+          hidden: true,
+          deprecated: true,
+        })
+        .option("site", {
+          hidden: true,
+          type: "boolean",
           deprecated: true,
         })
         .option("yes", {
@@ -310,9 +321,26 @@ export async function main(argv: string[]): Promise<void> {
         throw new CommandLineArgsError(message);
       }
 
-      // TODO: make sure args.name is a valid identifier for a worker name
+      const creationDirectory = path.resolve(process.cwd(), args.name ?? "");
 
-      const creationDirectory = path.join(process.cwd(), args.name ?? "");
+      if (args.site) {
+        const gitDirectory =
+          creationDirectory !== process.cwd()
+            ? path.basename(creationDirectory)
+            : "my-site";
+        const message =
+          "The --site option is no longer supported.\n" +
+          "If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
+          "```\n" +
+          `git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
+          `cd ${gitDirectory}\n` +
+          "```\n\n" +
+          "Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
+          "Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
+        throw new CommandLineArgsError(message);
+      }
+
+      // TODO: make sure args.name is a valid identifier for a worker name
       const workerName = path
         .basename(creationDirectory)
         .toLowerCase()
@@ -2527,6 +2555,7 @@ export async function main(argv: string[]): Promise<void> {
     logger.log(""); // Just adds a bit of space
     if (e instanceof CommandLineArgsError) {
       wrangler.showHelp("error");
+      logger.log(""); // Add a bit of space.
       logger.error(e.message);
     } else if (e instanceof ParseError) {
       e.notes.push({

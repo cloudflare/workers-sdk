@@ -108,6 +108,22 @@ describe("init", () => {
               If you wish to use webpack then you will need to create a custom build."
             `);
     });
+
+    it("should error if `--site` is used", async () => {
+      await expect(runWrangler("init --site")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "The --site option is no longer supported.
+              If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
+
+              \`\`\`
+              git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
+              cd my-site
+              \`\`\`
+
+              Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
+              Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
+            `);
+    });
   });
 
   describe("wrangler.toml", () => {
