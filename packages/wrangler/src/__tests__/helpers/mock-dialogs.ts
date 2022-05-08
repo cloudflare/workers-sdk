@@ -1,4 +1,5 @@
 import { confirm, prompt } from "../../dialogs";
+import { normalizeSlashes } from "./mock-console";
 
 /**
  * The expected values for a confirmation request.
@@ -20,7 +21,7 @@ export interface ConfirmExpectation {
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
   (confirm as jest.Mock).mockImplementation((text: string) => {
     for (const { text: expectedText, result } of expectations) {
-      if (text === expectedText) {
+      if (normalizeSlashes(text) === normalizeSlashes(expectedText)) {
         return Promise.resolve(result);
       }
     }

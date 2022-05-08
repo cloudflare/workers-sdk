@@ -359,7 +359,12 @@ export async function main(argv: string[]): Promise<void> {
       let justCreatedWranglerToml = false;
 
       if (fs.existsSync(wranglerTomlDestination)) {
-        logger.warn(`${wranglerTomlDestination} file already exists!`);
+        logger.warn(
+          `${path.relative(
+            process.cwd(),
+            wranglerTomlDestination
+          )} already exists!`
+        );
         const shouldContinue = await confirm(
           "Do you want to continue initializing this project?"
         );
@@ -379,11 +384,19 @@ export async function main(argv: string[]): Promise<void> {
             }) + "\n"
           );
 
-          logger.log(`✨ Successfully created wrangler.toml`);
+          logger.log(
+            `✨ Created ${path.relative(
+              process.cwd(),
+              wranglerTomlDestination
+            )}`
+          );
           justCreatedWranglerToml = true;
         } catch (err) {
           throw new Error(
-            `Failed to create wrangler.toml.\n${(err as Error).message ?? err}`
+            `Failed to create ${path.relative(
+              process.cwd(),
+              wranglerTomlDestination
+            )}.\n${(err as Error).message ?? err}`
           );
         }
       }
@@ -404,7 +417,14 @@ export async function main(argv: string[]): Promise<void> {
             path.join(creationDirectory, ".gitignore"),
             readFileSync(path.join(__dirname, "../templates/gitignore"))
           );
-          logger.log(`✨ Initialized git repository`);
+          logger.log(
+            args.name && args.name !== "."
+              ? `✨ Initialized git repository at ${path.relative(
+                  process.cwd(),
+                  creationDirectory
+                )}`
+              : `✨ Initialized git repository`
+          );
         }
       }
 
@@ -439,8 +459,10 @@ export async function main(argv: string[]): Promise<void> {
           );
 
           await packageManager.install();
-          logger.log(`✨ Created package.json`);
           pathToPackageJson = path.join(creationDirectory, "package.json");
+          logger.log(
+            `✨ Created ${path.relative(process.cwd(), pathToPackageJson)}`
+          );
         } else {
           return;
         }
@@ -460,7 +482,10 @@ export async function main(argv: string[]): Promise<void> {
           const shouldInstall =
             yesFlag ||
             (await confirm(
-              "Would you like to install wrangler into your package.json?"
+              `Would you like to install wrangler into ${path.relative(
+                process.cwd(),
+                pathToPackageJson
+              )}?`
             ));
           if (shouldInstall) {
             await packageManager.addDevDeps(`wrangler@${wranglerVersion}`);
@@ -486,11 +511,13 @@ export async function main(argv: string[]): Promise<void> {
             "@cloudflare/workers-types",
             "typescript"
           );
-
-          logger.log(
-            `✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies`
-          );
           pathToTSConfig = path.join(creationDirectory, "tsconfig.json");
+          logger.log(
+            `✨ Created ${path.relative(
+              process.cwd(),
+              pathToTSConfig
+            )}, installed @cloudflare/workers-types into devDependencies`
+          );
         }
       } else {
         isTypescriptProject = true;
@@ -516,7 +543,10 @@ export async function main(argv: string[]): Promise<void> {
             // and we don't want to break them. Instead, we simply
             // tell the user that they need to update their tsconfig.json
             logger.log(
-              `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in your tsconfig.json`
+              `✨ Installed @cloudflare/workers-types.\nPlease add "@cloudflare/workers-types" to compilerOptions.types in ${path.relative(
+                process.cwd(),
+                pathToTSConfig
+              )}`
             );
           }
         }
@@ -598,12 +628,13 @@ export async function main(argv: string[]): Promise<void> {
 
       if (isTypescriptProject) {
         if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
-          let shouldCreateSource = false;
-
-          shouldCreateSource =
+          const shouldCreateSource =
             yesFlag ||
             (await confirm(
-              `Would you like to create a Worker at src/index.ts?`
+              `Would you like to create a Worker at ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.ts")
+              )}?`
             ));
 
           if (shouldCreateSource) {
@@ -615,7 +646,12 @@ export async function main(argv: string[]): Promise<void> {
               readFileSync(path.join(__dirname, "../templates/new-worker.ts"))
             );
 
-            logger.log(`✨ Created src/index.ts`);
+            logger.log(
+              `✨ Created ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.ts")
+              )}`
+            );
 
             await writePackageJsonScriptsAndUpdateWranglerToml(
               shouldWritePackageJsonScripts,
@@ -626,20 +662,31 @@ export async function main(argv: string[]): Promise<void> {
           }
         }
       } else {
-        if (!fs.existsSync("./src/index.js")) {
-          const shouldCreateSource = await confirm(
-            `Would you like to create a Worker at src/index.js?`
-          );
+        if (!fs.existsSync(path.join(creationDirectory, "./src/index.js"))) {
+          const shouldCreateSource =
+            yesFlag ||
+            (await confirm(
+              `Would you like to create a Worker at ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.js")
+              )}?`
+            ));
+
           if (shouldCreateSource) {
             await mkdir(path.join(creationDirectory, "./src"), {
               recursive: true,
             });
             await writeFile(
-              path.join(path.join(creationDirectory, "./src/index.js")),
+              path.join(creationDirectory, "./src/index.js"),
               readFileSync(path.join(__dirname, "../templates/new-worker.js"))
             );
 
-            logger.log(`✨ Created src/index.js`);
+            logger.log(
+              `✨ Created ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.js")
+              )}`
+            );
 
             await writePackageJsonScriptsAndUpdateWranglerToml(
               shouldWritePackageJsonScripts,
