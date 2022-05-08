@@ -28,6 +28,18 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
   });
 }
 
+export function clearConfirmMocks() {
+  (confirm as jest.Mock).mockReset();
+  // Because confirm was originally a spy, calling mockReset will simply reset
+  // it as a function with no return value (!), so we need to accitionally reset
+  // the mock implementation to the one that throws (from jest.setup.js).
+  (confirm as jest.Mock).mockImplementation((text: string) => {
+    throw new Error(
+      `Unexpected call to \`confirm("${text}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
+    );
+  });
+}
+
 /**
  * The expected values for a prompt request.
  */
@@ -62,4 +74,16 @@ export function mockPrompt(...expectations: PromptExpectation[]) {
       throw new Error(`Unexpected confirmation message: ${text}`);
     }
   );
+}
+
+export function clearPromptMocks() {
+  (prompt as jest.Mock).mockReset();
+  // Because prompt was originally a spy, calling mockReset will simply reset
+  // it as a function with no return value (!), so we need to accitionally reset
+  // the mock implementation to the one that throws (from jest.setup.js).
+  (prompt as jest.Mock).mockImplementation((text: string) => {
+    throw new Error(
+      `Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
+    );
+  });
 }

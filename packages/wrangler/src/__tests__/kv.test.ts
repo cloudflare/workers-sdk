@@ -8,7 +8,7 @@ import {
   setMockFetchKVGetValue,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -22,6 +22,7 @@ describe("wrangler", () => {
 
   afterEach(() => {
     unsetAllMocks();
+    clearConfirmMocks();
   });
 
   describe("kv:namespace", () => {
