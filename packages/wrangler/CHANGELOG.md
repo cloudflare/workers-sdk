@@ -1,5 +1,13 @@
 # wrangler
 
+## 0.0.34
+
+### Patch Changes
+
+- [#926](https://github.com/cloudflare/wrangler2/pull/926) [`7b38a7c`](https://github.com/cloudflare/wrangler2/commit/7b38a7c3e5df293167380002489c821c7c0a5553) Thanks [@threepointone](https://github.com/threepointone)! - polish: show paths of created files with `wrangler init`
+
+  This patch modifies the terminal when running `wrangler init`, to show the proper paths of files created during it (like `package.json`, `tsconfig.json`, etc etc). It also fixes a bug where we weren't detecting the existence of `src/index.js` for a named worker before asking to create it.
+
 ## 0.0.33
 
 ### Patch Changes
