@@ -1,5 +1,17 @@
 # wrangler
 
+## 0.0.32
+
+### Patch Changes
+
+- [#922](https://github.com/cloudflare/wrangler2/pull/922) [`e2f9bb2`](https://github.com/cloudflare/wrangler2/commit/e2f9bb2bad7fcb64ad284da7dec5d91778c8a09b) Thanks [@threepointone](https://github.com/threepointone)! - feat: offer to create a git repo when calling `wrangler init`
+
+  Worker projects created by `wrangler init` should also be managed by source control (popularly, git). This patch adds a choice in `wrangler init` to make the created project into a git repository.
+
+  Additionally, this fixes a bug in our tests where mocked `confirm()` and `prompt()` calls were leaking between tests.
+
+  Closes https://github.com/cloudflare/wrangler2/issues/847
+
 ## 0.0.31
 
 ### Patch Changes
