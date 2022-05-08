@@ -4,6 +4,7 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
+import { execa } from "execa";
 import { findUp } from "find-up";
 import getPort from "get-port";
 import { render } from "ink";
@@ -387,9 +388,27 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
+      const yesFlag = args.yes ?? false;
+
+      const isInsideGitProject = Boolean(await findUp(".git"));
+      const isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
+      if (!isInsideGitProject && isGitInstalled) {
+        const shouldInitGit =
+          yesFlag ||
+          (await confirm("Would you like to use git to manage this Worker?"));
+        if (shouldInitGit) {
+          await execa("git", ["init"], { cwd: creationDirectory });
+          await writeFile(
+            path.join(creationDirectory, ".gitignore"),
+            readFileSync(path.join(__dirname, "../templates/gitignore"))
+          );
+          logger.log(`✨ Initialized git repository`);
+        }
+      }
+
       let pathToPackageJson = await findUp("package.json");
       let shouldCreatePackageJson = false;
-      const yesFlag = args.yes ?? false;
+
       if (!pathToPackageJson) {
         // If no package.json exists, ask to create one
         shouldCreatePackageJson =

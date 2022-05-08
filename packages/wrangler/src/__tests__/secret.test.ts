@@ -3,7 +3,12 @@ import * as TOML from "@iarna/toml";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import {
+  mockConfirm,
+  mockPrompt,
+  clearConfirmMocks,
+  clearPromptMocks,
+} from "./helpers/mock-dialogs";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -19,6 +24,8 @@ describe("wrangler secret", () => {
 
   afterEach(() => {
     unsetAllMocks();
+    clearConfirmMocks();
+    clearPromptMocks();
   });
 
   describe("put", () => {
