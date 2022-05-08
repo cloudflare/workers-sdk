@@ -390,7 +390,9 @@ export async function main(argv: string[]): Promise<void> {
 
       const yesFlag = args.yes ?? false;
 
-      const isInsideGitProject = Boolean(await findUp(".git"));
+      const isInsideGitProject = Boolean(
+        await findUp(".git", { cwd: creationDirectory, type: "directory" })
+      );
       const isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
       if (!isInsideGitProject && isGitInstalled) {
         const shouldInitGit =
@@ -406,7 +408,9 @@ export async function main(argv: string[]): Promise<void> {
         }
       }
 
-      let pathToPackageJson = await findUp("package.json");
+      let pathToPackageJson = await findUp("package.json", {
+        cwd: creationDirectory,
+      });
       let shouldCreatePackageJson = false;
 
       if (!pathToPackageJson) {
@@ -466,7 +470,9 @@ export async function main(argv: string[]): Promise<void> {
       }
 
       let isTypescriptProject = false;
-      let pathToTSConfig = await findUp("tsconfig.json");
+      let pathToTSConfig = await findUp("tsconfig.json", {
+        cwd: creationDirectory,
+      });
       if (!pathToTSConfig) {
         // If there's no tsconfig, offer to create one
         // and install @cloudflare/workers-types

@@ -205,6 +205,25 @@ describe("init", () => {
       expect(parsed.compatibility_date).toBe("something-else");
     });
 
+    it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
+      fs.mkdirSync("path/to/worker", { recursive: true });
+      fs.writeFileSync(
+        "path/to/worker/wrangler.toml",
+        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
+        "utf-8"
+      );
+      mockConfirm({
+        text: "Do you want to continue initializing this project?",
+        result: false,
+      });
+      await runWrangler("init path/to/worker");
+      expect(std.warn).toContain("wrangler.toml file already exists!");
+      const parsed = TOML.parse(
+        await fsp.readFile("path/to/worker/wrangler.toml", "utf-8")
+      );
+      expect(parsed.compatibility_date).toBe("something-else");
+    });
+
     it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
       fs.writeFileSync(
         "./wrangler.toml",
@@ -305,12 +324,35 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Successfully created wrangler.toml
-        ✨ Initialized git repository
         ✨ Created package.json
         ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
         ✨ Created src/index.ts
 
         To start developing your Worker, run \`npm start\`
+        To publish your Worker to the Internet, run \`npm run publish\`",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
+      fs.mkdirSync("path/to/worker", { recursive: true });
+      await execa("git", ["init"], { cwd: "path/to/worker" });
+      expect(fs.lstatSync("path/to/worker/.git").isDirectory()).toBe(true);
+
+      await runWrangler("init path/to/worker/my-worker -y");
+
+      // Note the lack of "✨ Initialized git repository" in the log
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "✨ Successfully created wrangler.toml
+        ✨ Created package.json
+        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created src/index.ts
+
+        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
           "warn": "",
         }
@@ -417,6 +459,41 @@ describe("init", () => {
       expect(packageJson.version).toEqual("1.0.0");
     });
 
+    it("should not touch an existing package.json in a target directory", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
+          result: false,
+        }
+      );
+
+      fs.mkdirSync("path/to/worker", { recursive: true });
+      fs.writeFileSync(
+        "path/to/worker/package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      await runWrangler("init path/to/worker/my-worker");
+      const packageJson = JSON.parse(
+        fs.readFileSync("path/to/worker/package.json", "utf-8")
+      );
+      expect(packageJson.name).toEqual("test");
+      expect(packageJson.version).toEqual("1.0.0");
+    });
+
     it("should offer to install wrangler into an existing package.json", async () => {
       mockConfirm(
         {
@@ -452,6 +529,45 @@ describe("init", () => {
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
         `wrangler@${wranglerVersion}`
       );
+    });
+
+    it("should offer to install wrangler into a package.json relative to the target directory", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "Would you like to install wrangler into your package.json?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.js?",
+          result: false,
+        }
+      );
+
+      fs.mkdirSync("path/to/worker", { recursive: true });
+      fs.writeFileSync(
+        "path/to/worker/package.json",
+        JSON.stringify({ name: "test", version: "1.0.0" }),
+        "utf-8"
+      );
+
+      await runWrangler("init path/to/worker/my-worker");
+      const packageJson = JSON.parse(
+        fs.readFileSync("path/to/worker/package.json", "utf-8")
+      );
+      expect(packageJson.name).toEqual("test");
+      expect(packageJson.version).toEqual("1.0.0");
+      expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
+        `wrangler@${wranglerVersion}`
+      );
+      expect(mockPackageManager.cwd).toBe(process.cwd());
     });
 
     it("should not touch an existing package.json in an ancestor directory", async () => {
@@ -757,6 +873,44 @@ describe("init", () => {
       await runWrangler("init");
       const tsconfigJson = JSON.parse(
         fs.readFileSync("./tsconfig.json", "utf-8")
+      );
+      expect(tsconfigJson.compilerOptions).toEqual({});
+    });
+
+    it("should not touch an existing tsconfig.json in the ancestor of a target directory", async () => {
+      fs.mkdirSync("path/to/worker", { recursive: true });
+      fs.writeFileSync(
+        "path/to/worker/package.json",
+        JSON.stringify({
+          name: "test",
+          version: "1.0.0",
+          devDependencies: {
+            wrangler: "0.0.0",
+            "@cloudflare/workers-types": "0.0.0",
+          },
+        }),
+        "utf-8"
+      );
+      fs.writeFileSync(
+        "path/to/worker/tsconfig.json",
+        JSON.stringify({ compilerOptions: {} }),
+        "utf-8"
+      );
+
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "Would you like to create a Worker at src/index.ts?",
+          result: true,
+        }
+      );
+
+      await runWrangler("init path/to/worker/my-worker");
+      const tsconfigJson = JSON.parse(
+        fs.readFileSync("path/to/worker/tsconfig.json", "utf-8")
       );
       expect(tsconfigJson.compilerOptions).toEqual({});
     });
