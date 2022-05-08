@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.0.0
+
+### Major Changes
+
+- [#928](https://github.com/cloudflare/wrangler2/pull/928) [`7672f99`](https://github.com/cloudflare/wrangler2/commit/7672f99b0d69b9bdcc149f54388b52f0f890f8f8) Thanks [@threepointone](https://github.com/threepointone)! - ⛅️ Wrangler 2.0.0
+
+  Wrangler 2.0 is a full rewrite. Every feature has been improved, while retaining as much backward compatibility as we could. We hope you love it. It'll only get better.
+
 ## 0.0.34
 
 ### Patch Changes
