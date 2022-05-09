@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import * as esbuild from "esbuild";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
@@ -876,6 +877,77 @@ export default{
           test-name.test-sub-domain.workers.dev"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should preserve exports on a module format worker", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "index.js",
+        `
+export const abc = 123;
+export const def = "show me the money";
+export default {};`
+      );
+
+      await runWrangler("publish index.js --dry-run --outdir out");
+
+      expect(
+        (
+          await esbuild.build({
+            entryPoints: [path.resolve("./out/index.js")],
+            metafile: true,
+            write: false,
+          })
+        ).metafile?.outputs["index.js"].exports
+      ).toMatchInlineSnapshot(`
+        Array [
+          "abc",
+          "def",
+          "default",
+        ]
+      `);
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should not preserve exports on a service-worker format worker", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "index.js",
+        `
+export const abc = 123;
+export const def = "show me the money";
+addEventListener('fetch', event => {});`
+      );
+
+      await runWrangler("publish index.js --dry-run --outdir out --minify");
+
+      expect(
+        (
+          await esbuild.build({
+            entryPoints: [path.resolve("./out/index.js")],
+            metafile: true,
+            write: false,
+          })
+        ).metafile?.outputs["index.js"].exports
+      ).toMatchInlineSnapshot(`Array []`);
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "--dry-run: exiting now.",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
+
+        ",
+        }
+      `);
     });
 
     it("should be able to transpile entry-points in sub-directories (sw)", async () => {

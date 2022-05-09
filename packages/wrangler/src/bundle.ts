@@ -66,7 +66,7 @@ export async function bundleWorker(
     absWorkingDir: entry.directory,
     outdir: destination,
     external: ["__STATIC_CONTENT_MANIFEST"],
-    format: "esm",
+    format: entry.format === "modules" ? "esm" : "iife",
     target: "es2020",
     sourcemap: true,
     minify,
