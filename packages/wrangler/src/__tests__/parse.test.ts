@@ -165,6 +165,10 @@ describe("parseTOML", () => {
       });
     }
   });
+
+  it("should cope with Windows line-endings", () => {
+    expect(parseTOML("# A comment with a Windows line-ending\r\n")).toEqual({});
+  });
 });
 
 describe("parseJSON", () => {

@@ -77,7 +77,9 @@ type TomlError = Error & {
  */
 export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
   try {
-    return TOML.parse(input);
+    // Normalize CRLF to LF to avoid hitting https://github.com/iarna/iarna-toml/issues/33.
+    const normalizedInput = input.replace(/\r\n$/g, "\n");
+    return TOML.parse(normalizedInput);
   } catch (err) {
     const { name, message, line, col } = err as TomlError;
     if (name !== TOML_ERROR_NAME) {
