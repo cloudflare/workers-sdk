@@ -210,6 +210,10 @@ export function usePreviewServer({
       const request = message.pipe(remote.request(headers));
       request.on("response", (responseHeaders) => {
         const status = responseHeaders[":status"] ?? 500;
+
+        // log all requests to terminal
+        logger.log(new Date().toLocaleTimeString(), method, url, status);
+
         rewriteRemoteHostToLocalHostInHeaders(
           responseHeaders,
           previewToken.host,
@@ -349,15 +353,6 @@ async function createProxyServer(
       : createHttpServer();
 
   return server
-    .on("request", function (req, res) {
-      // log all requests
-      logger.log(
-        new Date().toLocaleTimeString(),
-        req.method,
-        req.url,
-        res.statusCode
-      );
-    })
     .on("upgrade", (req) => {
       // log all websocket connections
       logger.log(
