@@ -853,40 +853,45 @@ const createDeployment: CommandModule<
 
     const isInteractive = process.stdin.isTTY;
     if (!projectName && isInteractive) {
-      const existingOrNew = await new Promise<"new" | "existing">((resolve) => {
-        const { unmount } = render(
-          <>
-            <Text>
-              No project selected. Would you like to create one or use an
-              existing project?
-            </Text>
-            <SelectInput
-              items={[
-                {
-                  key: "new",
-                  label: "Create a new project",
-                  value: "new",
-                },
-                {
-                  key: "existing",
-                  label: "Use an existing project",
-                  value: "existing",
-                },
-              ]}
-              onSelect={async (selected) => {
-                resolve(selected.value as "new" | "existing");
-                unmount();
-              }}
-            />
-          </>
-        );
-      });
+      const projects = (await listProjects({ accountId })).filter(
+        (project) => !project.source
+      );
+
+      let existingOrNew: "existing" | "new" = "new";
+
+      if (projects.length > 0) {
+        existingOrNew = await new Promise<"new" | "existing">((resolve) => {
+          const { unmount } = render(
+            <>
+              <Text>
+                No project selected. Would you like to create one or use an
+                existing project?
+              </Text>
+              <SelectInput
+                items={[
+                  {
+                    key: "new",
+                    label: "Create a new project",
+                    value: "new",
+                  },
+                  {
+                    key: "existing",
+                    label: "Use an existing project",
+                    value: "existing",
+                  },
+                ]}
+                onSelect={async (selected) => {
+                  resolve(selected.value as "new" | "existing");
+                  unmount();
+                }}
+              />
+            </>
+          );
+        });
+      }
 
       switch (existingOrNew) {
         case "existing": {
-          const projects = (await listProjects({ accountId })).filter(
-            (project) => !project.source
-          );
           projectName = await new Promise((resolve) => {
             const { unmount } = render(
               <>
