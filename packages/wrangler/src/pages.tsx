@@ -855,7 +855,7 @@ const createDeployment: CommandModule<
         (project) => !project.source
       );
 
-      let existingOrNew = "new";
+      let existingOrNew: "existing" | "new" = "new";
 
       if (projects.length > 0) {
         existingOrNew = await new Promise<"new" | "existing">((resolve) => {
