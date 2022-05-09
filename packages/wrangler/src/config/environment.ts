@@ -8,6 +8,24 @@ export interface Environment
   extends EnvironmentInheritable,
     EnvironmentNonInheritable {}
 
+export type SimpleRoute = string;
+export type ZoneIdRoute = {
+  pattern: string;
+  zone_id: string;
+  custom_domain?: boolean;
+};
+export type ZoneNameRoute = {
+  pattern: string;
+  zone_name: string;
+  custom_domain?: boolean;
+};
+export type CustomDomainRoute = { pattern: string; custom_domain: boolean };
+export type Route =
+  | SimpleRoute
+  | ZoneIdRoute
+  | ZoneNameRoute
+  | CustomDomainRoute;
+
 /**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
@@ -74,14 +92,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  routes:
-    | (
-        | string
-        | { pattern: string; zone_id: string; custom_domain?: boolean }
-        | { pattern: string; zone_name: string; custom_domain?: boolean }
-        | { pattern: string; custom_domain: boolean }
-      )[]
-    | undefined;
+  routes: Route[] | undefined;
 
   /**
    * A route that your worker should be published to. Literally
@@ -92,14 +103,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  route:
-    | (
-        | string
-        | { pattern: string; zone_id: string; custom_domain?: boolean }
-        | { pattern: string; zone_name: string; custom_domain?: boolean }
-        | { pattern: string; custom_domain: boolean }
-      )
-    | undefined;
+  route: Route | undefined;
 
   /**
    * Path to a custom tsconfig

@@ -562,19 +562,30 @@ function normalizeAndValidateModulePaths(
  * or an object that looks like {pattern: string, zone_id: string }
  */
 function isValidRouteValue(item: unknown): boolean {
-  return (
-    !!item &&
-    (typeof item === "string" ||
-      (typeof item === "object" &&
-        hasProperty(item, "pattern") &&
-        typeof item.pattern === "string" &&
-        // it could have a zone_name
-        ((hasProperty(item, "zone_name") &&
-          typeof item.zone_name === "string") ||
-          // or a zone_id
-          (hasProperty(item, "zone_id") && typeof item.zone_id === "string")) &&
-        Object.keys(item).length === 2))
-  );
+  if (!item) {
+    return false;
+  }
+  if (typeof item === "string") {
+    return true;
+  }
+  if (typeof item === "object") {
+    if (!hasProperty(item, "pattern") || typeof item.pattern !== "string") {
+      return false;
+    }
+
+    const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
+
+    const hasZoneId = hasProperty(item, "zone_id") && typeof item.zone_id === "string";
+    const hasZoneName = hasProperty(item, "zone_name") && typeof item.zone_name === "string";
+    const hasCustomDomainFlag = hasProperty(item, "custom_domain") && typeof item.custom_domain === "boolean";
+
+    if (otherKeys === 2 && (hasCustomDomainFlag && (hasZoneId || hasZoneName))) {
+      return true;
+    } else if (otherKeys === 1 && (hasZoneId || hasZoneName || hasCustomDomainFlag)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -583,7 +594,7 @@ function isValidRouteValue(item: unknown): boolean {
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && !isValidRouteValue(value)) {
     diagnostics.errors.push(
-      `Expected "${field}" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got ${JSON.stringify(
+      `Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got ${JSON.stringify(
         value
       )}.`
     );
@@ -613,7 +624,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
   }
   if (invalidRoutes.length > 0) {
     diagnostics.errors.push(
-      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
         invalidRoutes,
         null,
         2
