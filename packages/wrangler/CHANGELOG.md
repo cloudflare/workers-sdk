@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.0.2
+
+### Patch Changes
+
+- [#940](https://github.com/cloudflare/wrangler2/pull/940) [`299ecf5`](https://github.com/cloudflare/wrangler2/commit/299ecf5b5d2ccdb2b81f0a5a2beb85c5eda6e73f) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Use new bulk upload API for 'wrangler pages publish'
+
+  This will improve upload speed and reliability of 'pages publish'.
+
 ## 2.0.1
 
 ### Patch Changes
