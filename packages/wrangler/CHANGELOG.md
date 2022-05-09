@@ -1,5 +1,31 @@
 # wrangler
 
+## 2.0.1
+
+### Patch Changes
+
+- [#932](https://github.com/cloudflare/wrangler2/pull/932) [`e95e5a0`](https://github.com/cloudflare/wrangler2/commit/e95e5a0a4e6848a747cba067ad7c095d672f0f55) Thanks [@threepointone](https://github.com/threepointone)! - fix: log proper response status codes in `dev`
+
+  During `dev` we log the method/url/statuscode for every req+res. This fix logs the correct details for every request.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/931
+
+* [#930](https://github.com/cloudflare/wrangler2/pull/930) [`bc28bea`](https://github.com/cloudflare/wrangler2/commit/bc28bea376260abb6fed996698436fb11e7840fc) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Default to creating a new project when no existing ones are available for 'wrangler pages publish'
+
+- [#934](https://github.com/cloudflare/wrangler2/pull/934) [`692ddc4`](https://github.com/cloudflare/wrangler2/commit/692ddc4f1a3770758a8199bbdcd0abee108c3a2c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Suppress beta warning when operating in Pages' CI environment
+
+* [#936](https://github.com/cloudflare/wrangler2/pull/936) [`a0e0b26`](https://github.com/cloudflare/wrangler2/commit/a0e0b2696f498e0d7913e8ffd3db5abd025e7085) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: support Windows line-endings in TOML files
+
+  The TOML parser that Wrangler uses crashes if there is a Windows line-ending in a comment.
+  See https://github.com/iarna/iarna-toml/issues/33.
+
+  According to the TOML spec, we should be able to normalize line-endings as we see fit.
+  See https://toml.io/en/v1.0.0#:~:text=normalize%20newline%20to%20whatever%20makes%20sense.
+
+  This change normalizes line-endings of TOML strings before parsing to avoid hitting this bug.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/915
+
 ## 2.0.0
 
 ### Major Changes
