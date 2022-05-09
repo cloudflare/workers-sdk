@@ -82,6 +82,8 @@ const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
 export const pagesBetaWarning =
   "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
 
+const isInPagesCI = !!process.env.CF_PAGES;
+
 const CLEANUP_CALLBACKS: (() => void)[] = [];
 const CLEANUP = () => {
   CLEANUP_CALLBACKS.forEach((callback) => callback());
@@ -1581,8 +1583,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           watch,
           plugin,
         }) => {
-          // Beta message for `wrangler pages <commands>` usage
-          logger.log(pagesBetaWarning);
+          if (!isInPagesCI) {
+            // Beta message for `wrangler pages <commands>` usage
+            logger.log(pagesBetaWarning);
+          }
 
           await buildFunctions({
             outfile,
