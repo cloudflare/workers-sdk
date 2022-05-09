@@ -804,8 +804,8 @@ const createDeployment: CommandModule<
     return yargs
       .positional("directory", {
         type: "string",
-        default: "functions",
-        description: "The directory of Pages Functions",
+        default: ".",
+        description: "The directory of static files to upload",
       })
       .options({
         "project-name": {
