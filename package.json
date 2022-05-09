@@ -134,5 +134,9 @@
   },
   "volta": {
     "node": "16.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.9.0",
+    "wrangler": "^0.0.27"
   }
 }

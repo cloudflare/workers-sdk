@@ -43,6 +43,7 @@ import {
 } from "./parse";
 import { previewHandler, previewOptions } from "./preview";
 import publish from "./publish";
+import { createPubSubNamespace, deletePubSubNamespace, listPubSubNamespace } from "./pubsub";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
@@ -1690,8 +1691,72 @@ function createCLIParser(argv: string[]) {
           }
         );
         return r2BucketYargs;
+      }
+
+      );
+  });
+
+  wrangler.command("pubsub", "Interact with programmable mqtt on the edge", (pubsubYargs) => {
+    return pubsubYargs
+      .command(subHelp)
+      .command("namespaces", "Manage pubsub namespaces", (pubsubNamespaceYargs) => {
+        pubsubNamespaceYargs.command(
+          "create <name>",
+          "Create a new pubsub name",
+          (yargs) => {
+            return yargs.positional("name", {
+              describe: "The name of the new namespace",
+              type: "string",
+              demandOption: true,
+            });
+          },
+          async (args) => {
+            await printWranglerBanner();
+
+            const config = readConfig(args.config as ConfigPath, args);
+
+            const accountId = await requireAuth(config);
+
+            logger.log(`Creating namespace ${args.name}.`);
+            await createPubSubNamespace(accountId, args.name);
+            logger.log(`Created namespace ${args.name}.`);
+          }
+        );
+
+        pubsubNamespaceYargs.command("list", "List pubsub namespace", {}, async (args) => {
+          const config = readConfig(args.config as ConfigPath, args);
+
+          const accountId = await requireAuth(config);
+
+          logger.log(JSON.stringify(await listPubSubNamespace(accountId), null, 2));
+        });
+
+        pubsubNamespaceYargs.command(
+          "delete <name>",
+          "Delete a pubsub namespace",
+          (yargs) => {
+            return yargs.positional("name", {
+              describe: "The name of the namespace to delete",
+              type: "string",
+              demandOption: true,
+            });
+          },
+          async (args) => {
+            await printWranglerBanner();
+
+            const config = readConfig(args.config as ConfigPath, args);
+
+            const accountId = await requireAuth(config);
+
+            logger.log(`Deleting namespace ${args.name}.`);
+            await deletePubSubNamespace(accountId, args.name);
+            logger.log(`Deleted namespace ${args.name}.`);
+          }
+        );
+        return pubsubNamespaceYargs;
       });
   });
+
 
   /**
    * User Group: login, logout, and whoami
