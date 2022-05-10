@@ -258,7 +258,7 @@ describe("pages", () => {
         🆙 Publish a directory of static assets as a Pages deployment
 
         Positionals:
-          directory  The directory of Pages Functions  [string] [default: \\"functions\\"]
+          directory  The directory of static files to upload  [string]
 
         Flags:
           -c, --config      Path to .toml configuration file  [string]
@@ -267,11 +267,11 @@ describe("pages", () => {
               --legacy-env  Use legacy environments  [boolean]
 
         Options:
-              --project-name    The name of the project you want to list deployments for  [string]
-              --branch          The branch of the project you want to list deployments for  [string]
-              --commit-hash     The branch of the project you want to list deployments for  [string]
-              --commit-message  The branch of the project you want to list deployments for  [string]
-              --commit-dirty    The branch of the project you want to list deployments for  [boolean]
+              --project-name    The name of the project you want to deploy to  [string]
+              --branch          The name of the branch you want to deploy to  [string]
+              --commit-hash     The SHA to attach to this deployment  [string]
+              --commit-message  The commit message to attach to this deployment  [string]
+              --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 
         🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
       `);

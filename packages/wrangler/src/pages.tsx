@@ -804,34 +804,30 @@ const createDeployment: CommandModule<
     return yargs
       .positional("directory", {
         type: "string",
-        default: ".",
+        demandOption: true,
         description: "The directory of static files to upload",
       })
       .options({
         "project-name": {
           type: "string",
-          description:
-            "The name of the project you want to list deployments for",
+          description: "The name of the project you want to deploy to",
         },
         branch: {
           type: "string",
-          description:
-            "The branch of the project you want to list deployments for",
+          description: "The name of the branch you want to deploy to",
         },
         "commit-hash": {
           type: "string",
-          description:
-            "The branch of the project you want to list deployments for",
+          description: "The SHA to attach to this deployment",
         },
         "commit-message": {
           type: "string",
-          description:
-            "The branch of the project you want to list deployments for",
+          description: "The commit message to attach to this deployment",
         },
         "commit-dirty": {
           type: "boolean",
           description:
-            "The branch of the project you want to list deployments for",
+            "Whether or not the workspace should be considered dirty for this deployment",
         },
       })
       .epilogue(pagesBetaWarning);
@@ -844,6 +840,10 @@ const createDeployment: CommandModule<
     commitMessage,
     commitDirty,
   }) => {
+    if (!directory) {
+      throw new FatalError("Must specify a directory.", 1);
+    }
+
     const config = getConfigCache<PagesConfigCache>(
       PAGES_CONFIG_CACHE_FILENAME
     );
