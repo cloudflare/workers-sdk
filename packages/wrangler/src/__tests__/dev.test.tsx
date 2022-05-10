@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import getPort from "get-port";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
@@ -574,6 +575,71 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       await runWrangler("dev --ip=0.0.0.0");
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+  });
+
+  describe("port", () => {
+    it("should default port to 8787 if it is not in use", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(8787);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use to `port` from `wrangler.toml`, if available", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          port: 8888,
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      // Mock `getPort()` to resolve to a completely different port.
+      (getPort as jest.Mock).mockResolvedValue(98765);
+
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(8888);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use --port command line arg, if provided", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          port: 8888,
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      // Mock `getPort()` to resolve to a completely different port.
+      (getPort as jest.Mock).mockResolvedValue(98765);
+
+      await runWrangler("dev --port=9999");
+      expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(9999);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should use a different port to the default if it is in use", async () => {
+      writeWranglerToml({
+        main: "index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      // Mock `getPort()` to resolve to a completely different port.
+      (getPort as jest.Mock).mockResolvedValue(98765);
+
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(98765);
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);

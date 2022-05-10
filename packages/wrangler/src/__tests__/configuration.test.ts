@@ -27,7 +27,7 @@ describe("normalizeAndValidateConfig()", () => {
       dev: {
         ip: "localhost",
         local_protocol: "http",
-        port: 8787,
+        port: undefined, // the default of 8787 is set at runtime
         upstream_protocol: "https",
         host: undefined,
       },

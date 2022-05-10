@@ -352,7 +352,7 @@ function normalizeAndValidateDev(
 ): DevConfig {
   const {
     ip = "localhost",
-    port = 8787,
+    port,
     local_protocol = "http",
     upstream_protocol = "https",
     host,
