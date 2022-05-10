@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
-import { Box, Text, useApp, useInput, useStdin } from "ink";
+import { Box, Text, useApp, useInput, useStdin, useStdout } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
@@ -63,6 +63,7 @@ export type DevProps = {
 export function DevImplementation(props: DevProps): JSX.Element {
   const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
+  const { stdout } = useStdout();
 
   useCustomBuild(props.entry, props.build);
 
@@ -101,6 +102,13 @@ export function DevImplementation(props: DevProps): JSX.Element {
     tsconfig: props.tsconfig,
     minify: props.minify,
     nodeCompat: props.nodeCompat,
+  });
+
+  // During console resize UI was tearing and leaving artifacts,
+  // this is a workaround that clears the tearing artifacts
+  stdout?.on("resize", () => {
+    console.clear();
+    console.log();
   });
 
   // only load the UI if we're running in a supported environment
