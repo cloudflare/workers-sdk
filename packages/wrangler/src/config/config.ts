@@ -161,7 +161,7 @@ export interface DevConfig {
    *
    * @default `8787`
    */
-  port: number;
+  port: number | undefined;
 
   /**
    * Protocol that local wrangler dev server listens to requests on.

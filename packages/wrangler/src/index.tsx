@@ -73,6 +73,7 @@ type ConfigPath = string | undefined;
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
+const DEFAULT_LOCAL_PORT = 8787;
 
 function getRules(config: Config): Config["rules"] {
   const rules = config.rules ?? config.build?.upload?.rules ?? [];
@@ -1026,7 +1027,11 @@ export async function main(argv: string[]): Promise<void> {
             args.siteInclude,
             args.siteExclude
           )}
-          port={await getPort({ port: args.port || config.dev.port })}
+          port={
+            args.port ||
+            config.dev.port ||
+            (await getPort({ port: DEFAULT_LOCAL_PORT }))
+          }
           ip={args.ip || config.dev.ip}
           inspectorPort={
             args["inspector-port"] ?? (await getPort({ port: 9229 }))
@@ -1474,7 +1479,9 @@ export async function main(argv: string[]): Promise<void> {
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}
-          port={await getPort({ port: config.dev.port })}
+          port={
+            config.dev.port || (await getPort({ port: DEFAULT_LOCAL_PORT }))
+          }
           ip={config.dev.ip}
           public={undefined}
           compatibilityDate={getDevCompatibilityDate(config)}
