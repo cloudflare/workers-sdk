@@ -407,7 +407,17 @@ export async function main(argv: string[]): Promise<void> {
       const isInsideGitProject = Boolean(
         await findUp(".git", { cwd: creationDirectory, type: "directory" })
       );
-      const isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
+      let isGitInstalled;
+      try {
+        isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
+      } catch (err) {
+        if ((err as { code: string | undefined }).code !== "ENOENT") {
+          // only throw if the error is not because git is not installed
+          throw err;
+        } else {
+          isGitInstalled = false;
+        }
+      }
       if (!isInsideGitProject && isGitInstalled) {
         const shouldInitGit =
           yesFlag ||
