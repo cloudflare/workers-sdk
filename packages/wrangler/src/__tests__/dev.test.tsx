@@ -754,10 +754,9 @@ describe("wrangler dev", () => {
           script  The path to an entry point for your worker  [string]
 
         Flags:
-          -c, --config      Path to .toml configuration file  [string]
-          -h, --help        Show help  [boolean]
-          -v, --version     Show version number  [boolean]
-              --legacy-env  Use legacy environments  [boolean]
+          -c, --config   Path to .toml configuration file  [string]
+          -h, --help     Show help  [boolean]
+          -v, --version  Show version number  [boolean]
 
         Options:
               --name                                       Name of the worker  [string]

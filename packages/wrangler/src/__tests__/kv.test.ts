@@ -59,10 +59,9 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
             -e, --env      Perform on a specific environment  [string]
@@ -92,10 +91,9 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
             -e, --env      Perform on a specific environment  [string]
@@ -126,10 +124,9 @@ describe("wrangler", () => {
             namespace  The name of the new namespace  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
             -e, --env      Perform on a specific environment  [string]
@@ -291,10 +288,9 @@ describe("wrangler", () => {
           Deletes a given namespace.
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The name of the namespace to delete  [string]
@@ -490,10 +486,9 @@ describe("wrangler", () => {
             value  The value to write  [string]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The binding of the namespace to write to  [string]
@@ -530,10 +525,9 @@ describe("wrangler", () => {
             value  The value to write  [string]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The binding of the namespace to write to  [string]
@@ -570,10 +564,9 @@ describe("wrangler", () => {
             value  The value to write  [string]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The binding of the namespace to write to  [string]
@@ -610,10 +603,9 @@ describe("wrangler", () => {
             value  The value to write  [string]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The binding of the namespace to write to  [string]
@@ -650,10 +642,9 @@ describe("wrangler", () => {
             value  The value to write  [string]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The binding of the namespace to write to  [string]
@@ -956,10 +947,9 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The name of the namespace to get from  [string]
@@ -991,10 +981,9 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The name of the namespace to get from  [string]
@@ -1027,10 +1016,9 @@ describe("wrangler", () => {
             key  The key value to get.  [string] [required]
 
           Flags:
-            -c, --config      Path to .toml configuration file  [string]
-            -h, --help        Show help  [boolean]
-            -v, --version     Show version number  [boolean]
-                --legacy-env  Use legacy environments  [boolean]
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]
 
           Options:
                 --binding       The name of the namespace to get from  [string]
