@@ -436,7 +436,7 @@ describe("wrangler dev", () => {
       await expect(
         runWrangler("dev")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Could not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\""`
+        `"The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\"."`
       );
       expect(std.out).toMatchInlineSnapshot(`
         "Running custom build: node -e \\"console.log('custom build');\\"
@@ -444,7 +444,7 @@ describe("wrangler dev", () => {
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve \\"index.js\\" after running custom build: node -e \\"console.log('custom build');\\"[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".[0m
 
         "
       `);
