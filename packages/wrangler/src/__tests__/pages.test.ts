@@ -30,10 +30,9 @@ describe("pages", () => {
         wrangler pages publish [directory]           🆙 Publish a directory of static assets as a Pages deployment
 
       Flags:
-        -c, --config      Path to .toml configuration file  [string]
-        -h, --help        Show help  [boolean]
-        -v, --version     Show version number  [boolean]
-            --legacy-env  Use legacy environments  [boolean]
+        -c, --config   Path to .toml configuration file  [string]
+        -h, --help     Show help  [boolean]
+        -v, --version  Show version number  [boolean]
 
       🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
     `);
@@ -261,10 +260,9 @@ describe("pages", () => {
           directory  The directory of static files to upload  [string]
 
         Flags:
-          -c, --config      Path to .toml configuration file  [string]
-          -h, --help        Show help  [boolean]
-          -v, --version     Show version number  [boolean]
-              --legacy-env  Use legacy environments  [boolean]
+          -c, --config   Path to .toml configuration file  [string]
+          -h, --help     Show help  [boolean]
+          -v, --version  Show version number  [boolean]
 
         Options:
               --project-name    The name of the project you want to deploy to  [string]

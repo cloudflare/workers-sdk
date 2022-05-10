@@ -870,6 +870,11 @@ export async function main(argv: string[]): Promise<void> {
           describe: "Enable dev tools",
           type: "boolean",
           deprecated: true,
+        })
+        .option("legacy-env", {
+          type: "boolean",
+          describe: "Use legacy environments",
+          hidden: true,
         });
     },
     async (args) => {
@@ -1209,6 +1214,11 @@ export async function main(argv: string[]): Promise<void> {
         .option("dry-run", {
           describe: "Don't actually publish",
           type: "boolean",
+        })
+        .option("legacy-env", {
+          type: "boolean",
+          describe: "Use legacy environments",
+          hidden: true,
         });
     },
     async (args) => {
@@ -1330,6 +1340,11 @@ export async function main(argv: string[]): Promise<void> {
           default: false,
           describe:
             "If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
+        })
+        .option("legacy-env", {
+          type: "boolean",
+          describe: "Use legacy environments",
+          hidden: true,
         });
     },
     async (args) => {
@@ -1640,6 +1655,11 @@ export async function main(argv: string[]): Promise<void> {
     (secretYargs) => {
       return secretYargs
         .command(subHelp)
+        .option("legacy-env", {
+          type: "boolean",
+          describe: "Use legacy environments",
+          hidden: true,
+        })
         .command(
           "put <key>",
           "Create or update a secret variable for a script",
@@ -2609,19 +2629,14 @@ export async function main(argv: string[]): Promise<void> {
     }
   );
 
-  wrangler
-    .option("legacy-env", {
-      type: "boolean",
-      describe: "Use legacy environments",
-    })
-    .option("config", {
-      alias: "c",
-      describe: "Path to .toml configuration file",
-      type: "string",
-      requiresArg: true,
-    });
+  wrangler.option("config", {
+    alias: "c",
+    describe: "Path to .toml configuration file",
+    type: "string",
+    requiresArg: true,
+  });
 
-  wrangler.group(["config", "help", "version", "legacy-env"], "Flags:");
+  wrangler.group(["config", "help", "version"], "Flags:");
   wrangler.help().alias("h", "help");
   wrangler.version(wranglerVersion).alias("v", "version");
   wrangler.exitProcess(false);
