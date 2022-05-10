@@ -8,6 +8,14 @@ import { confirm, prompt } from "../dialogs";
 import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 
+// Mock out getPort since we don't actually care about what ports are open in unit tests.
+jest.mock("get-port", () => {
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(async (options) => options.port),
+  };
+});
+
 jest.mock("ws", () => {
   return {
     __esModule: true,

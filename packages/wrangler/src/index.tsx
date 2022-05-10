@@ -995,7 +995,7 @@ export async function main(argv: string[]): Promise<void> {
       const nodeCompat = args.nodeCompat ?? config.node_compat;
       if (nodeCompat) {
         logger.warn(
-          "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+          "Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
         );
       }
 
@@ -1026,9 +1026,7 @@ export async function main(argv: string[]): Promise<void> {
             args.siteInclude,
             args.siteExclude
           )}
-          port={
-            args.port || config.dev?.port || (await getPort({ port: 8787 }))
-          }
+          port={await getPort({ port: args.port || config.dev.port })}
           ip={args.ip || config.dev.ip}
           inspectorPort={
             args["inspector-port"] ?? (await getPort({ port: 9229 }))
@@ -1476,7 +1474,7 @@ export async function main(argv: string[]): Promise<void> {
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}
-          port={config.dev?.port}
+          port={await getPort({ port: config.dev.port })}
           ip={config.dev.ip}
           public={undefined}
           compatibilityDate={getDevCompatibilityDate(config)}
