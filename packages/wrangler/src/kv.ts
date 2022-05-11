@@ -151,7 +151,9 @@ export async function putKeyValue(
     }
   }
   return await fetchResult(
-    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${keyValue.key}`,
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
+      keyValue.key
+    )}`,
     { method: "PUT", body: keyValue.value },
     searchParams
   );

@@ -2016,7 +2016,9 @@ export async function main(argv: string[]): Promise<void> {
             const accountId = await requireAuth(config);
 
             await fetchResult<{ id: string }>(
-              `/accounts/${accountId}/storage/kv/namespaces/${id}`,
+              `/accounts/${accountId}/storage/kv/namespaces/${encodeURIComponent(
+                id
+              )}`,
               { method: "DELETE" }
             );
 
@@ -2270,7 +2272,9 @@ export async function main(argv: string[]): Promise<void> {
             const accountId = await requireAuth(config);
 
             await fetchResult(
-              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`,
+              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
+                key
+              )}`,
               { method: "DELETE" }
             );
           }

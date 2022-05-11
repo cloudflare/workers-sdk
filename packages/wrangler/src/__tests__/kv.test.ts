@@ -257,6 +257,14 @@ describe("wrangler", () => {
         expect(requests.count).toEqual(1);
       });
 
+      it("should encode URI id properly for deleting namespace", async () => {
+        const requests = mockDeleteRequest("%2Fvoyager");
+        await runWrangler(`kv:namespace delete --namespace-id /voyager`);
+        expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
       it("should delete a namespace specified by binding name", async () => {
         writeWranglerConfig();
         const requests = mockDeleteRequest("bound-id");
@@ -377,6 +385,21 @@ describe("wrangler", () => {
         expect(requests.count).toEqual(1);
         expect(std.out).toMatchInlineSnapshot(
           `"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."`
+        );
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should encode URI key's properly for putting in a key request", async () => {
+        const requests = mockKeyPutRequest("DS9", {
+          key: "%2Fmy-key",
+          value: "my-value",
+        });
+
+        await runWrangler("kv:key put /my-key my-value --namespace-id DS9");
+
+        expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(
+          `"Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."`
         );
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
@@ -1076,6 +1099,16 @@ describe("wrangler", () => {
           `kv:key delete --namespace-id some-namespace-id someKey`
         );
         expect(requests.count).toEqual(1);
+      });
+
+      it("should encode the URI properly for deleting a key requests", async () => {
+        const requests = mockDeleteRequest("voyager", "%2FNCC-74656");
+        await runWrangler(`kv:key delete --namespace-id voyager /NCC-74656`);
+        expect(requests.count).toEqual(1);
+        expect(std.out).toMatchInlineSnapshot(
+          `"Deleting the key \\"/NCC-74656\\" on namespace voyager."`
+        );
+        expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
       it("should delete a key in a namespace specified by binding name", async () => {
