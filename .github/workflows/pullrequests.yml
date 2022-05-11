@@ -21,7 +21,7 @@ jobs:
           node-version: 16.7
           cache: "npm"
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: eslint-cache
         with:
           path: |
