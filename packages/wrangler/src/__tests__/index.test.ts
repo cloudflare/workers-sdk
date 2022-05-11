@@ -234,7 +234,7 @@ describe("wrangler", () => {
       await runWrangler("build").catch((err) => {
         expect(err.message).toMatchInlineSnapshot(`
           "Deprecation:
-          \`wrangler build\` has been deprecated, please refer to https://github.com/cloudflare/wrangler2/blob/main/docs/deprecations.md#build for alternatives"
+          \`wrangler build\` has been deprecated, please refer to https://github.com/cloudflare/cloudflare-docs/blob/production/content/workers/wrangler/migration/deprecations.md#build for alternatives"
         `);
       });
     });
