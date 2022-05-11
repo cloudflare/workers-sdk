@@ -906,6 +906,7 @@ export default {};`
           "default",
         ]
       `);
+
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -926,7 +927,7 @@ export const def = "show me the money";
 addEventListener('fetch', event => {});`
       );
 
-      await runWrangler("publish index.js --dry-run --outdir out --minify");
+      await runWrangler("publish index.js --dry-run --outdir out");
 
       expect(
         (
