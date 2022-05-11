@@ -20,6 +20,20 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
     return;
   }
 
+  let pathToCACerts = process.env.NODE_EXTRA_CA_CERTS;
+  if (pathToCACerts) {
+    // TODO:
+    // - should we log a warning here?
+    // - maybe we can generate a certificate that concatenates with ours?
+    // - is there a security concern/should we cleanup after we exit?
+    //
+    //  I do think it'll be rare that someone wants to add a cert AND
+    //  use cloudflare WARP, but let's wait till the situation actually
+    //  arises before we do anything about it
+  } else {
+    pathToCACerts = join(__dirname, "../Cloudflare_CA.pem");
+  }
+
   wranglerProcess = spawn(
     process.execPath,
     [
@@ -32,7 +46,13 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
       join(__dirname, "../wrangler-dist/cli.js"),
       ...process.argv.slice(2),
     ],
-    { stdio: "inherit" }
+    {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        NODE_EXTRA_CA_CERTS: pathToCACerts,
+      },
+    }
   ).on("exit", (code) =>
     process.exit(code === undefined || code === null ? 0 : code)
   );
