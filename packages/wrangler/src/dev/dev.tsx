@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import * as path from "node:path";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
@@ -242,9 +243,11 @@ function useCustomBuild(
         persistent: true,
         ignoreInitial: true,
       }).on("all", (_event, filePath) => {
+        const relativeFile =
+          path.relative(expectedEntry.directory, expectedEntry.file) || ".";
         //TODO: we should buffer requests to the proxy until this completes
         logger.log(`The file ${filePath} changed, restarting build...`);
-        runCustomBuild(expectedEntry.file, build).catch((err) => {
+        runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
           logger.error("Custom build failed:", err);
         });
       });
@@ -253,7 +256,7 @@ function useCustomBuild(
     return () => {
       watcher?.close();
     };
-  }, [build, expectedEntry.file]);
+  }, [build, expectedEntry]);
 }
 
 function sleep(period: number) {
