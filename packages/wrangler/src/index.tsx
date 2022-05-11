@@ -723,7 +723,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
       throw new DeprecationError(
-        "`wrangler build` has been deprecated, please refer to https://github.com/cloudflare/cloudflare-docs/blob/production/content/workers/wrangler/migration/deprecations.md#build for alternatives"
+        "`wrangler build` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for alternatives"
       );
     }
   );
@@ -736,7 +736,7 @@ export async function main(argv: string[]): Promise<void> {
     () => {
       // "🕵️  Authenticate Wrangler with a Cloudflare API Token",
       throw new DeprecationError(
-        "`wrangler config` has been deprecated, please refer to https://github.com/cloudflare/cloudflare-docs/blob/production/content/workers/wrangler/migration/deprecations.md#config for alternatives"
+        "`wrangler config` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#config for alternatives"
       );
     }
   );
@@ -1653,7 +1653,7 @@ export async function main(argv: string[]): Promise<void> {
     },
     () => {
       throw new DeprecationError(
-        "`wrangler subdomain` has been deprecated, please refer to https://github.com/cloudflare/cloudflare-docs/blob/production/content/workers/wrangler/migration/deprecations.md#subdomain for alternatives"
+        "`wrangler subdomain` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#subdomain for alternatives"
       );
     }
   );
