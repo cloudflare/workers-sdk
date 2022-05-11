@@ -110,7 +110,8 @@
     "wrangler-dist",
     "templates",
     "vendor",
-    "import_meta_url.js"
+    "import_meta_url.js",
+    "Cloudflare_CA.pem"
   ],
   "scripts": {
     "clean": "rm -rf wrangler-dist miniflare-dist",
