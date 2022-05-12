@@ -1,5 +1,64 @@
 # wrangler
 
+## 2.0.3
+
+### Patch Changes
+
+- [#956](https://github.com/cloudflare/wrangler2/pull/956) [`1caa5f7`](https://github.com/cloudflare/wrangler2/commit/1caa5f764100156a8d8e25347036b05e2b0210f6) Thanks [@threepointone](https://github.com/threepointone)! - fix: don't crash during `init` if `git` is not installed
+
+  When a command isn't available on a system, calling `execa()` on it throws an error, and not just a non zero exitCode. This patch fixes the flow so we don't crash the whole process when that happens on testing the presence of `git` when calling `wrangler init`.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/950
+
+* [#970](https://github.com/cloudflare/wrangler2/pull/970) [`35e780b`](https://github.com/cloudflare/wrangler2/commit/35e780b0dddee81323963b2362c38261b65473c0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes Pages Plugins and static asset routing.
+
+  There was previously a bug where a relative pathname would be missing the leading slash which would result in routing errors.
+
+- [#957](https://github.com/cloudflare/wrangler2/pull/957) [`e0a0509`](https://github.com/cloudflare/wrangler2/commit/e0a05094493f1327b6790e66b6dcbff2d579628c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: Moving `--legacy-env` out of global
+  The `--legacy-env` flag was in global scope, which only certain commands
+  utilize the flag for functionality, and doesnt do anything for the other commands.
+
+  resolves #933
+
+* [#948](https://github.com/cloudflare/wrangler2/pull/948) [`82165c5`](https://github.com/cloudflare/wrangler2/commit/82165c56a3d13bf466767e06500738bb97e61d6e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: improve error message if custom build output is not found
+
+  The message you get if Wrangler cannot find the output from the custom build is now more helpful.
+  It will even look around to see if there is a suitable file nearby and make suggestions about what should be put in the `main` configuration.
+
+  Closes [#946](https://github.com/cloudflare/wrangler2/issues/946)
+
+- [#952](https://github.com/cloudflare/wrangler2/pull/952) [`ae3895e`](https://github.com/cloudflare/wrangler2/commit/ae3895eea63518242b2660e6b52790f922566a78) Thanks [@d3lm](https://github.com/d3lm)! - feat: use host specific callback url
+
+  To allow OAuth to work on environments such as WebContainer we have to generate a host-specific callback URL. This PR uses `@webcontainer/env` to generate such URL only for running in WebContainer. Otherwise the callback URL stays unmodified.
+
+* [#951](https://github.com/cloudflare/wrangler2/pull/951) [`09196ec`](https://github.com/cloudflare/wrangler2/commit/09196ec6362fb8651d7d20bdc2a7a14792c6fda5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: look for an alternate port in the dev command if the configured one is in use
+
+  Previously, we were only calling `getPort()` if the configured port was undefined.
+  But since we were setting the default for this during validation, it was never undefined.
+
+  Fixes [#949](https://github.com/cloudflare/wrangler2/issues/949)
+
+- [#963](https://github.com/cloudflare/wrangler2/pull/963) [`5b03eb8`](https://github.com/cloudflare/wrangler2/commit/5b03eb8cdec6f16c67a47f20472e098659395888) Thanks [@threepointone](https://github.com/threepointone)! - fix: work with Cloudflare WARP
+
+  Using wrangler with Cloudflare WARP (https://developers.cloudflare.com/cloudflare-one/connections/connect-devices/warp/) requires using the Cloudflare certificate. This patch simply uses the certificate as NODE_EXTRA_CA_CERTS when we start wrangler.
+
+  Test plan:
+
+  - Turn on Cloudflare WARP/ Gateway with WARP
+  - `wrangler dev`
+  - Turn on Cloudflare WARP/ Gateway with DoH
+  - `wrangler dev`
+  - Turn off Cloudflare WARP
+  - `wrangler dev`
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/953, https://github.com/cloudflare/wrangler2/issues/850
+
+* [#964](https://github.com/cloudflare/wrangler2/pull/964) [`0dfd95f`](https://github.com/cloudflare/wrangler2/commit/0dfd95ff02ae72a34c8de6f5844a4208cb8fb7bf) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: KV not setting correctly
+  The KV has URL inputs, which in the case of `/` would get collapsed and lost.
+  T:o handle special characters `encodeURIComponent` is implemented.
+
+  resolves #961
+
 ## 2.0.2
 
 ### Patch Changes
