@@ -89,7 +89,7 @@ function getQuoteBoundedSubstring(content: string) {
 
 function isOriginConflictError(
   e: unknown
-): e is { code: 100116; message: string, notes: Array<{ text: string }> } {
+): e is { code: 100116; message: string; notes: Array<{ text: string }> } {
   return (
     typeof e === "object" &&
     e !== null &&
@@ -99,7 +99,7 @@ function isOriginConflictError(
 
 function isDNSConflictError(
   e: unknown
-): e is { code: 100117; message: string, notes: Array<{ text: string }> } {
+): e is { code: 100117; message: string; notes: Array<{ text: string }> } {
   return (
     typeof e === "object" &&
     e !== null &&
@@ -139,7 +139,7 @@ function publishCustomDomains(
       zone_name: "zone_name" in domainRoute ? domainRoute.zone_name : undefined,
     };
   });
-    
+
   if (!process.stdout.isTTY) {
     // running in non-interactive mode.
     // existing origins / dns records are not indicative of errors,
@@ -187,7 +187,6 @@ function publishCustomDomains(
         const shouldContinue = await confirm(
           `You already have conflicting DNS records for these domains: "${conflictingOrigins}"\nUpdate them to point to this script instead?`
         );
-        console.log({shouldContinue})
         if (!shouldContinue) {
           throw new CustomDomainOverrideRejected();
         }

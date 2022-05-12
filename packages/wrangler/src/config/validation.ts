@@ -575,13 +575,20 @@ function isValidRouteValue(item: unknown): boolean {
 
     const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
 
-    const hasZoneId = hasProperty(item, "zone_id") && typeof item.zone_id === "string";
-    const hasZoneName = hasProperty(item, "zone_name") && typeof item.zone_name === "string";
-    const hasCustomDomainFlag = hasProperty(item, "custom_domain") && typeof item.custom_domain === "boolean";
+    const hasZoneId =
+      hasProperty(item, "zone_id") && typeof item.zone_id === "string";
+    const hasZoneName =
+      hasProperty(item, "zone_name") && typeof item.zone_name === "string";
+    const hasCustomDomainFlag =
+      hasProperty(item, "custom_domain") &&
+      typeof item.custom_domain === "boolean";
 
-    if (otherKeys === 2 && (hasCustomDomainFlag && (hasZoneId || hasZoneName))) {
+    if (otherKeys === 2 && hasCustomDomainFlag && (hasZoneId || hasZoneName)) {
       return true;
-    } else if (otherKeys === 1 && (hasZoneId || hasZoneName || hasCustomDomainFlag)) {
+    } else if (
+      otherKeys === 1 &&
+      (hasZoneId || hasZoneName || hasCustomDomainFlag)
+    ) {
       return true;
     }
   }

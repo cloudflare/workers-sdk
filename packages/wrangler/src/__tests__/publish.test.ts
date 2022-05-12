@@ -12,6 +12,7 @@ import {
   unsetMockFetchKVGetValues,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
@@ -643,6 +644,136 @@ describe("publish", () => {
         env: "dev",
       });
       await runWrangler("publish ./index --env dev --legacy-env false");
+    });
+
+    describe("custom domains", () => {
+      it("should publish routes marked with 'custom_domain' as seperate custom domains", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "api.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        mockUpdateWorkerRequest({ enabled: false });
+        mockUploadWorkerRequest({ expectedType: "esm" });
+        mockPublishCustomDomainsRequest({
+          publishFlags: {
+            override_scope: true,
+            override_existing_origin: false,
+            override_existing_dns_record: false,
+          },
+          domains: [{ hostname: "api.example.com" }],
+        });
+        await runWrangler("publish ./index");
+        expect(std.out).toContain("api.example.com (custom domain)");
+      });
+
+      it("should allow retrying if publish fails with a conflicting custom domain error", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "api.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        mockUpdateWorkerRequest({ enabled: false });
+        mockUploadWorkerRequest({ expectedType: "esm" });
+        mockPublishCustomDomainsRequestConflictWithoutOverride({
+          originConflicts: true,
+          domains: [{ hostname: "api.example.com" }],
+        });
+        mockConfirm({
+          text: `Custom Domains already exist for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+          result: true,
+        });
+        await runWrangler("publish ./index");
+        expect(std.out).toContain("api.example.com (custom domain)");
+      });
+
+      it("should allow retrying if publish fails with a conflicting DNS record error", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "api.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        mockUpdateWorkerRequest({ enabled: false });
+        mockUploadWorkerRequest({ expectedType: "esm" });
+        mockPublishCustomDomainsRequestConflictWithoutOverride({
+          dnsRecordConflicts: true,
+          domains: [{ hostname: "api.example.com" }],
+        });
+        mockConfirm({
+          text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+          result: true,
+        });
+        await runWrangler("publish ./index");
+        expect(std.out).toContain("api.example.com (custom domain)");
+      });
+
+      it("should allow retrying for conflicting custom domains and then again for conflicting dns", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "api.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        mockUpdateWorkerRequest({ enabled: false });
+        mockUploadWorkerRequest({ expectedType: "esm" });
+        mockPublishCustomDomainsRequestConflictWithoutOverride({
+          originConflicts: true,
+          dnsRecordConflicts: true,
+          domains: [{ hostname: "api.example.com" }],
+        });
+        mockConfirm(
+          {
+            text: `Custom Domains already exist for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+            result: true,
+          },
+          {
+            text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+            result: true,
+          }
+        );
+        await runWrangler("publish ./index");
+        expect(std.out).toContain("api.example.com (custom domain)");
+      });
+
+      it("should throw if an invalid custom domain is requested", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "*.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        await expect(
+          runWrangler("publish ./index")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"Cannot use \\"*.example.com\\" as a Custom Domain; wildcard operators (*) are not allowed"`
+        );
+
+        writeWranglerToml({
+          routes: [
+            { pattern: "api.example.com/at/a/path", custom_domain: true },
+          ],
+        });
+        writeWorkerSource();
+        await expect(
+          runWrangler("publish ./index")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(
+          `"Cannot use \\"api.example.com/at/a/path\\" as a Custom Domain; paths are not allowed"`
+        );
+      });
+
+      it("should not retry publish on error if user does not confirm", async () => {
+        writeWranglerToml({
+          routes: [{ pattern: "api.example.com", custom_domain: true }],
+        });
+        writeWorkerSource();
+        mockUpdateWorkerRequest({ enabled: false });
+        mockUploadWorkerRequest({ expectedType: "esm" });
+        mockPublishCustomDomainsRequestConflictWithoutOverride({
+          dnsRecordConflicts: true,
+          domains: [{ hostname: "api.example.com" }],
+        });
+        mockConfirm({
+          text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+          result: false,
+        });
+        await runWrangler("publish ./index");
+        expect(std.out).toContain(
+          'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
+        );
+      });
     });
 
     it.todo("should error if it's a workers.dev route");
@@ -4918,6 +5049,102 @@ function mockPublishRoutesRequest({
         )
       );
       return null;
+    }
+  );
+}
+
+function mockPublishCustomDomainsRequest({
+  publishFlags,
+  domains = [],
+  env = undefined,
+  legacyEnv = false,
+}: {
+  publishFlags: {
+    override_scope: boolean;
+    override_existing_origin: boolean;
+    override_existing_dns_record: boolean;
+  };
+  domains: Array<
+    { hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+  >;
+  env?: string | undefined;
+  legacyEnv?: boolean | undefined;
+}) {
+  const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+  const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+  setMockResponse(
+    `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains`,
+    "PUT",
+    ([_url, accountId, scriptName, envName], { body }) => {
+      expect(accountId).toEqual("some-account-id");
+      expect(scriptName).toEqual(
+        legacyEnv && env ? `test-name-${env}` : "test-name"
+      );
+      if (!legacyEnv) {
+        expect(envName).toEqual(env);
+      }
+
+      expect(JSON.parse(body as string)).toEqual({
+        ...publishFlags,
+        origins: domains,
+      });
+
+      return null;
+    }
+  );
+}
+
+function mockPublishCustomDomainsRequestConflictWithoutOverride({
+  domains = [],
+  originConflicts = false,
+  dnsRecordConflicts = false,
+  env = undefined,
+  legacyEnv = false,
+}: {
+  originConflicts?: boolean;
+  dnsRecordConflicts?: boolean;
+  domains: Array<
+    { hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+  >;
+  env?: string | undefined;
+  legacyEnv?: boolean | undefined;
+}) {
+  const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+  const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+  setMockRawResponse(
+    `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains`,
+    "PUT",
+    ([_url, accountId, scriptName, envName], { body }) => {
+      expect(accountId).toEqual("some-account-id");
+      expect(scriptName).toEqual(
+        legacyEnv && env ? `test-name-${env}` : "test-name"
+      );
+      if (!legacyEnv) {
+        expect(envName).toEqual(env);
+      }
+
+      const parsed = JSON.parse(body as string);
+      expect(parsed.origins).toEqual(domains);
+
+      if (originConflicts && !parsed.override_existing_origin) {
+        return createFetchResult(null, false, [
+          {
+            code: 100116,
+            message: `Cannot create Custom Domain "${domains[0].hostname}": Custom Domain already exists and points to a different script; retry and use option "override_existing_origin" to override`,
+          },
+        ]);
+      }
+      if (dnsRecordConflicts && !parsed.override_existing_dns_record) {
+        return createFetchResult(null, false, [
+          {
+            code: 100117,
+            message: `Cannot create Custom Domain "${domains[0].hostname}": a DNS record already exists for this origin; retry and use option "override_existing_dns_record" to override`,
+          },
+        ]);
+      }
+      return createFetchResult(null, true);
     }
   );
 }
