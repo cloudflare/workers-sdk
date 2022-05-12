@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.7
-          cache: "npm"
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
       - uses: actions/cache@v3
         id: node-modules-cache
@@ -28,10 +28,11 @@ jobs:
           path: |
             node_modules
             */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install NPM Dependencies
-        run: npm install
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
 
       - name: Check for errors
         run: npm run check
