@@ -1576,6 +1576,10 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 default: false,
                 description: "Build a plugin rather than a Worker script",
               },
+              "build-output-directory": {
+                type: "string",
+                description: "The directory to output static assets to",
+              },
             })
             .epilogue(pagesBetaWarning),
         async ({
@@ -1587,11 +1591,14 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           fallbackService,
           watch,
           plugin,
+          "build-output-directory": buildOutputDirectory,
         }) => {
           if (!isInPagesCI) {
             // Beta message for `wrangler pages <commands>` usage
             logger.log(pagesBetaWarning);
           }
+
+          buildOutputDirectory ??= dirname(outfile);
 
           await buildFunctions({
             outfile,
@@ -1602,7 +1609,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             fallbackService,
             watch,
             plugin,
-            buildOutputDirectory: dirname(outfile),
+            buildOutputDirectory,
           });
         }
       )

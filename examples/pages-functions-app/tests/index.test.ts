@@ -123,5 +123,17 @@ describe("Pages Functions", () => {
     expect(text).toContain(
       "<h1>Hello from a static asset brought from a Plugin!</h1>"
     );
+
+    response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/static/foo"
+    );
+    text = await response.text();
+    expect(text).toContain("<h1>foo</h1>");
+
+    response = await waitUntilReady(
+      "http://localhost:8789/mounted-plugin/static/dir/bar"
+    );
+    text = await response.text();
+    expect(text).toContain("<h1>bar</h1>");
   });
 });
