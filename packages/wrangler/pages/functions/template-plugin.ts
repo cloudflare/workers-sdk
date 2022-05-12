@@ -103,8 +103,9 @@ export default function (pluginArgs) {
     const { env, next, data } = workerContext;
 
     const url = new URL(request.url);
-    const relativePathname =
-      url.pathname.split(workerContext.functionPath)[1] || "/";
+    const relativePathname = `/${
+      url.pathname.split(workerContext.functionPath)[1] || ""
+    }`.replace(/^\/\//, "/");
 
     const handlerIterator = executeRequest(request, relativePathname);
     const pluginNext = async (input?: RequestInfo, init?: RequestInit) => {
