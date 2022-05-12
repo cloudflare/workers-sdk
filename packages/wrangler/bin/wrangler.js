@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-const { spawn } = require("node:child_process");
-const { join } = require("node:path");
+const { spawn } = require("child_process");
+const { join } = require("path");
 const semiver = require("semiver");
 
 const MIN_NODE_VERSION = "16.7.0";
