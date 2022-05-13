@@ -23,7 +23,7 @@ const isWindows = process.platform === "win32";
 describe("Pages Functions", () => {
   let wranglerProcess: ChildProcess;
 
-  beforeAll(async () => {
+  beforeEach(() => {
     wranglerProcess = spawn("npm", ["run", "dev"], {
       shell: isWindows,
       cwd: path.resolve(__dirname, "../"),
@@ -37,7 +37,7 @@ describe("Pages Functions", () => {
     });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await new Promise((resolve, reject) => {
       wranglerProcess.once("exit", (code) => {
         if (!code) {
@@ -46,7 +46,7 @@ describe("Pages Functions", () => {
           reject(code);
         }
       });
-      wranglerProcess.kill();
+      wranglerProcess.kill("SIGTERM");
     });
   });
 

@@ -1,8 +1,10 @@
-import { spawn, spawnSync } from "child_process";
-import * as path from "path";
+import { spawn } from "child_process";
+import path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
+
+const isWindows = process.platform === "win32";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
   let response: Response | undefined = undefined;
@@ -18,30 +20,18 @@ const waitUntilReady = async (url: string): Promise<Response> => {
   return response as Response;
 };
 
-const isWindows = process.platform === "win32";
-
-describe("Remix", () => {
+describe("Pages Dev", () => {
   let wranglerProcess: ChildProcess;
 
-  beforeAll(async () => {
-    spawnSync("npm", ["run", "build"], {
-      shell: isWindows,
-      cwd: path.resolve(__dirname, "../"),
-    });
-    wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
+  beforeEach(() => {
+    wranglerProcess = spawn("npm", ["run", "dev"], {
       shell: isWindows,
       cwd: path.resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
     });
-    wranglerProcess.stdout?.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
-    wranglerProcess.stderr?.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await new Promise((resolve, reject) => {
       wranglerProcess.once("exit", (code) => {
         if (!code) {
@@ -50,13 +40,17 @@ describe("Remix", () => {
           reject(code);
         }
       });
-      wranglerProcess.kill("SIGTERM");
+      isWindows
+        ? wranglerProcess.kill("SIGTERM")
+        : wranglerProcess.kill("SIGKILL");
     });
   });
 
-  it("renders", async () => {
-    const response = await waitUntilReady("http://localhost:8788/");
-    const text = await response.text();
-    expect(text).toContain("Welcome to Remix");
+  it("should work with `--node-compat` when running code requiring polyfills", async () => {
+    const response = await waitUntilReady("http://localhost:12345/stripe");
+
+    await expect(response.text()).resolves.toContain(
+      `"PATH":"path/to/some-file","STRIPE_OBJECT"`
+    );
   });
 });
