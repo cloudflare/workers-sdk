@@ -19,7 +19,7 @@ type KvArgs = {
  *
  * @returns the generated id of the created namespace.
  */
-export async function createNamespace(
+export async function createKVNamespace(
   accountId: string,
   title: string
 ): Promise<string> {
@@ -51,7 +51,7 @@ export interface KVNamespaceInfo {
 /**
  * Fetch a list of all the namespaces under the given `accountId`.
  */
-export async function listNamespaces(
+export async function listKVNamespaces(
   accountId: string
 ): Promise<KVNamespaceInfo[]> {
   const pageSize = 100;
@@ -83,7 +83,7 @@ export interface NamespaceKeyInfo {
   metadata?: { [key: string]: unknown };
 }
 
-export async function listNamespaceKeys(
+export async function listKVNamespaceKeys(
   accountId: string,
   namespaceId: string,
   prefix = ""
@@ -92,6 +92,16 @@ export async function listNamespaceKeys(
     `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`,
     {},
     new URLSearchParams({ prefix })
+  );
+}
+
+export async function deleteKVNamespace(
+  accountId: string,
+  namespaceId: string
+) {
+  return await fetchResult<{ id: string }>(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`,
+    { method: "DELETE" }
   );
 }
 
@@ -119,7 +129,7 @@ const KeyValueKeys = new Set([
 /**
  * Is the given object a valid `KeyValue` type?
  */
-export function isKeyValue(keyValue: object): keyValue is KeyValue {
+export function isKVKeyValue(keyValue: object): keyValue is KeyValue {
   const props = Object.keys(keyValue);
   if (!props.includes("key") || !props.includes("value")) {
     return false;
@@ -130,12 +140,12 @@ export function isKeyValue(keyValue: object): keyValue is KeyValue {
 /**
  * Get all the properties on the `keyValue` that are not expected.
  */
-export function unexpectedKeyValueProps(keyValue: KeyValue): string[] {
+export function unexpectedKVKeyValueProps(keyValue: KeyValue): string[] {
   const props = Object.keys(keyValue);
   return props.filter((prop) => !KeyValueKeys.has(prop));
 }
 
-export async function putKeyValue(
+export async function putKVKeyValue(
   accountId: string,
   namespaceId: string,
   keyValue: KeyValue
@@ -159,15 +169,28 @@ export async function putKeyValue(
   );
 }
 
-export async function getKeyValue(
+export async function getKVKeyValue(
   accountId: string,
   namespaceId: string,
   key: string
 ): Promise<string> {
-  return await fetchKVGetValue(accountId, namespaceId, key);
+  return await fetchKVGetValue(accountId, namespaceId, encodeURIComponent(key));
 }
 
-export async function putBulkKeyValue(
+export async function deleteKVKeyValue(
+  accountId: string,
+  namespaceId: string,
+  key: string
+) {
+  return await fetchResult(
+    `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
+      key
+    )}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function putKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keyValues: KeyValue[],
@@ -192,7 +215,7 @@ export async function putBulkKeyValue(
   }
 }
 
-export async function deleteBulkKeyValue(
+export async function deleteKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keys: string[],
@@ -217,7 +240,7 @@ export async function deleteBulkKeyValue(
   }
 }
 
-export function getNamespaceId(
+export function getKVNamespaceId(
   { preview, binding, "namespace-id": namespaceId }: KvArgs,
   config: Config
 ): string {
@@ -312,7 +335,7 @@ export function getNamespaceId(
 /**
  * KV namespace binding names must be valid JS identifiers.
  */
-export function isValidNamespaceBinding(
+export function isValidKVNamespaceBinding(
   binding: string | undefined
 ): binding is string {
   return (

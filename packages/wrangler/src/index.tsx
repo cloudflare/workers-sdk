@@ -22,17 +22,19 @@ import { confirm, prompt } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import {
-  getNamespaceId,
-  listNamespaces,
-  listNamespaceKeys,
-  putKeyValue,
-  putBulkKeyValue,
-  deleteBulkKeyValue,
-  createNamespace,
-  isValidNamespaceBinding,
-  getKeyValue,
-  isKeyValue,
-  unexpectedKeyValueProps,
+  getKVNamespaceId,
+  listKVNamespaces,
+  listKVNamespaceKeys,
+  putKVKeyValue,
+  putKVBulkKeyValue,
+  deleteKVBulkKeyValue,
+  createKVNamespace,
+  isValidKVNamespaceBinding,
+  getKVKeyValue,
+  isKVKeyValue,
+  unexpectedKVKeyValueProps,
+  deleteKVNamespace,
+  deleteKVKeyValue,
 } from "./kv";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -1919,7 +1921,7 @@ export async function main(argv: string[]): Promise<void> {
           async (args) => {
             await printWranglerBanner();
 
-            if (!isValidNamespaceBinding(args.namespace)) {
+            if (!isValidKVNamespaceBinding(args.namespace)) {
               throw new CommandLineArgsError(
                 `The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
               );
@@ -1942,7 +1944,7 @@ export async function main(argv: string[]): Promise<void> {
             // TODO: generate a binding name stripping non alphanumeric chars
 
             logger.log(`🌀 Creating namespace with title "${title}"`);
-            const namespaceId = await createNamespace(accountId, title);
+            const namespaceId = await createKVNamespace(accountId, title);
 
             logger.log("✨ Success!");
             const envString = args.env ? ` under [env.${args.env}]` : "";
@@ -1969,7 +1971,7 @@ export async function main(argv: string[]): Promise<void> {
             // TODO: we should show bindings if they exist for given ids
 
             logger.log(
-              JSON.stringify(await listNamespaces(accountId), null, "  ")
+              JSON.stringify(await listKVNamespaces(accountId), null, "  ")
             );
           }
         )
@@ -2006,7 +2008,7 @@ export async function main(argv: string[]): Promise<void> {
 
             let id;
             try {
-              id = getNamespaceId(args, config);
+              id = getKVNamespaceId(args, config);
             } catch (e) {
               throw new CommandLineArgsError(
                 "Not able to delete namespace.\n" + ((e as Error).message ?? e)
@@ -2015,12 +2017,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            await fetchResult<{ id: string }>(
-              `/accounts/${accountId}/storage/kv/namespaces/${encodeURIComponent(
-                id
-              )}`,
-              { method: "DELETE" }
-            );
+            await deleteKVNamespace(accountId, id);
 
             // TODO: recommend they remove it from wrangler.toml
 
@@ -2105,7 +2102,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ key, ttl, expiration, ...args }) => {
             await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
               ? readFileSync(args.path)
@@ -2124,7 +2121,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            await putKeyValue(accountId, namespaceId, {
+            await putKVKeyValue(accountId, namespaceId, {
               key,
               value,
               expiration,
@@ -2169,11 +2166,11 @@ export async function main(argv: string[]): Promise<void> {
           async ({ prefix, ...args }) => {
             // TODO: support for limit+cursor (pagination)
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
 
-            const results = await listNamespaceKeys(
+            const results = await listKVNamespaceKeys(
               accountId,
               namespaceId,
               prefix
@@ -2221,11 +2218,11 @@ export async function main(argv: string[]): Promise<void> {
           },
           async ({ key, ...args }) => {
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
 
-            logger.log(await getKeyValue(accountId, namespaceId, key));
+            logger.log(await getKVKeyValue(accountId, namespaceId, key));
           }
         )
         .command(
@@ -2263,7 +2260,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ key, ...args }) => {
             await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
 
             logger.log(
               `Deleting the key "${key}" on namespace ${namespaceId}.`
@@ -2271,12 +2268,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            await fetchResult(
-              `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
-                key
-              )}`,
-              { method: "DELETE" }
-            );
+            await deleteKVKeyValue(accountId, namespaceId, key);
           }
         );
     }
@@ -2328,7 +2320,7 @@ export async function main(argv: string[]): Promise<void> {
             // but we'll do that in the future if needed.
 
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
             const content = parseJSON(readFileSync(filename), filename);
 
             if (!Array.isArray(content)) {
@@ -2348,12 +2340,12 @@ export async function main(argv: string[]): Promise<void> {
                     keyValue
                   )}`
                 );
-              } else if (!isKeyValue(keyValue)) {
+              } else if (!isKVKeyValue(keyValue)) {
                 errors.push(
                   `The item at index ${i} is ${JSON.stringify(keyValue)}`
                 );
               } else {
-                const props = unexpectedKeyValueProps(keyValue);
+                const props = unexpectedKVKeyValueProps(keyValue);
                 if (props.length > 0) {
                   warnings.push(
                     `The item at index ${i} contains unexpected properties: ${JSON.stringify(
@@ -2386,7 +2378,7 @@ export async function main(argv: string[]): Promise<void> {
             }
 
             const accountId = await requireAuth(config);
-            await putBulkKeyValue(
+            await putKVBulkKeyValue(
               accountId,
               namespaceId,
               content,
@@ -2438,7 +2430,7 @@ export async function main(argv: string[]): Promise<void> {
           async ({ filename, ...args }) => {
             await printWranglerBanner();
             const config = readConfig(args.config as ConfigPath, args);
-            const namespaceId = getNamespaceId(args, config);
+            const namespaceId = getKVNamespaceId(args, config);
 
             if (!args.force) {
               const result = await confirm(
@@ -2483,7 +2475,7 @@ export async function main(argv: string[]): Promise<void> {
 
             const accountId = await requireAuth(config);
 
-            await deleteBulkKeyValue(
+            await deleteKVBulkKeyValue(
               accountId,
               namespaceId,
               content,
