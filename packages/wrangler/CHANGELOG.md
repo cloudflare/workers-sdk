@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.0.5
+
+### Patch Changes
+
+- [`556e6dd`](https://github.com/cloudflare/wrangler2/commit/556e6dda27b6800353fc709d02763cc47448198e) Thanks [@threepointone](https://github.com/threepointone)! - chore: bump to do a release
+
 ## 2.0.4
 
 ### Patch Changes
