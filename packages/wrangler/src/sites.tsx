@@ -3,11 +3,11 @@ import * as path from "node:path";
 import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import {
-  createNamespace,
-  listNamespaceKeys,
-  listNamespaces,
-  putBulkKeyValue,
-  deleteBulkKeyValue,
+  createKVNamespace,
+  listKVNamespaceKeys,
+  listKVNamespaces,
+  putKVBulkKeyValue,
+  deleteKVBulkKeyValue,
 } from "./kv";
 import { logger } from "./logger";
 import type { Config } from "./config";
@@ -75,14 +75,14 @@ async function createKVNamespaceIfNotAlreadyExisting(
 ) {
   // check if it already exists
   // TODO: this is super inefficient, should be made better
-  const namespaces = await listNamespaces(accountId);
+  const namespaces = await listKVNamespaces(accountId);
   const found = namespaces.find((x) => x.title === title);
   if (found) {
     return { created: false, id: found.id };
   }
 
   // else we make the namespace
-  const id = await createNamespace(accountId, title);
+  const id = await createKVNamespace(accountId, title);
   logger.log(`🌀 Created namespace for Workers Site "${title}"`);
 
   return {
@@ -131,7 +131,7 @@ export async function syncAssets(
   );
 
   // let's get all the keys in this namespace
-  const namespaceKeysResponse = await listNamespaceKeys(accountId, namespace);
+  const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
   const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
@@ -185,9 +185,9 @@ export async function syncAssets(
 
   await Promise.all([
     // upload all the new assets
-    putBulkKeyValue(accountId, namespace, toUpload, () => {}),
+    putKVBulkKeyValue(accountId, namespace, toUpload, () => {}),
     // delete all the unused assets
-    deleteBulkKeyValue(
+    deleteKVBulkKeyValue(
       accountId,
       namespace,
       Array.from(namespaceKeys),

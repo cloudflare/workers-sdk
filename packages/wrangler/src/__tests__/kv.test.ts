@@ -257,14 +257,6 @@ describe("wrangler", () => {
         expect(requests.count).toEqual(1);
       });
 
-      it("should encode URI id properly for deleting namespace", async () => {
-        const requests = mockDeleteRequest("%2Fvoyager");
-        await runWrangler(`kv:namespace delete --namespace-id /voyager`);
-        expect(requests.count).toEqual(1);
-        expect(std.out).toMatchInlineSnapshot(`""`);
-        expect(std.err).toMatchInlineSnapshot(`""`);
-      });
-
       it("should delete a namespace specified by binding name", async () => {
         writeWranglerConfig();
         const requests = mockDeleteRequest("bound-id");
@@ -389,7 +381,7 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
-      it("should encode URI key's properly for putting in a key request", async () => {
+      it("should encode the key in the api request to put a value", async () => {
         const requests = mockKeyPutRequest("DS9", {
           key: "%2Fmy-key",
           value: "my-value",
@@ -951,6 +943,20 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
+      it("should encode the key in the api request to get a value", async () => {
+        setMockFetchKVGetValue(
+          "some-account-id",
+          "some-namespace-id",
+          "%2Fmy%2Ckey",
+          "my-value"
+        );
+        await runWrangler(
+          "kv:key get /my,key --namespace-id some-namespace-id"
+        );
+        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
       it("should error if no key is provided", async () => {
         await expect(
           runWrangler("kv:key get")
@@ -1101,7 +1107,7 @@ describe("wrangler", () => {
         expect(requests.count).toEqual(1);
       });
 
-      it("should encode the URI properly for deleting a key requests", async () => {
+      it("should encode the key in the api request to delete a value", async () => {
         const requests = mockDeleteRequest("voyager", "%2FNCC-74656");
         await runWrangler(`kv:key delete --namespace-id voyager /NCC-74656`);
         expect(requests.count).toEqual(1);

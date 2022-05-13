@@ -112,6 +112,9 @@ function addAuthorizationHeader(
  * doesn't return json. We inline the implementation and try not to share
  * any code with the other calls. We should push back on any new APIs that
  * try to introduce non-"standard" response structures.
+ *
+ * Note: any calls to fetchKVGetValue must call encodeURIComponent on key
+ * before passing it
  */
 
 export async function fetchKVGetValue(
