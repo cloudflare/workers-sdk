@@ -70,7 +70,10 @@ export const getArtifactForWorkflowRun = async ({
 
     const tgzBlob = await files[tgzFileName].async("blob");
     const response = new Response(tgzBlob, {
-      headers: { "Cache-Control": `public, s-maxage=${ONE_WEEK}` },
+      headers: {
+        "Cache-Control": `public, s-maxage=${ONE_WEEK}`,
+        "Access-Control-Allow-Origin": "*",
+      },
     });
 
     waitUntil(cache.put(cacheKey, response.clone()));
