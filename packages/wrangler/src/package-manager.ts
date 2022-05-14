@@ -5,15 +5,16 @@ import { logger } from "./logger";
 
 export interface PackageManager {
   cwd: string;
-  type: "npm" | "yarn";
+  type: "npm" | "yarn" | "pnpm";
   addDevDeps(...packages: string[]): Promise<void>;
   install(): Promise<void>;
 }
 
 export async function getPackageManager(cwd: string): Promise<PackageManager> {
-  const [hasYarn, hasNpm] = await Promise.all([supportsYarn(), supportsNpm()]);
+  const [hasYarn, hasNpm, hasPnpm] = await Promise.all([supportsYarn(), supportsNpm(), supportsPnpm()]);
   const hasYarnLock = existsSync(join(cwd, "yarn.lock"));
   const hasNpmLock = existsSync(join(cwd, "package-lock.json"));
+  const hasPnpmLock = existsSync(join(cwd, "pnpm-lock.yaml"));
 
   if (hasNpmLock) {
     if (hasNpm) {
@@ -27,6 +28,18 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
         "There is already a package-lock.json file but could not find npm on the PATH."
       );
       return { ...YarnPackageManager, cwd };
+    }
+  } else if (hasPnpmLock) {
+    if (hasPnpm) {
+      logger.log(
+        "Using pnpm as package manager, as there is already a pnpm-lock.yaml file."
+      );
+      return { ...PnpmPackageManager, cwd };
+    } else {
+      logger.warn(
+        "There is already a pnpm-lock.yaml file but could not find pnpm on the PATH."
+      );
+      // will simply fallback to the first found of [npm, yaml, pnpm] in the next if round.
     }
   } else if (hasYarnLock) {
     if (hasYarn) {
@@ -49,6 +62,9 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
   } else if (hasYarn) {
     logger.log("Using yarn as package manager.");
     return { ...YarnPackageManager, cwd };
+  } else if (hasPnpm) {
+    logger.log("Using pnpm as package manager.");
+    return { ...PnpmPackageManager, cwd };
   } else {
     throw new Error(
       "Unable to find a package manager. Supported managers are: npm and yarn."
@@ -80,6 +96,29 @@ const NpmPackageManager: PackageManager = {
   /** Install all the dependencies in the local package.json. */
   async install(): Promise<void> {
     await execa("npm", ["install"], {
+      stdio: "inherit",
+      cwd: this.cwd,
+    });
+  },
+};
+
+/**
+ * Manage packages using pnpm
+ */
+const PnpmPackageManager: PackageManager = {
+  cwd: process.cwd(),
+  type: "pnpm",
+  /** Add and install a new devDependency into the local package.json. */
+  async addDevDeps(...packages: string[]): Promise<void> {
+    await execa("pnpm", ["install", ...packages, "--save-dev"], {
+      stdio: "inherit",
+      cwd: this.cwd,
+    });
+  },
+
+  /** Install all the dependencies in the local package.json. */
+  async install(): Promise<void> {
+    await execa("pnpm", ["install"], {
       stdio: "inherit",
       cwd: this.cwd,
     });
@@ -124,4 +163,8 @@ function supportsYarn(): Promise<boolean> {
 
 function supportsNpm(): Promise<boolean> {
   return supports("npm");
+}
+
+function supportsPnpm(): Promise<boolean> {
+  return supports("pnpm");
 }
