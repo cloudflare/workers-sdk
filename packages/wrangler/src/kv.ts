@@ -129,9 +129,24 @@ const KeyValueKeys = new Set([
 /**
  * Is the given object a valid `KeyValue` type?
  */
-export function isKVKeyValue(keyValue: object): keyValue is KeyValue {
-  const props = Object.keys(keyValue);
-  if (!props.includes("key") || !props.includes("value")) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function isKVKeyValue(keyValue: any): keyValue is KeyValue {
+  // (keyValue could indeed be any-thing)
+  if (
+    typeof keyValue !== "object" ||
+    typeof keyValue.key !== "string" ||
+    typeof keyValue.value !== "string" ||
+    !(
+      keyValue.expiration === undefined ||
+      typeof keyValue.expiration === "number"
+    ) ||
+    !(
+      keyValue.expiration_ttl === undefined ||
+      typeof keyValue.expiration_ttl === "number"
+    ) ||
+    !(keyValue.base64 === undefined || typeof keyValue.base64 === "boolean") ||
+    !(keyValue.metadata === undefined || typeof keyValue.metadata === "object")
+  ) {
     return false;
   }
   return true;
