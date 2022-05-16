@@ -2334,13 +2334,7 @@ export async function main(argv: string[]): Promise<void> {
             const warnings: string[] = [];
             for (let i = 0; i < content.length; i++) {
               const keyValue = content[i];
-              if (typeof keyValue !== "object") {
-                errors.push(
-                  `The item at index ${i} is type: "${typeof keyValue}" - ${JSON.stringify(
-                    keyValue
-                  )}`
-                );
-              } else if (!isKVKeyValue(keyValue)) {
+              if (!isKVKeyValue(keyValue)) {
                 errors.push(
                   `The item at index ${i} is ${JSON.stringify(keyValue)}`
                 );

@@ -1262,7 +1262,25 @@ describe("wrangler", () => {
           "a string",
           { key: "someKey" },
           { value: "someValue" },
+          // add a valid object here to make sure it's not included
+          { key: "someKey1", value: "someValue1" },
+          // this one will only add a warning
           { key: "someKey1", value: "someValue1", invalid: true },
+          // back to the invalid ones
+          { key: 123, value: "somevalue" },
+          { key: "somekey", value: 123 },
+          { key: "someKey1", value: "someValue1", expiration: "string" },
+          { key: "someKey1", value: "someValue1", expiration_ttl: "string" },
+          {
+            key: 123,
+            value: {
+              a: {
+                nested: "object",
+              },
+            },
+          },
+          { key: "someKey1", value: "someValue1", metadata: 123 },
+          { key: "someKey1", value: "someValue1", base64: "string" },
         ];
         writeFileSync("./keys.json", JSON.stringify(keyValues));
         await expect(
@@ -1280,10 +1298,17 @@ describe("wrangler", () => {
                   base64?: boolean;
                 }
 
-                The item at index 0 is type: \\"number\\" - 123
-                The item at index 1 is type: \\"string\\" - \\"a string\\"
+                The item at index 0 is 123
+                The item at index 1 is \\"a string\\"
                 The item at index 2 is {\\"key\\":\\"someKey\\"}
-                The item at index 3 is {\\"value\\":\\"someValue\\"}"
+                The item at index 3 is {\\"value\\":\\"someValue\\"}
+                The item at index 6 is {\\"key\\":123,\\"value\\":\\"somevalue\\"}
+                The item at index 7 is {\\"key\\":\\"somekey\\",\\"value\\":123}
+                The item at index 8 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration\\":\\"string\\"}
+                The item at index 9 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration_ttl\\":\\"string\\"}
+                The item at index 10 is {\\"key\\":123,\\"value\\":{\\"a\\":{\\"nested\\":\\"object\\"}}}
+                The item at index 11 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"metadata\\":123}
+                The item at index 12 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"base64\\":\\"string\\"}"
               `);
 
         expect(std.out).toMatchInlineSnapshot(`
@@ -1293,7 +1318,7 @@ describe("wrangler", () => {
         expect(std.warn).toMatchInlineSnapshot(`
           "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
 
-            The item at index 4 contains unexpected properties: [\\"invalid\\"].
+            The item at index 5 contains unexpected properties: [\\"invalid\\"].
 
           "
         `);
