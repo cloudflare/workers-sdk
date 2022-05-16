@@ -1122,7 +1122,35 @@ const createDeployment: CommandModule<
       );
     }
 
-    const sortedFiles = [...fileMap.values()].sort((a, b) => b.size - a.size);
+    const files = [...fileMap.values()];
+
+    const { jwt } = await fetchResult<{ jwt: string }>(
+      `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+    );
+
+    const start = Date.now();
+
+    const response = await fetch(
+      "https://api.pages.cloudflare.com/files/check-missing",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      }
+    );
+
+    const { hashes: missingHashes } = (await response.json()) as {
+      hashes: string[];
+    };
+
+    const sortedFiles = files
+      .filter((file) => missingHashes.includes(file.hash))
+      .sort((a, b) => b.size - a.size);
 
     const buckets: {
       files: FileContainer[];
@@ -1155,14 +1183,7 @@ const createDeployment: CommandModule<
       }
     }
 
-    const start = Date.now();
-
-    let counter = 0;
-
-    const { jwt } = await fetchResult<{ jwt: string }>(
-      `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
-    );
-
+    let counter = fileMap.size - sortedFiles.length;
     const { rerender, unmount } = render(
       <Progress done={counter} total={fileMap.size} />
     );
