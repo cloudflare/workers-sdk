@@ -1014,7 +1014,7 @@ const validateRule: ValidatorFn = (diagnostics, field, value) => {
 
   if (!isOptionalProperty(rule, "fallthrough", "boolean")) {
     diagnostics.errors.push(
-      `binding should, optionally, have a boolean "fallthrough" field.`
+      `the field "fallthrough", when present, should be a boolean.`
     );
     isValid = false;
   }
@@ -1135,7 +1135,7 @@ const validateDurableObjectBinding: ValidatorFn = (
     return false;
   }
 
-  // Durable Object bindings must have a name and class_name, and optionally a script_name.
+  // Durable Object bindings must have a name and class_name, and optionally a script_name and an environment.
   let isValid = true;
   if (!isRequiredProperty(value, "name", "string")) {
     diagnostics.errors.push(`binding should have a string "name" field.`);
@@ -1147,7 +1147,21 @@ const validateDurableObjectBinding: ValidatorFn = (
   }
   if (!isOptionalProperty(value, "script_name", "string")) {
     diagnostics.errors.push(
-      `binding should, optionally, have a string "script_name" field.`
+      `the field "script_name", when present, should be a string.`
+    );
+    isValid = false;
+  }
+  // environment requires a script_name
+  if (!isOptionalProperty(value, "environment", "string")) {
+    diagnostics.errors.push(
+      `the field "environment", when present, should be a string.`
+    );
+    isValid = false;
+  }
+
+  if ("environment" in value && !("script_name" in value)) {
+    diagnostics.errors.push(
+      `binding should have a "script_name" field if "environment" is present.`
     );
     isValid = false;
   }
