@@ -413,12 +413,7 @@ export async function main(argv: string[]): Promise<void> {
       try {
         isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
       } catch (err) {
-        if ((err as { code: string | undefined }).code !== "ENOENT") {
-          // only throw if the error is not because git is not installed
-          throw err;
-        } else {
-          isGitInstalled = false;
-        }
+        isGitInstalled = false;
       }
       if (!isInsideGitProject && isGitInstalled) {
         const shouldInitGit =
