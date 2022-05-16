@@ -1,5 +1,0 @@
-name = "workers-node-app"
-compatibility_date = "2022-05-16"
-main = "src/index.ts"
-
-node_compat = true
