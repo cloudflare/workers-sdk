@@ -236,6 +236,8 @@ interface EnvironmentNonInheritable {
       class_name: string;
       /** The script where the Durable Object is defined (if it's external to this worker) */
       script_name?: string;
+      /** The service environment of the script_name to bind to */
+      environment?: string;
     }[];
   };
 

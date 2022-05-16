@@ -3106,6 +3106,7 @@ addEventListener('fetch', event => {});`
               name: "DURABLE_OBJECT_TWO",
               class_name: "AnotherDurableObject",
               script_name: "another-durable-object-worker",
+              environment: "staging",
             },
           ],
         },
@@ -3182,6 +3183,7 @@ addEventListener('fetch', event => {});`
           },
           {
             class_name: "AnotherDurableObject",
+            environment: "staging",
             name: "DURABLE_OBJECT_TWO",
             script_name: "another-durable-object-worker",
             type: "durable_object_namespace",

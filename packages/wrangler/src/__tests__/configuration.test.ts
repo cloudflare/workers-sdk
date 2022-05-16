@@ -620,6 +620,12 @@ describe("normalizeAndValidateConfig()", () => {
               class_name: "CLASS2",
               script_name: "SCRIPT2",
             },
+            {
+              name: "DO_BINDING_3",
+              class_name: "CLASS3",
+              script_name: "SCRIPT3",
+              environment: "ENV3",
+            },
           ],
         },
         kv_namespaces: [
@@ -1106,12 +1112,28 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: {
               bindings: [
                 {},
-                { name: "VALID" },
+                { name: "MISSING_CLASS" },
                 { name: 1555, class_name: 1666 },
                 {
                   name: 1777,
                   class_name: 1888,
                   script_name: 1999,
+                },
+                {
+                  name: "SOMENAME",
+                  class_name: "SomeClass",
+                  environment: "staging",
+                },
+                {
+                  name: 1778,
+                  class_name: 1889,
+                  script_name: 1992,
+                  environment: 2111,
+                },
+                {
+                  name: 1772,
+                  class_name: 1883,
+                  environment: 2112,
                 },
               ],
             },
@@ -1133,7 +1155,7 @@ describe("normalizeAndValidateConfig()", () => {
               - binding should have a string \\"name\\" field.
               - binding should have a string \\"class_name\\" field.
 
-            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
+            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"MISSING_CLASS\\"}
               - binding should have a string \\"class_name\\" field.
 
             - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
@@ -1143,7 +1165,22 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
               - binding should have a string \\"name\\" field.
               - binding should have a string \\"class_name\\" field.
-              - binding should, optionally, have a string \\"script_name\\" field."
+              - the field \\"script_name\\", when present, should be a string.
+
+            - \\"durable_objects.bindings[4]\\": {\\"name\\":\\"SOMENAME\\",\\"class_name\\":\\"SomeClass\\",\\"environment\\":\\"staging\\"}
+              - binding should have a \\"script_name\\" field if \\"environment\\" is present.
+
+            - \\"durable_objects.bindings[5]\\": {\\"name\\":1778,\\"class_name\\":1889,\\"script_name\\":1992,\\"environment\\":2111}
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
+              - the field \\"script_name\\", when present, should be a string.
+              - the field \\"environment\\", when present, should be a string.
+
+            - \\"durable_objects.bindings[6]\\": {\\"name\\":1772,\\"class_name\\":1883,\\"environment\\":2112}
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
+              - the field \\"environment\\", when present, should be a string.
+              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
         `);
       });
     });
@@ -2304,7 +2341,7 @@ describe("normalizeAndValidateConfig()", () => {
               - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
                 - binding should have a string \\"name\\" field.
                 - binding should have a string \\"class_name\\" field.
-                - binding should, optionally, have a string \\"script_name\\" field."
+                - the field \\"script_name\\", when present, should be a string."
         `);
       });
     });

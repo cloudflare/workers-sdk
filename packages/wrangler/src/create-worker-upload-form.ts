@@ -44,6 +44,7 @@ export interface WorkerMetadata {
         name: string;
         class_name: string;
         script_name?: string;
+        environment?: string;
       }
     | { type: "r2_bucket"; name: string; bucket_name: string }
   )[];
@@ -76,12 +77,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
   });
 
   bindings.durable_objects?.bindings.forEach(
-    ({ name, class_name, script_name }) => {
+    ({ name, class_name, script_name, environment }) => {
       metadataBindings.push({
         name,
         type: "durable_object_namespace",
         class_name: class_name,
         ...(script_name && { script_name }),
+        ...(environment && { environment }),
       });
     }
   );

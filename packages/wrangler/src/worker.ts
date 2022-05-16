@@ -105,6 +105,7 @@ interface CfDurableObject {
   name: string;
   class_name: string;
   script_name?: string;
+  environment?: string;
 }
 
 interface CfR2Bucket {
