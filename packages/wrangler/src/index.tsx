@@ -934,6 +934,9 @@ export async function main(argv: string[]): Promise<void> {
        * try to extract a host from it
        */
       function getHost(urlLike: string): string | undefined {
+        // strip leading * / *.
+        urlLike = urlLike.replace(/^\*(\.)?/g, "");
+
         if (
           !(urlLike.startsWith("http://") || urlLike.startsWith("https://"))
         ) {

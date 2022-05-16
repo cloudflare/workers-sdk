@@ -225,6 +225,32 @@ describe("wrangler dev", () => {
       );
     });
 
+    it("should strip leading `*` from given host when deducing a zone id", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: "*some-host.com/some/path/*",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("should strip leading `*.` from given host when deducing a zone id", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: "*.some-host.com/some/path/*",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
     it("should, when provided, use a configured zone_id", async () => {
       writeWranglerToml({
         main: "index.js",
