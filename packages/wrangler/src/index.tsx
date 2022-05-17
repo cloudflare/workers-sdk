@@ -1256,7 +1256,7 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
 
-      const accountId = await requireAuth(config);
+      const accountId = args.dryRun ? undefined : await requireAuth(config);
 
       const assetPaths = getAssetPaths(
         config,
