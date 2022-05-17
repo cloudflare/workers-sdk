@@ -4658,6 +4658,27 @@ addEventListener('fetch', event => {});`
       `);
     });
 
+    it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "index.js",
+        `
+      import path from 'path';
+      console.log(path.join("some/path/to", "a/file.txt"));
+      export default {}
+      `
+      );
+      let err: Error | undefined;
+      try {
+        await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err?.message).toMatch(
+        `Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
+      );
+    });
+
     it("should polyfill node builtins when enabled", async () => {
       writeWranglerToml();
       fs.writeFileSync(
