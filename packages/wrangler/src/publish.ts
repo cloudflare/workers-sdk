@@ -164,7 +164,7 @@ export default async function publish(props: Props): Promise<void> {
 
     // if config.migrations
     let migrations;
-    if (config.migrations.length > 0) {
+    if (!props.dryRun && config.migrations.length > 0) {
       // get current migration tag
       type ScriptData = { id: string; migration_tag?: string };
       let script: ScriptData | undefined;
