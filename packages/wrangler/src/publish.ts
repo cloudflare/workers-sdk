@@ -271,6 +271,7 @@ export default async function publish(props: Props): Promise<void> {
       data_blobs: config.data_blobs,
       durable_objects: config.durable_objects,
       r2_buckets: config.r2_buckets,
+      services: config.services,
       unsafe: config.unsafe?.bindings,
     };
 

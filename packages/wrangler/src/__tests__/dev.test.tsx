@@ -839,6 +839,34 @@ describe("wrangler dev", () => {
       `);
     });
   });
+
+  describe("service bindings", () => {
+    it("should warn when using service bindings", async () => {
+      writeWranglerToml({
+        services: [
+          { binding: "WorkerA", service: "A" },
+          { binding: "WorkerB", service: "B", environment: "staging" },
+        ],
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"services\\" fields are experimental and may change or break at any time.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+
+        ",
+        }
+      `);
+    });
+  });
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {

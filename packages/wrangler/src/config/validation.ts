@@ -696,27 +696,12 @@ function normalizeAndValidateEnvironment(
     diagnostics,
     rawEnv,
     "experimental_services",
-    `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:\n` +
-      "```\n" +
-      TOML.stringify({
-        unsafe: {
-          bindings: (rawEnv?.experimental_services || []).map(
-            (serviceDefinition) => {
-              return {
-                name: serviceDefinition.name,
-                type: "service",
-                service: serviceDefinition.service,
-                environment: serviceDefinition.environment,
-              };
-            }
-          ),
-        },
-      }) +
-      "```",
+    `The "experimental_services" field is no longer supported. Simply rename the [experimental_services] field to [services].`,
     true
   );
 
   experimental(diagnostics, rawEnv, "unsafe");
+  experimental(diagnostics, rawEnv, "services");
 
   const route = validateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -878,6 +863,16 @@ function normalizeAndValidateEnvironment(
       envName,
       "r2_buckets",
       validateBindingArray(envName, validateR2Binding),
+      []
+    ),
+    services: notInheritable(
+      diagnostics,
+      topLevelEnv,
+      rawConfig,
+      rawEnv,
+      envName,
+      "services",
+      validateBindingArray(envName, validateServiceBinding),
       []
     ),
     unsafe: notInheritable(
@@ -1192,8 +1187,13 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
     const safeBindings = [
       "plain_text",
       "json",
+      "wasm_module",
+      "data_blob",
+      "text_blob",
       "kv_namespace",
       "durable_object_namespace",
+      "r2_bucket",
+      "service",
     ];
 
     if (safeBindings.includes(value.type)) {
@@ -1435,4 +1435,39 @@ const validateBindingsHaveUniqueNames = (
   }
 
   return !hasDuplicates;
+};
+const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
+  if (typeof value !== "object" || value === null) {
+    diagnostics.errors.push(
+      `"services" bindings should be objects, but got ${JSON.stringify(value)}`
+    );
+    return false;
+  }
+  let isValid = true;
+  // Service bindings must have a binding, service, and environment.
+  if (!isRequiredProperty(value, "binding", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isRequiredProperty(value, "service", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "service" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isOptionalProperty(value, "environment", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  return isValid;
 };

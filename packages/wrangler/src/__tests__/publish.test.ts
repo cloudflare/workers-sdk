@@ -3165,6 +3165,12 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest({
         expectedType: "sw",
         expectedBindings: [
+          { json: 123, name: "ENV_VAR_ONE", type: "json" },
+          {
+            name: "ENV_VAR_TWO",
+            text: "Hello, I'm an environment variable",
+            type: "plain_text",
+          },
           {
             name: "KV_NAMESPACE_ONE",
             namespace_id: "kv-ns-one-id",
@@ -3197,12 +3203,6 @@ addEventListener('fetch', event => {});`
             bucket_name: "r2-bucket-two-name",
             name: "R2_BUCKET_TWO",
             type: "r2_bucket",
-          },
-          { json: 123, name: "ENV_VAR_ONE", type: "json" },
-          {
-            name: "ENV_VAR_TWO",
-            text: "Hello, I'm an environment variable",
-            type: "plain_text",
           },
           {
             name: "WASM_MODULE_ONE",
@@ -4122,6 +4122,47 @@ addEventListener('fetch', event => {});`
                               Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
                               https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
                           `);
+      });
+    });
+
+    describe("[services]", () => {
+      it("should support service bindings", async () => {
+        writeWranglerToml({
+          services: [
+            {
+              binding: "FOO",
+              service: "foo-service",
+              environment: "production",
+            },
+          ],
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            {
+              type: "service",
+              name: "FOO",
+              service: "foo-service",
+              environment: "production",
+            },
+          ],
+        });
+
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+              - \\"services\\" fields are experimental and may change or break at any time.
+
+          "
+        `);
       });
     });
 
