@@ -4,7 +4,7 @@ import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, sep } from "node:path";
+import { dirname, join, sep, extname, basename } from "node:path";
 import { cwd } from "node:process";
 import { URL } from "node:url";
 import { hash } from "blake3-wasm";
@@ -1079,8 +1079,7 @@ const createDeployment: CommandModule<
             const fileContent = await readFile(filepath);
 
             const base64Content = fileContent.toString("base64");
-            const extension =
-              name.split(".").length > 1 ? name.split(".").at(-1) || "" : "";
+            const extension = extname(basename(name)).substring(1);
 
             const content = base64Content + extension;
 
