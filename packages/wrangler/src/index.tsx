@@ -892,6 +892,19 @@ export async function main(argv: string[]): Promise<void> {
       const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "dev");
 
+      if (config.services && config.services.length > 0) {
+        logger.warn(
+          `This worker is bound to live services: ${config.services
+            .map(
+              (service) =>
+                `${service.binding} (${service.service}${
+                  service.environment ? `@${service.environment}` : ""
+                })`
+            )
+            .join(", ")}`
+        );
+      }
+
       if (args.inspect) {
         logger.warn(
           "Passing --inspect is unnecessary, now you can always connect to devtools."
@@ -1102,6 +1115,7 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
+            services: config.services,
             unsafe: config.unsafe?.bindings,
           }}
           crons={config.triggers.crons}
@@ -1554,6 +1568,7 @@ export async function main(argv: string[]): Promise<void> {
                 };
               }
             ),
+            services: config.services,
             unsafe: config.unsafe?.bindings,
           }}
           crons={config.triggers.crons}
@@ -1751,6 +1766,7 @@ export async function main(argv: string[]): Promise<void> {
                       vars: {},
                       durable_objects: { bindings: [] },
                       r2_buckets: [],
+                      services: [],
                       wasm_modules: {},
                       text_blobs: {},
                       data_blobs: {},

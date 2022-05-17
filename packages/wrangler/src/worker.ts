@@ -113,6 +113,12 @@ interface CfR2Bucket {
   bucket_name: string;
 }
 
+interface CfService {
+  binding: string;
+  service: string;
+  environment?: string;
+}
+
 interface CfUnsafeBinding {
   name: string;
   type: string;
@@ -158,6 +164,7 @@ export interface CfWorkerInit {
     data_blobs: CfDataBlobBindings | undefined;
     durable_objects: { bindings: CfDurableObject[] } | undefined;
     r2_buckets: CfR2Bucket[] | undefined;
+    services: CfService[] | undefined;
     unsafe: CfUnsafeBinding[] | undefined;
   };
   migrations: CfDurableObjectMigrations | undefined;

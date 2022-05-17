@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import { builtinModules } from "node:module";
 import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
@@ -14,6 +15,33 @@ type BundleResult = {
   resolvedEntryPointPath: string;
   bundleType: "esm" | "commonjs";
   stop: (() => void) | undefined;
+};
+
+/**
+ * Searches for any uses of node's builtin modules, and throws an error if it
+ * finds anything. This plugin is only used when nodeCompat is not enabled.
+ * Supports both regular node builtins, and the new "node:<MODULE>" format.
+ */
+const checkForNodeBuiltinsPlugin = {
+  name: "checkForNodeBuiltins",
+  setup(build: esbuild.PluginBuild) {
+    build.onResolve(
+      {
+        filter: new RegExp(
+          "^(" +
+            builtinModules.join("|") +
+            "|" +
+            builtinModules.map((module) => "node:" + module).join("|") +
+            ")$"
+        ),
+      },
+      () => {
+        throw new Error(
+          `Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
+        );
+      }
+    );
+  },
 };
 
 /**
@@ -60,6 +88,7 @@ export async function bundleWorker(
     format: entry.format,
     rules,
   });
+
   const result = await esbuild.build({
     ...getEntryPoint(entry.file, serveAssetsFromWorker),
     bundle: true,
@@ -87,7 +116,9 @@ export async function bundleWorker(
       moduleCollector.plugin,
       ...(nodeCompat
         ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
-        : []),
+        : // we use checkForNodeBuiltinsPlugin to throw a nicer error
+          // if we find node builtins when nodeCompat isn't turned on
+          [checkForNodeBuiltinsPlugin]),
     ],
     ...(jsxFactory && { jsxFactory }),
     ...(jsxFragment && { jsxFragment }),

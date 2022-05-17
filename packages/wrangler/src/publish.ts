@@ -164,7 +164,7 @@ export default async function publish(props: Props): Promise<void> {
 
     // if config.migrations
     let migrations;
-    if (config.migrations.length > 0) {
+    if (!props.dryRun && config.migrations.length > 0) {
       // get current migration tag
       type ScriptData = { id: string; migration_tag?: string };
       let script: ScriptData | undefined;
@@ -271,6 +271,7 @@ export default async function publish(props: Props): Promise<void> {
       data_blobs: config.data_blobs,
       durable_objects: config.durable_objects,
       r2_buckets: config.r2_buckets,
+      services: config.services,
       unsafe: config.unsafe?.bindings,
     };
 

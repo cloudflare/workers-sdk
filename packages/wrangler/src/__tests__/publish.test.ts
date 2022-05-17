@@ -3165,6 +3165,12 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest({
         expectedType: "sw",
         expectedBindings: [
+          { json: 123, name: "ENV_VAR_ONE", type: "json" },
+          {
+            name: "ENV_VAR_TWO",
+            text: "Hello, I'm an environment variable",
+            type: "plain_text",
+          },
           {
             name: "KV_NAMESPACE_ONE",
             namespace_id: "kv-ns-one-id",
@@ -3197,12 +3203,6 @@ addEventListener('fetch', event => {});`
             bucket_name: "r2-bucket-two-name",
             name: "R2_BUCKET_TWO",
             type: "r2_bucket",
-          },
-          { json: 123, name: "ENV_VAR_ONE", type: "json" },
-          {
-            name: "ENV_VAR_TWO",
-            text: "Hello, I'm an environment variable",
-            type: "plain_text",
           },
           {
             name: "WASM_MODULE_ONE",
@@ -4125,6 +4125,47 @@ addEventListener('fetch', event => {});`
       });
     });
 
+    describe("[services]", () => {
+      it("should support service bindings", async () => {
+        writeWranglerToml({
+          services: [
+            {
+              binding: "FOO",
+              service: "foo-service",
+              environment: "production",
+            },
+          ],
+        });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            {
+              type: "service",
+              name: "FOO",
+              service: "foo-service",
+              environment: "production",
+            },
+          ],
+        });
+
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+                  "Uploaded test-name (TIMINGS)
+                  Published test-name (TIMINGS)
+                    test-name.test-sub-domain.workers.dev"
+              `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`
+          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+              - \\"services\\" fields are experimental and may change or break at any time.
+
+          "
+        `);
+      });
+    });
+
     describe("[unsafe]", () => {
       it("should warn if using unsafe bindings", async () => {
         writeWranglerToml({
@@ -4627,9 +4668,16 @@ addEventListener('fetch', event => {});`
 
   describe("--dry-run", () => {
     it("should not publish the worker if --dry-run is specified", async () => {
-      process.env.CLOUDFLARE_ACCOUNT_ID = "";
-      writeWranglerToml();
+      writeWranglerToml({
+        // add a durable object with migrations
+        // to make sure we _don't_ fetch migration status
+        durable_objects: {
+          bindings: [{ name: "NAME", class_name: "SomeClass" }],
+        },
+        migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
+      });
       writeWorkerSource();
+      process.env.CLOUDFLARE_ACCOUNT_ID = "";
       await runWrangler("publish index.js --dry-run");
       expect(std).toMatchInlineSnapshot(`
         Object {
@@ -4657,6 +4705,27 @@ addEventListener('fetch', event => {});`
         ",
         }
       `);
+    });
+
+    it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
+      writeWranglerToml();
+      fs.writeFileSync(
+        "index.js",
+        `
+      import path from 'path';
+      console.log(path.join("some/path/to", "a/file.txt"));
+      export default {}
+      `
+      );
+      let err: Error | undefined;
+      try {
+        await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err?.message).toMatch(
+        `Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
+      );
     });
 
     it("should polyfill node builtins when enabled", async () => {

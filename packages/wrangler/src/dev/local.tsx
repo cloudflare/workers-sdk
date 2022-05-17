@@ -87,6 +87,11 @@ function useLocalWorker({
           '⎔ A "public" folder is not yet supported in local mode.'
         );
       }
+      if (bindings.services && bindings.services.length > 0) {
+        throw new Error(
+          "⎔ Service bindings are not yet supported in local mode."
+        );
+      }
 
       // In local mode, we want to copy all referenced modules into
       // the output bundle directory before starting up
@@ -297,6 +302,7 @@ function useLocalWorker({
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
     bindings.vars,
+    bindings.services,
     compatibilityDate,
     compatibilityFlags,
     localPersistencePath,
