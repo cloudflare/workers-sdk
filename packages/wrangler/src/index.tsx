@@ -206,6 +206,14 @@ function demandOneOfOption(...options: string[]) {
   };
 }
 
+/**
+ * Remove trailing white space from inputs.
+ * Matching Wrangler legacy behavior with handling inputs
+ */
+function trimTrailingWhitespace(str: string) {
+  return str.trimEnd();
+}
+
 class CommandLineArgsError extends Error {}
 
 export async function main(argv: string[]): Promise<void> {
@@ -1719,9 +1727,11 @@ export async function main(argv: string[]): Promise<void> {
             const accountId = await requireAuth(config);
 
             const isInteractive = process.stdin.isTTY;
-            const secretValue = isInteractive
-              ? await prompt("Enter a secret value:", "password")
-              : await readFromStdin();
+            const secretValue = trimTrailingWhitespace(
+              isInteractive
+                ? await prompt("Enter a secret value:", "password")
+                : await readFromStdin()
+            );
 
             logger.log(
               `🌀 Creating the secret for script ${scriptName} ${
