@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import ignore from "ignore";
@@ -103,7 +104,7 @@ async function createKVNamespaceIfNotAlreadyExisting(
  * asset in the KV namespace.
  */
 export async function syncAssets(
-  accountId: string,
+  accountId: string | undefined,
   scriptName: string,
   siteAssets: AssetPaths | undefined,
   preview: boolean,
@@ -120,6 +121,7 @@ export async function syncAssets(
     logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
     return { manifest: undefined, namespace: undefined };
   }
+  assert(accountId, "Missing accountId");
 
   const title = `__${scriptName}-workers_sites_assets${
     preview ? "_preview" : ""

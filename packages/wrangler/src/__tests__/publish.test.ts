@@ -4677,6 +4677,7 @@ addEventListener('fetch', event => {});`
         migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
       });
       writeWorkerSource();
+      process.env.CLOUDFLARE_ACCOUNT_ID = "";
       await runWrangler("publish index.js --dry-run");
       expect(std).toMatchInlineSnapshot(`
         Object {

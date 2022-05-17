@@ -15,7 +15,7 @@ import type { CfWorkerInit } from "./worker";
 
 type Props = {
   config: Config;
-  accountId: string;
+  accountId: string | undefined;
   entry: Entry;
   rules: Config["rules"];
   name: string | undefined;
@@ -325,6 +325,7 @@ export default async function publish(props: Props): Promise<void> {
     logger.log(`--dry-run: exiting now.`);
     return;
   }
+  assert(accountId, "Missing accountId");
 
   const uploadMs = Date.now() - start;
   const deployments: Promise<string[]>[] = [];
