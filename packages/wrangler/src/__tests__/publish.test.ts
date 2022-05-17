@@ -4627,6 +4627,7 @@ addEventListener('fetch', event => {});`
 
   describe("--dry-run", () => {
     it("should not publish the worker if --dry-run is specified", async () => {
+      process.env.CLOUDFLARE_ACCOUNT_ID = "";
       writeWranglerToml();
       writeWorkerSource();
       await runWrangler("publish index.js --dry-run");
