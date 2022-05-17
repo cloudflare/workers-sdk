@@ -4668,7 +4668,14 @@ addEventListener('fetch', event => {});`
 
   describe("--dry-run", () => {
     it("should not publish the worker if --dry-run is specified", async () => {
-      writeWranglerToml();
+      writeWranglerToml({
+        // add a durable object with migrations
+        // to make sure we _don't_ fetch migration status
+        durable_objects: {
+          bindings: [{ name: "NAME", class_name: "SomeClass" }],
+        },
+        migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
+      });
       writeWorkerSource();
       await runWrangler("publish index.js --dry-run");
       expect(std).toMatchInlineSnapshot(`
