@@ -11,6 +11,7 @@ import { render } from "ink";
 import React from "react";
 import onExit from "signal-exit";
 import supportsColor from "supports-color";
+import { setGlobalDispatcher, ProxyAgent } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
@@ -76,6 +77,17 @@ type ConfigPath = string | undefined;
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
 const DEFAULT_LOCAL_PORT = 8787;
+
+const proxy =
+  process.env.https_proxy ||
+  process.env.HTTPS_PROXY ||
+  process.env.http_proxy ||
+  process.env.HTTP_PROXY ||
+  undefined;
+
+if (proxy) {
+  setGlobalDispatcher(new ProxyAgent(proxy));
+}
 
 function getRules(config: Config): Config["rules"] {
   const rules = config.rules ?? config.build?.upload?.rules ?? [];
