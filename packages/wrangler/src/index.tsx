@@ -1027,6 +1027,33 @@ function createCLIParser(argv: string[]) {
       const accountId = !args.local ? await requireAuth(config) : undefined;
 
       // TODO: if worker_dev = false and no routes, then error (only for dev)
+      /**
+       * Collects routes based on priority to be aggregated,
+       * if no routes are found returns `undefined`
+       */
+      function getRoutes() {
+        if (typeof args.routes !== "undefined") {
+          return args.routes;
+        }
+        if (typeof config.routes !== "undefined") {
+          const configRoutes = [];
+          for (const route of config.routes) {
+            if (typeof route === "object") {
+              configRoutes.push(route.pattern);
+            }
+            if (typeof route === "string") {
+              configRoutes.push(route);
+            }
+          }
+          return configRoutes;
+        }
+        if (typeof config.route === "object") {
+          return [config.route.pattern];
+        }
+        if (typeof config.route === "string") {
+          return [config.route];
+        }
+      }
 
       /**
        * Given something that resembles a URL,
@@ -1067,7 +1094,7 @@ function createCLIParser(argv: string[]) {
       // get a zone id for it, by lopping off subdomains until we get a hit
       // from the API. That's it!
 
-      let zone: { host: string; id: string } | undefined;
+      let zone: { host: string; id: string; routes?: string[] } | undefined;
 
       if (!args.local) {
         const hostLike =
@@ -1108,6 +1135,7 @@ function createCLIParser(argv: string[]) {
             ? {
                 host,
                 id: zoneId,
+                routes: getRoutes(),
               }
             : undefined;
       }

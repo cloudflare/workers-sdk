@@ -263,6 +263,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "some-domain.com",
         id: "some-zone-id",
+        routes: ["https://some-domain.com/*"],
       });
     });
 
@@ -280,6 +281,7 @@ describe("wrangler dev", () => {
         // note that it uses the provided zone_name as a host too
         host: "some-zone.com",
         id: "a-zone-id",
+        routes: ["https://some-domain.com/*"],
       });
     });
 
@@ -313,6 +315,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "5.some-host.com",
         id: "some-zone-id-5",
+        routes: ["http://5.some-host.com/some/path/*"],
       });
       (Dev as jest.Mock).mockClear();
 
@@ -326,6 +329,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "4.some-host.com",
         id: "some-zone-id-4",
+        routes: ["https://4.some-host.com/some/path/*"],
       });
       (Dev as jest.Mock).mockClear();
 
@@ -339,6 +343,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "3.some-host.com",
         id: "some-zone-id-3",
+        routes: ["http://3.some-host.com/some/path/*"],
       });
       (Dev as jest.Mock).mockClear();
 
@@ -355,6 +360,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "2.some-host.com",
         id: "some-zone-id-2",
+        routes: ["http://3.some-host.com/some/path/*"],
       });
       (Dev as jest.Mock).mockClear();
 
@@ -373,6 +379,7 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
         host: "1.some-host.com",
         id: "some-zone-id-1",
+        routes: ["http://3.some-host.com/some/path/*"],
       });
       (Dev as jest.Mock).mockClear();
     });

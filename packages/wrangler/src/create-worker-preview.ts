@@ -118,7 +118,7 @@ async function createPreviewToken(
       : `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
   const mode: CfPreviewMode = ctx.zone
-    ? { routes: ["*/*"] } // TODO: should we support routes here? how?
+    ? { routes: [...(ctx.zone.routes ?? "*/*")] }
     : { workers_dev: true };
 
   const formData = createWorkerUploadForm(worker);

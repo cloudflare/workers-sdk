@@ -83,7 +83,7 @@ export function useWorker(props: {
   usageModel: "bundled" | "unbound" | undefined;
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: { id: string; host: string } | undefined;
+  zone: { id: string; host: string; routes?: string[] } | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
