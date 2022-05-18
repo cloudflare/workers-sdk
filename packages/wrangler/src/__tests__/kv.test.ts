@@ -48,10 +48,7 @@ describe("wrangler", () => {
         );
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:namespace create <namespace>
+          wrangler kv:namespace create <namespace>
 
           Create a new namespace
 
@@ -65,8 +62,10 @@ describe("wrangler", () => {
 
           Options:
             -e, --env      Perform on a specific environment  [string]
-                --preview  Interact with a preview namespace  [boolean]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+                --preview  Interact with a preview namespace  [boolean]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -80,10 +79,7 @@ describe("wrangler", () => {
         );
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:namespace create <namespace>
+          wrangler kv:namespace create <namespace>
 
           Create a new namespace
 
@@ -97,8 +93,10 @@ describe("wrangler", () => {
 
           Options:
             -e, --env      Perform on a specific environment  [string]
-                --preview  Interact with a preview namespace  [boolean]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+                --preview  Interact with a preview namespace  [boolean]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
           "
         `);
@@ -113,10 +111,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:namespace create <namespace>
+          wrangler kv:namespace create <namespace>
 
           Create a new namespace
 
@@ -130,8 +125,10 @@ describe("wrangler", () => {
 
           Options:
             -e, --env      Perform on a specific environment  [string]
-                --preview  Interact with a preview namespace  [boolean]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
+                --preview  Interact with a preview namespace  [boolean]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
 
           "
         `);
@@ -283,21 +280,7 @@ describe("wrangler", () => {
                 A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
               `);
         expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:namespace delete
-
-          Deletes a given namespace.
-
-          Flags:
-            -c, --config   Path to .toml configuration file  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
-
-          Options:
-                --binding       The name of the namespace to delete  [string]
-                --namespace-id  The id of the namespace to delete  [string]
-            -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
 
             A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
 
@@ -489,10 +472,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key put <key> [value]
+          wrangler kv:key put <key> [value]
 
           Writes a single key/value pair to the given namespace.
 
@@ -512,8 +492,10 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path  [string]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+                --path          Read value from the file at a given path  [string]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -528,10 +510,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key put <key> [value]
+          wrangler kv:key put <key> [value]
 
           Writes a single key/value pair to the given namespace.
 
@@ -551,8 +530,10 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path  [string]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+                --path          Read value from the file at a given path  [string]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
           "
         `);
@@ -567,10 +548,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key put <key> [value]
+          wrangler kv:key put <key> [value]
 
           Writes a single key/value pair to the given namespace.
 
@@ -590,8 +568,10 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path  [string]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+                --path          Read value from the file at a given path  [string]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
           "
         `);
@@ -606,10 +586,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key put <key> [value]
+          wrangler kv:key put <key> [value]
 
           Writes a single key/value pair to the given namespace.
 
@@ -629,8 +606,10 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path  [string]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
+                --path          Read value from the file at a given path  [string]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
 
           "
         `);
@@ -645,10 +624,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key put <key> [value]
+          wrangler kv:key put <key> [value]
 
           Writes a single key/value pair to the given namespace.
 
@@ -668,8 +644,10 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
-                --path          Read value from the file at a given path  [string]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
+                --path          Read value from the file at a given path  [string]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
 
           "
         `);
@@ -965,10 +943,7 @@ describe("wrangler", () => {
         );
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key get <key>
+          wrangler kv:key get <key>
 
           Reads a single value by key from the given namespace.
 
@@ -984,8 +959,10 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+                --preview       Interact with a preview namespace  [boolean] [default: false]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
           "
         `);
@@ -999,10 +976,7 @@ describe("wrangler", () => {
         );
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key get <key>
+          wrangler kv:key get <key>
 
           Reads a single value by key from the given namespace.
 
@@ -1018,8 +992,10 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+                --preview       Interact with a preview namespace  [boolean] [default: false]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
           "
         `);
@@ -1034,10 +1010,7 @@ describe("wrangler", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          "
-        `);
-        expect(std.err).toMatchInlineSnapshot(`
-          "wrangler kv:key get <key>
+          wrangler kv:key get <key>
 
           Reads a single value by key from the given namespace.
 
@@ -1053,8 +1026,10 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]
-          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+                --preview       Interact with a preview namespace  [boolean] [default: false]"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
           "
         `);

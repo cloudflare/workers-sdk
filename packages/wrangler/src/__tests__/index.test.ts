@@ -63,10 +63,7 @@ describe("wrangler", () => {
 
       expect(std.out).toMatchInlineSnapshot(`
         "
-        "
-      `);
-      expect(std.err).toMatchInlineSnapshot(`
-        "wrangler
+        wrangler
 
         Commands:
           wrangler init [name]       📥 Create a wrangler.toml configuration file
@@ -86,8 +83,10 @@ describe("wrangler", () => {
         Flags:
           -c, --config   Path to .toml configuration file  [string]
           -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]
-        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
+          -v, --version  Show version number  [boolean]"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
 
         "
       `);
