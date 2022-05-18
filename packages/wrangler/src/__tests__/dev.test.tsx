@@ -774,7 +774,11 @@ describe("wrangler dev", () => {
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
-          "err": "wrangler dev [script]
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
+
+        ",
+          "out": "
+        wrangler dev [script]
 
         👂 Start a local server for developing your worker
 
@@ -811,12 +815,7 @@ describe("wrangler dev", () => {
               --minify                                     Minify the script  [boolean]
               --node-compat                                Enable node.js compatibility  [boolean]
               --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
-              --inspect                                    Enable dev tools  [deprecated] [boolean]
-        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
-
-        ",
-          "out": "
-        ",
+              --inspect                                    Enable dev tools  [deprecated] [boolean]",
           "warn": "",
         }
       `);

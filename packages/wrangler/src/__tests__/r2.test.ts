@@ -17,6 +17,33 @@ describe("wrangler", () => {
 
   describe("r2", () => {
     describe("bucket", () => {
+      it("should show the correct help when an invalid command is passed", async () => {
+        await expect(() =>
+          runWrangler("r2 bucket foo")
+        ).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+        expect(std.err).toMatchInlineSnapshot(`
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+          "
+        `);
+        expect(std.out).toMatchInlineSnapshot(`
+          "
+          wrangler r2 bucket
+
+          Manage R2 buckets
+
+          Commands:
+            wrangler r2 bucket create <name>  Create a new R2 bucket
+            wrangler r2 bucket list           List R2 buckets
+            wrangler r2 bucket delete <name>  Delete an R2 bucket
+
+          Flags:
+            -c, --config   Path to .toml configuration file  [string]
+            -h, --help     Show help  [boolean]
+            -v, --version  Show version number  [boolean]"
+        `);
+      });
+
       describe("list", () => {
         function mockListRequest(buckets: R2BucketInfo[]) {
           const requests = { count: 0 };
@@ -69,10 +96,7 @@ describe("wrangler", () => {
           );
           expect(std.out).toMatchInlineSnapshot(`
             "
-            "
-          `);
-          expect(std.err).toMatchInlineSnapshot(`
-            "wrangler r2 bucket create <name>
+            wrangler r2 bucket create <name>
 
             Create a new R2 bucket
 
@@ -82,8 +106,10 @@ describe("wrangler", () => {
             Flags:
               -c, --config   Path to .toml configuration file  [string]
               -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
-            [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+              -v, --version  Show version number  [boolean]"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`
+            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
             "
           `);
@@ -97,10 +123,7 @@ describe("wrangler", () => {
           );
           expect(std.out).toMatchInlineSnapshot(`
             "
-            "
-          `);
-          expect(std.err).toMatchInlineSnapshot(`
-            "wrangler r2 bucket create <name>
+            wrangler r2 bucket create <name>
 
             Create a new R2 bucket
 
@@ -110,8 +133,10 @@ describe("wrangler", () => {
             Flags:
               -c, --config   Path to .toml configuration file  [string]
               -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
-            [31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+              -v, --version  Show version number  [boolean]"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`
+            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
             "
           `);
@@ -151,10 +176,7 @@ describe("wrangler", () => {
           );
           expect(std.out).toMatchInlineSnapshot(`
             "
-            "
-          `);
-          expect(std.err).toMatchInlineSnapshot(`
-            "wrangler r2 bucket delete <name>
+            wrangler r2 bucket delete <name>
 
             Delete an R2 bucket
 
@@ -164,8 +186,10 @@ describe("wrangler", () => {
             Flags:
               -c, --config   Path to .toml configuration file  [string]
               -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
-            [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+              -v, --version  Show version number  [boolean]"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`
+            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
             "
           `);
@@ -179,10 +203,7 @@ describe("wrangler", () => {
           );
           expect(std.out).toMatchInlineSnapshot(`
             "
-            "
-          `);
-          expect(std.err).toMatchInlineSnapshot(`
-            "wrangler r2 bucket delete <name>
+            wrangler r2 bucket delete <name>
 
             Delete an R2 bucket
 
@@ -192,8 +213,10 @@ describe("wrangler", () => {
             Flags:
               -c, --config   Path to .toml configuration file  [string]
               -h, --help     Show help  [boolean]
-              -v, --version  Show version number  [boolean]
-            [31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
+              -v, --version  Show version number  [boolean]"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`
+            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
             "
           `);

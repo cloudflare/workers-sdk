@@ -208,7 +208,7 @@ function demandOneOfOption(...options: string[]) {
 
 class CommandLineArgsError extends Error {}
 
-export async function main(argv: string[]): Promise<void> {
+function createCLIParser(argv: string[]) {
   const wrangler = makeCLI(argv)
     .strict()
     // We handle errors ourselves in a try-catch around `yargs.parse`.
@@ -2655,14 +2655,21 @@ export async function main(argv: string[]): Promise<void> {
   wrangler.version(wranglerVersion).alias("v", "version");
   wrangler.exitProcess(false);
 
+  return wrangler;
+}
+
+export async function main(argv: string[]): Promise<void> {
+  const wrangler = createCLIParser(argv);
   try {
     await wrangler.parse();
   } catch (e) {
     logger.log(""); // Just adds a bit of space
     if (e instanceof CommandLineArgsError) {
-      wrangler.showHelp("error");
-      logger.log(""); // Add a bit of space.
       logger.error(e.message);
+      // We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
+      // The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
+      // The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
+      await createCLIParser([...argv, "--help"]).parse();
     } else if (e instanceof ParseError) {
       e.notes.push({
         text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
