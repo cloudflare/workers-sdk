@@ -732,8 +732,8 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
-          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+          - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
               666,
               777,
               {
@@ -2229,8 +2229,8 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
-            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+            - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
                 666,
                 777
               ].
