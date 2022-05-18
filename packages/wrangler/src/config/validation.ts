@@ -193,7 +193,8 @@ export function normalizeAndValidateConfig(
     dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
     migrations: normalizeAndValidateMigrations(
       diagnostics,
-      rawConfig.migrations ?? []
+      rawConfig.migrations ?? [],
+      activeEnv.durable_objects
     ),
     site: normalizeAndValidateSite(
       diagnostics,
@@ -387,7 +388,8 @@ function normalizeAndValidateDev(
  */
 function normalizeAndValidateMigrations(
   diagnostics: Diagnostics,
-  rawMigrations: Config["migrations"]
+  rawMigrations: Config["migrations"],
+  durableObjects: Config["durable_objects"]
 ): Config["migrations"] {
   if (!Array.isArray(rawMigrations)) {
     diagnostics.errors.push(
@@ -441,6 +443,26 @@ function normalizeAndValidateMigrations(
         "string"
       );
     }
+
+    if (
+      Array.isArray(durableObjects?.bindings) &&
+      durableObjects.bindings.length > 0
+    ) {
+      // intrinsic [durable_objects] implies [migrations]
+      const exportedDurableObjects = (durableObjects.bindings || []).filter(
+        (binding) => !binding.script_name
+      );
+      if (exportedDurableObjects.length > 0 && rawMigrations.length === 0) {
+        diagnostics.warnings.push(
+          `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects
+            .map((durable) => durable.class_name || "(unnamed)")
+            .join(
+              ", "
+            )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
+        );
+      }
+    }
+
     return rawMigrations;
   }
 }

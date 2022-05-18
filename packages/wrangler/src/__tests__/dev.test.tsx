@@ -675,7 +675,7 @@ describe("wrangler dev", () => {
   });
 
   describe("durable_objects", () => {
-    it("should warn if there is one or more remote Durable Object", async () => {
+    it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async () => {
       writeWranglerToml({
         main: "index.js",
         durable_objects: {
@@ -700,7 +700,16 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
+          CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
+          section to your wrangler.toml. Refer to
+          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
+          for more details.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
 
           Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
           live instances.
