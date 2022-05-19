@@ -1243,7 +1243,7 @@ const createDeployment: CommandModule<
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
-      "dev [directory] [-- command]",
+      "dev [directory] [-- command..]",
       "🧑‍💻 Develop your full-stack Pages application locally",
       (yargs) => {
         return yargs
