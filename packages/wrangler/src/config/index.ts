@@ -223,7 +223,7 @@ export function printBindings({
       type: "Vars",
       entries: Object.entries(vars).map(([key, value]) => ({
         key,
-        value: truncate(`${value}`),
+        value: `"${truncate(`${value}`)}"`,
       })),
     });
   }

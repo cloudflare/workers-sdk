@@ -473,7 +473,7 @@ describe("publish", () => {
     expect(std.out).toMatchInlineSnapshot(`
       "Your worker has access to the following:
       Vars
-      	- xyz: 123
+      	- xyz: \\"123\\"
       Uploaded test-name (TIMINGS)
       Published test-name (TIMINGS)
         test-name.test-sub-domain.workers.dev"
@@ -3429,8 +3429,8 @@ addEventListener('fetch', event => {});`
          \\"data\\": 1337
         }
         Vars
-        	- ENV_VAR_ONE: 123
-        	- ENV_VAR_TWO: Hello, I'm an environment variable
+        	- ENV_VAR_ONE: \\"123\\"
+        	- ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
         Wasm Modules
         	- WASM_MODULE_ONE: some_wasm.wasm
         	- WASM_MODULE_TWO: more_wasm.wasm
@@ -4177,9 +4177,9 @@ addEventListener('fetch', event => {});`
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
           Vars
-          	- text: plain ol' string
-          	- count: 1
-          	- complex: [object Object]
+          	- text: \\"plain ol' string\\"
+          	- count: \\"1\\"
+          	- complex: \\"[object Object]\\"
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4395,7 +4395,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          Service Bindings
+          Services
           	- FOO: foo-service - production
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)

@@ -765,13 +765,13 @@ describe("wrangler dev", () => {
       expect(std.out).toMatchInlineSnapshot(`
         "Your worker has access to the following:
         Vars
-        	- VAR_1: original value 1
-        	- VAR_2: original value 2
-        	- VAR_3: original value 3
-        	- VAR_MULTI_LINE_1: original multi-line 1
-        	- VAR_MULTI_LINE_2: original multi-line 2
-        	- EMPTY: original empty
-        	- UNQUOTED: original unquoted
+        	- VAR_1: \\"original value 1\\"
+        	- VAR_2: \\"original value 2\\"
+        	- VAR_3: \\"original value 3\\"
+        	- VAR_MULTI_LINE_1: \\"original multi-line 1\\"
+        	- VAR_MULTI_LINE_2: \\"original multi-line 2\\"
+        	- EMPTY: \\"original empty\\"
+        	- UNQUOTED: \\"original unquoted\\"
         Using vars defined in .dev.vars"
       `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -870,7 +870,7 @@ describe("wrangler dev", () => {
           "debug": "",
           "err": "",
           "out": "Your worker has access to the following:
-        Service Bindings
+        Services
         	- WorkerA: A
         	- WorkerB: B - staging",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
