@@ -1,5 +1,11 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.4
+
+### Patch Changes
+
+- [`70c01a2`](https://github.com/cloudflare/wrangler2/commit/70c01a2a13b1950be07d9b02cb3f12cbc91036ad) Thanks [@threepointone](https://github.com/threepointone)! - fix: include all files when publishing wranglerjs-compat-webpack-plugin
+
 ## 0.0.3
 
 ### Patch Changes
