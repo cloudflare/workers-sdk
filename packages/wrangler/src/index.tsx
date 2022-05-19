@@ -2397,14 +2397,7 @@ function createCLIParser(argv: string[]) {
             }
 
             const accountId = await requireAuth(config);
-            await putKVBulkKeyValue(
-              accountId,
-              namespaceId,
-              content,
-              (index, total) => {
-                logger.log(`Uploaded ${index} of ${total}.`);
-              }
-            );
+            await putKVBulkKeyValue(accountId, namespaceId, content);
 
             logger.log("Success!");
           }
@@ -2494,14 +2487,7 @@ function createCLIParser(argv: string[]) {
 
             const accountId = await requireAuth(config);
 
-            await deleteKVBulkKeyValue(
-              accountId,
-              namespaceId,
-              content,
-              (index, total) => {
-                logger.log(`Deleted ${index} of ${total}.`);
-              }
-            );
+            await deleteKVBulkKeyValue(accountId, namespaceId, content);
 
             logger.log("Success!");
           }
