@@ -472,7 +472,7 @@ describe("publish", () => {
     await runWrangler("publish ./some-path/worker/index.js");
     expect(std.out).toMatchInlineSnapshot(`
       "Your worker has access to the following:
-      - Vars
+      - Vars:
         - xyz: \\"123\\"
       Uploaded test-name (TIMINGS)
       Published test-name (TIMINGS)
@@ -2833,7 +2833,7 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
         "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - SOMENAME: SomeClass
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2868,7 +2868,7 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
         "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - SOMENAME: SomeClass (defined in some-script)
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2910,7 +2910,7 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
         "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
         Uploaded test-name (TIMINGS)
@@ -2960,7 +2960,7 @@ addEventListener('fetch', event => {});`
           "debug": "",
           "err": "",
           "out": "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
         Uploaded test-name (TIMINGS)
@@ -3003,7 +3003,7 @@ addEventListener('fetch', event => {});`
           "debug": "",
           "err": "",
           "out": "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
         Uploaded test-name (TIMINGS)
@@ -3048,7 +3048,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
           Uploaded test-name (TIMINGS)
@@ -3110,7 +3110,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js --legacy-env false --env xyz");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
           Uploaded test-name (xyz) (TIMINGS)
@@ -3168,7 +3168,7 @@ addEventListener('fetch', event => {});`
             "debug": "",
             "err": "",
             "out": "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
           Uploaded test-name (TIMINGS)
@@ -3236,7 +3236,7 @@ addEventListener('fetch', event => {});`
             "debug": "",
             "err": "",
             "out": "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
           Uploaded test-name (xyz) (TIMINGS)
@@ -3404,28 +3404,28 @@ addEventListener('fetch', event => {});`
       await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
       expect(std.out).toMatchInlineSnapshot(`
         "Your worker has access to the following:
-        - Data Blobs
+        - Data Blobs:
           - DATA_BLOB_ONE: some-data-blob.bin
           - DATA_BLOB_TWO: more-data-blob.bin
-        - Durable Objects
+        - Durable Objects:
           - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
           - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
-        - KV Namespaces
+        - KV Namespaces:
           - KV_NAMESPACE_ONE: kv-ns-one-id
           - KV_NAMESPACE_TWO: kv-ns-two-id
-        - R2 Buckets
+        - R2 Buckets:
           - R2_BUCKET_ONE: r2-bucket-one-name
           - R2_BUCKET_TWO: r2-bucket-two-name
-        - Text Blobs
+        - Text Blobs:
           - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
           - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
-        - Unsafe
+        - Unsafe:
           - some unsafe thing: UNSAFE_BINDING_ONE
           - another unsafe thing: UNSAFE_BINDING_TWO
-        - Vars
+        - Vars:
           - ENV_VAR_ONE: \\"123\\"
           - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
-        - Wasm Modules
+        - Wasm Modules:
           - WASM_MODULE_ONE: some_wasm.wasm
           - WASM_MODULE_TWO: more_wasm.wasm
         Uploaded test-name (TIMINGS)
@@ -3805,7 +3805,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Wasm Modules
+          - Wasm Modules:
             - TESTWASMNAME: path/to/test.wasm
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -3874,7 +3874,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Wasm Modules
+          - Wasm Modules:
             - TESTWASMNAME: path/to/and/the/path/to/test.wasm
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -3942,7 +3942,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Text Blobs
+          - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/text.file
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4015,7 +4015,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Text Blobs
+          - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4051,7 +4051,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Data Blobs
+          - Data Blobs:
             - TESTDATABLOBNAME: path/to/data.bin
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4124,7 +4124,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Data Blobs
+          - Data Blobs:
             - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4161,7 +4161,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Vars
+          - Vars:
             - text: \\"plain ol' string\\"
             - count: \\"1\\"
             - complex: \\"[object Object]\\"
@@ -4190,7 +4190,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - R2 Buckets
+          - R2 Buckets:
             - FOO: foo-bucket
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4235,7 +4235,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4274,7 +4274,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4318,7 +4318,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Durable Objects
+          - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4380,7 +4380,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Services
+          - Services:
             - FOO: foo-service - production
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4425,7 +4425,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Unsafe
+          - Unsafe:
             - binding-type: my-binding
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4467,7 +4467,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - Unsafe
+          - Unsafe:
             - plain_text: my-binding
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
@@ -4921,7 +4921,7 @@ addEventListener('fetch', event => {});`
           "debug": "",
           "err": "",
           "out": "Your worker has access to the following:
-        - Durable Objects
+        - Durable Objects:
           - NAME: SomeClass
         --dry-run: exiting now.",
           "warn": "",

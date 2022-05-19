@@ -214,7 +214,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     ...output
       .map((bindingGroup) => {
         return [
-          `- ${bindingGroup.type}`,
+          `- ${bindingGroup.type}:`,
           bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
         ];
       })
