@@ -12,13 +12,8 @@ import { logger } from "./logger";
 export default async function openInBrowser(url: string): Promise<void> {
   const errorMessage = `Failed to open ${url} in a browser`;
 
-  try {
-    const childProcess = await open(url);
-    childProcess.on("error", () => {
-      logger.warn(errorMessage);
-    });
-  } catch (e) {
-    const cause = e instanceof Error ? e : new Error(`${e}`);
-    throw new Error(errorMessage, { cause });
-  }
+  const childProcess = await open(url);
+  childProcess.on("error", () => {
+    logger.warn(errorMessage);
+  });
 }

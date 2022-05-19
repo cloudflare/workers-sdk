@@ -643,25 +643,20 @@ export const openInspector = async (inspectorPort: number) => {
       braveBrowser = "brave";
   }
 
-  try {
-    const childProcess = await open(url, {
-      app: [
-        {
-          name: open.apps.chrome,
-        },
-        {
-          name: braveBrowser,
-        },
-        {
-          name: open.apps.edge,
-        },
-      ],
-    });
-    childProcess.on("error", () => {
-      logger.warn(errorMessage);
-    });
-  } catch (e) {
-    const cause = e instanceof Error ? e : new Error(`${e}`);
-    throw new Error(errorMessage, { cause });
-  }
+  const childProcess = await open(url, {
+    app: [
+      {
+        name: open.apps.chrome,
+      },
+      {
+        name: braveBrowser,
+      },
+      {
+        name: open.apps.edge,
+      },
+    ],
+  });
+  childProcess.on("error", () => {
+    logger.warn(errorMessage);
+  });
 };
