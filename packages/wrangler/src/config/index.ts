@@ -210,7 +210,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
   }
 
   const message = [
-    `Your worker has access to the following:`,
+    `Your worker has access to the following bindings:`,
     ...output
       .map((bindingGroup) => {
         return [
