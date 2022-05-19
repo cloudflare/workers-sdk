@@ -1,3 +1,5 @@
 # Global owners
 * @threepointone @petebacondarwin
-/packages/wrangler/pages/ @GregBrimble
+/packages/wrangler/pages/ @cloudflare/pages
+/packages/wrangler/src/pages/ @cloudflare/pages
+/packages/wrangler/src/pages.* @cloudflare/pages
