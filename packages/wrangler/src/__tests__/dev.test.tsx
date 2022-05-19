@@ -698,7 +698,14 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       await runWrangler("dev");
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
-      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.out).toMatchInlineSnapshot(`
+        "Your worker has access to the following:
+        Durable Objects
+        	- NAME_1: CLASS_1
+        	- NAME_2: CLASS_2 (defined in SCRIPT_A)
+        	- NAME_3: CLASS_3
+        	- NAME_4: CLASS_4 (defined in SCRIPT_B)"
+      `);
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
 
@@ -755,9 +762,18 @@ describe("wrangler dev", () => {
         EMPTY: "",
         UNQUOTED: "unquoted value", // Note that whitespace is trimmed
       });
-      expect(std.out).toMatchInlineSnapshot(
-        `"Using vars defined in .dev.vars"`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Your worker has access to the following:
+        Vars
+        	- VAR_1: original value 1
+        	- VAR_2: original value 2
+        	- VAR_3: original value 3
+        	- VAR_MULTI_LINE_1: original multi-line 1
+        	- VAR_MULTI_LINE_2: original multi-line 2
+        	- EMPTY: original empty
+        	- UNQUOTED: original unquoted
+        Using vars defined in .dev.vars"
+      `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -853,7 +869,10 @@ describe("wrangler dev", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "",
+          "out": "Your worker has access to the following:
+        Service Bindings
+        	- WorkerA: A
+        	- WorkerB: B - staging",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
             - \\"services\\" fields are experimental and may change or break at any time.

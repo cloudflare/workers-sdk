@@ -14,7 +14,7 @@ import supportsColor from "supports-color";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { findWranglerToml, printBindings, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -1036,6 +1036,8 @@ function createCLIParser(argv: string[]) {
         );
       }
 
+      printBindings({ config, dev: true });
+
       const { waitUntilExit } = render(
         <Dev
           name={getScriptName(args, config)}
@@ -1286,6 +1288,9 @@ function createCLIParser(argv: string[]) {
         args.siteInclude,
         args.siteExclude
       );
+
+      printBindings({ config, dev: false });
+
       await publish({
         config,
         accountId,

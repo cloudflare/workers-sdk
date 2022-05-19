@@ -471,7 +471,10 @@ describe("publish", () => {
     mockSubDomainRequest();
     await runWrangler("publish ./some-path/worker/index.js");
     expect(std.out).toMatchInlineSnapshot(`
-      "Uploaded test-name (TIMINGS)
+      "Your worker has access to the following:
+      Vars
+      	- xyz: 123
+      Uploaded test-name (TIMINGS)
       Published test-name (TIMINGS)
         test-name.test-sub-domain.workers.dev"
     `);
@@ -2829,7 +2832,10 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Your worker has access to the following:
+        Durable Objects
+        	- SOMENAME: SomeClass
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2861,7 +2867,10 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Your worker has access to the following:
+        Durable Objects
+        	- SOMENAME: SomeClass (defined in some-script)
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2900,7 +2909,11 @@ addEventListener('fetch', event => {});`
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Your worker has access to the following:
+        Durable Objects
+        	- SOMENAME: SomeClass
+        	- SOMEOTHERNAME: SomeOtherClass
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2946,7 +2959,11 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Your worker has access to the following:
+        Durable Objects
+        	- SOMENAME: SomeClass
+        	- SOMEOTHERNAME: SomeOtherClass
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "",
@@ -2985,7 +3002,11 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Your worker has access to the following:
+        Durable Objects
+        	- SOMENAME: SomeClass
+        	- SOMEOTHERNAME: SomeOtherClass
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "",
@@ -3026,7 +3047,11 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Your worker has access to the following:
+          Durable Objects
+          	- SOMENAME: SomeClass
+          	- SOMEOTHERNAME: SomeOtherClass
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -3084,7 +3109,11 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js --legacy-env false --env xyz");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (xyz) (TIMINGS)
+          "Your worker has access to the following:
+          Durable Objects
+          	- SOMENAME: SomeClass
+          	- SOMEOTHERNAME: SomeOtherClass
+          Uploaded test-name (xyz) (TIMINGS)
           Published test-name (xyz) (TIMINGS)
             xyz.test-name.test-sub-domain.workers.dev"
         `);
@@ -3138,7 +3167,11 @@ addEventListener('fetch', event => {});`
           Object {
             "debug": "",
             "err": "",
-            "out": "Uploaded test-name (TIMINGS)
+            "out": "Your worker has access to the following:
+          Durable Objects
+          	- SOMENAME: SomeClass
+          	- SOMEOTHERNAME: SomeOtherClass
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev",
             "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -3202,7 +3235,11 @@ addEventListener('fetch', event => {});`
           Object {
             "debug": "",
             "err": "",
-            "out": "Uploaded test-name (xyz) (TIMINGS)
+            "out": "Your worker has access to the following:
+          Durable Objects
+          	- SOMENAME: SomeClass
+          	- SOMEOTHERNAME: SomeOtherClass
+          Uploaded test-name (xyz) (TIMINGS)
           Published test-name (xyz) (TIMINGS)
             xyz.test-name.test-sub-domain.workers.dev",
             "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -3366,7 +3403,38 @@ addEventListener('fetch', event => {});`
 
       await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Your worker has access to the following:
+        Data Blobs
+        	- DATA_BLOB_ONE: some-data-blob.bin
+        	- DATA_BLOB_TWO: more-data-blob.bin
+        Durable Objects
+        	- DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
+        	- DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
+        KV Namespaces
+        	- KV_NAMESPACE_ONE: kv-ns-one-id
+        	- KV_NAMESPACE_TWO: kv-ns-two-id
+        R2 Buckets
+        	- R2_BUCKET_ONE: r2-bucket-one-name
+        	- R2_BUCKET_TWO: r2-bucket-two-name
+        Text Blobs
+        	- TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
+        	- TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
+        some unsafe thing
+        	- UNSAFE_BINDING_ONE: {
+         \\"data\\": {
+          \\"some\\": {
+           \\"unsafe\\":...
+        another unsafe thing
+        	- UNSAFE_BINDING_TWO: {
+         \\"data\\": 1337
+        }
+        Vars
+        	- ENV_VAR_ONE: 123
+        	- ENV_VAR_TWO: Hello, I'm an environment variable
+        Wasm Modules
+        	- WASM_MODULE_ONE: some_wasm.wasm
+        	- WASM_MODULE_TWO: more_wasm.wasm
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -3742,10 +3810,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Wasm Modules
+          	- TESTWASMNAME: path/to/test.wasm
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -3766,7 +3837,10 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "
+          "Your worker has access to the following:
+          Wasm Modules
+          	- TESTWASMNAME: path/to/test.wasm
+
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -3808,10 +3882,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Wasm Modules
+          	- TESTWASMNAME: path/to/and/the/path/to/test.wasm
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -3873,10 +3950,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Text Blobs
+          	- TESTTEXTBLOBNAME: path/to/text.file
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -3897,7 +3977,10 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "
+          "Your worker has access to the following:
+          Text Blobs
+          	- TESTTEXTBLOBNAME: path/to/text.file
+
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -3943,10 +4026,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Text Blobs
+          	- TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -3976,10 +4062,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Data Blobs
+          	- TESTDATABLOBNAME: path/to/data.bin
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4000,7 +4089,10 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "
+          "Your worker has access to the following:
+          Data Blobs
+          	- TESTDATABLOBNAME: path/to/data.bin
+
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -4046,10 +4138,13 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Data Blobs
+          	- TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4080,10 +4175,15 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Vars
+          	- text: plain ol' string
+          	- count: 1
+          	- complex: [object Object]
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4104,10 +4204,13 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          R2 Buckets
+          	- FOO: foo-bucket
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4146,10 +4249,13 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Durable Objects
+          	- EXAMPLE_DO_BINDING: ExampleDurableObject
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4182,10 +4288,13 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Durable Objects
+          	- EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4223,10 +4332,13 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Durable Objects
+          	- EXAMPLE_DO_BINDING: ExampleDurableObject
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4282,10 +4394,13 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          Service Bindings
+          	- FOO: foo-service - production
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
           "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -4324,10 +4439,15 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          binding-type
+          	- my-binding: {
+           \\"param\\": \\"binding-param\\"
+          }
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
           "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -4363,10 +4483,15 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Your worker has access to the following:
+          plain_text
+          	- my-binding: {
+           \\"text\\": \\"text\\"
+          }
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`
           "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -4814,7 +4939,10 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "--dry-run: exiting now.",
+          "out": "Your worker has access to the following:
+        Durable Objects
+        	- NAME: SomeClass
+        --dry-run: exiting now.",
           "warn": "",
         }
       `);
