@@ -80,7 +80,7 @@ export function printBindings({
   dev: boolean;
 }) {
   const truncate = (item: string | Record<string, unknown>) => {
-    const s = typeof item === "string" ? item : JSON.stringify(item, null, " ");
+    const s = typeof item === "string" ? item : JSON.stringify(item);
     const maxLength = 40;
     if (s.length < maxLength) {
       return s;

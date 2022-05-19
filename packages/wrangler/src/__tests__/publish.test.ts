@@ -3420,14 +3420,9 @@ addEventListener('fetch', event => {});`
           - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
           - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
         - some unsafe thing
-          - UNSAFE_BINDING_ONE: {
-         \\"data\\": {
-          \\"some\\": {
-           \\"unsafe\\":...
+          - UNSAFE_BINDING_ONE: {\\"data\\":{\\"some\\":{\\"unsafe\\":\\"thing\\"}}}
         - another unsafe thing
-          - UNSAFE_BINDING_TWO: {
-         \\"data\\": 1337
-        }
+          - UNSAFE_BINDING_TWO: {\\"data\\":1337}
         - Vars
           - ENV_VAR_ONE: \\"123\\"
           - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
@@ -4441,9 +4436,7 @@ addEventListener('fetch', event => {});`
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
           - binding-type
-            - my-binding: {
-           \\"param\\": \\"binding-param\\"
-          }
+            - my-binding: {\\"param\\":\\"binding-param\\"}
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4485,9 +4478,7 @@ addEventListener('fetch', event => {});`
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
           - plain_text
-            - my-binding: {
-           \\"text\\": \\"text\\"
-          }
+            - my-binding: {\\"text\\":\\"text\\"}
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
