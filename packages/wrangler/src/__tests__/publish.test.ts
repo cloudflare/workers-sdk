@@ -1178,9 +1178,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -1232,9 +1229,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1326,9 +1320,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1385,11 +1376,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
-        - Text Blobs
-          - __STATIC_CONTENT_MANIFEST: __STATIC_CONTENT_MANIFEST
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1440,9 +1426,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1491,9 +1474,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-some-env-workers_sites_assets-id
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
           some-env.test-name.test-sub-domain.workers.dev"
@@ -1543,9 +1523,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-some-env-workers_sites_assets-id
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
           test-name-some-env.test-sub-domain.workers.dev"
@@ -1590,9 +1567,6 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1632,9 +1606,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1674,9 +1645,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1717,9 +1685,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1760,9 +1725,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1803,9 +1765,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1846,9 +1805,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1891,9 +1847,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/directory-1/file-1.txt...
         Uploading as assets/directory-1/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1940,9 +1893,6 @@ addEventListener('fetch', event => {});`
         "Reading assets/.well-known/file-2.txt...
         Uploading as assets/.well-known/file-2.5938485188.txt...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2088,9 +2038,6 @@ addEventListener('fetch', event => {});`
         Deleting assets/file-3.somehash.txt from the asset store...
         Deleting assets/file-4.anotherhash.txt from the asset store...
         ↗️  Done syncing assets
-        Your worker has access to the following:
-        - KV Namespaces
-          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"

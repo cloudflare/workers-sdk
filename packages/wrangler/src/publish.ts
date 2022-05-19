@@ -494,7 +494,12 @@ export default async function publish(props: Props): Promise<void> {
       usage_model: config.usage_model,
     };
 
-    printBindings(bindings);
+    const withoutStaticAssets = {
+      ...bindings,
+      kv_namespaces: config.kv_namespaces,
+      text_blobs: config.text_blobs,
+    };
+    printBindings(withoutStaticAssets);
 
     if (!props.dryRun) {
       // Upload the script so it has time to propagate.
