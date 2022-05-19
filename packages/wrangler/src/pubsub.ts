@@ -26,7 +26,7 @@ export async function listPubSubNamespace(
  * A 400 is returned if the account already owns a bucket with this name.
  * A bucket must be explicitly deleted to be replaced.
  */
-//DELETE: https://api.staging.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pubsub/namespaces
+//DELETE: https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pubsub/namespaces
 
 
 export async function createPubSubNamespace(

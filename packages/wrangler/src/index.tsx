@@ -1696,7 +1696,7 @@ function createCLIParser(argv: string[]) {
       );
   });
 
-  wrangler.command("pubsub", "Interact with programmable mqtt on the edge", (pubsubYargs) => {
+  wrangler.command("pubsub", "Interact and manage your Pub/Sub messaging brokers", (pubsubYargs) => {
     return pubsubYargs
       .command(subHelp)
       .command("namespaces", "Manage pubsub namespaces", (pubsubNamespaceYargs) => {
