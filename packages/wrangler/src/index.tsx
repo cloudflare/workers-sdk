@@ -1286,6 +1286,7 @@ function createCLIParser(argv: string[]) {
         args.siteInclude,
         args.siteExclude
       );
+
       await publish({
         config,
         accountId,
