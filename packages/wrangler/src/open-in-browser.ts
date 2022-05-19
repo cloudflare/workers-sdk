@@ -8,19 +8,12 @@ import { logger } from "./logger";
  * StackBlitz, remote servers), it doesn't just crash the process.
  *
  * @param url the URL to point the browser at
- * @param options open a Chromium-based browser instead of the default
  */
-export default async function openInBrowser(
-  url: string,
-  { forceChromium }: { forceChromium: boolean } = { forceChromium: false }
-): Promise<void> {
-  const options: open.Options | undefined = forceChromium
-    ? {
-        app: [{ name: open.apps.chrome }, { name: open.apps.edge }],
-      }
-    : undefined;
-  const childProcess = await open(url, options);
+export default async function openInBrowser(url: string): Promise<void> {
+  const errorMessage = `Failed to open ${url} in a browser`;
+
+  const childProcess = await open(url);
   childProcess.on("error", () => {
-    logger.warn(`Failed to open ${url} in a browser.`);
+    logger.warn(errorMessage);
   });
 }
