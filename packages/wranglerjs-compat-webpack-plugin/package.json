@@ -7,6 +7,9 @@
   "type": "commonjs",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "bugs": {
     "url": "https://github.com/cloudflare/wrangler2/issues"
   },
