@@ -5,6 +5,7 @@ import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
+import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { confirm } from "./dialogs";
 import { logger } from "./logger";
@@ -492,6 +493,8 @@ export default async function publish(props: Props): Promise<void> {
         props.compatibilityFlags ?? config.compatibility_flags,
       usage_model: config.usage_model,
     };
+
+    printBindings(bindings);
 
     if (!props.dryRun) {
       // Upload the script so it has time to propagate.

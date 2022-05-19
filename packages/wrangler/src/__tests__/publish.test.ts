@@ -1178,6 +1178,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -1229,6 +1232,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1320,6 +1326,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1376,6 +1385,11 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
+        - Text Blobs
+          - __STATIC_CONTENT_MANIFEST: __STATIC_CONTENT_MANIFEST
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1426,6 +1440,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1474,6 +1491,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-some-env-workers_sites_assets-id
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
           some-env.test-name.test-sub-domain.workers.dev"
@@ -1523,6 +1543,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-some-env-workers_sites_assets-id
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
           test-name-some-env.test-sub-domain.workers.dev"
@@ -1567,6 +1590,9 @@ addEventListener('fetch', event => {});`
         Reading assets/file-2.txt...
         Uploading as assets/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1606,6 +1632,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1645,6 +1674,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1685,6 +1717,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1725,6 +1760,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1765,6 +1803,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1805,6 +1846,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/file-1.txt...
         Uploading as assets/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1847,6 +1891,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/directory-1/file-1.txt...
         Uploading as assets/directory-1/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1893,6 +1940,9 @@ addEventListener('fetch', event => {});`
         "Reading assets/.well-known/file-2.txt...
         Uploading as assets/.well-known/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2038,6 +2088,9 @@ addEventListener('fetch', event => {});`
         Deleting assets/file-3.somehash.txt from the asset store...
         Deleting assets/file-4.anotherhash.txt from the asset store...
         ↗️  Done syncing assets
+        Your worker has access to the following:
+        - KV Namespaces
+          - __STATIC_CONTENT: __test-name-workers_sites_assets-id
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -3419,10 +3472,9 @@ addEventListener('fetch', event => {});`
         - Text Blobs
           - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
           - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
-        - some unsafe thing
-          - UNSAFE_BINDING_ONE: {\\"data\\":{\\"some\\":{\\"unsafe\\":\\"thing\\"}}}
-        - another unsafe thing
-          - UNSAFE_BINDING_TWO: {\\"data\\":1337}
+        - Unsafe
+          - some unsafe thing: UNSAFE_BINDING_ONE
+          - another unsafe thing: UNSAFE_BINDING_TWO
         - Vars
           - ENV_VAR_ONE: \\"123\\"
           - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
@@ -3832,10 +3884,7 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
-          - Wasm Modules
-            - TESTWASMNAME: path/to/test.wasm
-
+          "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -3972,10 +4021,7 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
-          - Text Blobs
-            - TESTTEXTBLOBNAME: path/to/text.file
-
+          "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -4084,10 +4130,7 @@ addEventListener('fetch', event => {});`
           `"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
         );
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
-          - Data Blobs
-            - TESTDATABLOBNAME: path/to/data.bin
-
+          "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
@@ -4435,8 +4478,8 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - binding-type
-            - my-binding: {\\"param\\":\\"binding-param\\"}
+          - Unsafe
+            - binding-type: my-binding
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4477,8 +4520,8 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Your worker has access to the following:
-          - plain_text
-            - my-binding: {\\"text\\":\\"text\\"}
+          - Unsafe
+            - plain_text: my-binding
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"

@@ -2,6 +2,7 @@ import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
+import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
 
 export type {
@@ -65,20 +66,7 @@ export function findWranglerToml(
 /**
  * Print all the bindings a worker using a given config would have access to
  */
-export function printBindings({
-  config,
-  dev,
-}: {
-  /**
-   * The configuration to get bindings from
-   */
-  config: Config;
-
-  /**
-   * `true` if running in dev mode. Uses `preview_id`s when possible.
-   */
-  dev: boolean;
-}) {
+export function printBindings(bindings: CfWorkerInit["bindings"]) {
   const truncate = (item: string | Record<string, unknown>) => {
     const s = typeof item === "string" ? item : JSON.stringify(item);
     const maxLength = 40;
@@ -102,7 +90,7 @@ export function printBindings({
     unsafe,
     vars,
     wasm_modules,
-  } = config;
+  } = bindings;
 
   if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
     output.push({
@@ -114,7 +102,7 @@ export function printBindings({
     });
   }
 
-  if (durable_objects.bindings.length > 0) {
+  if (durable_objects && durable_objects.bindings.length > 0) {
     output.push({
       type: "Durable Objects",
       entries: durable_objects.bindings.map(
@@ -136,33 +124,31 @@ export function printBindings({
     });
   }
 
-  if (kv_namespaces.length > 0) {
+  if (kv_namespaces && kv_namespaces.length > 0) {
     output.push({
       type: "KV Namespaces",
-      entries: kv_namespaces.map(({ binding, id, preview_id }) => {
+      entries: kv_namespaces.map(({ binding, id }) => {
         return {
           key: binding,
-          value: dev ? preview_id ?? id : id,
+          value: id,
         };
       }),
     });
   }
 
-  if (r2_buckets.length > 0) {
+  if (r2_buckets && r2_buckets.length > 0) {
     output.push({
       type: "R2 Buckets",
-      entries: r2_buckets.map(
-        ({ binding, bucket_name, preview_bucket_name }) => {
-          return {
-            key: binding,
-            value: dev ? preview_bucket_name ?? bucket_name : bucket_name,
-          };
-        }
-      ),
+      entries: r2_buckets.map(({ binding, bucket_name }) => {
+        return {
+          key: binding,
+          value: bucket_name,
+        };
+      }),
     });
   }
 
-  if (services.length > 0) {
+  if (services && services.length > 0) {
     output.push({
       type: "Services",
       entries: services.map(({ binding, service, environment }) => {
@@ -189,33 +175,14 @@ export function printBindings({
     });
   }
 
-  if (unsafe.bindings.length > 0) {
-    const groupedBindings = unsafe.bindings.reduce(
-      (grouped, { type, name, ...binding }) => {
-        const i = grouped.findIndex((group) => group.type === type);
-        if (i < 0) {
-          grouped.push({
-            type,
-            entries: [
-              {
-                key: name,
-                value: truncate(binding),
-              },
-            ],
-          });
-        } else {
-          grouped[i].entries.push({
-            key: name,
-            value: truncate(binding),
-          });
-        }
-
-        return grouped;
-      },
-      [] as typeof output
-    );
-
-    output.push(...groupedBindings);
+  if (unsafe && unsafe.length > 0) {
+    output.push({
+      type: "Unsafe",
+      entries: unsafe.map(({ name, type }) => ({
+        key: type,
+        value: name,
+      })),
+    });
   }
 
   if (vars !== undefined && Object.keys(vars).length > 0) {
