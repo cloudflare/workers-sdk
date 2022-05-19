@@ -19,8 +19,22 @@ export default async function openInBrowser(
         app: [{ name: open.apps.chrome }, { name: open.apps.edge }],
       }
     : undefined;
-  const childProcess = await open(url, options);
-  childProcess.on("error", () => {
-    logger.warn(`Failed to open ${url} in a browser.`);
-  });
+
+  const errorMessage = `Failed to open ${url} in a ${
+    forceChromium ? "Chromium-based" : ""
+  } browser.${
+    forceChromium
+      ? "\nPlease install a Chromium-based browser such as Google Chrome or Microsoft Edge."
+      : ""
+  }`;
+
+  try {
+    const childProcess = await open(url, options);
+    childProcess.on("error", () => {
+      logger.warn(errorMessage);
+    });
+  } catch (e) {
+    const cause = e instanceof Error ? e : new Error(`${e}`);
+    throw new Error(errorMessage, { cause });
+  }
 }
