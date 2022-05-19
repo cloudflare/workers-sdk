@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { createServer } from "node:http";
+import os from "node:os";
 import { URL } from "node:url";
 
 import open from "open";
@@ -11,7 +12,6 @@ import { waitForPortToBeAvailable } from "./proxy";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
-import os from 'node:os';
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -650,8 +650,8 @@ export const openInspector = async (inspectorPort: number) => {
           name: open.apps.chrome,
         },
         {
-          name: braveBrowser
-        }
+          name: braveBrowser,
+        },
         {
           name: open.apps.edge,
         },
