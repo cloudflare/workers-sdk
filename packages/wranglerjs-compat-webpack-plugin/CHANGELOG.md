@@ -1,5 +1,11 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.3
+
+### Patch Changes
+
+- [`cf300ee`](https://github.com/cloudflare/wrangler2/commit/cf300eef4c6ca94386ed3cbcf19d470aa6972aca) Thanks [@threepointone](https://github.com/threepointone)! - fix: include files to be published with wranglerjs-compat-webpack-plugin
+
 ## 0.0.2
 
 ### Patch Changes
