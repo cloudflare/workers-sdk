@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { createServer } from "node:http";
 import { URL } from "node:url";
 
+import open from "open";
 import { useEffect, useRef, useState } from "react";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
@@ -621,3 +622,28 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
     logger.warn("console event:", evt);
   }
 }
+
+export const openInspector = async (inspectorPort: number) => {
+  const url = `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`;
+  const errorMessage =
+    "Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
+
+  try {
+    const childProcess = await open(url, {
+      app: [
+        {
+          name: open.apps.chrome,
+        },
+        {
+          name: open.apps.edge,
+        },
+      ],
+    });
+    childProcess.on("error", () => {
+      logger.warn(errorMessage);
+    });
+  } catch (e) {
+    const cause = e instanceof Error ? e : new Error(`${e}`);
+    throw new Error(errorMessage, { cause });
+  }
+};

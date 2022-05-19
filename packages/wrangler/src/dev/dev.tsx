@@ -10,6 +10,7 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import { runCustomBuild } from "../entry";
+import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getAPIToken } from "../user";
@@ -378,10 +379,7 @@ function useHotkeys(
         }
         // toggle inspector
         case "d": {
-          await openInBrowser(
-            `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`,
-            { forceChromium: true }
-          );
+          await openInspector(inspectorPort);
           break;
         }
         // toggle local
