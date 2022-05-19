@@ -1,6 +1,6 @@
 {
   "name": "wranglerjs-compat-webpack-plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
   "author": "wrangler@cloudflare.com",
   "license": "MIT OR Apache-2.0",
