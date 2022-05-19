@@ -82,7 +82,6 @@ jobs:
 
       - name: Build wrangler
         run: npm run build
-        working-directory: packages/wrangler
 
       - name: Build & Publish Prerelease Registry
         run: npm run publish

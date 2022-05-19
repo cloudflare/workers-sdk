@@ -36,6 +36,9 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
+      - name: Build
+        run: npm run build
+
       - name: Check for errors
         run: npm run check
 
