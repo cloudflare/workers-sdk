@@ -1,5 +1,11 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.5
+
+### Patch Changes
+
+- [`8529678`](https://github.com/cloudflare/wrangler2/commit/85296787adb1835054510a5df23a30ee08758971) Thanks [@threepointone](https://github.com/threepointone)! - fix: build the webpack plugin along with the others
+
 ## 0.0.4
 
 ### Patch Changes
