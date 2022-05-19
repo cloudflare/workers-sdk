@@ -37,7 +37,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        working-directory: packages/wrangler
 
       - name: Pack
         run: npm pack
