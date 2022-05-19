@@ -102,7 +102,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     });
   }
 
-  if (durable_objects && durable_objects.bindings.length > 0) {
+  if (durable_objects !== undefined && durable_objects.bindings.length > 0) {
     output.push({
       type: "Durable Objects",
       entries: durable_objects.bindings.map(
@@ -124,7 +124,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     });
   }
 
-  if (kv_namespaces && kv_namespaces.length > 0) {
+  if (kv_namespaces !== undefined && kv_namespaces.length > 0) {
     output.push({
       type: "KV Namespaces",
       entries: kv_namespaces.map(({ binding, id }) => {
@@ -136,7 +136,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     });
   }
 
-  if (r2_buckets && r2_buckets.length > 0) {
+  if (r2_buckets !== undefined && r2_buckets.length > 0) {
     output.push({
       type: "R2 Buckets",
       entries: r2_buckets.map(({ binding, bucket_name }) => {
@@ -148,7 +148,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     });
   }
 
-  if (services && services.length > 0) {
+  if (services !== undefined && services.length > 0) {
     output.push({
       type: "Services",
       entries: services.map(({ binding, service, environment }) => {
@@ -175,7 +175,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     });
   }
 
-  if (unsafe && unsafe.length > 0) {
+  if (unsafe !== undefined && unsafe.length > 0) {
     output.push({
       type: "Unsafe",
       entries: unsafe.map(({ name, type }) => ({
