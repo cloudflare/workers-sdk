@@ -11,6 +11,7 @@ import { waitForPortToBeAvailable } from "./proxy";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
+import os from 'node:os';
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -623,10 +624,24 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
   }
 }
 
+/**
+ * Opens the chrome debugger
+ */
 export const openInspector = async (inspectorPort: number) => {
   const url = `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`;
   const errorMessage =
     "Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
+
+  // see: https://github.com/sindresorhus/open/issues/177#issue-610016699
+  let braveBrowser: string;
+  switch (os.platform()) {
+    case "darwin":
+    case "win32":
+      braveBrowser = "Brave";
+      break;
+    default:
+      braveBrowser = "brave";
+  }
 
   try {
     const childProcess = await open(url, {
@@ -634,6 +649,9 @@ export const openInspector = async (inspectorPort: number) => {
         {
           name: open.apps.chrome,
         },
+        {
+          name: braveBrowser
+        }
         {
           name: open.apps.edge,
         },
