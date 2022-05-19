@@ -247,8 +247,8 @@ export function printBindings({
     ...output
       .map((bindingGroup) => {
         return [
-          bindingGroup.type,
-          bindingGroup.entries.map(({ key, value }) => `\t- ${key}: ${value}`),
+          `- ${bindingGroup.type}`,
+          bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
         ];
       })
       .flat(2),
