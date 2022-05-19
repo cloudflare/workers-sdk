@@ -471,7 +471,7 @@ describe("publish", () => {
     mockSubDomainRequest();
     await runWrangler("publish ./some-path/worker/index.js");
     expect(std.out).toMatchInlineSnapshot(`
-      "Your worker has access to the following:
+      "Your worker has access to the following bindings:
       - Vars:
         - xyz: \\"123\\"
       Uploaded test-name (TIMINGS)
@@ -2832,7 +2832,7 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Your worker has access to the following:
+        "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass
         Uploaded test-name (TIMINGS)
@@ -2867,7 +2867,7 @@ addEventListener('fetch', event => {});`
       mockUploadWorkerRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Your worker has access to the following:
+        "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass (defined in some-script)
         Uploaded test-name (TIMINGS)
@@ -2909,7 +2909,7 @@ addEventListener('fetch', event => {});`
 
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Your worker has access to the following:
+        "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
@@ -2959,7 +2959,7 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Your worker has access to the following:
+          "out": "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
@@ -3002,7 +3002,7 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Your worker has access to the following:
+          "out": "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
@@ -3047,7 +3047,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
@@ -3109,7 +3109,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js --legacy-env false --env xyz");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
@@ -3167,7 +3167,7 @@ addEventListener('fetch', event => {});`
           Object {
             "debug": "",
             "err": "",
-            "out": "Your worker has access to the following:
+            "out": "Your worker has access to the following bindings:
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
@@ -3235,7 +3235,7 @@ addEventListener('fetch', event => {});`
           Object {
             "debug": "",
             "err": "",
-            "out": "Your worker has access to the following:
+            "out": "Your worker has access to the following bindings:
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
@@ -3403,7 +3403,7 @@ addEventListener('fetch', event => {});`
 
       await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
       expect(std.out).toMatchInlineSnapshot(`
-        "Your worker has access to the following:
+        "Your worker has access to the following bindings:
         - Data Blobs:
           - DATA_BLOB_ONE: some-data-blob.bin
           - DATA_BLOB_TWO: more-data-blob.bin
@@ -3804,7 +3804,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Wasm Modules:
             - TESTWASMNAME: path/to/test.wasm
           Uploaded test-name (TIMINGS)
@@ -3873,7 +3873,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Wasm Modules:
             - TESTWASMNAME: path/to/and/the/path/to/test.wasm
           Uploaded test-name (TIMINGS)
@@ -3941,7 +3941,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/text.file
           Uploaded test-name (TIMINGS)
@@ -4014,7 +4014,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
           Uploaded test-name (TIMINGS)
@@ -4050,7 +4050,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Data Blobs:
             - TESTDATABLOBNAME: path/to/data.bin
           Uploaded test-name (TIMINGS)
@@ -4123,7 +4123,7 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js --config ./path/to/wrangler.toml");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Data Blobs:
             - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
           Uploaded test-name (TIMINGS)
@@ -4160,7 +4160,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Vars:
             - text: \\"plain ol' string\\"
             - count: \\"1\\"
@@ -4189,7 +4189,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - R2 Buckets:
             - FOO: foo-bucket
           Uploaded test-name (TIMINGS)
@@ -4234,7 +4234,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
           Uploaded test-name (TIMINGS)
@@ -4273,7 +4273,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
           Uploaded test-name (TIMINGS)
@@ -4317,7 +4317,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
           Uploaded test-name (TIMINGS)
@@ -4379,7 +4379,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Services:
             - FOO: foo-service - production
           Uploaded test-name (TIMINGS)
@@ -4424,7 +4424,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Unsafe:
             - binding-type: my-binding
           Uploaded test-name (TIMINGS)
@@ -4466,7 +4466,7 @@ addEventListener('fetch', event => {});`
 
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Your worker has access to the following:
+          "Your worker has access to the following bindings:
           - Unsafe:
             - plain_text: my-binding
           Uploaded test-name (TIMINGS)
@@ -4920,7 +4920,7 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Your worker has access to the following:
+          "out": "Your worker has access to the following bindings:
         - Durable Objects:
           - NAME: SomeClass
         --dry-run: exiting now.",
