@@ -40,7 +40,7 @@ export async function fetchInternal<ResponseType>(
     {
       method,
       ...init,
-      headers,
+      headers: { "Content-Type": "application/json", ...headers },
     }
   );
   const jsonText = await response.text();
