@@ -66,7 +66,12 @@ async function sessionToken(
     ? `/zones/${ctx.zone.id}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-  const { exchange_url } = await fetchResult<{ exchange_url: string }>(initUrl);
+  const { exchange_url } = await fetchResult<{ exchange_url: string }>(
+    initUrl,
+    undefined,
+    undefined,
+    abortSignal
+  );
   const { inspector_websocket, prewarm, token } = (await (
     await fetch(exchange_url, { signal: abortSignal })
   ).json()) as { inspector_websocket: string; token: string; prewarm: string };
@@ -119,13 +124,18 @@ async function createPreviewToken(
   const formData = createWorkerUploadForm(worker);
   formData.set("wrangler-session-config", JSON.stringify(mode));
 
-  const { preview_token } = await fetchResult<{ preview_token: string }>(url, {
-    method: "POST",
-    body: formData,
-    headers: {
-      "cf-preview-upload-config-token": value,
+  const { preview_token } = await fetchResult<{ preview_token: string }>(
+    url,
+    {
+      method: "POST",
+      body: formData,
+      headers: {
+        "cf-preview-upload-config-token": value,
+      },
     },
-  });
+    undefined,
+    abortSignal
+  );
 
   return {
     value: preview_token,
