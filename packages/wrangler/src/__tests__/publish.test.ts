@@ -2841,7 +2841,13 @@ addEventListener('fetch', event => {});`
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIn wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
+          but no [migrations] for them. This may not work as expected until you add a [migrations] section
+          to your wrangler.toml. Refer to
+          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
+          for more details.
 
         "
       `);
