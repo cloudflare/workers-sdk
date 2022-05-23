@@ -404,7 +404,7 @@ export async function waitForPortToBeAvailable(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (options.abortSignal as any).addEventListener("abort", () => {
+    options.abortSignal.addEventListener("abort", () => {
       const abortError = new Error("waitForPortToBeAvailable() aborted");
       (abortError as Error & { code: string }).code = "ABORT_ERR";
       doReject(abortError);
