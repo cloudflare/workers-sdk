@@ -187,14 +187,9 @@ export async function syncAssets(
 
   await Promise.all([
     // upload all the new assets
-    putKVBulkKeyValue(accountId, namespace, toUpload, () => {}),
+    putKVBulkKeyValue(accountId, namespace, toUpload),
     // delete all the unused assets
-    deleteKVBulkKeyValue(
-      accountId,
-      namespace,
-      Array.from(namespaceKeys),
-      () => {}
-    ),
+    deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys)),
   ]);
 
   logger.log("↗️  Done syncing assets");

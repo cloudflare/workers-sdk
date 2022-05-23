@@ -1205,10 +1205,10 @@ describe("wrangler", () => {
         );
         expect(requests.count).toEqual(3);
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded 0 of 12000.
-          Uploaded 5000 of 12000.
-          Uploaded 10000 of 12000.
-          Uploaded 12000 of 12000.
+          "Uploaded 0% (0 out of 12,000)
+          Uploaded 41% (5,000 out of 12,000)
+          Uploaded 83% (10,000 out of 12,000)
+          Uploaded 100% (12,000 out of 12,000)
           Success!"
         `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1358,10 +1358,10 @@ describe("wrangler", () => {
         );
         expect(requests.count).toEqual(3);
         expect(std.out).toMatchInlineSnapshot(`
-          "Deleted 0 of 12000.
-          Deleted 5000 of 12000.
-          Deleted 10000 of 12000.
-          Deleted 12000 of 12000.
+          "Deleted 0% (0 out of 12,000)
+          Deleted 41% (5,000 out of 12,000)
+          Deleted 83% (10,000 out of 12,000)
+          Deleted 100% (12,000 out of 12,000)
           Success!"
         `);
         expect(std.warn).toMatchInlineSnapshot(`""`);

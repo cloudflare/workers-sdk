@@ -1,5 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
+import { logger } from "./logger";
 import type { Config } from "./config";
 
 /** The largest number of kv items we can pass to the API in a single request. */
@@ -205,15 +206,37 @@ export async function deleteKVKeyValue(
   );
 }
 
+/**
+ * Formatter for converting e.g. 5328 --> 5,328
+ */
+const formatNumber = new Intl.NumberFormat("en-US", {
+  notation: "standard",
+}).format;
+
+/**
+ * Helper function for bulk requests, logs ongoing output to console.
+ */
+function logBulkProgress(
+  operation: "put" | "delete",
+  index: number,
+  total: number
+) {
+  logger.log(
+    `${operation === "put" ? "Uploaded" : "Deleted"} ${Math.floor(
+      (100 * index) / total
+    )}% (${formatNumber(index)} out of ${formatNumber(total)})`
+  );
+}
+
 export async function putKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keyValues: KeyValue[],
-  progressCallback: (index: number, total: number) => void
+  quiet = false
 ) {
   for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
-    if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
-      progressCallback(index, keyValues.length);
+    if (!quiet && keyValues.length > BATCH_KEY_MAX) {
+      logBulkProgress("put", index, keyValues.length);
     }
 
     await fetchResult(
@@ -225,8 +248,9 @@ export async function putKVBulkKeyValue(
       }
     );
   }
-  if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
-    progressCallback(keyValues.length, keyValues.length);
+
+  if (!quiet && keyValues.length > BATCH_KEY_MAX) {
+    logBulkProgress("put", keyValues.length, keyValues.length);
   }
 }
 
@@ -234,11 +258,11 @@ export async function deleteKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keys: string[],
-  progressCallback: (index: number, total: number) => void
+  quiet = false
 ) {
   for (let index = 0; index < keys.length; index += BATCH_KEY_MAX) {
-    if (progressCallback && keys.length > BATCH_KEY_MAX) {
-      progressCallback(index, keys.length);
+    if (!quiet && keys.length > BATCH_KEY_MAX) {
+      logBulkProgress("delete", index, keys.length);
     }
 
     await fetchResult(
@@ -250,8 +274,8 @@ export async function deleteKVBulkKeyValue(
       }
     );
   }
-  if (progressCallback && keys.length > BATCH_KEY_MAX) {
-    progressCallback(keys.length, keys.length);
+  if (!quiet && keys.length > BATCH_KEY_MAX) {
+    logBulkProgress("delete", keys.length, keys.length);
   }
 }
 
