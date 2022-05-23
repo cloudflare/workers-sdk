@@ -207,25 +207,24 @@ export async function deleteKVKeyValue(
 }
 
 /**
- * Formatter for converting e.g. 5,328 --> 5.3K
+ * Formatter for converting e.g. 5328 --> 5,328
  */
-const compact = new Intl.NumberFormat("en-US", {
-  compactDisplay: "short",
-  notation: "compact",
+const formatNumber = new Intl.NumberFormat("en-US", {
+  notation: "standard",
 }).format;
 
 /**
  * Helper function for bulk requests, logs ongoing output to console.
  */
 function logBulkProgress(
-  request: "put" | "delete",
+  operation: "put" | "delete",
   index: number,
   total: number
 ) {
   logger.log(
-    `${request === "put" ? "Uploaded" : "Deleted"} ${Math.floor(
+    `${operation === "put" ? "Uploaded" : "Deleted"} ${Math.floor(
       (100 * index) / total
-    )}% (${compact(index)} out of ${compact(total)})`
+    )}% (${formatNumber(index)} out of ${formatNumber(total)})`
   );
 }
 
