@@ -62,8 +62,6 @@ export class ParseError extends Error implements Message {
   }
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const TOML_ERROR_NAME = "TomlError";
 const TOML_ERROR_SUFFIX = " at row ";
 
@@ -101,9 +99,28 @@ export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
 const JSON_ERROR_SUFFIX = " in JSON at position ";
 
 /**
+ * A minimal type describing a package.json file.
+ */
+export type PackageJSON = {
+  devDependencies?: Record<string, unknown>;
+  dependencies?: Record<string, unknown>;
+  scripts?: Record<string, unknown>;
+};
+
+/**
+ * A typed version of `parseJSON()`.
+ */
+export function parsePackageJSON<T extends PackageJSON = PackageJSON>(
+  input: string,
+  file?: string
+): T {
+  return parseJSON<T>(input, file);
+}
+
+/**
  * A wrapper around `JSON.parse` that throws a `ParseError`.
  */
-export function parseJSON(input: string, file?: string): any {
+export function parseJSON<T>(input: string, file?: string): T {
   try {
     return JSON.parse(input);
   } catch (err) {

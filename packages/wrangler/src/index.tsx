@@ -43,6 +43,7 @@ import {
   formatMessage,
   ParseError,
   parseJSON,
+  parsePackageJSON,
   parseTOML,
   readFileSync,
 } from "./parse";
@@ -485,7 +486,7 @@ function createCLIParser(argv: string[]) {
       } else {
         // If package.json exists and wrangler isn't installed,
         // then ask to add wrangler to devDependencies
-        const packageJson = parseJSON(
+        const packageJson = parsePackageJSON(
           readFileSync(pathToPackageJson),
           pathToPackageJson
         );
@@ -539,7 +540,7 @@ function createCLIParser(argv: string[]) {
         isTypescriptProject = true;
         // If there's a tsconfig, check if @cloudflare/workers-types
         // is already installed, and offer to install it if not
-        const packageJson = parseJSON(
+        const packageJson = parsePackageJSON(
           readFileSync(pathToPackageJson),
           pathToPackageJson
         );
@@ -568,7 +569,7 @@ function createCLIParser(argv: string[]) {
         }
       }
 
-      const packageJsonContent = parseJSON(
+      const packageJsonContent = parsePackageJSON(
         readFileSync(pathToPackageJson),
         pathToPackageJson
       );

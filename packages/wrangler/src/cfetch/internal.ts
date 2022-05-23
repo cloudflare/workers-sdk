@@ -45,7 +45,7 @@ export async function fetchInternal<ResponseType>(
   );
   const jsonText = await response.text();
   try {
-    return parseJSON(jsonText) as ResponseType;
+    return parseJSON<ResponseType>(jsonText);
   } catch (err) {
     throw new ParseError({
       text: "Received a malformed response from the API",

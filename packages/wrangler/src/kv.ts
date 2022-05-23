@@ -128,25 +128,50 @@ const KeyValueKeys = new Set([
 ]);
 
 /**
+ * The object has the specified property.
+ */
+function hasProperty<T extends object>(
+  obj: object,
+  property: keyof T
+): obj is T {
+  return property in obj;
+}
+
+/**
+ * The object has a required property of the specified type.
+ */
+function hasTypedProperty<T extends object>(
+  obj: object,
+  property: keyof T,
+  type: string
+): obj is T {
+  return hasProperty(obj, property) && typeof obj[property] === type;
+}
+
+/**
+ * The object an optional property, of the specified type.
+ */
+function hasOptionalTypedProperty<T extends object>(
+  obj: object,
+  property: keyof T,
+  type: string
+): obj is Omit<T, typeof property> | T {
+  return !hasProperty(obj, property) || typeof obj[property] === type;
+}
+
+/**
  * Is the given object a valid `KeyValue` type?
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isKVKeyValue(keyValue: any): keyValue is KeyValue {
-  // (keyValue could indeed be any-thing)
+export function isKVKeyValue(keyValue: unknown): keyValue is KeyValue {
   if (
+    keyValue === null ||
     typeof keyValue !== "object" ||
-    typeof keyValue.key !== "string" ||
-    typeof keyValue.value !== "string" ||
-    !(
-      keyValue.expiration === undefined ||
-      typeof keyValue.expiration === "number"
-    ) ||
-    !(
-      keyValue.expiration_ttl === undefined ||
-      typeof keyValue.expiration_ttl === "number"
-    ) ||
-    !(keyValue.base64 === undefined || typeof keyValue.base64 === "boolean") ||
-    !(keyValue.metadata === undefined || typeof keyValue.metadata === "object")
+    !hasTypedProperty(keyValue, "key", "string") ||
+    !hasTypedProperty(keyValue, "value", "string") ||
+    !hasOptionalTypedProperty(keyValue, "expiration", "number") ||
+    !hasOptionalTypedProperty(keyValue, "expiration_ttl", "number") ||
+    !hasOptionalTypedProperty(keyValue, "base64", "boolean") ||
+    !hasOptionalTypedProperty(keyValue, "metadata", "object")
   ) {
     return false;
   }
