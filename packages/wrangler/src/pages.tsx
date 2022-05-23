@@ -4,7 +4,7 @@ import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, sep } from "node:path";
+import { dirname, join, sep, extname, basename } from "node:path";
 import { cwd } from "node:process";
 import { URL } from "node:url";
 import { hash } from "blake3-wasm";
@@ -733,6 +733,7 @@ async function buildFunctions({
   onEnd,
   plugin = false,
   buildOutputDirectory,
+  nodeCompat,
 }: {
   outfile: string;
   outputConfigPath?: string;
@@ -744,12 +745,13 @@ async function buildFunctions({
   onEnd?: () => void;
   plugin?: boolean;
   buildOutputDirectory?: string;
+  nodeCompat?: boolean;
 }) {
   RUNNING_BUILDERS.forEach(
     (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
   );
 
-  const routesModule = join(tmpdir(), "./functionsRoutes.mjs");
+  const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
   const baseURL = toUrlPath("/");
 
   const config: Config = await generateConfigFromFileTree({
@@ -778,6 +780,7 @@ async function buildFunctions({
         minify,
         sourcemap,
         watch,
+        nodeCompat,
         onEnd,
       })
     );
@@ -792,6 +795,7 @@ async function buildFunctions({
         watch,
         onEnd,
         buildOutputDirectory,
+        nodeCompat,
       })
     );
   }
@@ -1024,7 +1028,7 @@ const createDeployment: CommandModule<
     let builtFunctions: string | undefined = undefined;
     const functionsDirectory = join(cwd(), "functions");
     if (existsSync(functionsDirectory)) {
-      const outfile = join(tmpdir(), "./functionsWorker.js");
+      const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 
       await new Promise((resolve) =>
         buildFunctions({
@@ -1087,8 +1091,7 @@ const createDeployment: CommandModule<
             const fileContent = await readFile(filepath);
 
             const base64Content = fileContent.toString("base64");
-            const extension =
-              name.split(".").length > 1 ? name.split(".").at(-1) || "" : "";
+            const extension = extname(basename(name)).substring(1);
 
             if (filestat.size > 25 * 1024 * 1024) {
               throw new Error(
@@ -1315,7 +1318,7 @@ const createDeployment: CommandModule<
 export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
-      "dev [directory] [-- command]",
+      "dev [directory] [-- command..]",
       "🧑‍💻 Develop your full-stack Pages application locally",
       (yargs) => {
         return yargs
@@ -1371,6 +1374,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               default: false,
               description: "Auto reload HTML pages when change is detected",
             },
+            "node-compat": {
+              describe: "Enable node.js compatibility",
+              default: false,
+              type: "boolean",
+              hidden: true,
+            },
             // TODO: Miniflare user options
           })
           .epilogue(pagesBetaWarning);
@@ -1385,6 +1394,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         kv: kvs = [],
         do: durableObjects = [],
         "live-reload": liveReload,
+        "node-compat": nodeCompat,
         _: [_pages, _dev, ...remaining],
       }) => {
         // Beta message for `wrangler pages <commands>` usage
@@ -1418,7 +1428,16 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         );
 
         if (usingFunctions) {
-          const outfile = join(tmpdir(), "./functionsWorker.js");
+          const outfile = join(
+            tmpdir(),
+            `./functionsWorker-${Math.random()}.js`
+          );
+
+          if (nodeCompat) {
+            console.warn(
+              "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+            );
+          }
 
           logger.log(`Compiling worker to "${outfile}"...`);
 
@@ -1430,6 +1449,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               watch: true,
               onEnd: () => scriptReadyResolve(),
               buildOutputDirectory: directory,
+              nodeCompat,
             });
           } catch {}
 
@@ -1444,6 +1464,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               watch: true,
               onEnd: () => scriptReadyResolve(),
               buildOutputDirectory: directory,
+              nodeCompat,
             });
           });
 
@@ -1651,6 +1672,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 type: "string",
                 description: "The directory to output static assets to",
               },
+              "node-compat": {
+                describe: "Enable node.js compatibility",
+                default: false,
+                type: "boolean",
+                hidden: true,
+              },
             })
             .epilogue(pagesBetaWarning),
         async ({
@@ -1663,10 +1690,17 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           watch,
           plugin,
           "build-output-directory": buildOutputDirectory,
+          "node-compat": nodeCompat,
         }) => {
           if (!isInPagesCI) {
             // Beta message for `wrangler pages <commands>` usage
             logger.log(pagesBetaWarning);
+          }
+
+          if (nodeCompat) {
+            console.warn(
+              "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+            );
           }
 
           buildOutputDirectory ??= dirname(outfile);
@@ -1681,6 +1715,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             watch,
             plugin,
             buildOutputDirectory,
+            nodeCompat,
           });
         }
       )

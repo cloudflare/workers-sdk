@@ -50,7 +50,7 @@ describe("Remix", () => {
           reject(code);
         }
       });
-      wranglerProcess.kill();
+      wranglerProcess.kill("SIGTERM");
     });
   });
 

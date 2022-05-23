@@ -26,7 +26,8 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
 export async function fetchInternal<ResponseType>(
   resource: string,
   init: RequestInit = {},
-  queryParams?: URLSearchParams
+  queryParams?: URLSearchParams,
+  abortSignal?: AbortSignal
 ): Promise<ResponseType> {
   await requireLoggedIn();
   const apiToken = requireApiToken();
@@ -41,11 +42,12 @@ export async function fetchInternal<ResponseType>(
       method,
       ...init,
       headers,
+      signal: abortSignal,
     }
   );
   const jsonText = await response.text();
   try {
-    return parseJSON(jsonText) as ResponseType;
+    return parseJSON<ResponseType>(jsonText);
   } catch (err) {
     throw new ParseError({
       text: "Received a malformed response from the API",

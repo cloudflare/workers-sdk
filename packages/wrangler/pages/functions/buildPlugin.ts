@@ -1,5 +1,7 @@
 import { access, lstat } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
+import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
+import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
 
 type Options = {
@@ -8,6 +10,7 @@ type Options = {
   minify?: boolean;
   sourcemap?: boolean;
   watch?: boolean;
+  nodeCompat?: boolean;
   onEnd?: () => void;
 };
 
@@ -17,6 +20,7 @@ export function buildPlugin({
   minify = false,
   sourcemap = false,
   watch = false,
+  nodeCompat,
   onEnd = () => {},
 }: Options) {
   return build({
@@ -30,6 +34,7 @@ export function buildPlugin({
     sourcemap,
     watch,
     allowOverwrite: true,
+    define: { ...(nodeCompat ? { global: "globalThis" } : {}) },
     plugins: [
       {
         name: "wrangler notifier and monitor",
@@ -87,6 +92,14 @@ export function buildPlugin({
           }
         },
       },
+      ...(nodeCompat
+        ? [
+            NodeGlobalsPolyfills({
+              buffer: true,
+            }),
+            NodeModulesPolyfills(),
+          ]
+        : []),
     ],
   });
 }

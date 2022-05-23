@@ -43,6 +43,7 @@ describe("normalizeAndValidateConfig()", () => {
       migrations: [],
       name: undefined,
       r2_buckets: [],
+      services: [],
       route: undefined,
       routes: undefined,
       rules: [],
@@ -620,6 +621,12 @@ describe("normalizeAndValidateConfig()", () => {
               class_name: "CLASS2",
               script_name: "SCRIPT2",
             },
+            {
+              name: "DO_BINDING_3",
+              class_name: "CLASS3",
+              script_name: "SCRIPT3",
+              environment: "ENV3",
+            },
           ],
         },
         kv_namespaces: [
@@ -636,6 +643,13 @@ describe("normalizeAndValidateConfig()", () => {
             binding: "R2_BINDING_2",
             bucket_name: "R2_BUCKET_2",
             preview_bucket_name: "R2_PREVIEW_2",
+          },
+        ],
+        services: [
+          {
+            binding: "SERVICE_BINDING_1",
+            service: "SERVICE_TYPE_1",
+            environment: "SERVICE_BINDING_ENVIRONMENT_1",
           },
         ],
         unsafe: {
@@ -661,9 +675,11 @@ describe("normalizeAndValidateConfig()", () => {
       );
       expect(diagnostics.hasErrors()).toBe(false);
       expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+        "Processing wrangler configuration:
+          - \\"unsafe\\" fields are experimental and may change or break at any time.
+          - \\"services\\" fields are experimental and may change or break at any time.
+          - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+      `);
     });
 
     it("should error on invalid environment values", () => {
@@ -717,8 +733,8 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
       expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
         "Processing wrangler configuration:
-          - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
-          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+          - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
               666,
               777,
               {
@@ -1106,12 +1122,28 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: {
               bindings: [
                 {},
-                { name: "VALID" },
+                { name: "MISSING_CLASS" },
                 { name: 1555, class_name: 1666 },
                 {
                   name: 1777,
                   class_name: 1888,
                   script_name: 1999,
+                },
+                {
+                  name: "SOMENAME",
+                  class_name: "SomeClass",
+                  environment: "staging",
+                },
+                {
+                  name: 1778,
+                  class_name: 1889,
+                  script_name: 1992,
+                  environment: 2111,
+                },
+                {
+                  name: 1772,
+                  class_name: 1883,
+                  environment: 2112,
                 },
               ],
             },
@@ -1125,7 +1157,12 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: { bindings: expect.anything },
           })
         );
-        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - In wrangler.toml, you have configured [durable_objects] exported by this Worker ((unnamed), (unnamed), 1666, SomeClass, 1883), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -1133,7 +1170,7 @@ describe("normalizeAndValidateConfig()", () => {
               - binding should have a string \\"name\\" field.
               - binding should have a string \\"class_name\\" field.
 
-            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
+            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"MISSING_CLASS\\"}
               - binding should have a string \\"class_name\\" field.
 
             - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
@@ -1143,7 +1180,22 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
               - binding should have a string \\"name\\" field.
               - binding should have a string \\"class_name\\" field.
-              - binding should, optionally, have a string \\"script_name\\" field."
+              - the field \\"script_name\\", when present, should be a string.
+
+            - \\"durable_objects.bindings[4]\\": {\\"name\\":\\"SOMENAME\\",\\"class_name\\":\\"SomeClass\\",\\"environment\\":\\"staging\\"}
+              - binding should have a \\"script_name\\" field if \\"environment\\" is present.
+
+            - \\"durable_objects.bindings[5]\\": {\\"name\\":1778,\\"class_name\\":1889,\\"script_name\\":1992,\\"environment\\":2111}
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
+              - the field \\"script_name\\", when present, should be a string.
+              - the field \\"environment\\", when present, should be a string.
+
+            - \\"durable_objects.bindings[6]\\": {\\"name\\":1772,\\"class_name\\":1883,\\"environment\\":2112}
+              - binding should have a string \\"name\\" field.
+              - binding should have a string \\"class_name\\" field.
+              - the field \\"environment\\", when present, should be a string.
+              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
         `);
       });
     });
@@ -1354,6 +1406,151 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
             - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
             - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+        `);
+      });
+    });
+
+    describe("services field", () => {
+      it("should error if services is an object", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: {} } as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got {}."
+        `);
+      });
+
+      it("should error if services is a string", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: "BAD" } as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got \\"BAD\\"."
+        `);
+      });
+
+      it("should error if services is a number", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: 999 } as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got 999."
+        `);
+      });
+
+      it("should error if services is null", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          { services: null } as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({ services: expect.anything })
+        );
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"services\\" should be an array but got null."
+        `);
+      });
+
+      it("should error if services bindings are not valid", () => {
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          {
+            services: [
+              {},
+              { binding: "SERVICE_BINDING_1" },
+              { binding: 123, service: 456 },
+              { binding: 123, service: 456, environment: 789 },
+              { binding: "SERVICE_BINDING_1", service: 456, environment: 789 },
+              {
+                binding: 123,
+                service: "SERVICE_BINDING_SERVICE_1",
+                environment: 789,
+              },
+              {
+                binding: 123,
+                service: 456,
+                environment: "SERVICE_BINDING_ENVIRONMENT_1",
+              },
+            ],
+          } as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(
+          expect.not.objectContaining({
+            services: { bindings: expect.anything },
+          })
+        );
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
+            - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
+            - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
+            - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+            - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
+            - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+            - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+            - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+            - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+            - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
         `);
       });
     });
@@ -1622,14 +1819,7 @@ describe("normalizeAndValidateConfig()", () => {
             - [1mDeprecation[0m: \\"zone_id\\":
               This is unnecessary since we can deduce this from routes directly.
             - [1mDeprecation[0m: \\"experimental_services\\":
-              The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
-              \`\`\`
-              [[unsafe.bindings]]
-              name = \\"mock-name\\"
-              type = \\"service\\"
-              service = \\"SERVICE\\"
-              environment = \\"ENV\\"
-              \`\`\`"
+              The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
         `);
       });
     });
@@ -2045,8 +2235,8 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
 
           - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got 888.
-            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: [
+            - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
                 666,
                 777
               ].
@@ -2284,7 +2474,12 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: { bindings: expect.anything },
           })
         );
-        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - In wrangler.toml, you have configured [durable_objects] exported by this Worker ((unnamed), (unnamed), 1666), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -2304,7 +2499,7 @@ describe("normalizeAndValidateConfig()", () => {
               - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
                 - binding should have a string \\"name\\" field.
                 - binding should have a string \\"class_name\\" field.
-                - binding should, optionally, have a string \\"script_name\\" field."
+                - the field \\"script_name\\", when present, should be a string."
         `);
       });
     });
@@ -2869,14 +3064,7 @@ describe("normalizeAndValidateConfig()", () => {
               - [1mDeprecation[0m: \\"zone_id\\":
                 This is unnecessary since we can deduce this from routes directly.
               - [1mDeprecation[0m: \\"experimental_services\\":
-                The \\"experimental_services\\" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:
-                \`\`\`
-                [[unsafe.bindings]]
-                name = \\"mock-name\\"
-                type = \\"service\\"
-                service = \\"SERVICE\\"
-                environment = \\"ENV\\"
-                \`\`\`"
+                The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
         `);
       });
     });

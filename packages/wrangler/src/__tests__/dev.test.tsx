@@ -225,6 +225,32 @@ describe("wrangler dev", () => {
       );
     });
 
+    it("should strip leading `*` from given host when deducing a zone id", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: "*some-host.com/some/path/*",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
+    it("should strip leading `*.` from given host when deducing a zone id", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: "*.some-host.com/some/path/*",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
+      await runWrangler("dev");
+      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
+        "some-host.com"
+      );
+    });
+
     it("should, when provided, use a configured zone_id", async () => {
       writeWranglerToml({
         main: "index.js",
@@ -649,7 +675,7 @@ describe("wrangler dev", () => {
   });
 
   describe("durable_objects", () => {
-    it("should warn if there is one or more remote Durable Object", async () => {
+    it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async () => {
       writeWranglerToml({
         main: "index.js",
         durable_objects: {
@@ -674,7 +700,16 @@ describe("wrangler dev", () => {
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
       expect(std.out).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`
-        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
+          CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
+          section to your wrangler.toml. Refer to
+          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
+          for more details.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
 
           Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
           live instances.
@@ -748,7 +783,11 @@ describe("wrangler dev", () => {
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
-          "err": "wrangler dev [script]
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
+
+        ",
+          "out": "
+        wrangler dev [script]
 
         👂 Start a local server for developing your worker
 
@@ -785,12 +824,7 @@ describe("wrangler dev", () => {
               --minify                                     Minify the script  [boolean]
               --node-compat                                Enable node.js compatibility  [boolean]
               --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
-              --inspect                                    Enable dev tools  [deprecated] [boolean]
-        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
-
-        ",
-          "out": "
-        ",
+              --inspect                                    Enable dev tools  [deprecated] [boolean]",
           "warn": "",
         }
       `);
@@ -807,6 +841,34 @@ describe("wrangler dev", () => {
           "err": "",
           "out": "",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
+
+        ",
+        }
+      `);
+    });
+  });
+
+  describe("service bindings", () => {
+    it("should warn when using service bindings", async () => {
+      writeWranglerToml({
+        services: [
+          { binding: "WorkerA", service: "A" },
+          { binding: "WorkerB", service: "B", environment: "staging" },
+        ],
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"services\\" fields are experimental and may change or break at any time.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
         ",
         }

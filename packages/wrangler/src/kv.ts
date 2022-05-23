@@ -1,5 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
+import { logger } from "./logger";
 import type { Config } from "./config";
 
 /** The largest number of kv items we can pass to the API in a single request. */
@@ -127,11 +128,51 @@ const KeyValueKeys = new Set([
 ]);
 
 /**
+ * The object has the specified property.
+ */
+function hasProperty<T extends object>(
+  obj: object,
+  property: keyof T
+): obj is T {
+  return property in obj;
+}
+
+/**
+ * The object has a required property of the specified type.
+ */
+function hasTypedProperty<T extends object>(
+  obj: object,
+  property: keyof T,
+  type: string
+): obj is T {
+  return hasProperty(obj, property) && typeof obj[property] === type;
+}
+
+/**
+ * The object an optional property, of the specified type.
+ */
+function hasOptionalTypedProperty<T extends object>(
+  obj: object,
+  property: keyof T,
+  type: string
+): obj is Omit<T, typeof property> | T {
+  return !hasProperty(obj, property) || typeof obj[property] === type;
+}
+
+/**
  * Is the given object a valid `KeyValue` type?
  */
-export function isKVKeyValue(keyValue: object): keyValue is KeyValue {
-  const props = Object.keys(keyValue);
-  if (!props.includes("key") || !props.includes("value")) {
+export function isKVKeyValue(keyValue: unknown): keyValue is KeyValue {
+  if (
+    keyValue === null ||
+    typeof keyValue !== "object" ||
+    !hasTypedProperty(keyValue, "key", "string") ||
+    !hasTypedProperty(keyValue, "value", "string") ||
+    !hasOptionalTypedProperty(keyValue, "expiration", "number") ||
+    !hasOptionalTypedProperty(keyValue, "expiration_ttl", "number") ||
+    !hasOptionalTypedProperty(keyValue, "base64", "boolean") ||
+    !hasOptionalTypedProperty(keyValue, "metadata", "object")
+  ) {
     return false;
   }
   return true;
@@ -190,15 +231,37 @@ export async function deleteKVKeyValue(
   );
 }
 
+/**
+ * Formatter for converting e.g. 5328 --> 5,328
+ */
+const formatNumber = new Intl.NumberFormat("en-US", {
+  notation: "standard",
+}).format;
+
+/**
+ * Helper function for bulk requests, logs ongoing output to console.
+ */
+function logBulkProgress(
+  operation: "put" | "delete",
+  index: number,
+  total: number
+) {
+  logger.log(
+    `${operation === "put" ? "Uploaded" : "Deleted"} ${Math.floor(
+      (100 * index) / total
+    )}% (${formatNumber(index)} out of ${formatNumber(total)})`
+  );
+}
+
 export async function putKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keyValues: KeyValue[],
-  progressCallback: (index: number, total: number) => void
+  quiet = false
 ) {
   for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
-    if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
-      progressCallback(index, keyValues.length);
+    if (!quiet && keyValues.length > BATCH_KEY_MAX) {
+      logBulkProgress("put", index, keyValues.length);
     }
 
     await fetchResult(
@@ -210,8 +273,9 @@ export async function putKVBulkKeyValue(
       }
     );
   }
-  if (progressCallback && keyValues.length > BATCH_KEY_MAX) {
-    progressCallback(keyValues.length, keyValues.length);
+
+  if (!quiet && keyValues.length > BATCH_KEY_MAX) {
+    logBulkProgress("put", keyValues.length, keyValues.length);
   }
 }
 
@@ -219,11 +283,11 @@ export async function deleteKVBulkKeyValue(
   accountId: string,
   namespaceId: string,
   keys: string[],
-  progressCallback: (index: number, total: number) => void
+  quiet = false
 ) {
   for (let index = 0; index < keys.length; index += BATCH_KEY_MAX) {
-    if (progressCallback && keys.length > BATCH_KEY_MAX) {
-      progressCallback(index, keys.length);
+    if (!quiet && keys.length > BATCH_KEY_MAX) {
+      logBulkProgress("delete", index, keys.length);
     }
 
     await fetchResult(
@@ -235,8 +299,8 @@ export async function deleteKVBulkKeyValue(
       }
     );
   }
-  if (progressCallback && keys.length > BATCH_KEY_MAX) {
-    progressCallback(keys.length, keys.length);
+  if (!quiet && keys.length > BATCH_KEY_MAX) {
+    logBulkProgress("delete", keys.length, keys.length);
   }
 }
 

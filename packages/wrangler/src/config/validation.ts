@@ -193,7 +193,8 @@ export function normalizeAndValidateConfig(
     dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
     migrations: normalizeAndValidateMigrations(
       diagnostics,
-      rawConfig.migrations ?? []
+      rawConfig.migrations ?? [],
+      activeEnv.durable_objects
     ),
     site: normalizeAndValidateSite(
       diagnostics,
@@ -387,7 +388,8 @@ function normalizeAndValidateDev(
  */
 function normalizeAndValidateMigrations(
   diagnostics: Diagnostics,
-  rawMigrations: Config["migrations"]
+  rawMigrations: Config["migrations"],
+  durableObjects: Config["durable_objects"]
 ): Config["migrations"] {
   if (!Array.isArray(rawMigrations)) {
     diagnostics.errors.push(
@@ -441,6 +443,26 @@ function normalizeAndValidateMigrations(
         "string"
       );
     }
+
+    if (
+      Array.isArray(durableObjects?.bindings) &&
+      durableObjects.bindings.length > 0
+    ) {
+      // intrinsic [durable_objects] implies [migrations]
+      const exportedDurableObjects = (durableObjects.bindings || []).filter(
+        (binding) => !binding.script_name
+      );
+      if (exportedDurableObjects.length > 0 && rawMigrations.length === 0) {
+        diagnostics.warnings.push(
+          `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects
+            .map((durable) => durable.class_name || "(unnamed)")
+            .join(
+              ", "
+            )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
+        );
+      }
+    }
+
     return rawMigrations;
   }
 }
@@ -562,19 +584,37 @@ function normalizeAndValidateModulePaths(
  * or an object that looks like {pattern: string, zone_id: string }
  */
 function isValidRouteValue(item: unknown): boolean {
-  return (
-    !!item &&
-    (typeof item === "string" ||
-      (typeof item === "object" &&
-        hasProperty(item, "pattern") &&
-        typeof item.pattern === "string" &&
-        // it could have a zone_name
-        ((hasProperty(item, "zone_name") &&
-          typeof item.zone_name === "string") ||
-          // or a zone_id
-          (hasProperty(item, "zone_id") && typeof item.zone_id === "string")) &&
-        Object.keys(item).length === 2))
-  );
+  if (!item) {
+    return false;
+  }
+  if (typeof item === "string") {
+    return true;
+  }
+  if (typeof item === "object") {
+    if (!hasProperty(item, "pattern") || typeof item.pattern !== "string") {
+      return false;
+    }
+
+    const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
+
+    const hasZoneId =
+      hasProperty(item, "zone_id") && typeof item.zone_id === "string";
+    const hasZoneName =
+      hasProperty(item, "zone_name") && typeof item.zone_name === "string";
+    const hasCustomDomainFlag =
+      hasProperty(item, "custom_domain") &&
+      typeof item.custom_domain === "boolean";
+
+    if (otherKeys === 2 && hasCustomDomainFlag && (hasZoneId || hasZoneName)) {
+      return true;
+    } else if (
+      otherKeys === 1 &&
+      (hasZoneId || hasZoneName || hasCustomDomainFlag)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -583,7 +623,7 @@ function isValidRouteValue(item: unknown): boolean {
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
   if (value !== undefined && !isValidRouteValue(value)) {
     diagnostics.errors.push(
-      `Expected "${field}" to be either a string, or an object with shape { pattern, zone_id | zone_name }, but got ${JSON.stringify(
+      `Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got ${JSON.stringify(
         value
       )}.`
     );
@@ -613,7 +653,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
   }
   if (invalidRoutes.length > 0) {
     diagnostics.errors.push(
-      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+      `Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
         invalidRoutes,
         null,
         2
@@ -696,27 +736,12 @@ function normalizeAndValidateEnvironment(
     diagnostics,
     rawEnv,
     "experimental_services",
-    `The "experimental_services" field is no longer supported. Instead, use [[unsafe.bindings]] to enable experimental features. Add this to your wrangler.toml:\n` +
-      "```\n" +
-      TOML.stringify({
-        unsafe: {
-          bindings: (rawEnv?.experimental_services || []).map(
-            (serviceDefinition) => {
-              return {
-                name: serviceDefinition.name,
-                type: "service",
-                service: serviceDefinition.service,
-                environment: serviceDefinition.environment,
-              };
-            }
-          ),
-        },
-      }) +
-      "```",
+    `The "experimental_services" field is no longer supported. Simply rename the [experimental_services] field to [services].`,
     true
   );
 
   experimental(diagnostics, rawEnv, "unsafe");
+  experimental(diagnostics, rawEnv, "services");
 
   const route = validateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -880,6 +905,16 @@ function normalizeAndValidateEnvironment(
       validateBindingArray(envName, validateR2Binding),
       []
     ),
+    services: notInheritable(
+      diagnostics,
+      topLevelEnv,
+      rawConfig,
+      rawEnv,
+      envName,
+      "services",
+      validateBindingArray(envName, validateServiceBinding),
+      []
+    ),
     unsafe: notInheritable(
       diagnostics,
       topLevelEnv,
@@ -1014,7 +1049,7 @@ const validateRule: ValidatorFn = (diagnostics, field, value) => {
 
   if (!isOptionalProperty(rule, "fallthrough", "boolean")) {
     diagnostics.errors.push(
-      `binding should, optionally, have a boolean "fallthrough" field.`
+      `the field "fallthrough", when present, should be a boolean.`
     );
     isValid = false;
   }
@@ -1135,7 +1170,7 @@ const validateDurableObjectBinding: ValidatorFn = (
     return false;
   }
 
-  // Durable Object bindings must have a name and class_name, and optionally a script_name.
+  // Durable Object bindings must have a name and class_name, and optionally a script_name and an environment.
   let isValid = true;
   if (!isRequiredProperty(value, "name", "string")) {
     diagnostics.errors.push(`binding should have a string "name" field.`);
@@ -1147,7 +1182,21 @@ const validateDurableObjectBinding: ValidatorFn = (
   }
   if (!isOptionalProperty(value, "script_name", "string")) {
     diagnostics.errors.push(
-      `binding should, optionally, have a string "script_name" field.`
+      `the field "script_name", when present, should be a string.`
+    );
+    isValid = false;
+  }
+  // environment requires a script_name
+  if (!isOptionalProperty(value, "environment", "string")) {
+    diagnostics.errors.push(
+      `the field "environment", when present, should be a string.`
+    );
+    isValid = false;
+  }
+
+  if ("environment" in value && !("script_name" in value)) {
+    diagnostics.errors.push(
+      `binding should have a "script_name" field if "environment" is present.`
     );
     isValid = false;
   }
@@ -1178,8 +1227,13 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
     const safeBindings = [
       "plain_text",
       "json",
+      "wasm_module",
+      "data_blob",
+      "text_blob",
       "kv_namespace",
       "durable_object_namespace",
+      "r2_bucket",
+      "service",
     ];
 
     if (safeBindings.includes(value.type)) {
@@ -1421,4 +1475,39 @@ const validateBindingsHaveUniqueNames = (
   }
 
   return !hasDuplicates;
+};
+const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
+  if (typeof value !== "object" || value === null) {
+    diagnostics.errors.push(
+      `"services" bindings should be objects, but got ${JSON.stringify(value)}`
+    );
+    return false;
+  }
+  let isValid = true;
+  // Service bindings must have a binding, service, and environment.
+  if (!isRequiredProperty(value, "binding", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isRequiredProperty(value, "service", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "service" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isOptionalProperty(value, "environment", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  return isValid;
 };

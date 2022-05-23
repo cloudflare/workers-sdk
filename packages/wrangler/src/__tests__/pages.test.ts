@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -24,10 +24,10 @@ describe("pages", () => {
       ⚡️ Configure Cloudflare Pages
 
       Commands:
-        wrangler pages dev [directory] [-- command]  🧑‍💻 Develop your full-stack Pages application locally
-        wrangler pages project                       ⚡️ Interact with your Pages projects
-        wrangler pages deployment                    🚀 Interact with the deployments of a project
-        wrangler pages publish [directory]           🆙 Publish a directory of static assets as a Pages deployment
+        wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
+        wrangler pages project                         ⚡️ Interact with your Pages projects
+        wrangler pages deployment                      🚀 Interact with the deployments of a project
+        wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
       Flags:
         -c, --config   Path to .toml configuration file  [string]
@@ -322,6 +322,29 @@ describe("pages", () => {
 
       //   ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
       // `);
+    });
+
+    it("should not error when directory names contain periods and houses a extensionless file", async () => {
+      mkdirSync(".well-known");
+      writeFileSync(".well-known/foobar", "foobar");
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/file",
+        async () => ({
+          id: "7b764dacfd211bebd8077828a7ddefd7",
+        })
+      );
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async () => ({
+          url: "https://abcxyz.foo.pages.dev/",
+        })
+      );
+
+      await runWrangler("pages publish . --project-name=foo");
+
+      expect(std.err).toMatchInlineSnapshot(`""`);
     });
   });
 });

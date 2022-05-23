@@ -5,17 +5,26 @@ import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { fetchResult } from "./cfetch";
+import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
+import { confirm } from "./dialogs";
+import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { syncAssets } from "./sites";
 import type { Config } from "./config";
+import type {
+  Route,
+  ZoneIdRoute,
+  ZoneNameRoute,
+  CustomDomainRoute,
+} from "./config/environment";
 import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { CfWorkerInit } from "./worker";
 
 type Props = {
   config: Config;
-  accountId: string;
+  accountId: string | undefined;
   entry: Entry;
   rules: Config["rules"];
   name: string | undefined;
@@ -36,8 +45,176 @@ type Props = {
   dryRun: boolean | undefined;
 };
 
+type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function renderRoute(route: Route): string {
+  let result = "";
+  if (typeof route === "string") {
+    result = route;
+  } else {
+    result = route.pattern;
+    const isCustomDomain = Boolean(
+      "custom_domain" in route && route.custom_domain
+    );
+    if (isCustomDomain && "zone_id" in route) {
+      result += ` (custom domain - zone id: ${route.zone_id})`;
+    } else if (isCustomDomain && "zone_name" in route) {
+      result += ` (custom domain - zone name: ${route.zone_name})`;
+    } else if (isCustomDomain) {
+      result += ` (custom domain)`;
+    } else if ("zone_id" in route) {
+      result += ` (zone id: ${route.zone_id})`;
+    } else if ("zone_name" in route) {
+      result += ` (zone name: ${route.zone_name})`;
+    }
+  }
+  return result;
+}
+
+// this function takes a string with quotes in it
+// (i.e. `hello "world", if that really is your name`)
+// and peels out the first instance of a substring
+// bounded by quotes (so, in the example above, `world`)
+//
+// this is useful because the /domains api will return
+// which domains conflicted in an error message, bounded
+// by a string, which we can use to provide helpful
+// messages to a user
+function getQuoteBoundedSubstring(content: string) {
+  const matches = content.split('"');
+  return matches[1] ?? "";
+}
+
+function isOriginConflictError(
+  e: unknown
+): e is { code: 100116; message: string; notes: Array<{ text: string }> } {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { code: number }).code === 100116
+  );
+}
+
+function isDNSConflictError(
+  e: unknown
+): e is { code: 100117; message: string; notes: Array<{ text: string }> } {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { code: number }).code === 100117
+  );
+}
+
+// empty error class to throw and then explicitly catch via `instanceof`
+class CustomDomainOverrideRejected extends Error {}
+
+// publishing to custom domains involves a few more steps than just updating
+// the routing table, and thus the api implementing it is fairly defensive -
+// it will error eagerly on conflicts against existing domains or existing
+// managed DNS records
+//
+// however, you can pass params to override the errors. we start on the
+// defensive path, and if one of these errors occur, we prompt the user
+// for confirmation that they do indeed want to override the conflicts, and
+// then retry the request with the right override added
+//
+// if a user does not confirm that they want to override, we skip publishing
+// to these custom domains, but continue on through the rest of the
+// publish stage
+function publishCustomDomains(
+  workerUrl: string,
+  domains: Array<RouteObject>
+): Promise<string[]> {
+  const config = {
+    override_scope: true,
+    override_existing_origin: false,
+    override_existing_dns_record: false,
+  };
+  const origins = domains.map((domainRoute) => {
+    return {
+      hostname: domainRoute.pattern,
+      zone_id: "zone_id" in domainRoute ? domainRoute.zone_id : undefined,
+      zone_name: "zone_name" in domainRoute ? domainRoute.zone_name : undefined,
+    };
+  });
+
+  if (!process.stdout.isTTY) {
+    // running in non-interactive mode.
+    // existing origins / dns records are not indicative of errors,
+    // so we aggressively update rather than aggressively fail
+    config.override_existing_origin = true;
+    config.override_existing_dns_record = true;
+  }
+
+  // Mixing promise chains with async/await is funky, but it allows us to keep related
+  // logic synchronous-looking (i.e. prompting for confirmation and then re-requesting)
+  // while retaining the flexibility of promise chain fall-throughs. We can group error
+  // handling logic in dedicated catch calls, and all we have to do is re-throw an
+  // error and it will pass down to the next catch call
+  return fetchResult(`${workerUrl}/domains`, {
+    method: "PUT",
+    body: JSON.stringify({ ...config, origins }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .catch(async (err) => {
+      if (isOriginConflictError(err)) {
+        const conflictingOrigins = getQuoteBoundedSubstring(err.notes[0].text);
+        const shouldContinue = await confirm(
+          `Custom Domains already exist for these domains: "${conflictingOrigins}"\nUpdate them to point to this script instead?`
+        );
+        if (!shouldContinue) {
+          throw new CustomDomainOverrideRejected();
+        }
+        config.override_existing_origin = true;
+        await fetchResult(`${workerUrl}/domains`, {
+          method: "PUT",
+          body: JSON.stringify({ ...config, origins }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } else {
+        throw err;
+      }
+    })
+    .catch(async (err) => {
+      if (isDNSConflictError(err)) {
+        const conflictingOrigins = getQuoteBoundedSubstring(err.notes[0].text);
+        const shouldContinue = await confirm(
+          `You already have conflicting DNS records for these domains: "${conflictingOrigins}"\nUpdate them to point to this script instead?`
+        );
+        if (!shouldContinue) {
+          throw new CustomDomainOverrideRejected();
+        }
+        config.override_existing_dns_record = true;
+        await fetchResult(`${workerUrl}/domains`, {
+          method: "PUT",
+          body: JSON.stringify({ ...config, origins }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } else {
+        throw err;
+      }
+    })
+    .then(() => domains.map((domain) => renderRoute(domain)))
+    .catch((err) => {
+      if (err instanceof CustomDomainOverrideRejected) {
+        return [
+          domains.length > 1
+            ? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
+            : `Publishing to Custom Domain "${domains[0].pattern}" was skipped, fix conflict and try again`,
+        ];
+      }
+      throw err;
+    });
 }
 
 export default async function publish(props: Props): Promise<void> {
@@ -52,6 +229,25 @@ export default async function publish(props: Props): Promise<void> {
   const triggers = props.triggers || config.triggers?.crons;
   const routes =
     props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+  const routesOnly: Array<Route> = [];
+  const customDomainsOnly: Array<RouteObject> = [];
+  for (const route of routes) {
+    if (typeof route !== "string" && route.custom_domain) {
+      if (route.pattern.includes("*")) {
+        throw new Error(
+          `Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
+        );
+      }
+      if (route.pattern.includes("/")) {
+        throw new Error(
+          `Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
+        );
+      }
+      customDomainsOnly.push(route);
+    } else {
+      routesOnly.push(route);
+    }
+  }
 
   // deployToWorkersDev defaults to true only if there aren't any routes defined
   const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
@@ -143,103 +339,19 @@ export default async function publish(props: Props): Promise<void> {
       }
     );
 
-    // Some validation of durable objects + migrations
-    if (config.durable_objects.bindings.length > 0) {
-      // intrinsic [durable_objects] implies [migrations]
-      const exportedDurableObjects = config.durable_objects.bindings.filter(
-        (binding) => !binding.script_name
-      );
-      if (exportedDurableObjects.length > 0 && config.migrations.length === 0) {
-        logger.warn(
-          `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects.map(
-            (durable) => durable.class_name
-          )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
-        );
-      }
-    }
-
     const content = readFileSync(resolvedEntryPointPath, {
       encoding: "utf-8",
     });
 
-    // if config.migrations
-    let migrations;
-    if (config.migrations.length > 0) {
-      // get current migration tag
-      type ScriptData = { id: string; migration_tag?: string };
-      let script: ScriptData | undefined;
-      if (!props.legacyEnv) {
-        try {
-          if (props.env) {
-            const scriptData = await fetchResult<{
-              script: ScriptData;
-            }>(
-              `/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
-            );
-            script = scriptData.script;
-          } else {
-            const scriptData = await fetchResult<{
-              default_environment: {
-                script: ScriptData;
-              };
-            }>(`/accounts/${accountId}/workers/services/${scriptName}`);
-            script = scriptData.default_environment.script;
-          }
-        } catch (err) {
-          if (
-            ![
-              10090, // corresponds to workers.api.error.service_not_found, so the script wasn't previously published at all
-              10092, // workers.api.error.environment_not_found, so the script wasn't published to this environment yet
-            ].includes((err as { code: number }).code)
-          ) {
-            throw err;
-          }
-          // else it's a 404, no script found, and we can proceed
-        }
-      } else {
-        const scripts = await fetchResult<ScriptData[]>(
-          `/accounts/${accountId}/workers/scripts`
-        );
-        script = scripts.find(({ id }) => id === scriptName);
-      }
-
-      if (script?.migration_tag) {
-        // was already published once
-        const scriptMigrationTag = script.migration_tag;
-        const foundIndex = config.migrations.findIndex(
-          (migration) => migration.tag === scriptMigrationTag
-        );
-        if (foundIndex === -1) {
-          logger.warn(
-            `The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already deleted it. Applying all available migrations to the script...`
-          );
-          migrations = {
-            old_tag: script.migration_tag,
-            new_tag: config.migrations[config.migrations.length - 1].tag,
-            steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
-          };
-        } else {
-          if (foundIndex !== config.migrations.length - 1) {
-            // there are new migrations to send up
-            migrations = {
-              old_tag: script.migration_tag,
-              new_tag: config.migrations[config.migrations.length - 1].tag,
-              steps: config.migrations
-                .slice(foundIndex + 1)
-                .map(({ tag: _tag, ...rest }) => rest),
-            };
-          }
-          // else, we're up to date, no migrations to send
-        }
-      } else {
-        // first time publishing durable objects to this script,
-        // so we send all the migrations
-        migrations = {
-          new_tag: config.migrations[config.migrations.length - 1].tag,
-          steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
-        };
-      }
-    }
+    // durable object migrations
+    const migrations = !props.dryRun
+      ? await getMigrationsToUpload(scriptName, {
+          accountId,
+          config,
+          legacyEnv: props.legacyEnv,
+          env: props.env,
+        })
+      : undefined;
 
     const assets = await syncAssets(
       accountId,
@@ -271,6 +383,7 @@ export default async function publish(props: Props): Promise<void> {
       data_blobs: config.data_blobs,
       durable_objects: config.durable_objects,
       r2_buckets: config.r2_buckets,
+      services: config.services,
       unsafe: config.unsafe?.bindings,
     };
 
@@ -298,6 +411,13 @@ export default async function publish(props: Props): Promise<void> {
       usage_model: config.usage_model,
     };
 
+    const withoutStaticAssets = {
+      ...bindings,
+      kv_namespaces: config.kv_namespaces,
+      text_blobs: config.text_blobs,
+    };
+    printBindings(withoutStaticAssets);
+
     if (!props.dryRun) {
       // Upload the script so it has time to propagate.
       // We can also now tell whether available_on_subdomain is set
@@ -324,6 +444,7 @@ export default async function publish(props: Props): Promise<void> {
     logger.log(`--dry-run: exiting now.`);
     return;
   }
+  assert(accountId, "Missing accountId");
 
   const uploadMs = Date.now() - start;
   const deployments: Promise<string[]>[] = [];
@@ -374,13 +495,13 @@ export default async function publish(props: Props): Promise<void> {
   logger.log("Uploaded", workerName, formatTime(uploadMs));
 
   // Update routing table for the script.
-  if (routes.length > 0) {
+  if (routesOnly.length > 0) {
     deployments.push(
       fetchResult(`${workerUrl}/routes`, {
         // Note: PUT will delete previous routes on this script.
         method: "PUT",
         body: JSON.stringify(
-          routes.map((route) =>
+          routesOnly.map((route) =>
             typeof route !== "object" ? { pattern: route } : route
           )
         ),
@@ -388,27 +509,20 @@ export default async function publish(props: Props): Promise<void> {
           "Content-Type": "application/json",
         },
       }).then(() => {
-        if (routes.length > 10) {
-          return routes
+        if (routesOnly.length > 10) {
+          return routesOnly
             .slice(0, 9)
-            .map((route) =>
-              typeof route === "string"
-                ? route
-                : "zone_id" in route
-                ? `${route.pattern} (zone id: ${route.zone_id})`
-                : `${route.pattern} (zone name: ${route.zone_name})`
-            )
-            .concat([`...and ${routes.length - 10} more routes`]);
+            .map((route) => renderRoute(route))
+            .concat([`...and ${routesOnly.length - 10} more routes`]);
         }
-        return routes.map((route) =>
-          typeof route === "string"
-            ? route
-            : "zone_id" in route
-            ? `${route.pattern} (zone id: ${route.zone_id})`
-            : `${route.pattern} (zone name: ${route.zone_name})`
-        );
+        return routesOnly.map((route) => renderRoute(route));
       })
     );
+  }
+
+  // Update custom domains for the script
+  if (customDomainsOnly.length > 0) {
+    deployments.push(publishCustomDomains(workerUrl, customDomainsOnly));
   }
 
   // Configure any schedules for the script.

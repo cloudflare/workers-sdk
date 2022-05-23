@@ -8,6 +8,24 @@ export interface Environment
   extends EnvironmentInheritable,
     EnvironmentNonInheritable {}
 
+export type SimpleRoute = string;
+export type ZoneIdRoute = {
+  pattern: string;
+  zone_id: string;
+  custom_domain?: boolean;
+};
+export type ZoneNameRoute = {
+  pattern: string;
+  zone_name: string;
+  custom_domain?: boolean;
+};
+export type CustomDomainRoute = { pattern: string; custom_domain: boolean };
+export type Route =
+  | SimpleRoute
+  | ZoneIdRoute
+  | ZoneNameRoute
+  | CustomDomainRoute;
+
 /**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
@@ -74,13 +92,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  routes:
-    | (
-        | string
-        | { pattern: string; zone_id: string }
-        | { pattern: string; zone_name: string }
-      )[]
-    | undefined;
+  routes: Route[] | undefined;
 
   /**
    * A route that your worker should be published to. Literally
@@ -91,13 +103,7 @@ interface EnvironmentInheritable {
    *
    * @inheritable
    */
-  route:
-    | (
-        | string
-        | { pattern: string; zone_id: string }
-        | { pattern: string; zone_name: string }
-      )
-    | undefined;
+  route: Route | undefined;
 
   /**
    * Path to a custom tsconfig
@@ -236,6 +242,8 @@ interface EnvironmentNonInheritable {
       class_name: string;
       /** The script where the Durable Object is defined (if it's external to this worker) */
       script_name?: string;
+      /** The service environment of the script_name to bind to */
+      environment?: string;
     }[];
   };
 
@@ -277,6 +285,24 @@ interface EnvironmentNonInheritable {
     bucket_name: string;
     /** The preview name of this R2 bucket at the edge. */
     preview_bucket_name?: string;
+  }[];
+
+  /**
+   * Specifies service bindings (worker-to-worker) that are bound to this Worker environment.
+   *
+   * NOTE: This field is not automatically inherited from the top level environment,
+   * and so must be specified in every named environment.
+   *
+   * @default `[]`
+   * @nonInheritable
+   */
+  services: {
+    /** The binding name used to refer to the bound service. */
+    binding: string;
+    /** The name of the service. */
+    service: string;
+    /** The environment of the service (e.g. production, staging, etc). */
+    environment?: string;
   }[];
 
   /**

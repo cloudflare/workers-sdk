@@ -1,6 +1,6 @@
 {
   "name": "wrangler",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "author": "wrangler@cloudflare.com",
   "description": "Command-line interface for all things Cloudflare Workers",
   "bin": {
@@ -75,6 +75,7 @@
     "find-up": "^6.3.0",
     "get-port": "^6.1.2",
     "glob-to-regexp": "0.4.1",
+    "http-terminator": "^3.2.0",
     "ignore": "^5.2.0",
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.1",
@@ -96,7 +97,7 @@
     "timeago.js": "^4.0.2",
     "tmp-promise": "^3.0.3",
     "ts-dedent": "^2.2.0",
-    "undici": "^4.15.1",
+    "undici": "^5.3.0",
     "update-check": "^1.5.4",
     "ws": "^8.5.0",
     "yargs": "^17.4.1"

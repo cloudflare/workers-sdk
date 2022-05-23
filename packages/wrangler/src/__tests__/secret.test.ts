@@ -60,6 +60,22 @@ describe("wrangler secret", () => {
     describe("interactive", () => {
       useMockStdin({ isTTY: true });
 
+      it("should trim stdin secret value", async () => {
+        mockPrompt({
+          text: "Enter a secret value:",
+          type: "password",
+          result: `hunter2
+          `,
+        });
+
+        mockPutRequest({ name: `secret-name`, text: `hunter2` });
+        await runWrangler("secret put secret-name --name script-name");
+        expect(std.out).toMatchInlineSnapshot(`
+          "🌀 Creating the secret for script script-name
+          ✨ Success! Uploaded secret secret-name"
+        `);
+      });
+
       it("should create a secret", async () => {
         mockPrompt({
           text: "Enter a secret value:",
@@ -145,6 +161,25 @@ describe("wrangler secret", () => {
 
     describe("non-interactive", () => {
       const mockStdIn = useMockStdin({ isTTY: false });
+
+      it("should trim stdin secret value, from piped input", async () => {
+        mockPutRequest({ name: "the-key", text: "the-secret" });
+        // Pipe the secret in as three chunks to test that we reconstitute it correctly.
+        mockStdIn.send(
+          `the`,
+          `-`,
+          `secret
+          ` // whitespace & newline being removed
+        );
+        await runWrangler("secret put the-key --name script-name");
+
+        expect(std.out).toMatchInlineSnapshot(`
+          "🌀 Creating the secret for script script-name
+          ✨ Success! Uploaded secret the-key"
+        `);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
 
       it("should create a secret, from piped input", async () => {
         mockPutRequest({ name: "the-key", text: "the-secret" });

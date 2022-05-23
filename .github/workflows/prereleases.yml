@@ -31,7 +31,7 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install NPM Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
       - name: Modify package.json version
@@ -77,12 +77,11 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install NPM Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
       - name: Build wrangler
         run: npm run build
-        working-directory: packages/wrangler
 
       - name: Build & Publish Prerelease Registry
         run: npm run publish
