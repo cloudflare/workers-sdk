@@ -94,46 +94,55 @@ describe("Pages Functions", () => {
     expect(text).toContain("<h1>An asset</h1>");
   });
 
-  it("can mount a plugin", async () => {
-    // Middleware
-    let response = await waitUntilReady(
-      "http://localhost:8789/mounted-plugin/some-page"
-    );
-    let text = await response.text();
-    expect(text).toContain("<footer>Set from a Plugin!</footer>");
+  describe("can mount a plugin", () => {
+    it("should mount Middleware", async () => {
+      const response = await waitUntilReady(
+        "http://localhost:8789/mounted-plugin/some-page"
+      );
+      const text = await response.text();
+      expect(text).toContain("<footer>Set from a Plugin!</footer>");
+    });
 
-    // Fixed page
-    response = await waitUntilReady(
-      "http://localhost:8789/mounted-plugin/fixed"
-    );
-    text = await response.text();
-    expect(text).toContain("I'm a fixed response");
+    it("should mount Fixed page", async () => {
+      const response = await waitUntilReady(
+        "http://localhost:8789/mounted-plugin/fixed"
+      );
+      const text = await response.text();
+      expect(text).toContain("I'm a fixed response");
+    });
   });
 
-  it("can import static assets", async () => {
-    let response = await waitUntilReady("http://localhost:8789/static");
-    let text = await response.text();
-    expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
+  describe("can import static assets", () => {
+    it("should render a static asset", async () => {
+      const response = await waitUntilReady("http://localhost:8789/static");
+      const text = await response.text();
+      expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
+    });
 
-    // from a Plugin
-    response = await waitUntilReady(
-      "http://localhost:8789/mounted-plugin/static"
-    );
-    text = await response.text();
-    expect(text).toContain(
-      "<h1>Hello from a static asset brought from a Plugin!</h1>"
-    );
+    it("should render from a Plugin", async () => {
+      const response = await waitUntilReady(
+        "http://localhost:8789/mounted-plugin/static"
+      );
+      const text = await response.text();
+      expect(text).toContain(
+        "<h1>Hello from a static asset brought from a Plugin!</h1>"
+      );
+    });
 
-    response = await waitUntilReady(
-      "http://localhost:8789/mounted-plugin/static/foo"
-    );
-    text = await response.text();
-    expect(text).toContain("<h1>foo</h1>");
+    it("should render static/foo", async () => {
+      const response = await waitUntilReady(
+        "http://localhost:8789/mounted-plugin/static/foo"
+      );
+      const text = await response.text();
+      expect(text).toContain("<h1>foo</h1>");
+    });
 
-    response = await waitUntilReady(
-      "http://localhost:8789/mounted-plugin/static/dir/bar"
-    );
-    text = await response.text();
-    expect(text).toContain("<h1>bar</h1>");
+    it("should render static/dir/bar", async () => {
+      const response = await waitUntilReady(
+        "http://localhost:8789/mounted-plugin/static/dir/bar"
+      );
+      const text = await response.text();
+      expect(text).toContain("<h1>bar</h1>");
+    });
   });
 });
