@@ -27,12 +27,14 @@ export { fetchKVGetValue } from "./internal";
 export async function fetchResult<ResponseType>(
   resource: string,
   init: RequestInit = {},
-  queryParams?: URLSearchParams
+  queryParams?: URLSearchParams,
+  abortSignal?: AbortSignal
 ): Promise<ResponseType> {
   const json = await fetchInternal<FetchResult<ResponseType>>(
     resource,
     init,
-    queryParams
+    queryParams,
+    abortSignal
   );
   if (json.success) {
     return json.result;
