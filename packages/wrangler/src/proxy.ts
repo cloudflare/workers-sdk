@@ -2,11 +2,13 @@ import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
 import { createServer as createHttpsServer } from "node:https";
 import WebSocket from "faye-websocket";
+import { createHttpTerminator } from "http-terminator";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
 import { logger } from "./logger";
 import type { CfPreviewToken } from "./create-worker-preview";
+import type { HttpTerminator } from "http-terminator";
 import type {
   IncomingHttpHeaders,
   RequestListener,
@@ -67,6 +69,11 @@ function rewriteRemoteHostToLocalHostInHeaders(
   }
 }
 
+type PreviewProxy = {
+  server: HttpServer | HttpsServer;
+  terminator: HttpTerminator;
+};
+
 export function usePreviewServer({
   previewToken,
   publicRoot,
@@ -81,21 +88,26 @@ export function usePreviewServer({
   ip: string;
 }) {
   /** Creates an HTTP/1 proxy that sends requests over HTTP/2. */
-  const [proxyServer, setProxyServer] = useState<HttpServer | HttpsServer>();
+  const [proxy, setProxy] = useState<PreviewProxy>();
 
   /**
    * Create the instance of the local proxy server that will pass on
    * requests to the preview worker.
    */
   useEffect(() => {
-    if (proxyServer === undefined) {
+    if (proxy === undefined) {
       createProxyServer(localProtocol)
-        .then((proxy) => setProxyServer(proxy))
+        .then((server) => {
+          setProxy({
+            server,
+            terminator: createHttpTerminator({ server }),
+          });
+        })
         .catch(async (err) => {
           logger.error("Failed to create proxy server:", err);
         });
     }
-  }, [proxyServer, localProtocol]);
+  }, [proxy, localProtocol]);
 
   /**
    * When we're not connected / getting a fresh token on changes,
@@ -123,7 +135,7 @@ export function usePreviewServer({
   }
 
   useEffect(() => {
-    if (proxyServer === undefined) {
+    if (proxy === undefined) {
       return;
     }
 
@@ -138,8 +150,8 @@ export function usePreviewServer({
         // store the stream in a buffer so we can replay it later
         streamBufferRef.current.push({ stream, headers });
       };
-      proxyServer.on("stream", bufferStream);
-      cleanupListeners.push(() => proxyServer.off("stream", bufferStream));
+      proxy.server.on("stream", bufferStream);
+      cleanupListeners.push(() => proxy.server.off("stream", bufferStream));
 
       const bufferRequestResponse = (
         request: IncomingMessage,
@@ -149,9 +161,9 @@ export function usePreviewServer({
         requestResponseBufferRef.current.push({ request, response });
       };
 
-      proxyServer.on("request", bufferRequestResponse);
+      proxy.server.on("request", bufferRequestResponse);
       cleanupListeners.push(() =>
-        proxyServer.off("request", bufferRequestResponse)
+        proxy.server.off("request", bufferRequestResponse)
       );
       return () => {
         cleanupListeners.forEach((cleanup) => cleanup());
@@ -179,8 +191,8 @@ export function usePreviewServer({
       port,
       localProtocol
     );
-    proxyServer.on("stream", handleStream);
-    cleanupListeners.push(() => proxyServer.off("stream", handleStream));
+    proxy.server.on("stream", handleStream);
+    cleanupListeners.push(() => proxy.server.off("stream", handleStream));
 
     // flush and replay buffered streams
     streamBufferRef.current.forEach((buffer) =>
@@ -236,9 +248,9 @@ export function usePreviewServer({
       ? createHandleAssetsRequest(assetPath, handleRequest)
       : handleRequest;
 
-    proxyServer.on("request", actualHandleRequest);
+    proxy.server.on("request", actualHandleRequest);
     cleanupListeners.push(() =>
-      proxyServer.off("request", actualHandleRequest)
+      proxy.server.off("request", actualHandleRequest)
     );
 
     // flush and replay buffered requests
@@ -270,8 +282,8 @@ export function usePreviewServer({
         remoteWebsocketClient.close();
       });
     };
-    proxyServer.on("upgrade", handleUpgrade);
-    cleanupListeners.push(() => proxyServer.off("upgrade", handleUpgrade));
+    proxy.server.on("upgrade", handleUpgrade);
+    cleanupListeners.push(() => proxy.server.off("upgrade", handleUpgrade));
 
     return () => {
       cleanupListeners.forEach((cleanup) => cleanup());
@@ -281,7 +293,7 @@ export function usePreviewServer({
     publicRoot,
     port,
     localProtocol,
-    proxyServer,
+    proxy,
     // We use a state value as a sigil to trigger reconnecting the server.
     // It's not used inside the effect, so react-hooks/exhaustive-deps
     // doesn't complain if it's not included in the dependency array.
@@ -293,7 +305,7 @@ export function usePreviewServer({
   // containing component is mounted/unmounted.
   useEffect(() => {
     const abortController = new AbortController();
-    if (proxyServer === undefined) {
+    if (proxy === undefined) {
       return;
     }
 
@@ -303,8 +315,10 @@ export function usePreviewServer({
       abortSignal: abortController.signal,
     })
       .then(() => {
-        proxyServer.listen(port, ip);
-        logger.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
+        proxy.server.on("listening", () => {
+          logger.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
+        });
+        proxy.server.listen(port, ip);
       })
       .catch((err) => {
         if ((err as { code: string }).code !== "ABORT_ERR") {
@@ -313,10 +327,12 @@ export function usePreviewServer({
       });
 
     return () => {
-      proxyServer.close();
       abortController.abort();
+      // Running `proxy.server.close()` does not close open connections, preventing the process from exiting.
+      // So we use this `terminator` to close all the connections and force the server to shutdown.
+      proxy.terminator.terminate();
     };
-  }, [port, ip, proxyServer, localProtocol]);
+  }, [port, ip, proxy, localProtocol]);
 }
 
 function createHandleAssetsRequest(
