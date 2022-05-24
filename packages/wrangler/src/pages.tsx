@@ -18,7 +18,7 @@ import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
-import { fetch, File, FormData } from "undici";
+import { File, FormData } from "undici";
 import { buildPlugin } from "../pages/functions/buildPlugin";
 import { buildWorker } from "../pages/functions/buildWorker";
 import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
@@ -28,7 +28,6 @@ import { getConfigCache, saveToConfigCache } from "./config-cache";
 import { prompt } from "./dialogs";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
-import { getEnvironmentVariableFactory } from "./environment-variables";
 import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
@@ -1215,16 +1214,18 @@ const createDeployment: CommandModule<
           undefined,
           jwt
         ).then(
-          (data) => {
+          () => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);
+          },
+          (error) => {
+            return Promise.reject(
+              new FatalError(
+                "Failed to upload files. Please try again.",
+                error.code || 1
+              )
+            );
           }
-          // (error) => {
-          //   throw new FatalError(
-          //     "Failed to upload files. Please try again.",
-          //     1
-          //   );
-          // }
         )
       );
     }

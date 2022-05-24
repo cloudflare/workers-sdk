@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Project, Deployment } from "../pages";
-import type { File, FormData } from "undici";
+import type { FormData } from "undici";
 
 describe("pages", () => {
   runInTempDir();
@@ -280,7 +280,7 @@ describe("pages", () => {
 
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/upload-token",
-        async ([_url, accountId], init) => {
+        async ([_url, accountId]) => {
           expect(accountId).toEqual("some-account-id");
 
           return {
@@ -364,7 +364,7 @@ describe("pages", () => {
 
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/upload-token",
-        async ([_url, accountId], init) => {
+        async ([_url, accountId]) => {
           expect(accountId).toEqual("some-account-id");
 
           return {
