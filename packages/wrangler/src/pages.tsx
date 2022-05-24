@@ -1218,13 +1218,13 @@ const createDeployment: CommandModule<
           (data) => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);
-          },
-          (error) => {
-            throw new FatalError(
-              "Failed to upload files. Please try again.",
-              1
-            );
           }
+          // (error) => {
+          //   throw new FatalError(
+          //     "Failed to upload files. Please try again.",
+          //     1
+          //   );
+          // }
         )
       );
     }

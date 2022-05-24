@@ -279,18 +279,50 @@ describe("pages", () => {
       writeFileSync("logo.png", "foobar");
 
       setMockResponse(
-        "/accounts/:accountId/pages/projects/foo/file",
+        "/accounts/:accountId/pages/projects/foo/upload-token",
         async ([_url, accountId], init) => {
           expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
-          const body = init.body as FormData;
-          const logoPNGFile = body.get("file") as File;
-          expect(await logoPNGFile.text()).toEqual("foobar");
-          expect(logoPNGFile.name).toEqual("logo.png");
 
           return {
-            id: "2082190357cfd3617ccfe04f340c6247",
+            jwt: "<<funfetti-auth-jwt>>",
           };
+        }
+      );
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init, __, ___, authOverride) => {
+          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+          const body = JSON.parse(init.body as string) as { hashes: string[] };
+          expect(body).toMatchObject({
+            hashes: ["2082190357cfd3617ccfe04f340c6247"],
+          });
+          return body.hashes;
+        }
+      );
+
+      setMockResponse(
+        "/pages/assets/upload",
+        "POST",
+        async (_, init, __, ___, authOverride) => {
+          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+          const body = JSON.parse(init.body as string) as {
+            key: string;
+            value: string;
+            metadata: { contentType: string };
+            base64: boolean;
+          }[];
+          expect(body).toMatchObject([
+            {
+              key: "2082190357cfd3617ccfe04f340c6247",
+              value: Buffer.from("foobar").toString("base64"),
+              metadata: {
+                contentType: "image/png",
+              },
+              base64: true,
+            },
+          ]);
         }
       );
 
@@ -326,13 +358,56 @@ describe("pages", () => {
 
     it("should not error when directory names contain periods and houses a extensionless file", async () => {
       mkdirSync(".well-known");
+      // Note: same content as previous test, but since it's a different extension,
+      // it hashes to a different value
       writeFileSync(".well-known/foobar", "foobar");
 
       setMockResponse(
-        "/accounts/:accountId/pages/projects/foo/file",
-        async () => ({
-          id: "7b764dacfd211bebd8077828a7ddefd7",
-        })
+        "/accounts/:accountId/pages/projects/foo/upload-token",
+        async ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+
+          return {
+            jwt: "<<funfetti-auth-jwt>>",
+          };
+        }
+      );
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init, __, ___, authOverride) => {
+          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+          const body = JSON.parse(init.body as string) as { hashes: string[] };
+          expect(body).toMatchObject({
+            hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
+          });
+          return body.hashes;
+        }
+      );
+
+      setMockResponse(
+        "/pages/assets/upload",
+        "POST",
+        async (_, init, __, ___, authOverride) => {
+          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+          const body = JSON.parse(init.body as string) as {
+            key: string;
+            value: string;
+            metadata: { contentType: string };
+            base64: boolean;
+          }[];
+          expect(body).toMatchObject([
+            {
+              key: "7b764dacfd211bebd8077828a7ddefd7",
+              value: Buffer.from("foobar").toString("base64"),
+              metadata: {
+                contentType: "application/octet-stream",
+              },
+              base64: true,
+            },
+          ]);
+        }
       );
 
       setMockResponse(
