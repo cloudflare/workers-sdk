@@ -1304,7 +1304,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
               description: "Auto reload HTML pages when change is detected",
             },
             "node-compat": {
-              describe: "Enable node.js compaitibility",
+              describe: "Enable node.js compatibility",
               default: false,
               type: "boolean",
               hidden: true,
@@ -1602,7 +1602,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
                 description: "The directory to output static assets to",
               },
               "node-compat": {
-                describe: "Enable node.js compaitibility",
+                describe: "Enable node.js compatibility",
                 default: false,
                 type: "boolean",
                 hidden: true,
