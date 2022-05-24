@@ -1005,7 +1005,7 @@ const createDeployment: CommandModule<
 
       if (isGitDirty && !commitDirty) {
         logger.warn(
-          `Warning: Your working directory is a git repo and has uncommitted changes\nTo silense this warning, pass in --commit-dirty=true`
+          `Warning: Your working directory is a git repo and has uncommitted changes\nTo silence this warning, pass in --commit-dirty=true`
         );
       }
 
