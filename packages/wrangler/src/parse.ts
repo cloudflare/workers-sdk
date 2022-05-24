@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import { resolve } from "node:path";
+import Module from "node:module";
 import TOML from "@iarna/toml";
-import { formatMessagesSync } from "esbuild";
+import { formatMessagesSync, buildSync } from "esbuild";
 
 export type Message = {
   text: string;
@@ -148,6 +149,44 @@ export function readFileSync(file: string): string {
     const { message } = err as Error;
     throw new ParseError({
       text: `Could not read file: ${file}`,
+      notes: [
+        {
+          text: message.replace(file, resolve(file)),
+        },
+      ],
+    });
+  }
+}
+
+/**
+ * Converts the text version of a CommonJS module to an actual module.
+ */
+export function importCJSFromString(contents: string, filename = "file") {
+  const m = new Module(filename);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  m._compile(contents, filename);
+  return m.exports;
+}
+
+/**
+ * Use esbuild to import a module.
+ */
+export function importModule<ImportedModule>(file: string): ImportedModule {
+  try {
+    const result = buildSync({
+      entryPoints: [file],
+      bundle: true,
+      write: false,
+      format: "cjs",
+      platform: "node",
+    });
+    const [output] = result.outputFiles;
+    return importCJSFromString(output.text);
+  } catch (err) {
+    const { message } = err as Error;
+    throw new ParseError({
+      text: `Could not import file: ${file}`,
       notes: [
         {
           text: message.replace(file, resolve(file)),

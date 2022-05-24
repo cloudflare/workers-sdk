@@ -22,7 +22,15 @@ import type { Environment, RawEnvironment } from "./environment";
  */
 export type Config = ConfigFields<DevConfig> & Environment;
 
-export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
+export type ImportableConfigFields = {
+  config: {
+    module: string;
+  };
+};
+
+export type RawConfig = Partial<
+  ConfigFields<RawDevConfig> & ImportableConfigFields
+> &
   RawEnvironment &
   DeprecatedConfigFields &
   EnvironmentMap;
@@ -213,6 +221,13 @@ export interface DeprecatedConfigFields {
    * @deprecated
    */
   miniflare?: unknown;
+}
+
+export type ImportableConfig = RawConfig;
+export type ImportableConfigTransform = (initialConfig: RawConfig) => RawConfig;
+export interface ImportableConfigModule {
+  config?: ImportableConfig;
+  onConfig?: ImportableConfigTransform;
 }
 
 interface EnvironmentMap {

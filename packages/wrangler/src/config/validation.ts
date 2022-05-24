@@ -228,7 +228,7 @@ export function normalizeAndValidateConfig(
     diagnostics,
     "top-level",
     Object.keys(rawConfig),
-    [...Object.keys(config), "env"]
+    [...Object.keys(config), "env", "config"]
   );
 
   return { config, diagnostics };

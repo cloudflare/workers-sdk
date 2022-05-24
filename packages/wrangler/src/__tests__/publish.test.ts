@@ -25,6 +25,8 @@ import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
+import type { WriteConfigModuleFormats } from "./helpers/write-config-module";
+import writeConfigModule from "./helpers/write-config-module";
 
 describe("publish", () => {
   mockAccountId();
@@ -479,6 +481,153 @@ describe("publish", () => {
         test-name.test-sub-domain.workers.dev"
     `);
     expect(std.err).toMatchInlineSnapshot(`""`);
+  });
+
+  describe("config module", () => {
+    const formats: WriteConfigModuleFormats[] = ["esm", "cjs", "ts"];
+    const tomlConfig = {
+      compatibility_date: "2022-01-12",
+      name: "test-name",
+      vars: { xyz: 123 },
+    };
+    const config = {
+      vars: { foo: "bar" },
+    };
+    beforeEach(() => writeWorkerSource());
+    formats.forEach((format) => {
+      describe(`with a config module in a ${format} file`, () => {
+        it("allows defined config to be merged with the original toml config", async () => {
+          const filename = writeConfigModule(format, config, {
+            hasConfig: true,
+          });
+          writeWranglerToml({
+            ...tomlConfig,
+            config: {
+              module: filename,
+            },
+          });
+          mockUploadWorkerRequest({
+            expectedBindings: [
+              {
+                text: "bar",
+                name: "foo",
+                type: "plain_text",
+              },
+            ],
+            expectedCompatibilityDate: "2022-01-12",
+          });
+          mockSubDomainRequest();
+          await runWrangler("publish ./index.js");
+          expect(std.out).toMatchInlineSnapshot(`
+            "Your worker has access to the following bindings:
+            - Vars:
+              - foo: \\"bar\\"
+            Uploaded test-name (TIMINGS)
+            Published test-name (TIMINGS)
+              test-name.test-sub-domain.workers.dev"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`""`);
+        });
+        it("allows a defined config transformer to transform the original toml config", async () => {
+          const filename = writeConfigModule(format, config, {
+            hasOnConfig: true,
+          });
+          writeWranglerToml({
+            ...tomlConfig,
+            config: {
+              module: filename,
+            },
+          });
+          mockUploadWorkerRequest({
+            expectedBindings: [
+              {
+                json: 123,
+                name: "xyz",
+                type: "json",
+              },
+              {
+                text: "yes",
+                name: "transformed",
+                type: "plain_text",
+              },
+            ],
+            expectedCompatibilityDate: "2022-01-12",
+          });
+          mockSubDomainRequest();
+          await runWrangler("publish ./index.js");
+          expect(std.out).toMatchInlineSnapshot(`
+            "Your worker has access to the following bindings:
+            - Vars:
+              - xyz: \\"123\\"
+              - transformed: \\"yes\\"
+            Uploaded test-name (TIMINGS)
+            Published test-name (TIMINGS)
+              test-name.test-sub-domain.workers.dev"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`""`);
+        });
+        it("allows the defined config to be applied first, then the transformer", async () => {
+          const filename = writeConfigModule(format, config, {
+            hasConfig: true,
+            hasOnConfig: true,
+          });
+          writeWranglerToml({
+            ...tomlConfig,
+            config: {
+              module: filename,
+            },
+          });
+          mockUploadWorkerRequest({
+            expectedBindings: [
+              {
+                text: "bar",
+                name: "foo",
+                type: "plain_text",
+              },
+              {
+                text: "yes",
+                name: "transformed",
+                type: "plain_text",
+              },
+            ],
+            expectedCompatibilityDate: "2022-01-12",
+          });
+          mockSubDomainRequest();
+          await runWrangler("publish ./index.js");
+          expect(std.out).toMatchInlineSnapshot(`
+            "Your worker has access to the following bindings:
+            - Vars:
+              - foo: \\"bar\\"
+              - transformed: \\"yes\\"
+            Uploaded test-name (TIMINGS)
+            Published test-name (TIMINGS)
+              test-name.test-sub-domain.workers.dev"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`""`);
+        });
+        it("does not break if the config or config transformer are not found", async () => {
+          const filename = writeConfigModule(format, config);
+          writeWranglerToml({
+            ...tomlConfig,
+            config: {
+              module: filename,
+            },
+          });
+          mockUploadWorkerRequest();
+          mockSubDomainRequest();
+          await runWrangler("publish ./index.js");
+          expect(std.out).toMatchInlineSnapshot(`
+            "Your worker has access to the following bindings:
+            - Vars:
+              - xyz: \\"123\\"
+            Uploaded test-name (TIMINGS)
+            Published test-name (TIMINGS)
+              test-name.test-sub-domain.workers.dev"
+          `);
+          expect(std.err).toMatchInlineSnapshot(`""`);
+        });
+      });
+    });
   });
 
   describe("routes", () => {

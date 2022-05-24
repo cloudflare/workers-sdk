@@ -1,9 +1,9 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
-import { parseTOML, readFileSync } from "../parse";
+import { parseTOML, readFileSync, importModule } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
-import type { Config, RawConfig } from "./config";
+import type { Config, ImportableConfigModule, RawConfig } from "./config";
 
 export type {
   Config,
@@ -35,6 +35,16 @@ export function readConfig(
     rawConfig = parseTOML(readFileSync(configPath), configPath);
   }
 
+  // Cut over to an imported config if found
+  if (rawConfig?.config?.module) {
+    const importedConfigPath = findUpSync(rawConfig.config.module, {
+      cwd: process.cwd(),
+    });
+    if (importedConfigPath) {
+      rawConfig = importConfig(rawConfig, importedConfigPath);
+    }
+  }
+
   // Process the top-level configuration.
   const { config, diagnostics } = normalizeAndValidateConfig(
     rawConfig,
@@ -61,6 +71,23 @@ export function findWranglerToml(
 ): string | undefined {
   const configPath = findUpSync("wrangler.toml", { cwd: referencePath });
   return configPath;
+}
+
+/**
+ * Imports the config module and returns the new config through this pipeline:
+ * toml config => module config => module transform
+ */
+export function importConfig(
+  initialConfig: RawConfig,
+  file: string
+): RawConfig {
+  const { config = {}, onConfig = (c) => c } =
+    importModule<ImportableConfigModule>(file);
+  return onConfig({
+    // todo: change to a deep merge
+    ...initialConfig,
+    ...config,
+  });
 }
 
 /**
