@@ -27,10 +27,11 @@ export async function fetchInternal<ResponseType>(
   resource: string,
   init: RequestInit = {},
   queryParams?: URLSearchParams,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  authOverride?: string
 ): Promise<ResponseType> {
   await requireLoggedIn();
-  const apiToken = requireApiToken();
+  const apiToken = authOverride || requireApiToken();
   const headers = cloneHeaders(init.headers);
   addAuthorizationHeader(headers, apiToken);
 

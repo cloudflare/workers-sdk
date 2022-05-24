@@ -81,11 +81,6 @@ interface PagesConfigCache {
 
 const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
 
-const getCloudflarePagesApiHostFromEnv = getEnvironmentVariableFactory({
-  variableName: "PAGES_API_HOST",
-  defaultValue: "https://api.pages.cloudflare.com",
-});
-
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
 // don't want to do this if pages commands aren't being called.
@@ -1139,22 +1134,21 @@ const createDeployment: CommandModule<
 
     const start = Date.now();
 
-    const PAGES_API_HOST = getCloudflarePagesApiHostFromEnv();
-
-    const response = await fetch(`${PAGES_API_HOST}/files/check-missing`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${jwt}`,
+    const missingHashes = await fetchResult<string[]>(
+      `/pages/assets/check-missing`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
       },
-      body: JSON.stringify({
-        hashes: files.map(({ hash }) => hash),
-      }),
-    });
-
-    const { hashes: missingHashes } = (await response.json()) as {
-      hashes: string[];
-    };
+      undefined,
+      undefined,
+      jwt
+    );
 
     const sortedFiles = files
       .filter((file) => missingHashes.includes(file.hash))
@@ -1208,26 +1202,30 @@ const createDeployment: CommandModule<
         base64: true,
       }));
       queue.add(() =>
-        fetch(`${PAGES_API_HOST}/files/bulk`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${jwt}`,
+        fetchResult(
+          `/pages/assets/upload`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
           },
-          body: JSON.stringify(payload),
-        })
-          .then((response) => response.json() as Promise<{ success: boolean }>)
-          .then((data) => {
-            if (!data.success) {
-              throw new FatalError(
-                "Failed to upload files. Please try again.",
-                1
-              );
-            }
-
+          undefined,
+          undefined,
+          jwt
+        ).then(
+          (data) => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);
-          })
+          },
+          (error) => {
+            throw new FatalError(
+              "Failed to upload files. Please try again.",
+              1
+            );
+          }
+        )
       );
     }
 

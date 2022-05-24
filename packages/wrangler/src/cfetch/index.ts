@@ -28,13 +28,15 @@ export async function fetchResult<ResponseType>(
   resource: string,
   init: RequestInit = {},
   queryParams?: URLSearchParams,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  authOverride?: string
 ): Promise<ResponseType> {
   const json = await fetchInternal<FetchResult<ResponseType>>(
     resource,
     init,
     queryParams,
-    abortSignal
+    abortSignal,
+    authOverride
   );
   if (json.success) {
     return json.result;
