@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
-import { execa } from "execa";
+import { execa, execaSync } from "execa";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
@@ -412,10 +412,37 @@ describe("init", () => {
       `);
     });
 
+    // I... don't know how to test this lol
     it.todo(
       "should not offer to initialize a git repo if git is not installed"
     );
-    // I... don't know how to test this lol
+
+    it("should initialize git repo with `main` default branch", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: false,
+        }
+      );
+      await runWrangler("init");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "✨ Created wrangler.toml
+        ✨ Initialized git repository",
+          "warn": "",
+        }
+      `);
+
+      expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
+        "refs/heads/main"
+      );
+    });
   });
 
   describe("package.json", () => {
