@@ -444,7 +444,9 @@ function createCLIParser(argv: string[]) {
           yesFlag ||
           (await confirm("Would you like to use git to manage this Worker?"));
         if (shouldInitGit) {
-          await execa("git", ["init"], { cwd: creationDirectory });
+          await execa("git", ["init", "--initial-branch=main"], {
+            cwd: creationDirectory,
+          });
           await writeFile(
             path.join(creationDirectory, ".gitignore"),
             readFileSync(path.join(__dirname, "../templates/gitignore"))
