@@ -1139,14 +1139,12 @@ const createDeployment: CommandModule<
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
           hashes: files.map(({ hash }) => hash),
         }),
-      },
-      undefined,
-      undefined,
-      jwt
+      }
     );
 
     const sortedFiles = files
@@ -1201,19 +1199,14 @@ const createDeployment: CommandModule<
         base64: true,
       }));
       queue.add(() =>
-        fetchResult(
-          `/pages/assets/upload`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
+        fetchResult(`/pages/assets/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
           },
-          undefined,
-          undefined,
-          jwt
-        ).then(
+          body: JSON.stringify(payload),
+        }).then(
           () => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);

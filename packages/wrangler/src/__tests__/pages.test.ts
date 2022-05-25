@@ -292,8 +292,10 @@ describe("pages", () => {
       setMockResponse(
         "/pages/assets/check-missing",
         "POST",
-        async (_, init, __, ___, authOverride) => {
-          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+        async (_, init) => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
           const body = JSON.parse(init.body as string) as { hashes: string[] };
           expect(body).toMatchObject({
             hashes: ["2082190357cfd3617ccfe04f340c6247"],
@@ -302,29 +304,27 @@ describe("pages", () => {
         }
       );
 
-      setMockResponse(
-        "/pages/assets/upload",
-        "POST",
-        async (_, init, __, ___, authOverride) => {
-          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
-          const body = JSON.parse(init.body as string) as {
-            key: string;
-            value: string;
-            metadata: { contentType: string };
-            base64: boolean;
-          }[];
-          expect(body).toMatchObject([
-            {
-              key: "2082190357cfd3617ccfe04f340c6247",
-              value: Buffer.from("foobar").toString("base64"),
-              metadata: {
-                contentType: "image/png",
-              },
-              base64: true,
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+        const body = JSON.parse(init.body as string) as {
+          key: string;
+          value: string;
+          metadata: { contentType: string };
+          base64: boolean;
+        }[];
+        expect(body).toMatchObject([
+          {
+            key: "2082190357cfd3617ccfe04f340c6247",
+            value: Buffer.from("foobar").toString("base64"),
+            metadata: {
+              contentType: "image/png",
             },
-          ]);
-        }
-      );
+            base64: true,
+          },
+        ]);
+      });
 
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/deployments",
@@ -376,8 +376,10 @@ describe("pages", () => {
       setMockResponse(
         "/pages/assets/check-missing",
         "POST",
-        async (_, init, __, ___, authOverride) => {
-          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
+        async (_, init) => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
           const body = JSON.parse(init.body as string) as { hashes: string[] };
           expect(body).toMatchObject({
             hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
@@ -386,29 +388,27 @@ describe("pages", () => {
         }
       );
 
-      setMockResponse(
-        "/pages/assets/upload",
-        "POST",
-        async (_, init, __, ___, authOverride) => {
-          expect(authOverride).toBe("<<funfetti-auth-jwt>>");
-          const body = JSON.parse(init.body as string) as {
-            key: string;
-            value: string;
-            metadata: { contentType: string };
-            base64: boolean;
-          }[];
-          expect(body).toMatchObject([
-            {
-              key: "7b764dacfd211bebd8077828a7ddefd7",
-              value: Buffer.from("foobar").toString("base64"),
-              metadata: {
-                contentType: "application/octet-stream",
-              },
-              base64: true,
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+        const body = JSON.parse(init.body as string) as {
+          key: string;
+          value: string;
+          metadata: { contentType: string };
+          base64: boolean;
+        }[];
+        expect(body).toMatchObject([
+          {
+            key: "7b764dacfd211bebd8077828a7ddefd7",
+            value: Buffer.from("foobar").toString("base64"),
+            metadata: {
+              contentType: "application/octet-stream",
             },
-          ]);
-        }
-      );
+            base64: true,
+          },
+        ]);
+      });
 
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/deployments",
