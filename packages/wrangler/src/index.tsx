@@ -759,7 +759,17 @@ function createCLIParser(argv: string[]) {
         }
       }
       // install packages as the final step of init
-      await installPackages(shouldRunPackageManagerInstall, devDepsToInstall);
+      try {
+        await installPackages(shouldRunPackageManagerInstall, devDepsToInstall);
+      } catch (e) {
+        // fetching packages could fail due to loss of internet, etc
+        // we should let folks know we failed to fetch, but their
+        // workers project is still ready to go
+        logger.error(e instanceof Error ? e.message : e);
+        instructions.push(
+          "\n🚨 wrangler was unable to fetch your npm packages, but your project is ready to go"
+        );
+      }
 
       // let users know what to do now
       instructions.forEach((instruction) => logger.log(instruction));
