@@ -46,8 +46,9 @@ describe("init", () => {
         "✨ Created wrangler.toml
         ✨ Initialized git repository
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`"
@@ -72,8 +73,9 @@ describe("init", () => {
         "✨ Created my-worker/wrangler.toml
         ✨ Initialized git repository at my-worker
         ✨ Created my-worker/package.json
-        ✨ Created my-worker/tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created my-worker/tsconfig.json
         ✨ Created my-worker/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd my-worker && npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`"
@@ -97,8 +99,9 @@ describe("init", () => {
           "out": "✨ Created wrangler.toml
         ✨ Initialized git repository
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
@@ -373,8 +376,9 @@ describe("init", () => {
           "err": "",
           "out": "✨ Created wrangler.toml
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
@@ -397,8 +401,9 @@ describe("init", () => {
           "err": "",
           "out": "✨ Created path/to/worker/my-worker/wrangler.toml
         ✨ Created path/to/worker/my-worker/package.json
-        ✨ Created path/to/worker/my-worker/tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created path/to/worker/my-worker/tsconfig.json
         ✨ Created path/to/worker/my-worker/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
@@ -616,7 +621,7 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created wrangler.toml
-        ✨ Installed wrangler",
+        ✨ Installed wrangler into devDependencies",
           "warn": "",
         }
       `);
@@ -664,7 +669,7 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-        ✨ Installed wrangler",
+        ✨ Installed wrangler into devDependencies",
           "warn": "",
         }
       `);
@@ -801,8 +806,9 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created wrangler.toml
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npx wrangler dev\`
         To publish your Worker to the Internet, run \`npx wrangler publish\`",
@@ -851,8 +857,9 @@ describe("init", () => {
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`"
@@ -899,8 +906,9 @@ describe("init", () => {
       expect(packageJson.scripts.publish).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npx wrangler dev\`
         To publish your Worker to the Internet, run \`npx wrangler publish\`"
@@ -940,7 +948,8 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created wrangler.toml
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies",
+        ✨ Created tsconfig.json
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
           "warn": "",
         }
       `);
@@ -981,7 +990,8 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created my-worker/wrangler.toml
-        ✨ Created my-worker/tsconfig.json, installed @cloudflare/workers-types into devDependencies",
+        ✨ Created my-worker/tsconfig.json
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
           "warn": "",
         }
       `);
@@ -1027,7 +1037,8 @@ describe("init", () => {
           "err": "",
           "out": "✨ Created wrangler.toml
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies",
+        ✨ Created tsconfig.json
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
           "warn": "",
         }
       `);
@@ -1179,8 +1190,8 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created wrangler.toml
-        ✨ Installed @cloudflare/workers-types.
-        Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
+        ✨ Installed @cloudflare/workers-types into devDependencies
+        🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
           "warn": "",
         }
       `);
@@ -1445,8 +1456,9 @@ describe("init", () => {
           "out": "✨ Created wrangler.toml
         ✨ Initialized git repository
         ✨ Created package.json
-        ✨ Created tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created tsconfig.json
         ✨ Created src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
@@ -1473,8 +1485,9 @@ describe("init", () => {
           "out": "✨ Created path/to/worker/wrangler.toml
         ✨ Initialized git repository at path/to/worker
         ✨ Created path/to/worker/package.json
-        ✨ Created path/to/worker/tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created path/to/worker/tsconfig.json
         ✨ Created path/to/worker/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd path/to/worker && npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
@@ -1503,8 +1516,9 @@ describe("init", () => {
           "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
         ✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
         ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
-        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json, installed @cloudflare/workers-types into devDependencies
+        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
         ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
         To publish your Worker to the Internet, run \`npm run publish\`",
