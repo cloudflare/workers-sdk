@@ -6,6 +6,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Project, Deployment } from "../pages";
 import type { FormData } from "undici";
+import type { RequestInit } from "undici";
 
 describe("pages", () => {
   runInTempDir();
@@ -346,6 +347,102 @@ describe("pages", () => {
       );
 
       await runWrangler("pages publish . --project-name=foo");
+
+      // TODO: Unmounting somehow loses this output
+
+      // expect(std.out).toMatchInlineSnapshot(`
+      //   "✨ Success! Uploaded 1 files (TIMINGS)
+
+      //   ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      // `);
+    });
+
+    it("should retry uploads", async () => {
+      writeFileSync("logo.txt", "foobar");
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/upload-token",
+        async ([_url, accountId]) => {
+          expect(accountId).toEqual("some-account-id");
+
+          return {
+            jwt: "<<funfetti-auth-jwt>>",
+          };
+        }
+      );
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init) => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
+          const body = JSON.parse(init.body as string) as { hashes: string[] };
+          expect(body).toMatchObject({
+            hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+          });
+          return body.hashes;
+        }
+      );
+
+      // Accumulate multiple requests then assert afterwards
+      const requests: RequestInit[] = [];
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        requests.push(init);
+
+        if (requests.length < 2) {
+          throw new Error("Something exploded, please retry");
+        } else {
+          return { success: true };
+        }
+      });
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async ([_url, accountId], init) => {
+          expect(accountId).toEqual("some-account-id");
+          expect(init.method).toEqual("POST");
+          const body = init.body as FormData;
+          const manifest = JSON.parse(body.get("manifest") as string);
+          expect(manifest).toMatchInlineSnapshot(`
+            Object {
+              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+            }
+          `);
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      await runWrangler("pages publish . --project-name=foo");
+
+      // Assert two identical requests
+      expect(requests.length).toBe(2);
+      for (const init of requests) {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+
+        const body = JSON.parse(init.body as string) as {
+          key: string;
+          value: string;
+          metadata: { contentType: string };
+          base64: boolean;
+        }[];
+        expect(body).toMatchObject([
+          {
+            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+            value: Buffer.from("foobar").toString("base64"),
+            metadata: {
+              contentType: "text/plain",
+            },
+            base64: true,
+          },
+        ]);
+      }
 
       // TODO: Unmounting somehow loses this output
 

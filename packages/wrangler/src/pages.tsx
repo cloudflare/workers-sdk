@@ -1187,7 +1187,7 @@ const createDeployment: CommandModule<
       <Progress done={counter} total={fileMap.size} />
     );
 
-    const queue = new PQueue({ concurrency: 10 });
+    const queue = new PQueue({ concurrency: 3 });
 
     for (const bucket of buckets) {
       const payload = bucket.files.map((file) => ({
@@ -1198,15 +1198,33 @@ const createDeployment: CommandModule<
         },
         base64: true,
       }));
+
+      let attempts = 0;
+      const doUpload = async (): Promise<void> => {
+        try {
+          return await fetchResult(`/pages/assets/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          if (attempts < 5) {
+            // Linear backoff, 0 second first time, then 1 second etc.
+            await new Promise((resolve) =>
+              setTimeout(resolve, attempts++ * 1000)
+            );
+            return doUpload();
+          } else {
+            throw e;
+          }
+        }
+      };
+
       queue.add(() =>
-        fetchResult(`/pages/assets/upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: JSON.stringify(payload),
-        }).then(
+        doUpload().then(
           () => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);
