@@ -85,7 +85,7 @@ function throwFetchError(
   response: FetchResult<unknown>
 ): never {
   const error = new ParseError({
-    text: "Received a bad response from the API",
+    text: `A request to the Cloudflare API (${resource}) failed.`,
     notes: response.errors.map((err) => ({
       text: err.code ? `${err.message} [code: ${err.code}]` : err.message,
     })),
