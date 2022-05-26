@@ -2754,7 +2754,7 @@ export async function main(argv: string[]): Promise<void> {
       e.notes.push({
         text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
       });
-      logger.error(formatMessage(e));
+      logger.log(formatMessage(e));
     } else {
       logger.error(e instanceof Error ? e.message : e);
       logger.log(
