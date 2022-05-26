@@ -32,7 +32,7 @@ export async function fetchInternal<ResponseType>(
   await requireLoggedIn();
   const apiToken = requireApiToken();
   const headers = cloneHeaders(init.headers);
-  addAuthorizationHeader(headers, apiToken);
+  addAuthorizationHeaderIfUnspecified(headers, apiToken);
 
   const queryString = queryParams ? `?${queryParams.toString()}` : "";
   const method = init.method ?? "GET";
@@ -96,16 +96,13 @@ function requireApiToken(): string {
   return authToken;
 }
 
-function addAuthorizationHeader(
+function addAuthorizationHeaderIfUnspecified(
   headers: Record<string, string>,
   apiToken: string
 ): void {
-  if ("Authorization" in headers) {
-    throw new Error(
-      "The request already specifies an authorisation header - cannot add a new one."
-    );
+  if (!("Authorization" in headers)) {
+    headers["Authorization"] = `Bearer ${apiToken}`;
   }
-  headers["Authorization"] = `Bearer ${apiToken}`;
 }
 
 /**

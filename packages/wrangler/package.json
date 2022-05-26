@@ -87,6 +87,7 @@
     "jest-websocket-mock": "^2.3.0",
     "mime": "^3.0.0",
     "open": "^8.4.0",
+    "p-queue": "^7.2.0",
     "pretty-bytes": "^6.0.0",
     "prompts": "^2.4.2",
     "react": "^17.0.2",
@@ -132,7 +133,7 @@
     "testTimeout": 30000,
     "testRegex": ".*.(test|spec)\\.[jt]sx?$",
     "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
     ],
     "moduleNameMapper": {
       "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",

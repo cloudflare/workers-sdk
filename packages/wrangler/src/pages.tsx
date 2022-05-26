@@ -14,6 +14,7 @@ import SelectInput from "ink-select-input";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
 import { getType } from "mime";
+import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
@@ -32,7 +33,11 @@ import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import { requireAuth } from "./user";
 import type { Config } from "../pages/functions/routes";
-import type { Headers, Request, fetch } from "@miniflare/core";
+import type {
+  Headers as MiniflareHeaders,
+  Request as MiniflareRequest,
+  fetch as miniflareFetch,
+} from "@miniflare/core";
 import type { BuildResult } from "esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { BuilderCallback, CommandModule } from "yargs";
@@ -284,7 +289,7 @@ function generateRulesMatcher<T>(
     T
   ][];
 
-  return ({ request }: { request: Request }) => {
+  return ({ request }: { request: MiniflareRequest }) => {
     const { pathname, host } = new URL(request.url);
 
     return compiledRules
@@ -357,7 +362,7 @@ function generateHeadersMatcher(headersFile: string) {
       )
     );
 
-    return (request: Request) => {
+    return (request: MiniflareRequest) => {
       const matches = rulesMatcher({
         request,
       });
@@ -406,7 +411,7 @@ function generateRedirectsMatcher(redirectsFile: string) {
       })
     );
 
-    return (request: Request) => {
+    return (request: MiniflareRequest) => {
       const match = rulesMatcher({
         request,
       })[0];
@@ -461,7 +466,9 @@ function hasFileExtension(pathname: string) {
   return /\/.+\.[a-z0-9]+$/i.test(pathname);
 }
 
-async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
+async function generateAssetsFetch(
+  directory: string
+): Promise<typeof miniflareFetch> {
   // Defer importing miniflare until we really need it
   const { Headers, Request, Response } = await import("@miniflare/core");
 
@@ -510,12 +517,12 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
     return readFileSync(file);
   };
 
-  const generateResponse = (request: Request) => {
+  const generateResponse = (request: MiniflareRequest) => {
     const url = new URL(request.url);
 
     const deconstructedResponse: {
       status: number;
-      headers: Headers;
+      headers: MiniflareHeaders;
       body?: Buffer;
     } = {
       status: 200,
@@ -667,8 +674,12 @@ async function generateAssetsFetch(directory: string): Promise<typeof fetch> {
   };
 
   const attachHeaders = (
-    request: Request,
-    deconstructedResponse: { status: number; headers: Headers; body?: Buffer }
+    request: MiniflareRequest,
+    deconstructedResponse: {
+      status: number;
+      headers: MiniflareHeaders;
+      body?: Buffer;
+    }
   ) => {
     const headers = deconstructedResponse.headers;
     const newHeaders = new Headers({});
@@ -1031,12 +1042,9 @@ const createDeployment: CommandModule<
       builtFunctions = readFileSync(outfile, "utf-8");
     }
 
-    type File = {
-      content: Buffer;
-      metadata: Metadata;
-    };
-
-    type Metadata = {
+    type FileContainer = {
+      content: string;
+      contentType: string;
       sizeInBytes: number;
       hash: string;
     };
@@ -1051,7 +1059,7 @@ const createDeployment: CommandModule<
 
     const walk = async (
       dir: string,
-      fileMap: Map<string, File> = new Map(),
+      fileMap: Map<string, FileContainer> = new Map(),
       depth = 0
     ) => {
       const files = await readdir(dir);
@@ -1085,8 +1093,6 @@ const createDeployment: CommandModule<
             const base64Content = fileContent.toString("base64");
             const extension = extname(basename(name)).substring(1);
 
-            const content = base64Content + extension;
-
             if (filestat.size > 25 * 1024 * 1024) {
               throw new Error(
                 `Error: Pages only supports files up to ${prettyBytes(
@@ -1096,11 +1102,12 @@ const createDeployment: CommandModule<
             }
 
             fileMap.set(name, {
-              content: fileContent,
-              metadata: {
-                sizeInBytes: filestat.size,
-                hash: hash(content).toString("hex").slice(0, 32),
-              },
+              content: base64Content,
+              contentType: getType(name) || "application/octet-stream",
+              sizeInBytes: filestat.size,
+              hash: hash(base64Content + extension)
+                .toString("hex")
+                .slice(0, 32),
             });
           }
         })
@@ -1111,51 +1118,112 @@ const createDeployment: CommandModule<
 
     const fileMap = await walk(directory);
 
-    const start = Date.now();
-
-    const files: Array<Promise<void>> = [];
-
-    if (fileMap.size > 1000) {
-      throw new Error(
-        `Error: Pages only supports up to 1,000 files in a deployment at the moment.\nTry a smaller project perhaps?`
+    if (fileMap.size > 20000) {
+      throw new FatalError(
+        `Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
+        1
       );
     }
 
-    let counter = 0;
+    const files = [...fileMap.values()];
 
+    const { jwt } = await fetchResult<{ jwt: string }>(
+      `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+    );
+
+    const start = Date.now();
+
+    const missingHashes = await fetchResult<string[]>(
+      `/pages/assets/check-missing`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      }
+    );
+
+    const sortedFiles = files
+      .filter((file) => missingHashes.includes(file.hash))
+      .sort((a, b) => b.sizeInBytes - a.sizeInBytes);
+
+    const buckets: {
+      files: FileContainer[];
+      remainingSize: number;
+    }[] = [];
+
+    const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
+    const MAX_BUCKET_FILE_COUNT = 5000;
+
+    for (const file of sortedFiles) {
+      let inserted = false;
+
+      for (const bucket of buckets) {
+        if (
+          bucket.remainingSize >= file.sizeInBytes &&
+          bucket.files.length < MAX_BUCKET_FILE_COUNT
+        ) {
+          bucket.files.push(file);
+          bucket.remainingSize -= file.sizeInBytes;
+          inserted = true;
+          break;
+        }
+      }
+
+      if (!inserted) {
+        buckets.push({
+          files: [file],
+          remainingSize: MAX_BUCKET_SIZE - file.sizeInBytes,
+        });
+      }
+    }
+
+    let counter = fileMap.size - sortedFiles.length;
     const { rerender, unmount } = render(
       <Progress done={counter} total={fileMap.size} />
     );
 
-    fileMap.forEach((file: File, name: string) => {
-      const form = new FormData();
-      form.append(
-        "file",
-        new File([new Uint8Array(file.content.buffer)], name)
-      );
+    const queue = new PQueue({ concurrency: 10 });
 
-      // TODO: Consider a retry
-
-      const promise = fetchResult<{ id: string }>(
-        `/accounts/${accountId}/pages/projects/${projectName}/file`,
-        {
+    for (const bucket of buckets) {
+      const payload = bucket.files.map((file) => ({
+        key: file.hash,
+        value: file.content,
+        metadata: {
+          contentType: file.contentType,
+        },
+        base64: true,
+      }));
+      queue.add(() =>
+        fetchResult(`/pages/assets/upload`, {
           method: "POST",
-          body: form,
-        }
-      ).then((response) => {
-        counter++;
-        rerender(<Progress done={counter} total={fileMap.size} />);
-        if (response.id != file.metadata.hash) {
-          throw new Error(
-            `Looks like there was an issue uploading '${name}'. Try again perhaps?`
-          );
-        }
-      });
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify(payload),
+        }).then(
+          () => {
+            counter += bucket.files.length;
+            rerender(<Progress done={counter} total={fileMap.size} />);
+          },
+          (error) => {
+            return Promise.reject(
+              new FatalError(
+                "Failed to upload files. Please try again.",
+                error.code || 1
+              )
+            );
+          }
+        )
+      );
+    }
 
-      files.push(promise);
-    });
-
-    await Promise.all(files);
+    await queue.onIdle();
 
     unmount();
 
@@ -1173,7 +1241,7 @@ const createDeployment: CommandModule<
         Object.fromEntries(
           [...fileMap.entries()].map(([fileName, file]) => [
             `/${fileName}`,
-            file.metadata.hash,
+            file.hash,
           ])
         )
       )
@@ -1477,7 +1545,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 
           // env.ASSETS.fetch
           serviceBindings: {
-            async ASSETS(request: Request) {
+            async ASSETS(request: MiniflareRequest) {
               if (proxyPort) {
                 try {
                   const url = new URL(request.url);
@@ -1869,7 +1937,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
     } as CommandModule);
 };
 
-const invalidAssetsFetch: typeof fetch = () => {
+const invalidAssetsFetch: typeof miniflareFetch = () => {
   throw new Error(
     "Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."
   );
