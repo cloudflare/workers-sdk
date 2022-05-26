@@ -79,6 +79,9 @@ interface PagesConfigCache {
 }
 
 const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
+const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
+const MAX_BUCKET_FILE_COUNT = 5000;
+const BULK_UPLOAD_CONCURRENCY = 3;
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1156,9 +1159,6 @@ const createDeployment: CommandModule<
       remainingSize: number;
     }[] = [];
 
-    const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
-    const MAX_BUCKET_FILE_COUNT = 5000;
-
     for (const file of sortedFiles) {
       let inserted = false;
 
@@ -1187,7 +1187,7 @@ const createDeployment: CommandModule<
       <Progress done={counter} total={fileMap.size} />
     );
 
-    const queue = new PQueue({ concurrency: 3 });
+    const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
     for (const bucket of buckets) {
       const payload = bucket.files.map((file) => ({
