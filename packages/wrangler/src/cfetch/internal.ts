@@ -100,11 +100,9 @@ function addAuthorizationHeaderIfUnspecified(
   headers: Record<string, string>,
   apiToken: string
 ): void {
-  if ("Authorization" in headers) {
-    // Only set if not already present
-    return;
+  if (!("Authorization" in headers)) {
+    headers["Authorization"] = `Bearer ${apiToken}`;
   }
-  headers["Authorization"] = `Bearer ${apiToken}`;
 }
 
 /**

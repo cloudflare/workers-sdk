@@ -32,7 +32,7 @@ const mocks: MockFetch<unknown>[] = [];
 export async function mockFetchInternal(
   resource: string,
   init: RequestInit = {},
-  queryParams: URLSearchParams = new URLSearchParams(),
+  queryParams: URLSearchParams = new URLSearchParams()
 ) {
   for (const { regexp, method, handler } of mocks) {
     const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;

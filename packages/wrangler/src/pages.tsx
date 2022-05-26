@@ -1045,7 +1045,7 @@ const createDeployment: CommandModule<
     type FileContainer = {
       content: string;
       contentType: string;
-      size: number;
+      sizeInBytes: number;
       hash: string;
     };
 
@@ -1104,7 +1104,7 @@ const createDeployment: CommandModule<
             fileMap.set(name, {
               content: base64Content,
               contentType: getType(name) || "application/octet-stream",
-              size: filestat.size,
+              sizeInBytes: filestat.size,
               hash: hash(base64Content + extension)
                 .toString("hex")
                 .slice(0, 32),
@@ -1149,7 +1149,7 @@ const createDeployment: CommandModule<
 
     const sortedFiles = files
       .filter((file) => missingHashes.includes(file.hash))
-      .sort((a, b) => b.size - a.size);
+      .sort((a, b) => b.sizeInBytes - a.sizeInBytes);
 
     const buckets: {
       files: FileContainer[];
@@ -1164,11 +1164,11 @@ const createDeployment: CommandModule<
 
       for (const bucket of buckets) {
         if (
-          bucket.remainingSize >= file.size &&
+          bucket.remainingSize >= file.sizeInBytes &&
           bucket.files.length < MAX_BUCKET_FILE_COUNT
         ) {
           bucket.files.push(file);
-          bucket.remainingSize -= file.size;
+          bucket.remainingSize -= file.sizeInBytes;
           inserted = true;
           break;
         }
@@ -1177,7 +1177,7 @@ const createDeployment: CommandModule<
       if (!inserted) {
         buckets.push({
           files: [file],
-          remainingSize: MAX_BUCKET_SIZE - file.size,
+          remainingSize: MAX_BUCKET_SIZE - file.sizeInBytes,
         });
       }
     }
