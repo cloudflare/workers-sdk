@@ -10,6 +10,7 @@ export { getCloudflareAPIBaseURL as getCloudflareApiBaseUrl } from "./internal";
 export interface FetchError {
   code: number;
   message: string;
+  error_chain?: FetchError[];
 }
 export interface FetchResult<ResponseType = unknown> {
   success: boolean;
@@ -87,7 +88,7 @@ function throwFetchError(
   const error = new ParseError({
     text: `A request to the Cloudflare API (${resource}) failed.`,
     notes: response.errors.map((err) => ({
-      text: err.code ? `${err.message} [code: ${err.code}]` : err.message,
+      text: renderError(err),
     })),
   });
   // add the first error code directly to this error
@@ -103,4 +104,18 @@ function throwFetchError(
 function hasCursor(result_info: unknown): result_info is { cursor: string } {
   const cursor = (result_info as { cursor: string } | undefined)?.cursor;
   return cursor !== undefined && cursor !== null && cursor !== "";
+}
+
+function renderError(err: FetchError, level = 0): string {
+  const chainedMessages =
+    err.error_chain
+      ?.map(
+        (chainedError) =>
+          `\n${"  ".repeat(level)}- ${renderError(chainedError, level + 1)}`
+      )
+      .join("\n") ?? "";
+  return (
+    (err.code ? `${err.message} [code: ${err.code}]` : err.message) +
+    chainedMessages
+  );
 }
