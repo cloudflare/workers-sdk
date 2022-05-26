@@ -2,6 +2,8 @@ import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWorkerSource } from "./helpers/write-worker-source";
+import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { PackageManager } from "../package-manager";
 
 describe("wrangler", () => {
@@ -113,9 +115,6 @@ describe("wrangler", () => {
   });
 
   describe("subcommand implicit help ran on incomplete command execution", () => {
-    function endEventLoop() {
-      return new Promise((resolve) => setImmediate(resolve));
-    }
     it("no subcommand for 'secret' should display a list of available subcommands", async () => {
       await runWrangler("secret");
       await endEventLoop();
@@ -195,6 +194,7 @@ describe("wrangler", () => {
           -v, --version  Show version number  [boolean]"
       `);
     });
+
     it("no subcommand 'r2' should display a list of available subcommands", async () => {
       await runWrangler("r2");
       await endEventLoop();
@@ -213,6 +213,7 @@ describe("wrangler", () => {
       `);
     });
   });
+
   describe("Deprecated commands", () => {
     it("should print a deprecation message for 'generate'", async () => {
       await runWrangler("generate").catch((err) => {
@@ -229,13 +230,27 @@ describe("wrangler", () => {
         `);
       });
     });
-    it("should print a deprecation message for 'build'", async () => {
-      await runWrangler("build").catch((err) => {
-        expect(err.message).toMatchInlineSnapshot(`
-          "Deprecation:
-          \`wrangler build\` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for alternatives"
-        `);
-      });
+  });
+
+  it("should print a deprecation message for 'build' and then try to run `publish --dry-run --outdir`", async () => {
+    writeWranglerToml({
+      main: "index.js",
     });
+    writeWorkerSource();
+    await runWrangler("build");
+    await endEventLoop();
+    expect(std.out).toMatchInlineSnapshot(`
+      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+
+        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m for more information.
+        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
+
+
+      --dry-run: exiting now."
+    `);
   });
 });
+
+function endEventLoop() {
+  return new Promise((resolve) => setImmediate(resolve));
+}

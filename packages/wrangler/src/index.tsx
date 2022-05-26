@@ -785,13 +785,34 @@ function createCLIParser(argv: string[]) {
     (yargs) => {
       return yargs.option("env", {
         describe: "Perform on a specific environment",
+        type: "string",
       });
     },
-    () => {
+    async (buildArgs) => {
       // "[DEPRECATED] 🦀 Build your project (if applicable)",
-      throw new DeprecationError(
-        "`wrangler build` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for alternatives"
+
+      const envFlag = buildArgs.env ? ` --env=${buildArgs.env}` : "";
+      logger.log(
+        formatMessage({
+          kind: "warning",
+          text: "Deprecation: `wrangler build` has been deprecated.",
+          notes: [
+            {
+              text: "Please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for more information.",
+            },
+            {
+              text: `Attempting to run \`wrangler publish --dry-run --outdir=dist${envFlag}\` for you instead:`,
+            },
+          ],
+        })
       );
+
+      await createCLIParser([
+        "publish",
+        "--dry-run",
+        "--outdir=dist",
+        ...(buildArgs.env ? ["--env", buildArgs.env] : []),
+      ]).parse();
     }
   );
 
