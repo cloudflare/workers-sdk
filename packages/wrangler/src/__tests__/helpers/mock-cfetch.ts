@@ -3,6 +3,7 @@ import { pathToRegexp } from "path-to-regexp";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
 import type { RequestInit } from "undici";
+import { Response } from "undici";
 
 /**
  * The signature of the function that will handle a mock request.
@@ -42,6 +43,30 @@ export async function mockFetchInternal(
       // The `resource` regular expression will extract the labelled groups from the URL.
       // These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
       return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+    }
+  }
+  throw new Error(
+    `no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
+  );
+}
+
+export async function mockFetchInternalResponse(
+  resource: string,
+  init: RequestInit = {},
+  queryParams: URLSearchParams = new URLSearchParams()
+) {
+  for (const { regexp, method, handler } of mocks) {
+    const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
+    const uri = regexp.exec(resourcePath);
+    // Do the resource path and (if specified) the HTTP method match?
+    if (uri !== null && (!method || method === (init.method ?? "GET"))) {
+      // The `resource` regular expression will extract the labelled groups from the URL.
+      // These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
+      let body = await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+      if (typeof body !== "string" && !Buffer.isBuffer(body)) {
+        body = JSON.stringify(body);
+      }
+      return new Response(body as string | Buffer);
     }
   }
   throw new Error(

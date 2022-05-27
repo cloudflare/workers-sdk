@@ -1,11 +1,16 @@
 import fetchMock from "jest-fetch-mock";
 import {
   fetchInternal,
+  fetchInternalResponse,
   fetchKVGetValue,
   getCloudflareAPIBaseURL,
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
-import { mockFetchInternal, mockFetchKVGetValue } from "./helpers/mock-cfetch";
+import {
+  mockFetchInternal,
+  mockFetchInternalResponse,
+  mockFetchKVGetValue,
+} from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
@@ -39,6 +44,9 @@ jest.mock("../package-manager");
 
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
+(fetchInternalResponse as jest.Mock).mockImplementation(
+  mockFetchInternalResponse
+);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
 (getCloudflareAPIBaseURL as jest.Mock).mockReturnValue(
   "https://api.cloudflare.com/client/v4"

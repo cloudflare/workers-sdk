@@ -204,6 +204,7 @@ describe("wrangler", () => {
         📦 Interact with an R2 store
 
         Commands:
+          wrangler r2 object  Manage R2 objects
           wrangler r2 bucket  Manage R2 buckets
 
         Flags:

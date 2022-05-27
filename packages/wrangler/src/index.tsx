@@ -2,6 +2,8 @@ import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import type { Readable } from "node:stream";
+import { pipeline } from "node:stream";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { execa } from "execa";
@@ -49,7 +51,14 @@ import {
   readFileSync,
 } from "./parse";
 import publish from "./publish";
-import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
+import {
+  bucketAndKeyFromObjectPath,
+  createR2Bucket,
+  deleteR2Bucket,
+  getR2Object,
+  listR2Buckets,
+  putR2Object,
+} from "./r2";
 import { getAssetPaths } from "./sites";
 import {
   createTail,
@@ -2519,6 +2528,177 @@ function createCLIParser(argv: string[]) {
   wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
     return r2Yargs
       .command(subHelp)
+      .command("object", "Manage R2 objects", (r2ObjectYargs) => {
+        return r2ObjectYargs
+          .command(
+            "get <objectPath>",
+            "Fetch an object from an R2 bucket",
+            (yargs) => {
+              return yargs
+                .positional("objectPath", {
+                  describe:
+                    "The source object path in the form of {bucket}/{key}",
+                  type: "string",
+                })
+                .option("file", {
+                  describe: "The destination file to create",
+                  alias: "f",
+                  conflicts: "pipe",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("pipe", {
+                  describe:
+                    "Enables the file to be piped to a destination, rather than specified with the --file option",
+                  alias: "p",
+                  conflicts: "file",
+                  type: "boolean",
+                });
+            },
+            async (args) => {
+              const config = readConfig(args.config as ConfigPath, args);
+              const accountId = await requireAuth(config);
+              const { objectPath, pipe } = args;
+              const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+              if (!bucket || !key) {
+                throw new CommandLineArgsError(
+                  "The object path must be in the form of {bucket}/{key}"
+                );
+              }
+              let file = args.file;
+              if (!file && !pipe) {
+                file = key;
+              }
+              if (!pipe) {
+                await printWranglerBanner();
+                logger.log(`Downloading "${key}" from "${bucket}".`);
+              }
+              const input = await getR2Object(accountId, bucket, key);
+              const output = file ? fs.createWriteStream(file) : process.stdout;
+              await new Promise<void>((resolve, reject) => {
+                pipeline(input, output, (err) => {
+                  err ? reject(err) : resolve();
+                });
+              });
+              if (!pipe) logger.log("Download complete.");
+            }
+          )
+          .command(
+            "put <objectPath>",
+            "Create an object in an R2 bucket",
+            (yargs) => {
+              return yargs
+                .positional("objectPath", {
+                  describe:
+                    "The destination object path in the form of {bucket}/{key}",
+                  type: "string",
+                })
+                .option("file", {
+                  describe: "The path of the file to upload",
+                  alias: "f",
+                  conflicts: "pipe",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("pipe", {
+                  describe:
+                    "Enables the file to be piped in, rather than specified with the --file option",
+                  alias: "p",
+                  conflicts: "file",
+                  type: "boolean",
+                })
+                .option("content-type", {
+                  describe:
+                    "A standard MIME type describing the format of the object data",
+                  alias: "ct",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("content-disposition", {
+                  describe:
+                    "Specifies presentational information for the object",
+                  alias: "cd",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("content-encoding", {
+                  describe:
+                    "Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field",
+                  alias: "ce",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("content-language", {
+                  describe: "The language the content is in",
+                  alias: "cl",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("cache-control", {
+                  describe:
+                    "Specifies caching behavior along the request/reply chain",
+                  alias: "cc",
+                  requiresArg: true,
+                  type: "string",
+                })
+                .option("expires", {
+                  describe:
+                    "The date and time at which the object is no longer cacheable",
+                  alias: "e",
+                  requiresArg: true,
+                  type: "string",
+                });
+            },
+            async (args) => {
+              await printWranglerBanner();
+
+              const config = readConfig(args.config as ConfigPath, args);
+              const accountId = await requireAuth(config);
+              const { objectPath, file, pipe, ...options } = args;
+              const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+              if (!bucket || !key) {
+                throw new CommandLineArgsError(
+                  "The object path must be in the form of {bucket}/{key}"
+                );
+              }
+              if (!file && !pipe) {
+                throw new CommandLineArgsError(
+                  "Either the --file or --pipe options are required."
+                );
+              }
+              let object: Readable | Buffer;
+              let objectSize: number;
+              if (file) {
+                object = fs.createReadStream(file);
+                const stats = fs.statSync(file);
+                objectSize = stats.size;
+              } else {
+                // todo: replace this with a multi-part upload instead of buffering it into memory
+                object = await new Promise<Buffer>((resolve, reject) => {
+                  const stream = process.stdin;
+                  const chunks = Array<Buffer>();
+                  stream.on("data", (chunk) => chunks.push(chunk));
+                  stream.on("end", () => resolve(Buffer.concat(chunks)));
+                  stream.on("error", (err) =>
+                    reject(
+                      new CommandLineArgsError(
+                        `Could not pipe. Reason: "${err.message}"`
+                      )
+                    )
+                  );
+                });
+                objectSize = object.length;
+              }
+
+              logger.log(`Creating object "${key}" in bucket "${bucket}".`);
+              await putR2Object(accountId, bucket, key, object, {
+                ...options,
+                "content-length": `${objectSize}`,
+              });
+              logger.log("Upload complete.");
+            }
+          );
+      })
       .command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
         r2BucketYargs.command(
           "create <name>",
@@ -2573,6 +2753,7 @@ function createCLIParser(argv: string[]) {
             logger.log(`Deleted bucket ${args.name}.`);
           }
         );
+
         return r2BucketYargs;
       });
   });

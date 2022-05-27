@@ -3,7 +3,7 @@ import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { RequestInit, HeadersInit } from "undici";
+import type { RequestInit, HeadersInit, Response } from "undici";
 
 /**
  * Get the URL to use to access the Cloudflare API.
@@ -13,6 +13,58 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
   deprecatedName: "CF_API_BASE_URL",
   defaultValue: "https://api.cloudflare.com/client/v4",
 });
+
+/**
+ * Builds and makes the fetch request.
+ *
+ * Initially belonged inside fetchInternal but was separated out to allow raw response access,
+ * to handle non-json responses.
+ */
+export async function fetchInternalResponse(
+  resource: string,
+  init: RequestInit = {},
+  queryParams?: URLSearchParams,
+  abortSignal?: AbortSignal
+): Promise<Response> {
+  await requireLoggedIn();
+  const apiToken = requireApiToken();
+  const headers = cloneHeaders(init.headers);
+  addAuthorizationHeader(headers, apiToken);
+
+  const queryString = queryParams ? `?${queryParams.toString()}` : "";
+  const method = init.method ?? "GET";
+  return fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
+    method,
+    ...init,
+    headers,
+    signal: abortSignal,
+  });
+}
+
+export async function handleResponseAsJSON<ResponseType>(
+  resource: string,
+  init: RequestInit,
+  response: Response
+) {
+  const jsonText = await response.text();
+  try {
+    return parseJSON<ResponseType>(jsonText);
+  } catch (err) {
+    throw new ParseError({
+      text: "Received a malformed response from the API",
+      notes: [
+        {
+          text: truncate(jsonText, 100),
+        },
+        {
+          text: `${init.method ?? "GET"} ${resource} -> ${response.status} ${
+            response.statusText
+          }`,
+        },
+      ],
+    });
+  }
+}
 
 /**
  * Make a fetch request to the Cloudflare API.
@@ -29,38 +81,13 @@ export async function fetchInternal<ResponseType>(
   queryParams?: URLSearchParams,
   abortSignal?: AbortSignal
 ): Promise<ResponseType> {
-  await requireLoggedIn();
-  const apiToken = requireApiToken();
-  const headers = cloneHeaders(init.headers);
-  addAuthorizationHeader(headers, apiToken);
-
-  const queryString = queryParams ? `?${queryParams.toString()}` : "";
-  const method = init.method ?? "GET";
-  const response = await fetch(
-    `${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-    {
-      method,
-      ...init,
-      headers,
-      signal: abortSignal,
-    }
+  const response = await fetchInternalResponse(
+    resource,
+    init,
+    queryParams,
+    abortSignal
   );
-  const jsonText = await response.text();
-  try {
-    return parseJSON<ResponseType>(jsonText);
-  } catch (err) {
-    throw new ParseError({
-      text: "Received a malformed response from the API",
-      notes: [
-        {
-          text: truncate(jsonText, 100),
-        },
-        {
-          text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
-        },
-      ],
-    });
-  }
+  return handleResponseAsJSON(resource, init, response);
 }
 
 function truncate(text: string, maxLength: number): string {
