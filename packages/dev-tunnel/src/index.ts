@@ -1,15 +1,20 @@
 import { Router } from "itty-router";
 import { TUNNEL_TTL_SECONDS } from "./constants";
 
-export type TunnelCreationRequestBody = {
-  host: string;
+export type TunnelCreationRequest = {
+  sessionUrl: string;
 };
 
-export type TunnelHeartbeatRequestBody = {
+export type TunnelCreationResponse = {
+  id: string;
+  url: string;
+};
+
+export type TunnelHeartbeatRequest = {
   id: string;
 };
 
-export type TunnelShutdownRequestBody = TunnelHeartbeatRequestBody;
+export type TunnelShutdownRequest = TunnelHeartbeatRequest;
 
 /**
  * Routes for interacting with the dev-tunnel worker
@@ -54,22 +59,24 @@ const router = Router();
 // handle tunnel creation requests
 router.post(Routes.CREATE, async (request: Request, env: Env) => {
   try {
-    const { host } = await request.json<TunnelCreationRequestBody>();
+    const { sessionUrl } = await request.json<TunnelCreationRequest>();
     const id = crypto.randomUUID();
 
-    await env.TUNNELS.put(id, host, {
+    await env.TUNNELS.put(id, sessionUrl, {
       expirationTtl: TUNNEL_TTL_SECONDS,
     });
 
     const { hostname } = new URL(request.url);
 
-    return new Response(
-      JSON.stringify({ id, url: `https://${hostname}/${id}` }),
-      {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    const body: TunnelCreationResponse = {
+      id,
+      url: `https://${hostname}/${id}`,
+    };
+
+    return new Response(JSON.stringify(body), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
     return new Response("Invalid request", { status: 400 });
   }
@@ -78,7 +85,7 @@ router.post(Routes.CREATE, async (request: Request, env: Env) => {
 // handle tunnel heartbeat requests
 router.patch(Routes.HEARTBEAT, async (request: Request, env: Env) => {
   try {
-    const { id } = await request.json<TunnelHeartbeatRequestBody>();
+    const { id } = await request.json<TunnelHeartbeatRequest>();
 
     const host = await env.TUNNELS.get(id);
     if (!host) {
@@ -104,10 +111,10 @@ router.patch(Routes.HEARTBEAT, async (request: Request, env: Env) => {
 // handle tunnel shutdown requests
 router.delete(Routes.SHUTDOWN, async (request: Request, env: Env) => {
   try {
-    const { id } = await request.json<TunnelShutdownRequestBody>();
+    const { id } = await request.json<TunnelShutdownRequest>();
     await env.TUNNELS.delete(id);
 
-    return new Response(null);
+    return new Response(null, { status: 204 });
   } catch (e) {
     return new Response("Invalid request", {
       status: 400,

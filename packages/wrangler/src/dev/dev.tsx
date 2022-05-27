@@ -1,14 +1,9 @@
-import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { watch } from "chokidar";
-import clipboardy from "clipboardy";
-import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
-import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { fetch } from "undici";
 import { printBindings } from "../config";
 import { runCustomBuild } from "../entry";
 import { openInspector } from "../inspect";
@@ -17,6 +12,7 @@ import openInBrowser from "../open-in-browser";
 import { getAPIToken } from "../user";
 import { Local } from "./local";
 import { Remote } from "./remote";
+import { useTunnel } from "./tunnel";
 import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Entry } from "../entry";
@@ -139,11 +135,19 @@ function InteractiveDevSession(props: InteractiveDevSessionProps) {
     props.localProtocol
   );
 
-  useTunnel(toggles.tunnel);
+  const tunnelURL = useTunnel({
+    toggle: toggles.tunnel,
+    ...props,
+  });
 
   return (
     <>
       <DevSession {...props} local={toggles.local} />
+      {tunnelURL !== undefined ? (
+        <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
+          <Text>sharing at {tunnelURL}</Text>
+        </Box>
+      ) : null}
       <Box borderStyle="round" paddingLeft={1} paddingRight={1}>
         <Text bold={true}>[b]</Text>
         <Text> open a browser, </Text>
@@ -153,6 +157,8 @@ function InteractiveDevSession(props: InteractiveDevSessionProps) {
         <Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
         <Text bold={true}>[c]</Text>
         <Text> clear console, </Text>
+        <Text bold={true}>[s]</Text>
+        <Text> {tunnelURL !== undefined ? "un" : null}share session, </Text>
         <Text bold={true}>[x]</Text>
         <Text> to exit</Text>
       </Box>
@@ -263,94 +269,11 @@ function useCustomBuild(
   }, [build, expectedEntry]);
 }
 
-function sleep(period: number) {
-  return new Promise((resolve) => setTimeout(resolve, period));
-}
-const SLEEP_DURATION = 2000;
-// really need a first class api for this
-const hostNameRegex = /userHostname="(.*)"/g;
-async function findTunnelHostname() {
-  let hostName: string | undefined;
-  while (!hostName) {
-    try {
-      const resp = await fetch("http://localhost:8789/metrics");
-      const data = await resp.text();
-      const matches = Array.from(data.matchAll(hostNameRegex));
-      hostName = matches[0][1];
-    } catch (err) {
-      await sleep(SLEEP_DURATION);
-    }
-  }
-  return hostName;
-}
-
-/**
- * Create a tunnel to the remote worker.
- * We've disabled this for now until we figure out a better user experience.
- */
-function useTunnel(toggle: boolean) {
-  const tunnel = useRef<ReturnType<typeof spawn>>();
-  const removeSignalExitListener = useRef<() => void>();
-  // TODO: test if cloudflared is available, if not
-  // point them to a url where they can get docs to install it
-  useEffect(() => {
-    async function startTunnel() {
-      if (toggle) {
-        try {
-          await commandExists("cloudflared");
-        } catch (e) {
-          logger.warn(
-            "To share your worker on the Internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
-          );
-          return;
-        }
-        logger.log("⎔ Starting a tunnel...");
-        tunnel.current = spawn("cloudflared", [
-          "tunnel",
-          "--url",
-          "http://localhost:8787",
-          "--metrics",
-          "localhost:8789",
-        ]);
-
-        tunnel.current.on("close", (code) => {
-          if (code) {
-            logger.log(`Tunnel process exited with code ${code}`);
-          }
-        });
-
-        removeSignalExitListener.current = onExit((_code, _signal) => {
-          logger.log("⎔ Shutting down local tunnel.");
-          tunnel.current?.kill();
-          tunnel.current = undefined;
-        });
-
-        const hostName = await findTunnelHostname();
-        await clipboardy.write(hostName);
-        logger.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
-      }
-    }
-
-    startTunnel().catch(async (err) => {
-      logger.error("tunnel:", err);
-    });
-
-    return () => {
-      if (tunnel.current) {
-        logger.log("⎔ Shutting down tunnel.");
-        tunnel.current?.kill();
-        tunnel.current = undefined;
-        removeSignalExitListener.current && removeSignalExitListener.current();
-        removeSignalExitListener.current = undefined;
-      }
-    };
-  }, [toggle]);
-}
-
 type useHotkeysInitialState = {
   local: boolean;
   tunnel: boolean;
 };
+
 function useHotkeys(
   initial: useHotkeysInitialState,
   port: number,
@@ -361,6 +284,7 @@ function useHotkeys(
   // UGH, we should put port in context instead
   const [toggles, setToggles] = useState(initial);
   const { exit } = useApp();
+
   useInput(
     async (
       input,
@@ -387,9 +311,16 @@ function useHotkeys(
         }
         // toggle local
         case "l":
-          setToggles((previousToggles) => ({
+          setToggles(({ local, ...previousToggles }) => ({
             ...previousToggles,
-            local: !previousToggles.local,
+            local: !local,
+          }));
+          break;
+        // toggle tunnel
+        case "s":
+          setToggles(({ tunnel, ...previousToggles }) => ({
+            ...previousToggles,
+            tunnel: !tunnel,
           }));
           break;
         // shut down

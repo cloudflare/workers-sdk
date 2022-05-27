@@ -6,6 +6,7 @@
   "description": "Tunnel worker for sharing local `dev` sessions",
   "license": "MIT OR Apache-2.0",
   "module": "src/index.ts",
+  "main": "src/index.ts",
   "scripts": {
     "test": "jest",
     "publish": "npx wrangler publish"
