@@ -5,10 +5,11 @@
   "author": "wrangler@cloudflare.com",
   "description": "Tunnel worker for sharing local `dev` sessions",
   "license": "MIT OR Apache-2.0",
-  "module": "src/index.ts",
-  "main": "src/index.ts",
+  "module": "lib",
+  "main": "lib",
   "scripts": {
     "test": "jest",
+    "build": "tsc",
     "publish": "npx wrangler publish"
   },
   "bugs": {

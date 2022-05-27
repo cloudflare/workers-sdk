@@ -178,4 +178,5 @@ miniflare-dist
 packages/wrangler/wrangler.toml
 packages/prerelease-registry/_worker.js
 packages/wranglerjs-compat-webpack-plugin/lib
+packages/dev-tunnel/lib
 .wrangler-1-cache

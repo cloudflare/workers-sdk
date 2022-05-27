@@ -4,7 +4,11 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": false,
+    "declaration": true,
+    "target": "ESNext",
+    "outDir": "lib"
   },
   "include": ["src/index.ts"]
 }
