@@ -33,7 +33,7 @@
     "typescript": "^4.6.3"
   },
   "scripts": {
-    "check": "run-p check:* --aggregate-output --continue-on-error",
+    "check": "npm run build --workspace=dev-tunnel && run-p check:* --aggregate-output --continue-on-error",
     "check:type": "npm run check:type --workspaces --if-present",
     "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
     "check:format": "prettier packages/** .changeset --check --ignore-unknown",
