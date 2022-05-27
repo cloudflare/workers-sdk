@@ -1,12 +1,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
+import {
+  createFetchResult,
+  setMockRawResponse,
+  setMockResponse,
+  unsetAllMocks,
+} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Project, Deployment } from "../pages";
-import type { FormData } from "undici";
-import type { RequestInit } from "undici";
+import type { Deployment, Project } from "../pages";
+import type { FormData, RequestInit } from "undici";
 
 describe("pages", () => {
   runInTempDir();
@@ -388,13 +392,18 @@ describe("pages", () => {
 
       // Accumulate multiple requests then assert afterwards
       const requests: RequestInit[] = [];
-      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+      setMockRawResponse("/pages/assets/upload", "POST", async (_, init) => {
         requests.push(init);
 
         if (requests.length < 2) {
-          throw new Error("Something exploded, please retry");
+          return createFetchResult(null, false, [
+            {
+              code: 800000,
+              message: "Something exploded, please retry",
+            },
+          ]);
         } else {
-          return { success: true };
+          return createFetchResult(null, true);
         }
       });
 
@@ -444,13 +453,11 @@ describe("pages", () => {
         ]);
       }
 
-      // TODO: Unmounting somehow loses this output
+      expect(std.out).toMatchInlineSnapshot(`
+        "✨ Success! Uploaded 1 files (TIMINGS)
 
-      // expect(std.out).toMatchInlineSnapshot(`
-      //   "✨ Success! Uploaded 1 files (TIMINGS)
-
-      //   ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-      // `);
+        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      `);
     });
 
     it("should not error when directory names contain periods and houses a extensionless file", async () => {

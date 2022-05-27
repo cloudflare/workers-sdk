@@ -82,6 +82,7 @@ const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
 const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
 const MAX_BUCKET_FILE_COUNT = 5000;
 const BULK_UPLOAD_CONCURRENCY = 3;
+const MAX_UPLOAD_ATTEMPTS = 5;
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1211,7 +1212,7 @@ const createDeployment: CommandModule<
             body: JSON.stringify(payload),
           });
         } catch (e) {
-          if (attempts < 5) {
+          if (attempts < MAX_UPLOAD_ATTEMPTS) {
             // Linear backoff, 0 second first time, then 1 second etc.
             await new Promise((resolve) =>
               setTimeout(resolve, attempts++ * 1000)
