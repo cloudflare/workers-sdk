@@ -9,8 +9,27 @@ import {
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Deployment, Project } from "../pages";
+import type { Deployment, Project, UploadPayloadFile } from "../pages";
 import type { FormData, RequestInit } from "undici";
+
+// Asserting within mock responses get swallowed, so run them out-of-band
+const outOfBandTests: (() => void)[] = [];
+function assertLater(fn: () => void) {
+  outOfBandTests.push(fn);
+}
+
+function mockGetToken(jwt: string) {
+  setMockResponse(
+    "/accounts/:accountId/pages/projects/foo/upload-token",
+    async ([_url, accountId]) => {
+      assertLater(() => {
+        expect(accountId).toEqual("some-account-id");
+      });
+
+      return { jwt };
+    }
+  );
+}
 
 describe("pages", () => {
   runInTempDir();
@@ -18,6 +37,12 @@ describe("pages", () => {
   function endEventLoop() {
     return new Promise((resolve) => setImmediate(resolve));
   }
+  beforeEach(() => {
+    outOfBandTests.length = 0;
+  });
+  afterEach(() => {
+    outOfBandTests.forEach((fn) => fn());
+  });
 
   it("should should display a list of available subcommands, for pages with no subcommand", async () => {
     await runWrangler("pages");
@@ -83,12 +108,16 @@ describe("pages", () => {
         "/accounts/:accountId/pages/projects",
         ([_url, accountId], init, query) => {
           requests.count++;
-          expect(accountId).toEqual("some-account-id");
-          expect(query.get("per_page")).toEqual("10");
-          expect(query.get("page")).toEqual(`${requests.count}`);
-          expect(init).toEqual({});
           const pageSize = Number(query.get("per_page"));
           const page = Number(query.get("page"));
+          const expectedPageSize = 10;
+          const expectedPage = requests.count;
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(pageSize).toEqual(expectedPageSize);
+            expect(page).toEqual(expectedPage);
+            expect(init).toEqual({});
+          });
           return projects.slice((page - 1) * pageSize, page * pageSize);
         }
       );
@@ -163,12 +192,14 @@ describe("pages", () => {
       setMockResponse(
         "/accounts/:accountId/pages/projects",
         ([_url, accountId], init) => {
-          expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
           const body = JSON.parse(init.body as string);
-          expect(body).toEqual({
-            name: "a-new-project",
-            production_branch: "main",
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            expect(body).toEqual({
+              name: "a-new-project",
+              production_branch: "main",
+            });
           });
           return {
             name: "a-new-project",
@@ -200,8 +231,10 @@ describe("pages", () => {
         "/accounts/:accountId/pages/projects/:project/deployments",
         ([_url, accountId, project]) => {
           requests.count++;
-          expect(project).toEqual("images");
-          expect(accountId).toEqual("some-account-id");
+          assertLater(() => {
+            expect(project).toEqual("images");
+            expect(accountId).toEqual("some-account-id");
+          });
           return deployments;
         }
       );
@@ -286,7 +319,9 @@ describe("pages", () => {
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/upload-token",
         async ([_url, accountId]) => {
-          expect(accountId).toEqual("some-account-id");
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+          });
 
           return {
             jwt: "<<funfetti-auth-jwt>>",
@@ -298,51 +333,52 @@ describe("pages", () => {
         "/pages/assets/check-missing",
         "POST",
         async (_, init) => {
-          expect(init.headers).toMatchObject({
-            Authorization: "Bearer <<funfetti-auth-jwt>>",
-          });
           const body = JSON.parse(init.body as string) as { hashes: string[] };
-          expect(body).toMatchObject({
-            hashes: ["2082190357cfd3617ccfe04f340c6247"],
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: ["2082190357cfd3617ccfe04f340c6247"],
+            });
           });
           return body.hashes;
         }
       );
 
       setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-        expect(init.headers).toMatchObject({
-          Authorization: "Bearer <<funfetti-auth-jwt>>",
-        });
-        const body = JSON.parse(init.body as string) as {
-          key: string;
-          value: string;
-          metadata: { contentType: string };
-          base64: boolean;
-        }[];
-        expect(body).toMatchObject([
-          {
-            key: "2082190357cfd3617ccfe04f340c6247",
-            value: Buffer.from("foobar").toString("base64"),
-            metadata: {
-              contentType: "image/png",
+        assertLater(() => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
+          const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+          expect(body).toMatchObject([
+            {
+              key: "2082190357cfd3617ccfe04f340c6247",
+              value: Buffer.from("foobar").toString("base64"),
+              metadata: {
+                contentType: "image/png",
+              },
+              base64: true,
             },
-            base64: true,
-          },
-        ]);
+          ]);
+        });
       });
 
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/deployments",
         async ([_url, accountId], init) => {
-          expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
-          const body = init.body as FormData;
-          const manifest = JSON.parse(body.get("manifest") as string);
-          expect(manifest).toMatchInlineSnapshot(`
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
             Object {
               "/logo.png": "2082190357cfd3617ccfe04f340c6247",
             }
           `);
+          });
 
           return {
             url: "https://abcxyz.foo.pages.dev/",
@@ -364,27 +400,20 @@ describe("pages", () => {
     it("should retry uploads", async () => {
       writeFileSync("logo.txt", "foobar");
 
-      setMockResponse(
-        "/accounts/:accountId/pages/projects/foo/upload-token",
-        async ([_url, accountId]) => {
-          expect(accountId).toEqual("some-account-id");
-
-          return {
-            jwt: "<<funfetti-auth-jwt>>",
-          };
-        }
-      );
+      mockGetToken("<<funfetti-auth-jwt>>");
 
       setMockResponse(
         "/pages/assets/check-missing",
         "POST",
         async (_, init) => {
-          expect(init.headers).toMatchObject({
-            Authorization: "Bearer <<funfetti-auth-jwt>>",
-          });
           const body = JSON.parse(init.body as string) as { hashes: string[] };
-          expect(body).toMatchObject({
-            hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+            });
           });
           return body.hashes;
         }
@@ -410,15 +439,17 @@ describe("pages", () => {
       setMockResponse(
         "/accounts/:accountId/pages/projects/foo/deployments",
         async ([_url, accountId], init) => {
-          expect(accountId).toEqual("some-account-id");
-          expect(init.method).toEqual("POST");
-          const body = init.body as FormData;
-          const manifest = JSON.parse(body.get("manifest") as string);
-          expect(manifest).toMatchInlineSnapshot(`
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
             Object {
               "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
             }
           `);
+          });
 
           return {
             url: "https://abcxyz.foo.pages.dev/",
@@ -431,30 +462,137 @@ describe("pages", () => {
       // Assert two identical requests
       expect(requests.length).toBe(2);
       for (const init of requests) {
-        expect(init.headers).toMatchObject({
-          Authorization: "Bearer <<funfetti-auth-jwt>>",
-        });
+        assertLater(() => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
 
-        const body = JSON.parse(init.body as string) as {
-          key: string;
-          value: string;
-          metadata: { contentType: string };
-          base64: boolean;
-        }[];
-        expect(body).toMatchObject([
-          {
-            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
-            value: Buffer.from("foobar").toString("base64"),
-            metadata: {
-              contentType: "text/plain",
+          const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+          expect(body).toMatchObject([
+            {
+              key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+              value: Buffer.from("foobar").toString("base64"),
+              metadata: {
+                contentType: "text/plain",
+              },
+              base64: true,
             },
-            base64: true,
-          },
-        ]);
+          ]);
+        });
       }
 
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Success! Uploaded 1 files (TIMINGS)
+
+        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      `);
+    });
+
+    it("should try to use multiple buckets (up to the max concurrency)", async () => {
+      writeFileSync("logo.txt", "foobar");
+      writeFileSync("logo.png", "foobar");
+      writeFileSync("logo.html", "foobar");
+      writeFileSync("logo.js", "foobar");
+
+      mockGetToken("<<funfetti-auth-jwt>>");
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init) => {
+          const body = JSON.parse(init.body as string) as { hashes: string[] };
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: expect.arrayContaining([
+                "d96fef225537c9f5e44a3cb27fd0b492",
+                "2082190357cfd3617ccfe04f340c6247",
+                "6be321bef99e758250dac034474ddbb8",
+                "1a98fb08af91aca4a7df1764a2c4ddb0",
+              ]),
+            });
+          });
+          return body.hashes;
+        }
+      );
+
+      // Accumulate multiple requests then assert afterwards
+      const requests: RequestInit[] = [];
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        requests.push(init);
+      });
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async ([_url, accountId], init) => {
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
+            Object {
+              "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+              "/logo.js": "6be321bef99e758250dac034474ddbb8",
+              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+            }
+          `);
+          });
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      await runWrangler("pages publish . --project-name=foo");
+
+      // We have 3 buckets, so expect 3 uploads
+      expect(requests.length).toBe(3);
+      const bodies: UploadPayloadFile[][] = [];
+      for (const init of requests) {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+        bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
+      }
+      // First bucket should end up with 2 files
+      expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+      // But we don't know the order, so flatten and test without ordering
+      expect(bodies.flatMap((b) => b)).toEqual(
+        expect.arrayContaining([
+          {
+            base64: true,
+            key: "d96fef225537c9f5e44a3cb27fd0b492",
+            metadata: { contentType: "text/html" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+            metadata: { contentType: "text/plain" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "6be321bef99e758250dac034474ddbb8",
+            metadata: { contentType: "application/javascript" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "2082190357cfd3617ccfe04f340c6247",
+            metadata: { contentType: "image/png" },
+            value: "Zm9vYmFy",
+          },
+        ])
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "✨ Success! Uploaded 4 files (TIMINGS)
 
         ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
       `);
@@ -466,52 +604,42 @@ describe("pages", () => {
       // it hashes to a different value
       writeFileSync(".well-known/foobar", "foobar");
 
-      setMockResponse(
-        "/accounts/:accountId/pages/projects/foo/upload-token",
-        async ([_url, accountId]) => {
-          expect(accountId).toEqual("some-account-id");
-
-          return {
-            jwt: "<<funfetti-auth-jwt>>",
-          };
-        }
-      );
+      mockGetToken("<<funfetti-auth-jwt>>");
 
       setMockResponse(
         "/pages/assets/check-missing",
         "POST",
         async (_, init) => {
-          expect(init.headers).toMatchObject({
-            Authorization: "Bearer <<funfetti-auth-jwt>>",
-          });
           const body = JSON.parse(init.body as string) as { hashes: string[] };
-          expect(body).toMatchObject({
-            hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
+            });
           });
           return body.hashes;
         }
       );
 
       setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-        expect(init.headers).toMatchObject({
-          Authorization: "Bearer <<funfetti-auth-jwt>>",
-        });
-        const body = JSON.parse(init.body as string) as {
-          key: string;
-          value: string;
-          metadata: { contentType: string };
-          base64: boolean;
-        }[];
-        expect(body).toMatchObject([
-          {
-            key: "7b764dacfd211bebd8077828a7ddefd7",
-            value: Buffer.from("foobar").toString("base64"),
-            metadata: {
-              contentType: "application/octet-stream",
+        assertLater(() => {
+          expect(init.headers).toMatchObject({
+            Authorization: "Bearer <<funfetti-auth-jwt>>",
+          });
+          const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+          expect(body).toMatchObject([
+            {
+              key: "7b764dacfd211bebd8077828a7ddefd7",
+              value: Buffer.from("foobar").toString("base64"),
+              metadata: {
+                contentType: "application/octet-stream",
+              },
+              base64: true,
             },
-            base64: true,
-          },
-        ]);
+          ]);
+        });
       });
 
       setMockResponse(
