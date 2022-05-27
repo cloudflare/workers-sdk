@@ -73,6 +73,13 @@ export type Deployment = {
   project_name: string;
 };
 
+export type UploadPayloadFile = {
+  key: string;
+  value: string;
+  metadata: { contentType: string };
+  base64: boolean;
+};
+
 interface PagesConfigCache {
   account_id?: string;
   project_name?: string;
@@ -1155,15 +1162,23 @@ const createDeployment: CommandModule<
       .filter((file) => missingHashes.includes(file.hash))
       .sort((a, b) => b.sizeInBytes - a.sizeInBytes);
 
+    // Start with a few buckets so small projects still get
+    // the benefit of multiple upload streams
     const buckets: {
       files: FileContainer[];
       remainingSize: number;
-    }[] = [];
+    }[] = new Array(BULK_UPLOAD_CONCURRENCY).fill(null).map(() => ({
+      files: [],
+      remainingSize: MAX_BUCKET_SIZE,
+    }));
 
+    let bucketOffset = 0;
     for (const file of sortedFiles) {
       let inserted = false;
 
-      for (const bucket of buckets) {
+      for (let i = 0; i < buckets.length; i++) {
+        // Start at a different bucket for each new file
+        const bucket = buckets[(i + bucketOffset) % buckets.length];
         if (
           bucket.remainingSize >= file.sizeInBytes &&
           bucket.files.length < MAX_BUCKET_FILE_COUNT
@@ -1181,6 +1196,7 @@ const createDeployment: CommandModule<
           remainingSize: MAX_BUCKET_SIZE - file.sizeInBytes,
         });
       }
+      bucketOffset++;
     }
 
     let counter = fileMap.size - sortedFiles.length;
@@ -1191,7 +1207,10 @@ const createDeployment: CommandModule<
     const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
     for (const bucket of buckets) {
-      const payload = bucket.files.map((file) => ({
+      // Don't upload empty buckets (can happen for tiny projects)
+      if (bucket.files.length === 0) continue;
+
+      const payload: UploadPayloadFile[] = bucket.files.map((file) => ({
         key: file.hash,
         value: file.content,
         metadata: {
