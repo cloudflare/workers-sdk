@@ -1,0 +1,9 @@
+name = "live-share"
+main = "src/index.ts"
+workers_dev = true
+compatibility_date = "2022-05-26"
+
+[[kv_namespaces]]
+binding    = "TUNNELS"
+id         = "096bf2fc986f4c328c93161c046a89cf"
+preview_id = "ad2ecb4a579d470eaa98939c24ac4a82"

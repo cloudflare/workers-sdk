@@ -1,0 +1,33 @@
+{
+  "name": "dev-tunnel",
+  "private": "true",
+  "version": "0.0.0",
+  "author": "wrangler@cloudflare.com",
+  "description": "Tunnel worker for sharing local `dev` sessions",
+  "license": "MIT OR Apache-2.0",
+  "module": "src/index.ts",
+  "scripts": {
+    "test": "jest",
+    "publish": "npx wrangler publish"
+  },
+  "bugs": {
+    "url": "https://github.com/cloudflare/wrangler2/issues"
+  },
+  "homepage": "https://github.com/cloudflare/wrangler2#readme",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.11.0"
+  },
+  "dependencies": {
+    "itty-router": "^2.6.1"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.c?(t|j)sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true
+        }
+      ]
+    }
+  }
+}
