@@ -79,6 +79,10 @@ interface PagesConfigCache {
 }
 
 const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
+const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
+const MAX_BUCKET_FILE_COUNT = 5000;
+const BULK_UPLOAD_CONCURRENCY = 3;
+const MAX_UPLOAD_ATTEMPTS = 5;
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -1156,9 +1160,6 @@ const createDeployment: CommandModule<
       remainingSize: number;
     }[] = [];
 
-    const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
-    const MAX_BUCKET_FILE_COUNT = 5000;
-
     for (const file of sortedFiles) {
       let inserted = false;
 
@@ -1187,7 +1188,7 @@ const createDeployment: CommandModule<
       <Progress done={counter} total={fileMap.size} />
     );
 
-    const queue = new PQueue({ concurrency: 10 });
+    const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
     for (const bucket of buckets) {
       const payload = bucket.files.map((file) => ({
@@ -1198,15 +1199,33 @@ const createDeployment: CommandModule<
         },
         base64: true,
       }));
+
+      let attempts = 0;
+      const doUpload = async (): Promise<void> => {
+        try {
+          return await fetchResult(`/pages/assets/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          if (attempts < MAX_UPLOAD_ATTEMPTS) {
+            // Linear backoff, 0 second first time, then 1 second etc.
+            await new Promise((resolve) =>
+              setTimeout(resolve, attempts++ * 1000)
+            );
+            return doUpload();
+          } else {
+            throw e;
+          }
+        }
+      };
+
       queue.add(() =>
-        fetchResult(`/pages/assets/upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: JSON.stringify(payload),
-        }).then(
+        doUpload().then(
           () => {
             counter += bucket.files.length;
             rerender(<Progress done={counter} total={fileMap.size} />);
