@@ -1,5 +1,94 @@
 # wrangler
 
+## 2.0.7
+
+### Patch Changes
+
+- [#1110](https://github.com/cloudflare/wrangler2/pull/1110) [`515a52f`](https://github.com/cloudflare/wrangler2/commit/515a52fbde910bf83a4964f337bd4f4e8a138705) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: print instructions even if installPackages fails to fetch npm packages
+
+* [#1051](https://github.com/cloudflare/wrangler2/pull/1051) [`7e2e97b`](https://github.com/cloudflare/wrangler2/commit/7e2e97b927c0186544e38f66186e2d4fdd136288) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add support for using wrangler behind a proxy
+
+  Configures the undici library (the library wrangler uses for `fetch`) to send all requests via a proxy selected from the first non-empty environment variable from "https_proxy", "HTTPS_PROXY", "http_proxy" and "HTTP_PROXY".
+
+- [#1089](https://github.com/cloudflare/wrangler2/pull/1089) [`de59ee7`](https://github.com/cloudflare/wrangler2/commit/de59ee7d502fa75843584447eb784e76f84d4e50) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: batch package manager installs so folks only have to wait once
+
+  When running `wrangler init`, we install packages as folks confirm their options.
+  This disrupts the "flow", particularly on slower internet connections.
+
+  To avoid this disruption, we now only install packages once we're done asking questions.
+
+  Closes #1036
+
+* [#1073](https://github.com/cloudflare/wrangler2/pull/1073) [`6bb2564`](https://github.com/cloudflare/wrangler2/commit/6bb2564ddd9c90d75be98dbc524ba2f6b3bd1160) Thanks [@caass](https://github.com/caass)! - Add a better message when a user doesn't have a Chromium-based browser.
+
+  Certain functionality we use in wrangler depends on a Chromium-based browser. Previously, we would throw a somewhat arcane error that was hard (or impossible) to understand without knowing what we needed. While ideally all of our functionality would work across all major browsers, as a stopgap measure we can at least inform the user what the actual issue is.
+
+  Additionally, add support for Brave as a Chromium-based browser.
+
+- [#1079](https://github.com/cloudflare/wrangler2/pull/1079) [`fb0dec4`](https://github.com/cloudflare/wrangler2/commit/fb0dec4f022473b7019d4d6dca81aa9fa593eb36) Thanks [@caass](https://github.com/caass)! - Print the bindings a worker has access to during `dev` and `publish`
+
+  It can be helpful for a user to know exactly what resources a worker will have access to and where they can access them, so we now log the bindings available to a worker during `wrangler dev` and `wrangler publish`.
+
+* [#1097](https://github.com/cloudflare/wrangler2/pull/1097) [`c73a3c4`](https://github.com/cloudflare/wrangler2/commit/c73a3c44aca8f4716fdc3dbd8f8c3806f452b580) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure all line endings are normalized before parsing as TOML
+
+  Only the last line-ending was being normalized not all of them.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1094
+
+- [#1111](https://github.com/cloudflare/wrangler2/pull/1111) [`1eaefeb`](https://github.com/cloudflare/wrangler2/commit/1eaefebd48f0aae89dbf8372cc09eef09ee171a4) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Git default `main` branch
+
+  polish: Default branch when choosing to initialize a git repository will now be `main`.
+  This is inline with current common industry ethical practices.
+  See:
+
+  - https://sfconservancy.org/news/2020/jun/23/gitbranchname/
+  - https://github.com/github/renaming
+  - https://sfconservancy.org/news/2020/jun/23/gitbranchname/
+
+* [#1058](https://github.com/cloudflare/wrangler2/pull/1058) [`1a59efe`](https://github.com/cloudflare/wrangler2/commit/1a59efebf4385f3cda58ed9c2575f7878054a319) Thanks [@threepointone](https://github.com/threepointone)! - refactor: detect missing `[migrations]` during config validation
+
+  This does a small refactor -
+
+  - During publish, we were checking whether `[migrations]` were defined in the presence of `[durable_objects]`, and warning if not. This moves it into the config validation step, which means it'll check for all commands (but notably `dev`)
+  - It moves the code to determine current migration tag/migrations to upload into a helper. We'll be reusing this soon when we upload migrations to `dev`.
+
+- [#1090](https://github.com/cloudflare/wrangler2/pull/1090) [`85fbfe8`](https://github.com/cloudflare/wrangler2/commit/85fbfe8d7c886d39847f4b18fb450c190201befd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: remove use of `any`
+
+  This "quick-win" refactors some of the code to avoid the use of `any` where possible.
+  Using `any` can cause type-checking to be disabled across the code in unexpectedly wide-impact ways.
+
+  There is one other use of `any` not touched here because it is fixed by #1088 separately.
+
+* [#1088](https://github.com/cloudflare/wrangler2/pull/1088) [`d63d790`](https://github.com/cloudflare/wrangler2/commit/d63d7904c926babb115927f11df9f8368a89e3aa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that the proxy server shuts down to prevent `wrangler dev` from hanging
+
+  When running `wrangler dev` we create a proxy to the actual remote Worker.
+  After creating a connection to this proxy by a browser request the proxy did not shutdown.
+  Now we use a `HttpTerminator` helper library to force the proxy to close open connections and shutdown correctly.
+
+  Fixes #958
+
+- [#1099](https://github.com/cloudflare/wrangler2/pull/1099) [`175737f`](https://github.com/cloudflare/wrangler2/commit/175737fe712c2bae286df59a9a43f1817a05ebec) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: delegate `wrangler build` to `wrangler publish`
+
+  Since `wrangler publish --dry-run --outdir=dist` is basically the same result
+  as what Wrangler 1 did with `wrangler build` let's run that for the user if
+  they try to run `wrangler build`.
+
+* [#1081](https://github.com/cloudflare/wrangler2/pull/1081) [`8070763`](https://github.com/cloudflare/wrangler2/commit/807076374e7f1c4848d8a2bdfe9b28d5cbd9579a) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: friendlier error for when a subdomain hasn't been configured in dev mode
+
+- [#1123](https://github.com/cloudflare/wrangler2/pull/1123) [`15e5c12`](https://github.com/cloudflare/wrangler2/commit/15e5c129909fa5a81ef0167b4ec9009b550b9f11) Thanks [@timabb031](https://github.com/timabb031)! - chore: updated new worker ts template with env/ctx parameters and added Env interface
+
+* [#1080](https://github.com/cloudflare/wrangler2/pull/1080) [`4a09c1b`](https://github.com/cloudflare/wrangler2/commit/4a09c1b3ff2cf6d69a7ba71453663606ae0c6a5c) Thanks [@caass](https://github.com/caass)! - Improve messaging when bulk deleting or uploading KV Pairs
+
+  Closes #555
+
+- [#1000](https://github.com/cloudflare/wrangler2/pull/1000) [`5a8e8d5`](https://github.com/cloudflare/wrangler2/commit/5a8e8d56fab5a86b7c7cc32bfd6fdacf7febf20a) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - `pages dev <dir>` & `wrangler pages functions build` will have a `--node-compat` flag powered by @esbuild-plugins/node-globals-polyfill (which in itself is powered by rollup-plugin-node-polyfills). The only difference in `pages` will be it does not check the `wrangler.toml` so the `node_compat = true`will not enable it for `wrangler pages` functionality.
+
+  resolves #890
+
+* [#1028](https://github.com/cloudflare/wrangler2/pull/1028) [`b7a9ce6`](https://github.com/cloudflare/wrangler2/commit/b7a9ce60244e18b74533aaeeff6ae282a82892f1) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Use new bulk upload API for 'wrangler pages publish'
+
+  This raises the file limit back up to 20k for a deployment.
+
 ## 2.0.6
 
 ### Patch Changes
@@ -33,45 +122,46 @@
   $ wrangler r2 foo
 
   ✘ [ERROR] Unknown argument: foo
-
-
-  wrangler r2
-
-  📦 Interact with an R2 store
-
-  Commands:
-    wrangler r2 bucket  Manage R2 buckets
-
-  Flags:
-    -c, --config   Path to .toml configuration file  [string]
-    -h, --help     Show help  [boolean]
-    -v, --version  Show version number  [boolean]
   ```
 
-  Fixes #871
+wrangler r2
+
+📦 Interact with an R2 store
+
+Commands:
+wrangler r2 bucket Manage R2 buckets
+
+Flags:
+-c, --config Path to .toml configuration file [string]
+-h, --help Show help [boolean]
+-v, --version Show version number [boolean]
+
+````
+
+Fixes #871
 
 * [#906](https://github.com/cloudflare/wrangler2/pull/906) [`3279f10`](https://github.com/cloudflare/wrangler2/commit/3279f103fb3b1c27addb4c69c30ad970ab0d5f77) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement support for service bindings
 
-  This adds experimental support for service bindings, aka worker-to-worker bindings. It's lets you "call" a worker from another worker, without incurring any network cost, and (ideally) with much less latency. To use it, define a `[services]` field in `wrangler.toml`, which is a map of bindings to worker names (and environment). Let's say you already have a worker named "my-worker" deployed. In another worker's configuration, you can create a service binding to it like so:
+This adds experimental support for service bindings, aka worker-to-worker bindings. It's lets you "call" a worker from another worker, without incurring any network cost, and (ideally) with much less latency. To use it, define a `[services]` field in `wrangler.toml`, which is a map of bindings to worker names (and environment). Let's say you already have a worker named "my-worker" deployed. In another worker's configuration, you can create a service binding to it like so:
 
-  ```toml
-  [[services]]
-  binding = "MYWORKER"
-  service = "my-worker"
-  environment = "production" # optional, defaults to the worker's `default_environment` for now
-  ```
+```toml
+[[services]]
+binding = "MYWORKER"
+service = "my-worker"
+environment = "production" # optional, defaults to the worker's `default_environment` for now
+````
 
-  And in your worker, you can call it like so:
+And in your worker, you can call it like so:
 
-  ```js
-  export default {
-    fetch(req, env, ctx) {
-      return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-    }
-  };
-  ```
+```js
+export default {
+  fetch(req, env, ctx) {
+    return env.MYWORKER.fetch(new Request("http://domain/some-path"));
+  }
+};
+```
 
-  Fixes https://github.com/cloudflare/wrangler2/issues/1026
+Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#1045](https://github.com/cloudflare/wrangler2/pull/1045) [`8eeef9a`](https://github.com/cloudflare/wrangler2/commit/8eeef9ace652ffad3be0116f6f58c71dc251e49c) Thanks [@jrf0110](https://github.com/jrf0110)! - fix: Incorrect extension extraction from file paths.
 
