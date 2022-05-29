@@ -1362,7 +1362,7 @@ addEventListener('fetch', event => {});`
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-      await runWrangler("publish", false);
+      await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
         "Reading assets/subdir/file-1.txt...
