@@ -4,12 +4,14 @@ import { normalizeSlashes, stripTimings } from "./mock-console";
 /**
  * A helper to 'run' wrangler commands for tests.
  */
-export async function runWrangler(cmd?: string) {
+export async function runWrangler(cmd?: string, _normalizeSlashes = true) {
   try {
     await main(cmd?.split(" ") ?? []);
   } catch (err) {
     if (err instanceof Error) {
-      err.message = normalizeSlashes(stripTimings(err.message));
+      err.message = _normalizeSlashes
+        ? normalizeSlashes(stripTimings(err.message))
+        : stripTimings(err.message);
     }
     throw err;
   }

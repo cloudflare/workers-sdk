@@ -1327,6 +1327,56 @@ addEventListener('fetch', event => {});`
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
+    it("should not contain backslash for assets with nested directories", async () => {
+      const assets = [
+        { filePath: "assets/subdir/file-1.txt", content: "Content of file-1" },
+        { filePath: "assets/subdir/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      writeWranglerToml({
+        main: "./index.js",
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name-workers_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+        expectedModules: {
+          __STATIC_CONTENT_MANIFEST:
+            '{"subdir/file-1.txt":"assets/subdir/file-1.2ca234f380.txt","subdir/file-2.txt":"assets/subdir/file-2.5938485188.txt"}',
+        },
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish", false);
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Reading assets/subdir/file-1.txt...
+        Uploading as assets/subdir/file-1.2ca234f380.txt...
+        Reading assets/subdir/file-2.txt...
+        Uploading as assets/subdir/file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
     it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
       const assets = [
         { filePath: "assets/file-1.txt", content: "Content of file-1" },
