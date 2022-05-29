@@ -177,7 +177,12 @@ export async function syncAssets(
 
     // remove the key from the set so we know what we've already uploaded
     namespaceKeys.delete(assetKey);
-    manifest[path.relative(siteAssets.assetDirectory, absAssetFile)] = assetKey;
+
+    // prevent causing different manifest keys on windows
+    const maifestKey = urlSafe(
+      path.relative(siteAssets.assetDirectory, absAssetFile)
+    );
+    manifest[maifestKey] = assetKey;
   }
 
   // keys now contains all the files we're deleting
