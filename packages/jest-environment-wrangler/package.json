@@ -17,6 +17,6 @@
   "author": "wrangler@cloudflare.com",
   "license": "ISC",
   "dependencies": {
-    "jest-environment-miniflare": "2.4.0"
+    "jest-environment-miniflare": "^2.5.0"
   }
 }
