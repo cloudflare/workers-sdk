@@ -658,7 +658,7 @@ function createCLIParser(argv: string[]) {
                   start: isCreatingWranglerToml
                     ? `wrangler dev`
                     : `wrangler dev ${scriptPath}`,
-                  publish: isCreatingWranglerToml
+                  deploy: isCreatingWranglerToml
                     ? `wrangler publish`
                     : `wrangler publish ${scriptPath}`,
                 },
@@ -673,7 +673,7 @@ function createCLIParser(argv: string[]) {
             }npm start\``
           );
           instructions.push(
-            `To publish your Worker to the Internet, run \`npm run publish\``
+            `To publish your Worker to the Internet, run \`npm run deploy\``
           );
         } else {
           instructions.push(

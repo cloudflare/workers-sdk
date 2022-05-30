@@ -24,7 +24,7 @@ npx wrangler init my-worker
 # try it out
 cd my-worker && npm run start
 # and then publish it
-npm run publish
+npm run deploy
 ```
 
 ## Installation:
