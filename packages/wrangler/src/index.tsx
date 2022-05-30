@@ -483,7 +483,7 @@ function createCLIParser(argv: string[]) {
                 name: workerName,
                 version: "0.0.0",
                 devDependencies: {
-                  wrangler: wranglerVersion,
+                  wrangler: `^${wranglerVersion}`,
                 },
                 private: true,
               },
