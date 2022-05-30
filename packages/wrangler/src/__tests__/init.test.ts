@@ -51,7 +51,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`"
+        To publish your Worker to the Internet, run \`npm run deploy\`"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -78,7 +78,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd my-worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`"
+        To publish your Worker to the Internet, run \`npm run deploy\`"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
       expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -104,7 +104,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -381,7 +381,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -406,7 +406,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -878,7 +878,7 @@ describe("init", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(true);
 
       expect(packageJson.scripts.start).toBe("wrangler dev");
-      expect(packageJson.scripts.publish).toBe("wrangler publish");
+      expect(packageJson.scripts.deploy).toBe("wrangler publish");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
@@ -889,7 +889,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`"
+        To publish your Worker to the Internet, run \`npm run deploy\`"
       `);
     });
 
@@ -917,7 +917,7 @@ describe("init", () => {
         JSON.stringify({
           scripts: {
             start: "test-start",
-            publish: "test-publish",
+            deploy: "test-publish",
           },
         })
       );
@@ -930,7 +930,7 @@ describe("init", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(true);
 
       expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.publish).toBe("test-publish");
+      expect(packageJson.scripts.deploy).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created tsconfig.json
@@ -1316,7 +1316,7 @@ describe("init", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(false);
 
       expect(packageJson.scripts.start).toBe("wrangler dev");
-      expect(packageJson.scripts.publish).toBe("wrangler publish");
+      expect(packageJson.scripts.deploy).toBe("wrangler publish");
       expect(packageJson.name).toContain("wrangler-tests");
       expect(packageJson.version).toEqual("0.0.0");
       expect(std.out).toMatchInlineSnapshot(`
@@ -1325,7 +1325,7 @@ describe("init", () => {
         ✨ Created src/index.js
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`"
+        To publish your Worker to the Internet, run \`npm run deploy\`"
       `);
     });
 
@@ -1353,7 +1353,7 @@ describe("init", () => {
         JSON.stringify({
           scripts: {
             start: "test-start",
-            publish: "test-publish",
+            deploy: "test-publish",
           },
         })
       );
@@ -1366,7 +1366,7 @@ describe("init", () => {
       expect(fs.existsSync("./src/index.ts")).toBe(false);
 
       expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.publish).toBe("test-publish");
+      expect(packageJson.scripts.deploy).toBe("test-publish");
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created src/index.js
@@ -1488,7 +1488,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -1517,7 +1517,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd path/to/worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -1548,7 +1548,7 @@ describe("init", () => {
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
         To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
-        To publish your Worker to the Internet, run \`npm run publish\`",
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);

@@ -1,6 +1,6 @@
 ## ⛅️ wrangler
 
-> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler.  v1 vs v2 comparison is at [our docs site](https://developers.cloudflare.com/workers/wrangler/compare-v1-v2/)
+> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler. v1 vs v2 comparison is at [our docs site](https://developers.cloudflare.com/workers/wrangler/compare-v1-v2/)
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
@@ -24,7 +24,7 @@ npx wrangler init my-worker
 # try it out
 cd my-worker && npm run start
 # and then publish it
-npm run publish
+npm run deploy
 ```
 
 ## Installation:
