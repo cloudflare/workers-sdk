@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const semiver = require("semiver");
 
-const MIN_NODE_VERSION = "16.7.0";
+const MIN_NODE_VERSION = "16.13.2";
 
 let wranglerProcess;
 
