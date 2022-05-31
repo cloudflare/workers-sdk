@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 const { spawn } = require("child_process");
-const { join } = require("path");
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
 const semiver = require("semiver");
 
 const MIN_NODE_VERSION = "16.7.0";
@@ -25,13 +27,23 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
     // TODO:
     // - should we log a warning here?
     // - maybe we can generate a certificate that concatenates with ours?
-    // - is there a security concern/should we cleanup after we exit?
     //
     //  I do think it'll be rare that someone wants to add a cert AND
     //  use cloudflare WARP, but let's wait till the situation actually
     //  arises before we do anything about it
   } else {
-    pathToCACerts = join(__dirname, "../Cloudflare_CA.pem");
+    const osTempDir = os.tmpdir();
+    const certDir = path.join(osTempDir, "wrangler-cert");
+    const certPath = path.join(certDir, "Cloudflare_CA.pem");
+    // copy cert to the system temp dir if needed
+    if (!fs.existsSync(certPath)) {
+      fs.mkdirSync(certDir, { recursive: true });
+      fs.writeFileSync(
+        certPath,
+        fs.readFileSync(path.join(__dirname, "../Cloudflare_CA.pem"), "utf-8")
+      );
+    }
+    pathToCACerts = certPath;
   }
 
   wranglerProcess = spawn(
@@ -43,7 +55,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
       "--no-warnings",
       "--experimental-vm-modules",
       ...process.execArgv,
-      join(__dirname, "../wrangler-dist/cli.js"),
+      path.join(__dirname, "../wrangler-dist/cli.js"),
       ...process.argv.slice(2),
     ],
     {
