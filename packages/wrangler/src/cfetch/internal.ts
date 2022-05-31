@@ -1,4 +1,5 @@
 import { fetch, Headers } from "undici";
+import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
@@ -33,6 +34,7 @@ export async function fetchInternal<ResponseType>(
   const apiToken = requireApiToken();
   const headers = cloneHeaders(init.headers);
   addAuthorizationHeaderIfUnspecified(headers, apiToken);
+  addUserAgent(headers);
 
   const queryString = queryParams ? `?${queryParams.toString()}` : "";
   const method = init.method ?? "GET";
@@ -103,6 +105,10 @@ function addAuthorizationHeaderIfUnspecified(
   if (!("Authorization" in headers)) {
     headers["Authorization"] = `Bearer ${apiToken}`;
   }
+}
+
+function addUserAgent(headers: Record<string, string>): void {
+  headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 }
 
 /**
