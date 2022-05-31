@@ -42,7 +42,7 @@
     "prettify": "prettier packages/** --write --ignore-unknown"
   },
   "engines": {
-    "node": ">=16.7.0"
+    "node": ">=16.13.2"
   },
   "eslintConfig": {
     "root": true,
@@ -132,6 +132,6 @@
     ]
   },
   "volta": {
-    "node": "16.7.0"
+    "node": "16.13.2"
   }
 }
