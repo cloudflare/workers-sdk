@@ -61,6 +61,8 @@ describe("normalizeAndValidateConfig()", () => {
       data_blobs: undefined,
       workers_dev: undefined,
       zone_id: undefined,
+      minify: undefined,
+      node_compat: undefined,
     });
     expect(diagnostics.hasErrors()).toBe(false);
     expect(diagnostics.hasWarnings()).toBe(false);
@@ -662,6 +664,8 @@ describe("normalizeAndValidateConfig()", () => {
             },
           ],
         },
+        minify: true,
+        node_compat: true,
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -729,6 +733,8 @@ describe("normalizeAndValidateConfig()", () => {
           cwd: 1555,
           watch_dir: 1666,
         },
+        minify: "INVALID",
+        node_compat: "INVALID",
       } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -791,7 +797,9 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"tsconfig\\" to be of type string but got true.
           - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
           - Expected \\"main\\" to be of type string but got 1333.
-          - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
+          - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+          - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+          - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
       `);
     });
 
@@ -1917,6 +1925,8 @@ describe("normalizeAndValidateConfig()", () => {
           cwd: "CWD",
           watch_dir: "WATCH_DIR",
         },
+        minify: true,
+        node_compat: true,
       };
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1957,6 +1967,8 @@ describe("normalizeAndValidateConfig()", () => {
           cwd: "ENV_CWD",
           watch_dir: "ENV_WATCH_DIR",
         },
+        minify: false,
+        node_compat: false,
       };
       const rawConfig: RawConfig = {
         name: "mock-name",
@@ -1976,6 +1988,8 @@ describe("normalizeAndValidateConfig()", () => {
           cwd: "CWD",
           watch_dir: "WATCH_DIR",
         },
+        minify: true,
+        node_compat: true,
         env: {
           ENV1: rawEnv,
         },
@@ -2226,6 +2240,8 @@ describe("normalizeAndValidateConfig()", () => {
           cwd: 1555,
           watch_dir: 1666,
         },
+        minify: "INVALID",
+        node_compat: "INVALID",
       } as unknown as RawEnvironment;
 
       const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2258,7 +2274,9 @@ describe("normalizeAndValidateConfig()", () => {
             - Expected \\"tsconfig\\" to be of type string but got 123.
             - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
             - Expected \\"main\\" to be of type string but got 1333.
-            - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\"."
+            - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+            - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+            - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
       `);
     });
 
