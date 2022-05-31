@@ -1066,6 +1066,7 @@ const createDeployment: CommandModule<
       "_headers",
       ".DS_Store",
       "node_modules",
+      ".git",
     ];
 
     const walk = async (
