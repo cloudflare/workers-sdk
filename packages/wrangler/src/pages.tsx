@@ -1522,6 +1522,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           } else {
             logger.log("No functions. Shimming...");
             miniflareArgs = {
+              // cfFetch sets the `cf` object that a function could expect
+              // If there are no functions, there's no reason to set this up (and not make that network call)
+              cfFetch: false,
               // TODO: The fact that these request/response hacks are necessary is ridiculous.
               // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
               script: `
