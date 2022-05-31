@@ -1,5 +1,5 @@
 import { URL } from "node:url";
-import { fetch } from "undici";
+import { fetch, File } from "undici";
 import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { logger } from "./logger";
@@ -122,7 +122,11 @@ async function createPreviewToken(
     : { workers_dev: true };
 
   const formData = createWorkerUploadForm(worker);
-  formData.set("wrangler-session-config", JSON.stringify(mode));
+
+  const modeFile = new File([JSON.stringify(mode)], "", {
+    type: "application/json",
+  });
+  formData.append("wrangler-session-config", modeFile);
 
   const { preview_token } = await fetchResult<{ preview_token: string }>(
     url,
