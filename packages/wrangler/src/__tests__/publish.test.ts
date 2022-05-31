@@ -2895,7 +2895,15 @@ addEventListener('fetch', event => {});`
 
             - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
           but no [migrations] for them. This may not work as expected until you add a [migrations] section
-          to your wrangler.toml. Refer to
+          to your wrangler.toml. Add this configuration to your wrangler.toml:
+
+                \`\`\`
+                [[migrations]]
+                tag = \\"v1\\" # Should be unique for each entry
+                new_classes = [\\"SomeClass\\"]
+                \`\`\`
+
+              Refer to
           [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
           for more details.
 

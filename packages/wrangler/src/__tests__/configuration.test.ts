@@ -678,7 +678,15 @@ describe("normalizeAndValidateConfig()", () => {
         "Processing wrangler configuration:
           - \\"unsafe\\" fields are experimental and may change or break at any time.
           - \\"services\\" fields are experimental and may change or break at any time.
-          - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+          - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+
+              \`\`\`
+              [[migrations]]
+              tag = \\"v1\\" # Should be unique for each entry
+              new_classes = [\\"CLASS1\\"]
+              \`\`\`
+
+            Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
       `);
     });
 
@@ -1157,12 +1165,9 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: { bindings: expect.anything },
           })
         );
-        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
+
         expect(diagnostics.hasErrors()).toBe(true);
-        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - In wrangler.toml, you have configured [durable_objects] exported by this Worker ((unnamed), (unnamed), 1666, SomeClass, 1883), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
-        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
@@ -2474,12 +2479,8 @@ describe("normalizeAndValidateConfig()", () => {
             durable_objects: { bindings: expect.anything },
           })
         );
-        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasWarnings()).toBe(false);
         expect(diagnostics.hasErrors()).toBe(true);
-        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - In wrangler.toml, you have configured [durable_objects] exported by this Worker ((unnamed), (unnamed), 1666), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
-        `);
         expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
           "Processing wrangler configuration:
 
