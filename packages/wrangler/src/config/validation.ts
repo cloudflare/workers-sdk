@@ -453,13 +453,32 @@ function normalizeAndValidateMigrations(
         (binding) => !binding.script_name
       );
       if (exportedDurableObjects.length > 0 && rawMigrations.length === 0) {
-        diagnostics.warnings.push(
-          `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${exportedDurableObjects
-            .map((durable) => durable.class_name || "(unnamed)")
-            .join(
+        if (
+          !exportedDurableObjects.some(
+            (exportedDurableObject) =>
+              typeof exportedDurableObject.class_name !== "string"
+          )
+        ) {
+          const durableObjectClassnames = exportedDurableObjects.map(
+            (durable) => durable.class_name
+          );
+
+          diagnostics.warnings.push(
+            `In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(
               ", "
-            )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
-        );
+            )}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+
+  \`\`\`
+  [[migrations]]
+  tag = "v1" # Should be unique for each entry
+  new_classes = [${durableObjectClassnames
+    .map((name) => `"${name}"`)
+    .join(", ")}]
+  \`\`\`
+
+Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
+          );
+        }
       }
     }
 
