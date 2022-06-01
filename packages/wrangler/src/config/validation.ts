@@ -384,29 +384,38 @@ function normalizeAndValidateMigrations(
     return [];
   } else {
     for (let i = 0; i < rawMigrations.length; i++) {
-      const migration = rawMigrations[i];
+      const { tag, new_classes, renamed_classes, deleted_classes, ...rest } =
+        rawMigrations[i];
+
+      validateAdditionalProperties(
+        diagnostics,
+        "migrations",
+        Object.keys(rest),
+        []
+      );
+
       validateRequiredProperty(
         diagnostics,
         `migrations[${i}]`,
         `tag`,
-        migration.tag,
+        tag,
         "string"
       );
       validateOptionalTypedArray(
         diagnostics,
         `migrations[${i}].new_classes`,
-        migration.new_classes,
+        new_classes,
         "string"
       );
-      if (migration.renamed_classes !== undefined) {
-        if (!Array.isArray(migration.renamed_classes)) {
+      if (renamed_classes !== undefined) {
+        if (!Array.isArray(renamed_classes)) {
           diagnostics.errors.push(
             `Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
-              migration.renamed_classes
+              renamed_classes
             )}.`
           );
         } else if (
-          migration.renamed_classes.some(
+          renamed_classes.some(
             (c) =>
               typeof c !== "object" ||
               !isRequiredProperty(c, "from", "string") ||
@@ -415,7 +424,7 @@ function normalizeAndValidateMigrations(
         ) {
           diagnostics.errors.push(
             `Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
-              migration.renamed_classes
+              renamed_classes
             )}.`
           );
         }
@@ -423,7 +432,7 @@ function normalizeAndValidateMigrations(
       validateOptionalTypedArray(
         diagnostics,
         `migrations[${i}].deleted_classes`,
-        migration.deleted_classes,
+        deleted_classes,
         "string"
       );
     }
