@@ -15,7 +15,7 @@ import { setGlobalDispatcher, ProxyAgent } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { findWranglerToml, printBindings, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -1119,6 +1119,70 @@ function createCLIParser(argv: string[]) {
         );
       }
 
+      const bindings = {
+        kv_namespaces: config.kv_namespaces?.map(
+          ({ binding, preview_id, id: _id }) => {
+            // In `dev`, we make folks use a separate kv namespace called
+            // `preview_id` instead of `id` so that they don't
+            // break production data. So here we check that a `preview_id`
+            // has actually been configured.
+            // This whole block of code will be obsoleted in the future
+            // when we have copy-on-write for previews on edge workers.
+            if (!preview_id) {
+              // TODO: This error has to be a _lot_ better, ideally just asking
+              // to create a preview namespace for the user automatically
+              throw new Error(
+                `In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+              ); // Ugh, I really don't like this message very much
+            }
+            return {
+              binding,
+              id: preview_id,
+            };
+          }
+        ),
+        // Use a copy of combinedVars since we're modifying it later
+        vars: getVarsForDev(config),
+        wasm_modules: config.wasm_modules,
+        text_blobs: config.text_blobs,
+        data_blobs: config.data_blobs,
+        durable_objects: config.durable_objects,
+        r2_buckets: config.r2_buckets?.map(
+          ({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+            // same idea as kv namespace preview id,
+            // same copy-on-write TODO
+            if (!preview_bucket_name) {
+              throw new Error(
+                `In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+              );
+            }
+            return {
+              binding,
+              bucket_name: preview_bucket_name,
+            };
+          }
+        ),
+        services: config.services,
+        unsafe: config.unsafe?.bindings,
+      };
+
+      // mask anything that was overridden in .dev.vars
+      // so that we don't log potential secrets into the terminal
+      const maskedVars = { ...bindings.vars };
+      for (const key of Object.keys(maskedVars)) {
+        if (maskedVars[key] !== config.vars[key]) {
+          // This means it was overridden in .dev.vars
+          // so let's mask it
+          maskedVars[key] = "(hidden)";
+        }
+      }
+
+      // now log all available bindings into the terminal
+      printBindings({
+        ...bindings,
+        vars: maskedVars,
+      });
+
       const { waitUntilExit } = render(
         <Dev
           name={getScriptName(args, config)}
@@ -1164,51 +1228,7 @@ function createCLIParser(argv: string[]) {
             args["compatibility-flags"] || config.compatibility_flags
           }
           usageModel={config.usage_model}
-          bindings={{
-            kv_namespaces: config.kv_namespaces?.map(
-              ({ binding, preview_id, id: _id }) => {
-                // In `dev`, we make folks use a separate kv namespace called
-                // `preview_id` instead of `id` so that they don't
-                // break production data. So here we check that a `preview_id`
-                // has actually been configured.
-                // This whole block of code will be obsoleted in the future
-                // when we have copy-on-write for previews on edge workers.
-                if (!preview_id) {
-                  // TODO: This error has to be a _lot_ better, ideally just asking
-                  // to create a preview namespace for the user automatically
-                  throw new Error(
-                    `In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
-                  ); // Ugh, I really don't like this message very much
-                }
-                return {
-                  binding,
-                  id: preview_id,
-                };
-              }
-            ),
-            vars: getVarsForDev(config),
-            wasm_modules: config.wasm_modules,
-            text_blobs: config.text_blobs,
-            data_blobs: config.data_blobs,
-            durable_objects: config.durable_objects,
-            r2_buckets: config.r2_buckets?.map(
-              ({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
-                // same idea as kv namespace preview id,
-                // same copy-on-write TODO
-                if (!preview_bucket_name) {
-                  throw new Error(
-                    `In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
-                  );
-                }
-                return {
-                  binding,
-                  bucket_name: preview_bucket_name,
-                };
-              }
-            ),
-            services: config.services,
-            unsafe: config.unsafe?.bindings,
-          }}
+          bindings={bindings}
           crons={config.triggers.crons}
         />
       );
