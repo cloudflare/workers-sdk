@@ -7,7 +7,12 @@ import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, clearConfirmMocks } from "./helpers/mock-dialogs";
+import {
+  mockConfirm,
+  clearConfirmMocks,
+  mockSelect,
+  clearSelectMocks,
+} from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
@@ -29,6 +34,7 @@ describe("init", () => {
 
   afterEach(() => {
     clearConfirmMocks();
+    clearSelectMocks();
   });
 
   const std = mockConsoleMethods();
@@ -287,12 +293,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
 
       await runWrangler("init");
       expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
@@ -459,12 +466,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: false,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "none",
+      });
       await runWrangler("init");
       expect(fs.existsSync("./package.json")).toBe(true);
       const packageJson = JSON.parse(
@@ -501,12 +508,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at my-worker/src/index.js?",
-          result: false,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at my-worker/src/index.js?",
+        result: "none",
+      });
       await runWrangler("init my-worker");
       const packageJson = JSON.parse(
         fs.readFileSync("./my-worker/package.json", "utf-8")
@@ -536,12 +543,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: false,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "none",
+      });
 
       fs.writeFileSync(
         "./package.json",
@@ -578,12 +585,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
-          result: false,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+        result: "none",
+      });
 
       fs.mkdirSync("path/to/worker", { recursive: true });
       fs.writeFileSync(
@@ -621,12 +629,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: false,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "none",
+      });
 
       fs.writeFileSync(
         "./package.json",
@@ -667,12 +676,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
-          result: false,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+        result: "none",
+      });
 
       fs.mkdirSync("path/to/worker", { recursive: true });
       fs.writeFileSync(
@@ -715,12 +725,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: false,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "none",
+      });
 
       fs.writeFileSync(
         "./package.json",
@@ -769,12 +780,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: true,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "fetch",
+      });
 
       fs.writeFileSync(
         "./package.json",
@@ -812,12 +824,13 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
         }
       );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
 
       fs.writeFileSync(
         "./package.json",
@@ -861,12 +874,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
       await runWrangler("init");
 
       expect(fs.existsSync("./package.json")).toBe(true);
@@ -906,12 +919,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
       await fsp.writeFile(
         "./package.json",
         JSON.stringify({
@@ -1037,12 +1050,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: false,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "none",
+      });
       await runWrangler("init");
       expect(fs.existsSync("./tsconfig.json")).toBe(true);
       const { config: tsconfigJson, error: tsConfigParseError } =
@@ -1090,16 +1103,15 @@ describe("init", () => {
         "utf-8"
       );
 
-      mockConfirm(
-        {
-          text: "Would you like to use git to manage this Worker?",
-          result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
-        }
-      );
+      mockConfirm({
+        text: "Would you like to use git to manage this Worker?",
+        result: false,
+      });
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
 
       await runWrangler("init");
       const tsconfigJson = JSON.parse(
@@ -1140,16 +1152,15 @@ describe("init", () => {
         "utf-8"
       );
 
-      mockConfirm(
-        {
-          text: "Would you like to use git to manage this Worker?",
-          result: false,
-        },
-        {
-          text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
-          result: true,
-        }
-      );
+      mockConfirm({
+        text: "Would you like to use git to manage this Worker?",
+        result: false,
+      });
+
+      mockSelect({
+        text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
+        result: "fetch",
+      });
 
       await runWrangler("init path/to/worker/my-worker");
       const tsconfigJson = JSON.parse(
@@ -1183,12 +1194,12 @@ describe("init", () => {
         {
           text: "Would you like to install the type definitions for Workers into your package.json?",
           result: true,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: false,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "none",
+      });
       fs.writeFileSync(
         "./package.json",
         JSON.stringify({
@@ -1243,16 +1254,15 @@ describe("init", () => {
         "utf-8"
       );
 
-      mockConfirm(
-        {
-          text: "Would you like to use git to manage this Worker?",
-          result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.ts?",
-          result: true,
-        }
-      );
+      mockConfirm({
+        text: "Would you like to use git to manage this Worker?",
+        result: false,
+      });
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "fetch",
+      });
 
       fs.mkdirSync("./sub-1/sub-2", { recursive: true });
       process.chdir("./sub-1/sub-2");
@@ -1299,12 +1309,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: true,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "fetch",
+      });
       await runWrangler("init");
 
       expect(fs.existsSync("./package.json")).toBe(true);
@@ -1342,12 +1352,12 @@ describe("init", () => {
         {
           text: "Would you like to use TypeScript?",
           result: false,
-        },
-        {
-          text: "Would you like to create a Worker at src/index.js?",
-          result: true,
         }
       );
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.js?",
+        result: "fetch",
+      });
       await fsp.writeFile(
         "./package.json",
         JSON.stringify({

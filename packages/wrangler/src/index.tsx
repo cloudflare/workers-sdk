@@ -19,7 +19,7 @@ import { findWranglerToml, printBindings, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
-import { confirm, prompt } from "./dialogs";
+import { confirm, prompt, select } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import {
@@ -689,24 +689,61 @@ function createCLIParser(argv: string[]) {
         }
       }
 
+      async function getNewWorkerType(newWorkerFilename: string) {
+        return select(
+          `Would you like to create a Worker at ${newWorkerFilename}?`,
+          [
+            {
+              value: "none",
+              label: "None",
+            },
+            {
+              value: "fetch",
+              label: "Fetch handler",
+            },
+            {
+              value: "scheduled",
+              label: "Scheduled handler",
+            },
+          ],
+          1
+        ) as Promise<"none" | "fetch" | "scheduled">;
+      }
+
+      function getNewWorkerTemplate(
+        lang: "js" | "ts",
+        workerType: "fetch" | "scheduled"
+      ) {
+        const templates = {
+          "js-fetch": "new-worker.js",
+          "js-scheduled": "new-worker-scheduled.js",
+          "ts-fetch": "new-worker.ts",
+          "ts-scheduled": "new-worker-scheduled.ts",
+        };
+
+        return templates[`${lang}-${workerType}`];
+      }
+
       if (isTypescriptProject) {
         if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
-          const shouldCreateSource =
-            yesFlag ||
-            (await confirm(
-              `Would you like to create a Worker at ${path.relative(
-                process.cwd(),
-                path.join(creationDirectory, "./src/index.ts")
-              )}?`
-            ));
+          const newWorkerFilename = path.relative(
+            process.cwd(),
+            path.join(creationDirectory, "./src/index.ts")
+          );
 
-          if (shouldCreateSource) {
+          const newWorkerType = yesFlag
+            ? "fetch"
+            : await getNewWorkerType(newWorkerFilename);
+
+          if (newWorkerType !== "none") {
+            const template = getNewWorkerTemplate("ts", newWorkerType);
+
             await mkdir(path.join(creationDirectory, "./src"), {
               recursive: true,
             });
             await writeFile(
               path.join(creationDirectory, "./src/index.ts"),
-              readFileSync(path.join(__dirname, "../templates/new-worker.ts"))
+              readFileSync(path.join(__dirname, `../templates/${template}`))
             );
 
             logger.log(
@@ -726,22 +763,24 @@ function createCLIParser(argv: string[]) {
         }
       } else {
         if (!fs.existsSync(path.join(creationDirectory, "./src/index.js"))) {
-          const shouldCreateSource =
-            yesFlag ||
-            (await confirm(
-              `Would you like to create a Worker at ${path.relative(
-                process.cwd(),
-                path.join(creationDirectory, "./src/index.js")
-              )}?`
-            ));
+          const newWorkerFilename = path.relative(
+            process.cwd(),
+            path.join(creationDirectory, "./src/index.js")
+          );
 
-          if (shouldCreateSource) {
+          const newWorkerType = yesFlag
+            ? "fetch"
+            : await getNewWorkerType(newWorkerFilename);
+
+          if (newWorkerType !== "none") {
+            const template = getNewWorkerTemplate("js", newWorkerType);
+
             await mkdir(path.join(creationDirectory, "./src"), {
               recursive: true,
             });
             await writeFile(
               path.join(creationDirectory, "./src/index.js"),
-              readFileSync(path.join(__dirname, "../templates/new-worker.js"))
+              readFileSync(path.join(__dirname, `../templates/${template}`))
             );
 
             logger.log(

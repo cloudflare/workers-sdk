@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { Box, Text, useInput, render } from "ink";
+import SelectInput from "ink-select-input";
 import TextInput from "ink-text-input";
 import * as React from "react";
 import { useState } from "react";
@@ -80,6 +81,53 @@ export async function prompt(
         onSubmit={(inputText) => {
           unmount();
           resolve(inputText);
+        }}
+      />
+    );
+  });
+}
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type SelectProps = {
+  text: string;
+  options: SelectOption[];
+  initialIndex: number;
+  onSelect: (value: string) => void;
+};
+
+function Select(props: SelectProps) {
+  return (
+    <Box flexDirection="column">
+      <Text>{props.text}</Text>
+      <SelectInput
+        initialIndex={props.initialIndex}
+        items={props.options}
+        onSelect={async (selected) => {
+          props.onSelect(selected.value);
+        }}
+      />
+    </Box>
+  );
+}
+
+export function select(
+  text: string,
+  options: SelectOption[],
+  initialIndex: number
+): Promise<string> {
+  return new Promise((resolve) => {
+    const { unmount } = render(
+      <Select
+        text={text}
+        options={options}
+        initialIndex={initialIndex}
+        onSelect={(option: string) => {
+          unmount();
+          resolve(option);
         }}
       />
     );
