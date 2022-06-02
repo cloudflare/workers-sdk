@@ -148,7 +148,7 @@ describe("wrangler secret", () => {
         }
         expect(std.out).toMatchInlineSnapshot(`
           "
-          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
         `);
         expect(std.err).toMatchInlineSnapshot(`
           "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m
@@ -204,7 +204,7 @@ describe("wrangler secret", () => {
 
         expect(std.out).toMatchInlineSnapshot(`
           "
-          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
         `);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -372,7 +372,7 @@ describe("wrangler secret", () => {
       }
       expect(std.out).toMatchInlineSnapshot(`
         "
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
         "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m
@@ -468,7 +468,7 @@ describe("wrangler secret", () => {
       }
       expect(std.out).toMatchInlineSnapshot(`
         "
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
         "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m

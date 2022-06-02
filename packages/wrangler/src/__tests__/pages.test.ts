@@ -79,7 +79,7 @@ describe("pages", () => {
       expect(std.out).toMatchInlineSnapshot(`
         "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
     });
 
@@ -89,7 +89,7 @@ describe("pages", () => {
       expect(std.out).toMatchInlineSnapshot(`
         "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.[0m"
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
     });
   });
@@ -374,10 +374,10 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-            }
-          `);
+                          Object {
+                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                          }
+                      `);
           });
 
           return {
@@ -445,10 +445,10 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-            }
-          `);
+                          Object {
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
           });
 
           return {
@@ -533,13 +533,13 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-              "/logo.js": "6be321bef99e758250dac034474ddbb8",
-              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-            }
-          `);
+                          Object {
+                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
           });
 
           return {

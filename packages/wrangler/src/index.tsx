@@ -2772,14 +2772,14 @@ export async function main(argv: string[]): Promise<void> {
       await createCLIParser([...argv, "--help"]).parse();
     } else if (e instanceof ParseError) {
       e.notes.push({
-        text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new",
+        text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new/choose",
       });
       logger.log(formatMessage(e));
     } else {
       logger.error(e instanceof Error ? e.message : e);
       logger.log(
         `${fgGreenColor}%s${resetColor}`,
-        "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new."
+        "If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose"
       );
     }
     throw e;
