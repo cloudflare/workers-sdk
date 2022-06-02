@@ -9,7 +9,6 @@ import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
-import { printBindings } from "../config";
 import { runCustomBuild } from "../entry";
 import { openInspector } from "../inspect";
 import { logger } from "../logger";
@@ -105,8 +104,6 @@ export function DevImplementation(props: DevProps): JSX.Element {
     minify: props.minify,
     nodeCompat: props.nodeCompat,
   });
-
-  printBindings(props.bindings);
 
   // only load the UI if we're running in a supported environment
   const { isRawModeSupported } = useStdin();

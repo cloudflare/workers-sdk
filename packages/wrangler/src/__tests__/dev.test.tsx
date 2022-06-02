@@ -698,7 +698,14 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       await runWrangler("dev");
       expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
-      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.out).toMatchInlineSnapshot(`
+        "Your worker has access to the following bindings:
+        - Durable Objects:
+          - NAME_1: CLASS_1
+          - NAME_2: CLASS_2 (defined in SCRIPT_A)
+          - NAME_3: CLASS_3
+          - NAME_4: CLASS_4 (defined in SCRIPT_B)"
+      `);
       expect(std.warn).toMatchInlineSnapshot(`
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -772,9 +779,18 @@ describe("wrangler dev", () => {
         EMPTY: "",
         UNQUOTED: "unquoted value", // Note that whitespace is trimmed
       });
-      expect(std.out).toMatchInlineSnapshot(
-        `"Using vars defined in .dev.vars"`
-      );
+      expect(std.out).toMatchInlineSnapshot(`
+        "Using vars defined in .dev.vars
+        Your worker has access to the following bindings:
+        - Vars:
+          - VAR_1: \\"(hidden)\\"
+          - VAR_2: \\"original value 2\\"
+          - VAR_3: \\"(hidden)\\"
+          - VAR_MULTI_LINE_1: \\"(hidden)\\"
+          - VAR_MULTI_LINE_2: \\"(hidden)\\"
+          - EMPTY: \\"(hidden)\\"
+          - UNQUOTED: \\"(hidden)\\""
+      `);
       expect(std.warn).toMatchInlineSnapshot(`""`);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
@@ -870,7 +886,10 @@ describe("wrangler dev", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "",
+          "out": "Your worker has access to the following bindings:
+        - Services:
+          - WorkerA: A
+          - WorkerB: B - staging",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
             - \\"services\\" fields are experimental and may change or break at any time.
@@ -879,6 +898,68 @@ describe("wrangler dev", () => {
         [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
         ",
+        }
+      `);
+    });
+  });
+
+  describe("print bindings", () => {
+    it("should print bindings", async () => {
+      writeWranglerToml({
+        services: [
+          { binding: "WorkerA", service: "A" },
+          { binding: "WorkerB", service: "B", environment: "staging" },
+        ],
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Your worker has access to the following bindings:
+        - Services:
+          - WorkerA: A
+          - WorkerB: B - staging",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"services\\" fields are experimental and may change or break at any time.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+
+        ",
+        }
+      `);
+    });
+
+    it("should mask vars that were overriden in .dev.vars", async () => {
+      writeWranglerToml({
+        vars: {
+          variable: 123,
+          overriden: "original values",
+        },
+      });
+      fs.writeFileSync(
+        ".dev.vars",
+        `
+        SECRET = "A secret"
+        overriden = "overriden value"
+      `
+      );
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev index.js");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Using vars defined in .dev.vars
+        Your worker has access to the following bindings:
+        - Vars:
+          - variable: \\"123\\"
+          - overriden: \\"(hidden)\\"
+          - SECRET: \\"(hidden)\\"",
+          "warn": "",
         }
       `);
     });
