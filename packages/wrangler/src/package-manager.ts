@@ -11,7 +11,11 @@ export interface PackageManager {
 }
 
 export async function getPackageManager(cwd: string): Promise<PackageManager> {
-  const [hasYarn, hasNpm, hasPnpm] = await Promise.all([supportsYarn(), supportsNpm(), supportsPnpm()]);
+  const [hasYarn, hasNpm, hasPnpm] = await Promise.all([
+    supportsYarn(),
+    supportsNpm(),
+    supportsPnpm(),
+  ]);
   const hasYarnLock = existsSync(join(cwd, "yarn.lock"));
   const hasNpmLock = existsSync(join(cwd, "package-lock.json"));
   const hasPnpmLock = existsSync(join(cwd, "pnpm-lock.yaml"));
