@@ -1,4 +1,4 @@
-import { confirm, prompt } from "../../dialogs";
+import { confirm, prompt, select } from "../../dialogs";
 import { normalizeSlashes } from "./mock-console";
 
 /**
@@ -85,6 +85,46 @@ export function clearPromptMocks() {
   (prompt as jest.Mock).mockImplementation((text: string) => {
     throw new Error(
       `Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
+    );
+  });
+}
+
+/**
+ * The expected values for a select request.
+ */
+export interface SelectExpectation {
+  /** The text expected to be seen in the select dialog. */
+  text: string;
+  /** The mock response send back from the select dialog. */
+  result: string;
+}
+
+/**
+ * Mock the implementation of `select()` that will respond with configured results
+ * for configured select text messages.
+ *
+ * If there is a call to `select()` that does not match any of the expectations
+ * then an error is thrown.
+ */
+export function mockSelect(...expectations: SelectExpectation[]) {
+  (select as jest.Mock).mockImplementation((text: string) => {
+    for (const { text: expectedText, result } of expectations) {
+      if (normalizeSlashes(text) === normalizeSlashes(expectedText)) {
+        return Promise.resolve(result);
+      }
+    }
+    throw new Error(`Unexpected select message: ${text}`);
+  });
+}
+
+export function clearSelectMocks() {
+  (select as jest.Mock).mockReset();
+  // Because select was originally a spy, calling mockReset will simply reset
+  // it as a function with no return value (!), so we need to additionally reset
+  // the mock implementation to the one that throws (from jest.setup.js).
+  (select as jest.Mock).mockImplementation((text: string) => {
+    throw new Error(
+      `Unexpected call to \`select("${text}")\`.\nYou should use \`mockSelect()\` to mock calls to \`select()\` with expectations. Search the codebase for \`mockSelect\` to learn more.`
     );
   });
 }
