@@ -54,12 +54,8 @@ export type DevProps = {
   };
   env: string | undefined;
   legacyEnv: boolean;
-  zone:
-    | {
-        id: string;
-        host: string;
-      }
-    | undefined;
+  zone: string | undefined;
+  host: string | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -197,6 +193,7 @@ function DevSession(props: DevSessionProps) {
       env={props.env}
       legacyEnv={props.legacyEnv}
       zone={props.zone}
+      host={props.host}
     />
   );
 }

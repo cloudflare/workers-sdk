@@ -152,10 +152,12 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev --host some-host.com");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "some-host.com",
-        id: "some-zone-id",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "some-host.com",
+          zone: "some-zone-id",
+        })
+      );
     });
 
     it("should read wrangler.toml's dev.host", async () => {
@@ -168,9 +170,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should read --route", async () => {
@@ -180,9 +180,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev --route http://some-host.com/some/path/*");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should read wrangler.toml's routes", async () => {
@@ -196,9 +194,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should read wrangler.toml's environment specific routes", async () => {
@@ -220,9 +216,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev --env staging");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should strip leading `*` from given host when deducing a zone id", async () => {
@@ -233,9 +227,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should strip leading `*.` from given host when deducing a zone id", async () => {
@@ -246,9 +238,7 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone.host).toEqual(
-        "some-host.com"
-      );
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
     });
 
     it("should, when provided, use a configured zone_id", async () => {
@@ -260,10 +250,12 @@ describe("wrangler dev", () => {
       });
       fs.writeFileSync("index.js", `export default {};`);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "some-domain.com",
-        id: "some-zone-id",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "some-domain.com",
+          zone: "some-zone-id",
+        })
+      );
     });
 
     it("should, when provided, use a zone_name to get a zone_id", async () => {
@@ -276,11 +268,13 @@ describe("wrangler dev", () => {
       fs.writeFileSync("index.js", `export default {};`);
       mockGetZones("some-zone.com", [{ id: "a-zone-id" }]);
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        // note that it uses the provided zone_name as a host too
-        host: "some-zone.com",
-        id: "a-zone-id",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          // note that it uses the provided zone_name as a host too
+          host: "some-zone.com",
+          zone: "a-zone-id",
+        })
+      );
     });
 
     it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
@@ -292,10 +286,12 @@ describe("wrangler dev", () => {
       mockGetZones("222.333.some-host.com", []);
       mockGetZones("333.some-host.com", [{ id: "some-zone-id" }]);
       await runWrangler("dev --host 111.222.333.some-host.com");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "111.222.333.some-host.com",
-        id: "some-zone-id",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "111.222.333.some-host.com",
+          zone: "some-zone-id",
+        })
+      );
     });
 
     it("should, in order, use args.host/config.dev.host/args.routes/(config.route|config.routes)", async () => {
@@ -310,10 +306,12 @@ describe("wrangler dev", () => {
         routes: ["http://5.some-host.com/some/path/*"],
       });
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "5.some-host.com",
-        id: "some-zone-id-5",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "5.some-host.com",
+          zone: "some-zone-id-5",
+        })
+      );
       (Dev as jest.Mock).mockClear();
 
       // config.route
@@ -323,10 +321,12 @@ describe("wrangler dev", () => {
         route: "https://4.some-host.com/some/path/*",
       });
       await runWrangler("dev");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "4.some-host.com",
-        id: "some-zone-id-4",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "4.some-host.com",
+          zone: "some-zone-id-4",
+        })
+      );
       (Dev as jest.Mock).mockClear();
 
       // --routes
@@ -336,10 +336,12 @@ describe("wrangler dev", () => {
         route: "https://4.some-host.com/some/path/*",
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "3.some-host.com",
-        id: "some-zone-id-3",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "3.some-host.com",
+          zone: "some-zone-id-3",
+        })
+      );
       (Dev as jest.Mock).mockClear();
 
       // config.dev.host
@@ -352,10 +354,12 @@ describe("wrangler dev", () => {
         route: "4.some-host.com/some/path/*",
       });
       await runWrangler("dev --routes http://3.some-host.com/some/path/*");
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "2.some-host.com",
-        id: "some-zone-id-2",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "2.some-host.com",
+          zone: "some-zone-id-2",
+        })
+      );
       (Dev as jest.Mock).mockClear();
 
       // --host
@@ -370,10 +374,12 @@ describe("wrangler dev", () => {
       await runWrangler(
         "dev --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
       );
-      expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual({
-        host: "1.some-host.com",
-        id: "some-zone-id-1",
-      });
+      expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          host: "1.some-host.com",
+          zone: "some-zone-id-1",
+        })
+      );
       (Dev as jest.Mock).mockClear();
     });
 
