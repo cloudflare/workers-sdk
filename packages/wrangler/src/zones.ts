@@ -7,6 +7,7 @@ import type { Route } from "./config/environment";
 export interface RouteZoneAndHost {
   zone: string;
   host: string;
+  routePattern: string;
 }
 
 /**
@@ -46,6 +47,7 @@ export async function* getZonesAndHostsForRoutes(
       yield {
         host,
         zone,
+        routePattern: typeof route === "string" ? route : route.pattern,
       };
     }
   }

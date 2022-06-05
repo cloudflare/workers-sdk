@@ -4,13 +4,15 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
-import { fetchResult } from "./cfetch";
+import { fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { confirm } from "./dialogs";
 import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
+import { ParseError } from "./parse";
 import { syncAssets } from "./sites";
+import { getZonesAndHostsForRoutes } from "./zones";
 import type { Config } from "./config";
 import type {
   Route,
@@ -21,6 +23,7 @@ import type {
 import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { CfWorkerInit } from "./worker";
+import type { RouteZoneAndHost } from "./zones";
 
 type Props = {
   config: Config;
@@ -260,7 +263,7 @@ export default async function publish(props: Props): Promise<void> {
   const nodeCompat = props.nodeCompat ?? config.node_compat;
   if (nodeCompat) {
     logger.warn(
-      "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+      "Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
     );
   }
 
@@ -291,7 +294,7 @@ export default async function publish(props: Props): Promise<void> {
   const envName = props.env ?? "production";
 
   const start = Date.now();
-  const notProd = !props.legacyEnv && props.env;
+  const notProd = Boolean(!props.legacyEnv && props.env);
   const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
   const workerUrl = notProd
     ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
@@ -497,18 +500,7 @@ export default async function publish(props: Props): Promise<void> {
   // Update routing table for the script.
   if (routesOnly.length > 0) {
     deployments.push(
-      fetchResult(`${workerUrl}/routes`, {
-        // Note: PUT will delete previous routes on this script.
-        method: "PUT",
-        body: JSON.stringify(
-          routesOnly.map((route) =>
-            typeof route !== "object" ? { pattern: route } : route
-          )
-        ),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }).then(() => {
+      publishRoutes(workerUrl, routesOnly, scriptName, notProd).then(() => {
         if (routesOnly.length > 10) {
           return routesOnly
             .slice(0, 9)
@@ -580,4 +572,160 @@ async function getSubdomain(accountId: string): Promise<string> {
       throw e;
     }
   }
+}
+
+/**
+ * Associate the newly deployed Worker with the given routes.
+ */
+async function publishRoutes(
+  workerUrl: string,
+  routes: Route[],
+  scriptName: string,
+  notProd: boolean
+): Promise<string[]> {
+  try {
+    return await fetchResult(`${workerUrl}/routes`, {
+      // Note: PUT will delete previous routes on this script.
+      method: "PUT",
+      body: JSON.stringify(
+        routes.map((route) =>
+          typeof route !== "object" ? { pattern: route } : route
+        )
+      ),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (e) {
+    if (isAuthenticationError(e)) {
+      // An authentication error is probably due to a known issue,
+      // where the user is logged in via an API token that does not have "All Zones".
+      return await publishRoutesFallback(routes, scriptName, notProd);
+    } else {
+      throw e;
+    }
+  }
+}
+
+/**
+ * Try updating routes for the Worker using a less optimal zone-based API.
+ *
+ * Compute match zones to the routes, then for each route attempt to connect it to the Worker via the zone.
+ */
+async function publishRoutesFallback(
+  routes: Route[],
+  scriptName: string,
+  notProd: boolean
+) {
+  if (notProd) {
+    throw new Error(
+      "Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
+        "Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+    );
+  }
+  logger.warn(
+    "The current authentication token does not have 'All Zones' permissions so cannot use the bulk-routes API endpoint.\n" +
+      "Falling back to using the zone-based API endpoint to update each route individually.\n" +
+      "Note that there is no access to read or create routes associated with zones that the API token does not have permission for."
+  );
+
+  const deployedRoutes: string[] = [];
+
+  // Collect the routes (and their zones) that will be deployed.
+  const activeZones = new Map<string, string>();
+  const routesToDeploy: RouteZoneAndHost[] = [];
+  for await (const routeToDeploy of getZonesAndHostsForRoutes(routes)) {
+    activeZones.set(routeToDeploy.zone, routeToDeploy.host);
+    routesToDeploy.push(routeToDeploy);
+  }
+
+  // Collect the routes that are already deployed.
+  const allRoutes = new Map<string, string>();
+  const alreadyDeployedRoutes = new Set<string>();
+  for (const [zone, host] of activeZones) {
+    await collectKnownRoutes(
+      zone,
+      host,
+      scriptName,
+      allRoutes,
+      alreadyDeployedRoutes
+    );
+  }
+
+  // Deploy each route that is not already deployed.
+  for (const { routePattern, zone } of routesToDeploy) {
+    if (allRoutes.has(routePattern)) {
+      const knownScript = allRoutes.get(routePattern);
+      if (knownScript === scriptName) {
+        // This route is already associated with this worker, so no need to hit the API.
+        alreadyDeployedRoutes.delete(routePattern);
+        continue;
+      } else {
+        throw new Error(
+          `The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`
+        );
+      }
+    }
+
+    const { pattern } = await fetchResult(`/zones/${zone}/workers/routes`, {
+      method: "POST",
+      body: JSON.stringify({
+        pattern: routePattern,
+        script: scriptName,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    deployedRoutes.push(pattern);
+  }
+
+  if (alreadyDeployedRoutes.size) {
+    logger.warn(
+      "Previously deployed routes:\n" +
+        "The following routes were already associated with this worker, and have not been deleted:\n" +
+        [...alreadyDeployedRoutes.values()].map((route) => ` - "${route}"\n`) +
+        "If these routes are not wanted then you can remove them in the dashboard.\n" +
+        "These routes would have been deleted automatically if the bulk-routes API had been used."
+    );
+  }
+
+  return deployedRoutes;
+}
+
+/**
+ * For the given `zone`, add to the mappings of routes to script names, and the set of currently deployed routes.
+ */
+async function collectKnownRoutes(
+  zone: string,
+  host: string,
+  scriptName: string,
+  /** A map of routes to scripts. */
+  allRoutes: Map<string, string>,
+  /** A set of routes that are already deployed to the script being published. */
+  alreadyDeployedRoutes: Set<string>
+): Promise<void> {
+  try {
+    for (const { pattern, script } of await fetchListResult<{
+      pattern: string;
+      script: string;
+    }>(`/zones/${zone}/workers/routes`)) {
+      allRoutes.set(pattern, script);
+      if (script === scriptName) {
+        alreadyDeployedRoutes.add(pattern);
+      }
+    }
+  } catch (e) {
+    if (isAuthenticationError(e)) {
+      e.notes.push({
+        text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
+      });
+    }
+    throw e;
+  }
+}
+
+function isAuthenticationError(e: unknown): e is ParseError {
+  return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }

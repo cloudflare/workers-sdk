@@ -649,8 +649,85 @@ describe("publish", () => {
       await runWrangler("publish ./index --env dev --legacy-env false");
     });
 
+    it("should fallback to the Wrangler 1 zone-based API if the bulk-routes API fails", async () => {
+      writeWranglerToml({
+        routes: ["example.com/some-route/*"],
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false });
+      mockUploadWorkerRequest({ expectedType: "esm" });
+      // Simulate the bulk-routes API failing with a not authorized error.
+      mockUnauthorizedPublishRoutesRequest();
+      // Simulate that the worker has already been deployed to another route in this zone.
+      mockCollectKnownRoutesRequest([
+        {
+          pattern: "foo.example.com/other-route",
+          script: "test-name",
+        },
+      ]);
+      mockGetZoneFromHostRequest("example.com", "some-zone-id");
+      mockPublishRoutesFallbackRequest({
+        pattern: "example.com/some-route/*",
+        script: "test-name",
+      });
+      await runWrangler("publish ./index");
+
+      expect(std.err).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`
+        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions so cannot use the bulk-routes API endpoint.[0m
+
+          Falling back to using the zone-based API endpoint to update each route individually.
+          Note that there is no access to read or create routes associated with zones that the API token
+          does not have permission for.
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+
+          The following routes were already associated with this worker, and have not been deleted:
+           - \\"foo.example.com/other-route\\"
+          If these routes are not wanted then you can remove them in the dashboard.
+          These routes would have been deleted automatically if the bulk-routes API had been used.
+
+        "
+      `);
+      expect(std.out).toMatchInlineSnapshot(`
+        "Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          example.com/some-route/*"
+      `);
+    });
+
+    it("should error if the bulk-routes API fails and trying to push to a non-production environment", async () => {
+      writeWranglerToml({
+        routes: ["example.com/some-route/*"],
+        legacy_env: false,
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ env: "staging", enabled: false });
+      mockUploadWorkerRequest({ env: "staging", expectedType: "esm" });
+      // Simulate the bulk-routes API failing with a not authorized error.
+      mockUnauthorizedPublishRoutesRequest({ env: "staging" });
+      // Simulate that the worker has already been deployed to another route in this zone.
+      mockCollectKnownRoutesRequest([
+        {
+          pattern: "foo.example.com/other-route",
+          script: "test-name",
+        },
+      ]);
+      mockGetZoneFromHostRequest("example.com", "some-zone-id");
+      mockPublishRoutesFallbackRequest({
+        pattern: "example.com/some-route/*",
+        script: "test-name",
+      });
+      await expect(runWrangler("publish ./index --env=staging")).rejects
+        .toThrowErrorMatchingInlineSnapshot(`
+              "Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
+              Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+            `);
+    });
+
     describe("custom domains", () => {
-      it("should publish routes marked with 'custom_domain' as seperate custom domains", async () => {
+      it("should publish routes marked with 'custom_domain' as separate custom domains", async () => {
         writeWranglerToml({
           routes: [{ pattern: "api.example.com", custom_domain: true }],
         });
@@ -5004,7 +5081,7 @@ addEventListener('fetch', event => {});`
           "debug": "",
           "err": "",
           "out": "--dry-run: exiting now.",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
         ",
         }
@@ -5048,7 +5125,7 @@ addEventListener('fetch', event => {});`
           "debug": "",
           "err": "",
           "out": "--dry-run: exiting now.",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
         ",
         }
@@ -5224,6 +5301,49 @@ function mockPublishRoutesRequest({
       return null;
     }
   );
+}
+
+function mockUnauthorizedPublishRoutesRequest({
+  env = undefined,
+  legacyEnv = false,
+}: {
+  env?: string | undefined;
+  legacyEnv?: boolean | undefined;
+} = {}) {
+  const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+  const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+  setMockRawResponse(
+    `/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+    "PUT",
+    () =>
+      createFetchResult(null, false, [
+        { message: "Authentication error", code: 10000 },
+      ])
+  );
+}
+
+function mockCollectKnownRoutesRequest(
+  routes: { pattern: string; script: string }[]
+) {
+  setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
+}
+
+function mockGetZoneFromHostRequest(host: string, zone: string) {
+  setMockResponse("/zones", (_uri, _init, queryParams) => {
+    expect(queryParams.get("name")).toEqual(host);
+    return [{ id: zone }];
+  });
+}
+
+function mockPublishRoutesFallbackRequest(route: {
+  pattern: string;
+  script: string;
+}) {
+  setMockResponse(`/zones/:zoneId/workers/routes`, "POST", (_url, { body }) => {
+    expect(JSON.parse(body as string)).toEqual(route);
+    return route.pattern;
+  });
 }
 
 function mockPublishCustomDomainsRequest({
