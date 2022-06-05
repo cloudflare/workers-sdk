@@ -628,21 +628,23 @@ function createCLIParser(argv: string[]) {
         isWritingScripts: boolean,
         isCreatingWranglerToml: boolean,
         packagePath: string,
-        scriptPath: string
+        scriptPath: string,
+        extraToml: TOML.JsonMap
       ) {
         if (isCreatingWranglerToml) {
-          // rewrite wrangler.toml with main = "path/to/script"
+          // rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
           const parsedWranglerToml = parseTOML(
             readFileSync(wranglerTomlDestination)
           );
-          fs.writeFileSync(
-            wranglerTomlDestination,
-            TOML.stringify({
+          const newToml = {
+            ...{
               name: parsedWranglerToml.name,
               main: scriptPath,
               compatibility_date: parsedWranglerToml.compatibility_date,
-            })
-          );
+            },
+            ...extraToml,
+          };
+          fs.writeFileSync(wranglerTomlDestination, TOML.stringify(newToml));
         }
         const isNamedWorker =
           isCreatingWranglerToml && path.dirname(packagePath) !== process.cwd();
@@ -724,6 +726,20 @@ function createCLIParser(argv: string[]) {
         return templates[`${lang}-${workerType}`];
       }
 
+      function getNewWorkerToml(
+        workerType: "fetch" | "scheduled"
+      ): TOML.JsonMap {
+        if (workerType === "scheduled") {
+          return {
+            triggers: {
+              crons: ["1 * * * *"],
+            },
+          };
+        }
+
+        return {};
+      }
+
       if (isTypescriptProject) {
         if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
           const newWorkerFilename = path.relative(
@@ -757,7 +773,8 @@ function createCLIParser(argv: string[]) {
               shouldWritePackageJsonScripts,
               justCreatedWranglerToml,
               pathToPackageJson,
-              "src/index.ts"
+              "src/index.ts",
+              getNewWorkerToml(newWorkerType)
             );
           }
         }
@@ -794,7 +811,8 @@ function createCLIParser(argv: string[]) {
               shouldWritePackageJsonScripts,
               justCreatedWranglerToml,
               pathToPackageJson,
-              "src/index.js"
+              "src/index.js",
+              getNewWorkerToml(newWorkerType)
             );
           }
         }
