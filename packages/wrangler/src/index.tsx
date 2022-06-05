@@ -637,11 +637,9 @@ function createCLIParser(argv: string[]) {
             readFileSync(wranglerTomlDestination)
           );
           const newToml = {
-            ...{
-              name: parsedWranglerToml.name,
-              main: scriptPath,
-              compatibility_date: parsedWranglerToml.compatibility_date,
-            },
+            name: parsedWranglerToml.name,
+            main: scriptPath,
+            compatibility_date: parsedWranglerToml.compatibility_date,
             ...extraToml,
           };
           fs.writeFileSync(wranglerTomlDestination, TOML.stringify(newToml));
