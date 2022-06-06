@@ -1,5 +1,11 @@
 # jest-environment-wrangler
 
+## 0.0.30
+
+### Patch Changes
+
+- [#1133](https://github.com/cloudflare/wrangler2/pull/1133) [`9c29c5a`](https://github.com/cloudflare/wrangler2/commit/9c29c5a69059b744766fa3c617887707b53992f4) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.5.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.5.0)
+
 ## 0.0.29
 
 ## 0.0.28
