@@ -1,5 +1,87 @@
 # wrangler
 
+## 2.0.8
+
+### Patch Changes
+
+- [#1184](https://github.com/cloudflare/wrangler2/pull/1184) [`4a10176`](https://github.com/cloudflare/wrangler2/commit/4a10176ad1e4856724c70f07f06ef6915ac21ac8) Thanks [@timabb031](https://github.com/timabb031)! - polish: add cron trigger to wrangler.toml when new Scheduled Worker is created
+
+  When `wrangler init` is used to create a new Scheduled Worker a cron trigger (1 \* \* \* \*) will be added to wrangler.toml, but only if wrangler.toml is being created during init. If wrangler.toml exists prior to running `wrangler init` then wrangler.toml will remain unchanged even if the user selects the "Scheduled Handler" option. This is as per existing tests in init.test.ts that ensure wrangler.toml is never overwritten after agreeing to prompts. That can change if it needs to.
+
+* [#1163](https://github.com/cloudflare/wrangler2/pull/1163) [`52c0bf0`](https://github.com/cloudflare/wrangler2/commit/52c0bf0469635b76d9717b7113c98572de02d196) Thanks [@threepointone](https://github.com/threepointone)! - fix: only log available bindings once in `dev`
+
+  Because we were calling `printBindings` during the render phase of `<Dev/>`, we were logging the bindings multiple times (render can be called multiple times, and the interaction of Ink's stdout output intermingled with console is a bit weird). We could have put it into an effect, but I think a better solution here is to simply log it before we even start rendering `<Dev/>` (so we could see the bindings even if Dev fails to load, for example).
+
+  This also adds a fix that masks any overriden values so that we don't accidentally log potential secrets into the terminal.
+
+- [#1153](https://github.com/cloudflare/wrangler2/pull/1153) [`40f20b2`](https://github.com/cloudflare/wrangler2/commit/40f20b2941e337051e664cf819b4422605925608) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: `minify` and `node_compat` should be inherited
+
+  Fixes [#1150](https://github.com/cloudflare/wrangler2/issues/1150)
+
+* [#1157](https://github.com/cloudflare/wrangler2/pull/1157) [`ea8f8d7`](https://github.com/cloudflare/wrangler2/commit/ea8f8d77ab5370bb43c23b7aad6221a02931ce8b) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: Ignore .git when publishing a Pages project
+
+- [#1171](https://github.com/cloudflare/wrangler2/pull/1171) [`de4e3c2`](https://github.com/cloudflare/wrangler2/commit/de4e3c2d4a0b647f190e709a0cadb6ef8eb08530) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: link to the issue chooser in GitHub
+
+  Previously, when an error occurs, wrangler says:
+
+  > If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new.
+
+  Now, it links through to the issue template chooser which is more helpful.
+
+  Fixes [#1169](https://github.com/cloudflare/wrangler2/issues/1169)
+
+* [#1154](https://github.com/cloudflare/wrangler2/pull/1154) [`5d6de58`](https://github.com/cloudflare/wrangler2/commit/5d6de58a1410bd958e9e3eb4a16c622b58c1a207) Thanks [@threepointone](https://github.com/threepointone)! - fix: extract Cloudflare_CA.pem to temp dir before using it
+
+  With package managers like yarn, the cloudflare cert won't be available on the filesystem as expected (since the module is inside a .zip file). This fix instead extracts the file out of the module, copies it to a temporary directory, and directs node to use that as the cert instead, preventing warnings like https://github.com/cloudflare/wrangler2/issues/1136.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1136
+
+- [#1166](https://github.com/cloudflare/wrangler2/pull/1166) [`08e3a49`](https://github.com/cloudflare/wrangler2/commit/08e3a49985520fc7931f2823c198345ddf956a2f) Thanks [@threepointone](https://github.com/threepointone)! - fix: warn on unexpected fields on migrations
+
+  This adds a warning for unexpected fields on `[migrations]` config, reported in https://github.com/cloudflare/wrangler2/issues/1165. It also adds a test for incorrect `renamed_classes` in a migration.
+
+* [#1006](https://github.com/cloudflare/wrangler2/pull/1006) [`ee0c380`](https://github.com/cloudflare/wrangler2/commit/ee0c38053b4fb198fd4bd71cb7dc1f0aa394ae62) Thanks [@danbulant](https://github.com/danbulant)! - feat: add pnpm support
+
+- [`6187f36`](https://github.com/cloudflare/wrangler2/commit/6187f36b3ab4646b97af8d058d2abb0e52f580d2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: backslash on manifest keys in windows
+
+* [#1158](https://github.com/cloudflare/wrangler2/pull/1158) [`e452a35`](https://github.com/cloudflare/wrangler2/commit/e452a35d4ea17a154c786d9421bd5822ef615c6b) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: Skip cfFetch if there are no functions during pages dev
+
+- [#1122](https://github.com/cloudflare/wrangler2/pull/1122) [`c2d2f44`](https://github.com/cloudflare/wrangler2/commit/c2d2f4420cb30f54fc90bd6bf9728adb4bbb0ab2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: display chained errors from the CF API
+
+  For example if you have an invalid CF_API_TOKEN and try running `wrangler whoami`
+  you now get the additional `6111` error information:
+
+  ```
+  ✘ [ERROR] A request to the Cloudflare API (/user) failed.
+
+    Invalid request headers [code: 6003]
+    - Invalid format for Authorization header [code: 6111]
+  ```
+
+* [#1161](https://github.com/cloudflare/wrangler2/pull/1161) [`cec0657`](https://github.com/cloudflare/wrangler2/commit/cec06573c75834368b95b178f1c276856e207701) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: add User-Agent to all CF API requests
+
+- [#1152](https://github.com/cloudflare/wrangler2/pull/1152) [`b817136`](https://github.com/cloudflare/wrangler2/commit/b81713698840a6f87d6ffbf21f8aa1c71a631636) Thanks [@threepointone](https://github.com/threepointone)! - polish: Give a copy-paste config when `[migrations]` are missing
+
+  This gives a slightly better message when migrations are missing for declared durable objcts. Specifically, it gives a copy-pastable section to add to wrangler.toml, and doesn't show the warning at all for invalid class names anymore.
+
+  Partially makes https://github.com/cloudflare/wrangler2/issues/1076 better.
+
+* [#1141](https://github.com/cloudflare/wrangler2/pull/1141) [`a8c509a`](https://github.com/cloudflare/wrangler2/commit/a8c509a200027bea212d461e8d67f7e1940cc71b) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: rename "publish" package.json script to "deploy"
+
+  Renaming the default "publish" package.json script to "deploy" to avoid confusion with npm's publish command.
+
+  Closes #1121
+
+- [#1133](https://github.com/cloudflare/wrangler2/pull/1133) [`9c29c5a`](https://github.com/cloudflare/wrangler2/commit/9c29c5a69059b744766fa3c617887707b53992f4) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.5.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.5.0)
+
+* [#1175](https://github.com/cloudflare/wrangler2/pull/1175) [`e978986`](https://github.com/cloudflare/wrangler2/commit/e9789865fa9e80ec61f48aef614e6a74fce258f3) Thanks [@timabb031](https://github.com/timabb031)! - feature: allow user to select a handler template with `wrangler init`
+
+  This allows the user to choose which template they'd like to use when they are prompted to create a new worker.
+  The options are currently "None"/"Fetch Handler"/"Scheduled Handler".
+  Support for new handler types such as `email` can be added easily in future.
+
+- [#1122](https://github.com/cloudflare/wrangler2/pull/1122) [`c2d2f44`](https://github.com/cloudflare/wrangler2/commit/c2d2f4420cb30f54fc90bd6bf9728adb4bbb0ab2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: improve error message when CF API responds with an error
+
 ## 2.0.7
 
 ### Patch Changes

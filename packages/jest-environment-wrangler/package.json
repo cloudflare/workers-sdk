@@ -1,6 +1,6 @@
 {
   "name": "jest-environment-wrangler",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "A jest environment for Cloudflare Workers, powered by wrangler.",
   "main": "dist/index.js",
   "scripts": {
