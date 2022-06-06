@@ -15,6 +15,7 @@ import {
 } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { RawConfig } from "../config";
 import type { PackageManager } from "../package-manager";
 
 describe("init", () => {
@@ -341,6 +342,72 @@ describe("init", () => {
         ",
         }
       `);
+    });
+
+    it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
+      fs.writeFileSync(
+        "./wrangler.toml",
+        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
+        "utf-8"
+      );
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: true,
+        },
+        {
+          text: "Do you want to continue initializing this project?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        }
+      );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "scheduled",
+      });
+
+      await runWrangler("init");
+      expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
+        `"compatibility_date=\\"something-else\\""`
+      );
+    });
+
+    it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        }
+      );
+
+      mockSelect({
+        text: "Would you like to create a Worker at src/index.ts?",
+        result: "scheduled",
+      });
+
+      await runWrangler("init");
+      const parsed = TOML.parse(
+        await fsp.readFile("./wrangler.toml", "utf-8")
+      ) as RawConfig;
+      expect(typeof parsed.compatibility_date).toBe("string");
+      expect(parsed.name).toContain("wrangler-tests");
+      expect(parsed?.triggers?.crons[0]).toEqual("1 * * * *");
     });
   });
 
