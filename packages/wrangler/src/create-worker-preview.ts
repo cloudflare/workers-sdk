@@ -111,7 +111,7 @@ async function createPreviewToken(
   );
 
   const { accountId } = account;
-  const scriptId = ctx.zone ? randomId() : worker.name || host.split(".")[0];
+  const scriptId = worker.name || (ctx.zone ? randomId() : host.split(".")[0]);
   const url =
     ctx.env && !ctx.legacyEnv
       ? `/accounts/${accountId}/workers/services/${scriptId}/environments/${ctx.env}/edge-preview`
