@@ -137,7 +137,13 @@ export async function syncAssets(
   const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
   const manifest: Record<string, string> = {};
-  const toUpload: KeyValue[] = [];
+
+  // A batch of uploads where each bucket has to be less than 100mb
+  const uploadBuckets: KeyValue[][] = [];
+  // The "live" bucket that we'll keep filling until it's just below 100mb
+  let uploadBucket: KeyValue[] = [];
+  // A size counter for the live bucket
+  let uploadBucketSize = 0;
 
   const include = createPatternMatcher(siteAssets.includePatterns, false);
   const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
@@ -156,7 +162,7 @@ export async function syncAssets(
       continue;
     }
 
-    await validateAssetSize(absAssetFile, assetFile);
+    const assetSize = await validateAssetSize(absAssetFile, assetFile);
     logger.log(`Reading ${assetFile}...`);
     const content = await readFile(absAssetFile, "base64");
 
@@ -166,7 +172,20 @@ export async function syncAssets(
     // now put each of the files into kv
     if (!namespaceKeys.has(assetKey)) {
       logger.log(`Uploading as ${assetKey}...`);
-      toUpload.push({
+
+      // Check if adding this asset to the bucket would
+      // push it over the 100mb limit
+      if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
+        // If so, move the current bucket into the batch,
+        // and reset the counter/bucket
+        uploadBuckets.push(uploadBucket);
+        uploadBucketSize = 0;
+        uploadBucket = [];
+      }
+
+      // Update the bucket and the size counter
+      uploadBucketSize += assetSize;
+      uploadBucket.push({
         key: assetKey,
         value: content,
         base64: true,
@@ -175,27 +194,31 @@ export async function syncAssets(
       logger.log(`Skipping - already uploaded.`);
     }
 
-    // remove the key from the set so we know what we've already uploaded
+    // Remove the key from the set so we know what we've already uploaded
     namespaceKeys.delete(assetKey);
 
-    // prevent causing different manifest keys on windows
-    const maifestKey = urlSafe(
+    // Prevent different manifest keys on windows
+    const manifestKey = urlSafe(
       path.relative(siteAssets.assetDirectory, absAssetFile)
     );
-    manifest[maifestKey] = assetKey;
+    manifest[manifestKey] = assetKey;
   }
+
+  // Add the last (potentially only) bucket to the batch
+  uploadBuckets.push(uploadBucket);
 
   // keys now contains all the files we're deleting
   for (const key of namespaceKeys) {
     logger.log(`Deleting ${key} from the asset store...`);
   }
 
-  await Promise.all([
-    // upload all the new assets
-    putKVBulkKeyValue(accountId, namespace, toUpload),
-    // delete all the unused assets
-    deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys)),
-  ]);
+  // sequentially upload each bucket
+  for (const bucket of uploadBuckets) {
+    await putKVBulkKeyValue(accountId, namespace, bucket);
+  }
+
+  // then delete all the assets that aren't used anymore
+  await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
 
   logger.log("↗️  Done syncing assets");
 
@@ -217,13 +240,14 @@ function createPatternMatcher(
 async function validateAssetSize(
   absFilePath: string,
   relativeFilePath: string
-) {
+): Promise<number> {
   const { size } = await stat(absFilePath);
   if (size > 25 * 1024 * 1024) {
     throw new Error(
       `File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
     );
   }
+  return size;
 }
 
 function validateAssetKey(assetKey: string) {
