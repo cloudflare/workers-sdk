@@ -1138,7 +1138,7 @@ const createDeployment: CommandModule<
 
     const files = [...fileMap.values()];
 
-    let jwt: string;
+    let jwt = "";
 
     async function refreshJwt() {
       jwt = (
