@@ -19,7 +19,7 @@ function assertLater(fn: () => void) {
 }
 
 function mockGetToken(jwt: string) {
-  setMockResponse(
+  return setMockResponse(
     "/accounts/:accountId/pages/projects/foo/upload-token",
     async ([_url, accountId]) => {
       assertLater(() => {
@@ -374,10 +374,10 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-            }
-          `);
+                          Object {
+                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                          }
+                      `);
           });
 
           return {
@@ -445,10 +445,10 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-            }
-          `);
+                          Object {
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
           });
 
           return {
@@ -479,6 +479,103 @@ describe("pages", () => {
             },
           ]);
         });
+      }
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "✨ Success! Uploaded 1 files (TIMINGS)
+
+        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      `);
+    });
+
+    it("should refetch a JWT if it expires while uploading", async () => {
+      writeFileSync("logo.txt", "foobar");
+
+      const cancelMockGetToken = mockGetToken("<<funfetti-auth-jwt>>");
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init) => {
+          const body = JSON.parse(init.body as string) as { hashes: string[] };
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+            });
+          });
+          return body.hashes;
+        }
+      );
+
+      // Accumulate multiple requests then assert afterwards
+      const requests: RequestInit[] = [];
+      setMockRawResponse("/pages/assets/upload", "POST", async (_, init) => {
+        requests.push(init);
+
+        // Fail just the first request
+        if (requests.length < 2) {
+          cancelMockGetToken();
+          mockGetToken("<<funfetti-auth-jwt2>>");
+          return createFetchResult(null, false, [
+            {
+              code: 8000013,
+              message: "Authorization failed",
+            },
+          ]);
+        } else {
+          return createFetchResult(null, true);
+        }
+      });
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async ([_url, accountId], init) => {
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
+                          Object {
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
+          });
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      await runWrangler("pages publish . --project-name=foo");
+
+      // Assert two requests
+      expect(requests.length).toBe(2);
+
+      expect(requests[0].headers).toMatchObject({
+        Authorization: "Bearer <<funfetti-auth-jwt>>",
+      });
+
+      expect(requests[1].headers).toMatchObject({
+        Authorization: "Bearer <<funfetti-auth-jwt2>>",
+      });
+
+      for (const init of requests) {
+        const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+        expect(body).toMatchObject([
+          {
+            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+            value: Buffer.from("foobar").toString("base64"),
+            metadata: {
+              contentType: "text/plain",
+            },
+            base64: true,
+          },
+        ]);
       }
 
       expect(std.out).toMatchInlineSnapshot(`
@@ -533,13 +630,13 @@ describe("pages", () => {
             const body = init.body as FormData;
             const manifest = JSON.parse(body.get("manifest") as string);
             expect(manifest).toMatchInlineSnapshot(`
-            Object {
-              "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-              "/logo.js": "6be321bef99e758250dac034474ddbb8",
-              "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-              "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-            }
-          `);
+                          Object {
+                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
           });
 
           return {
