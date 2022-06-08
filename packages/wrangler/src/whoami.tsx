@@ -3,7 +3,7 @@ import Table from "ink-table";
 import React from "react";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { logger } from "./logger";
-import { getAPIToken } from "./user";
+import { getAPIToken, getCloudflareAPITokenFromEnv } from "./user";
 
 export async function whoami() {
   logger.log("Getting User settings...");
@@ -48,10 +48,11 @@ export interface UserInfo {
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
   const apiToken = getAPIToken();
+  const apiTokenFromEnv = getCloudflareAPITokenFromEnv();
   return apiToken
     ? {
         apiToken,
-        authType: "OAuth",
+        authType: apiTokenFromEnv ? "API" : "OAuth",
         email: await getEmail(),
         accounts: await getAccounts(),
       }
