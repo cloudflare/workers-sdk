@@ -963,6 +963,11 @@ function createCLIParser(argv: string[]) {
           describe: "Protocol to listen to requests on, defaults to http.",
           choices: ["http", "https"] as const,
         })
+        .options("local-upstream", {
+          type: "string",
+          describe:
+            "Host to act as origin in local mode, defaults to dev.host or route",
+        })
         .option("experimental-public", {
           describe: "Static assets to be served",
           type: "string",
@@ -1667,6 +1672,7 @@ function createCLIParser(argv: string[]) {
           tsconfig={config.tsconfig}
           upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
+          localUpstream={undefined}
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}
