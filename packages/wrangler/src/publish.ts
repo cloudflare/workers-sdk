@@ -643,13 +643,24 @@ async function publishRoutesFallback(
   const allRoutes = new Map<string, string>();
   const alreadyDeployedRoutes = new Set<string>();
   for (const [zone, host] of activeZones) {
-    await collectKnownRoutes(
-      zone,
-      host,
-      scriptName,
-      allRoutes,
-      alreadyDeployedRoutes
-    );
+    try {
+      for (const { pattern, script } of await fetchListResult<{
+        pattern: string;
+        script: string;
+      }>(`/zones/${zone}/workers/routes`)) {
+        allRoutes.set(pattern, script);
+        if (script === scriptName) {
+          alreadyDeployedRoutes.add(pattern);
+        }
+      }
+    } catch (e) {
+      if (isAuthenticationError(e)) {
+        e.notes.push({
+          text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
+        });
+      }
+      throw e;
+    }
   }
 
   // Deploy each route that is not already deployed.
@@ -692,38 +703,6 @@ async function publishRoutesFallback(
   }
 
   return deployedRoutes;
-}
-
-/**
- * For the given `zone`, add to the mappings of routes to script names, and the set of currently deployed routes.
- */
-async function collectKnownRoutes(
-  zone: string,
-  host: string,
-  scriptName: string,
-  /** A map of routes to scripts. */
-  allRoutes: Map<string, string>,
-  /** A set of routes that are already deployed to the script being published. */
-  alreadyDeployedRoutes: Set<string>
-): Promise<void> {
-  try {
-    for (const { pattern, script } of await fetchListResult<{
-      pattern: string;
-      script: string;
-    }>(`/zones/${zone}/workers/routes`)) {
-      allRoutes.set(pattern, script);
-      if (script === scriptName) {
-        alreadyDeployedRoutes.add(pattern);
-      }
-    }
-  } catch (e) {
-    if (isAuthenticationError(e)) {
-      e.notes.push({
-        text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
-      });
-    }
-    throw e;
-  }
 }
 
 function isAuthenticationError(e: unknown): e is ParseError {

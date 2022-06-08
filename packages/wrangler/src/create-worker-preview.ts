@@ -140,7 +140,8 @@ async function createPreviewToken(
   return {
     value: preview_token,
     host:
-      ctx.host ?? worker.name
+      ctx.host ??
+      (worker.name
         ? `${
             worker.name
             // TODO: this should also probably have the env prefix
@@ -150,7 +151,7 @@ async function createPreviewToken(
             //   ? `${ctx.env}.${worker.name}`
             //   : worker.name
           }.${host.split(".").slice(1).join(".")}`
-        : host,
+        : host),
 
     inspectorUrl,
     prewarmUrl,
