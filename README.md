@@ -37,7 +37,7 @@ $ npm install wrangler --save-dev
 
 ### `wrangler init [name]`
 
-Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration).
+Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
 ### `wrangler dev`
 
@@ -47,7 +47,7 @@ Start a local development server, with live reloading and devtools.
 
 Publish the given script to the worldwide Cloudflare network.
 
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/commands).
+For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
 
 ## Pages
 
