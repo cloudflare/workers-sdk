@@ -499,7 +499,7 @@ export default async function publish(props: Props): Promise<void> {
   // Update routing table for the script.
   if (routesOnly.length > 0) {
     deployments.push(
-      publishRoutes(workerUrl, routesOnly, scriptName, notProd).then(() => {
+      publishRoutes(routesOnly, { workerUrl, scriptName, notProd }).then(() => {
         if (routesOnly.length > 10) {
           return routesOnly
             .slice(0, 9)
@@ -577,10 +577,12 @@ async function getSubdomain(accountId: string): Promise<string> {
  * Associate the newly deployed Worker with the given routes.
  */
 async function publishRoutes(
-  workerUrl: string,
   routes: Route[],
-  scriptName: string,
-  notProd: boolean
+  {
+    workerUrl,
+    scriptName,
+    notProd,
+  }: { workerUrl: string; scriptName: string; notProd: boolean }
 ): Promise<string[]> {
   try {
     return await fetchResult(`${workerUrl}/routes`, {
@@ -599,7 +601,7 @@ async function publishRoutes(
     if (isAuthenticationError(e)) {
       // An authentication error is probably due to a known issue,
       // where the user is logged in via an API token that does not have "All Zones".
-      return await publishRoutesFallback(routes, scriptName, notProd);
+      return await publishRoutesFallback(routes, { scriptName, notProd });
     } else {
       throw e;
     }
@@ -613,8 +615,7 @@ async function publishRoutes(
  */
 async function publishRoutesFallback(
   routes: Route[],
-  scriptName: string,
-  notProd: boolean
+  { scriptName, notProd }: { scriptName: string; notProd: boolean }
 ) {
   if (notProd) {
     throw new Error(
