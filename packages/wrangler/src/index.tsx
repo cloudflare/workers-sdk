@@ -66,7 +66,7 @@ import {
   requireAuth,
 } from "./user";
 import { whoami } from "./whoami";
-import { getZoneFromHost, getZonesAndHostsForRoutes } from "./zones";
+import { getZoneIdFromHost, getZoneForRoute } from "./zones";
 
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
@@ -1086,17 +1086,20 @@ function createCLIParser(argv: string[]) {
 
       // Compute zone info from the `host` and `route` args and config;
       let host = args.host || config.dev.host;
-      let zone: string | undefined;
+      let zoneId: string | undefined;
 
       if (!args.local) {
         if (host) {
-          zone = await getZoneFromHost(host);
+          zoneId = await getZoneIdFromHost(host);
         }
         const routes = args.routes || config.route || config.routes;
-        if (!zone && routes) {
-          ({ zone, host } = (
-            await getZonesAndHostsForRoutes(routes).next()
-          ).value);
+        if (!zoneId && routes) {
+          const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+          const zone = await getZoneForRoute(firstRoute);
+          if (zone) {
+            zoneId = zone.id;
+            host = zone.host;
+          }
         }
       }
 
@@ -1176,7 +1179,7 @@ function createCLIParser(argv: string[]) {
           name={getScriptName(args, config)}
           entry={entry}
           env={args.env}
-          zone={zone}
+          zone={zoneId}
           host={host}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(config)}

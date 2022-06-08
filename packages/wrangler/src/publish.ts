@@ -12,7 +12,7 @@ import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { ParseError } from "./parse";
 import { syncAssets } from "./sites";
-import { getZonesAndHostsForRoutes } from "./zones";
+import { getZoneForRoute } from "./zones";
 import type { Config } from "./config";
 import type {
   Route,
@@ -23,7 +23,6 @@ import type {
 import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { CfWorkerInit } from "./worker";
-import type { RouteZoneAndHost } from "./zones";
 
 type Props = {
   config: Config;
@@ -633,10 +632,16 @@ async function publishRoutesFallback(
 
   // Collect the routes (and their zones) that will be deployed.
   const activeZones = new Map<string, string>();
-  const routesToDeploy: RouteZoneAndHost[] = [];
-  for await (const routeToDeploy of getZonesAndHostsForRoutes(routes)) {
-    activeZones.set(routeToDeploy.zone, routeToDeploy.host);
-    routesToDeploy.push(routeToDeploy);
+  const routesToDeploy = new Map<string, string>();
+  for (const route of routes) {
+    const zone = await getZoneForRoute(route);
+    if (zone) {
+      activeZones.set(zone.id, zone.host);
+      routesToDeploy.set(
+        typeof route === "string" ? route : route.pattern,
+        zone.id
+      );
+    }
   }
 
   // Collect the routes that are already deployed.
@@ -664,7 +669,7 @@ async function publishRoutesFallback(
   }
 
   // Deploy each route that is not already deployed.
-  for (const { routePattern, zone } of routesToDeploy) {
+  for (const [routePattern, zoneId] of routesToDeploy.entries()) {
     if (allRoutes.has(routePattern)) {
       const knownScript = allRoutes.get(routePattern);
       if (knownScript === scriptName) {
@@ -678,7 +683,7 @@ async function publishRoutesFallback(
       }
     }
 
-    const { pattern } = await fetchResult(`/zones/${zone}/workers/routes`, {
+    const { pattern } = await fetchResult(`/zones/${zoneId}/workers/routes`, {
       method: "POST",
       body: JSON.stringify({
         pattern: routePattern,

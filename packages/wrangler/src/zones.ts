@@ -4,10 +4,9 @@ import type { Route } from "./config/environment";
 /**
  * An object holding information about a zone for publishing.
  */
-export interface RouteZoneAndHost {
-  zone: string;
+export interface Zone {
+  id: string;
   host: string;
-  routePattern: string;
 }
 
 /**
@@ -17,46 +16,28 @@ export interface RouteZoneAndHost {
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function* getZonesAndHostsForRoutes(
-  routes: Route | Route[]
-): AsyncGenerator<RouteZoneAndHost> {
-  if (!Array.isArray(routes)) {
-    routes = [routes];
-  }
-
-  for (const route of routes) {
-    let zone: string | undefined =
-      typeof route === "object" && "zone_id" in route
-        ? route.zone_id
-        : undefined;
-
-    const host =
-      typeof route === "string"
-        ? getHost(route)
-        : typeof route === "object"
-        ? "zone_name" in route
-          ? getHost(route.zone_name)
-          : getHost(route.pattern)
-        : undefined;
-
-    if (host && !zone) {
-      zone = await getZoneFromHost(host);
-    }
-
-    if (zone && host) {
-      yield {
-        host,
-        zone,
-        routePattern: typeof route === "string" ? route : route.pattern,
-      };
-    }
-  }
+export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
+  const host =
+    typeof route === "string"
+      ? getHostFromUrl(route)
+      : typeof route === "object"
+      ? "zone_name" in route
+        ? getHostFromUrl(route.zone_name)
+        : getHostFromUrl(route.pattern)
+      : undefined;
+  const id =
+    typeof route === "object" && "zone_id" in route
+      ? route.zone_id
+      : host
+      ? await getZoneIdFromHost(host)
+      : undefined;
+  return id && host ? { id, host } : undefined;
 }
 
 /**
  * Given something that resembles a URL, try to extract a host from it.
  */
-function getHost(urlLike: string): string | undefined {
+function getHostFromUrl(urlLike: string): string | undefined {
   // strip leading * / *.
   urlLike = urlLike.replace(/^\*(\.)?/g, "");
 
@@ -73,7 +54,7 @@ function getHost(urlLike: string): string | undefined {
  * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
  * lopping off subdomains until we get a hit from the API.
  */
-export async function getZoneFromHost(host: string): Promise<string> {
+export async function getZoneIdFromHost(host: string): Promise<string> {
   const hostPieces = host.split(".");
 
   while (hostPieces.length > 1) {
