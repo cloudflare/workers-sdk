@@ -1138,17 +1138,15 @@ const createDeployment: CommandModule<
 
     const files = [...fileMap.values()];
 
-    let jwt = "";
-
-    async function refreshJwt() {
-      jwt = (
+    async function fetchJwt(): Promise<string> {
+      return (
         await fetchResult<{ jwt: string }>(
           `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
         )
       ).jwt;
     }
 
-    await refreshJwt();
+    let jwt = await fetchJwt();
 
     const start = Date.now();
 
@@ -1247,7 +1245,7 @@ const createDeployment: CommandModule<
 
             if ((e as { code: number }).code === 8000013) {
               // Looks like the JWT expired, fetch another one
-              await refreshJwt();
+              jwt = await fetchJwt();
             }
             return doUpload();
           } else {
