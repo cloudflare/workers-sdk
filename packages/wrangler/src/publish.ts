@@ -623,9 +623,10 @@ async function publishRoutesFallback(
     );
   }
   logger.warn(
-    "The current authentication token does not have 'All Zones' permissions so cannot use the bulk-routes API endpoint.\n" +
+    "The current authentication token does not have 'All Zones' permissions.\n" +
       "Falling back to using the zone-based API endpoint to update each route individually.\n" +
-      "Note that there is no access to read or create routes associated with zones that the API token does not have permission for."
+      "Note that there is no access to read or create routes associated with zones that the API token does not have permission for.\n" +
+      "No existing routes will been deleted in this case."
   );
 
   const deployedRoutes: string[] = [];
@@ -702,8 +703,7 @@ async function publishRoutesFallback(
       "Previously deployed routes:\n" +
         "The following routes were already associated with this worker, and have not been deleted:\n" +
         [...alreadyDeployedRoutes.values()].map((route) => ` - "${route}"\n`) +
-        "If these routes are not wanted then you can remove them in the dashboard.\n" +
-        "These routes would have been deleted automatically if the bulk-routes API had been used."
+        "If these routes are not wanted then you can remove them in the dashboard."
     );
   }
 
