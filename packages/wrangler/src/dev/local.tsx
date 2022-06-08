@@ -30,6 +30,8 @@ interface LocalProps {
   inspectorPort: number;
   enableLocalPersistence: boolean;
   crons: Config["triggers"]["crons"];
+  localProtocol: "http" | "https";
+  localUpstream: string | undefined;
 }
 
 export function Local(props: LocalProps) {
@@ -57,6 +59,8 @@ function useLocalWorker({
   ip,
   localProtocol,
   crons,
+  localProtocol,
+  localUpstream,
 }: LocalProps) {
   // TODO: pass vars via command line
   const local = useRef<ReturnType<typeof spawn>>();
@@ -157,6 +161,11 @@ function useLocalWorker({
         }
       }
 
+      const upstream =
+        typeof localUpstream === "string"
+          ? `${localProtocol}://${localUpstream}`
+          : undefined;
+
       const options: MiniflareOptions = {
         name: workerName,
         port,
@@ -212,6 +221,7 @@ function useLocalWorker({
         sourceMap: true,
         logUnhandledRejections: true,
         crons,
+        upstream,
       };
 
       // The path to the Miniflare CLI assumes that this file is being run from
@@ -321,6 +331,8 @@ function useLocalWorker({
     bindings.text_blobs,
     bindings.data_blobs,
     crons,
+    localProtocol,
+    localUpstream,
   ]);
   return { inspectorUrl };
 }

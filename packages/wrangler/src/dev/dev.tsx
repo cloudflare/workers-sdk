@@ -35,6 +35,7 @@ export type DevProps = {
   tsconfig: string | undefined;
   upstreamProtocol: "https" | "http";
   localProtocol: "https" | "http";
+  localUpstream: string | undefined;
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
   crons: Config["triggers"]["crons"];
@@ -163,6 +164,8 @@ function DevSession(props: DevSessionProps) {
       inspectorPort={props.inspectorPort}
       enableLocalPersistence={props.enableLocalPersistence}
       crons={props.crons}
+      localProtocol={props.localProtocol}
+      localUpstream={props.localUpstream}
     />
   ) : (
     <Remote

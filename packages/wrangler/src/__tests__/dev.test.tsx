@@ -403,6 +403,46 @@ describe("wrangler dev", () => {
     });
   });
 
+  describe("local origin", () => {
+    it("should use dev.host from toml by default", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        dev: {
+          host: `2.some-host.com`,
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --local");
+      expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+        "2.some-host.com"
+      );
+    });
+
+    it("should use route from toml by default", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: `2.some-host.com`,
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --local");
+      expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+        "2.some-host.com"
+      );
+    });
+
+    it("should respect the option when provided", async () => {
+      writeWranglerToml({
+        main: "index.js",
+        route: `2.some-host.com`,
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await runWrangler("dev --local-upstream some-host.com --local");
+      expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+        "some-host.com"
+      );
+    });
+  });
+
   describe("custom builds", () => {
     it("should run a custom build before starting `dev`", async () => {
       writeWranglerToml({
@@ -844,6 +884,7 @@ describe("wrangler dev", () => {
               --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
               --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
               --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+              --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
               --jsx-factory                                The function that is called for each JSX element  [string]
               --jsx-fragment                               The function that is called for each JSX fragment  [string]
               --tsconfig                                   Path to a custom tsconfig.json file  [string]

@@ -1279,6 +1279,7 @@ function createCLIParser(argv: string[]) {
           tsconfig={config.tsconfig}
           upstreamProtocol={config.dev.upstream_protocol}
           localProtocol={config.dev.local_protocol}
+          localUpstream={undefined}
           enableLocalPersistence={false}
           accountId={accountId}
           assetPaths={undefined}
