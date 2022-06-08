@@ -60,15 +60,20 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
     }
   }
 
-  if (hasNpm) {
+  if (process.env.npm_execpath?.includes("npx")) {
     logger.log("Using npm as package manager.");
     return { ...NpmPackageManager, cwd };
+  }
+
+  if (hasPnpm) {
+    logger.log("Using pnpm as package manager.");
+    return { ...PnpmPackageManager, cwd };
   } else if (hasYarn) {
     logger.log("Using yarn as package manager.");
     return { ...YarnPackageManager, cwd };
-  } else if (hasPnpm) {
-    logger.log("Using pnpm as package manager.");
-    return { ...PnpmPackageManager, cwd };
+  } else if (hasNpm) {
+    logger.log("Using npm as package manager.");
+    return { ...NpmPackageManager, cwd };
   } else {
     throw new Error(
       "Unable to find a package manager. Supported managers are: npm, yarn, and pnpm."
