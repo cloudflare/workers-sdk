@@ -444,7 +444,10 @@ function createCLIParser(argv: string[]) {
           yesFlag ||
           (await confirm("Would you like to use git to manage this Worker?"));
         if (shouldInitGit) {
-          await execa("git", ["init", "--initial-branch=main"], {
+          await execa("git", ["init"], {
+            cwd: creationDirectory,
+          });
+          await execa("git", ["branch", "-m", "main"], {
             cwd: creationDirectory,
           });
           await writeFile(

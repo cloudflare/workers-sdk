@@ -435,6 +435,9 @@ describe("init", () => {
       `);
       expect(fs.lstatSync(".git").isDirectory()).toBe(true);
       expect(fs.lstatSync(".gitignore").isFile()).toBe(true);
+      expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
+        "main"
+      );
     });
 
     it("should not offer to initialize a git repo if it's already inside one", async () => {
