@@ -3,7 +3,7 @@ import { fetch, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
-import { getAPIToken, loginOrRefreshIfRequired } from "../user";
+import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
 
@@ -93,14 +93,6 @@ async function requireLoggedIn(): Promise<void> {
   if (!loggedIn) {
     throw new Error("Not logged in.");
   }
-}
-
-function requireApiToken(): string {
-  const authToken = getAPIToken();
-  if (!authToken) {
-    throw new Error("No API token found.");
-  }
-  return authToken;
 }
 
 function addAuthorizationHeaderIfUnspecified(

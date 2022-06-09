@@ -3,7 +3,6 @@ import getPort from "get-port";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -11,8 +10,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 describe("wrangler dev", () => {
-  mockAccountId();
-  mockApiToken();
   runInTempDir();
   const std = mockConsoleMethods();
   afterEach(() => {
