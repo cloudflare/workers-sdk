@@ -13,7 +13,6 @@ import { runCustomBuild } from "../entry";
 import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { getAPIToken } from "../user";
 import { Local } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
@@ -59,7 +58,6 @@ export type DevProps = {
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
-  const apiToken = props.initialMode === "remote" ? getAPIToken() : undefined;
   const directory = useTmpDir();
 
   useCustomBuild(props.entry, props.build);
@@ -104,19 +102,17 @@ export function DevImplementation(props: DevProps): JSX.Element {
   // only load the UI if we're running in a supported environment
   const { isRawModeSupported } = useStdin();
   return isRawModeSupported ? (
-    <InteractiveDevSession {...props} bundle={bundle} apiToken={apiToken} />
+    <InteractiveDevSession {...props} bundle={bundle} />
   ) : (
     <DevSession
       {...props}
       bundle={bundle}
-      apiToken={apiToken}
       local={props.initialMode === "local"}
     />
   );
 }
 
 type InteractiveDevSessionProps = DevProps & {
-  apiToken: string | undefined;
   bundle: EsbuildBundle | undefined;
 };
 
@@ -179,7 +175,6 @@ function DevSession(props: DevSessionProps) {
       bundle={props.bundle}
       format={props.entry.format}
       accountId={props.accountId}
-      apiToken={props.apiToken}
       bindings={props.bindings}
       assetPaths={props.assetPaths}
       public={props.public}
