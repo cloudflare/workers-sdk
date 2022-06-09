@@ -1245,6 +1245,7 @@ const createDeployment: CommandModule<
             );
 
             if ((e as { code: number }).code === 8000013) {
+              logger.debug(`Refetching JWT...`);
               // Looks like the JWT expired, fetch another one
               jwt = await fetchJwt();
             }

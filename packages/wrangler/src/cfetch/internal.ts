@@ -60,6 +60,7 @@ export async function fetchInternal<ResponseType>(
 
   logger.debug(`HTTP ${response.status} ${resource} ${duration}s`);
   const jsonText = await response.text();
+  logger.debug(jsonText);
   try {
     return parseJSON<ResponseType>(jsonText);
   } catch (err) {
