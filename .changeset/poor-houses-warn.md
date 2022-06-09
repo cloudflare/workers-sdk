@@ -2,4 +2,6 @@
 "wrangler": patch
 ---
 
-differentiate between API and OAuth in whoami
+fix: differentiate between API and OAuth in whoami
+
+Closes #1198
