@@ -1,5 +1,5 @@
 import { reinitialiseAuthTokens } from "../../user";
-import type { tokenWithType } from "../../user";
+import type { TokenWithType } from "../../user";
 
 const ORIGINAL_CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -13,7 +13,7 @@ const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 
 export function mockApiToken({
   apiToken = { token: "some-api-token", type: "OAuth" },
-}: { apiToken?: tokenWithType } = {}) {
+}: { apiToken?: TokenWithType } = {}) {
   beforeEach(() => {
     if (apiToken?.token === null) {
       delete process.env.CLOUDFLARE_API_TOKEN;
