@@ -66,6 +66,7 @@ import {
   requireAuth,
 } from "./user";
 import { whoami } from "./whoami";
+import { getZoneIdFromHost, getZoneForRoute } from "./zones";
 
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
@@ -1086,88 +1087,23 @@ function createCLIParser(argv: string[]) {
 
       // TODO: if worker_dev = false and no routes, then error (only for dev)
 
-      /**
-       * Given something that resembles a URL,
-       * try to extract a host from it
-       */
-      function getHost(urlLike: string): string | undefined {
-        // strip leading * / *.
-        urlLike = urlLike.replace(/^\*(\.)?/g, "");
-
-        if (
-          !(urlLike.startsWith("http://") || urlLike.startsWith("https://"))
-        ) {
-          urlLike = "http://" + urlLike;
-        }
-        return new URL(urlLike).host;
-      }
-
-      /**
-       * Given something that resembles a host,
-       * try to infer a zone id from it
-       */
-      async function getZoneId(host: string): Promise<string | undefined> {
-        const zones = await fetchResult<{ id: string }[]>(
-          `/zones`,
-          {},
-          new URLSearchParams({ name: host })
-        );
-        return zones[0]?.id;
-      }
-
-      // When we're given a host (in one of the above ways), we do 2 things:
-      // - We try to extract a host from it
-      // - We try to get a zone id from the host
-      //
-      // So it turns out it's particularly hard to get a 'valid' domain
-      // from a string, so we don't even try to validate TLDs, etc.
-      // Once we get something that looks like w.x.y.z-ish, we then try to
-      // get a zone id for it, by lopping off subdomains until we get a hit
-      // from the API. That's it!
-
-      let zone: { host: string; id: string } | undefined;
+      // Compute zone info from the `host` and `route` args and config;
+      let host = args.host || config.dev.host;
+      let zoneId: string | undefined;
 
       if (!args.local) {
-        const hostLike =
-          args.host ||
-          config.dev.host ||
-          (args.routes && args.routes[0]) ||
-          config.route ||
-          (config.routes && config.routes[0]);
-
-        let zoneId: string | undefined =
-          typeof hostLike === "object" && "zone_id" in hostLike
-            ? hostLike.zone_id
-            : undefined;
-
-        const host =
-          typeof hostLike === "string"
-            ? getHost(hostLike)
-            : typeof hostLike === "object"
-            ? "zone_name" in hostLike
-              ? getHost(hostLike.zone_name)
-              : getHost(hostLike.pattern)
-            : undefined;
-
-        const hostPieces =
-          typeof host === "string" ? host.split(".") : undefined;
-
-        while (!zoneId && hostPieces && hostPieces.length > 1) {
-          zoneId = await getZoneId(hostPieces.join("."));
-          hostPieces.shift();
+        if (host) {
+          zoneId = await getZoneIdFromHost(host);
         }
-
-        if (host && !zoneId) {
-          throw new Error(`Could not find zone for ${hostLike}`);
+        const routes = args.routes || config.route || config.routes;
+        if (!zoneId && routes) {
+          const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+          const zone = await getZoneForRoute(firstRoute);
+          if (zone) {
+            zoneId = zone.id;
+            host = zone.host;
+          }
         }
-
-        zone =
-          typeof zoneId === "string" && typeof host === "string"
-            ? {
-                host,
-                id: zoneId,
-              }
-            : undefined;
       }
 
       const nodeCompat = args.nodeCompat ?? config.node_compat;
@@ -1246,7 +1182,8 @@ function createCLIParser(argv: string[]) {
           name={getScriptName(args, config)}
           entry={entry}
           env={args.env}
-          zone={zone}
+          zone={zoneId}
+          host={host}
           rules={getRules(config)}
           legacyEnv={isLegacyEnv(config)}
           minify={args.minify ?? config.minify}
@@ -1675,6 +1612,7 @@ function createCLIParser(argv: string[]) {
           rules={getRules(config)}
           env={args.env}
           zone={undefined}
+          host={undefined}
           legacyEnv={isLegacyEnv(config)}
           build={config.build || {}}
           minify={undefined}

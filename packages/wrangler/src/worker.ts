@@ -176,5 +176,6 @@ export interface CfWorkerInit {
 export interface CfWorkerContext {
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: { id: string; host: string } | undefined;
+  zone: string | undefined;
+  host: string | undefined;
 }

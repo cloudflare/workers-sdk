@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { fetch, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
@@ -30,6 +31,10 @@ export async function fetchInternal<ResponseType>(
   queryParams?: URLSearchParams,
   abortSignal?: AbortSignal
 ): Promise<ResponseType> {
+  assert(
+    resource.startsWith("/"),
+    `CF API fetch - resource path must start with a "/" but got "${resource}"`
+  );
   await requireLoggedIn();
   const apiToken = requireApiToken();
   const headers = cloneHeaders(init.headers);

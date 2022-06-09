@@ -63,7 +63,7 @@ async function sessionToken(
 ): Promise<CfPreviewToken> {
   const { accountId } = account;
   const initUrl = ctx.zone
-    ? `/zones/${ctx.zone.id}/workers/edge-preview`
+    ? `/zones/${ctx.zone}/workers/edge-preview`
     : `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
   const { exchange_url } = await fetchResult<{ exchange_url: string }>(
@@ -139,19 +139,19 @@ async function createPreviewToken(
 
   return {
     value: preview_token,
-    host: ctx.zone
-      ? ctx.zone.host
-      : worker.name
-      ? `${
-          worker.name
-          // TODO: this should also probably have the env prefix
-          // but it doesn't appear to work yet, instead giving us the
-          // "There is nothing here yet" screen
-          // ctx.env && !ctx.legacyEnv
-          //   ? `${ctx.env}.${worker.name}`
-          //   : worker.name
-        }.${host.split(".").slice(1).join(".")}`
-      : host,
+    host:
+      ctx.host ??
+      (worker.name
+        ? `${
+            worker.name
+            // TODO: this should also probably have the env prefix
+            // but it doesn't appear to work yet, instead giving us the
+            // "There is nothing here yet" screen
+            // ctx.env && !ctx.legacyEnv
+            //   ? `${ctx.env}.${worker.name}`
+            //   : worker.name
+          }.${host.split(".").slice(1).join(".")}`
+        : host),
 
     inspectorUrl,
     prewarmUrl,

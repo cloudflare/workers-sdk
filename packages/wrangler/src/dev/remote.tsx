@@ -30,7 +30,8 @@ export function Remote(props: {
   usageModel: "bundled" | "unbound" | undefined;
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: { id: string; host: string } | undefined;
+  zone: string | undefined;
+  host: string | undefined;
 }) {
   assert(props.accountId, "accountId is required");
   assert(props.apiToken, "apiToken is required");
@@ -50,6 +51,7 @@ export function Remote(props: {
     env: props.env,
     legacyEnv: props.legacyEnv,
     zone: props.zone,
+    host: props.host,
   });
 
   usePreviewServer({
@@ -83,7 +85,8 @@ export function useWorker(props: {
   usageModel: "bundled" | "unbound" | undefined;
   env: string | undefined;
   legacyEnv: boolean | undefined;
-  zone: { id: string; host: string } | undefined;
+  zone: string | undefined;
+  host: string | undefined;
 }): CfPreviewToken | undefined {
   const {
     name,
@@ -176,7 +179,12 @@ export function useWorker(props: {
             accountId,
             apiToken,
           },
-          { env: props.env, legacyEnv: props.legacyEnv, zone: props.zone },
+          {
+            env: props.env,
+            legacyEnv: props.legacyEnv,
+            zone: props.zone,
+            host: props.host,
+          },
           abortController.signal
         )
       );
@@ -222,6 +230,7 @@ export function useWorker(props: {
     props.env,
     props.legacyEnv,
     props.zone,
+    props.host,
   ]);
   return token;
 }
