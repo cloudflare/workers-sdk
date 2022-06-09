@@ -414,10 +414,10 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 
 export type TokenWithType = {
   type: "API" | "OAuth";
-  token: string | undefined;
+  token: string;
 };
 
-export function getAPIToken(): TokenWithType {
+export function getAPIToken(): TokenWithType | undefined {
   if (LocalState.apiToken) {
     logger.warn(
       "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
