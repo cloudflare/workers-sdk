@@ -1,4 +1,5 @@
 import { reinitialiseAuthTokens } from "../../user";
+import type { tokenWithType } from "../../user";
 
 const ORIGINAL_CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -9,14 +10,15 @@ const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
  * Note that you can remove any API token from the environment by setting the value to `null`.
  * This is useful if a higher `describe()` block has already called `mockApiToken()`.
  */
+
 export function mockApiToken({
-  apiToken = "some-api-token",
-}: { apiToken?: string | null } = {}) {
+  apiToken = { token: "some-api-token", type: "OAuth" },
+}: { apiToken?: tokenWithType } = {}) {
   beforeEach(() => {
-    if (apiToken === null) {
+    if (apiToken?.token === null) {
       delete process.env.CLOUDFLARE_API_TOKEN;
     } else {
-      process.env.CLOUDFLARE_API_TOKEN = apiToken;
+      process.env.CLOUDFLARE_API_TOKEN = apiToken?.token;
     }
     // Now we have updated the environment, we must reinitialize the user auth state.
     reinitialiseAuthTokens();

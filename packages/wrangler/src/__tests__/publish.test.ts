@@ -53,7 +53,7 @@ describe("publish", () => {
   });
 
   describe("authentication", () => {
-    mockApiToken({ apiToken: null });
+    mockApiToken({ apiToken: { token: undefined, type: "OAuth" } });
     beforeEach(() => {
       // @ts-expect-error disable the mock we'd setup earlier
       // or else our server won't bother listening for oauth requests

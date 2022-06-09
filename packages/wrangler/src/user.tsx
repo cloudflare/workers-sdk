@@ -233,7 +233,7 @@ import type { Response } from "undici";
 /**
  * Try to read the API token from the environment.
  */
-export const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
+const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
   variableName: "CLOUDFLARE_API_TOKEN",
   deprecatedName: "CF_API_TOKEN",
 });
@@ -412,7 +412,12 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
   LocalState = getAuthTokens(config);
 }
 
-export function getAPIToken(): string | undefined {
+export type tokenWithType = {
+  type: "API" | "OAuth";
+  token: string | undefined;
+};
+
+export function getAPIToken(): tokenWithType {
   if (LocalState.apiToken) {
     logger.warn(
       "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
@@ -433,7 +438,12 @@ export function getAPIToken(): string | undefined {
     );
   }
 
-  return localAPIToken ?? LocalState.accessToken?.value;
+  // note that even if token is undefined, the type is OAuth
+  // as they'll be prompted to login via OAuth
+  return {
+    token: localAPIToken ?? LocalState.accessToken?.value,
+    type: localAPIToken ? "API" : "OAuth",
+  };
 }
 
 interface AccessContext {
