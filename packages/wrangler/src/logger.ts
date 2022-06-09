@@ -15,11 +15,11 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
   error: "error",
   warn: "warning",
   log: undefined,
-  debug: undefined,
+  debug: "warning",
 } as const;
 
 class Logger {
-  constructor(public loggerLevel: LoggerLevel = "log") {}
+  constructor(public loggerLevel: LoggerLevel = "debug") {}
 
   columns = process.stdout.columns;
 

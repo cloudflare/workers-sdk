@@ -3,6 +3,7 @@ import { fetch, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
+import { logger } from "../logger";
 import { getAPIToken, loginOrRefreshIfRequired } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
@@ -35,6 +36,7 @@ export async function fetchInternal<ResponseType>(
     resource.startsWith("/"),
     `CF API fetch - resource path must start with a "/" but got "${resource}"`
   );
+  const start = Date.now();
   await requireLoggedIn();
   const apiToken = requireApiToken();
   const headers = cloneHeaders(init.headers);
@@ -52,6 +54,11 @@ export async function fetchInternal<ResponseType>(
       signal: abortSignal,
     }
   );
+  const end = Date.now();
+
+  const duration = ((end - start) / 1000).toFixed(2);
+
+  logger.debug(`HTTP ${response.status} ${resource} ${duration}s`);
   const jsonText = await response.text();
   try {
     return parseJSON<ResponseType>(jsonText);

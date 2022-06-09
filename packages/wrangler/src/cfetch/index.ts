@@ -1,4 +1,5 @@
 import { URLSearchParams } from "node:url";
+import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { fetchInternal } from "./internal";
 import type { RequestInit } from "undici";
