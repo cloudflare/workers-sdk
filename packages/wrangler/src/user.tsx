@@ -1201,3 +1201,14 @@ export async function requireAuth(config: {
 
   return accountId;
 }
+
+/**
+ * Throw an error if there is no API token available.
+ */
+export function requireApiToken(): string {
+  const authToken = getAPIToken();
+  if (!authToken) {
+    throw new Error("No API token found.");
+  }
+  return authToken;
+}

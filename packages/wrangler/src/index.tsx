@@ -1083,8 +1083,6 @@ function createCLIParser(argv: string[]) {
         );
       }
 
-      const accountId = !args.local ? await requireAuth(config) : undefined;
-
       // TODO: if worker_dev = false and no routes, then error (only for dev)
 
       // Compute zone info from the `host` and `route` args and config;
@@ -1198,7 +1196,7 @@ function createCLIParser(argv: string[]) {
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }
-          accountId={accountId}
+          accountId={config.account_id}
           assetPaths={getAssetPaths(
             config,
             args.site,
