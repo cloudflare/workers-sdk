@@ -76,6 +76,7 @@ export async function previewHandler(args: ArgumentsCamelCase<PreviewArgs>) {
 			env={args.env}
 			zone={undefined}
 			host={undefined}
+			routes={undefined}
 			legacyEnv={isLegacyEnv(config)}
 			build={config.build || {}}
 			define={config.define}

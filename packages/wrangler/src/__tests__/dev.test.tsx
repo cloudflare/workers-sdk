@@ -141,6 +141,27 @@ describe("wrangler dev", () => {
 		});
 	});
 
+	describe("routes", () => {
+		it("should pass routes to <Dev/>", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+
+			// config.routes
+			mockGetZones("5.some-host.com", [{ id: "some-zone-id-5" }]);
+			writeWranglerToml({
+				main: "index.js",
+				routes: ["http://5.some-host.com/some/path/*"],
+			});
+			await runWrangler("dev");
+			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+				expect.objectContaining({
+					host: "5.some-host.com",
+					zone: "some-zone-id-5",
+					routes: ["http://5.some-host.com/some/path/*"],
+				})
+			);
+		});
+	});
+
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
 			writeWranglerToml({

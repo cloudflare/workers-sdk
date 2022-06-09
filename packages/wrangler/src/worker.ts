@@ -1,8 +1,9 @@
+import type { Route } from "./config/environment";
+import type { ApiCredentials } from "./user";
+
 /**
  * A Cloudflare account.
  */
-import type { ApiCredentials } from "./user";
-
 export interface CfAccount {
 	/**
 	 * An API token.
@@ -180,4 +181,5 @@ export interface CfWorkerContext {
 	legacyEnv: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
+	routes: Route[] | undefined;
 }

@@ -9,6 +9,7 @@ import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import { ChooseAccount, getAccountChoices, requireApiToken } from "../user";
+import type { Route } from "../config/environment";
 import type { CfPreviewToken } from "../create-worker-preview";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
@@ -34,6 +35,7 @@ export function Remote(props: {
 	legacyEnv: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
+	routes: Route[] | undefined;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -56,6 +58,7 @@ export function Remote(props: {
 		legacyEnv: props.legacyEnv,
 		zone: props.zone,
 		host: props.host,
+		routes: props.routes,
 	});
 
 	usePreviewServer({
@@ -125,6 +128,7 @@ export function useWorker(props: {
 	legacyEnv: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
+	routes: Route[] | undefined;
 }): CfPreviewToken | undefined {
 	const {
 		name,
@@ -230,6 +234,7 @@ export function useWorker(props: {
 						legacyEnv: props.legacyEnv,
 						zone: props.zone,
 						host: props.host,
+						routes: props.routes,
 					},
 					abortController.signal
 				)
@@ -277,6 +282,7 @@ export function useWorker(props: {
 		props.legacyEnv,
 		props.zone,
 		props.host,
+		props.routes,
 	]);
 	return token;
 }

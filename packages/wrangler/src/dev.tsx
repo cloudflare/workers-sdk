@@ -22,6 +22,7 @@ import {
 } from "./index";
 
 import type { Config } from "./config";
+import type { Route } from "./config/environment";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -296,14 +297,15 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 		// Compute zone info from the `host` and `route` args and config;
 		let host = args.host || config.dev.host;
 		let zoneId: string | undefined;
+		const routes: Route[] | undefined =
+			args.routes || (config.route && [config.route]) || config.routes;
 
 		if (!args.local) {
 			if (host) {
 				zoneId = await getZoneIdFromHost(host);
 			}
-			const routes = args.routes || config.route || config.routes;
 			if (!zoneId && routes) {
-				const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+				const firstRoute = routes[0];
 				const zone = await getZoneForRoute(firstRoute);
 				if (zone) {
 					zoneId = zone.id;
@@ -311,9 +313,8 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 				}
 			}
 		} else if (!host) {
-			const routes = args.routes || config.route || config.routes;
 			if (routes) {
-				const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+				const firstRoute = routes[0];
 				host = getHostFromRoute(firstRoute);
 			}
 		}
@@ -415,6 +416,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 					env={args.env}
 					zone={zoneId}
 					host={host}
+					routes={routes}
 					rules={getRules(config)}
 					legacyEnv={isLegacyEnv(config)}
 					minify={args.minify ?? config.minify}

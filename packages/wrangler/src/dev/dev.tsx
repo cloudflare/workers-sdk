@@ -17,6 +17,7 @@ import { Local } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
+import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
@@ -52,6 +53,7 @@ export type DevProps = {
 	legacyEnv: boolean;
 	zone: string | undefined;
 	host: string | undefined;
+	routes: Route[] | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -188,6 +190,7 @@ function DevSession(props: DevSessionProps) {
 			legacyEnv={props.legacyEnv}
 			zone={props.zone}
 			host={props.host}
+			routes={props.routes}
 		/>
 	);
 }
