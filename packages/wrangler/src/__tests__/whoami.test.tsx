@@ -9,12 +9,18 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {
+  const ENV_COPY = process.env;
+
   runInTempDir({ homedir: "./home" });
   const std = mockConsoleMethods();
   const { setIsTTY } = useMockIsTTY();
 
   beforeEach(() => {
     setIsTTY(true);
+  });
+
+  afterEach(() => {
+    process.env = ENV_COPY;
   });
 
   it("should return undefined if there is no config file", async () => {
@@ -26,6 +32,34 @@ describe("getUserInfo()", () => {
     writeAuthConfigFile({});
     const userInfo = await getUserInfo();
     expect(userInfo).toBeUndefined();
+  });
+
+  it("should say it's using an API token when one is set", async () => {
+    process.env = {
+      CLOUDFLARE_API_TOKEN: "123456789",
+    };
+    setMockResponse("/user", () => {
+      return { email: "user@example.com" };
+    });
+    setMockResponse("/accounts", () => {
+      return [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ];
+    });
+
+    const userInfo = await getUserInfo();
+    expect(userInfo).toEqual({
+      authType: "API",
+      apiToken: "123456789",
+      email: "user@example.com",
+      accounts: [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ],
+    });
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {

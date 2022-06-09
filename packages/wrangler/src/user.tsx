@@ -233,7 +233,7 @@ import type { Response } from "undici";
 /**
  * Try to read the API token from the environment.
  */
-const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
+export const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
   variableName: "CLOUDFLARE_API_TOKEN",
   deprecatedName: "CF_API_TOKEN",
 });
