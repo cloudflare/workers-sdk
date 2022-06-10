@@ -677,9 +677,9 @@ describe("publish", () => {
         "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
 
           Falling back to using the zone-based API endpoint to update each route individually.
-          Note that there is no access to read or create routes associated with zones that the API token
-          does not have permission for.
-          No existing routes will been deleted in this case.
+          Note that there is no access to routes associated with zones that the API token does not have
+          permission for.
+          Existing routes for this Worker in such zones will not be deleted.
 
 
         [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
