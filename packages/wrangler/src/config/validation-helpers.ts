@@ -277,12 +277,21 @@ export const isObjectWith =
         !properties.every((prop) => prop in value))
     ) {
       diagnostics.errors.push(
-        `Expected "${field}" to be of type object, containing properties ${properties}, but got ${JSON.stringify(
+        `Expected "${field}" to be of type object, containing only properties ${properties}, but got ${JSON.stringify(
           value
         )}.`
       );
       return false;
     }
+    // it's an object with the field as desired,
+    // but let's also check for unexpected fields
+    if (value !== undefined) {
+      const restFields = Object.keys(value).filter(
+        (key) => !properties.includes(key)
+      );
+      validateAdditionalProperties(diagnostics, field, restFields, []);
+    }
+
     return true;
   };
 

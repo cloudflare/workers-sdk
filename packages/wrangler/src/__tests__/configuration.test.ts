@@ -438,6 +438,40 @@ describe("normalizeAndValidateConfig()", () => {
       expect(diagnostics.hasWarnings()).toBe(false);
     });
 
+    it("should warn on unexpected fields on `triggers`", async () => {
+      const expectedConfig: RawConfig = {
+        triggers: {
+          crons: ["1 * * * *"],
+          // @ts-expect-error we're purposely adding a field
+          // that doesn't belong here
+          someOtherfield: 123,
+        },
+      };
+
+      const { config, diagnostics } = normalizeAndValidateConfig(
+        expectedConfig,
+        "project/wrangler.toml",
+        { env: undefined }
+      );
+
+      expect(config).toEqual(
+        expect.objectContaining({
+          triggers: {
+            crons: ["1 * * * *"],
+            someOtherfield: 123,
+          },
+        })
+      );
+      expect(diagnostics.hasErrors()).toBe(false);
+      expect(diagnostics.hasWarnings()).toBe(true);
+
+      expect(normalizePath(diagnostics.renderWarnings()))
+        .toMatchInlineSnapshot(`
+        "Processing project/wrangler.toml configuration:
+          - Unexpected fields found in triggers field: \\"someOtherfield\\""
+      `);
+    });
+
     it("should error on invalid `wasm_modules` paths", () => {
       const expectedConfig = {
         wasm_modules: {
