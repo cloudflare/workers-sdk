@@ -626,8 +626,8 @@ async function publishRoutesFallback(
   logger.warn(
     "The current authentication token does not have 'All Zones' permissions.\n" +
       "Falling back to using the zone-based API endpoint to update each route individually.\n" +
-      "Note that there is no access to read or create routes associated with zones that the API token does not have permission for.\n" +
-      "No existing routes will been deleted in this case."
+      "Note that there is no access to routes associated with zones that the API token does not have permission for.\n" +
+      "Existing routes for this Worker in such zones will not be deleted."
   );
 
   const deployedRoutes: string[] = [];
