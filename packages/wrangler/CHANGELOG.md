@@ -1,5 +1,54 @@
 # wrangler
 
+## 2.0.9
+
+### Patch Changes
+
+- [#1192](https://github.com/cloudflare/wrangler2/pull/1192) [`bafa5ac`](https://github.com/cloudflare/wrangler2/commit/bafa5ac4d466329b3c01dbecf9561a404e70ae02) Thanks [@threepointone](https://github.com/threepointone)! - fix: use worker name as a script ID when generating a preview session
+
+  When generating a preview session on the edge with `wrangler dev`, for a zoned worker we were using a random id as the script ID. This would make the backend not associate the dev session with any resources that were otherwise assigned to the script (specifically for secrets, but other stuff as well) The fix is simply to use the worker name (when available) as the script ID.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1003
+  Fixes https://github.com/cloudflare/wrangler2/issues/1172
+
+* [#1212](https://github.com/cloudflare/wrangler2/pull/1212) [`101342e`](https://github.com/cloudflare/wrangler2/commit/101342e33389845545a36158384e7b08b0eafc57) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash when not logged in and switching to remote dev mode
+
+  Previously, if you are not logged in when running `wrangler dev` it will only try to log you in
+  if you start in "remote" mode. In "local" mode there is no need to be logged in, so it doesn't
+  bother to try to login, and then will crash if you switch to "remote" mode interactively.
+
+  The problem was that we were only attempting to login once before creating the `<Remote>` component.
+  Now this logic has been moved into a `useEffect()` inside `<Remote>` so that it will be run whether
+  starting in "remote" or transitioning to "remote" from "local".
+
+  The fact that the check is no longer done before creating the components is proven by removing the
+  `mockAccountId()` and `mockApiToken()` calls from the `dev.test.ts` files.
+
+  Fixes [#18](https://github.com/cloudflare/wrangler2/issues/18)
+
+- [#1188](https://github.com/cloudflare/wrangler2/pull/1188) [`b44cc26`](https://github.com/cloudflare/wrangler2/commit/b44cc26546e4b625870ba88b292da548b6a340c0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: fallback on old zone-based API when account-based route API fails
+
+  While we wait for changes to the CF API to support API tokens that do not have
+  "All Zone" permissions, this change provides a workaround for most scenarios.
+
+  If the bulk-route request fails with an authorization error, then we fallback
+  to the Wrangler 1 approach, which sends individual route updates via a zone-based
+  endpoint.
+
+  Fixes #651
+
+* [#1203](https://github.com/cloudflare/wrangler2/pull/1203) [`3b88b9f`](https://github.com/cloudflare/wrangler2/commit/3b88b9f8ea42116b7127ab17a58ce294b876bf81) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: differentiate between API and OAuth in whoami
+
+  Closes #1198
+
+- [#1199](https://github.com/cloudflare/wrangler2/pull/1199) [`e64812e`](https://github.com/cloudflare/wrangler2/commit/e64812e1dd38729959ff16abf2a8623543e25896) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: Refresh JWT in wrangler pages publish when it expires
+
+* [#1209](https://github.com/cloudflare/wrangler2/pull/1209) [`2d42882`](https://github.com/cloudflare/wrangler2/commit/2d428824260d5015d8eba1b12fd0ef3c7ebfe490) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure wrangler init works with older versions of git
+
+  Rather than using the recently added `--initial-branch` option, we now just renamed the initial branch using `git branch -m main`.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1168
+
 ## 2.0.8
 
 ### Patch Changes
