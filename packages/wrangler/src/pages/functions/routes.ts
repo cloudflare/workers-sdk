@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
-import type { UrlPath } from "../../src/paths";
+import type { UrlPath } from "../../paths";
 
 export const HTTP_METHODS = [
   "HEAD",

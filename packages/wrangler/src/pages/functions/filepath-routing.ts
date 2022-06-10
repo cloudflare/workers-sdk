@@ -1,9 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
-import { toUrlPath } from "../../src/paths";
-import type { UrlPath } from "../../src/paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
+import { toUrlPath, UrlPath } from "../../paths";
 
 export async function generateConfigFromFileTree({
   baseDir,

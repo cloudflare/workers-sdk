@@ -1,5 +1,7 @@
 import { match } from "path-to-regexp";
 import type { HTTPMethod } from "./routes";
+import type { RequestInit, RequestInfo } from "undici";
+import { Request, Response, Headers, fetch } from "undici";
 
 /* TODO: Grab these from @cloudflare/workers-types instead */
 type Params<P extends string = string> = Record<P, string | string[]>;
