@@ -1056,21 +1056,50 @@ const upload = async ({
 
   const uploadMs = Date.now() - start;
 
+  const skipped = fileMap.size - missingHashes.length;
+  const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
+
   logger.log(
-    `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
+    `✨ Success! Uploaded ${
+      sortedFiles.length
+    } files ${skippedMessage}${formatTime(uploadMs)}\n`
   );
 
+  const doUpsertHashes = async (): Promise<void> => {
+    try {
+      return await fetchResult(`/pages/assets/upsert-hashes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      });
+    } catch (e) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if ((e as { code: number }).code === 8000013) {
+        // Looks like the JWT expired, fetch another one
+        jwt = await fetchJwt();
+      }
+
+      return await fetchResult(`/pages/assets/upsert-hashes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      });
+    }
+  };
+
   try {
-    await fetchResult("/pages/assets/upsert-hashes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${jwt}`,
-      },
-      body: JSON.stringify({
-        hashes: files.map(({ hash }) => hash),
-      }),
-    });
+    await doUpsertHashes();
   } catch {
     logger.warn(
       "Failed to update file hashes. Every upload appeared to succeed for this deployment, but you might need to re-upload for future deployments. This shouldn't have any impact other than slowing the upload speed of your next deployment."
