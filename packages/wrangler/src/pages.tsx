@@ -821,6 +821,299 @@ interface CreateDeploymentArgs {
   commitDirty?: boolean;
 }
 
+const upload = async ({
+  directory,
+  accountId,
+  projectName,
+}: {
+  directory: string;
+  accountId: string;
+  projectName: string;
+}) => {
+  type FileContainer = {
+    content: string;
+    contentType: string;
+    sizeInBytes: number;
+    hash: string;
+  };
+
+  const IGNORE_LIST = [
+    "_worker.js",
+    "_redirects",
+    "_headers",
+    ".DS_Store",
+    "node_modules",
+    ".git",
+  ];
+
+  const walk = async (
+    dir: string,
+    fileMap: Map<string, FileContainer> = new Map(),
+    depth = 0
+  ) => {
+    const files = await readdir(dir);
+
+    await Promise.all(
+      files.map(async (file) => {
+        const filepath = join(dir, file);
+        const filestat = await stat(filepath);
+
+        if (IGNORE_LIST.includes(file)) {
+          return;
+        }
+
+        if (filestat.isSymbolicLink()) {
+          return;
+        }
+
+        if (filestat.isDirectory()) {
+          fileMap = await walk(filepath, fileMap, depth + 1);
+        } else {
+          let name;
+          if (depth) {
+            name = filepath.split(sep).slice(1).join("/");
+          } else {
+            name = file;
+          }
+
+          // TODO: Move this to later so we don't hold as much in memory
+          const fileContent = await readFile(filepath);
+
+          const base64Content = fileContent.toString("base64");
+          const extension = extname(basename(name)).substring(1);
+
+          if (filestat.size > 25 * 1024 * 1024) {
+            throw new Error(
+              `Error: Pages only supports files up to ${prettyBytes(
+                25 * 1024 * 1024
+              )} in size\n${name} is ${prettyBytes(filestat.size)} in size`
+            );
+          }
+
+          fileMap.set(name, {
+            content: base64Content,
+            contentType: getType(name) || "application/octet-stream",
+            sizeInBytes: filestat.size,
+            hash: hash(base64Content + extension)
+              .toString("hex")
+              .slice(0, 32),
+          });
+        }
+      })
+    );
+
+    return fileMap;
+  };
+
+  const fileMap = await walk(directory);
+
+  if (fileMap.size > 20000) {
+    throw new FatalError(
+      `Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
+      1
+    );
+  }
+
+  const files = [...fileMap.values()];
+
+  async function fetchJwt(): Promise<string> {
+    return (
+      await fetchResult<{ jwt: string }>(
+        `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+      )
+    ).jwt;
+  }
+
+  let jwt = await fetchJwt();
+
+  const start = Date.now();
+
+  const missingHashes = await fetchResult<string[]>(
+    `/pages/assets/check-missing`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        hashes: files.map(({ hash }) => hash),
+      }),
+    }
+  );
+
+  const sortedFiles = files
+    .filter((file) => missingHashes.includes(file.hash))
+    .sort((a, b) => b.sizeInBytes - a.sizeInBytes);
+
+  // Start with a few buckets so small projects still get
+  // the benefit of multiple upload streams
+  const buckets: {
+    files: FileContainer[];
+    remainingSize: number;
+  }[] = new Array(BULK_UPLOAD_CONCURRENCY).fill(null).map(() => ({
+    files: [],
+    remainingSize: MAX_BUCKET_SIZE,
+  }));
+
+  let bucketOffset = 0;
+  for (const file of sortedFiles) {
+    let inserted = false;
+
+    for (let i = 0; i < buckets.length; i++) {
+      // Start at a different bucket for each new file
+      const bucket = buckets[(i + bucketOffset) % buckets.length];
+      if (
+        bucket.remainingSize >= file.sizeInBytes &&
+        bucket.files.length < MAX_BUCKET_FILE_COUNT
+      ) {
+        bucket.files.push(file);
+        bucket.remainingSize -= file.sizeInBytes;
+        inserted = true;
+        break;
+      }
+    }
+
+    if (!inserted) {
+      buckets.push({
+        files: [file],
+        remainingSize: MAX_BUCKET_SIZE - file.sizeInBytes,
+      });
+    }
+    bucketOffset++;
+  }
+
+  let counter = fileMap.size - sortedFiles.length;
+  const { rerender, unmount } = render(
+    <Progress done={counter} total={fileMap.size} />
+  );
+
+  const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+
+  for (const bucket of buckets) {
+    // Don't upload empty buckets (can happen for tiny projects)
+    if (bucket.files.length === 0) continue;
+
+    const payload: UploadPayloadFile[] = bucket.files.map((file) => ({
+      key: file.hash,
+      value: file.content,
+      metadata: {
+        contentType: file.contentType,
+      },
+      base64: true,
+    }));
+
+    let attempts = 0;
+    const doUpload = async (): Promise<void> => {
+      try {
+        return await fetchResult(`/pages/assets/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        if (attempts < MAX_UPLOAD_ATTEMPTS) {
+          // Linear backoff, 0 second first time, then 1 second etc.
+          await new Promise((resolve) =>
+            setTimeout(resolve, attempts++ * 1000)
+          );
+
+          if ((e as { code: number }).code === 8000013) {
+            // Looks like the JWT expired, fetch another one
+            jwt = await fetchJwt();
+          }
+          return doUpload();
+        } else {
+          throw e;
+        }
+      }
+    };
+
+    queue.add(() =>
+      doUpload().then(
+        () => {
+          counter += bucket.files.length;
+          rerender(<Progress done={counter} total={fileMap.size} />);
+        },
+        (error) => {
+          return Promise.reject(
+            new FatalError(
+              "Failed to upload files. Please try again.",
+              error.code || 1
+            )
+          );
+        }
+      )
+    );
+  }
+
+  await queue.onIdle();
+
+  unmount();
+
+  const uploadMs = Date.now() - start;
+
+  const skipped = fileMap.size - missingHashes.length;
+  const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
+
+  logger.log(
+    `✨ Success! Uploaded ${
+      sortedFiles.length
+    } files ${skippedMessage}${formatTime(uploadMs)}\n`
+  );
+
+  const doUpsertHashes = async (): Promise<void> => {
+    try {
+      return await fetchResult(`/pages/assets/upsert-hashes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      });
+    } catch (e) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if ((e as { code: number }).code === 8000013) {
+        // Looks like the JWT expired, fetch another one
+        jwt = await fetchJwt();
+      }
+
+      return await fetchResult(`/pages/assets/upsert-hashes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          hashes: files.map(({ hash }) => hash),
+        }),
+      });
+    }
+  };
+
+  try {
+    await doUpsertHashes();
+  } catch {
+    logger.warn(
+      "Failed to update file hashes. Every upload appeared to succeed for this deployment, but you might need to re-upload for future deployments. This shouldn't have any impact other than slowing the upload speed of your next deployment."
+    );
+  }
+
+  return Object.fromEntries(
+    [...fileMap.entries()].map(([fileName, file]) => [
+      `/${fileName}`,
+      file.hash,
+    ])
+  );
+};
+
 const createDeployment: CommandModule<
   CreateDeploymentArgs,
   CreateDeploymentArgs
@@ -1053,249 +1346,11 @@ const createDeployment: CommandModule<
       builtFunctions = readFileSync(outfile, "utf-8");
     }
 
-    type FileContainer = {
-      content: string;
-      contentType: string;
-      sizeInBytes: number;
-      hash: string;
-    };
-
-    const IGNORE_LIST = [
-      "_worker.js",
-      "_redirects",
-      "_headers",
-      ".DS_Store",
-      "node_modules",
-      ".git",
-    ];
-
-    const walk = async (
-      dir: string,
-      fileMap: Map<string, FileContainer> = new Map(),
-      depth = 0
-    ) => {
-      const files = await readdir(dir);
-
-      await Promise.all(
-        files.map(async (file) => {
-          const filepath = join(dir, file);
-          const filestat = await stat(filepath);
-
-          if (IGNORE_LIST.includes(file)) {
-            return;
-          }
-
-          if (filestat.isSymbolicLink()) {
-            return;
-          }
-
-          if (filestat.isDirectory()) {
-            fileMap = await walk(filepath, fileMap, depth + 1);
-          } else {
-            let name;
-            if (depth) {
-              name = filepath.split(sep).slice(1).join("/");
-            } else {
-              name = file;
-            }
-
-            // TODO: Move this to later so we don't hold as much in memory
-            const fileContent = await readFile(filepath);
-
-            const base64Content = fileContent.toString("base64");
-            const extension = extname(basename(name)).substring(1);
-
-            if (filestat.size > 25 * 1024 * 1024) {
-              throw new Error(
-                `Error: Pages only supports files up to ${prettyBytes(
-                  25 * 1024 * 1024
-                )} in size\n${name} is ${prettyBytes(filestat.size)} in size`
-              );
-            }
-
-            fileMap.set(name, {
-              content: base64Content,
-              contentType: getType(name) || "application/octet-stream",
-              sizeInBytes: filestat.size,
-              hash: hash(base64Content + extension)
-                .toString("hex")
-                .slice(0, 32),
-            });
-          }
-        })
-      );
-
-      return fileMap;
-    };
-
-    const fileMap = await walk(directory);
-
-    if (fileMap.size > 20000) {
-      throw new FatalError(
-        `Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
-        1
-      );
-    }
-
-    const files = [...fileMap.values()];
-
-    async function fetchJwt(): Promise<string> {
-      return (
-        await fetchResult<{ jwt: string }>(
-          `/accounts/${accountId}/pages/projects/${projectName}/upload-token`
-        )
-      ).jwt;
-    }
-
-    let jwt = await fetchJwt();
-
-    const start = Date.now();
-
-    const missingHashes = await fetchResult<string[]>(
-      `/pages/assets/check-missing`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          hashes: files.map(({ hash }) => hash),
-        }),
-      }
-    );
-
-    const sortedFiles = files
-      .filter((file) => missingHashes.includes(file.hash))
-      .sort((a, b) => b.sizeInBytes - a.sizeInBytes);
-
-    // Start with a few buckets so small projects still get
-    // the benefit of multiple upload streams
-    const buckets: {
-      files: FileContainer[];
-      remainingSize: number;
-    }[] = new Array(BULK_UPLOAD_CONCURRENCY).fill(null).map(() => ({
-      files: [],
-      remainingSize: MAX_BUCKET_SIZE,
-    }));
-
-    let bucketOffset = 0;
-    for (const file of sortedFiles) {
-      let inserted = false;
-
-      for (let i = 0; i < buckets.length; i++) {
-        // Start at a different bucket for each new file
-        const bucket = buckets[(i + bucketOffset) % buckets.length];
-        if (
-          bucket.remainingSize >= file.sizeInBytes &&
-          bucket.files.length < MAX_BUCKET_FILE_COUNT
-        ) {
-          bucket.files.push(file);
-          bucket.remainingSize -= file.sizeInBytes;
-          inserted = true;
-          break;
-        }
-      }
-
-      if (!inserted) {
-        buckets.push({
-          files: [file],
-          remainingSize: MAX_BUCKET_SIZE - file.sizeInBytes,
-        });
-      }
-      bucketOffset++;
-    }
-
-    let counter = fileMap.size - sortedFiles.length;
-    const { rerender, unmount } = render(
-      <Progress done={counter} total={fileMap.size} />
-    );
-
-    const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
-
-    for (const bucket of buckets) {
-      // Don't upload empty buckets (can happen for tiny projects)
-      if (bucket.files.length === 0) continue;
-
-      const payload: UploadPayloadFile[] = bucket.files.map((file) => ({
-        key: file.hash,
-        value: file.content,
-        metadata: {
-          contentType: file.contentType,
-        },
-        base64: true,
-      }));
-
-      let attempts = 0;
-      const doUpload = async (): Promise<void> => {
-        try {
-          return await fetchResult(`/pages/assets/upload`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${jwt}`,
-            },
-            body: JSON.stringify(payload),
-          });
-        } catch (e) {
-          if (attempts < MAX_UPLOAD_ATTEMPTS) {
-            // Linear backoff, 0 second first time, then 1 second etc.
-            await new Promise((resolve) =>
-              setTimeout(resolve, attempts++ * 1000)
-            );
-
-            if ((e as { code: number }).code === 8000013) {
-              // Looks like the JWT expired, fetch another one
-              jwt = await fetchJwt();
-            }
-            return doUpload();
-          } else {
-            throw e;
-          }
-        }
-      };
-
-      queue.add(() =>
-        doUpload().then(
-          () => {
-            counter += bucket.files.length;
-            rerender(<Progress done={counter} total={fileMap.size} />);
-          },
-          (error) => {
-            return Promise.reject(
-              new FatalError(
-                "Failed to upload files. Please try again.",
-                error.code || 1
-              )
-            );
-          }
-        )
-      );
-    }
-
-    await queue.onIdle();
-
-    unmount();
-
-    const uploadMs = Date.now() - start;
-
-    logger.log(
-      `✨ Success! Uploaded ${fileMap.size} files ${formatTime(uploadMs)}\n`
-    );
+    const manifest = await upload({ directory, accountId, projectName });
 
     const formData = new FormData();
 
-    formData.append(
-      "manifest",
-      JSON.stringify(
-        Object.fromEntries(
-          [...fileMap.entries()].map(([fileName, file]) => [
-            `/${fileName}`,
-            file.hash,
-          ])
-        )
-      )
-    );
+    formData.append("manifest", JSON.stringify(manifest));
 
     if (branch) {
       formData.append("branch", branch);
