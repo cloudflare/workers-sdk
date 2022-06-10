@@ -251,12 +251,18 @@ function useLocalWorker({
         process.stdout.write(data);
       });
 
+      // parse the node inspector url (which may be received in chunks) from stderr
+      let foundInspectorUrl = false;
+      const stderrData: string[] = [];
       local.current.stderr?.on("data", (data: Buffer) => {
+        if (foundInspectorUrl) return;
+        stderrData.push(data.toString());
         const matches =
-          /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)/.exec(
-            data.toString()
+          /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]{36})/.exec(
+            stderrData.join("")
           );
         if (matches) {
+          foundInspectorUrl = true;
           setInspectorUrl(matches[1]);
         }
       });
