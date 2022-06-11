@@ -256,7 +256,7 @@ function useLocalWorker({
       local.current.stderr?.on("data", (data: Buffer) => {
         stderrData += data.toString();
         const matches =
-          /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]{36})/.exec(
+          /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)[\r|\n]/.exec(
             stderrData
           );
         if (matches) {
