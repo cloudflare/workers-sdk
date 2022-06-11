@@ -252,17 +252,15 @@ function useLocalWorker({
       });
 
       // parse the node inspector url (which may be received in chunks) from stderr
-      let foundInspectorUrl = false;
-      const stderrData: string[] = [];
+      let stderrData = "";
       local.current.stderr?.on("data", (data: Buffer) => {
-        if (foundInspectorUrl) return;
-        stderrData.push(data.toString());
+        stderrData += data.toString();
         const matches =
           /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]{36})/.exec(
-            stderrData.join("")
+            stderrData
           );
         if (matches) {
-          foundInspectorUrl = true;
+          local.current?.stderr?.removeAllListeners("data");
           setInspectorUrl(matches[1]);
         }
       });
