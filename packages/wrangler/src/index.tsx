@@ -1,8 +1,14 @@
+import * as fs from "node:fs";
+import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
+import { findUp } from "find-up";
+import getPort from "get-port";
+import { render } from "ink";
+import React from "react";
 import onExit from "signal-exit";
 import supportsColor from "supports-color";
 import { setGlobalDispatcher, ProxyAgent } from "undici";
@@ -12,11 +18,12 @@ import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { devHandler, devOptions } from "./dev";
-import { confirm, prompt } from "./dialogs";
+import Dev from "./dev/dev";
+import { confirm, prompt, select } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
-import { initOptions, initHandler } from "./init";
+import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import {
   getKVNamespaceId,
   listKVNamespaces,
@@ -33,15 +40,18 @@ import {
   deleteKVKeyValue,
 } from "./kv";
 import { logger } from "./logger";
+import { getPackageManager } from "./package-manager";
 import { pages } from "./pages";
 import {
   formatMessage,
   ParseError,
   parseJSON,
+  parsePackageJSON,
+  parseTOML,
+  parseHumanDuration,
   readFileSync,
   readFileSyncToBuffer,
 } from "./parse";
-import { previewHandler, previewOptions } from "./preview";
 import publish from "./publish";
 import { createPubSubNamespace, deletePubSubNamespace, listPubSubNamespace } from "./pubsub";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
@@ -222,7 +232,7 @@ function trimTrailingWhitespace(str: string) {
   return str.trimEnd();
 }
 
-export class CommandLineArgsError extends Error {}
+class CommandLineArgsError extends Error {}
 
 function createCLIParser(argv: string[]) {
   const wrangler = makeCLI(argv)
@@ -285,8 +295,524 @@ function createCLIParser(argv: string[]) {
   wrangler.command(
     "init [name]",
     "📥 Create a wrangler.toml configuration file",
-    initOptions,
-    initHandler
+    (yargs) => {
+      return yargs
+        .positional("name", {
+          describe: "The name of your worker",
+          type: "string",
+        })
+        .option("type", {
+          describe: "The type of worker to create",
+          type: "string",
+          choices: ["rust", "javascript", "webpack"],
+          hidden: true,
+          deprecated: true,
+        })
+        .option("site", {
+          hidden: true,
+          type: "boolean",
+          deprecated: true,
+        })
+        .option("yes", {
+          describe: 'Answer "yes" to any prompts for new projects',
+          type: "boolean",
+          alias: "y",
+        });
+    },
+    async (args) => {
+      await printWranglerBanner();
+      if (args.type) {
+        let message = "The --type option is no longer supported.";
+        if (args.type === "webpack") {
+          message +=
+            "\nIf you wish to use webpack then you will need to create a custom build.";
+          // TODO: Add a link to docs
+        }
+        throw new CommandLineArgsError(message);
+      }
+
+      const devDepsToInstall: string[] = [];
+      const instructions: string[] = [];
+      let shouldRunPackageManagerInstall = false;
+      const creationDirectory = path.resolve(process.cwd(), args.name ?? "");
+
+      if (args.site) {
+        const gitDirectory =
+          creationDirectory !== process.cwd()
+            ? path.basename(creationDirectory)
+            : "my-site";
+        const message =
+          "The --site option is no longer supported.\n" +
+          "If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
+          "```\n" +
+          `git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
+          `cd ${gitDirectory}\n` +
+          "```\n\n" +
+          "Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
+          "Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
+        throw new CommandLineArgsError(message);
+      }
+
+      // TODO: make sure args.name is a valid identifier for a worker name
+      const workerName = path
+        .basename(creationDirectory)
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9\-_]/gm, "-");
+
+      const packageManager = await getPackageManager(creationDirectory);
+
+      // TODO: ask which directory to make the worker in (defaults to args.name)
+      // TODO: if args.name isn't provided, ask what to name the worker
+
+      const wranglerTomlDestination = path.join(
+        creationDirectory,
+        "./wrangler.toml"
+      );
+      let justCreatedWranglerToml = false;
+
+      if (fs.existsSync(wranglerTomlDestination)) {
+        logger.warn(
+          `${path.relative(
+            process.cwd(),
+            wranglerTomlDestination
+          )} already exists!`
+        );
+        const shouldContinue = await confirm(
+          "Do you want to continue initializing this project?"
+        );
+        if (!shouldContinue) {
+          return;
+        }
+      } else {
+        await mkdir(creationDirectory, { recursive: true });
+        const compatibilityDate = new Date().toISOString().substring(0, 10);
+
+        try {
+          await writeFile(
+            wranglerTomlDestination,
+            TOML.stringify({
+              name: workerName,
+              compatibility_date: compatibilityDate,
+            }) + "\n"
+          );
+
+          logger.log(
+            `✨ Created ${path.relative(
+              process.cwd(),
+              wranglerTomlDestination
+            )}`
+          );
+          justCreatedWranglerToml = true;
+        } catch (err) {
+          throw new Error(
+            `Failed to create ${path.relative(
+              process.cwd(),
+              wranglerTomlDestination
+            )}.\n${(err as Error).message ?? err}`
+          );
+        }
+      }
+
+      const yesFlag = args.yes ?? false;
+
+      if (
+        !(await isInsideGitRepo(creationDirectory)) &&
+        (await isGitInstalled())
+      ) {
+        const shouldInitGit =
+          yesFlag ||
+          (await confirm("Would you like to use git to manage this Worker?"));
+        if (shouldInitGit) {
+          await initializeGit(creationDirectory);
+          await writeFile(
+            path.join(creationDirectory, ".gitignore"),
+            readFileSync(path.join(__dirname, "../templates/gitignore"))
+          );
+          logger.log(
+            args.name && args.name !== "."
+              ? `✨ Initialized git repository at ${path.relative(
+                  process.cwd(),
+                  creationDirectory
+                )}`
+              : `✨ Initialized git repository`
+          );
+        }
+      }
+
+      const isolatedInit = !!args.name;
+      let pathToPackageJson = await findPath(
+        isolatedInit,
+        creationDirectory,
+        "package.json"
+      );
+      let shouldCreatePackageJson = false;
+
+      if (!pathToPackageJson) {
+        // If no package.json exists, ask to create one
+        shouldCreatePackageJson =
+          yesFlag ||
+          (await confirm(
+            "No package.json found. Would you like to create one?"
+          ));
+
+        if (shouldCreatePackageJson) {
+          await writeFile(
+            path.join(creationDirectory, "./package.json"),
+            JSON.stringify(
+              {
+                name: workerName,
+                version: "0.0.0",
+                devDependencies: {
+                  wrangler: wranglerVersion,
+                },
+                private: true,
+              },
+              null,
+              "  "
+            ) + "\n"
+          );
+
+          shouldRunPackageManagerInstall = true;
+          pathToPackageJson = path.join(creationDirectory, "package.json");
+          logger.log(
+            `✨ Created ${path.relative(process.cwd(), pathToPackageJson)}`
+          );
+        } else {
+          return;
+        }
+      } else {
+        // If package.json exists and wrangler isn't installed,
+        // then ask to add wrangler to devDependencies
+        const packageJson = parsePackageJSON(
+          readFileSync(pathToPackageJson),
+          pathToPackageJson
+        );
+        if (
+          !(
+            packageJson.devDependencies?.wrangler ||
+            packageJson.dependencies?.wrangler
+          )
+        ) {
+          const shouldInstall =
+            yesFlag ||
+            (await confirm(
+              `Would you like to install wrangler into ${path.relative(
+                process.cwd(),
+                pathToPackageJson
+              )}?`
+            ));
+          if (shouldInstall) {
+            devDepsToInstall.push(`wrangler@${wranglerVersion}`);
+          }
+        }
+      }
+
+      let isTypescriptProject = false;
+      let pathToTSConfig = await findPath(
+        isolatedInit,
+        creationDirectory,
+        "tsconfig.json"
+      );
+      if (!pathToTSConfig) {
+        // If there's no tsconfig, offer to create one
+        // and install @cloudflare/workers-types
+        if (yesFlag || (await confirm("Would you like to use TypeScript?"))) {
+          isTypescriptProject = true;
+          await writeFile(
+            path.join(creationDirectory, "./tsconfig.json"),
+            readFileSync(path.join(__dirname, "../templates/tsconfig.json"))
+          );
+          devDepsToInstall.push("@cloudflare/workers-types");
+          devDepsToInstall.push("typescript");
+          pathToTSConfig = path.join(creationDirectory, "tsconfig.json");
+          logger.log(
+            `✨ Created ${path.relative(process.cwd(), pathToTSConfig)}`
+          );
+        }
+      } else {
+        isTypescriptProject = true;
+        // If there's a tsconfig, check if @cloudflare/workers-types
+        // is already installed, and offer to install it if not
+        const packageJson = parsePackageJSON(
+          readFileSync(pathToPackageJson),
+          pathToPackageJson
+        );
+        if (
+          !(
+            packageJson.devDependencies?.["@cloudflare/workers-types"] ||
+            packageJson.dependencies?.["@cloudflare/workers-types"]
+          )
+        ) {
+          const shouldInstall = await confirm(
+            "Would you like to install the type definitions for Workers into your package.json?"
+          );
+          if (shouldInstall) {
+            devDepsToInstall.push("@cloudflare/workers-types");
+            // We don't update the tsconfig.json because
+            // it could be complicated in existing projects
+            // and we don't want to break them. Instead, we simply
+            // tell the user that they need to update their tsconfig.json
+            instructions.push(
+              `🚨 Please add "@cloudflare/workers-types" to compilerOptions.types in ${path.relative(
+                process.cwd(),
+                pathToTSConfig
+              )}`
+            );
+          }
+        }
+      }
+
+      const packageJsonContent = parsePackageJSON(
+        readFileSync(pathToPackageJson),
+        pathToPackageJson
+      );
+      const shouldWritePackageJsonScripts =
+        !packageJsonContent.scripts?.start &&
+        !packageJsonContent.scripts?.publish &&
+        shouldCreatePackageJson;
+
+      /*
+       * Passes the array of accumulated devDeps to install through to
+       * the package manager. Also generates a human-readable list
+       * of packages it installed.
+       * If there are no devDeps to install, optionally runs
+       * the package manager's install command.
+       */
+      async function installPackages(
+        shouldRunInstall: boolean,
+        depsToInstall: string[]
+      ) {
+        //lets install the devDeps they asked for
+        //and run their package manager's install command if needed
+        if (depsToInstall.length > 0) {
+          const formatter = new Intl.ListFormat("en", {
+            style: "long",
+            type: "conjunction",
+          });
+          await packageManager.addDevDeps(...depsToInstall);
+          const versionlessPackages = depsToInstall.map((dep) =>
+            dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
+          );
+
+          logger.log(
+            `✨ Installed ${formatter.format(
+              versionlessPackages
+            )} into devDependencies`
+          );
+        } else {
+          if (shouldRunInstall) {
+            await packageManager.install();
+          }
+        }
+      }
+
+      async function writePackageJsonScriptsAndUpdateWranglerToml(
+        isWritingScripts: boolean,
+        isCreatingWranglerToml: boolean,
+        packagePath: string,
+        scriptPath: string,
+        extraToml: TOML.JsonMap
+      ) {
+        if (isCreatingWranglerToml) {
+          // rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
+          const parsedWranglerToml = parseTOML(
+            readFileSync(wranglerTomlDestination)
+          );
+          const newToml = {
+            name: parsedWranglerToml.name,
+            main: scriptPath,
+            compatibility_date: parsedWranglerToml.compatibility_date,
+            ...extraToml,
+          };
+          fs.writeFileSync(wranglerTomlDestination, TOML.stringify(newToml));
+        }
+        const isNamedWorker =
+          isCreatingWranglerToml && path.dirname(packagePath) !== process.cwd();
+
+        if (isWritingScripts) {
+          await writeFile(
+            packagePath,
+            JSON.stringify(
+              {
+                ...packageJsonContent,
+                scripts: {
+                  ...packageJsonContent.scripts,
+                  start: isCreatingWranglerToml
+                    ? `wrangler dev`
+                    : `wrangler dev ${scriptPath}`,
+                  deploy: isCreatingWranglerToml
+                    ? `wrangler publish`
+                    : `wrangler publish ${scriptPath}`,
+                },
+              },
+              null,
+              2
+            ) + "\n"
+          );
+          instructions.push(
+            `\nTo start developing your Worker, run \`${
+              isNamedWorker ? `cd ${args.name} && ` : ""
+            }npm start\``
+          );
+          instructions.push(
+            `To publish your Worker to the Internet, run \`npm run deploy\``
+          );
+        } else {
+          instructions.push(
+            `\nTo start developing your Worker, run \`npx wrangler dev\`${
+              isCreatingWranglerToml ? "" : ` ${scriptPath}`
+            }`
+          );
+          instructions.push(
+            `To publish your Worker to the Internet, run \`npx wrangler publish\`${
+              isCreatingWranglerToml ? "" : ` ${scriptPath}`
+            }`
+          );
+        }
+      }
+
+      async function getNewWorkerType(newWorkerFilename: string) {
+        return select(
+          `Would you like to create a Worker at ${newWorkerFilename}?`,
+          [
+            {
+              value: "none",
+              label: "None",
+            },
+            {
+              value: "fetch",
+              label: "Fetch handler",
+            },
+            {
+              value: "scheduled",
+              label: "Scheduled handler",
+            },
+          ],
+          1
+        ) as Promise<"none" | "fetch" | "scheduled">;
+      }
+
+      function getNewWorkerTemplate(
+        lang: "js" | "ts",
+        workerType: "fetch" | "scheduled"
+      ) {
+        const templates = {
+          "js-fetch": "new-worker.js",
+          "js-scheduled": "new-worker-scheduled.js",
+          "ts-fetch": "new-worker.ts",
+          "ts-scheduled": "new-worker-scheduled.ts",
+        };
+
+        return templates[`${lang}-${workerType}`];
+      }
+
+      function getNewWorkerToml(
+        workerType: "fetch" | "scheduled"
+      ): TOML.JsonMap {
+        if (workerType === "scheduled") {
+          return {
+            triggers: {
+              crons: ["1 * * * *"],
+            },
+          };
+        }
+
+        return {};
+      }
+
+      if (isTypescriptProject) {
+        if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
+          const newWorkerFilename = path.relative(
+            process.cwd(),
+            path.join(creationDirectory, "./src/index.ts")
+          );
+
+          const newWorkerType = yesFlag
+            ? "fetch"
+            : await getNewWorkerType(newWorkerFilename);
+
+          if (newWorkerType !== "none") {
+            const template = getNewWorkerTemplate("ts", newWorkerType);
+
+            await mkdir(path.join(creationDirectory, "./src"), {
+              recursive: true,
+            });
+            await writeFile(
+              path.join(creationDirectory, "./src/index.ts"),
+              readFileSync(path.join(__dirname, `../templates/${template}`))
+            );
+
+            logger.log(
+              `✨ Created ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.ts")
+              )}`
+            );
+
+            await writePackageJsonScriptsAndUpdateWranglerToml(
+              shouldWritePackageJsonScripts,
+              justCreatedWranglerToml,
+              pathToPackageJson,
+              "src/index.ts",
+              getNewWorkerToml(newWorkerType)
+            );
+          }
+        }
+      } else {
+        if (!fs.existsSync(path.join(creationDirectory, "./src/index.js"))) {
+          const newWorkerFilename = path.relative(
+            process.cwd(),
+            path.join(creationDirectory, "./src/index.js")
+          );
+
+          const newWorkerType = yesFlag
+            ? "fetch"
+            : await getNewWorkerType(newWorkerFilename);
+
+          if (newWorkerType !== "none") {
+            const template = getNewWorkerTemplate("js", newWorkerType);
+
+            await mkdir(path.join(creationDirectory, "./src"), {
+              recursive: true,
+            });
+            await writeFile(
+              path.join(creationDirectory, "./src/index.js"),
+              readFileSync(path.join(__dirname, `../templates/${template}`))
+            );
+
+            logger.log(
+              `✨ Created ${path.relative(
+                process.cwd(),
+                path.join(creationDirectory, "./src/index.js")
+              )}`
+            );
+
+            await writePackageJsonScriptsAndUpdateWranglerToml(
+              shouldWritePackageJsonScripts,
+              justCreatedWranglerToml,
+              pathToPackageJson,
+              "src/index.js",
+              getNewWorkerToml(newWorkerType)
+            );
+          }
+        }
+      }
+      // install packages as the final step of init
+      try {
+        await installPackages(shouldRunPackageManagerInstall, devDepsToInstall);
+      } catch (e) {
+        // fetching packages could fail due to loss of internet, etc
+        // we should let folks know we failed to fetch, but their
+        // workers project is still ready to go
+        logger.error(e instanceof Error ? e.message : e);
+        instructions.push(
+          "\n🚨 wrangler was unable to fetch your npm packages, but your project is ready to go"
+        );
+      }
+
+      // let users know what to do now
+      instructions.forEach((instruction) => logger.log(instruction));
+    }
   );
 
   // build
@@ -499,12 +1025,6 @@ function createCLIParser(argv: string[]) {
         );
       }
 
-      if (args.assets) {
-        logger.warn(
-          "The --assets argument is experimental and may change or break at any time"
-        );
-      }
-
       if (args.latest) {
         logger.warn(
           "Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
@@ -701,8 +1221,128 @@ function createCLIParser(argv: string[]) {
   wrangler.command(
     "preview [method] [body]",
     false,
-    previewOptions,
-    previewHandler
+    (yargs) => {
+      return yargs
+        .positional("method", {
+          type: "string",
+          describe: "Type of request to preview your worker",
+        })
+        .positional("body", {
+          type: "string",
+          describe: "Body string to post to your preview worker request.",
+        })
+        .option("env", {
+          type: "string",
+          requiresArg: true,
+          describe: "Perform on a specific environment",
+        })
+        .option("watch", {
+          default: true,
+          describe: "Enable live preview",
+          type: "boolean",
+        });
+    },
+    async (args) => {
+      if (args.method || args.body) {
+        throw new DeprecationError(
+          "The `wrangler preview` command has been deprecated.\n" +
+            "Try using `wrangler dev` to to try out a worker during development.\n"
+        );
+      }
+
+      // Delegate to `wrangler dev`
+      logger.warn(
+        "***************************************************\n" +
+          "The `wrangler preview` command has been deprecated.\n" +
+          "Attempting to run `wrangler dev` instead.\n" +
+          "***************************************************\n"
+      );
+
+      const config = readConfig(args.config as ConfigPath, args);
+      const entry = await getEntry({}, config, "dev");
+
+      const accountId = await requireAuth(config);
+
+      const { waitUntilExit } = render(
+        <Dev
+          name={config.name}
+          entry={entry}
+          rules={getRules(config)}
+          env={args.env}
+          zone={undefined}
+          host={undefined}
+          legacyEnv={isLegacyEnv(config)}
+          build={config.build || {}}
+          minify={undefined}
+          nodeCompat={config.node_compat}
+          initialMode={args.local ? "local" : "remote"}
+          jsxFactory={config.jsx_factory}
+          jsxFragment={config.jsx_fragment}
+          tsconfig={config.tsconfig}
+          upstreamProtocol={config.dev.upstream_protocol}
+          localProtocol={config.dev.local_protocol}
+          enableLocalPersistence={false}
+          accountId={accountId}
+          assetPaths={undefined}
+          port={
+            config.dev.port || (await getPort({ port: DEFAULT_LOCAL_PORT }))
+          }
+          ip={config.dev.ip}
+          isWorkersSite={false}
+          compatibilityDate={getDevCompatibilityDate(config)}
+          compatibilityFlags={config.compatibility_flags}
+          usageModel={config.usage_model}
+          bindings={{
+            kv_namespaces: config.kv_namespaces?.map(
+              ({ binding, preview_id, id: _id }) => {
+                // In `dev`, we make folks use a separate kv namespace called
+                // `preview_id` instead of `id` so that they don't
+                // break production data. So here we check that a `preview_id`
+                // has actually been configured.
+                // This whole block of code will be obsoleted in the future
+                // when we have copy-on-write for previews on edge workers.
+                if (!preview_id) {
+                  // TODO: This error has to be a _lot_ better, ideally just asking
+                  // to create a preview namespace for the user automatically
+                  throw new Error(
+                    `In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+                  ); // Ugh, I really don't like this message very much
+                }
+                return {
+                  binding,
+                  id: preview_id,
+                };
+              }
+            ),
+            vars: config.vars,
+            wasm_modules: config.wasm_modules,
+            text_blobs: config.text_blobs,
+            data_blobs: config.data_blobs,
+            durable_objects: config.durable_objects,
+            r2_buckets: config.r2_buckets?.map(
+              ({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+                // same idea as kv namespace preview id,
+                // same copy-on-write TODO
+                if (!preview_bucket_name) {
+                  throw new Error(
+                    `In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+                  );
+                }
+                return {
+                  binding,
+                  bucket_name: preview_bucket_name,
+                };
+              }
+            ),
+            services: config.services,
+            unsafe: config.unsafe?.bindings,
+          }}
+          crons={config.triggers.crons}
+          inspectorPort={await getPort({ port: 9229 })}
+        />
+      );
+      await waitUntilExit();
+    }
   );
 
   // [DEPRECATED] route
@@ -1699,16 +2339,21 @@ function createCLIParser(argv: string[]) {
   wrangler.command("pubsub", "Interact and manage your Pub/Sub messaging brokers", (pubsubYargs) => {
     return pubsubYargs
       .command(subHelp)
-      .command("namespaces", "Manage pubsub namespaces", (pubsubNamespaceYargs) => {
+      .command("namespaces", "Manage Pub/Sub Namespaces", (pubsubNamespaceYargs) => {
         pubsubNamespaceYargs.command(
           "create <name>",
-          "Create a new pubsub name",
+          "Create a new Pub/Sub Namespance",
           (yargs) => {
-            return yargs.positional("name", {
-              describe: "The name of the new namespace",
-              type: "string",
-              demandOption: true,
-            });
+            return yargs.
+              positional("name", {
+                describe: "The name of the new namespace",
+                type: "string",
+                demandOption: true,
+              }).
+              option("description", {
+                describe: "Textual description of namespace",
+                type: "string",
+              });
           },
           async (args) => {
             await printWranglerBanner();
@@ -1717,8 +2362,15 @@ function createCLIParser(argv: string[]) {
 
             const accountId = await requireAuth(config);
 
+            const namespace: pubsub.Namespace = {
+              name: args.name,
+            }
+            if (args.description) {
+              namespace.description = args.description
+            }
+
             logger.log(`Creating namespace ${args.name}.`);
-            await createPubSubNamespace(accountId, args.name);
+            await pubsub.createNamespace(accountId, namespace);
             logger.log(`Created namespace ${args.name}.`);
           }
         );
@@ -1728,12 +2380,12 @@ function createCLIParser(argv: string[]) {
 
           const accountId = await requireAuth(config);
 
-          logger.log(JSON.stringify(await listPubSubNamespace(accountId), null, 2));
+          logger.log(JSON.stringify(await pubsub.listNamespaces(accountId), null, 2));
         });
 
         pubsubNamespaceYargs.command(
           "delete <name>",
-          "Delete a pubsub namespace",
+          "Delete a Pub/Sub Namespace",
           (yargs) => {
             return yargs.positional("name", {
               describe: "The name of the namespace to delete",
@@ -1749,12 +2401,261 @@ function createCLIParser(argv: string[]) {
             const accountId = await requireAuth(config);
 
             logger.log(`Deleting namespace ${args.name}.`);
-            await deletePubSubNamespace(accountId, args.name);
+            await pubsub.deleteNamespace(accountId, args.name);
             logger.log(`Deleted namespace ${args.name}.`);
           }
         );
         return pubsubNamespaceYargs;
-      });
+      })
+      .command("brokers", "Manage pubsub brokers", (brokersYargs) => {
+        brokersYargs.command(
+          "create <name>",
+          "Create a new Pub/Sub Broker",
+          yargs => yargs
+            .positional("name", {
+              describe: "The name of the broker",
+              type: "string",
+              demandOption: true,
+            })
+            .option("namespace", {
+              describe: "The namespace to create the broker",
+              type: "string",
+              alias: "ns",
+              demandOption: true,
+            })
+            .option("description", {
+              describe: "Longer description for the broker",
+              type: "string",
+            })
+            .option("expiration", {
+              describe: "Time to allow token validity (can use seconds, hours, months, weeks, years)",
+              type: "string",
+            })
+            .option("on_publish", {
+              describe: "Webhook to call upon publishing messages",
+              type: "string",
+            })
+            ,
+          async args => {
+            const config = readConfig(args.config as ConfigPath, args);
+
+            const accountId = await requireAuth(config);
+
+            const broker: pubsub.Broker = {
+              name: args.name,
+            };
+            if (args.description) {
+              broker.description = args.description
+            }
+            if (args.expiration) {
+              const expiration = parseHumanDuration(args.expiration)
+              if (isNaN(expiration)) {
+                throw new CommandLineArgsError(
+                  `${args.expiration} is not a time duration.  (Example of valid values are: 1y, 6 days)`
+                );
+              }
+              broker.expiration = expiration
+            }
+            if (args.on_publish) {
+              broker.on_publish = {
+                url: args.on_publish
+              }
+            }
+            logger.log(JSON.stringify(await pubsub.createBroker(accountId, args.namespace, broker), null, 2));
+          }
+        );
+
+        brokersYargs.command(
+          "update <name>",
+          "Update a configuration for Pub/Sub Broker",
+          yargs => yargs
+            .positional("name", {
+              describe: "The name of the broker",
+              type: "string",
+              demandOption: true,
+            })
+            .option("namespace", {
+              describe: "The namespace to create the broker",
+              type: "string",
+              alias: "ns",
+              demandOption: true,
+            })
+            .option("description", {
+              describe: "Longer description for the broker",
+              type: "string",
+            })
+            .option("expiration", {
+              describe: "Time to allow token validity (can use seconds, hours, months, weeks, years)",
+              type: "string",
+            })
+            .option("on_publish", {
+              describe: "Webhook to call upon publishing messages",
+              type: "string",
+            })
+            ,
+          async args => {
+            const config = readConfig(args.config as ConfigPath, args);
+            const accountId = await requireAuth(config);
+
+            const broker: pubsub.Broker = {};
+            if (args.description) {
+              broker.description = args.description
+            }
+            if (args.expiration) {
+              const expiration = parseHumanDuration(args.expiration)
+              if (isNaN(expiration)) {
+                throw new CommandLineArgsError(
+                  `${args.expiration} is not a time duration.  (Example of valid values are: 1y, 6 days)`
+                );
+              }
+              broker.expiration = expiration
+            }
+            if (args.on_publish) {
+              broker.on_publish = {
+                url: args.on_publish
+              }
+            }
+            logger.log(JSON.stringify(await pubsub.updateBroker(accountId, args.namespace, args.name, broker), null, 2));
+          }
+        );
+
+        brokersYargs.command(
+          "list", 
+          "List Pub/Sub Brokers", 
+          (yargs) => {
+            return yargs
+              .option("namespace", {
+                describe: "The namespace to create the broker",
+                type: "string",
+                alias: "ns",
+                demandOption: true,
+              });
+          }, 
+          async (args) => {
+            const config = readConfig(args.config as ConfigPath, args);
+
+            const accountId = await requireAuth(config);
+
+            logger.log(JSON.stringify(await pubsub.listBrokers(accountId, args.namespace), null, 2));
+          }
+        );
+
+        brokersYargs.command(
+          "delete <name>",
+          "Delete a Pub/Sub Broker",
+          (yargs) => {
+            return yargs
+              .positional("name", {
+                describe: "The name of the namespace to delete",
+                type: "string",
+                demandOption: true,
+              })
+              .option("namespace", {
+                describe: "The namespace to create the broker",
+                type: "string",
+                alias: "ns",
+                demandOption: true,
+              });
+          },
+          async (args) => {
+            await printWranglerBanner();
+
+            const config = readConfig(args.config as ConfigPath, args);
+
+            const accountId = await requireAuth(config);
+
+            logger.log(`Deleting namespace ${args.name}.`);
+            await pubsub.deleteBroker(accountId, args.namespace, args.name);
+            logger.log(`Deleted namespace ${args.name}.`);
+          }
+        );
+
+        return brokersYargs;
+      })
+      .command(
+        'issue <broker>', 
+        'Issue new client tokens', 
+        yargs => {
+          return yargs
+            .positional('broker',{
+              describe: "FQDN of the broker",
+              type: "string",
+              demandOption: true,
+            })
+            .option("number", {
+              describe: "The number of tokens to generate",
+              type: "number",
+              alias: "n",
+              default: 1,
+            });
+        }, async args => {
+          const config = readConfig(args.config as ConfigPath, args);
+          const accountId = await requireAuth(config);
+          const [namespace, broker] = await pubsub.lookupBroker(args.broker)
+
+          logger.log(JSON.stringify(await pubsub.issueTokens(accountId, namespace, broker, args.number), null, 2));
+        }
+      )
+      .command(
+        'revoke <broker> <jti..>', 
+        'Revoke access for client tokens', 
+        (yargs) => {
+          return yargs
+            .positional('broker',{
+              describe: "FQDN of the broker",
+              type: "string",
+              demandOption: true,
+            })
+            .positional("jti", {
+              describe: "Tokens to revoke",
+              type: "string",
+              demandOption: true,
+              array: true,
+            });
+        }, 
+        async args => {
+          const config = readConfig(args.config as ConfigPath, args);
+          const accountId = await requireAuth(config);
+          const [namespace, broker] = await pubsub.lookupBroker(args.broker)
+
+          logger.log('Revoking access to ${args.broker} for:')
+          logger.log(' ', args.jti.join(' '))
+
+          await pubsub.revokeTokens(accountId, namespace, broker, ...args.jti);
+
+          logger.log('Revoked.')
+        }
+      )
+      .command(
+        'unrevoke <broker> <jti..>',  
+        'Restore access for client tokens', 
+        (yargs) => {
+          return yargs
+            .positional('broker',{
+              describe: "FQDN of the broker",
+              type: "string",
+              demandOption: true,
+            })
+            .positional("jti", {
+              describe: "Tokens to revoke",
+              type: "string",
+              demandOption: true,
+              array: true,
+            });
+        }, 
+        async args => {
+          const config = readConfig(args.config as ConfigPath, args);
+          const accountId = await requireAuth(config);
+          const [namespace, broker] = await pubsub.lookupBroker(args.broker)
+
+          logger.log('Restoring access to ${args.broker} for:')
+          logger.log(' ', args.jti.join(' '))
+
+          await pubsub.unrevokeTokens(accountId, namespace, broker, ...args.jti);
+
+          logger.log('Unrevoked.')
+        }
+      );
   });
 
 
@@ -1897,4 +2798,26 @@ export function getDevCompatibilityDate(
     );
   }
   return compatibilityDate ?? currentDate;
+}
+
+/**
+ * Find the path to the given `basename` file from the `cwd`.
+ *
+ * If `isolatedInit` is true then we only look in the `cwd` directory for the file.
+ * Otherwise we also search up the tree.
+ */
+async function findPath(
+  isolatedInit: boolean,
+  cwd: string,
+  basename: string
+): Promise<string | undefined> {
+  if (isolatedInit) {
+    return fs.existsSync(path.resolve(cwd, basename))
+      ? path.resolve(cwd, basename)
+      : undefined;
+  } else {
+    return await findUp(basename, {
+      cwd: cwd,
+    });
+  }
 }
