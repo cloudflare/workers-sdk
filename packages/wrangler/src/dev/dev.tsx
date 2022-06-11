@@ -46,11 +46,7 @@ export type DevProps = {
   usageModel: "bundled" | "unbound" | undefined;
   minify: boolean | undefined;
   nodeCompat: boolean | undefined;
-  build: {
-    command?: string | undefined;
-    cwd?: string | undefined;
-    watch_dir?: string | undefined;
-  };
+  build: Config["build"];
   env: string | undefined;
   legacyEnv: boolean;
   zone: string | undefined;
@@ -220,14 +216,7 @@ function useTmpDir(): string | undefined {
   return directory?.name;
 }
 
-function useCustomBuild(
-  expectedEntry: Entry,
-  build: {
-    command?: string | undefined;
-    cwd?: string | undefined;
-    watch_dir?: string | undefined;
-  }
-): void {
+function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
   useEffect(() => {
     if (!build.command) return;
     let watcher: ReturnType<typeof watch> | undefined;

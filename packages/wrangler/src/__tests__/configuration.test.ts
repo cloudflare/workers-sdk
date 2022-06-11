@@ -19,7 +19,7 @@ describe("normalizeAndValidateConfig()", () => {
       build: {
         command: undefined,
         cwd: undefined,
-        watch_dir: undefined,
+        watch_dir: "./src",
       },
       compatibility_date: undefined,
       compatibility_flags: [],
@@ -879,171 +879,250 @@ describe("normalizeAndValidateConfig()", () => {
       `);
     });
 
-    it("should error on invalid `name` value with spaces", () => {
-      const expectedConfig: RawEnvironment = {
-        name: "NCC 1701 D",
-      } as unknown as RawEnvironment;
+    describe("name", () => {
+      it("should error on invalid `name` value with spaces", () => {
+        const expectedConfig: RawEnvironment = {
+          name: "NCC 1701 D",
+        } as unknown as RawEnvironment;
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        { env: undefined }
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
 
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasWarnings()).toBe(false);
-      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
-      `);
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
+        `);
+      });
+
+      it("should be valid `name` with underscores", () => {
+        const expectedConfig: RawEnvironment = {
+          name: "enterprise_nx_01",
+        } as unknown as RawEnvironment;
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasErrors()).toBe(false);
+      });
+
+      it("should error on invalid `name` value with special characters", () => {
+        const expectedConfig: RawEnvironment = {
+          name: "Thy'lek-Shran",
+        } as unknown as RawEnvironment;
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
+        `);
+      });
+
+      it("should error on invalid `name` value with only special characters", () => {
+        const expectedConfig: RawEnvironment = {
+          name: "!@#$%^&*(()",
+        } as unknown as RawEnvironment;
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
+        `);
+      });
     });
 
-    it("should be valid `name` with underscores", () => {
-      const expectedConfig: RawEnvironment = {
-        name: "enterprise_nx_01",
-      } as unknown as RawEnvironment;
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        { env: undefined }
-      );
-
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasWarnings()).toBe(false);
-      expect(diagnostics.hasErrors()).toBe(false);
-    });
-
-    it("should error on invalid `name` value with special characters", () => {
-      const expectedConfig: RawEnvironment = {
-        name: "Thy'lek-Shran",
-      } as unknown as RawEnvironment;
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        { env: undefined }
-      );
-
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasWarnings()).toBe(false);
-      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
-      `);
-    });
-
-    it("should error on invalid `name` value with only special characters", () => {
-      const expectedConfig: RawEnvironment = {
-        name: "!@#$%^&*(()",
-      } as unknown as RawEnvironment;
-
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        { env: undefined }
-      );
-
-      expect(config).toEqual(expect.objectContaining(expectedConfig));
-      expect(diagnostics.hasWarnings()).toBe(false);
-      expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
-      `);
-    });
-
-    it("should override build.upload config defaults with provided values and warn about deprecations", () => {
-      const expectedConfig: RawEnvironment = {
-        build: {
-          upload: {
-            dir: "src",
-            format: "modules",
-            main: "index.ts",
-            rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
+    describe("build", () => {
+      it("should override build.upload config defaults with provided values and warn about deprecations", () => {
+        const expectedConfig: RawEnvironment = {
+          build: {
+            upload: {
+              dir: "src",
+              format: "modules",
+              main: "index.ts",
+              rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
+            },
           },
-        },
-      };
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        path.resolve("project/wrangler.toml"),
-        { env: undefined }
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          path.resolve("project/wrangler.toml"),
+          { env: undefined }
+        );
 
-      expect(config.main).toEqual(path.resolve("project/src/index.ts"));
-      expect(config.build.upload).toBeUndefined();
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(true);
-      expect(normalizePath(diagnostics.renderWarnings()))
-        .toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - [1mDeprecation[0m: \\"build.upload.format\\":
-            The format is inferred automatically from the code.
-          - [1mDeprecation[0m: \\"build.upload.main\\":
-            Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-            Then add the top level \`main\` field to your configuration file:
-            \`\`\`
-            main = \\"src/index.ts\\"
-            \`\`\`
-          - [1mDeprecation[0m: \\"build.upload.dir\\":
-            Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-          - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-            \`\`\`
-            [[rules]]
-            type = \\"Text\\"
-            globs = [ \\"GLOB\\" ]
-            fallthrough = true
-            \`\`\`"
-      `);
-    });
+        expect(config.main).toEqual(path.resolve("project/src/index.ts"));
+        expect(config.build.upload).toBeUndefined();
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(normalizePath(diagnostics.renderWarnings()))
+          .toMatchInlineSnapshot(`
+          "Processing project/wrangler.toml configuration:
+            - [1mDeprecation[0m: \\"build.upload.format\\":
+              The format is inferred automatically from the code.
+            - [1mDeprecation[0m: \\"build.upload.main\\":
+              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+              Then add the top level \`main\` field to your configuration file:
+              \`\`\`
+              main = \\"src/index.ts\\"
+              \`\`\`
+            - [1mDeprecation[0m: \\"build.upload.dir\\":
+              Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
+            - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+              \`\`\`
+              [[rules]]
+              type = \\"Text\\"
+              globs = [ \\"GLOB\\" ]
+              fallthrough = true
+              \`\`\`"
+        `);
+      });
 
-    it("should default custom build watch directories to src", () => {
-      const expectedConfig: RawEnvironment = {
-        build: {
-          command: "execute some --build",
-        },
-      };
+      it("should default custom build watch directories to src", () => {
+        const expectedConfig: RawEnvironment = {
+          build: {
+            command: "execute some --build",
+          },
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        undefined,
-        { env: undefined }
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
 
-      expect(config.build).toEqual(
-        expect.objectContaining({
-          command: "execute some --build",
-          watch_dir: "./src",
-        })
-      );
+        expect(config.build).toEqual(
+          expect.objectContaining({
+            command: "execute some --build",
+            watch_dir: "./src",
+          })
+        );
 
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(false);
-    });
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
 
-    it("should resolve custom build watch directories relative to wrangler.toml", async () => {
-      const expectedConfig: RawEnvironment = {
-        build: {
-          command: "execute some --build",
-          watch_dir: "some/path",
-        },
-      };
+      it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+        const expectedConfig: RawEnvironment = {
+          build: {
+            command: "execute some --build",
+            watch_dir: "some/path",
+          },
+        };
 
-      const { config, diagnostics } = normalizeAndValidateConfig(
-        expectedConfig,
-        "project/wrangler.toml",
-        { env: undefined }
-      );
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          "project/wrangler.toml",
+          { env: undefined }
+        );
 
-      expect(config.build).toEqual(
-        expect.objectContaining({
-          command: "execute some --build",
-          watch_dir: path.normalize("project/some/path"),
-        })
-      );
+        expect(config.build).toEqual(
+          expect.objectContaining({
+            command: "execute some --build",
+            watch_dir: path.normalize("project/some/path"),
+          })
+        );
 
-      expect(diagnostics.hasErrors()).toBe(false);
-      expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should allow watch_dir to be an array of paths", () => {
+        const expectedConfig: RawEnvironment = {
+          build: {
+            command: "execute some --build",
+            watch_dir: ["some/path/a", "some/path/b", "some/path/c"],
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          "project/wrangler.toml",
+          { env: undefined }
+        );
+
+        expect(config.build).toEqual(
+          expect.objectContaining({
+            command: "execute some --build",
+            watch_dir: [
+              path.normalize("project/some/path/a"),
+              path.normalize("project/some/path/b"),
+              path.normalize("project/some/path/c"),
+            ],
+          })
+        );
+
+        expect(diagnostics.hasErrors()).toBe(false);
+        expect(diagnostics.hasWarnings()).toBe(false);
+      });
+
+      it("should error when the watch_dir array isn't an array of strings", () => {
+        const expectedConfig: RawEnvironment = {
+          build: {
+            command: "execute some --build",
+            watch_dir: [
+              "some/path/a",
+              "some/path/b",
+              // @ts-expect-error intentionally bad "paths"
+              123,
+              "some/path/c",
+              // @ts-expect-error intentionally bad "paths"
+              false,
+            ],
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          "project/wrangler.toml",
+          { env: undefined }
+        );
+
+        expect(config.build).toEqual(
+          expect.objectContaining({
+            command: "execute some --build",
+            watch_dir: [
+              path.normalize("project/some/path/a"),
+              path.normalize("project/some/path/b"),
+              path.normalize("project/123"),
+              path.normalize("project/some/path/c"),
+              path.normalize("project/false"),
+            ],
+          })
+        );
+
+        expect(diagnostics.hasWarnings()).toBe(false);
+        expect(diagnostics.hasErrors()).toBe(true);
+
+        expect(normalizePath(diagnostics.renderErrors()))
+          .toMatchInlineSnapshot(`
+          "Processing project/wrangler.toml configuration:
+            - Expected \\"build.watch_dir.[2]\\" to be of type string but got 123.
+            - Expected \\"build.watch_dir.[4]\\" to be of type string but got false."
+        `);
+      });
     });
 
     describe("durable_objects field", () => {
