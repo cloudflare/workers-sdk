@@ -200,9 +200,7 @@ export async function syncAssets(
     namespaceKeys.delete(assetKey);
 
     // Prevent different manifest keys on windows
-    const manifestKey = urlSafe(
-      path.relative(siteAssets.assetDirectory, absAssetFile)
-    );
+    const manifestKey = urlSafe(path.relative(assetDirectory, absAssetFile));
     manifest[manifestKey] = assetKey;
   }
 
