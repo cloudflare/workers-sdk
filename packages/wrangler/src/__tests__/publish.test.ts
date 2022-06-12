@@ -1440,6 +1440,33 @@ addEventListener('fetch', event => {});`
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
+    it("should error if --experimental-public and --site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      writeWorkerSource();
+      await expect(
+        runWrangler("publish --experimental-public abc --site xyz")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use --experimental-public and a Site configuration together."`
+      );
+    });
+
+    it("should error if --experimental-public and config.site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        site: {
+          bucket: "xyz",
+        },
+      });
+      writeWorkerSource();
+      await expect(
+        runWrangler("publish --experimental-public abc")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use --experimental-public and a Site configuration together."`
+      );
+    });
+
     it("should not contain backslash for assets with nested directories", async () => {
       const assets = [
         { filePath: "subdir/file-1.txt", content: "Content of file-1" },

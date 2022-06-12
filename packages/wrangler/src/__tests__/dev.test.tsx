@@ -856,6 +856,33 @@ describe("wrangler dev", () => {
         }
       `);
     });
+
+    it("should error if --experimental-public and --site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await expect(
+        runWrangler("dev --experimental-public abc --site xyz")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use --experimental-public and a Site configuration together."`
+      );
+    });
+
+    it("should error if --experimental-public and config.site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        site: {
+          bucket: "xyz",
+        },
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+      await expect(
+        runWrangler("dev --experimental-public abc")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use --experimental-public and a Site configuration together."`
+      );
+    });
   });
 
   describe("--inspect", () => {

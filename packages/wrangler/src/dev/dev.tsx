@@ -20,7 +20,6 @@ import type { Config } from "../config";
 import type { Entry } from "../entry";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
-import type { EsbuildBundle } from "./use-esbuild";
 
 export type DevProps = {
   name?: string;
@@ -54,10 +53,6 @@ export type DevProps = {
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
-  const directory = useTmpDir();
-
-  useCustomBuild(props.entry, props.build);
-
   if (props.public && props.entry.format === "service-worker") {
     throw new Error(
       "You cannot use the service-worker format with a `public` directory."
@@ -82,37 +77,16 @@ export function DevImplementation(props: DevProps): JSX.Element {
     );
   }
 
-  const bundle = useEsbuild({
-    entry: props.entry,
-    destination: directory,
-    staticRoot: props.public,
-    jsxFactory: props.jsxFactory,
-    rules: props.rules,
-    jsxFragment: props.jsxFragment,
-    serveAssetsFromWorker: !!props.public,
-    tsconfig: props.tsconfig,
-    minify: props.minify,
-    nodeCompat: props.nodeCompat,
-  });
-
   // only load the UI if we're running in a supported environment
   const { isRawModeSupported } = useStdin();
   return isRawModeSupported ? (
-    <InteractiveDevSession {...props} bundle={bundle} />
+    <InteractiveDevSession {...props} />
   ) : (
-    <DevSession
-      {...props}
-      bundle={bundle}
-      local={props.initialMode === "local"}
-    />
+    <DevSession {...props} local={props.initialMode === "local"} />
   );
 }
 
-type InteractiveDevSessionProps = DevProps & {
-  bundle: EsbuildBundle | undefined;
-};
-
-function InteractiveDevSession(props: InteractiveDevSessionProps) {
+function InteractiveDevSession(props: DevProps) {
   const toggles = useHotkeys(
     {
       local: props.initialMode === "local",
@@ -145,13 +119,33 @@ function InteractiveDevSession(props: InteractiveDevSessionProps) {
   );
 }
 
-type DevSessionProps = InteractiveDevSessionProps & { local: boolean };
+type DevSessionProps = DevProps & {
+  local: boolean;
+};
 
 function DevSession(props: DevSessionProps) {
+  useCustomBuild(props.entry, props.build);
+
+  const directory = useTmpDir();
+
+  const bundle = useEsbuild({
+    entry: props.entry,
+    destination: directory,
+    staticRoot: props.public,
+    jsxFactory: props.jsxFactory,
+    rules: props.rules,
+    jsxFragment: props.jsxFragment,
+    // In dev for remote mode, we serve --experimental-assets from the local proxy before we send the request to the worker.
+    serveAssetsFromWorker: !!props.public && !!props.local,
+    tsconfig: props.tsconfig,
+    minify: props.minify,
+    nodeCompat: props.nodeCompat,
+  });
+
   return props.local ? (
     <Local
       name={props.name}
-      bundle={props.bundle}
+      bundle={bundle}
       format={props.entry.format}
       compatibilityDate={props.compatibilityDate}
       localProtocol={props.localProtocol}
@@ -169,7 +163,7 @@ function DevSession(props: DevSessionProps) {
   ) : (
     <Remote
       name={props.name}
-      bundle={props.bundle}
+      bundle={bundle}
       format={props.entry.format}
       accountId={props.accountId}
       bindings={props.bindings}

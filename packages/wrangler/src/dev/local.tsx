@@ -84,11 +84,6 @@ function useLocalWorker({
         abortSignal: abortController.signal,
       });
 
-      if (publicDirectory) {
-        throw new Error(
-          '⎔ A "public" folder is not yet supported in local mode.'
-        );
-      }
       if (bindings.services && bindings.services.length > 0) {
         throw new Error(
           "⎔ Service bindings are not yet supported in local mode."

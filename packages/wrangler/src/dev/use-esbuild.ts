@@ -14,7 +14,6 @@ export type EsbuildBundle = {
   entry: Entry;
   type: "esm" | "commonjs";
   modules: CfModule[];
-  serveAssetsFromWorker: boolean;
 };
 
 export function useEsbuild({
@@ -67,8 +66,7 @@ export function useEsbuild({
 
       const { resolvedEntryPointPath, bundleType, modules, stop } =
         await bundleWorker(entry, destination, {
-          // In dev, we serve assets from the local proxy before we send the request to the worker.
-          serveAssetsFromWorker: false,
+          serveAssetsFromWorker,
           jsxFactory,
           jsxFragment,
           rules,
@@ -87,7 +85,6 @@ export function useEsbuild({
         path: resolvedEntryPointPath,
         type: bundleType,
         modules,
-        serveAssetsFromWorker,
       });
     }
 
