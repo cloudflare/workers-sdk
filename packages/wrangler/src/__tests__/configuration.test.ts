@@ -412,6 +412,67 @@ describe("normalizeAndValidateConfig()", () => {
       });
     });
 
+    describe("assets", () => {
+      it("should error if `assets` config is missing `bucket`", () => {
+        const expectedConfig: RawConfig = {
+          // @ts-expect-error we're intentionally passing an invalid configuration here
+          assets: {
+            include: ["INCLUDE_1", "INCLUDE_2"],
+            exclude: ["EXCLUDE_1", "EXCLUDE_2"],
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.hasErrors()).toBe(true);
+
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"assets\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"assets.bucket\\" is a required field."
+        `);
+      });
+
+      it("should error on invalid `assets` values", () => {
+        const expectedConfig = {
+          assets: {
+            bucket: "BUCKET",
+            include: [222, 333],
+            exclude: [444, 555],
+          },
+        };
+
+        const { config, diagnostics } = normalizeAndValidateConfig(
+          expectedConfig as unknown as RawConfig,
+          undefined,
+          { env: undefined }
+        );
+
+        expect(config).toEqual(expect.objectContaining(expectedConfig));
+        expect(diagnostics.hasWarnings()).toBe(true);
+        expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - \\"assets\\" fields are experimental and may change or break at any time."
+        `);
+        expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - Expected \\"assets.include.[0]\\" to be of type string but got 222.
+            - Expected \\"assets.include.[1]\\" to be of type string but got 333.
+            - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
+            - Expected \\"assets.exclude.[1]\\" to be of type string but got 555."
+        `);
+      });
+    });
+
     it("should map `wasm_module` paths from relative to the config path to relative to the cwd", () => {
       const expectedConfig: RawConfig = {
         wasm_modules: {

@@ -19,7 +19,6 @@ export type EsbuildBundle = {
 export function useEsbuild({
   entry,
   destination,
-  staticRoot,
   jsxFactory,
   jsxFragment,
   rules,
@@ -30,7 +29,6 @@ export function useEsbuild({
 }: {
   entry: Entry;
   destination: string | undefined;
-  staticRoot: string | undefined;
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
   rules: Config["rules"];
@@ -101,7 +99,6 @@ export function useEsbuild({
   }, [
     entry,
     destination,
-    staticRoot,
     jsxFactory,
     jsxFragment,
     serveAssetsFromWorker,

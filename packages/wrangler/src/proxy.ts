@@ -76,13 +76,13 @@ type PreviewProxy = {
 
 export function usePreviewServer({
   previewToken,
-  publicRoot,
+  assetDirectory,
   localProtocol,
   localPort: port,
   ip,
 }: {
   previewToken: CfPreviewToken | undefined;
-  publicRoot: string | undefined;
+  assetDirectory: string | undefined;
   localProtocol: "https" | "http";
   localPort: number;
   ip: string;
@@ -176,8 +176,6 @@ export function usePreviewServer({
     // We have a token. Let's proxy requests to the preview end point.
     const cleanupListeners: (() => void)[] = [];
 
-    const assetPath = typeof publicRoot === "string" ? publicRoot : null;
-
     // create a ClientHttp2Session
     const remote = connect(`https://${previewToken.host}`);
     cleanupListeners.push(() => remote.destroy());
@@ -247,8 +245,8 @@ export function usePreviewServer({
 
     // If an asset path is defined, check the file system
     // for a file first and serve if it exists.
-    const actualHandleRequest = assetPath
-      ? createHandleAssetsRequest(assetPath, handleRequest)
+    const actualHandleRequest = assetDirectory
+      ? createHandleAssetsRequest(assetDirectory, handleRequest)
       : handleRequest;
 
     proxy.server.on("request", actualHandleRequest);
@@ -293,7 +291,7 @@ export function usePreviewServer({
     };
   }, [
     previewToken,
-    publicRoot,
+    assetDirectory,
     port,
     localProtocol,
     proxy,
@@ -341,10 +339,10 @@ export function usePreviewServer({
 }
 
 function createHandleAssetsRequest(
-  assetPath: string,
+  assetDirectory: string,
   handleRequest: RequestListener
 ) {
-  const handleAsset = serveStatic(assetPath, {
+  const handleAsset = serveStatic(assetDirectory, {
     cacheControl: false,
   });
   return (request: IncomingMessage, response: ServerResponse) => {

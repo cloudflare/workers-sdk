@@ -115,6 +115,15 @@ export interface ConfigFields<Dev extends RawDevConfig> {
     | undefined;
 
   /**
+   * Serve a folder of static assets with your Worker, without any additional code.
+   * This can either be a string, or an object with additional config fields.
+   */
+  assets:
+    | string
+    | { bucket: string; include: string[]; exclude: string[] }
+    | undefined;
+
+  /**
    * A list of wasm modules that your worker should be bound to. This is
    * the "legacy" way of binding to a wasm module. ES module workers should
    * do proper module imports.

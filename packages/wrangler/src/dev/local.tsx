@@ -23,7 +23,7 @@ interface LocalProps {
   bindings: CfWorkerInit["bindings"];
   localProtocol: "http" | "https";
   assetPaths: AssetPaths | undefined;
-  public: string | undefined;
+  isWorkersSite: boolean;
   port: number;
   ip: string;
   rules: Config["rules"];
@@ -50,7 +50,7 @@ function useLocalWorker({
   compatibilityFlags,
   bindings,
   assetPaths,
-  public: publicDirectory,
+  isWorkersSite,
   port,
   rules,
   enableLocalPersistence,
@@ -310,7 +310,7 @@ function useLocalWorker({
     compatibilityFlags,
     localPersistencePath,
     assetPaths,
-    publicDirectory,
+    isWorkersSite,
     rules,
     bindings.wasm_modules,
     bindings.text_blobs,

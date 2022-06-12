@@ -40,7 +40,7 @@ type Props = {
   jsxFactory: string | undefined;
   jsxFragment: string | undefined;
   tsconfig: string | undefined;
-  experimentalPublic: boolean;
+  isWorkersSite: boolean;
   minify: boolean | undefined;
   nodeCompat: boolean | undefined;
   outDir: string | undefined;
@@ -274,7 +274,7 @@ export default async function publish(props: Props): Promise<void> {
 
   assert(
     !config.site || config.site.bucket,
-    "A [site] definition requires a `bucket` field with a path to the site's public directory."
+    "A [site] definition requires a `bucket` field with a path to the site's assets directory."
   );
 
   if (props.outDir) {
@@ -303,9 +303,13 @@ export default async function publish(props: Props): Promise<void> {
 
   const { format } = props.entry;
 
-  if (props.experimentalPublic && format === "service-worker") {
+  if (
+    !props.isWorkersSite &&
+    Boolean(props.assetPaths) &&
+    format === "service-worker"
+  ) {
     throw new Error(
-      "You cannot publish in the service-worker format with a public directory."
+      "You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
     );
   }
 
@@ -331,7 +335,8 @@ export default async function publish(props: Props): Promise<void> {
       props.entry,
       typeof destination === "string" ? destination : destination.path,
       {
-        serveAssetsFromWorker: props.experimentalPublic,
+        serveAssetsFromWorker:
+          !props.isWorkersSite && Boolean(props.assetPaths),
         jsxFactory,
         jsxFragment,
         rules: props.rules,

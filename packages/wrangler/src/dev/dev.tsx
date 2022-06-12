@@ -38,7 +38,7 @@ export type DevProps = {
   enableLocalPersistence: boolean;
   bindings: CfWorkerInit["bindings"];
   crons: Config["triggers"]["crons"];
-  public: string | undefined;
+  isWorkersSite: boolean;
   assetPaths: AssetPaths | undefined;
   compatibilityDate: string;
   compatibilityFlags: string[] | undefined;
@@ -53,9 +53,13 @@ export type DevProps = {
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
-  if (props.public && props.entry.format === "service-worker") {
+  if (
+    !props.isWorkersSite &&
+    props.assetPaths &&
+    props.entry.format === "service-worker"
+  ) {
     throw new Error(
-      "You cannot use the service-worker format with a `public` directory."
+      "You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
     );
   }
 
@@ -131,12 +135,12 @@ function DevSession(props: DevSessionProps) {
   const bundle = useEsbuild({
     entry: props.entry,
     destination: directory,
-    staticRoot: props.public,
     jsxFactory: props.jsxFactory,
     rules: props.rules,
     jsxFragment: props.jsxFragment,
-    // In dev for remote mode, we serve --experimental-assets from the local proxy before we send the request to the worker.
-    serveAssetsFromWorker: !!props.public && !!props.local,
+    serveAssetsFromWorker: Boolean(
+      props.assetPaths && !props.isWorkersSite && !props.local
+    ),
     tsconfig: props.tsconfig,
     minify: props.minify,
     nodeCompat: props.nodeCompat,
@@ -152,7 +156,7 @@ function DevSession(props: DevSessionProps) {
       compatibilityFlags={props.compatibilityFlags}
       bindings={props.bindings}
       assetPaths={props.assetPaths}
-      public={props.public}
+      isWorkersSite={props.isWorkersSite}
       port={props.port}
       ip={props.ip}
       rules={props.rules}
@@ -168,7 +172,7 @@ function DevSession(props: DevSessionProps) {
       accountId={props.accountId}
       bindings={props.bindings}
       assetPaths={props.assetPaths}
-      public={props.public}
+      isWorkersSite={props.isWorkersSite}
       port={props.port}
       ip={props.ip}
       localProtocol={props.localProtocol}
