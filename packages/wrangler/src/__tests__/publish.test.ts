@@ -1223,8 +1223,8 @@ addEventListener('fetch', event => {});`
 
     it("should warn if there is a `site.entry-point` configuration", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1250,10 +1250,10 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+          "out": "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1274,8 +1274,8 @@ addEventListener('fetch', event => {});`
 
     it("should resolve site.entry-point relative to wrangler.toml", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1301,10 +1301,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish --config ./my-site/wrangler.toml");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1369,8 +1369,8 @@ addEventListener('fetch', event => {});`
   describe("asset upload", () => {
     it("should upload all the files in the directory specified by `config.site.bucket`", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1392,10 +1392,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1406,8 +1406,8 @@ addEventListener('fetch', event => {});`
 
     it("should not contain backslash for assets with nested directories", async () => {
       const assets = [
-        { filePath: "assets/subdir/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/subdir/file-2.txt", content: "Content of file-2" },
+        { filePath: "subdir/file-1.txt", content: "Content of file-1" },
+        { filePath: "subdir/file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1431,7 +1431,7 @@ addEventListener('fetch', event => {});`
         ],
         expectedModules: {
           __STATIC_CONTENT_MANIFEST:
-            '{"subdir/file-1.txt":"assets/subdir/file-1.2ca234f380.txt","subdir/file-2.txt":"assets/subdir/file-2.5938485188.txt"}',
+            '{"subdir/file-1.txt":"subdir/file-1.2ca234f380.txt","subdir/file-2.txt":"subdir/file-2.5938485188.txt"}',
         },
       });
       mockSubDomainRequest();
@@ -1442,10 +1442,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/subdir/file-1.txt...
-        Uploading as assets/subdir/file-1.2ca234f380.txt...
-        Reading assets/subdir/file-2.txt...
-        Uploading as assets/subdir/file-2.5938485188.txt...
+        "Reading subdir/file-1.txt...
+        Uploading as subdir/file-1.2ca234f380.txt...
+        Reading subdir/file-2.txt...
+        Uploading as subdir/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1456,8 +1456,8 @@ addEventListener('fetch', event => {});`
 
     it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1475,7 +1475,7 @@ addEventListener('fetch', event => {});`
         expectedType: "sw",
         expectedModules: {
           __STATIC_CONTENT_MANIFEST:
-            '{"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"}',
+            '{"file-1.txt":"file-1.2ca234f380.txt","file-2.txt":"file-2.5938485188.txt"}',
         },
         expectedBindings: [
           {
@@ -1498,10 +1498,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1512,8 +1512,8 @@ addEventListener('fetch', event => {});`
 
     it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1537,7 +1537,7 @@ addEventListener('fetch', event => {});`
         ],
         expectedModules: {
           __STATIC_CONTENT_MANIFEST:
-            '{"file-1.txt":"assets/file-1.2ca234f380.txt","file-2.txt":"assets/file-2.5938485188.txt"}',
+            '{"file-1.txt":"file-1.2ca234f380.txt","file-2.txt":"file-2.5938485188.txt"}',
         },
       });
       mockSubDomainRequest();
@@ -1548,10 +1548,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1563,8 +1563,8 @@ addEventListener('fetch', event => {});`
     it("should make environment specific kv namespace for assets, even for service envs", async () => {
       // This is the same test as the one before this, but with an env arg
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-some-env-workers_sites_assets",
@@ -1596,10 +1596,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish --env some-env --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
@@ -1611,8 +1611,8 @@ addEventListener('fetch', event => {});`
     it("should make environment specific kv namespace for assets, even for legacy envs", async () => {
       // And this is the same test as the one before this, but with legacyEnv:true
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-some-env-workers_sites_assets",
@@ -1645,10 +1645,10 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish --env some-env --legacy-env true");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
@@ -1659,8 +1659,8 @@ addEventListener('fetch', event => {});`
 
     it("should only upload files that are not already in the KV namespace", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1678,21 +1678,19 @@ addEventListener('fetch', event => {});`
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
       // Put file-1 in the KV namespace
-      mockKeyListRequest(kvNamespace.id, [
-        { name: "assets/file-1.2ca234f380.txt" },
-      ]);
+      mockKeyListRequest(kvNamespace.id, [{ name: "file-1.2ca234f380.txt" }]);
       // Check we do not upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath !== "assets/file-1.txt")
+        assets.filter((a) => a.filePath !== "file-1.txt")
       );
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
+        "Reading file-1.txt...
         Skipping - already uploaded.
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1703,8 +1701,8 @@ addEventListener('fetch', event => {});`
 
     it("should only upload files that match the `site-include` arg", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1725,13 +1723,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "assets/file-1.txt")
+        assets.filter((a) => a.filePath === "file-1.txt")
       );
       await runWrangler("publish --site-include file-1.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1742,8 +1740,8 @@ addEventListener('fetch', event => {});`
 
     it("should not upload files that match the `site-exclude` arg", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1764,13 +1762,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "assets/file-1.txt")
+        assets.filter((a) => a.filePath === "file-1.txt")
       );
       await runWrangler("publish --site-exclude file-2.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1781,8 +1779,8 @@ addEventListener('fetch', event => {});`
 
     it("should only upload files that match the `site.include` config", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1804,13 +1802,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "assets/file-1.txt")
+        assets.filter((a) => a.filePath === "file-1.txt")
       );
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1821,8 +1819,8 @@ addEventListener('fetch', event => {});`
 
     it("should not upload files that match the `site.exclude` config", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1844,13 +1842,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "assets/file-1.txt")
+        assets.filter((a) => a.filePath === "file-1.txt")
       );
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1861,8 +1859,8 @@ addEventListener('fetch', event => {});`
 
     it("should use `site-include` arg over `site.include` config", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1884,13 +1882,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath === "assets/file-1.txt")
+        assets.filter((a) => a.filePath === "file-1.txt")
       );
       await runWrangler("publish --site-include file-1.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1901,8 +1899,8 @@ addEventListener('fetch', event => {});`
 
     it("should use `site-exclude` arg over `site.exclude` config", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -1912,7 +1910,7 @@ addEventListener('fetch', event => {});`
         main: "./index.js",
         site: {
           bucket: "assets",
-          exclude: ["assets/file-1.txt"],
+          exclude: ["file-1.txt"],
         },
       });
       writeWorkerSource();
@@ -1924,13 +1922,13 @@ addEventListener('fetch', event => {});`
       // Check we only upload file-1
       mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.filter((a) => a.filePath.endsWith("assets/file-1.txt"))
+        assets.filter((a) => a.filePath.endsWith("file-1.txt"))
       );
       await runWrangler("publish --site-exclude file-2.txt");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
-        Uploading as assets/file-1.2ca234f380.txt...
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1942,11 +1940,11 @@ addEventListener('fetch', event => {});`
     it("should walk directories except node_modules", async () => {
       const assets = [
         {
-          filePath: "assets/directory-1/file-1.txt",
+          filePath: "directory-1/file-1.txt",
           content: "Content of file-1",
         },
         {
-          filePath: "assets/node_modules/file-2.txt",
+          filePath: "node_modules/file-2.txt",
           content: "Content of file-2",
         },
       ];
@@ -1971,8 +1969,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/directory-1/file-1.txt...
-        Uploading as assets/directory-1/file-1.2ca234f380.txt...
+        "Reading directory-1/file-1.txt...
+        Uploading as directory-1/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -1984,15 +1982,15 @@ addEventListener('fetch', event => {});`
     it("should skip hidden files and directories except `.well-known`", async () => {
       const assets = [
         {
-          filePath: "assets/.hidden-file.txt",
+          filePath: ".hidden-file.txt",
           content: "Content of hidden-file",
         },
         {
-          filePath: "assets/.hidden/file-1.txt",
+          filePath: ".hidden/file-1.txt",
           content: "Content of file-1",
         },
         {
-          filePath: "assets/.well-known/file-2.txt",
+          filePath: ".well-known/file-2.txt",
           content: "Content of file-2",
         },
       ];
@@ -2017,8 +2015,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/.well-known/file-2.txt...
-        Uploading as assets/.well-known/file-2.5938485188.txt...
+        "Reading .well-known/file-2.txt...
+        Uploading as .well-known/file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2030,12 +2028,12 @@ addEventListener('fetch', event => {});`
     it("should error if the asset is over 25Mb", async () => {
       const assets = [
         {
-          filePath: "assets/large-file.txt",
+          filePath: "large-file.txt",
           // This file is greater than 25MiB when base64 encoded but small enough to be uploaded.
           content: "X".repeat(25 * 1024 * 1024 * 0.8 + 1),
         },
         {
-          filePath: "assets/too-large-file.txt",
+          filePath: "too-large-file.txt",
           content: "X".repeat(25 * 1024 * 1024 + 1),
         },
       ];
@@ -2047,7 +2045,7 @@ addEventListener('fetch', event => {});`
         main: "./index.js",
         site: {
           bucket: "assets",
-          exclude: ["assets/file-1.txt"],
+          exclude: ["file-1.txt"],
         },
       });
       writeWorkerSource();
@@ -2060,18 +2058,18 @@ addEventListener('fetch', event => {});`
       await expect(
         runWrangler("publish")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"File assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
+        `"File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
       );
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/large-file.txt...
-        Uploading as assets/large-file.0ea0637a45.txt...
-        Reading assets/too-large-file.txt...
+        "Reading large-file.txt...
+        Uploading as large-file.0ea0637a45.txt...
+        Reading too-large-file.txt...
 
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile assets/too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
         "
       `);
@@ -2080,7 +2078,7 @@ addEventListener('fetch', event => {});`
     it("should batch assets in groups <100 mb", async () => {
       // Let's have 20 files, from size 1 - 20 mb
       const assets = Array.from({ length: 20 }, (_, index) => ({
-        filePath: `assets/file-${`${index}`.padStart(2, "0")}.txt`,
+        filePath: `file-${`${index}`.padStart(2, "0")}.txt`,
         content: "X".repeat(1024 * 1024 * (index + 1)),
       }));
 
@@ -2133,46 +2131,46 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Reading assets/file-00.txt...
-        Uploading as assets/file-00.be5be5dd26.txt...
-        Reading assets/file-01.txt...
-        Uploading as assets/file-01.4842d35994.txt...
-        Reading assets/file-02.txt...
-        Uploading as assets/file-02.990572ec63.txt...
-        Reading assets/file-03.txt...
-        Uploading as assets/file-03.9d7dda9045.txt...
-        Reading assets/file-04.txt...
-        Uploading as assets/file-04.2b6fac6382.txt...
-        Reading assets/file-05.txt...
-        Uploading as assets/file-05.55762dc758.txt...
-        Reading assets/file-06.txt...
-        Uploading as assets/file-06.f408a6b020.txt...
-        Reading assets/file-07.txt...
-        Uploading as assets/file-07.64c051715b.txt...
-        Reading assets/file-08.txt...
-        Uploading as assets/file-08.d286789adb.txt...
-        Reading assets/file-09.txt...
-        Uploading as assets/file-09.6838c183a8.txt...
-        Reading assets/file-10.txt...
-        Uploading as assets/file-10.6e03221d2a.txt...
-        Reading assets/file-11.txt...
-        Uploading as assets/file-11.37d3fb2eff.txt...
-        Reading assets/file-12.txt...
-        Uploading as assets/file-12.b3556942f8.txt...
-        Reading assets/file-13.txt...
-        Uploading as assets/file-13.680caf51b1.txt...
-        Reading assets/file-14.txt...
-        Uploading as assets/file-14.51e88468f0.txt...
-        Reading assets/file-15.txt...
-        Uploading as assets/file-15.8e3fedb394.txt...
-        Reading assets/file-16.txt...
-        Uploading as assets/file-16.c81c5e426f.txt...
-        Reading assets/file-17.txt...
-        Uploading as assets/file-17.4b2ae3c47b.txt...
-        Reading assets/file-18.txt...
-        Uploading as assets/file-18.07f245e02b.txt...
-        Reading assets/file-19.txt...
-        Uploading as assets/file-19.f0d69f705d.txt...
+          "out": "Reading file-00.txt...
+        Uploading as file-00.be5be5dd26.txt...
+        Reading file-01.txt...
+        Uploading as file-01.4842d35994.txt...
+        Reading file-02.txt...
+        Uploading as file-02.990572ec63.txt...
+        Reading file-03.txt...
+        Uploading as file-03.9d7dda9045.txt...
+        Reading file-04.txt...
+        Uploading as file-04.2b6fac6382.txt...
+        Reading file-05.txt...
+        Uploading as file-05.55762dc758.txt...
+        Reading file-06.txt...
+        Uploading as file-06.f408a6b020.txt...
+        Reading file-07.txt...
+        Uploading as file-07.64c051715b.txt...
+        Reading file-08.txt...
+        Uploading as file-08.d286789adb.txt...
+        Reading file-09.txt...
+        Uploading as file-09.6838c183a8.txt...
+        Reading file-10.txt...
+        Uploading as file-10.6e03221d2a.txt...
+        Reading file-11.txt...
+        Uploading as file-11.37d3fb2eff.txt...
+        Reading file-12.txt...
+        Uploading as file-12.b3556942f8.txt...
+        Reading file-13.txt...
+        Uploading as file-13.680caf51b1.txt...
+        Reading file-14.txt...
+        Uploading as file-14.51e88468f0.txt...
+        Reading file-15.txt...
+        Uploading as file-15.8e3fedb394.txt...
+        Reading file-16.txt...
+        Uploading as file-16.c81c5e426f.txt...
+        Reading file-17.txt...
+        Uploading as file-17.4b2ae3c47b.txt...
+        Reading file-18.txt...
+        Uploading as file-18.07f245e02b.txt...
+        Reading file-19.txt...
+        Uploading as file-19.f0d69f705d.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -2184,7 +2182,7 @@ addEventListener('fetch', event => {});`
 
     it("should error if the asset key is over 512 characters", async () => {
       const longFilePathAsset = {
-        filePath: "assets/" + "folder/".repeat(100) + "file.txt",
+        filePath: "folder/".repeat(100) + "file.txt",
         content: "content of file",
       };
       const kvNamespace = {
@@ -2207,16 +2205,16 @@ addEventListener('fetch', event => {});`
       await expect(
         runWrangler("publish")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"The asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
+        `"The asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
       );
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt...
+        "Reading folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt...
 
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
       expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"assets/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
 
         "
       `);
@@ -2224,8 +2222,8 @@ addEventListener('fetch', event => {});`
 
     it("should delete uploaded assets that aren't included anymore", async () => {
       const assets = [
-        { filePath: "assets/file-1.txt", content: "Content of file-1" },
-        { filePath: "assets/file-2.txt", content: "Content of file-2" },
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
       ];
       const kvNamespace = {
         title: "__test-name-workers_sites_assets",
@@ -2244,32 +2242,33 @@ addEventListener('fetch', event => {});`
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, [
         // Put file-1 in the KV namespace
-        { name: "assets/file-1.2ca234f380.txt" },
+        { name: "file-1.2ca234f380.txt" },
         // As well as a couple from a previous upload
-        { name: "assets/file-3.somehash.txt" },
-        { name: "assets/file-4.anotherhash.txt" },
+        { name: "file-3.somehash.txt" },
+        { name: "file-4.anotherhash.txt" },
       ]);
 
       // we upload only file-1.txt
-      mockUploadAssetsToKVRequest(kvNamespace.id, [
-        ...assets.filter((a) => a.filePath !== "assets/file-1.txt"),
-      ]);
+      mockUploadAssetsToKVRequest(
+        kvNamespace.id,
+        assets.filter((a) => a.filePath !== "file-1.txt")
+      );
 
       // and mark file-3 and file-4 for deletion
       mockDeleteUnusedAssetsRequest(kvNamespace.id, [
-        "assets/file-3.somehash.txt",
-        "assets/file-4.anotherhash.txt",
+        "file-3.somehash.txt",
+        "file-4.anotherhash.txt",
       ]);
 
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Reading assets/file-1.txt...
+        "Reading file-1.txt...
         Skipping - already uploaded.
-        Reading assets/file-2.txt...
-        Uploading as assets/file-2.5938485188.txt...
-        Deleting assets/file-3.somehash.txt from the asset store...
-        Deleting assets/file-4.anotherhash.txt from the asset store...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
+        Deleting file-3.somehash.txt from the asset store...
+        Deleting file-4.anotherhash.txt from the asset store...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
@@ -5241,10 +5240,16 @@ addEventListener('fetch', event => {});`
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
-function writeAssets(assets: { filePath: string; content: string }[]) {
+function writeAssets(
+  assets: { filePath: string; content: string }[],
+  destination = "assets"
+) {
   for (const asset of assets) {
-    fs.mkdirSync(path.dirname(asset.filePath), { recursive: true });
-    fs.writeFileSync(asset.filePath, asset.content);
+    const filePathDestination = path.join(destination, asset.filePath);
+    fs.mkdirSync(path.dirname(filePathDestination), {
+      recursive: true,
+    });
+    fs.writeFileSync(filePathDestination, asset.content);
   }
 }
 

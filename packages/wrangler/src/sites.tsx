@@ -154,7 +154,7 @@ export async function syncAssets(
     siteAssets.assetDirectory
   );
   for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
-    const assetFile = path.relative(siteAssets.baseDirectory, absAssetFile);
+    const assetFile = path.relative(assetDirectory, absAssetFile);
     if (!include(assetFile)) {
       continue;
     }
