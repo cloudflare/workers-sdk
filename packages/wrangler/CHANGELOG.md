@@ -1,5 +1,15 @@
 # wrangler
 
+## 2.0.11
+
+### Patch Changes
+
+- [#1239](https://github.com/cloudflare/wrangler2/pull/1239) [`df55709`](https://github.com/cloudflare/wrangler2/commit/df5570924050298d6fc4dfe09304571472050c1a) Thanks [@threepointone](https://github.com/threepointone)! - polish: don't include folder name in Sites kv asset keys
+
+  As reported in https://github.com/cloudflare/wrangler2/issues/1189, we're including the name of the folder in the keys of the KV store that stores the assets. This doesn't match v1 behaviour. It makes sense not to include these since, we should be able to move around the folder and not have to reupload the entire folder again.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1189
+
 ## 2.0.10
 
 ### Patch Changes
