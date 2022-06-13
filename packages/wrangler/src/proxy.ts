@@ -100,7 +100,10 @@ export function usePreviewServer({
         .then((server) => {
           setProxy({
             server,
-            terminator: createHttpTerminator({ server }),
+            terminator: createHttpTerminator({
+              server,
+              gracefulTerminationTimeout: 0,
+            }),
           });
         })
         .catch(async (err) => {
@@ -330,7 +333,9 @@ export function usePreviewServer({
       abortController.abort();
       // Running `proxy.server.close()` does not close open connections, preventing the process from exiting.
       // So we use this `terminator` to close all the connections and force the server to shutdown.
-      proxy.terminator.terminate();
+      proxy.terminator
+        .terminate()
+        .catch(() => logger.error("Failed to terminate the proxy server."));
     };
   }, [port, ip, proxy, localProtocol]);
 }
@@ -450,16 +455,24 @@ export async function waitForPortToBeAvailable(
       // trying to make a server listen on that port, and retrying
       // until it succeeds.
       const server = createHttpServer();
+      const terminator = createHttpTerminator({
+        server,
+        gracefulTerminationTimeout: 0, // default 1000
+      });
+
       server.on("error", (err) => {
         // @ts-expect-error non standard property on Error
         if (err.code !== "EADDRINUSE") {
           doReject(err);
         }
       });
-      server.listen(port, () => {
-        server.close();
-        doResolve();
-      });
+      server.listen(port, () =>
+        terminator
+          .terminate()
+          .then(doResolve, () =>
+            logger.error("Failed to terminate the port checker.")
+          )
+      );
     }
   });
 }
