@@ -5294,6 +5294,7 @@ function mockUploadWorkerRequest(
         expect(envName).toEqual(env);
       }
       expect(queryParams.get("include_subdomain_availability")).toEqual("true");
+      expect(queryParams.get("excludeScript")).toEqual("true");
       const formBody = body as FormData;
       if (expectedEntry !== undefined) {
         expect(await (formBody.get("index.js") as File).text()).toMatch(
