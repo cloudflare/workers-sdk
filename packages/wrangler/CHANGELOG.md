@@ -1,5 +1,23 @@
 # wrangler
 
+## 2.0.10
+
+### Patch Changes
+
+- [#1210](https://github.com/cloudflare/wrangler2/pull/1210) [`785d418`](https://github.com/cloudflare/wrangler2/commit/785d4188916f8aa4c2767500d94bd773a4f9fd45) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload the delta for `wrangler pages publish`
+
+  We now keep track of the files that make up each deployment and intelligently only upload the files that we haven't seen. This means that similar subsequent deployments should only need to upload a minority of files and this will hopefully make uploads even faster.
+
+* [#1195](https://github.com/cloudflare/wrangler2/pull/1195) [`66a85ca`](https://github.com/cloudflare/wrangler2/commit/66a85ca72de226f1adedce0910954ed5c50c2c7b) Thanks [@threepointone](https://github.com/threepointone)! - fix: batch sites uploads in groups under 100mb
+
+  There's an upper limit on the size of an upload to the bulk kv put api (as specified in https://api.cloudflare.com/#workers-kv-namespace-write-multiple-key-value-pairs). This patch batches sites uploads staying under the 100mb limit.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1187
+
+- [#1218](https://github.com/cloudflare/wrangler2/pull/1218) [`f8a21ed`](https://github.com/cloudflare/wrangler2/commit/f8a21ede2034f921b978e4480fe2e6157953a308) Thanks [@threepointone](https://github.com/threepointone)! - fix: warn on unexpected fields on `config.triggers`
+
+  This adds a warning when we find unexpected fields on the `triggers` config (and any future fields that use the `isObjectWith()` validation helper)
+
 ## 2.0.9
 
 ### Patch Changes
