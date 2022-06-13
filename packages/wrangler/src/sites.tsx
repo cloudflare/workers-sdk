@@ -175,7 +175,7 @@ export async function syncAssets(
 
       // Check if adding this asset to the bucket would
       // push it over the 100mb limit
-      if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
+      if (uploadBucketSize + assetSize > 75 * 1024 * 1024) {
         // If so, move the current bucket into the batch,
         // and reset the counter/bucket
         uploadBuckets.push(uploadBucket);
