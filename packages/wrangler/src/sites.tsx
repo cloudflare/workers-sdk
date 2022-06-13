@@ -162,10 +162,12 @@ export async function syncAssets(
       continue;
     }
 
-    const assetSize = await validateAssetSize(absAssetFile, assetFile);
     logger.log(`Reading ${assetFile}...`);
     const content = await readFile(absAssetFile, "base64");
-
+    await validateAssetSize(absAssetFile, assetFile);
+    // while KV accepts files that are 25 MiB **before** b64 encoding
+    // the overall bucket size must be below 100 MiB **after** b64 encoding
+    const assetSize = Buffer.from(content).length;
     const assetKey = hashAsset(hasher, assetFile, content);
     validateAssetKey(assetKey);
 
@@ -174,8 +176,8 @@ export async function syncAssets(
       logger.log(`Uploading as ${assetKey}...`);
 
       // Check if adding this asset to the bucket would
-      // push it over the 100mb limit
-      if (uploadBucketSize + assetSize > 75 * 1024 * 1024) {
+      // push it over the 100 MiB limit KV bulk API limit
+      if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
         // If so, move the current bucket into the batch,
         // and reset the counter/bucket
         uploadBuckets.push(uploadBucket);
@@ -237,17 +239,22 @@ function createPatternMatcher(
   }
 }
 
+/**
+ * validate that the passed-in file is below 25 MiB
+ * **PRIOR** to base64 encoding. 25 MiB is a KV limit
+ * @param absFilePath
+ * @param relativeFilePath
+ */
 async function validateAssetSize(
   absFilePath: string,
   relativeFilePath: string
-): Promise<number> {
+): Promise<void> {
   const { size } = await stat(absFilePath);
   if (size > 25 * 1024 * 1024) {
     throw new Error(
       `File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
     );
   }
-  return size;
 }
 
 function validateAssetKey(assetKey: string) {

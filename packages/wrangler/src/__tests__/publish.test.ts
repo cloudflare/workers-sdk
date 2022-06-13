@@ -1989,6 +1989,7 @@ addEventListener('fetch', event => {});`
       expect(std.out).toMatchInlineSnapshot(`
         "Reading assets/large-file.txt...
         Uploading as assets/large-file.0ea0637a45.txt...
+        Reading assets/too-large-file.txt...
 
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
@@ -2024,9 +2025,9 @@ addEventListener('fetch', event => {});`
       mockKeyListRequest(kvNamespace.id, []);
 
       // We expect this to be uploaded in 3 batches
-      // The first batch has 13 files (91mb)
-      // The next batch 6 has 6 files (99mb)
-      // Ans the last one has just 1 file (20mb)
+      // The first batch has 11 files (88mb)
+      // The next batch has 5 files (93mb)
+      // And the last one has 4 files (98mb)
 
       // Since the bulk upload api endpoint stays the same
       // We're going to have to clear the mock as soon as it's resolved
@@ -2035,15 +2036,15 @@ addEventListener('fetch', event => {});`
 
       const removeFirstBulkUploadMockFn = mockUploadAssetsToKVRequest(
         kvNamespace.id,
-        assets.slice(0, 13),
+        assets.slice(0, 11),
         () => {
           removeFirstBulkUploadMockFn();
           const removeSecondBulkUploadMockFn = mockUploadAssetsToKVRequest(
             kvNamespace.id,
-            assets.slice(13, 19),
+            assets.slice(11, 16),
             () => {
               removeSecondBulkUploadMockFn();
-              mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(19, 20));
+              mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(16, 20));
             }
           );
         }
