@@ -154,9 +154,7 @@ export async function bundleWorker(
   };
 }
 
-type EntryPoint =
-  | { stdin: esbuild.StdinOptions; nodePaths: string[] }
-  | { entryPoints: string[] };
+type EntryPoint = { stdin: esbuild.StdinOptions } | { entryPoints: string[] };
 
 /**
  * Create an object that describes the entry point for esbuild.
@@ -181,7 +179,6 @@ function getEntryPoint(
         sourcefile: "static-asset-facade.js",
         resolveDir: path.dirname(entryFile),
       },
-      nodePaths: [path.join(__dirname, "../vendor")],
     };
   } else {
     return { entryPoints: [entryFile] };

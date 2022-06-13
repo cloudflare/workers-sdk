@@ -4,10 +4,6 @@ import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import manifest from "__STATIC_CONTENT_MANIFEST";
 const ASSET_MANIFEST = JSON.parse(manifest);
 
-// TODO: remove this
-globalThis.__STATIC_CONTENT = undefined;
-globalThis.__STATIC_CONTENT_MANIFEST = undefined;
-
 export default {
   async fetch(request, env, ctx) {
     let options = {
