@@ -214,10 +214,12 @@ export async function syncAssets(
     logger.log(`Deleting ${key} from the asset store...`);
   }
 
-  // sequentially upload each bucket
+  // upload each bucket in parallel
+  const bucketsToPut = [];
   for (const bucket of uploadBuckets) {
-    await putKVBulkKeyValue(accountId, namespace, bucket);
+    bucketsToPut.push(putKVBulkKeyValue(accountId, namespace, bucket));
   }
+  await Promise.all(bucketsToPut);
 
   // then delete all the assets that aren't used anymore
   await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
