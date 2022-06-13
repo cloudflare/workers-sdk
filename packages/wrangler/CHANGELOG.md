@@ -10,10 +10,6 @@
 
   Fixes https://github.com/cloudflare/wrangler2/issues/1189
 
-## 2.0.10
-
-### Patch Changes
-
 - [#1210](https://github.com/cloudflare/wrangler2/pull/1210) [`785d418`](https://github.com/cloudflare/wrangler2/commit/785d4188916f8aa4c2767500d94bd773a4f9fd45) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload the delta for `wrangler pages publish`
 
   We now keep track of the files that make up each deployment and intelligently only upload the files that we haven't seen. This means that similar subsequent deployments should only need to upload a minority of files and this will hopefully make uploads even faster.
