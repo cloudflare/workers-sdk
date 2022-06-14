@@ -2272,7 +2272,7 @@ function createCLIParser(argv: string[]) {
             const namespaceId = getKVNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
-              ? readFileSync(args.path)
+              ? fs.readFileSync(args.path)
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 args.value!;
 
