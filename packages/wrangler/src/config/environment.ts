@@ -175,7 +175,7 @@ interface EnvironmentInheritable {
     /** The directory in which the command is executed. */
     cwd?: string;
     /** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
-    watch_dir?: string | string[] | undefined;
+    watch_dir?: string | string[];
     /**
      * Deprecated field previously used to configure the build and upload of the script.
      * @deprecated
