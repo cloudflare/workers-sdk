@@ -227,19 +227,24 @@ function normalizeAndValidateBuild(
   rawBuild: Config["build"],
   configPath: string | undefined
 ): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
-  const { command, cwd, watch_dir, upload, ...rest } = rawBuild;
+  const { command, cwd, watch_dir: _watch_dir, upload, ...rest } = rawBuild;
+  let { watch_dir } = rawBuild;
   const deprecatedUpload: DeprecatedUpload = { ...upload };
   validateAdditionalProperties(diagnostics, "build", Object.keys(rest), []);
 
   validateOptionalProperty(diagnostics, "build", "command", command, "string");
   validateOptionalProperty(diagnostics, "build", "cwd", cwd, "string");
-  validateOptionalProperty(
-    diagnostics,
-    "build",
-    "watch_dir",
-    watch_dir,
-    "string"
-  );
+  if (Array.isArray(watch_dir)) {
+    validateTypedArray(diagnostics, "build.watch_dir", watch_dir, "string");
+  } else {
+    validateOptionalProperty(
+      diagnostics,
+      "build",
+      "watch_dir",
+      watch_dir,
+      "string"
+    );
+  }
 
   deprecated(
     diagnostics,
@@ -280,6 +285,9 @@ function normalizeAndValidateBuild(
     );
   }
 
+  // default watch_dir to './src'
+  watch_dir ||= "./src";
+
   return {
     command,
     watch_dir:
@@ -288,13 +296,18 @@ function normalizeAndValidateBuild(
       // - `configPath` will always be defined since `build` can only
       // be configured in `wrangler.toml`, but who knows, that may
       // change in the future, so we do a check anyway
-      command
-        ? configPath
-          ? path.relative(
-              process.cwd(),
-              path.join(path.dirname(configPath), watch_dir || "./src")
+      command && configPath
+        ? Array.isArray(watch_dir)
+          ? watch_dir.map((dir) =>
+              path.relative(
+                process.cwd(),
+                path.join(path.dirname(configPath), `${dir}`)
+              )
             )
-          : watch_dir || "./src"
+          : path.relative(
+              process.cwd(),
+              path.join(path.dirname(configPath), `${watch_dir}`)
+            )
         : watch_dir,
     cwd,
     deprecatedUpload,
