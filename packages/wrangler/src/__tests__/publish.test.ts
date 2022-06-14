@@ -2098,34 +2098,21 @@ addEventListener('fetch', event => {});`
       mockSubDomainRequest();
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
+      const requests = mockUploadAssetsToKVRequest(kvNamespace.id);
+
+      await runWrangler("publish");
 
       // We expect this to be uploaded in 3 batches
       // The first batch has 11 files (88mb)
       // The next batch has 5 files (93mb)
       // And the last one has 4 files (98mb)
-
-      // Since the bulk upload api endpoint stays the same
-      // We're going to have to clear the mock as soon as it's resolved
-      // And immediately add a mock for another one
-      // Welcome to a callback pyramid in 2022
-
-      const removeFirstBulkUploadMockFn = mockUploadAssetsToKVRequest(
-        kvNamespace.id,
-        assets.slice(0, 11),
-        () => {
-          removeFirstBulkUploadMockFn();
-          const removeSecondBulkUploadMockFn = mockUploadAssetsToKVRequest(
-            kvNamespace.id,
-            assets.slice(11, 16),
-            () => {
-              removeSecondBulkUploadMockFn();
-              mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(16, 20));
-            }
-          );
+      let assetIndex = 0;
+      for (const request of requests) {
+        for (const upload of request.uploads) {
+          checkAssetUpload(assets[assetIndex], upload);
+          assetIndex++;
         }
-      );
-
-      await runWrangler("publish");
+      }
 
       expect(std).toMatchInlineSnapshot(`
         Object {
@@ -5619,51 +5606,60 @@ function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
   );
 }
 
+interface ExpectedAsset {
+  filePath: string;
+  content: string;
+  expiration?: number;
+  expiration_ttl?: number;
+}
+interface UploadBody {
+  key: string;
+  base64: boolean;
+  value: string;
+  expiration: number | undefined;
+  expiration_ttl: number | undefined;
+}
+
 /** Create a mock handler for the request that tries to do a bulk upload of assets to a KV namespace. */
 function mockUploadAssetsToKVRequest(
   expectedNamespaceId: string,
-  assets: {
-    filePath: string;
-    content: string;
-    expiration?: number;
-    expiration_ttl?: number;
-  }[],
-  onUpload?: () => void
+  assets?: ExpectedAsset[]
 ) {
-  return setMockResponse(
+  const requests: {
+    uploads: UploadBody[];
+  }[] = [];
+  setMockResponse(
     "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
     "PUT",
     ([_url, accountId, namespaceId], { body }) => {
       expect(accountId).toEqual("some-account-id");
       expect(namespaceId).toEqual(expectedNamespaceId);
       const uploads = JSON.parse(body as string);
-      expect(assets.length).toEqual(uploads.length);
-      for (let i = 0; i < uploads.length; i++) {
-        const asset = assets[i];
-        const upload = uploads[i];
-        // The asset key consists of:
-        // - the basename of the filepath
-        // - some hash value
-        // - the extension
-        const keyMatcher = new RegExp(
-          "^" +
-            asset.filePath
-              .replace(/(\.[^.]+)$/, ".[a-z0-9]+$1")
-              .replace(/\./g, "\\.")
-        );
-        expect(upload.key).toMatch(keyMatcher);
-        // The asset value is base64 encoded.
-        expect(upload.base64).toBe(true);
-        expect(Buffer.from(upload.value, "base64").toString()).toEqual(
-          asset.content
-        );
-        expect(upload.expiration).toEqual(asset.expiration);
-        expect(upload.expiration_ttl).toEqual(asset.expiration_ttl);
+      if (assets) {
+        expect(assets.length).toEqual(uploads.length);
+        for (let i = 0; i < uploads.length; i++) {
+          checkAssetUpload(assets[i], uploads[i]);
+        }
+      } else {
+        requests.push({ uploads });
       }
-      onUpload?.();
-      return null;
     }
   );
+  return requests;
+}
+
+function checkAssetUpload(asset: ExpectedAsset, upload: UploadBody) {
+  // The asset key consists of: `<basename>.<hash>.<extension>`
+  const keyMatcher = new RegExp(
+    "^" +
+      asset.filePath.replace(/(\.[^.]+)$/, ".[a-z0-9]+$1").replace(/\./g, "\\.")
+  );
+  expect(upload.key).toMatch(keyMatcher);
+  // The asset value is base64 encoded.
+  expect(upload.base64).toBe(true);
+  expect(Buffer.from(upload.value, "base64").toString()).toEqual(asset.content);
+  expect(upload.expiration).toEqual(asset.expiration);
+  expect(upload.expiration_ttl).toEqual(asset.expiration_ttl);
 }
 
 /** Create a mock handler for thr request that does a bulk delete of unused assets */
