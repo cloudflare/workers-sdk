@@ -36,6 +36,7 @@
     "cli"
   ],
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.2.0",
     "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "blake3-wasm": "^2.1.5",
