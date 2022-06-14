@@ -114,6 +114,7 @@
     "templates",
     "vendor",
     "import_meta_url.js",
+    "kv-asset-handler.js",
     "Cloudflare_CA.pem"
   ],
   "scripts": {

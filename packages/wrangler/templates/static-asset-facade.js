@@ -1,6 +1,6 @@
 // DO NOT IMPORT THIS DIRECTLY
 import worker from "__ENTRY_POINT__";
-import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
+import { getAssetFromKV } from "__KV_ASSET_HANDLER__";
 import manifest from "__STATIC_CONTENT_MANIFEST";
 const ASSET_MANIFEST = JSON.parse(manifest);
 
