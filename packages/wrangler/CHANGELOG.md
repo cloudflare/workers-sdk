@@ -1,5 +1,62 @@
 # wrangler
 
+## 2.0.12
+
+### Patch Changes
+
+- [#1229](https://github.com/cloudflare/wrangler2/pull/1229) [`e273e09`](https://github.com/cloudflare/wrangler2/commit/e273e09d41c41f2dfcc1d89c81f6d56933e57102) Thanks [@timabb031](https://github.com/timabb031)! - fix: parsing of node inspector url
+
+  This fixes the parsing of the url returned by Node Inspector via stderr which could be received partially in multiple chunks or in a single chunk.
+
+  Closes #1226
+
+* [#1255](https://github.com/cloudflare/wrangler2/pull/1255) [`2d806dc`](https://github.com/cloudflare/wrangler2/commit/2d806dc981a7119de4c0d2c926992cc27e160cae) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put binary file upload
+
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler 1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+
+- [#1248](https://github.com/cloudflare/wrangler2/pull/1248) [`db8a0bb`](https://github.com/cloudflare/wrangler2/commit/db8a0bba1f070bce870016a9aecc8b30725694f4) Thanks [@threepointone](https://github.com/threepointone)! - fix: instruct api to exclude script content on worker upload
+
+  When we upload a script bundle, we get the actual content of the script back in the response. Sometimes that script can be large (depending on whether the upload was large), and currently it may even be a badly escaped string. We can pass a queryparam `excludeScript` that, as it implies, exclude the script content in the response. This fix does that.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1222
+
+* [#1250](https://github.com/cloudflare/wrangler2/pull/1250) [`e3278fa`](https://github.com/cloudflare/wrangler2/commit/e3278fa9ad15fc0f34322c32eb4bdd557b40c413) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: pass localProtocol to miniflare for https server
+
+  Closes #1247
+
+- [#1253](https://github.com/cloudflare/wrangler2/pull/1253) [`eee5c78`](https://github.com/cloudflare/wrangler2/commit/eee5c7815fff8e5a151fc7eda5c1a2496f575b48) Thanks [@threepointone](https://github.com/threepointone)! - fix: resolve asset handler for `--experimental-path`
+
+  In https://github.com/cloudflare/wrangler2/pull/1241, we removed the vendored version of `@cloudflare/kv-asset-handler`, as well as the build configuration that would point to the vendored version when compiling a worker using `--experimental-public`. However, wrangler can be used where it's not installed in the `package.json` for the worker, or even when there's no package.json at all (like when wrangler is installed globally, or used with `npx`). In this situation, if the user doesn't have `@cloudflare/kv-asset-handler` installed, then building the worker will fail. We don't want to make the user install this themselves, so instead we point to a barrel import for the library in the facade for the worker.
+
+* [#1234](https://github.com/cloudflare/wrangler2/pull/1234) [`3e94bc6`](https://github.com/cloudflare/wrangler2/commit/3e94bc6257dbb5e0ff37bca169379b658d8c8761) Thanks [@threepointone](https://github.com/threepointone)! - feat: support `--experimental-public` in local mode
+
+  `--experimental-public` is an abstraction over Workers Sites, and we can leverage miniflare's inbuilt support for Sites to serve assets in local mode.
+
+- [#1236](https://github.com/cloudflare/wrangler2/pull/1236) [`891d128`](https://github.com/cloudflare/wrangler2/commit/891d12802c413438b4ce837785abee792e317de1) Thanks [@threepointone](https://github.com/threepointone)! - fix: generate site assets manifest relative to `site.bucket`
+
+  We had a bug where we were generating asset manifest keys incorrectly if we ran wrangler from a different path to `wrangler.toml`. This fixes the generation of said keys, and adds a test for it.
+
+  Fixes #1235
+
+* [#1216](https://github.com/cloudflare/wrangler2/pull/1216) [`4eb70f9`](https://github.com/cloudflare/wrangler2/commit/4eb70f906666806250eeb709efa70118df57f2df) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: reload server on configuration changes, the values passed into the server during restart will be `bindings`
+
+  resolves #439
+
+- [#1231](https://github.com/cloudflare/wrangler2/pull/1231) [`5206c24`](https://github.com/cloudflare/wrangler2/commit/5206c24630b64a5c398194fd680faa67a5a23c9a) Thanks [@threepointone](https://github.com/threepointone)! - feat: `build.watch_dir` can be an array of paths
+
+  In projects where:
+
+  - all the source code isn't in one folder (like a monorepo, or even where the worker has non-standard imports across folders),
+  - we use a custom build, so it's hard to statically determine folders to watch for changes
+
+  ...we'd like to be able to specify multiple paths for custom builds, (the config `build.watch_dir` config). This patch enables such behaviour. It now accepts a single path as before, or optionally an array of strings/paths.
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1095
+
+* [#1241](https://github.com/cloudflare/wrangler2/pull/1241) [`471cfef`](https://github.com/cloudflare/wrangler2/commit/471cfeffc70088d5db2bdb132357d4dbfedde353) Thanks [@threepointone](https://github.com/threepointone)! - use `@cloudflare/kv-asset-handler` for `--experimental-public`
+
+  We'd previously vendored in `@cloudflare/kv-asset-handler` and `mime` for `--experimental-public`. We've since updated `@cloudflare/kv-asset-handler` to support module workers correctly, and don't need the vendored versions anymore. This patch uses the lib as a dependency, and deletes the `vendor` folder.
+
 ## 2.0.11
 
 ### Patch Changes
