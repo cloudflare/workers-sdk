@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
+import { logger } from "./logger";
 
 export type Message = {
   text: string;
@@ -38,7 +39,7 @@ export function formatMessage(
   const lines = formatMessagesSync([input], {
     color,
     kind: kind,
-    terminalWidth: process.stderr.columns,
+    terminalWidth: logger.columns,
   });
   return lines.join("\n");
 }

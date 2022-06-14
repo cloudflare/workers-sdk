@@ -242,7 +242,8 @@ describe("wrangler", () => {
     expect(std.out).toMatchInlineSnapshot(`
       "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m for more information.
+        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+        for more information.
         Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
