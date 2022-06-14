@@ -35,7 +35,7 @@ export default {
     } catch (e) {
       console.error(e);
       // if an error is thrown then serve from actual worker
-      return worker.fetch(request);
+      return worker.fetch(request, env, ctx);
       // TODO: throw here if worker is not available
       // (which implies it may be a service-worker)
     }
