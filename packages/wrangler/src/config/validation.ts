@@ -227,8 +227,7 @@ function normalizeAndValidateBuild(
   rawBuild: Config["build"],
   configPath: string | undefined
 ): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
-  const { command, cwd, watch_dir: _watch_dir, upload, ...rest } = rawBuild;
-  let { watch_dir } = rawBuild;
+  const { command, cwd, watch_dir = "./src", upload, ...rest } = rawBuild;
   const deprecatedUpload: DeprecatedUpload = { ...upload };
   validateAdditionalProperties(diagnostics, "build", Object.keys(rest), []);
 
@@ -284,9 +283,6 @@ function normalizeAndValidateBuild(
       true
     );
   }
-
-  // default watch_dir to './src'
-  watch_dir ||= "./src";
 
   return {
     command,
