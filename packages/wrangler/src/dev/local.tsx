@@ -301,6 +301,7 @@ function useLocalWorker({
     workerName,
     format,
     port,
+    localProtocol,
     ip,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
