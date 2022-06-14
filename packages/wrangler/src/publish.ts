@@ -430,7 +430,12 @@ export default async function publish(props: Props): Promise<void> {
             method: "PUT",
             body: createWorkerUploadForm(worker),
           },
-          new URLSearchParams({ include_subdomain_availability: "true" })
+          new URLSearchParams({
+            include_subdomain_availability: "true",
+            // pass excludeScript so the whole body of the
+            // script doesn't get included in the response
+            excludeScript: "true",
+          })
         )
       ).available_on_subdomain;
     }
