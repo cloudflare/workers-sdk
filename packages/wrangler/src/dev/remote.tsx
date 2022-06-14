@@ -40,6 +40,7 @@ export function Remote(props: {
     accountId: props.accountId,
     bindings: props.bindings,
     assetPaths: props.assetPaths,
+    public: props.public,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
     compatibilityFlags: props.compatibilityFlags,
@@ -74,6 +75,7 @@ export function useWorker(props: {
   accountId: string | undefined;
   bindings: CfWorkerInit["bindings"];
   assetPaths: AssetPaths | undefined;
+  public: string | undefined;
   port: number;
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
@@ -131,7 +133,7 @@ export function useWorker(props: {
         // include it in the kv namespace name regardless (since there's no
         // concept of service environments for kv namespaces yet).
         name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
-        assetPaths,
+        props.public ? undefined : assetPaths,
         true,
         false
       ); // TODO: cancellable?
@@ -223,6 +225,7 @@ export function useWorker(props: {
     accountId,
     port,
     assetPaths,
+    props.public,
     compatibilityDate,
     compatibilityFlags,
     usageModel,

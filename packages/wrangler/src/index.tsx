@@ -1087,6 +1087,12 @@ function createCLIParser(argv: string[]) {
           );
         }
 
+        if (args["experimental-public"] && (args.site || config.site)) {
+          throw new Error(
+            "Cannot use --experimental-public and a Site configuration together."
+          );
+        }
+
         if (args.public) {
           throw new Error(
             "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
@@ -1230,7 +1236,7 @@ function createCLIParser(argv: string[]) {
               accountId={config.account_id}
               assetPaths={getAssetPaths(
                 config,
-                args.site,
+                args["experimental-public"] || args.site,
                 args.siteInclude,
                 args.siteExclude
               )}
@@ -1385,9 +1391,21 @@ function createCLIParser(argv: string[]) {
     },
     async (args) => {
       await printWranglerBanner();
+
+      const configPath =
+        (args.config as ConfigPath) ||
+        (args.script && findWranglerToml(path.dirname(args.script)));
+      const config = readConfig(configPath, args);
+      const entry = await getEntry(args, config, "publish");
+
       if (args["experimental-public"]) {
         logger.warn(
           "The --experimental-public field is experimental and will change in the future."
+        );
+      }
+      if (args["experimental-public"] && (args.site || config.site)) {
+        throw new Error(
+          "Cannot use --experimental-public and a Site configuration together."
         );
       }
       if (args.public) {
@@ -1395,12 +1413,6 @@ function createCLIParser(argv: string[]) {
           "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
         );
       }
-
-      const configPath =
-        (args.config as ConfigPath) ||
-        (args.script && findWranglerToml(path.dirname(args.script)));
-      const config = readConfig(configPath, args);
-      const entry = await getEntry(args, config, "publish");
 
       if (args.latest) {
         logger.warn(
