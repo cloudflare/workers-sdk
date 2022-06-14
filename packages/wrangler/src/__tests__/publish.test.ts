@@ -5616,7 +5616,7 @@ interface ExpectedAsset {
   expiration?: number;
   expiration_ttl?: number;
 }
-interface UploadBody {
+interface StaticAssetUpload {
   key: string;
   base64: boolean;
   value: string;
@@ -5630,7 +5630,7 @@ function mockUploadAssetsToKVRequest(
   assets?: ExpectedAsset[]
 ) {
   const requests: {
-    uploads: UploadBody[];
+    uploads: StaticAssetUpload[];
   }[] = [];
   setMockResponse(
     "/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
@@ -5652,7 +5652,7 @@ function mockUploadAssetsToKVRequest(
   return requests;
 }
 
-function checkAssetUpload(asset: ExpectedAsset, upload: UploadBody) {
+function checkAssetUpload(asset: ExpectedAsset, upload: StaticAssetUpload) {
   // The asset key consists of: `<basename>.<hash>.<extension>`
   const keyMatcher = new RegExp(
     "^" +
