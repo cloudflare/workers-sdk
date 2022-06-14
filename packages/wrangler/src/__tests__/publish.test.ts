@@ -2104,8 +2104,12 @@ addEventListener('fetch', event => {});`
 
       // We expect this to be uploaded in 3 batches
       // The first batch has 11 files (88mb)
+      expect(requests[0].uploads.length).toEqual(11);
       // The next batch has 5 files (93mb)
+      expect(requests[1].uploads.length).toEqual(5);
       // And the last one has 4 files (98mb)
+      expect(requests[2].uploads.length).toEqual(4);
+
       let assetIndex = 0;
       for (const request of requests) {
         for (const upload of request.uploads) {
