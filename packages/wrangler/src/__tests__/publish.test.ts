@@ -2276,6 +2276,59 @@ addEventListener('fetch', event => {});`
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
+
+    it("should generate an asset manifest with keys relative to site.bucket", async () => {
+      const assets = [
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+
+      writeWranglerToml({
+        main: "./src/index.js",
+        site: {
+          bucket: "assets",
+        },
+      });
+      writeWorkerSource({ basePath: "src", type: "esm" });
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedBindings: [
+          {
+            name: "__STATIC_CONTENT",
+            namespace_id: "__test-name-workers_sites_assets-id",
+            type: "kv_namespace",
+          },
+        ],
+        expectedModules: {
+          __STATIC_CONTENT_MANIFEST:
+            '{"file-1.txt":"file-1.2ca234f380.txt","file-2.txt":"file-2.5938485188.txt"}',
+        },
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      process.chdir("./src");
+      await runWrangler("publish");
+      process.chdir("../");
+
+      expect(std.out).toMatchInlineSnapshot(`
+        "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev"
+      `);
+      expect(std.err).toMatchInlineSnapshot(`""`);
+    });
   });
 
   describe("workers_dev setting", () => {
