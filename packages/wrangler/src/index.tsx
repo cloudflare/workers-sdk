@@ -468,9 +468,12 @@ function createCLIParser(argv: string[]) {
         }
       }
 
-      let pathToPackageJson = await findUp("package.json", {
-        cwd: creationDirectory,
-      });
+      const isolatedInit = !!args.name;
+      let pathToPackageJson = await findPath(
+        isolatedInit,
+        creationDirectory,
+        "package.json"
+      );
       let shouldCreatePackageJson = false;
 
       if (!pathToPackageJson) {
@@ -534,9 +537,11 @@ function createCLIParser(argv: string[]) {
       }
 
       let isTypescriptProject = false;
-      let pathToTSConfig = await findUp("tsconfig.json", {
-        cwd: creationDirectory,
-      });
+      let pathToTSConfig = await findPath(
+        isolatedInit,
+        creationDirectory,
+        "tsconfig.json"
+      );
       if (!pathToTSConfig) {
         // If there's no tsconfig, offer to create one
         // and install @cloudflare/workers-types
@@ -2856,4 +2861,26 @@ function memoizeGetPort(defaultPort: number) {
   return async () => {
     return portValue || (portValue = await getPort({ port: defaultPort }));
   };
+}
+
+/**
+ * Find the path to the given `basename` file from the `cwd`.
+ *
+ * If `isolatedInit` is true then we only look in the `cwd` directory for the file.
+ * Otherwise we also search up the tree.
+ */
+async function findPath(
+  isolatedInit: boolean,
+  cwd: string,
+  basename: string
+): Promise<string | undefined> {
+  if (isolatedInit) {
+    return fs.existsSync(path.resolve(cwd, basename))
+      ? path.resolve(cwd, basename)
+      : undefined;
+  } else {
+    return await findUp(basename, {
+      cwd: cwd,
+    });
+  }
 }

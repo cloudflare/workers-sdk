@@ -757,14 +757,18 @@ describe("init", () => {
       `);
     });
 
-    it("should not touch an existing package.json in a target directory", async () => {
+    it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
           result: false,
         },
         {
-          text: "Would you like to install wrangler into path/to/worker/package.json?",
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to install wrangler into path/to/worker/my-worker/package.json?",
           result: false,
         },
         {
@@ -797,7 +801,8 @@ describe("init", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml",
+          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+        ✨ Created path/to/worker/my-worker/package.json",
           "warn": "",
         }
       `);
@@ -853,14 +858,14 @@ describe("init", () => {
       `);
     });
 
-    it("should offer to install wrangler into a package.json relative to the target directory", async () => {
+    it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
           result: false,
         },
         {
-          text: "Would you like to install wrangler into path/to/worker/package.json?",
+          text: "Would you like to install wrangler into ../package.json?",
           result: true,
         },
         {
@@ -869,7 +874,7 @@ describe("init", () => {
         }
       );
       mockSelect({
-        text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+        text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
       writeFiles({
@@ -879,9 +884,11 @@ describe("init", () => {
           },
         },
       });
+      setWorkingDirectory("path/to/worker/my-worker");
 
-      await runWrangler("init path/to/worker/my-worker");
+      await runWrangler("init");
 
+      setWorkingDirectory("../../../..");
       checkFiles({
         items: {
           "path/to/worker/package.json": {
@@ -898,7 +905,7 @@ describe("init", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+          "out": "✨ Created wrangler.toml
         ✨ Installed wrangler into devDependencies",
           "warn": "",
         }
@@ -1222,6 +1229,10 @@ describe("init", () => {
           result: false,
         },
         {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
           text: "Would you like to install wrangler into package.json?",
           result: false,
         },
@@ -1251,6 +1262,7 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created my-worker/wrangler.toml
+        ✨ Created my-worker/package.json
         ✨ Created my-worker/tsconfig.json
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
           "warn": "",
@@ -1359,11 +1371,21 @@ describe("init", () => {
       `);
     });
 
-    it("should not touch an existing tsconfig.json in the ancestor of a target directory", async () => {
-      mockConfirm({
-        text: "Would you like to use git to manage this Worker?",
-        result: false,
-      });
+    it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        }
+      );
       mockSelect({
         text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
         result: "fetch",
@@ -1398,10 +1420,13 @@ describe("init", () => {
           "debug": "",
           "err": "",
           "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+        ✨ Created path/to/worker/my-worker/package.json
+        ✨ Created path/to/worker/my-worker/tsconfig.json
         ✨ Created path/to/worker/my-worker/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -1670,7 +1695,7 @@ describe("init", () => {
           result: false,
         },
         {
-          text: "Would you like to install wrangler into package.json?",
+          text: "Would you like to install wrangler into my-worker/package.json?",
           result: false,
         },
         {
@@ -1681,7 +1706,9 @@ describe("init", () => {
       const PLACEHOLDER = "/* placeholder text */";
       writeFiles({
         items: {
-          "package.json": { contents: { name: "test", version: "1.0.0" } },
+          "my-worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
           "my-worker/src/index.js": { contents: PLACEHOLDER },
         },
       });
@@ -1805,6 +1832,72 @@ describe("init", () => {
           "warn": "",
         }
       `);
+    });
+
+    it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to install the type definitions for Workers into your package.json?",
+          result: true,
+        }
+      );
+      mockSelect({
+        text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
+        result: "fetch",
+      });
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "top-level" } },
+          "tsconfig.json": { contents: { compilerOptions: {} } },
+          "wrangler.toml": wranglerToml({
+            name: "top-level",
+            compatibility_date: "some-date",
+          }),
+        },
+      });
+
+      await runWrangler("init sub/folder/worker");
+
+      // Ancestor files are untouched.
+      checkFiles({
+        items: {
+          "package.json": { contents: { name: "top-level" } },
+          "tsconfig.json": {
+            contents: { config: { compilerOptions: {} }, error: undefined },
+          },
+          "wrangler.toml": wranglerToml({
+            name: "top-level",
+            compatibility_date: "some-date",
+          }),
+        },
+      });
+      // New initialized Worker has its own files.
+      checkFiles({
+        items: {
+          "sub/folder/worker/package.json": {
+            contents: expect.objectContaining({
+              name: "worker",
+            }),
+          },
+          "sub/folder/worker/tsconfig.json": true,
+          "sub/folder/worker/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "worker",
+          }),
+        },
+      });
     });
   });
 });
