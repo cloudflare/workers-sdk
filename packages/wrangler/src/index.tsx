@@ -5,7 +5,6 @@ import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { watch } from "chokidar";
-import { execa } from "execa";
 import { findUp } from "find-up";
 import getPort from "get-port";
 import { render } from "ink";
@@ -23,6 +22,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { confirm, prompt, select } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
+import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import {
   getKVNamespaceId,
   listKVNamespaces,
@@ -433,26 +433,15 @@ function createCLIParser(argv: string[]) {
 
       const yesFlag = args.yes ?? false;
 
-      const isInsideGitProject = Boolean(
-        await findUp(".git", { cwd: creationDirectory, type: "directory" })
-      );
-      let isGitInstalled;
-      try {
-        isGitInstalled = (await execa("git", ["--version"])).exitCode === 0;
-      } catch (err) {
-        isGitInstalled = false;
-      }
-      if (!isInsideGitProject && isGitInstalled) {
+      if (
+        !(await isInsideGitRepo(creationDirectory)) &&
+        (await isGitInstalled())
+      ) {
         const shouldInitGit =
           yesFlag ||
           (await confirm("Would you like to use git to manage this Worker?"));
         if (shouldInitGit) {
-          await execa("git", ["init"], {
-            cwd: creationDirectory,
-          });
-          await execa("git", ["branch", "-m", "main"], {
-            cwd: creationDirectory,
-          });
+          await initializeGit(creationDirectory);
           await writeFile(
             path.join(creationDirectory, ".gitignore"),
             readFileSync(path.join(__dirname, "../templates/gitignore"))
