@@ -37,6 +37,7 @@ describe("publish", () => {
     mockGrantAccessToken,
     mockGrantAuthorization,
     mockGetMemberships,
+    mockGetAuthURL,
   } = mockOAuthFlow();
 
   beforeEach(() => {
@@ -66,7 +67,7 @@ describe("publish", () => {
       writeWorkerSource();
       mockSubDomainRequest();
       mockUploadWorkerRequest();
-
+      mockGetAuthURL();
       mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });

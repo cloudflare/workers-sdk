@@ -25,12 +25,14 @@ describe("User", () => {
     mockGrantAuthorization,
     mockRevokeAuthorization,
     mockExchangeRefreshTokenForAccessToken,
+    mockGetAuthURL,
   } = mockOAuthFlow();
 
   const { setIsTTY } = useMockIsTTY();
 
   describe("login", () => {
     it("should login a user when `wrangler login` is run", async () => {
+      mockGetAuthURL();
       mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });

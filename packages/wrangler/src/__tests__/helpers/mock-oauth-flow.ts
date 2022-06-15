@@ -2,6 +2,7 @@ import fetchMock from "jest-fetch-mock";
 import { Request } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import openInBrowser from "../../open-in-browser";
+import { getAuthURL } from "../../user";
 import { mockHttpServer } from "./mock-http-server";
 
 // the response to send when wrangler wants an oauth grant
@@ -17,6 +18,17 @@ export const mockOAuthFlow = () => {
     fetchMock.resetMocks();
   });
 
+  const mockGetAuthURL = () => {
+    (getAuthURL as jest.MockedFunction<typeof getAuthURL>).mockImplementation(
+      async () =>
+        new Promise((resolve) =>
+          resolve(
+            "https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=MOCK_CLIENT_ID&redirect_uri=MOCK_REDIRECT_URI&state=MOCK_STATE&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256"
+          )
+        )
+    );
+  };
+
   /**
    * Mock out the callback from a browser to our HttpServer.
    *
@@ -24,6 +36,7 @@ export const mockOAuthFlow = () => {
    * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
    * we have created as part of the call to `mockOAuthFlow()`.
    */
+
   const mockOAuthServerCallback = () => {
     (
       openInBrowser as jest.MockedFunction<typeof openInBrowser>
@@ -178,6 +191,7 @@ export const mockOAuthFlow = () => {
     mockGrantAuthorization,
     mockOAuthServerCallback,
     mockRevokeAuthorization,
+    mockGetAuthURL,
     mockExchangeRefreshTokenForAccessToken,
   };
 };
