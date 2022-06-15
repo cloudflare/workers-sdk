@@ -89,6 +89,8 @@ const proxy =
   process.env.HTTP_PROXY ||
   undefined;
 
+console.log(process.env.npm_execpath);
+
 if (proxy) {
   setGlobalDispatcher(new ProxyAgent(proxy));
 }
