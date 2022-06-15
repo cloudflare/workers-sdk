@@ -36,7 +36,6 @@ export const mockOAuthFlow = () => {
    * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
    * we have created as part of the call to `mockOAuthFlow()`.
    */
-
   const mockOAuthServerCallback = () => {
     (
       openInBrowser as jest.MockedFunction<typeof openInBrowser>
