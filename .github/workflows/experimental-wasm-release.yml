@@ -40,6 +40,9 @@ jobs:
       - name: Check for errors
         run: npm run check
 
+      - name: Copy .npmrc to package
+        run: cp .npmrc packages/wrangler/.npmrc
+
       - name: Publish `wrangler@wasm` to NPM
         run: npm publish --tag wasm
         env:
