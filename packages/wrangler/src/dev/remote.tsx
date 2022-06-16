@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { useState, useEffect, useRef } from "react";
+import { printBundleSize } from "../bundle-reporter";
 import { createWorkerPreview } from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
@@ -119,6 +120,9 @@ export function useWorker(props: {
 
       if (!startedRef.current) {
         startedRef.current = true;
+        // TODO: For Dev we could show the reporter message in the interactive box.
+        // As of now only showing for initial server start
+        printBundleSize(modules);
       } else {
         logger.log("⎔ Detected changes, restarted server.");
       }
