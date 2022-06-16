@@ -86,6 +86,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
     kv_namespaces,
     r2_buckets,
     services,
+    dispatch_namespaces,
     text_blobs,
     unsafe,
     vars,
@@ -160,6 +161,19 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
         return {
           key: binding,
           value,
+        };
+      }),
+    });
+  }
+
+  if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
+    output.push({
+      type: "Dispatch Namespaces",
+      entries: dispatch_namespaces.map(({ binding, namespace }) => {
+
+        return {
+          key: binding,
+          value: namespace,
         };
       }),
     });

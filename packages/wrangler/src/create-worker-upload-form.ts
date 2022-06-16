@@ -50,6 +50,7 @@ export interface WorkerMetadata {
       }
     | { type: "r2_bucket"; name: string; bucket_name: string }
     | { type: "service"; name: string; service: string; environment?: string }
+    | { type: "namespace"; name: string; namespace: string }
   )[];
 }
 
@@ -113,6 +114,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
       type: "service",
       service,
       ...(environment && { environment }),
+    });
+  });
+
+  bindings.dispatch_namespaces?.forEach(({ binding, namespace }) => {
+    metadataBindings.push({
+      name: binding,
+      type: "namespace",
+      namespace,
     });
   });
 

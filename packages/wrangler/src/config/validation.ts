@@ -796,6 +796,14 @@ function normalizeAndValidateEnvironment(
       undefined,
       undefined
     ),
+    namespace_name: inheritable(
+      diagnostics,
+      topLevelEnv,
+      rawEnv,
+      "namespace_name",
+      isString,
+      undefined
+    ),
     compatibility_date: inheritable(
       diagnostics,
       topLevelEnv,
@@ -934,6 +942,16 @@ function normalizeAndValidateEnvironment(
       envName,
       "services",
       validateBindingArray(envName, validateServiceBinding),
+      []
+    ),
+    dispatch_namespaces: notInheritable(
+      diagnostics,
+      topLevelEnv,
+      rawConfig,
+      rawEnv,
+      envName,
+      "dispatch_namespaces",
+      validateBindingArray(envName, validateNamespaceBinding),
       []
     ),
     unsafe: notInheritable(
@@ -1546,3 +1564,31 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
   }
   return isValid;
 };
+const validateNamespaceBinding: ValidatorFn = (diagnostics, field, value) => {
+  if (typeof value !== "object" || value === null) {
+    diagnostics.errors.push(
+      `"${field}" bindings should be objects, but got ${JSON.stringify(value)}`
+    );
+    return false;
+  }
+  let isValid = true;
+  // Service bindings must have a binding, service, and environment.
+  if (!isRequiredProperty(value, "binding", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  if (!isRequiredProperty(value, "namespace", "string")) {
+    diagnostics.errors.push(
+      `"${field}" bindings should have a string "namespace" field but got ${JSON.stringify(
+        value
+      )}.`
+    );
+    isValid = false;
+  }
+  return isValid;
+};
+

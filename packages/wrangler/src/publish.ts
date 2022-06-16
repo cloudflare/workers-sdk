@@ -24,12 +24,16 @@ import type { Entry } from "./entry";
 import type { AssetPaths } from "./sites";
 import type { CfWorkerInit } from "./worker";
 
+// DEFAULT_ENV_NAME is used when an environment is not specified for non-legacy 'environmented' scripts.
+const DEFAULT_ENV_NAME = "production";
+
 type Props = {
   config: Config;
   accountId: string | undefined;
   entry: Entry;
   rules: Config["rules"];
   name: string | undefined;
+  namespaceName: string | undefined;
   env: string | undefined;
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
@@ -251,8 +255,25 @@ export default async function publish(props: Props): Promise<void> {
     }
   }
 
+  const namespaceName = props.namespaceName ?? config.namespace_name;
+  // if we are uploading to a namespace we won't be deploying to routes or triggers, give a warning
+  if (namespaceName && (
+      (routes && routes.length > 0)
+      || (triggers && triggers.length > 0)
+    )
+  ) {
+    logger.warn(
+      `Publishing to namespace '${namespaceName}': one or more routes or cron triggers are defined that will not be deployed.`
+    );
+  }
+
   // deployToWorkersDev defaults to true only if there aren't any routes defined
-  const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
+  const deployToWorkersDev = config.workers_dev ?? (routes.length === 0 && !namespaceName);
+  if (namespaceName && deployToWorkersDev) {
+    logger.warn(
+      `Publishing to namespace '${namespaceName}': 'deploy to workers.dev' was requested, but the script will not be published.`
+    );
+  }
 
   const jsxFactory = props.jsxFactory || config.jsx_factory;
   const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -290,14 +311,22 @@ export default async function publish(props: Props): Promise<void> {
   }
 
   const destination = props.outDir ?? (await tmp.dir({ unsafeCleanup: true }));
-  const envName = props.env ?? "production";
+  const envName = props.env ?? DEFAULT_ENV_NAME;
+
+  if (namespaceName && envName != DEFAULT_ENV_NAME) {
+      logger.warn(
+        `Publishing to namespace '${namespaceName}': a non-default environment was specified, but namespaced scripts do not have environments.`
+      );
+  }
 
   const start = Date.now();
   const notProd = Boolean(!props.legacyEnv && props.env);
   const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-  const workerUrl = notProd
-    ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-    : `/accounts/${accountId}/workers/scripts/${scriptName}`;
+  const workerUrl = namespaceName
+    ? `/accounts/${accountId}/workers/dispatch/namespaces/${namespaceName}/scripts/${scriptName}`
+    : notProd
+      ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+      : `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
   let available_on_subdomain; // we'll set this later
 
@@ -386,6 +415,7 @@ export default async function publish(props: Props): Promise<void> {
       durable_objects: config.durable_objects,
       r2_buckets: config.r2_buckets,
       services: config.services,
+      dispatch_namespaces: config.dispatch_namespaces,
       unsafe: config.unsafe?.bindings,
     };
 
@@ -454,6 +484,16 @@ export default async function publish(props: Props): Promise<void> {
   assert(accountId, "Missing accountId");
 
   const uploadMs = Date.now() - start;
+
+  if (namespaceName) {
+    // namespaced workers aren't deployed to workers.dev, routes, or triggers.
+    // no publishing needs to be done, so we can bail early
+    logger.log("Uploaded", workerName, `to namespace '${namespaceName}'`, formatTime(uploadMs));
+    return;
+  }
+
+  logger.log("Uploaded", workerName, formatTime(uploadMs));
+
   const deployments: Promise<string[]>[] = [];
 
   if (deployToWorkersDev) {
@@ -498,8 +538,6 @@ export default async function publish(props: Props): Promise<void> {
       });
     }
   }
-
-  logger.log("Uploaded", workerName, formatTime(uploadMs));
 
   // Update routing table for the script.
   if (routesOnly.length > 0) {

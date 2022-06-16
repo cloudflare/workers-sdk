@@ -50,6 +50,13 @@ interface EnvironmentInheritable {
   account_id: string | undefined;
 
   /**
+   * The name of the namespace this worker should be uploaded to. This option conflicts withs
+   * routes, cron triggers, and other ways of running a worker besides dispatching to it via
+   * a namespace binding bound to the namespace it was uploaded to.
+   */
+  namespace_name: string | undefined;
+
+  /**
    * A date in the form yyyy-mm-dd, which will be used to determine
    * which version of the Workers runtime is used.
    *
@@ -303,6 +310,22 @@ interface EnvironmentNonInheritable {
     service: string;
     /** The environment of the service (e.g. production, staging, etc). */
     environment?: string;
+  }[];
+
+  /**
+   * Specifies namespace bindings that are bound to this Worker environment.
+   *
+   * NOTE: This field is not automatically inherited from the top level environment,
+   * and so must be specified in every named environment.
+   *
+   * @default `[]`
+   * @nonInheritable
+   */
+  dispatch_namespaces: {
+    /** The binding name used to refer to the bound service. */
+    binding: string;
+    /** The namespace to bind to. */
+    namespace: string;
   }[];
 
   /**

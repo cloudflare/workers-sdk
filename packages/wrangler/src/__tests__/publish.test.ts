@@ -447,6 +447,64 @@ describe("publish", () => {
     });
   });
 
+  describe("namespaces", () => {
+    describe("namespace_name", () => {
+      it("uploads to a different endpoint when provided", async () => {
+        writeWranglerToml({ namespace_name: "some-namespace" });
+        writeWorkerSource();
+        mockSubDomainRequest();
+        mockUploadWorkerRequest({
+          namespaceName: "some-namespace",
+        });
+        await runWrangler("publish index.js");
+        expect(std.out).toMatchInlineSnapshot(
+          `"Uploaded test-name to namespace 'some-namespace' (TIMINGS)"`
+        );
+        expect(std.err).toMatchInlineSnapshot(`""`);
+        expect(std.warn).toMatchInlineSnapshot(`""`);
+      });
+    });
+
+    describe("namespace bindings", () => {
+      it("should upload dispatch_namespaces", async () => {
+        fs.mkdirSync("./some-path/worker", { recursive: true });
+        fs.writeFileSync(
+          "./some-path/wrangler.toml",
+          TOML.stringify({
+            name: "test-name",
+            compatibility_date: "2022-01-12",
+            dispatch_namespaces: [
+              { binding: "dispatcher", namespace: "my-namespace" },
+            ],
+          }),
+          "utf-8"
+        );
+        writeWorkerSource({ basePath: "./some-path/worker" });
+        mockUploadWorkerRequest({
+          expectedBindings: [
+            {
+              type: "namespace",
+              name: "dispatcher",
+              namespace: "my-namespace",
+            },
+          ],
+          expectedCompatibilityDate: "2022-01-12",
+        });
+        mockSubDomainRequest();
+        await runWrangler("publish ./some-path/worker/index.js");
+        expect(std.out).toMatchInlineSnapshot(`
+          "Your worker has access to the following bindings:
+          - Dispatch Namespaces:
+            - dispatcher: my-namespace
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+    });
+  });
+
   it("should resolve wrangler.toml relative to the entrypoint", async () => {
     fs.mkdirSync("./some-path/worker", { recursive: true });
     fs.writeFileSync(
@@ -5375,6 +5433,7 @@ function mockUploadWorkerRequest(
     expectedMigrations?: CfWorkerInit["migrations"];
     env?: string;
     legacyEnv?: boolean;
+    namespaceName?: string;
   } = {}
 ) {
   const {
@@ -5389,19 +5448,33 @@ function mockUploadWorkerRequest(
     env = undefined,
     legacyEnv = false,
     expectedMigrations,
+    namespaceName,
   } = options;
+
+  const uploadPath = namespaceName
+    ? "/accounts/:accountId/workers/dispatch/namespaces/:namespaceName/scripts/:scriptName"
+    : env && !legacyEnv
+    ? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
+    : "/accounts/:accountId/workers/scripts/:scriptName";
+
   setMockResponse(
-    env && !legacyEnv
-      ? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
-      : "/accounts/:accountId/workers/scripts/:scriptName",
+    uploadPath,
     "PUT",
-    async ([_url, accountId, scriptName, envName], { body }, queryParams) => {
-      expect(accountId).toEqual("some-account-id");
-      expect(scriptName).toEqual(
-        legacyEnv && env ? `test-name-${env}` : "test-name"
-      );
-      if (!legacyEnv) {
-        expect(envName).toEqual(env);
+    async ([_url, ...urlParams], { body }, queryParams) => {
+      if (!namespaceName) {
+        const [accountId, scriptName, envName] = urlParams;
+        expect(accountId).toEqual("some-account-id");
+        expect(scriptName).toEqual(
+          legacyEnv && env ? `test-name-${env}` : "test-name"
+        );
+        if (!legacyEnv) {
+          expect(envName).toEqual(env);
+        }
+      } else {
+        const [accountId, namespaceNameParam, scriptName] = urlParams;
+        expect(accountId).toEqual("some-account-id");
+        expect(scriptName).toEqual("test-name");
+        expect(namespaceNameParam).toEqual(namespaceName);
       }
       expect(queryParams.get("include_subdomain_availability")).toEqual("true");
       expect(queryParams.get("excludeScript")).toEqual("true");

@@ -31,6 +31,7 @@ describe("normalizeAndValidateConfig()", () => {
         upstream_protocol: "https",
         host: undefined,
       },
+      dispatch_namespaces: [],
       durable_objects: {
         bindings: [],
       },
@@ -63,6 +64,7 @@ describe("normalizeAndValidateConfig()", () => {
       zone_id: undefined,
       minify: undefined,
       node_compat: undefined,
+      namespace_name: undefined,
     });
     expect(diagnostics.hasErrors()).toBe(false);
     expect(diagnostics.hasWarnings()).toBe(false);

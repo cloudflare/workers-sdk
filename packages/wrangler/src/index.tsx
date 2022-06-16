@@ -21,6 +21,7 @@ import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { confirm, prompt, select } from "./dialogs";
+import { createNamespaceCommand, deleteNamespaceCommand } from "./dispatch"
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import {
@@ -1075,6 +1076,17 @@ function createCLIParser(argv: string[]) {
           );
         }
 
+        if (config.dispatch_namespaces && config.dispatch_namespaces.length > 0) {
+          logger.warn(
+            `This worker is bound to live namespaces: ${config.dispatch_namespaces
+              .map(
+                (namespace) =>
+                  `${namespace.binding} (${namespace.namespace})`
+              )
+              .join(", ")}`
+          );
+        }
+
         if (args.inspect) {
           logger.warn(
             "Passing --inspect is unnecessary, now you can always connect to devtools."
@@ -1291,6 +1303,12 @@ function createCLIParser(argv: string[]) {
           type: "string",
           requiresArg: true,
         })
+        .option("namespace-name", {
+          describe: "Namespace the worker should be uploaded to",
+          alias: "namespace",
+          type: "string",
+          requiresArg: true,
+        })
         .option("outdir", {
           describe: "Output directory for the bundled worker",
           type: "string",
@@ -1435,6 +1453,7 @@ function createCLIParser(argv: string[]) {
         name: getScriptName(args, config),
         rules: getRules(config),
         entry,
+        namespaceName: args.namespaceName,
         env: args.env,
         compatibilityDate: args.latest
           ? new Date().toISOString().substring(0, 10)
@@ -1921,6 +1940,7 @@ function createCLIParser(argv: string[]) {
                       durable_objects: { bindings: [] },
                       r2_buckets: [],
                       services: [],
+                      dispatch_namespaces: [],
                       wasm_modules: {},
                       text_blobs: {},
                       data_blobs: {},
@@ -2644,6 +2664,17 @@ function createCLIParser(argv: string[]) {
     async (pagesYargs) => {
       await pages(pagesYargs.command(subHelp).epilogue(pagesBetaWarning));
     }
+  );
+
+  wrangler.command(
+    "dispatch-namespace",
+    false,
+    (dispatchYargs) => {
+      return dispatchYargs
+        .command(subHelp)
+        .command(createNamespaceCommand)
+        .command(deleteNamespaceCommand)
+    },
   );
 
   wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
