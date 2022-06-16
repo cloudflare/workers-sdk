@@ -100,4 +100,9 @@ class MockStdIn {
     }
     return this.chunks.shift() ?? null;
   }
+
+  /**
+   * Used by Ink.js to set the encoding of the stdout.
+   */
+  setEncoding() {}
 }
