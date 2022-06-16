@@ -10,10 +10,8 @@ import { logger } from "./logger";
  * @param url the URL to point the browser at
  */
 export default async function openInBrowser(url: string): Promise<void> {
-  const errorMessage = `Failed to open ${url} in a browser`;
-
   const childProcess = await open(url);
   childProcess.on("error", () => {
-    logger.warn(errorMessage);
+    logger.warn("Failed to open");
   });
 }

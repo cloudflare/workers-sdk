@@ -75,3 +75,33 @@ jest.mock("../dev/dev", () => {
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
 jest.mock("../open-in-browser");
+
+// Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
+jest.mock("../generate-auth-url", () => {
+  return {
+    generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+    generateAuthUrl: jest
+      .fn()
+      .mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
+        return (
+          authUrl +
+          `?response_type=code&` +
+          `client_id=${encodeURIComponent(clientId)}&` +
+          `redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+          // we add offline_access manually for every request
+          `scope=${encodeURIComponent(
+            [...scopes, "offline_access"].join(" ")
+          )}&` +
+          `state=MOCK_STATE_PARAM&` +
+          `code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
+          `code_challenge_method=S256`
+        );
+      }),
+  };
+});
+
+jest.mock("../generate-random-state", () => {
+  return {
+    generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+  };
+});

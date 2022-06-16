@@ -223,6 +223,8 @@ import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
 import { purgeConfigCaches } from "./config-cache";
 import { getEnvironmentVariableFactory } from "./environment-variables";
+import { generateAuthUrl } from "./generate-auth-url";
+import { generateRandomState } from "./generate-random-state";
 import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
@@ -591,7 +593,7 @@ const RECOMMENDED_STATE_LENGTH = 32;
 /**
  * Character set to generate code verifier defined in rfc7636.
  */
-const PKCE_CHARSET =
+export const PKCE_CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 
 /**
@@ -641,17 +643,14 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
     stateQueryParam,
   });
 
-  return (
-    AUTH_URL +
-    `?response_type=code&` +
-    `client_id=${encodeURIComponent(CLIENT_ID)}&` +
-    `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    // we add offline_access manually for every request
-    `scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
-    `state=${stateQueryParam}&` +
-    `code_challenge=${encodeURIComponent(codeChallenge)}&` +
-    `code_challenge_method=S256`
-  );
+  return generateAuthUrl({
+    authUrl: AUTH_URL,
+    clientId: CLIENT_ID,
+    callbackUrl: CALLBACK_URL,
+    scopes,
+    stateQueryParam,
+    codeChallenge,
+  });
 }
 
 type TokenResponse =
@@ -864,18 +863,6 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 }
 
 /**
- * Generates random state to be passed for anti-csrf.
- */
-function generateRandomState(lengthOfState: number): string {
-  const output = new Uint32Array(lengthOfState);
-  // @ts-expect-error crypto's types aren't there yet
-  crypto.getRandomValues(output);
-  return Array.from(output)
-    .map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-    .join("");
-}
-
-/**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
  */
@@ -1013,6 +1000,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
     server.listen(8976);
   });
 
+  logger.log(`Opening a link in your default browser: ${urlToOpen}`);
   await openInBrowser(urlToOpen);
 
   return Promise.race([timerPromise, loginPromise]);
