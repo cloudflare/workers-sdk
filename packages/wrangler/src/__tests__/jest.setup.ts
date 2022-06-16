@@ -76,14 +76,32 @@ jest.mock("../dev/dev", () => {
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
 jest.mock("../open-in-browser");
 
-// Mock the getAuthURL function so we don't take snapshots of the constantly changing URL.
+// Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
 jest.mock("../generate-auth-url", () => {
   return {
+    generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
     generateAuthUrl: jest
       .fn()
-      .mockImplementation(
-        () =>
-          "https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=MOCK_CLIENT_ID&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256"
-      ),
+      .mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
+        return (
+          authUrl +
+          `?response_type=code&` +
+          `client_id=${encodeURIComponent(clientId)}&` +
+          `redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+          // we add offline_access manually for every request
+          `scope=${encodeURIComponent(
+            [...scopes, "offline_access"].join(" ")
+          )}&` +
+          `state=MOCK_STATE_PARAM&` +
+          `code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
+          `code_challenge_method=S256`
+        );
+      }),
+  };
+});
+
+jest.mock("../generate-random-state", () => {
+  return {
+    generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
   };
 });

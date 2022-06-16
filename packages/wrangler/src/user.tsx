@@ -224,6 +224,7 @@ import { getCloudflareApiBaseUrl } from "./cfetch";
 import { purgeConfigCaches } from "./config-cache";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 import { generateAuthUrl } from "./generate-auth-url";
+import { generateRandomState } from "./generate-random-state";
 import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
@@ -592,7 +593,7 @@ const RECOMMENDED_STATE_LENGTH = 32;
 /**
  * Character set to generate code verifier defined in rfc7636.
  */
-const PKCE_CHARSET =
+export const PKCE_CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 
 /**
@@ -859,18 +860,6 @@ async function generatePKCECodes(): Promise<PKCECodes> {
   }
   const codeChallenge = base64urlEncode(binary);
   return { codeChallenge, codeVerifier };
-}
-
-/**
- * Generates random state to be passed for anti-csrf.
- */
-function generateRandomState(lengthOfState: number): string {
-  const output = new Uint32Array(lengthOfState);
-  // @ts-expect-error crypto's types aren't there yet
-  crypto.getRandomValues(output);
-  return Array.from(output)
-    .map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-    .join("");
 }
 
 /**
