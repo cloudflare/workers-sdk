@@ -223,6 +223,7 @@ import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "./cfetch";
 import { purgeConfigCaches } from "./config-cache";
 import { getEnvironmentVariableFactory } from "./environment-variables";
+import { generateAuthUrl } from "./generate-auth-url";
 import { logger } from "./logger";
 import openInBrowser from "./open-in-browser";
 import { parseTOML, readFileSync } from "./parse";
@@ -641,17 +642,14 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
     stateQueryParam,
   });
 
-  return (
-    AUTH_URL +
-    `?response_type=code&` +
-    `client_id=${encodeURIComponent(CLIENT_ID)}&` +
-    `redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-    // we add offline_access manually for every request
-    `scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
-    `state=${stateQueryParam}&` +
-    `code_challenge=${encodeURIComponent(codeChallenge)}&` +
-    `code_challenge_method=S256`
-  );
+  return generateAuthUrl({
+    authUrl: AUTH_URL,
+    clientId: CLIENT_ID,
+    callbackUrl: CALLBACK_URL,
+    scopes,
+    stateQueryParam,
+    codeChallenge,
+  });
 }
 
 type TokenResponse =

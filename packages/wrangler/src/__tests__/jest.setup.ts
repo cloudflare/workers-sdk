@@ -77,14 +77,13 @@ jest.mock("../dev/dev", () => {
 jest.mock("../open-in-browser");
 
 // Mock the getAuthURL function so we don't take snapshots of the constantly changing URL.
-jest.mock("../user", () => {
+jest.mock("../generate-auth-url", () => {
   return {
-    ...jest.requireActual("../user"),
-    getAuthURL: jest
+    generateAuthUrl: jest
       .fn()
       .mockImplementation(
         () =>
-          "https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=MOCK_CLIENT_ID&redirect_uri=MOCK_REDIRECT_URI&state=MOCK_STATE&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256"
+          "https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=MOCK_CLIENT_ID&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256"
       ),
   };
 });
