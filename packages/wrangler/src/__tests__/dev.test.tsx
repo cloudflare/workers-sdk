@@ -403,7 +403,7 @@ describe("wrangler dev", () => {
     });
   });
 
-  describe("local origin", () => {
+  describe("local upstream", () => {
     it("should use dev.host from toml by default", async () => {
       writeWranglerToml({
         main: "index.js",
@@ -421,12 +421,12 @@ describe("wrangler dev", () => {
     it("should use route from toml by default", async () => {
       writeWranglerToml({
         main: "index.js",
-        route: `2.some-host.com`,
+        route: "https://4.some-host.com/some/path/*",
       });
       fs.writeFileSync("index.js", `export default {};`);
       await runWrangler("dev --local");
-      expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
-        "2.some-host.com"
+      expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual(
+        "4.some-host.com"
       );
     });
 

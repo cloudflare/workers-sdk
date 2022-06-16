@@ -9,6 +9,16 @@ export interface Zone {
   host: string;
 }
 
+export function getHostFromRoute(route: Route): string | undefined {
+  return typeof route === "string"
+    ? getHostFromUrl(route)
+    : typeof route === "object"
+    ? "zone_name" in route
+      ? getHostFromUrl(route.zone_name)
+      : getHostFromUrl(route.pattern)
+    : undefined;
+}
+
 /**
  * Try to compute the a zone ID and host name for one or more routes.
  *
@@ -17,14 +27,7 @@ export interface Zone {
  * - We try to get a zone id from the host
  */
 export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
-  const host =
-    typeof route === "string"
-      ? getHostFromUrl(route)
-      : typeof route === "object"
-      ? "zone_name" in route
-        ? getHostFromUrl(route.zone_name)
-        : getHostFromUrl(route.pattern)
-      : undefined;
+  const host = getHostFromRoute(route);
   const id =
     typeof route === "object" && "zone_id" in route
       ? route.zone_id

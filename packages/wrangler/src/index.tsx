@@ -68,7 +68,7 @@ import {
   requireAuth,
 } from "./user";
 import { whoami } from "./whoami";
-import { getZoneIdFromHost, getZoneForRoute } from "./zones";
+import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
 
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
@@ -1133,6 +1133,12 @@ function createCLIParser(argv: string[]) {
               host = zone.host;
             }
           }
+        } else if (!host) {
+          const routes = args.routes || config.route || config.routes;
+          if (routes) {
+            const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+            host = getHostFromRoute(firstRoute);
+          }
         }
 
         const nodeCompat = args.nodeCompat ?? config.node_compat;
@@ -1235,6 +1241,7 @@ function createCLIParser(argv: string[]) {
               localProtocol={
                 args["local-protocol"] || config.dev.local_protocol
               }
+              localUpstream={args["local-upstream"] || host}
               enableLocalPersistence={
                 args["experimental-enable-local-persistence"] || false
               }
