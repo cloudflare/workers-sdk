@@ -118,11 +118,13 @@ export function useWorker(props: {
 
       if (!bundle || !format) return;
 
+      const content = await readFile(bundle.path, "utf-8");
+
       if (!startedRef.current) {
         startedRef.current = true;
         // TODO: For Dev we could show the reporter message in the interactive box.
         // As of now only showing for initial server start
-        printBundleSize(modules);
+        printBundleSize(modules, content);
       } else {
         logger.log("⎔ Detected changes, restarted server.");
       }
@@ -143,8 +145,6 @@ export function useWorker(props: {
         true,
         false
       ); // TODO: cancellable?
-
-      const content = await readFile(bundle.path, "utf-8");
 
       const init: CfWorkerInit = {
         name,

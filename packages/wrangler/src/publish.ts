@@ -445,7 +445,7 @@ export default async function publish(props: Props): Promise<void> {
         )
       ).available_on_subdomain;
     }
-    printBundleSize(modules);
+    printBundleSize(modules, content);
   } finally {
     if (typeof destination !== "string") {
       // this means we're using a temp dir,

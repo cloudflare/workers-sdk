@@ -19,6 +19,11 @@ function getCompressedSize(modules: CfModule[]): string {
   ).toFixed(2)} KiB`;
 }
 
-export function printBundleSize(modules: CfModule[]) {
-  logger.log(`Total Upload: ${getCompressedSize(modules)}`);
+export function printBundleSize(modules: CfModule[], content: string) {
+  logger.log(
+    `Total Upload: ${getCompressedSize([
+      ...modules,
+      { name: "workerScript", content },
+    ])}`
+  );
 }
