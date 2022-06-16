@@ -1013,7 +1013,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
     server.listen(8976);
   });
 
-  logger.log(`Opened a link in your default browser: ${urlToOpen}`);
+  logger.log(`Opening a link in your default browser: ${urlToOpen}`);
   await openInBrowser(urlToOpen);
 
   return Promise.race([timerPromise, loginPromise]);
