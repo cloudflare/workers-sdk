@@ -1,5 +1,6 @@
 import { format } from "node:util";
 import { formatMessagesSync } from "esbuild";
+import { getEnvironmentVariableFactory } from "./environment-variables";
 
 const LOGGER_LEVELS = {
   error: 0,
@@ -18,9 +19,15 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
   debug: undefined,
 } as const;
 
-class Logger {
-  constructor(public loggerLevel: LoggerLevel = "log") {}
+const getLogLevelFromEnv = getEnvironmentVariableFactory({
+  variableName: "WRANGLER_LOG",
+  defaultValue: "log",
+});
 
+class Logger {
+  constructor() {}
+
+  loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
   columns = process.stdout.columns;
 
   debug = (...args: unknown[]) => this.doLog("debug", args);
