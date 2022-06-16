@@ -247,7 +247,7 @@ describe("wrangler", () => {
         Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-      Total Upload: 0.23 KiB / gzip: 0.18 KiB
+      Total Upload: 1.00 KiB / gzip: 1.00 KiB
       --dry-run: exiting now."
     `);
   });

@@ -14,8 +14,13 @@ const getSize = (modules: CfModule[]) => {
 
 function getCompressedSize(modules: CfModule[]): string {
   const { size, gzipSize } = getSize(modules);
-  return `${(Math.ceil(size) / 1024).toFixed(2)} KiB / gzip: ${(
-    Math.ceil(gzipSize) / 1024
+
+  /**
+   * Math.ceil is being used to handle an issue of .01 KiB variations seemingly randomly causing flakey tests.
+   * ceil forcing next integer up will prevent optimistic compression uploads being slightly higher than the given user limit.
+   */
+  return `${Math.ceil(size / 1024).toFixed(2)} KiB / gzip: ${Math.ceil(
+    gzipSize / 1024
   ).toFixed(2)} KiB`;
 }
 
