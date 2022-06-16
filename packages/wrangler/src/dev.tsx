@@ -10,7 +10,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
-import { getZoneIdFromHost, getZoneForRoute } from "./zones";
+import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
 import {
   printWranglerBanner,
   DEFAULT_LOCAL_PORT,
@@ -40,6 +40,7 @@ interface DevArgs {
   routes?: string[];
   host?: string;
   "local-protocol"?: "http" | "https";
+  "local-upstream"?: string | undefined;
   "experimental-public"?: string;
   public?: string;
   assets?: string;
@@ -123,6 +124,11 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
     .option("local-protocol", {
       describe: "Protocol to listen to requests on, defaults to http.",
       choices: ["http", "https"] as const,
+    })
+    .options("local-upstream", {
+      type: "string",
+      describe:
+        "Host to act as origin in local mode, defaults to dev.host or route",
     })
     .option("experimental-public", {
       describe: "Static assets to be served",
@@ -298,6 +304,12 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
           host = zone.host;
         }
       }
+    } else if (!host) {
+      const routes = args.routes || config.route || config.routes;
+      if (routes) {
+        const firstRoute = Array.isArray(routes) ? routes[0] : routes;
+        host = getHostFromRoute(firstRoute);
+      }
     }
 
     const nodeCompat = args["node-compat"] ?? config.node_compat;
@@ -408,6 +420,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
           tsconfig={args.tsconfig ?? config.tsconfig}
           upstreamProtocol={upstreamProtocol}
           localProtocol={args["local-protocol"] || config.dev.local_protocol}
+          localUpstream={args["local-upstream"] || host}
           enableLocalPersistence={
             args["experimental-enable-local-persistence"] || false
           }

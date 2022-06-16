@@ -21,7 +21,6 @@ interface LocalProps {
   compatibilityDate: string;
   compatibilityFlags: string[] | undefined;
   bindings: CfWorkerInit["bindings"];
-  localProtocol: "http" | "https";
   assetPaths: AssetPaths | undefined;
   isWorkersSite: boolean;
   port: number;
@@ -57,7 +56,6 @@ function useLocalWorker({
   rules,
   enableLocalPersistence,
   ip,
-  localProtocol,
   crons,
   localProtocol,
   localUpstream,
@@ -315,7 +313,6 @@ function useLocalWorker({
     workerName,
     format,
     port,
-    localProtocol,
     ip,
     bindings.durable_objects?.bindings,
     bindings.kv_namespaces,
