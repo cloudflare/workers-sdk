@@ -220,7 +220,7 @@ import SelectInput from "ink-select-input";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import { getCloudflareApiBaseUrl } from "../cfetch";
+import { fetchListResult } from "../cfetch";
 import { purgeConfigCaches } from "../config-cache";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -233,7 +233,6 @@ import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
-import type { Response } from "undici";
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -1080,56 +1079,41 @@ export async function getAccountId(
     return accountIdFromEnv;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(`${getCloudflareApiBaseUrl()}/memberships`, {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer " + apiToken,
-      },
-    });
-  } catch (err) {
-    // probably offline
-    return;
-  }
-
+  let accounts: { account: ChooseAccountItem }[] = [];
   let accountId: string | undefined;
-  const responseJSON = (await response.json()) as {
-    success: boolean;
-    result: { id: string; account: { id: string; name: string } }[];
-  };
-
-  if (responseJSON.success === true) {
-    if (responseJSON.result.length === 1) {
-      accountId = responseJSON.result[0].account.id;
-    } else if (isInteractive) {
-      accountId = await new Promise((resolve) => {
-        const accounts = responseJSON.result.map((x) => x.account);
-        const { unmount } = render(
-          <ChooseAccount
-            accounts={accounts}
-            onSelect={async (selected) => {
-              resolve(selected.value.id);
-              unmount();
-            }}
-          />
-        );
-      });
-    } else {
-      throw new Error(
-        "More than one account available but unable to select one in non-interactive mode.\n" +
-          `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
-          `Available accounts are ("<name>" - "<id>"):\n` +
-          responseJSON.result
-            .map((x) => `  "${x.account.name}" - "${x.account.id}")`)
-            .join("\n")
+  accounts = await fetchListResult<{
+    account: ChooseAccountItem;
+  }>(`/memberships`);
+  if (accounts.length === 0) {
+    throw new Error(
+      "Failed to automatically retrieve account IDs for the logged in user.\n" +
+        "In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+    );
+  }
+  if (accounts.length === 1) {
+    accountId = accounts[0].account.id;
+  } else if (isInteractive) {
+    accountId = await new Promise((resolve) => {
+      const accountIds = accounts.map((x) => x.account);
+      const { unmount } = render(
+        <ChooseAccount
+          accounts={accountIds}
+          onSelect={async (selected) => {
+            resolve(selected.value.id);
+            unmount();
+          }}
+        />
       );
-    }
+    });
   } else {
-    if (!isInteractive)
-      throw new Error(
-        `Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.`
-      );
+    throw new Error(
+      "More than one account available but unable to select one in non-interactive mode.\n" +
+        `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
+        `Available accounts are ("<name>" - "<id>"):\n` +
+        accounts
+          .map((x) => `  "${x.account.name}" - "${x.account.id}")`)
+          .join("\n")
+    );
   }
   return accountId;
 }
