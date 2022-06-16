@@ -25,14 +25,12 @@ describe("User", () => {
     mockGrantAuthorization,
     mockRevokeAuthorization,
     mockExchangeRefreshTokenForAccessToken,
-    mockGetAuthURL,
   } = mockOAuthFlow();
 
   const { setIsTTY } = useMockIsTTY();
 
   describe("login", () => {
-    it("should login a user when `wrangler login` is run", async () => {
-      mockGetAuthURL();
+    it.only("should login a user when `wrangler login` is run", async () => {
       mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });
@@ -48,7 +46,7 @@ describe("User", () => {
 
       expect(std.out).toMatchInlineSnapshot(`
         "Attempting to login via OAuth...
-        Opened a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=7sz9fe8JyuNefIWy4ASsNUI45-bCWZYU&code_challenge=wuwYbHusC3HhGoxx1TsMjYB2jGqivjL0m3aQjt44jOQ&code_challenge_method=S256
+        Opened a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=vVrhtC3bMvq_T4QvTEbDzdOwULTtPnuw&code_challenge=W0hMBLU8mjLZONVOfNRgORxzhjPPslRV8LnBlVRY8jo&code_challenge_method=S256
         Successfully logged in."
       `);
 

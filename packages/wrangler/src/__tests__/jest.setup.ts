@@ -75,3 +75,16 @@ jest.mock("../dev/dev", () => {
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
 jest.mock("../open-in-browser");
+
+// Mock the getAuthURL function so we don't take snapshots of the constantly changing URL.
+jest.mock("../user", () => {
+  return {
+    ...jest.requireActual("../user"),
+    getAuthURL: jest
+      .fn()
+      .mockImplementation(
+        () =>
+          "https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=MOCK_CLIENT_ID&redirect_uri=MOCK_REDIRECT_URI&state=MOCK_STATE&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256"
+      ),
+  };
+});
