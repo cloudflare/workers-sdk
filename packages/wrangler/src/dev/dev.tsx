@@ -149,7 +149,6 @@ function DevSession(props: DevSessionProps) {
       bundle={bundle}
       format={props.entry.format}
       compatibilityDate={props.compatibilityDate}
-      localProtocol={props.localProtocol}
       compatibilityFlags={props.compatibilityFlags}
       bindings={props.bindings}
       assetPaths={props.assetPaths}
