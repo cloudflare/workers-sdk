@@ -30,7 +30,7 @@ describe("User", () => {
   const { setIsTTY } = useMockIsTTY();
 
   describe("login", () => {
-    it.only("should login a user when `wrangler login` is run", async () => {
+    it("should login a user when `wrangler login` is run", async () => {
       mockOAuthServerCallback();
       const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
       mockGrantAuthorization({ respondWith: "success" });

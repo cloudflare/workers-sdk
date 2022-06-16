@@ -7,6 +7,10 @@ interface GenerateAuthUrlProps {
   codeChallenge: string;
 }
 
+/**
+ * generateAuthUrl was extracted from getAuthURL in user.tsx
+ * to make it possible to mock the generated URL
+ */
 export const generateAuthUrl = ({
   authUrl,
   clientId,
