@@ -111,7 +111,7 @@ export async function deleteKVNamespace(
  */
 export interface KeyValue {
   key: string;
-  value: string | Buffer;
+  value: string;
   expiration?: number;
   expiration_ttl?: number;
   metadata?: object;

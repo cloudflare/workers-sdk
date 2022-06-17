@@ -140,25 +140,6 @@ export function parseJSON<T>(input: string, file?: string): T {
 }
 
 /**
- * Reads a file into a node Buffer.
- */
-export function readFileSyncToBuffer(file: string): Buffer {
-  try {
-    return fs.readFileSync(file);
-  } catch (err) {
-    const { message } = err as Error;
-    throw new ParseError({
-      text: `Could not read file: ${file}`,
-      notes: [
-        {
-          text: message.replace(file, resolve(file)),
-        },
-      ],
-    });
-  }
-}
-
-/**
  * Reads a file and parses it based on its type.
  */
 export function readFileSync(file: string): string {

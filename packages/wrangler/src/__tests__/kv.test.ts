@@ -448,37 +448,16 @@ describe("wrangler", () => {
       });
 
       it("should put a key with a value loaded from a given path", async () => {
-        const buf = Buffer.from("file-contents", "utf-8");
-        writeFileSync("foo.txt", buf);
+        writeFileSync("foo.txt", "file-contents", "utf-8");
         const requests = mockKeyPutRequest("some-namespace-id", {
           key: "my-key",
-          value: buf,
+          value: "file-contents",
         });
         await runWrangler(
           "kv:key put my-key --namespace-id some-namespace-id --path foo.txt"
         );
         expect(std.out).toMatchInlineSnapshot(
           `"Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."`
-        );
-        expect(std.err).toMatchInlineSnapshot(`""`);
-        expect(requests.count).toEqual(1);
-      });
-
-      it("should put a key with a binary value loaded from a given path", async () => {
-        const buf = Buffer.from(
-          "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAiSURBVHgB7coxEQAACMPAgH/PgAM6dGwu49fA/deIBXrgAj2cAhIFT4QxAAAAAElFTkSuQmCC",
-          "base64"
-        );
-        writeFileSync("test.png", buf);
-        const requests = mockKeyPutRequest("another-namespace-id", {
-          key: "my-key",
-          value: buf,
-        });
-        await runWrangler(
-          "kv:key put my-key --namespace-id another-namespace-id --path test.png"
-        );
-        expect(std.out).toMatchInlineSnapshot(
-          `"Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."`
         );
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(requests.count).toEqual(1);
