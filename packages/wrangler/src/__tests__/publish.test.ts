@@ -1365,6 +1365,45 @@ addEventListener('fetch', event => {});`
         "
       `);
     });
+
+    it("should not require an explicit entry point when using --assets", async () => {
+      const assets = [
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      writeAssets(assets);
+      mockUploadWorkerRequest({ expectedMainModule: "stdin.js" });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish --assets assets --latest --name test-name");
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
+
+
+
+        ",
+        }
+      `);
+    });
   });
 
   describe("asset upload", () => {
