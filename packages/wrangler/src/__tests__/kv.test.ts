@@ -8,9 +8,9 @@ import {
   setMockFetchKVGetValue,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockProcess } from "./helpers/mock-process";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
 import { mockKeyListRequest } from "./helpers/mock-kv";
+import { mockProcess } from "./helpers/mock-process";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { KeyValue, KVNamespaceInfo, NamespaceKeyInfo } from "../kv";
