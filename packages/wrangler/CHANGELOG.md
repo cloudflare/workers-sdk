@@ -6,10 +6,6 @@
 
 - [`a4ba42a`](https://github.com/cloudflare/wrangler2/commit/a4ba42a99caf8a61f618293768e5f5375354f6ee) Thanks [@threepointone](https://github.com/threepointone)! - Revert "Take 2 at moving .npmrc to the root of the repository (#1281)"
 
-## 2.0.13
-
-### Patch Changes
-
 - [#1267](https://github.com/cloudflare/wrangler2/pull/1267) [`c667398`](https://github.com/cloudflare/wrangler2/commit/c66739841646e0646729e671267e7227ecf1147e) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: let folks know the URL we're opening during login
 
   Closes #1259
