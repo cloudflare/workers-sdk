@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.0.14
+
+### Patch Changes
+
+- [`a4ba42a`](https://github.com/cloudflare/wrangler2/commit/a4ba42a99caf8a61f618293768e5f5375354f6ee) Thanks [@threepointone](https://github.com/threepointone)! - Revert "Take 2 at moving .npmrc to the root of the repository (#1281)"
+
 ## 2.0.13
 
 ### Patch Changes
