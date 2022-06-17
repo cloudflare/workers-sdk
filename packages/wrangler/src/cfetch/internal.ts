@@ -123,7 +123,7 @@ export async function fetchKVGetValue(
   accountId: string,
   namespaceId: string,
   key: string
-): Promise<string> {
+): Promise<ArrayBuffer> {
   await requireLoggedIn();
   const apiToken = requireApiToken();
   const headers = { Authorization: `Bearer ${apiToken}` };
@@ -133,7 +133,7 @@ export async function fetchKVGetValue(
     headers,
   });
   if (response.ok) {
-    return await response.text();
+    return await response.arrayBuffer();
   } else {
     throw new Error(
       `Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
