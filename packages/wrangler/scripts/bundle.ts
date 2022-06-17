@@ -7,10 +7,14 @@ type BuildFlags = {
   watch?: boolean;
 };
 
-function watchLogger(project: string): WatchMode {
+function watchLogger(outputPath: string): WatchMode {
   return {
     onRebuild(error, _) {
-      if (error) console.error(`${project} build failed.\n`, error);
+      if (error) {
+        console.error(`${outputPath} build failed.\n`, error);
+      } else {
+        console.log(`${outputPath} updated.`);
+      }
     },
   };
 }
@@ -39,7 +43,7 @@ async function buildMain(flags: BuildFlags = {}) {
       "import.meta.url": "import_meta_url",
       "process.env.NODE_ENV": '"production"',
     },
-    watch: flags.watch ? watchLogger("Wrangler") : false,
+    watch: flags.watch ? watchLogger("./wrangler-dist") : false,
   });
 }
 
@@ -55,7 +59,7 @@ async function buildMiniflareCLI(flags: BuildFlags = {}) {
     define: {
       "process.env.NODE_ENV": '"production"',
     },
-    watch: flags.watch ? watchLogger("Miniflare") : false,
+    watch: flags.watch ? watchLogger("./miniflare-dist/index.mjs") : false,
   });
 }
 
@@ -66,11 +70,9 @@ async function run() {
   // custom miniflare cli
   await buildMiniflareCLI();
 
-  console.log("Built wrangler & Miniflare CLI.");
-
   // After built once completely, rerun them both in watch mode
   if (process.argv.includes("--watch")) {
-    console.log("Watching for changes...");
+    console.log("Built. Watching for changes...");
     await Promise.all([
       buildMain({ watch: true }),
       buildMiniflareCLI({ watch: true }),
