@@ -111,7 +111,7 @@ export async function deleteKVNamespace(
  */
 export interface KeyValue {
   key: string;
-  value: string;
+  value: string | Buffer;
   expiration?: number;
   expiration_ttl?: number;
   metadata?: object;
@@ -214,7 +214,7 @@ export async function getKVKeyValue(
   accountId: string,
   namespaceId: string,
   key: string
-): Promise<string> {
+): Promise<ArrayBuffer> {
   return await fetchKVGetValue(accountId, namespaceId, encodeURIComponent(key));
 }
 

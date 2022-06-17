@@ -48,6 +48,7 @@ import {
   parsePackageJSON,
   parseTOML,
   readFileSync,
+  readFileSyncToBuffer,
 } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
@@ -2277,7 +2278,7 @@ function createCLIParser(argv: string[]) {
             const namespaceId = getKVNamespaceId(args, config);
             // One of `args.path` and `args.value` must be defined
             const value = args.path
-              ? readFileSync(args.path)
+              ? readFileSyncToBuffer(args.path)
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 args.value!;
 
@@ -2394,7 +2395,9 @@ function createCLIParser(argv: string[]) {
 
             const accountId = await requireAuth(config);
 
-            logger.log(await getKVKeyValue(accountId, namespaceId, key));
+            process.stdout.write(
+              Buffer.from(await getKVKeyValue(accountId, namespaceId, key))
+            );
           }
         )
         .command(

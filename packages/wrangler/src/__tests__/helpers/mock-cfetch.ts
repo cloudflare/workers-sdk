@@ -179,7 +179,7 @@ export function unsetAllMocks() {
  * special-case mocking it here.
  */
 
-const kvGetMocks = new Map<string, string>();
+const kvGetMocks = new Map<string, string | Buffer>();
 
 /**
  * @mocked typeof fetchKVGetValue
@@ -201,7 +201,7 @@ export function setMockFetchKVGetValue(
   accountId: string,
   namespaceId: string,
   key: string,
-  value: string
+  value: string | Buffer
 ) {
   kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
 }
