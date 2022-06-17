@@ -19,7 +19,11 @@ export type Entry = { file: string; directory: string; format: CfScriptFormat };
  * Compute the entry-point for the Worker.
  */
 export async function getEntry(
-  args: { script?: string; format?: CfScriptFormat | undefined },
+  args: {
+    script?: string;
+    format?: CfScriptFormat | undefined;
+    assets?: string | undefined;
+  },
   config: Config,
   command: "dev" | "publish"
 ): Promise<Entry> {
@@ -35,6 +39,8 @@ export async function getEntry(
         ? path.resolve(config.site?.["entry-point"])
         : // site.entry-point could be a directory
           path.resolve(config.site?.["entry-point"], "index.js");
+    } else if (args.assets) {
+      file = path.resolve(__dirname, "../templates/no-op-worker.js");
     } else {
       throw new Error(
         `Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
