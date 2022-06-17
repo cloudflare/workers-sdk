@@ -1,5 +1,19 @@
 # wrangler
 
+## 2.0.13
+
+### Patch Changes
+
+- [#1267](https://github.com/cloudflare/wrangler2/pull/1267) [`c667398`](https://github.com/cloudflare/wrangler2/commit/c66739841646e0646729e671267e7227ecf1147e) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: let folks know the URL we're opening during login
+
+  Closes #1259
+
+* [#1277](https://github.com/cloudflare/wrangler2/pull/1277) [`3f3416b`](https://github.com/cloudflare/wrangler2/commit/3f3416b43f6500708369197802789f4dbe7b6d57) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: bump undici to v5.5.1 (CVE patch)
+
+- [#1260](https://github.com/cloudflare/wrangler2/pull/1260) [`d8ee04f`](https://github.com/cloudflare/wrangler2/commit/d8ee04f343303e50c976b676cd06075a971081f2) Thanks [@threepointone](https://github.com/threepointone)! - fix: pass env and ctx to request handler when using `--experimental-public`
+
+* [`1b068c9`](https://github.com/cloudflare/wrangler2/commit/1b068c99e26c5007e6dbeb26479b1dbd5d4e9a17) Thanks [@threepointone](https://github.com/threepointone)! - Revert "fix: kv:key put upload binary files fix (#1255)"
+
 ## 2.0.12
 
 ### Patch Changes
