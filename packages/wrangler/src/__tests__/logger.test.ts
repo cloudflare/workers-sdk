@@ -112,4 +112,30 @@ describe("logger", () => {
       `);
     });
   });
+
+  describe("loggerLevelFromEnvVar=error", () => {
+    beforeEach(() => {
+      process.env.WRANGLER_LOG = "error";
+    });
+    afterEach(() => {
+      process.env.WRANGLER_LOG = undefined;
+    });
+
+    it("should render messages that are at or above the log level set in the env var", () => {
+      logger.loggerLevel = "error";
+      logger.debug("This is a debug message");
+      logger.log("This is a log message");
+      logger.warn("This is a warn message");
+      logger.error("This is a error message");
+
+      expect(std.debug).toMatchInlineSnapshot(`""`);
+      expect(std.out).toMatchInlineSnapshot(`""`);
+      expect(std.warn).toMatchInlineSnapshot(`""`);
+      expect(std.err).toMatchInlineSnapshot(`
+        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
+
+        "
+      `);
+    });
+  });
 });
