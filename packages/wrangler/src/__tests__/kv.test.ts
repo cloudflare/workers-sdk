@@ -8,6 +8,7 @@ import {
   setMockFetchKVGetValue,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockProcess } from "./helpers/mock-process";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -19,6 +20,7 @@ describe("wrangler", () => {
   mockApiToken();
   runInTempDir();
   const std = mockConsoleMethods();
+  const proc = mockProcess();
 
   afterEach(() => {
     unsetAllMocks();
@@ -895,7 +897,23 @@ describe("wrangler", () => {
           "my-value"
         );
         await runWrangler("kv:key get my-key --namespace-id some-namespace-id");
-        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(proc.write).toEqual(Buffer.from("my-value"));
+        expect(std.err).toMatchInlineSnapshot(`""`);
+      });
+
+      it("should get a binary file by key in a given namespace specified by namespace-id", async () => {
+        const buf = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAiSURBVHgB7coxEQAACMPAgH/PgAM6dGwu49fA/deIBXrgAj2cAhIFT4QxAAAAAElFTkSuQmCC",
+          "base64"
+        );
+        setMockFetchKVGetValue(
+          "some-account-id",
+          "some-namespace-id",
+          "my-key",
+          buf
+        );
+        await runWrangler("kv:key get my-key --namespace-id some-namespace-id");
+        expect(proc.write).toEqual(buf);
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
@@ -910,7 +928,7 @@ describe("wrangler", () => {
         await runWrangler(
           "kv:key get my-key --binding someBinding --preview false"
         );
-        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(proc.write).toEqual(Buffer.from("my-value"));
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
@@ -923,7 +941,7 @@ describe("wrangler", () => {
           "my-value"
         );
         await runWrangler("kv:key get my-key --binding someBinding --preview");
-        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(proc.write).toEqual(Buffer.from("my-value"));
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
@@ -938,7 +956,7 @@ describe("wrangler", () => {
         await runWrangler(
           "kv:key get my-key --binding someBinding --env some-environment --preview false"
         );
-        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(proc.write).toEqual(Buffer.from("my-value"));
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
@@ -952,7 +970,7 @@ describe("wrangler", () => {
         await runWrangler(
           "kv:key get /my,key --namespace-id some-namespace-id"
         );
-        expect(std.out).toMatchInlineSnapshot(`"my-value"`);
+        expect(proc.write).toEqual(Buffer.from("my-value"));
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 

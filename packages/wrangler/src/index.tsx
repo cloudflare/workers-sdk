@@ -2390,8 +2390,7 @@ function createCLIParser(argv: string[]) {
 
             const accountId = await requireAuth(config);
 
-            fs.writeFileSync(
-              process.stdout.fd,
+            process.stdout.write(
               Buffer.from(await getKVKeyValue(accountId, namespaceId, key))
             );
           }
