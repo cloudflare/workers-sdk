@@ -304,8 +304,50 @@ export interface AssetPaths {
  * Uses the args (passed from the command line) if available,
  * falling back to those defined in the config.
  *
+ * (This function corresponds to --assets/config.assets)
+ *
  */
 export function getAssetPaths(
+  config: Config,
+  assetDirectory: string | undefined
+): AssetPaths | undefined {
+  const baseDirectory = path.resolve(
+    path.dirname(config.configPath ?? "wrangler.toml")
+  );
+
+  assetDirectory ??=
+    typeof config.assets === "string"
+      ? config.assets
+      : config.assets !== undefined
+      ? config.assets.bucket
+      : undefined;
+
+  const includePatterns =
+    (typeof config.assets !== "string" && config.assets?.include) || [];
+
+  const excludePatterns =
+    (typeof config.assets !== "string" && config.assets?.exclude) || [];
+
+  return assetDirectory
+    ? {
+        baseDirectory,
+        assetDirectory,
+        includePatterns,
+        excludePatterns,
+      }
+    : undefined;
+}
+
+/**
+ * Get an object that describes what site assets to upload, if any.
+ *
+ * Uses the args (passed from the command line) if available,
+ * falling back to those defined in the config.
+ *
+ * (This function corresponds to --site/config.site)
+ *
+ */
+export function getSiteAssetPaths(
   config: Config,
   assetDirectory = config.site?.bucket,
   includePatterns = config.site?.include ?? [],

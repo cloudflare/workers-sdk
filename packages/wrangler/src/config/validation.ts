@@ -186,6 +186,7 @@ export function normalizeAndValidateConfig(
       rawConfig,
       activeEnv.main
     ),
+    assets: normalizeAndValidateAssets(diagnostics, configPath, rawConfig),
     wasm_modules: normalizeAndValidateModulePaths(
       diagnostics,
       configPath,
@@ -214,6 +215,8 @@ export function normalizeAndValidateConfig(
     Object.keys(rawConfig),
     [...Object.keys(config), "env"]
   );
+
+  experimental(diagnostics, rawConfig, "assets");
 
   return { config, diagnostics };
 }
@@ -569,6 +572,35 @@ function normalizeAndValidateSite(
     };
   }
   return undefined;
+}
+
+/**
+ * Validate the `assets` configuration and return normalized values.
+ */
+function normalizeAndValidateAssets(
+  diagnostics: Diagnostics,
+  configPath: string | undefined,
+  rawConfig: RawConfig
+) {
+  if (
+    typeof rawConfig?.assets === "string" ||
+    rawConfig?.assets === undefined
+  ) {
+    return rawConfig?.assets;
+  }
+
+  const { bucket, include = [], exclude = [], ...rest } = rawConfig.assets;
+
+  validateAdditionalProperties(diagnostics, "assets", Object.keys(rest), []);
+  validateRequiredProperty(diagnostics, "assets", "bucket", bucket, "string");
+  validateTypedArray(diagnostics, "assets.include", include, "string");
+  validateTypedArray(diagnostics, "assets.exclude", exclude, "string");
+
+  return {
+    bucket,
+    include,
+    exclude,
+  };
 }
 
 /**

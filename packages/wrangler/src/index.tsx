@@ -52,7 +52,7 @@ import {
 } from "./parse";
 import publish from "./publish";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
-import { getAssetPaths } from "./sites";
+import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
   createTail,
   jsonPrintLogs,
@@ -972,6 +972,13 @@ function createCLIParser(argv: string[]) {
           describe: "Static assets to be served",
           type: "string",
           requiresArg: true,
+          deprecated: true,
+          hidden: true,
+        })
+        .option("assets", {
+          describe: "Static assets to be served",
+          type: "string",
+          requiresArg: true,
         })
         .option("site", {
           describe: "Root folder of static assets for Workers Sites",
@@ -1087,20 +1094,18 @@ function createCLIParser(argv: string[]) {
         }
 
         if (args["experimental-public"]) {
-          logger.warn(
-            "The --experimental-public field is experimental and will change in the future."
-          );
-        }
-
-        if (args["experimental-public"] && (args.site || config.site)) {
           throw new Error(
-            "Cannot use --experimental-public and a Site configuration together."
+            "The --experimental-public field has been renamed to --assets"
           );
         }
 
         if (args.public) {
+          throw new Error("The --public field has been renamed to --assets");
+        }
+
+        if ((args.assets || config.assets) && (args.site || config.site)) {
           throw new Error(
-            "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+            "Cannot use Assets and Workers Sites in the same Worker."
           );
         }
 
@@ -1215,6 +1220,16 @@ function createCLIParser(argv: string[]) {
             vars: maskedVars,
           });
 
+          const assetPaths =
+            args.assets || config.assets
+              ? getAssetPaths(config, args.assets)
+              : getSiteAssetPaths(
+                  config,
+                  args.site,
+                  args.siteInclude,
+                  args.siteExclude
+                );
+
           return (
             <Dev
               name={getScriptName(args, config)}
@@ -1239,18 +1254,13 @@ function createCLIParser(argv: string[]) {
                 args["experimental-enable-local-persistence"] || false
               }
               accountId={config.account_id}
-              assetPaths={getAssetPaths(
-                config,
-                args["experimental-public"] || args.site,
-                args.siteInclude,
-                args.siteExclude
-              )}
+              assetPaths={assetPaths}
               port={args.port || config.dev.port || (await getLocalPort())}
               ip={args.ip || config.dev.ip}
               inspectorPort={
                 args["inspector-port"] ?? (await getInspectorPort())
               }
-              public={args["experimental-public"]}
+              isWorkersSite={Boolean(args.site || config.site)}
               compatibilityDate={getDevCompatibilityDate(
                 config,
                 args["compatibility-date"]
@@ -1324,6 +1334,13 @@ function createCLIParser(argv: string[]) {
           default: false,
         })
         .option("experimental-public", {
+          describe: "Static assets to be served",
+          type: "string",
+          requiresArg: true,
+          deprecated: true,
+          hidden: true,
+        })
+        .option("assets", {
           describe: "Static assets to be served",
           type: "string",
           requiresArg: true,
@@ -1403,19 +1420,18 @@ function createCLIParser(argv: string[]) {
       const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "publish");
 
-      if (args["experimental-public"]) {
-        logger.warn(
-          "The --experimental-public field is experimental and will change in the future."
-        );
-      }
-      if (args["experimental-public"] && (args.site || config.site)) {
-        throw new Error(
-          "Cannot use --experimental-public and a Site configuration together."
-        );
-      }
       if (args.public) {
+        throw new Error("The --public field has been renamed to --assets");
+      }
+      if (args["experimental-public"]) {
         throw new Error(
-          "The --public field has been renamed to --experimental-public, and will change behaviour in the future."
+          "The --experimental-public field has been renamed to --assets"
+        );
+      }
+
+      if ((args.assets || config.assets) && (args.site || config.site)) {
+        throw new Error(
+          "Cannot use Assets and Workers Sites in the same Worker."
         );
       }
 
@@ -1427,12 +1443,15 @@ function createCLIParser(argv: string[]) {
 
       const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-      const assetPaths = getAssetPaths(
-        config,
-        args["experimental-public"] || args.site,
-        args.siteInclude,
-        args.siteExclude
-      );
+      const assetPaths =
+        args.assets || config.assets
+          ? getAssetPaths(config, args.assets)
+          : getSiteAssetPaths(
+              config,
+              args.site,
+              args.siteInclude,
+              args.siteExclude
+            );
 
       await publish({
         config,
@@ -1454,7 +1473,7 @@ function createCLIParser(argv: string[]) {
         legacyEnv: isLegacyEnv(config),
         minify: args.minify,
         nodeCompat: args.nodeCompat,
-        experimentalPublic: args["experimental-public"] !== undefined,
+        isWorkersSite: Boolean(args.site || config.site),
         outDir: args.outdir,
         dryRun: args.dryRun,
       });
@@ -1679,7 +1698,7 @@ function createCLIParser(argv: string[]) {
             config.dev.port || (await getPort({ port: DEFAULT_LOCAL_PORT }))
           }
           ip={config.dev.ip}
-          public={undefined}
+          isWorkersSite={false}
           compatibilityDate={getDevCompatibilityDate(config)}
           compatibilityFlags={config.compatibility_flags}
           usageModel={config.usage_model}

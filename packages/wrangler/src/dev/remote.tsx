@@ -16,7 +16,7 @@ export function Remote(props: {
   name: string | undefined;
   bundle: EsbuildBundle | undefined;
   format: CfScriptFormat | undefined;
-  public: string | undefined;
+  isWorkersSite: boolean;
   assetPaths: AssetPaths | undefined;
   port: number;
   ip: string;
@@ -40,7 +40,7 @@ export function Remote(props: {
     accountId: props.accountId,
     bindings: props.bindings,
     assetPaths: props.assetPaths,
-    public: props.public,
+    isWorkersSite: props.isWorkersSite,
     port: props.port,
     compatibilityDate: props.compatibilityDate,
     compatibilityFlags: props.compatibilityFlags,
@@ -53,7 +53,9 @@ export function Remote(props: {
 
   usePreviewServer({
     previewToken,
-    publicRoot: props.public,
+    assetDirectory: props.isWorkersSite
+      ? undefined
+      : props.assetPaths?.assetDirectory,
     localProtocol: props.localProtocol,
     localPort: props.port,
     ip: props.ip,
@@ -75,7 +77,7 @@ export function useWorker(props: {
   accountId: string | undefined;
   bindings: CfWorkerInit["bindings"];
   assetPaths: AssetPaths | undefined;
-  public: string | undefined;
+  isWorkersSite: boolean;
   port: number;
   compatibilityDate: string | undefined;
   compatibilityFlags: string[] | undefined;
@@ -133,7 +135,7 @@ export function useWorker(props: {
         // include it in the kv namespace name regardless (since there's no
         // concept of service environments for kv namespaces yet).
         name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
-        props.public ? undefined : assetPaths,
+        props.isWorkersSite ? assetPaths : undefined,
         true,
         false
       ); // TODO: cancellable?
@@ -225,7 +227,7 @@ export function useWorker(props: {
     accountId,
     port,
     assetPaths,
-    props.public,
+    props.isWorkersSite,
     compatibilityDate,
     compatibilityFlags,
     usageModel,

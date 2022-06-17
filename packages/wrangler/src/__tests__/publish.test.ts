@@ -1405,7 +1405,7 @@ addEventListener('fetch', event => {});`
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should upload all the files in the directory specified by `--experimental-public`", async () => {
+    it("should upload all the files in the directory specified by `--assets`", async () => {
       const assets = [
         { filePath: "file-1.txt", content: "Content of file-1" },
         { filePath: "file-2.txt", content: "Content of file-2" },
@@ -1426,34 +1426,74 @@ addEventListener('fetch', event => {});`
       mockListKVNamespacesRequest(kvNamespace);
       mockKeyListRequest(kvNamespace.id, []);
       mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-      await runWrangler("publish --experimental-public assets");
+      await runWrangler("publish --assets assets");
 
-      expect(std.out).toMatchInlineSnapshot(`
-        "Reading file-1.txt...
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
-          test-name.test-sub-domain.workers.dev"
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
       `);
-      expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should error if --experimental-public and --site are used together", async () => {
+    it("should error when trying to use --assets with a service-worker Worker", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      writeWorkerSource({ type: "sw" });
+      await expect(
+        runWrangler("publish --assets abc")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"`
+      );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
+
+        ",
+          "out": "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should error if --assets and --site are used together", async () => {
       writeWranglerToml({
         main: "./index.js",
       });
       writeWorkerSource();
       await expect(
-        runWrangler("publish --experimental-public abc --site xyz")
+        runWrangler("publish --assets abc --site xyz")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Cannot use --experimental-public and a Site configuration together."`
+        `"Cannot use Assets and Workers Sites in the same Worker."`
       );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+
+        ",
+          "out": "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "",
+        }
+      `);
     });
 
-    it("should error if --experimental-public and config.site are used together", async () => {
+    it("should error if --assets and config.site are used together", async () => {
       writeWranglerToml({
         main: "./index.js",
         site: {
@@ -1462,10 +1502,83 @@ addEventListener('fetch', event => {});`
       });
       writeWorkerSource();
       await expect(
-        runWrangler("publish --experimental-public abc")
+        runWrangler("publish --assets abc")
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Cannot use --experimental-public and a Site configuration together."`
+        `"Cannot use Assets and Workers Sites in the same Worker."`
       );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+
+        ",
+          "out": "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should error if config.assets and --site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        assets: "abc",
+      });
+      writeWorkerSource();
+      await expect(
+        runWrangler("publish --site xyz")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use Assets and Workers Sites in the same Worker."`
+      );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+
+        ",
+          "out": "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"assets\\" fields are experimental and may change or break at any time.
+
+        ",
+        }
+      `);
+    });
+
+    it("should error if config.assets and config.site are used together", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        assets: "abc",
+        site: {
+          bucket: "xyz",
+        },
+      });
+      writeWorkerSource();
+      await expect(
+        runWrangler("publish")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Cannot use Assets and Workers Sites in the same Worker."`
+      );
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+
+        ",
+          "out": "
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"assets\\" fields are experimental and may change or break at any time.
+
+        ",
+        }
+      `);
     });
 
     it("should not contain backslash for assets with nested directories", async () => {
