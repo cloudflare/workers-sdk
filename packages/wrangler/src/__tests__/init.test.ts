@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
@@ -15,8 +14,16 @@ import {
 } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { RawConfig } from "../config";
 import type { PackageManager } from "../package-manager";
+
+/**
+ * An expectation matcher for the minimal generated wrangler.toml.
+ */
+const MINIMAL_WRANGLER_TOML = {
+  compatibility_date: expect.any(String),
+  name: expect.stringContaining("wrangler-tests"),
+  main: "src/index.ts",
+};
 
 describe("init", () => {
   let mockPackageManager: PackageManager;
@@ -44,11 +51,16 @@ describe("init", () => {
     it("should initialize with no interactive prompts if `--yes` is used", async () => {
       await runWrangler("init --yes");
 
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.existsSync("./src/index.ts")).toBe(true);
-      expect(fs.existsSync("./tsconfig.json")).toBe(true);
-      expect(fs.existsSync("./package.json")).toBe(true);
-      expect(fs.existsSync("./wrangler.toml")).toBe(true);
+      checkFiles({
+        items: {
+          "./src/index.js": false,
+          "./src/index.ts": true,
+          "./tsconfig.json": true,
+          "./package.json": true,
+          "./wrangler.toml": true,
+        },
+      });
+
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Initialized git repository
@@ -67,15 +79,19 @@ describe("init", () => {
     it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
       await runWrangler("init my-worker --yes");
 
-      expect(fs.existsSync("./my-worker/src/index.js")).toBe(false);
-      expect(fs.existsSync("./my-worker/src/index.ts")).toBe(true);
-      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(true);
-      expect(fs.existsSync("./my-worker/package.json")).toBe(true);
-      expect(fs.existsSync("./my-worker/wrangler.toml")).toBe(true);
-      const parsedWranglerToml = TOML.parse(
-        fs.readFileSync("./my-worker/wrangler.toml", "utf-8")
-      );
-      expect(parsedWranglerToml.main).toEqual("src/index.ts");
+      checkFiles({
+        items: {
+          "./my-worker/src/index.js": false,
+          "./my-worker/src/index.ts": true,
+          "./my-worker/tsconfig.json": true,
+          "./my-worker/package.json": true,
+          "./my-worker/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "my-worker",
+          }),
+        },
+      });
+
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created my-worker/wrangler.toml
         ✨ Initialized git repository at my-worker
@@ -94,11 +110,16 @@ describe("init", () => {
     it("should initialize with no interactive prompts if `-y` is used", async () => {
       await runWrangler("init -y");
 
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.existsSync("./src/index.ts")).toBe(true);
-      expect(fs.existsSync("./tsconfig.json")).toBe(true);
-      expect(fs.existsSync("./package.json")).toBe(true);
-      expect(fs.existsSync("./wrangler.toml")).toBe(true);
+      checkFiles({
+        items: {
+          "./src/index.js": false,
+          "./src/index.ts": true,
+          "./tsconfig.json": true,
+          "./package.json": true,
+          "./wrangler.toml": true,
+        },
+      });
+
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -171,11 +192,17 @@ describe("init", () => {
         }
       );
       await runWrangler("init");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toContain("wrangler-tests");
-      expect(fs.existsSync("./package.json")).toBe(false);
-      expect(fs.existsSync("./tsconfig.json")).toBe(false);
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: expect.any(String),
+            name: expect.stringContaining("wrangler-tests"),
+          }),
+          "package.json": false,
+          "tsconfig.json": false,
+        },
+      });
+
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -198,13 +225,17 @@ describe("init", () => {
         }
       );
       await runWrangler("init my-worker");
-      const parsed = TOML.parse(
-        await fsp.readFile("./my-worker/wrangler.toml", "utf-8")
-      );
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toBe("my-worker");
-      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
-      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+
+      checkFiles({
+        items: {
+          "my-worker/wrangler.toml": wranglerToml({
+            compatibility_date: expect.any(String),
+            name: "my-worker",
+          }),
+          "my-worker/package.json": false,
+          "my-worker/tsconfig.json": false,
+        },
+      });
 
       expect(std).toMatchInlineSnapshot(`
         Object {
@@ -217,19 +248,32 @@ describe("init", () => {
     });
 
     it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
-      fs.writeFileSync(
-        "./wrangler.toml",
-        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            // use a fake value to make sure the file is not overwritten
+            compatibility_date: "something-else",
+          }),
+        },
+      });
+
       mockConfirm({
         text: "Do you want to continue initializing this project?",
         result: false,
       });
+
       await runWrangler("init");
       expect(std.warn).toContain("wrangler.toml already exists!");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
-      expect(parsed.compatibility_date).toBe("something-else");
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+          "package.json": false,
+          "tsconfig.json": false,
+        },
+      });
 
       expect(std).toMatchInlineSnapshot(`
         Object {
@@ -244,22 +288,30 @@ describe("init", () => {
     });
 
     it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
-      fs.mkdirSync("path/to/worker", { recursive: true });
-      fs.writeFileSync(
-        "path/to/worker/wrangler.toml",
-        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "path/to/worker/wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
       mockConfirm({
         text: "Do you want to continue initializing this project?",
         result: false,
       });
+
       await runWrangler("init path/to/worker");
+
       expect(std.warn).toContain("wrangler.toml already exists!");
-      const parsed = TOML.parse(
-        await fsp.readFile("path/to/worker/wrangler.toml", "utf-8")
-      );
-      expect(parsed.compatibility_date).toBe("something-else");
+      checkFiles({
+        items: {
+          "path/to/worker/wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+          "package.json": false,
+          "tsconfig.json": false,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -273,11 +325,13 @@ describe("init", () => {
     });
 
     it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
-      fs.writeFileSync(
-        "./wrangler.toml",
-        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
@@ -303,17 +357,24 @@ describe("init", () => {
       });
 
       await runWrangler("init");
-      expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
-        `"compatibility_date=\\"something-else\\""`
-      );
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
     });
 
     it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
-      fs.writeFileSync(
-        "./wrangler.toml",
-        `compatibility_date="something-else"`,
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
       mockConfirm(
         {
           text: "Do you want to continue initializing this project?",
@@ -328,10 +389,17 @@ describe("init", () => {
           result: false,
         }
       );
+
       await runWrangler("init");
+
       expect(std.warn).toContain("wrangler.toml already exists!");
-      const parsed = TOML.parse(await fsp.readFile("./wrangler.toml", "utf-8"));
-      expect(parsed.compatibility_date).toBe("something-else");
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -345,11 +413,13 @@ describe("init", () => {
     });
 
     it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
-      fs.writeFileSync(
-        "./wrangler.toml",
-        'compatibility_date="something-else"', // use a fake value to make sure the file is not overwritten
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
@@ -368,16 +438,20 @@ describe("init", () => {
           result: true,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.ts?",
         result: "scheduled",
       });
 
       await runWrangler("init");
-      expect(fs.readFileSync("./wrangler.toml", "utf-8")).toMatchInlineSnapshot(
-        `"compatibility_date=\\"something-else\\""`
-      );
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: "something-else",
+          }),
+        },
+      });
     });
 
     it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async () => {
@@ -395,19 +469,21 @@ describe("init", () => {
           result: true,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.ts?",
         result: "scheduled",
       });
 
       await runWrangler("init");
-      const parsed = TOML.parse(
-        await fsp.readFile("./wrangler.toml", "utf-8")
-      ) as RawConfig;
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toContain("wrangler-tests");
-      expect(parsed?.triggers?.crons[0]).toEqual("1 * * * *");
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            triggers: { crons: ["1 * * * *"] },
+          }),
+        },
+      });
     });
   });
 
@@ -423,7 +499,19 @@ describe("init", () => {
           result: false,
         }
       );
+
       await runWrangler("init");
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            compatibility_date: expect.any(String),
+            name: expect.stringContaining("wrangler-tests"),
+          }),
+          ".git": { items: {} },
+          ".gitignore": true,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -433,8 +521,6 @@ describe("init", () => {
           "warn": "",
         }
       `);
-      expect(fs.lstatSync(".git").isDirectory()).toBe(true);
-      expect(fs.lstatSync(".gitignore").isFile()).toBe(true);
       expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
         "main"
       );
@@ -442,9 +528,20 @@ describe("init", () => {
 
     it("should not offer to initialize a git repo if it's already inside one", async () => {
       await execa("git", ["init"]);
-      fs.mkdirSync("some-folder");
-      process.chdir("some-folder");
+      setWorkingDirectory("some-folder");
+
       await runWrangler("init -y");
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "some-folder",
+          }),
+          ".git": { items: {} },
+          ".gitignore": false,
+        },
+      });
 
       // Note the lack of "✨ Initialized git repository" in the log
       expect(std).toMatchInlineSnapshot(`
@@ -542,17 +639,23 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
+
       await runWrangler("init");
-      expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-      expect(packageJson.name).toContain("wrangler-tests");
-      expect(packageJson.version).toEqual("0.0.0");
-      expect(packageJson.devDependencies).toEqual({
-        wrangler: expect.any(String),
+
+      checkFiles({
+        items: {
+          "package.json": {
+            contents: expect.objectContaining({
+              name: expect.stringContaining("wrangler-tests"),
+              version: "0.0.0",
+              devDependencies: {
+                wrangler: expect.any(String),
+              },
+            }),
+          },
+          "tsconfig.json": false,
+        },
       });
-      expect(fs.existsSync("./tsconfig.json")).toBe(false);
       expect(mockPackageManager.install).toHaveBeenCalled();
       expect(std).toMatchInlineSnapshot(`
         Object {
@@ -584,11 +687,23 @@ describe("init", () => {
         text: "Would you like to create a Worker at my-worker/src/index.js?",
         result: "none",
       });
+
       await runWrangler("init my-worker");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./my-worker/package.json", "utf-8")
-      );
-      expect(packageJson.name).toBe("my-worker");
+
+      checkFiles({
+        items: {
+          "my-worker/package.json": {
+            contents: expect.objectContaining({
+              name: "my-worker",
+              version: "0.0.0",
+              devDependencies: {
+                wrangler: expect.any(String),
+              },
+            }),
+          },
+          "my-worker/tsconfig.json": false,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -619,19 +734,19 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "test", version: "1.0.0" } },
+        },
+      });
 
       await runWrangler("init");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-      expect(packageJson.name).toEqual("test");
-      expect(packageJson.version).toEqual("1.0.0");
+
+      checkFiles({
+        items: {
+          "package.json": { contents: { name: "test", version: "1.0.0" } },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -642,14 +757,18 @@ describe("init", () => {
       `);
     });
 
-    it("should not touch an existing package.json in a target directory", async () => {
+    it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
           result: false,
         },
         {
-          text: "Would you like to install wrangler into path/to/worker/package.json?",
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to install wrangler into path/to/worker/my-worker/package.json?",
           result: false,
         },
         {
@@ -657,30 +776,33 @@ describe("init", () => {
           result: false,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
         result: "none",
       });
-
-      fs.mkdirSync("path/to/worker", { recursive: true });
-      fs.writeFileSync(
-        "path/to/worker/package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "path/to/worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
 
       await runWrangler("init path/to/worker/my-worker");
-      const packageJson = JSON.parse(
-        fs.readFileSync("path/to/worker/package.json", "utf-8")
-      );
-      expect(packageJson.name).toEqual("test");
-      expect(packageJson.version).toEqual("1.0.0");
+
+      checkFiles({
+        items: {
+          "path/to/worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
           "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml",
+          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+        ✨ Created path/to/worker/my-worker/package.json",
           "warn": "",
         }
       `);
@@ -701,24 +823,27 @@ describe("init", () => {
           result: false,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
 
       await runWrangler("init");
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-      expect(packageJson.name).toEqual("test");
-      expect(packageJson.version).toEqual("1.0.0");
+
+      checkFiles({
+        items: {
+          "package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
         `wrangler@${wranglerVersion}`
       );
@@ -733,14 +858,14 @@ describe("init", () => {
       `);
     });
 
-    it("should offer to install wrangler into a package.json relative to the target directory", async () => {
+    it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
       mockConfirm(
         {
           text: "Would you like to use git to manage this Worker?",
           result: false,
         },
         {
-          text: "Would you like to install wrangler into path/to/worker/package.json?",
+          text: "Would you like to install wrangler into ../package.json?",
           result: true,
         },
         {
@@ -748,25 +873,30 @@ describe("init", () => {
           result: false,
         }
       );
-
       mockSelect({
-        text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+        text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
+      writeFiles({
+        items: {
+          "path/to/worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
+      setWorkingDirectory("path/to/worker/my-worker");
 
-      fs.mkdirSync("path/to/worker", { recursive: true });
-      fs.writeFileSync(
-        "path/to/worker/package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      await runWrangler("init");
 
-      await runWrangler("init path/to/worker/my-worker");
-      const packageJson = JSON.parse(
-        fs.readFileSync("path/to/worker/package.json", "utf-8")
-      );
-      expect(packageJson.name).toEqual("test");
-      expect(packageJson.version).toEqual("1.0.0");
+      setWorkingDirectory("../../../..");
+      checkFiles({
+        items: {
+          "path/to/worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+          "path/to/worker/my-worker/package.json": false,
+        },
+      });
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
         `wrangler@${wranglerVersion}`
       );
@@ -775,7 +905,7 @@ describe("init", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+          "out": "✨ Created wrangler.toml
         ✨ Installed wrangler into devDependencies",
           "warn": "",
         }
@@ -797,34 +927,29 @@ describe("init", () => {
           result: false,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.js?",
         result: "none",
       });
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
-
-      fs.mkdirSync("./sub-1/sub-2", { recursive: true });
-      process.chdir("./sub-1/sub-2");
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
+      setWorkingDirectory("./sub-1/sub-2");
 
       await runWrangler("init");
-      expect(fs.existsSync("./package.json")).toBe(false);
-      expect(fs.existsSync("../../package.json")).toBe(true);
 
-      const packageJson = JSON.parse(
-        fs.readFileSync("../../package.json", "utf-8")
-      );
-      expect(packageJson).toMatchInlineSnapshot(`
-        Object {
-          "name": "test",
-          "version": "1.0.0",
-        }
-      `);
+      checkFiles({
+        items: {
+          "package.json": false,
+          "../../package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -852,21 +977,30 @@ describe("init", () => {
           result: false,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.js?",
         result: "fetch",
       });
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
 
       await runWrangler("init");
-      expect(fs.existsSync("./src/index.js")).toBe(true);
-      expect(fs.existsSync("./src/index.ts")).toBe(false);
+
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            main: "src/index.js",
+          }),
+          "src/index.js": true,
+          "src/index.ts": false,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -896,21 +1030,26 @@ describe("init", () => {
           result: true,
         }
       );
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.ts?",
         result: "fetch",
       });
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+        },
+      });
 
       await runWrangler("init");
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.existsSync("./src/index.ts")).toBe(true);
+
+      checkFiles({
+        items: {
+          "src/index.js": false,
+          "src/index.ts": true,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -950,20 +1089,25 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.ts?",
         result: "fetch",
       });
+
       await runWrangler("init");
 
-      expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.existsSync("./src/index.ts")).toBe(true);
-
-      expect(packageJson.scripts.start).toBe("wrangler dev");
-      expect(packageJson.scripts.deploy).toBe("wrangler publish");
-      expect(packageJson.name).toContain("wrangler-tests");
-      expect(packageJson.version).toEqual("0.0.0");
+      checkFiles({
+        items: {
+          "package.json": {
+            contents: expect.objectContaining({
+              name: expect.stringContaining("wrangler-tests"),
+              version: "0.0.0",
+              scripts: {
+                start: "wrangler dev",
+                deploy: "wrangler publish",
+              },
+            }),
+          },
+          "src/index.js": false,
+          "src/index.ts": true,
+        },
+      });
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created package.json
@@ -995,25 +1139,35 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.ts?",
         result: "fetch",
       });
-      await fsp.writeFile(
-        "./package.json",
-        JSON.stringify({
-          scripts: {
-            start: "test-start",
-            deploy: "test-publish",
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: {
+              scripts: {
+                start: "test-start",
+                deploy: "test-publish",
+              },
+            },
           },
-        })
-      );
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+        },
+      });
+
       await runWrangler("init");
 
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.existsSync("./src/index.ts")).toBe(true);
-
-      expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.deploy).toBe("test-publish");
+      checkFiles({
+        items: {
+          "package.json": {
+            contents: {
+              scripts: {
+                start: "test-start",
+                deploy: "test-publish",
+              },
+            },
+          },
+          "src/index.js": false,
+          "src/index.ts": true,
+        },
+      });
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created tsconfig.json
@@ -1040,19 +1194,22 @@ describe("init", () => {
           result: true,
         }
       );
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
-      fs.mkdirSync("./src", { recursive: true });
       const PLACEHOLDER = "/* placeholder text */";
-      fs.writeFileSync("./src/index.ts", PLACEHOLDER, "utf-8");
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "test", version: "1.0.0" } },
+          "src/index.ts": { contents: PLACEHOLDER },
+        },
+      });
 
       await runWrangler("init");
-      expect(fs.existsSync("./src/index.js")).toBe(false);
-      expect(fs.readFileSync("./src/index.ts", "utf-8")).toBe(PLACEHOLDER);
+
+      checkFiles({
+        items: {
+          "src/index.js": false,
+          "src/index.ts": { contents: PLACEHOLDER },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1072,6 +1229,10 @@ describe("init", () => {
           result: false,
         },
         {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
           text: "Would you like to install wrangler into package.json?",
           result: false,
         },
@@ -1080,26 +1241,28 @@ describe("init", () => {
           result: true,
         }
       );
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
-      fs.mkdirSync("./my-worker/src", { recursive: true });
       const PLACEHOLDER = "/* placeholder text */";
-      fs.writeFileSync("./my-worker/src/index.ts", PLACEHOLDER, "utf-8");
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "test", version: "1.0.0" } },
+          "my-worker/src/index.ts": { contents: PLACEHOLDER },
+        },
+      });
 
       await runWrangler("init my-worker");
-      expect(fs.existsSync("./my-worker/src/index.js")).toBe(false);
-      expect(fs.readFileSync("./my-worker/src/index.ts", "utf-8")).toBe(
-        PLACEHOLDER
-      );
+
+      checkFiles({
+        items: {
+          "my-worker/src/index.js": false,
+          "my-worker/src/index.ts": { contents: PLACEHOLDER },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
           "err": "",
           "out": "✨ Created my-worker/wrangler.toml
+        ✨ Created my-worker/package.json
         ✨ Created my-worker/tsconfig.json
         ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
           "warn": "",
@@ -1126,17 +1289,23 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.ts?",
         result: "none",
       });
+
       await runWrangler("init");
-      expect(fs.existsSync("./tsconfig.json")).toBe(true);
-      const { config: tsconfigJson, error: tsConfigParseError } =
-        parseConfigFileTextToJson(
-          "./tsconfig.json",
-          fs.readFileSync("./tsconfig.json", "utf-8")
-        );
-      expect(tsConfigParseError).toBeUndefined();
-      expect(tsconfigJson.compilerOptions.types).toEqual([
-        "@cloudflare/workers-types",
-      ]);
+
+      checkFiles({
+        items: {
+          "tsconfig.json": {
+            contents: {
+              config: {
+                compilerOptions: expect.objectContaining({
+                  types: ["@cloudflare/workers-types"],
+                }),
+              },
+              error: undefined,
+            },
+          },
+        },
+      });
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
         "@cloudflare/workers-types",
         "typescript"
@@ -1155,39 +1324,39 @@ describe("init", () => {
     });
 
     it("should not touch an existing tsconfig.json in the same directory", async () => {
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({
-          name: "test",
-          version: "1.0.0",
-          devDependencies: {
-            wrangler: "0.0.0",
-            "@cloudflare/workers-types": "0.0.0",
-          },
-        }),
-        "utf-8"
-      );
-      fs.writeFileSync(
-        "./tsconfig.json",
-        JSON.stringify({ compilerOptions: {} }),
-        "utf-8"
-      );
-
       mockConfirm({
         text: "Would you like to use git to manage this Worker?",
         result: false,
       });
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.ts?",
         result: "fetch",
       });
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: {
+              name: "test",
+              version: "1.0.0",
+              devDependencies: {
+                wrangler: "0.0.0",
+                "@cloudflare/workers-types": "0.0.0",
+              },
+            },
+          },
+          "tsconfig.json": { contents: { compilerOptions: {} } },
+        },
+      });
 
       await runWrangler("init");
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("./tsconfig.json", "utf-8")
-      );
-      expect(tsconfigJson.compilerOptions).toEqual({});
+
+      checkFiles({
+        items: {
+          "tsconfig.json": {
+            contents: { config: { compilerOptions: {} }, error: undefined },
+          },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1202,50 +1371,62 @@ describe("init", () => {
       `);
     });
 
-    it("should not touch an existing tsconfig.json in the ancestor of a target directory", async () => {
-      fs.mkdirSync("path/to/worker", { recursive: true });
-      fs.writeFileSync(
-        "path/to/worker/package.json",
-        JSON.stringify({
-          name: "test",
-          version: "1.0.0",
-          devDependencies: {
-            wrangler: "0.0.0",
-            "@cloudflare/workers-types": "0.0.0",
-          },
-        }),
-        "utf-8"
+    it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        }
       );
-      fs.writeFileSync(
-        "path/to/worker/tsconfig.json",
-        JSON.stringify({ compilerOptions: {} }),
-        "utf-8"
-      );
-
-      mockConfirm({
-        text: "Would you like to use git to manage this Worker?",
-        result: false,
-      });
-
       mockSelect({
         text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
         result: "fetch",
       });
+      writeFiles({
+        items: {
+          "path/to/worker/package.json": {
+            contents: {
+              name: "test",
+              version: "1.0.0",
+              devDependencies: {
+                wrangler: "0.0.0",
+                "@cloudflare/workers-types": "0.0.0",
+              },
+            },
+          },
+          "path/to/worker/tsconfig.json": { contents: { compilerOptions: {} } },
+        },
+      });
 
       await runWrangler("init path/to/worker/my-worker");
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("path/to/worker/tsconfig.json", "utf-8")
-      );
-      expect(tsconfigJson.compilerOptions).toEqual({});
+
+      checkFiles({
+        items: {
+          "path/to/worker/tsconfig.json": {
+            contents: { config: { compilerOptions: {}, error: undefined } },
+          },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
           "err": "",
           "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+        ✨ Created path/to/worker/my-worker/package.json
+        ✨ Created path/to/worker/my-worker/tsconfig.json
         ✨ Created path/to/worker/my-worker/src/index.ts
+        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+        To publish your Worker to the Internet, run \`npm run deploy\`",
           "warn": "",
         }
       `);
@@ -1270,26 +1451,26 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.ts?",
         result: "none",
       });
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({
-          name: "test",
-          version: "1.0.0",
-        }),
-        "utf-8"
-      );
-      fs.writeFileSync(
-        "./tsconfig.json",
-        JSON.stringify({ compilerOptions: {} }),
-        "utf-8"
-      );
+      writeFiles({
+        items: {
+          "./package.json": {
+            contents: {
+              name: "test",
+              version: "1.0.0",
+            },
+          },
+          "./tsconfig.json": { contents: { compilerOptions: {} } },
+        },
+      });
 
       await runWrangler("init");
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("./tsconfig.json", "utf-8")
-      );
-      // unchanged tsconfig
-      expect(tsconfigJson.compilerOptions).toEqual({});
+
+      checkFiles({
+        items: {
+          // unchanged tsconfig
+          "tsconfig.json": { contents: { config: { compilerOptions: {} } } },
+        },
+      });
       expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
         "@cloudflare/workers-types"
       );
@@ -1306,46 +1487,41 @@ describe("init", () => {
     });
 
     it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({
-          name: "test",
-          version: "1.0.0",
-          devDependencies: {
-            wrangler: "0.0.0",
-            "@cloudflare/workers-types": "0.0.0",
-          },
-        }),
-        "utf-8"
-      );
-      fs.writeFileSync(
-        "./tsconfig.json",
-        JSON.stringify({ compilerOptions: {} }),
-        "utf-8"
-      );
-
       mockConfirm({
         text: "Would you like to use git to manage this Worker?",
         result: false,
       });
-
       mockSelect({
         text: "Would you like to create a Worker at src/index.ts?",
         result: "fetch",
       });
-
-      fs.mkdirSync("./sub-1/sub-2", { recursive: true });
-      process.chdir("./sub-1/sub-2");
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: {
+              name: "test",
+              version: "1.0.0",
+              devDependencies: {
+                wrangler: "0.0.0",
+                "@cloudflare/workers-types": "0.0.0",
+              },
+            },
+          },
+          "tsconfig.json": { contents: { compilerOptions: {} } },
+        },
+      });
+      setWorkingDirectory("./sub-1/sub-2");
 
       await runWrangler("init");
-      expect(fs.existsSync("./tsconfig.json")).toBe(false);
-      expect(fs.existsSync("../../tsconfig.json")).toBe(true);
 
-      const tsconfigJson = JSON.parse(
-        fs.readFileSync("../../tsconfig.json", "utf-8")
-      );
-      expect(tsconfigJson.compilerOptions).toEqual({});
-
+      checkFiles({
+        items: {
+          "tsconfig.json": false,
+          "../../tsconfig.json": {
+            contents: { config: { compilerOptions: {} } },
+          },
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1385,20 +1561,25 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.js?",
         result: "fetch",
       });
+
       await runWrangler("init");
 
-      expect(fs.existsSync("./package.json")).toBe(true);
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
-
-      expect(fs.existsSync("./src/index.js")).toBe(true);
-      expect(fs.existsSync("./src/index.ts")).toBe(false);
-
-      expect(packageJson.scripts.start).toBe("wrangler dev");
-      expect(packageJson.scripts.deploy).toBe("wrangler publish");
-      expect(packageJson.name).toContain("wrangler-tests");
-      expect(packageJson.version).toEqual("0.0.0");
+      checkFiles({
+        items: {
+          "src/index.js": true,
+          "src/index.ts": false,
+          "package.json": {
+            contents: expect.objectContaining({
+              name: expect.stringContaining("wrangler-tests"),
+              version: "0.0.0",
+              scripts: {
+                start: "wrangler dev",
+                deploy: "wrangler publish",
+              },
+            }),
+          },
+        },
+      });
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created package.json
@@ -1428,25 +1609,35 @@ describe("init", () => {
         text: "Would you like to create a Worker at src/index.js?",
         result: "fetch",
       });
-      await fsp.writeFile(
-        "./package.json",
-        JSON.stringify({
-          scripts: {
-            start: "test-start",
-            deploy: "test-publish",
+      writeFiles({
+        items: {
+          "package.json": {
+            contents: {
+              scripts: {
+                start: "test-start",
+                deploy: "test-publish",
+              },
+            },
           },
-        })
-      );
-      const packageJson = JSON.parse(
-        fs.readFileSync("./package.json", "utf-8")
-      );
+        },
+      });
+
       await runWrangler("init");
 
-      expect(fs.existsSync("./src/index.js")).toBe(true);
-      expect(fs.existsSync("./src/index.ts")).toBe(false);
-
-      expect(packageJson.scripts.start).toBe("test-start");
-      expect(packageJson.scripts.deploy).toBe("test-publish");
+      checkFiles({
+        items: {
+          "src/index.js": true,
+          "src/index.ts": false,
+          "package.json": {
+            contents: expect.objectContaining({
+              scripts: {
+                start: "test-start",
+                deploy: "test-publish",
+              },
+            }),
+          },
+        },
+      });
       expect(std.out).toMatchInlineSnapshot(`
         "✨ Created wrangler.toml
         ✨ Created src/index.js
@@ -1471,19 +1662,22 @@ describe("init", () => {
           result: false,
         }
       );
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
-      fs.mkdirSync("./src", { recursive: true });
       const PLACEHOLDER = "/* placeholder text */";
-      fs.writeFileSync("./src/index.js", PLACEHOLDER, "utf-8");
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "test", version: "1.0.0" } },
+          "src/index.js": { contents: PLACEHOLDER },
+        },
+      });
 
       await runWrangler("init");
-      expect(fs.readFileSync("./src/index.js", "utf-8")).toBe(PLACEHOLDER);
-      expect(fs.existsSync("./src/index.ts")).toBe(false);
+
+      checkFiles({
+        items: {
+          "src/index.js": { contents: PLACEHOLDER },
+          "src/index.ts": false,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1501,7 +1695,7 @@ describe("init", () => {
           result: false,
         },
         {
-          text: "Would you like to install wrangler into package.json?",
+          text: "Would you like to install wrangler into my-worker/package.json?",
           result: false,
         },
         {
@@ -1509,21 +1703,24 @@ describe("init", () => {
           result: false,
         }
       );
-
-      fs.writeFileSync(
-        "./package.json",
-        JSON.stringify({ name: "test", version: "1.0.0" }),
-        "utf-8"
-      );
-      fs.mkdirSync("./my-worker/src", { recursive: true });
       const PLACEHOLDER = "/* placeholder text */";
-      fs.writeFileSync("./my-worker/src/index.js", PLACEHOLDER, "utf-8");
+      writeFiles({
+        items: {
+          "my-worker/package.json": {
+            contents: { name: "test", version: "1.0.0" },
+          },
+          "my-worker/src/index.js": { contents: PLACEHOLDER },
+        },
+      });
 
       await runWrangler("init my-worker");
-      expect(fs.readFileSync("./my-worker/src/index.js", "utf-8")).toBe(
-        PLACEHOLDER
-      );
-      expect(fs.existsSync("./my-worker/src/index.ts")).toBe(false);
+
+      checkFiles({
+        items: {
+          "my-worker/src/index.js": { contents: PLACEHOLDER },
+          "my-worker/src/index.ts": false,
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1539,23 +1736,28 @@ describe("init", () => {
     it("should create a worker with a given name", async () => {
       await runWrangler("init my-worker -y");
 
-      const parsed = TOML.parse(
-        await fsp.readFile("./my-worker/wrangler.toml", "utf-8")
-      );
-
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toBe("my-worker");
+      checkFiles({
+        items: {
+          "my-worker/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "my-worker",
+          }),
+        },
+      });
     });
 
     it('should create a worker with the name of the current directory if "name" is .', async () => {
       await runWrangler("init . -y");
 
-      const parsed = TOML.parse(await fsp.readFile("wrangler.toml", "utf-8"));
-
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toBe(path.basename(process.cwd()).toLowerCase());
-      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
-      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+      const workerName = path.basename(process.cwd()).toLowerCase();
+      checkFiles({
+        items: {
+          "wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: workerName,
+          }),
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1577,14 +1779,14 @@ describe("init", () => {
     it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
       await runWrangler("init path/to/worker -y");
 
-      const parsed = TOML.parse(
-        await fsp.readFile("path/to/worker/wrangler.toml", "utf-8")
-      );
-
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toBe("worker");
-      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
-      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+      checkFiles({
+        items: {
+          "path/to/worker/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "worker",
+          }),
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1605,17 +1807,15 @@ describe("init", () => {
 
     it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
       await runWrangler("init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y");
-      const parsed = TOML.parse(
-        await fsp.readFile(
-          "WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml",
-          "utf-8"
-        )
-      );
 
-      expect(typeof parsed.compatibility_date).toBe("string");
-      expect(parsed.name).toBe("weird_w0rkr_n4m3-js-tsx-tar-gz");
-      expect(fs.existsSync("./my-worker/package.json")).toBe(false);
-      expect(fs.existsSync("./my-worker/tsconfig.json")).toBe(false);
+      checkFiles({
+        items: {
+          "WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "weird_w0rkr_n4m3-js-tsx-tar-gz",
+          }),
+        },
+      });
       expect(std).toMatchInlineSnapshot(`
         Object {
           "debug": "",
@@ -1633,5 +1833,160 @@ describe("init", () => {
         }
       `);
     });
+
+    it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
+      mockConfirm(
+        {
+          text: "Would you like to use git to manage this Worker?",
+          result: false,
+        },
+        {
+          text: "Would you like to use TypeScript?",
+          result: true,
+        },
+        {
+          text: "No package.json found. Would you like to create one?",
+          result: true,
+        },
+        {
+          text: "Would you like to install the type definitions for Workers into your package.json?",
+          result: true,
+        }
+      );
+      mockSelect({
+        text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
+        result: "fetch",
+      });
+      writeFiles({
+        items: {
+          "package.json": { contents: { name: "top-level" } },
+          "tsconfig.json": { contents: { compilerOptions: {} } },
+          "wrangler.toml": wranglerToml({
+            name: "top-level",
+            compatibility_date: "some-date",
+          }),
+        },
+      });
+
+      await runWrangler("init sub/folder/worker");
+
+      // Ancestor files are untouched.
+      checkFiles({
+        items: {
+          "package.json": { contents: { name: "top-level" } },
+          "tsconfig.json": {
+            contents: { config: { compilerOptions: {} }, error: undefined },
+          },
+          "wrangler.toml": wranglerToml({
+            name: "top-level",
+            compatibility_date: "some-date",
+          }),
+        },
+      });
+      // New initialized Worker has its own files.
+      checkFiles({
+        items: {
+          "sub/folder/worker/package.json": {
+            contents: expect.objectContaining({
+              name: "worker",
+            }),
+          },
+          "sub/folder/worker/tsconfig.json": true,
+          "sub/folder/worker/wrangler.toml": wranglerToml({
+            ...MINIMAL_WRANGLER_TOML,
+            name: "worker",
+          }),
+        },
+      });
+    });
   });
 });
+
+/**
+ * Change the current working directory, ensuring that this exists.
+ */
+function setWorkingDirectory(directory: string) {
+  fs.mkdirSync(directory, { recursive: true });
+  process.chdir(directory);
+}
+
+/**
+ * Write the given folder/files to disk at the given `cwd`.
+ */
+function writeFiles(folder: TestFolder, cwd = process.cwd()) {
+  for (const name in folder.items) {
+    const item = folder.items[name];
+    const itemPath = path.resolve(cwd, name);
+    if (typeof item !== "boolean") {
+      if ("contents" in item) {
+        fs.mkdirSync(path.dirname(itemPath), { recursive: true });
+        fs.writeFileSync(itemPath, stringify(name, item.contents));
+      } else {
+        fs.mkdirSync(itemPath, { recursive: true });
+        writeFiles(item, itemPath);
+      }
+    } else {
+      throw new Error("Cannot write boolean flags to disk: " + itemPath);
+    }
+  }
+}
+
+/**
+ * Check that the given test folders/files match what is in on disk.
+ */
+function checkFiles(folder: TestFolder, cwd = process.cwd()) {
+  for (const name in folder.items) {
+    const item = folder.items[name];
+    const itemPath = path.resolve(cwd, name);
+    if (typeof item === "boolean") {
+      if (fs.existsSync(itemPath) !== item) {
+        throw new Error(`Expected ${itemPath} ${item ? "" : "not "}to exist.`);
+      }
+    } else if ("contents" in item) {
+      const actualContents = parse(name, fs.readFileSync(itemPath, "utf-8"));
+      expect(actualContents).toEqual(item.contents);
+    } else if ("items" in item) {
+      checkFiles(item, itemPath);
+    } else {
+      throw new Error("Unexpected TestFile object.");
+    }
+  }
+}
+
+function stringify(name: string, value: unknown) {
+  if (name.endsWith(".toml")) {
+    return TOML.stringify(value as TOML.JsonMap);
+  }
+  if (name.endsWith(".json")) {
+    return JSON.stringify(value);
+  }
+  return `${value}`;
+}
+
+function parse(name: string, value: string): unknown {
+  if (name.endsWith(".toml")) {
+    return TOML.parse(value);
+  }
+  if (name.endsWith("tsconfig.json")) {
+    return parseConfigFileTextToJson(name, value);
+  }
+  if (name.endsWith(".json")) {
+    return JSON.parse(value);
+  }
+  return value;
+}
+
+function wranglerToml(options: TOML.JsonMap = {}): TestFile {
+  return {
+    contents: options,
+  };
+}
+
+interface TestFile {
+  contents: unknown;
+}
+interface TestFolder {
+  items: {
+    [id: string]: TestFile | TestFolder | boolean;
+  };
+}

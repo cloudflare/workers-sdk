@@ -20,13 +20,22 @@ export interface ConfirmExpectation {
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
   (confirm as jest.Mock).mockImplementation((text: string) => {
-    for (const { text: expectedText, result } of expectations) {
-      if (normalizeSlashes(text) === normalizeSlashes(expectedText)) {
-        return Promise.resolve(result);
+    for (const expectation of expectations) {
+      if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
+        expectations = expectations.filter((e) => e !== expectation);
+        return Promise.resolve(expectation.result);
       }
     }
     throw new Error(`Unexpected confirmation message: ${text}`);
   });
+  return () => {
+    if (expectations.length > 0) {
+      throw new Error(
+        "The following expected confirmation dialogs were not used:\n" +
+          expectations.map((e) => `- "${e.text}"`).join("\n")
+      );
+    }
+  };
 }
 
 export function clearConfirmMocks() {
@@ -63,18 +72,23 @@ export interface PromptExpectation {
 export function mockPrompt(...expectations: PromptExpectation[]) {
   (prompt as jest.Mock).mockImplementation(
     (text: string, type: "text" | "password") => {
-      for (const {
-        text: expectedText,
-        type: expectedType,
-        result,
-      } of expectations) {
-        if (text === expectedText && type == expectedType) {
-          return Promise.resolve(result);
+      for (const expectation of expectations) {
+        if (text === expectation.text && type == expectation.type) {
+          expectations = expectations.filter((e) => e !== expectation);
+          return Promise.resolve(expectation.result);
         }
       }
       throw new Error(`Unexpected confirmation message: ${text}`);
     }
   );
+  return () => {
+    if (expectations.length > 0) {
+      throw new Error(
+        "The following expected prompt dialogs were not used:\n" +
+          expectations.map((e) => `- "${e.text}"`).join("\n")
+      );
+    }
+  };
 }
 
 export function clearPromptMocks() {
@@ -108,13 +122,22 @@ export interface SelectExpectation {
  */
 export function mockSelect(...expectations: SelectExpectation[]) {
   (select as jest.Mock).mockImplementation((text: string) => {
-    for (const { text: expectedText, result } of expectations) {
-      if (normalizeSlashes(text) === normalizeSlashes(expectedText)) {
-        return Promise.resolve(result);
+    for (const expectation of expectations) {
+      if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
+        expectations = expectations.filter((e) => e !== expectation);
+        return Promise.resolve(expectation.result);
       }
     }
     throw new Error(`Unexpected select message: ${text}`);
   });
+  return () => {
+    if (expectations.length > 0) {
+      throw new Error(
+        "The following expected select dialogs were not used:\n" +
+          expectations.map((e) => `- "${e.text}"`).join("\n")
+      );
+    }
+  };
 }
 
 export function clearSelectMocks() {
