@@ -133,7 +133,7 @@ export async function fetchKVGetValue(
     headers,
   });
   if (response.ok) {
-    return Buffer.from(await response.arrayBuffer()).toString(undefined);
+    return Buffer.from(await response.arrayBuffer()).toString();
   } else {
     throw new Error(
       `Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
