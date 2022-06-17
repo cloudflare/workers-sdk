@@ -123,10 +123,16 @@ export function useWorker(props: {
       if (!startedRef.current) {
         startedRef.current = true;
         // TODO: For Dev we could show the reporter message in the interactive box.
-        // As of now only showing for initial server start
-        printBundleSize(modules, content);
+        void printBundleSize(
+          { name: path.basename(bundle.path), content: content },
+          modules
+        );
       } else {
         logger.log("⎔ Detected changes, restarted server.");
+        void printBundleSize(
+          { name: path.basename(bundle.path), content: content },
+          modules
+        );
       }
 
       // Ensure we have an account id, even if it means logging in here.
