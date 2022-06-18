@@ -15,7 +15,7 @@ export interface PubSubNamespace {
  * A Pub/Sub Broker's on-publish hook configuration.
  */
 export interface PubSubBrokerOnPublish {
-  url?: string;
+  url: string;
 }
 /**
  * PubSubBroker represents a single Broker configuration and endpoint.
