@@ -26,12 +26,14 @@ export function useEsbuild({
 	tsconfig,
 	minify,
 	nodeCompat,
+	define,
 }: {
 	entry: Entry;
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	rules: Config["rules"];
+	define: Config["define"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
@@ -72,6 +74,7 @@ export function useEsbuild({
 					tsconfig,
 					minify,
 					nodeCompat,
+					define,
 				});
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -107,6 +110,7 @@ export function useEsbuild({
 		exit,
 		minify,
 		nodeCompat,
+		define,
 	]);
 	return bundle;
 }

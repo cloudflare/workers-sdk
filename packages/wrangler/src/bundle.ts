@@ -59,6 +59,7 @@ export async function bundleWorker(
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
 		nodeCompat: boolean | undefined;
+		define: Config["define"];
 	}
 ): Promise<BundleResult> {
 	const {
@@ -105,6 +106,7 @@ export async function bundleWorker(
 			define: {
 				"process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
+				...options.define,
 			},
 		}),
 		loader: {

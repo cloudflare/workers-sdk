@@ -212,6 +212,16 @@ interface EnvironmentInheritable {
  */
 interface EnvironmentNonInheritable {
 	/**
+	 * A map of values to substitute when deploying your worker.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	define: Record<string, string>;
+	/**
 	 * A map of environment variables to set when deploying your worker.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

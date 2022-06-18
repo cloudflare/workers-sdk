@@ -944,6 +944,16 @@ function normalizeAndValidateEnvironment(
 			validateVars(envName),
 			{}
 		),
+		define: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"define",
+			validateDefines(envName),
+			{}
+		),
 		durable_objects: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1141,6 +1151,68 @@ const validateRule: ValidatorFn = (diagnostics, field, value) => {
 
 	return isValid;
 };
+
+const validateDefines =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		let isValid = true;
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value === "object" && value !== null) {
+			for (const varName in value) {
+				// some casting here to appease typescript
+				// even though the value might not match the type
+				if (typeof (value as Record<string, string>)[varName] !== "string") {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.${varName}" should be a string but got ${JSON.stringify(
+							(value as Record<string, string>)[varName]
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+		} else {
+			if (value !== undefined) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+						value
+					)}.\n`
+				);
+				isValid = false;
+			}
+		}
+
+		const configDefines = Object.keys(config?.define ?? {});
+
+		// If there are no top level vars then there is nothing to do here.
+		if (configDefines.length > 0) {
+			if (typeof value === "object" && value !== null) {
+				const configEnvDefines = config === undefined ? [] : Object.keys(value);
+
+				for (const varName of configDefines) {
+					if (!(varName in value)) {
+						diagnostics.warnings.push(
+							`"define.${varName}" exists at the top level, but not on "${fieldPath}".\n` +
+								`This is not what you probably want, since "define" configuration is not inherited by environments.\n` +
+								`Please add "define.${varName}" to "env.${envName}".`
+						);
+					}
+				}
+				for (const varName of configEnvDefines) {
+					if (!configDefines.includes(varName)) {
+						diagnostics.warnings.push(
+							`"${varName}" exists on "env.${envName}", but not on the top level.\n` +
+								`This is not what you probably want, since "define" configuration within environments can only override existing top level "define" configuration\n` +
+								`Please remove "${fieldPath}.${varName}", or add "define.${varName}".`
+						);
+					}
+				}
+			}
+		}
+
+		return isValid;
+	};
 
 const validateVars =
 	(envName: string): ValidatorFn =>
@@ -1481,6 +1553,7 @@ const validateBindingsHaveUniqueNames = (
 		text_blobs,
 		unsafe,
 		vars,
+		define,
 		wasm_modules,
 		data_blobs,
 	}: Partial<Config>
@@ -1494,6 +1567,7 @@ const validateBindingsHaveUniqueNames = (
 		"Text Blob": getBindingNames(text_blobs),
 		Unsafe: getBindingNames(unsafe),
 		"Environment Variable": getBindingNames(vars),
+		Definition: getBindingNames(define),
 		"WASM Module": getBindingNames(wasm_modules),
 		"Data Blob": getBindingNames(data_blobs),
 	} as Record<string, string[]>;
