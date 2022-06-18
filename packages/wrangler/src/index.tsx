@@ -2350,7 +2350,8 @@ function createCLIParser(argv: string[]) {
               (yargs) => {
                 return yargs
                   .positional("name", {
-                    describe: "The name of the new Namespace. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
+                    describe:
+                      "The name of the new Namespace. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
                     type: "string",
                     demandOption: true,
                   })
@@ -2373,9 +2374,9 @@ function createCLIParser(argv: string[]) {
                   namespace.description = args.description;
                 }
 
-                logger.log(`Creating Namespace ${args.name}.`);
+                logger.log(`Creating Pub/SubNamespace ${args.name}...`);
                 await pubsub.createPubSubNamespace(accountId, namespace);
-                logger.log(`Created Namespace ${args.name}.`);
+                logger.log(`Success! Created Pub/Sub Namespace ${args.name}`);
               }
             );
 
@@ -2415,7 +2416,7 @@ function createCLIParser(argv: string[]) {
 
                 const accountId = await requireAuth(config);
 
-                logger.log(`Deleting namespace ${args.name}.`);
+                logger.log(`Deleting namespace ${args.name}...`);
                 await pubsub.deletePubSubNamespace(accountId, args.name);
                 logger.log(`Deleted namespace ${args.name}.`);
               }
@@ -2423,207 +2424,218 @@ function createCLIParser(argv: string[]) {
             return pubsubNamespaceYargs;
           }
         )
-        .command("brokers", "Interact with your Pub/Sub Brokers", (brokersYargs) => {
-          brokersYargs.command(
-            "create <name>",
-            "Create a new Pub/Sub Broker",
-            (yargs) =>
-              yargs
-                .positional("name", {
-                  describe: "The name of the Pub/Sub Broker. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
-                  type: "string",
-                  demandOption: true,
-                })
-                .option("namespace", {
-                  describe: "An existing Namespace to associate the Broker with. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
-                  type: "string",
-                  alias: "ns",
-                  demandOption: true,
-                })
-                .option("description", {
-                  describe: "Longer description for the broker",
-                  type: "string",
-                })
-                .option("expiration", {
-                  describe:
-                    "Time to allow token validity (can use seconds, hours, months, weeks, years)",
-                  type: "string",
-                })
-                .option("on-publish-url", {
-                  describe:
-                    "A (HTTPS) Cloudflare Worker (or webhook) URL that messages will be sent to on-publish.",
-                  type: "string",
-                }),
-            async (args) => {
-              const config = readConfig(args.config as ConfigPath, args);
+        .command(
+          "brokers",
+          "Interact with your Pub/Sub Brokers",
+          (brokersYargs) => {
+            brokersYargs.command(
+              "create <name>",
+              "Create a new Pub/Sub Broker",
+              (yargs) =>
+                yargs
+                  .positional("name", {
+                    describe:
+                      "The name of the Pub/Sub Broker. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe:
+                      "An existing Namespace to associate the Broker with. This name will form part of the public endpoint, in the form <broker>.<namespace>.cloudflarepubsub.com",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  })
+                  .option("description", {
+                    describe: "Longer description for the broker",
+                    type: "string",
+                  })
+                  .option("expiration", {
+                    describe:
+                      "Time to allow token validity (can use seconds, hours, months, weeks, years)",
+                    type: "string",
+                  })
+                  .option("on-publish-url", {
+                    describe:
+                      "A (HTTPS) Cloudflare Worker (or webhook) URL that messages will be sent to on-publish.",
+                    type: "string",
+                  }),
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
 
-              const accountId = await requireAuth(config);
+                const accountId = await requireAuth(config);
 
-              const broker: pubsub.PubSubBroker = {
-                name: args.name,
-              };
-              if (args.description) {
-                broker.description = args.description;
-              }
-              if (args.expiration) {
-                const expiration = parseHumanDuration(args.expiration);
-                if (isNaN(expiration)) {
-                  throw new CommandLineArgsError(
-                    `${args.expiration} is not a time duration.  (Example of valid values are: 1y, 6 days)`
-                  );
-                }
-                broker.expiration = expiration;
-              }
-              if (args["on-publish-url"]) {
-                broker.on_publish = {
-                  url: args["on_publish_url"],
+                const broker: pubsub.PubSubBroker = {
+                  name: args.name,
                 };
-              }
-              logger.log(
-                JSON.stringify(
-                  await pubsub.createBroker(accountId, args.namespace, broker),
-                  null,
-                  2
-                )
-              );
-            }
-          );
-
-          brokersYargs.command(
-            "update <name>",
-            "Update an existing Pub/Sub Broker's configuration.",
-            (yargs) =>
-              yargs
-                .positional("name", {
-                  describe: "The name of an existing Pub/Sub Broker",
-                  type: "string",
-                  demandOption: true,
-                })
-                .option("namespace", {
-                  describe: "The Namespace the Broker is associated with",
-                  type: "string",
-                  alias: "ns",
-                  demandOption: true,
-                })
-                .option("description", {
-                  describe: "A optional description of the Broker.",
-                  type: "string",
-                })
-                .option("expiration", {
-                  describe:
-                    "The expiration date for all client credentials issued by the Broker (can use seconds, hours, months, weeks, years)",
-                  type: "string",
-                })
-                .option("on-publish-url", {
-                  describe:
-                    "A (HTTPS) Cloudflare Worker (or webhook) URL that messages will be sent to on-publish.",
-                  type: "string",
-                }),
-            async (args) => {
-              const config = readConfig(args.config as ConfigPath, args);
-              const accountId = await requireAuth(config);
-
-              const broker: pubsub.PubSubBroker = {};
-              if (args.description) {
-                broker.description = args.description;
-              }
-              if (args.expiration) {
-                const expiration = parseHumanDuration(args.expiration);
-                if (isNaN(expiration)) {
-                  throw new CommandLineArgsError(
-                    `${args.expiration} is not a time duration.  (Example of valid values are: 1y, 6 days)`
-                  );
+                if (args.description) {
+                  broker.description = args.description;
                 }
-                broker.expiration = expiration;
+                if (args.expiration) {
+                  const expiration = parseHumanDuration(args.expiration);
+                  if (isNaN(expiration)) {
+                    throw new CommandLineArgsError(
+                      `${args.expiration} is not a time duration.  (Example of valid values are: 1y, 6 days)`
+                    );
+                  }
+                  broker.expiration = expiration;
+                }
+                if (args["on-publish-url"]) {
+                  broker.on_publish = {
+                    url: args["on_publish_url"],
+                  };
+                }
+                logger.log(
+                  JSON.stringify(
+                    await pubsub.createBroker(
+                      accountId,
+                      args.namespace,
+                      broker
+                    ),
+                    null,
+                    2
+                  )
+                );
               }
-              if (args["on-publish-url"]) {
-                broker.on_publish = {
-                  url: args["on-publish-url"],
-                };
+            );
+
+            brokersYargs.command(
+              "update <name>",
+              "Update an existing Pub/Sub Broker's configuration.",
+              (yargs) =>
+                yargs
+                  .positional("name", {
+                    describe: "The name of an existing Pub/Sub Broker",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  })
+                  .option("description", {
+                    describe: "A optional description of the Broker.",
+                    type: "string",
+                  })
+                  .option("expiration", {
+                    describe:
+                      "The expiration date for all client credentials issued by the Broker (can use seconds, hours, months, weeks, years)",
+                    type: "string",
+                  })
+                  .option("on-publish-url", {
+                    describe:
+                      "A (HTTPS) Cloudflare Worker (or webhook) URL that messages will be sent to on-publish.",
+                    type: "string",
+                  }),
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                const broker: pubsub.PubSubBroker = {};
+                if (args.description) {
+                  broker.description = args.description;
+                }
+                if (args.expiration) {
+                  const expiration = parseHumanDuration(args.expiration);
+                  if (isNaN(expiration)) {
+                    throw new CommandLineArgsError(
+                      `${args.expiration} is not a time duration. (Example of valid values are: 1y, 6 days)`
+                    );
+                  }
+                  broker.expiration = expiration;
+                }
+                if (args["on-publish-url"]) {
+                  broker.on_publish = {
+                    url: args["on-publish-url"],
+                  };
+                }
+                logger.log(
+                  JSON.stringify(
+                    await pubsub.updatePubSubBroker(
+                      accountId,
+                      args.namespace,
+                      args.name,
+                      broker
+                    ),
+                    null,
+                    2
+                  )
+                );
+                logger.log(`Successfully updated Pub/Sub Broker ${args.name}`);
               }
-              logger.log(
-                JSON.stringify(
-                  await pubsub.updatePubSubBroker(
-                    accountId,
-                    args.namespace,
-                    args.name,
-                    broker
-                  ),
-                  null,
-                  2
-                )
-              );
-            }
-          );
+            );
 
-          brokersYargs.command(
-            "list",
-            "List the Pub/Sub Brokers within a Namespace",
-            (yargs) => {
-              return yargs.option("namespace", {
-                describe: "The Namespace the Brokers are associated with.",
-                type: "string",
-                alias: "ns",
-                demandOption: true,
-              });
-            },
-            async (args) => {
-              const config = readConfig(args.config as ConfigPath, args);
-
-              const accountId = await requireAuth(config);
-
-              logger.log(
-                JSON.stringify(
-                  await pubsub.listPubSubBrokers(accountId, args.namespace),
-                  null,
-                  2
-                )
-              );
-            }
-          );
-
-          brokersYargs.command(
-            "delete <name>",
-            "Delete an existing Pub/Sub Broker",
-            (yargs) => {
-              return yargs
-                .positional("name", {
-                  describe: "The name of the Broker to delete",
-                  type: "string",
-                  demandOption: true,
-                })
-                .option("namespace", {
+            brokersYargs.command(
+              "list",
+              "List the Pub/Sub Brokers within a Namespace",
+              (yargs) => {
+                return yargs.option("namespace", {
                   describe: "The Namespace the Brokers are associated with.",
                   type: "string",
                   alias: "ns",
                   demandOption: true,
                 });
-            },
-            async (args) => {
-              await printWranglerBanner();
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
 
-              const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
 
-              const accountId = await requireAuth(config);
-
-              if (
-                await confirm(
-                  `Are you sure you want to delete the Pub/Sub Broker ${args.name}? This cannot be undone, and all connected clients will be disconnected.`
-                )
-              ) {
-                logger.log(`Deleting Pub/Sub Broker ${args.name}.`);
-                await pubsub.deletePubSubBroker(
-                  accountId,
-                  args.namespace,
-                  args.name
+                logger.log(
+                  JSON.stringify(
+                    await pubsub.listPubSubBrokers(accountId, args.namespace),
+                    null,
+                    2
+                  )
                 );
-                logger.log(`Deleted Pub/Sub Broker ${args.name}.`);
               }
-            }
-          );
+            );
 
-          return brokersYargs;
-        })
+            brokersYargs.command(
+              "delete <name>",
+              "Delete an existing Pub/Sub Broker",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe: "The name of the Broker to delete",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Brokers are associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  });
+              },
+              async (args) => {
+                await printWranglerBanner();
+
+                const config = readConfig(args.config as ConfigPath, args);
+
+                const accountId = await requireAuth(config);
+
+                if (
+                  await confirm(
+                    `Are you sure you want to delete the Pub/Sub Broker ${args.name}? This cannot be undone, and all connected clients will be disconnected.`
+                  )
+                ) {
+                  logger.log(`Deleting Pub/Sub Broker ${args.name}.`);
+                  await pubsub.deletePubSubBroker(
+                    accountId,
+                    args.namespace,
+                    args.name
+                  );
+                  logger.log(`Deleted Pub/Sub Broker ${args.name}.`);
+                }
+              }
+            );
+
+            return brokersYargs;
+          }
+        )
         .command(
           "issue <broker>",
           "Issue new client credentials for a specific Pub/Sub Broker",
@@ -2646,6 +2658,7 @@ function createCLIParser(argv: string[]) {
             const accountId = await requireAuth(config);
             const [namespace, broker] = await pubsub.lookupBroker(args.broker);
 
+            logger.log(`Issuing ${args.number} tokens...`)
             logger.log(
               JSON.stringify(
                 await pubsub.issuePubSubBrokerTokens(
@@ -2682,7 +2695,7 @@ function createCLIParser(argv: string[]) {
             const accountId = await requireAuth(config);
             const [namespace, broker] = await pubsub.lookupBroker(args.broker);
 
-            logger.log("Revoking access to ${args.broker} for:");
+            logger.log(`Revoking access to ${args.broker} for:`);
             logger.log(" ", args.jti.join(" "));
 
             await pubsub.revokePubSubBrokerTokens(
@@ -2717,7 +2730,7 @@ function createCLIParser(argv: string[]) {
             const accountId = await requireAuth(config);
             const [namespace, broker] = await pubsub.lookupBroker(args.broker);
 
-            logger.log("Restoring access to ${args.broker} for:");
+            logger.log(`Restoring access to ${args.broker} for:`);
             logger.log(" ", args.jti.join(" "));
 
             await pubsub.unrevokePubSubBrokerTokens(
@@ -2727,7 +2740,7 @@ function createCLIParser(argv: string[]) {
               ...args.jti
             );
 
-            logger.log("Unrevoked.");
+            logger.log(`Unrevoked ${args.jti.length} tokens`);
           }
         );
     }
