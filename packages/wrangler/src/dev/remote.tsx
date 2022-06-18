@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { useState, useEffect, useRef } from "react";
+import { printBundleSize } from "../bundle-reporter";
 import { createWorkerPreview } from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
@@ -128,6 +129,14 @@ export function useWorker(props: {
         account_id: accountIdRef.current,
       });
 
+      const content = await readFile(bundle.path, "utf-8");
+
+      // TODO: For Dev we could show the reporter message in the interactive box.
+      void printBundleSize(
+        { name: path.basename(bundle.path), content: content },
+        modules
+      );
+
       const assets = await syncAssets(
         accountIdRef.current,
         // When we're using the newer service environments, we wouldn't
@@ -139,8 +148,6 @@ export function useWorker(props: {
         true,
         false
       ); // TODO: cancellable?
-
-      const content = await readFile(bundle.path, "utf-8");
 
       const init: CfWorkerInit = {
         name,

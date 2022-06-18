@@ -28,7 +28,9 @@ const std = {
 
 function normalizeOutput(spy: jest.SpyInstance): string {
   return normalizeErrorMarkers(
-    stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
+    replaceByte(
+      stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
+    )
   );
 }
 
@@ -84,4 +86,12 @@ export function stripTimings(stdout: string): string {
 
 export function stripTrailingWhitespace(str: string): string {
   return str.replace(/[^\S\n]+\n/g, "\n");
+}
+
+/**
+ * Removing leading kilobit (tenth of a byte) from test output due to
+ * variation causing every few tests the value to change by ± .01
+ */
+function replaceByte(stdout: string): string {
+  return stdout.replaceAll(/.[0-9][0-9] KiB/g, "xx KiB");
 }

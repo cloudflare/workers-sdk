@@ -80,6 +80,7 @@ describe("publish", () => {
         "Attempting to login via OAuth...
         Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
         Successfully logged in.
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -110,6 +111,7 @@ describe("publish", () => {
         "Attempting to login via OAuth...
         Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
         Successfully logged in.
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -149,7 +151,8 @@ describe("publish", () => {
         await runWrangler("publish index.js");
 
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -175,7 +178,8 @@ describe("publish", () => {
         await runWrangler("publish index.js");
 
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -282,7 +286,8 @@ describe("publish", () => {
       });
       await runWrangler("publish index.js --env some-env");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-some-env (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
           test-name-some-env.test-sub-domain.workers.dev"
       `);
@@ -300,7 +305,8 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --legacy-env true");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -318,7 +324,8 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --env some-env --legacy-env true");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name-some-env (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name-some-env (TIMINGS)
           Published test-name-some-env (TIMINGS)
             test-name-some-env.test-sub-domain.workers.dev"
         `);
@@ -336,7 +343,8 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --env some-env --legacy-env true");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name-some-env (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name-some-env (TIMINGS)
           Published test-name-some-env (TIMINGS)
             test-name-some-env.test-sub-domain.workers.dev"
         `);
@@ -405,7 +413,8 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -430,7 +439,8 @@ describe("publish", () => {
         });
         await runWrangler("publish index.js --env some-env --legacy-env false");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (some-env) (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (some-env) (TIMINGS)
           Published test-name (some-env) (TIMINGS)
             some-env.test-name.test-sub-domain.workers.dev"
         `);
@@ -475,6 +485,7 @@ describe("publish", () => {
       "Your worker has access to the following bindings:
       - Vars:
         - xyz: \\"123\\"
+      Total Upload: 0xx KiB / gzip: 0xx KiB
       Uploaded test-name (TIMINGS)
       Published test-name (TIMINGS)
         test-name.test-sub-domain.workers.dev"
@@ -527,7 +538,8 @@ describe("publish", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           some-example.com/some-route/*
           *a-boring-website.com (zone id: 54sdf7fsda)
@@ -587,7 +599,8 @@ describe("publish", () => {
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (staging) (TIMINGS)
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (staging) (TIMINGS)
         Published test-name (staging) (TIMINGS)
           some-example.com/some-route/*
           *a-boring-website.com (zone id: 54sdf7fsda)
@@ -692,7 +705,8 @@ describe("publish", () => {
         "
       `);
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           example.com/some-route/*"
       `);
@@ -870,7 +884,8 @@ describe("publish", () => {
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -886,7 +901,8 @@ describe("publish", () => {
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -902,7 +918,8 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -920,7 +937,8 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -936,7 +954,8 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -971,7 +990,8 @@ describe("publish", () => {
       await runWrangler("publish");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1020,7 +1040,8 @@ describe("publish", () => {
       await runWrangler("publish index.ts");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1038,7 +1059,8 @@ describe("publish", () => {
       await runWrangler("publish index.ts");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1068,7 +1090,8 @@ export default{
       mockSubDomainRequest();
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1084,7 +1107,8 @@ export default{
       await runWrangler("publish ./src/index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1123,7 +1147,8 @@ export default {};`
         Object {
           "debug": "",
           "err": "",
-          "out": "--dry-run: exiting now.",
+          "out": "--dry-run: exiting now.
+        Total Upload: 0xx KiB / gzip: 0xx KiB",
           "warn": "",
         }
       `);
@@ -1155,7 +1180,8 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "--dry-run: exiting now.",
+          "out": "--dry-run: exiting now.
+        Total Upload: 0xx KiB / gzip: 0xx KiB",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
 
         ",
@@ -1175,7 +1201,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./src/index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -1256,6 +1283,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -1307,6 +1335,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1393,6 +1422,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 52xx KiB / gzip: 13xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -1437,6 +1467,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1476,6 +1507,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 52xx KiB / gzip: 13xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -1663,6 +1695,7 @@ addEventListener('fetch', event => {});`
         Reading subdir/file-2.txt...
         Uploading as subdir/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1719,6 +1752,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1769,6 +1803,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1817,6 +1852,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (some-env) (TIMINGS)
         Published test-name (some-env) (TIMINGS)
           some-env.test-name.test-sub-domain.workers.dev"
@@ -1866,6 +1902,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name-some-env (TIMINGS)
         Published test-name-some-env (TIMINGS)
           test-name-some-env.test-sub-domain.workers.dev"
@@ -1908,6 +1945,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1947,6 +1985,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -1986,6 +2025,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2026,6 +2066,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2066,6 +2107,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2106,6 +2148,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2146,6 +2189,7 @@ addEventListener('fetch', event => {});`
         "Reading file-1.txt...
         Uploading as file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2188,6 +2232,7 @@ addEventListener('fetch', event => {});`
         "Reading directory-1/file-1.txt...
         Uploading as directory-1/file-1.2ca234f380.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2234,6 +2279,7 @@ addEventListener('fetch', event => {});`
         "Reading .well-known/file-2.txt...
         Uploading as .well-known/file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2379,6 +2425,7 @@ addEventListener('fetch', event => {});`
         Reading file-19.txt...
         Uploading as file-19.f0d69f705d.txt...
         ↗️  Done syncing assets
+        Total Upload: 1xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -2477,6 +2524,7 @@ addEventListener('fetch', event => {});`
         Deleting file-3.somehash.txt from the asset store...
         Deleting file-4.anotherhash.txt from the asset store...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2530,6 +2578,7 @@ addEventListener('fetch', event => {});`
         Reading file-2.txt...
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -2548,7 +2597,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2567,7 +2617,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2585,7 +2636,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2603,7 +2655,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         No publish targets for test-name (TIMINGS)"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2622,7 +2675,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         No publish targets for test-name (TIMINGS)"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2645,7 +2699,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         No publish targets for test-name (dev) (TIMINGS)"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2669,7 +2724,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         No publish targets for test-name (dev) (TIMINGS)"
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2693,7 +2749,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         Published test-name (dev) (TIMINGS)
           dev.test-name.test-sub-domain.workers.dev"
       `);
@@ -2719,7 +2776,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         Published test-name (dev) (TIMINGS)
           dev.test-name.test-sub-domain.workers.dev"
       `);
@@ -2746,7 +2804,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         Published test-name (dev) (TIMINGS)
           dev.test-name.test-sub-domain.workers.dev"
       `);
@@ -2776,7 +2835,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index --env dev --legacy-env false");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         Published test-name (dev) (TIMINGS)
           dev.test-name.test-sub-domain.workers.dev"
       `);
@@ -2808,7 +2868,8 @@ addEventListener('fetch', event => {});`
       );
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (dev) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (dev) (TIMINGS)
         Published test-name (dev) (TIMINGS)
           dev.test-name.test-sub-domain.workers.dev"
       `);
@@ -2825,7 +2886,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2842,7 +2904,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish ./index");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -2879,7 +2942,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           http://example.com/*"
       `);
@@ -2912,7 +2976,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           http://production.example.com/*"
       `);
@@ -2944,7 +3009,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           http://production.example.com/*"
       `);
@@ -2969,7 +3035,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev
           http://example.com/*"
@@ -3003,7 +3070,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           test-name-production.test-sub-domain.workers.dev
           http://production.example.com/*"
@@ -3037,7 +3105,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           test-name-production.test-sub-domain.workers.dev
           http://production.example.com/*"
@@ -3071,7 +3140,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           http://production.example.com/*"
       `);
@@ -3104,7 +3174,8 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js --env production");
 
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name-production (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name-production (TIMINGS)
         Published test-name-production (TIMINGS)
           http://production.example.com/*"
       `);
@@ -3134,6 +3205,7 @@ addEventListener('fetch', event => {});`
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
         "Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -3158,6 +3230,7 @@ addEventListener('fetch', event => {});`
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
           "Running custom build: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -3263,7 +3336,8 @@ addEventListener('fetch', event => {});`
       mockSubDomainRequest();
       await runWrangler("publish index.js --minify");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -3301,7 +3375,8 @@ addEventListener('fetch', event => {});`
       mockSubDomainRequest();
       await runWrangler("publish -e testEnv index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (testEnv) (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (testEnv) (TIMINGS)
         Published test-name (testEnv) (TIMINGS)
           testEnv.test-name.test-sub-domain.workers.dev"
       `);
@@ -3327,6 +3402,7 @@ addEventListener('fetch', event => {});`
         "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -3376,6 +3452,7 @@ addEventListener('fetch', event => {});`
         "Your worker has access to the following bindings:
         - Durable Objects:
           - SOMENAME: SomeClass (defined in some-script)
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -3419,6 +3496,7 @@ addEventListener('fetch', event => {});`
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -3469,6 +3547,7 @@ addEventListener('fetch', event => {});`
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -3512,6 +3591,7 @@ addEventListener('fetch', event => {});`
         - Durable Objects:
           - SOMENAME: SomeClass
           - SOMEOTHERNAME: SomeOtherClass
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
@@ -3557,6 +3637,7 @@ addEventListener('fetch', event => {});`
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -3619,6 +3700,7 @@ addEventListener('fetch', event => {});`
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (xyz) (TIMINGS)
           Published test-name (xyz) (TIMINGS)
             xyz.test-name.test-sub-domain.workers.dev"
@@ -3677,6 +3759,7 @@ addEventListener('fetch', event => {});`
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev",
@@ -3745,6 +3828,7 @@ addEventListener('fetch', event => {});`
           - Durable Objects:
             - SOMENAME: SomeClass
             - SOMEOTHERNAME: SomeOtherClass
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (xyz) (TIMINGS)
           Published test-name (xyz) (TIMINGS)
             xyz.test-name.test-sub-domain.workers.dev",
@@ -3934,6 +4018,7 @@ addEventListener('fetch', event => {});`
         - Wasm Modules:
           - WASM_MODULE_ONE: some_wasm.wasm
           - WASM_MODULE_TWO: more_wasm.wasm
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
@@ -4313,6 +4398,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Wasm Modules:
             - TESTWASMNAME: path/to/test.wasm
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4382,6 +4468,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Wasm Modules:
             - TESTWASMNAME: path/to/and/the/path/to/test.wasm
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4414,10 +4501,11 @@ addEventListener('fetch', event => {});`
         mockSubDomainRequest();
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-                  "Uploaded test-name (TIMINGS)
-                  Published test-name (TIMINGS)
-                    test-name.test-sub-domain.workers.dev"
-              `);
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
+          Published test-name (TIMINGS)
+            test-name.test-sub-domain.workers.dev"
+        `);
         expect(std.err).toMatchInlineSnapshot(`""`);
         expect(std.warn).toMatchInlineSnapshot(`""`);
       });
@@ -4450,6 +4538,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/text.file
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4523,6 +4612,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Text Blobs:
             - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4559,6 +4649,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Data Blobs:
             - TESTDATABLOBNAME: path/to/data.bin
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4632,6 +4723,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Data Blobs:
             - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4671,6 +4763,7 @@ addEventListener('fetch', event => {});`
             - text: \\"plain ol' string\\"
             - count: \\"1\\"
             - complex: \\"[object Object]\\"
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4698,6 +4791,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - R2 Buckets:
             - FOO: foo-bucket
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4743,6 +4837,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4782,6 +4877,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4826,6 +4922,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Durable Objects:
             - EXAMPLE_DO_BINDING: ExampleDurableObject
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4888,6 +4985,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Services:
             - FOO: foo-service - production
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4933,6 +5031,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Unsafe:
             - binding-type: my-binding
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -4975,6 +5074,7 @@ addEventListener('fetch', event => {});`
           "Your worker has access to the following bindings:
           - Unsafe:
             - plain_text: my-binding
+          Total Upload: 0xx KiB / gzip: 0xx KiB
           Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
@@ -5020,7 +5120,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5048,7 +5149,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5080,7 +5182,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5128,7 +5231,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5224,7 +5328,8 @@ addEventListener('fetch', event => {});`
         });
         await runWrangler("publish index.js");
         expect(std.out).toMatchInlineSnapshot(`
-          "Uploaded test-name (TIMINGS)
+          "Total Upload: 0xx KiB / gzip: 0xx KiB
+          Uploaded test-name (TIMINGS)
           Published test-name (TIMINGS)
             test-name.test-sub-domain.workers.dev"
         `);
@@ -5253,7 +5358,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5281,7 +5387,8 @@ addEventListener('fetch', event => {});`
       });
       await runWrangler("publish index.js");
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5309,7 +5416,8 @@ addEventListener('fetch', event => {});`
         "publish index.js --compatibility-date 2022-03-17 --name test-name"
       );
       expect(std.out).toMatchInlineSnapshot(`
-        "Uploaded test-name (TIMINGS)
+        "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev"
       `);
@@ -5349,7 +5457,8 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "",
@@ -5378,7 +5487,8 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "",
@@ -5400,7 +5510,8 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "Uploaded test-name (TIMINGS)
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
           "warn": "",
@@ -5429,6 +5540,7 @@ addEventListener('fetch', event => {});`
           "out": "Your worker has access to the following bindings:
         - Durable Objects:
           - NAME: SomeClass
+        Total Upload: 0xx KiB / gzip: 0xx KiB
         --dry-run: exiting now.",
           "warn": "",
         }
@@ -5445,7 +5557,8 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "--dry-run: exiting now.",
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        --dry-run: exiting now.",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
         ",
@@ -5489,10 +5602,61 @@ addEventListener('fetch', event => {});`
         Object {
           "debug": "",
           "err": "",
-          "out": "--dry-run: exiting now.",
+          "out": "Total Upload: 4xx KiB / gzip: 1xx KiB
+        --dry-run: exiting now.",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
         ",
+        }
+      `);
+    });
+  });
+
+  describe("bundle reporter", () => {
+    it("should print the bundle size", async () => {
+      fs.writeFileSync(
+        "./text.txt",
+        `${new Array(100)
+          .fill("Try not. Do or do not. There is no try.")
+          .join("")}`
+      );
+
+      fs.writeFileSync(
+        "./hello.html",
+        `<!DOCTYPE html>
+      <html>
+        <body>
+            <h2>Hello World!</h2>
+        </body>
+      </html>
+      `
+      );
+
+      fs.writeFileSync(
+        "index.js",
+        `import hello from "./hello.html";
+         import text from "./text.txt";
+        export default {
+          async fetch(request) {
+            return new Response(json.stringify({ hello, text }));
+        },
+      };`
+      );
+      writeWranglerToml({
+        main: "index.js",
+      });
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await runWrangler("publish");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Total Upload: 4xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
         }
       `);
     });

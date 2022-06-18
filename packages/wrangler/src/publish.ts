@@ -4,6 +4,7 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
+import { printBundleSize } from "./bundle-reporter";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
@@ -444,6 +445,10 @@ export default async function publish(props: Props): Promise<void> {
         )
       ).available_on_subdomain;
     }
+    void printBundleSize(
+      { name: path.basename(resolvedEntryPointPath), content: content },
+      modules
+    );
   } finally {
     if (typeof destination !== "string") {
       // this means we're using a temp dir,

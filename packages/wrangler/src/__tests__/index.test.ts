@@ -247,7 +247,8 @@ describe("wrangler", () => {
         Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-      --dry-run: exiting now."
+      --dry-run: exiting now.
+      Total Upload: 0xx KiB / gzip: 0xx KiB"
     `);
   });
 });
