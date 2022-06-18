@@ -118,27 +118,24 @@ export function useWorker(props: {
 
       if (!bundle || !format) return;
 
-      const content = await readFile(bundle.path, "utf-8");
-
       if (!startedRef.current) {
         startedRef.current = true;
-        // TODO: For Dev we could show the reporter message in the interactive box.
-        void printBundleSize(
-          { name: path.basename(bundle.path), content: content },
-          modules
-        );
       } else {
         logger.log("⎔ Detected changes, restarted server.");
-        void printBundleSize(
-          { name: path.basename(bundle.path), content: content },
-          modules
-        );
       }
 
       // Ensure we have an account id, even if it means logging in here.
       accountIdRef.current = await requireAuth({
         account_id: accountIdRef.current,
       });
+
+      const content = await readFile(bundle.path, "utf-8");
+
+      // TODO: For Dev we could show the reporter message in the interactive box.
+      void printBundleSize(
+        { name: path.basename(bundle.path), content: content },
+        modules
+      );
 
       const assets = await syncAssets(
         accountIdRef.current,
