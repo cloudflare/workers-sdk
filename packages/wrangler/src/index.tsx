@@ -2607,7 +2607,7 @@ function createCLIParser(argv: string[]) {
 
               if (
                 await confirm(
-                  `Are you sure you want to delete the Pub/Sub Broker ${args.name}? All connected clients will be disconnected.`
+                  `Are you sure you want to delete the Pub/Sub Broker ${args.name}? This cannot be undone, and all connected clients will be disconnected.`
                 )
               ) {
                 logger.log(`Deleting Pub/Sub Broker ${args.name}.`);

@@ -94,7 +94,7 @@ export async function deletePubSubBroker(
   broker: string
 ): Promise<void> {
   return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/${broker}`,
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
     { method: "DELETE" }
   );
 }
