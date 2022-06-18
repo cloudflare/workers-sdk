@@ -77,7 +77,7 @@ jest.mock("../dev/dev", () => {
 jest.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-jest.mock("../generate-auth-url", () => {
+jest.mock("../user/generate-auth-url", () => {
   return {
     generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
     generateAuthUrl: jest
@@ -100,7 +100,7 @@ jest.mock("../generate-auth-url", () => {
   };
 });
 
-jest.mock("../generate-random-state", () => {
+jest.mock("../user/generate-random-state", () => {
   return {
     generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
   };
