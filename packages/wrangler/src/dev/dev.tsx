@@ -139,7 +139,7 @@ function DevSession(props: DevSessionProps) {
     rules: props.rules,
     jsxFragment: props.jsxFragment,
     serveAssetsFromWorker: Boolean(
-      props.assetPaths && !props.isWorkersSite && !props.local
+      props.assetPaths && !props.isWorkersSite && props.local
     ),
     tsconfig: props.tsconfig,
     minify: props.minify,
