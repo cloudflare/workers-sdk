@@ -4,6 +4,7 @@ import {
   indexLocation,
   parseJSON,
   parseTOML,
+  parseYAML,
 } from "../parse";
 import type { Message } from "../parse";
 
@@ -171,6 +172,99 @@ describe("parseTOML", () => {
       parseTOML(
         "# A comment with a Windows line-ending\r\n# Another comment with a Windows line-ending\r\n"
       )
+    ).toEqual({});
+  });
+});
+
+describe("parseYAML", () => {
+  it("should parse yaml that is empty", () => {
+    expect(parseYAML("")).toStrictEqual({});
+  });
+
+  it("should parse yaml with basic values", () => {
+    expect(
+        parseYAML(`
+name: basic
+version: 1
+`)
+    ).toStrictEqual({
+      name: "basic",
+      version: 1,
+    });
+  });
+
+  it("should parse yaml with complex values", () => {
+    expect(
+        parseYAML(`
+name: complex
+version: 1
+owner:
+  name:
+    - tim
+  alive: true
+  dog:
+    exists: true
+`)
+    ).toStrictEqual({
+      name: "complex",
+      owner: {
+        alive: true,
+        dog: {
+          exists: true,
+        },
+        name: ["tim"],
+      },
+      version: 1,
+    });
+  });
+
+  it("should fail to parse yaml with invalid string", () => {
+    try {
+      parseYAML(`name: "fail'`);
+      fail("parseYAML did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
+        text: "Missing closing \"quote",
+        kind: "error",
+        location: {
+          line: 1,
+          column: 13,
+          fileText: "name: \"fail'",
+          file: undefined,
+          lineText: "name: \"fail'",
+        },
+        notes: [],
+      });
+    }
+  });
+
+  it("should fail to parse yaml with a non-dictionary", () => {
+    try {
+      parseYAML(`- hello`, "config.yaml");
+      fail("parseYAML did not throw");
+    } catch (err) {
+      expect({ ...(err as Error) }).toStrictEqual({
+        name: "ParseError",
+        text: "Expected config to be a dictionary",
+        kind: "error",
+        location: {
+          line: 1,
+          column: 1,
+          lineText: "- hello",
+          file: "config.yaml",
+          fileText: "- hello",
+        },
+        notes: [],
+      });
+    }
+  });
+
+  it("should cope with Windows line-endings", () => {
+    expect(
+        parseYAML(
+            "# A comment with a Windows line-ending\r\n# Another comment with a Windows line-ending\r\n"
+        )
     ).toEqual({});
   });
 });

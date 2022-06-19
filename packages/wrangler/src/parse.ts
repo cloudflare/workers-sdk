@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
+import YAML from "yaml";
 import { logger } from "./logger";
 
 export type Message = {
@@ -90,6 +91,51 @@ export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
       lineText,
       line: line + 1,
       column: col - 1,
+      file,
+      fileText: input,
+    };
+    throw new ParseError({ text, location });
+  }
+}
+
+const YAML_ERROR_NAME = "YAMLParseError";
+const YAML_ERROR_SUFFIX = " at line ";
+
+type YamlError = Error & {
+  linePos: [{ line: number; col: number }, { line: number; col: number }];
+};
+
+/**
+ * A wrapper around `YAML.parse` that throws a `ParseError`.
+ */
+export function parseYAML(input: string, file?: string): TOML.JsonMap | never {
+  try {
+    const parsed = YAML.parse(input, { prettyErrors: true }) ?? {}; // Cast null to an empty object.
+    if (parsed.constructor !== Object) {
+      throw new ParseError({
+        text: "Expected config to be a dictionary",
+        location: {
+          lineText: input.split("\n")[0],
+          line: 1,
+          column: 1,
+          file,
+          fileText: input,
+        }
+      });
+    }
+    return parsed as TOML.JsonMap;
+  } catch (err) {
+    const { name, message, linePos } = err as YamlError;
+    if (name !== YAML_ERROR_NAME) {
+      throw err;
+    }
+    const { line, col } = linePos[0];
+    const text = message.substring(0, message.lastIndexOf(YAML_ERROR_SUFFIX));
+    const lineText = input.split("\n")[line - 1];
+    const location = {
+      lineText,
+      line,
+      column: col,
       file,
       fileText: input,
     };

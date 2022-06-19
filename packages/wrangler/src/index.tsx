@@ -16,7 +16,7 @@ import { setGlobalDispatcher, ProxyAgent } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, printBindings, readConfig } from "./config";
+import { findWranglerConfig, printBindings, readConfig } from "./config"
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -1055,7 +1055,7 @@ function createCLIParser(argv: string[]) {
         const configPath =
           (args.config as ConfigPath) ||
           ((args.script &&
-            findWranglerToml(path.dirname(args.script))) as ConfigPath);
+            findWranglerConfig(path.dirname(args.script))) as ConfigPath);
         let config = readConfig(configPath, args);
 
         if (config.configPath) {
@@ -1416,7 +1416,7 @@ function createCLIParser(argv: string[]) {
 
       const configPath =
         (args.config as ConfigPath) ||
-        (args.script && findWranglerToml(path.dirname(args.script)));
+        (args.script && findWranglerConfig(path.dirname(args.script)));
       const config = readConfig(configPath, args);
       const entry = await getEntry(args, config, "publish");
 

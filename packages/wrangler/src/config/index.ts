@@ -1,6 +1,6 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
-import { parseTOML, readFileSync } from "../parse";
+import { parseTOML, parseYAML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
@@ -27,12 +27,13 @@ export function readConfig(
 ): Config {
   let rawConfig: RawConfig = {};
   if (!configPath) {
-    configPath = findWranglerToml();
+    configPath = findWranglerConfig();
   }
 
   // Load the configuration from disk if available
   if (configPath) {
-    rawConfig = parseTOML(readFileSync(configPath), configPath);
+    const parser = configPath.endsWith('.toml') ? parseTOML : parseYAML;
+    rawConfig = parser(readFileSync(configPath), configPath);
   }
 
   // Process the top-level configuration.
@@ -53,14 +54,18 @@ export function readConfig(
 }
 
 /**
- * Find the wrangler.toml file by searching up the file-system
+ * Find the wrangler config file by searching up the file-system
  * from the current working directory.
+ *
+ * Find a specific config file type, or defaults to TOML then YAML.
  */
-export function findWranglerToml(
-  referencePath: string = process.cwd()
+export function findWranglerConfig(
+  referencePath: string = process.cwd(),
+  fileType: string | undefined = undefined,
 ): string | undefined {
-  const configPath = findUpSync("wrangler.toml", { cwd: referencePath });
-  return configPath;
+  const types = fileType ? [ fileType ] : [ 'toml', 'yaml' ];
+  return types.reduce((path: string | undefined, type: string) =>
+      path || findUpSync(`wrangler.${type}`, { cwd: referencePath }), undefined);
 }
 
 /**
