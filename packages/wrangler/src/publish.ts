@@ -46,6 +46,7 @@ type Props = {
 	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
+	noBuild: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -340,22 +341,45 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 	try {
-		const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
-			props.entry,
-			typeof destination === "string" ? destination : destination.path,
-			{
-				serveAssetsFromWorker:
-					!props.isWorkersSite && Boolean(props.assetPaths),
-				jsxFactory,
-				jsxFragment,
-				rules: props.rules,
-				tsconfig: props.tsconfig ?? config.tsconfig,
-				minify,
-				nodeCompat,
-				define: config.define,
-				checkFetch: false,
-			}
-		);
+		if (props.noBuild) {
+			// if we're not building, let's just copy the entry to the destination directory
+			const destinationDir =
+				typeof destination === "string" ? destination : destination.path;
+			mkdirSync(destinationDir, { recursive: true });
+			writeFileSync(
+				path.join(destinationDir, path.basename(props.entry.file)),
+				readFileSync(props.entry.file, "utf-8")
+			);
+		}
+
+		const {
+			modules,
+			resolvedEntryPointPath,
+			bundleType,
+		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBuild
+			? // we can skip the whole bundling step and mock a bundle here
+			  {
+					modules: [],
+					resolvedEntryPointPath: props.entry.file,
+					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
+					stop: undefined,
+			  }
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						serveAssetsFromWorker:
+							!props.isWorkersSite && Boolean(props.assetPaths),
+						jsxFactory,
+						jsxFragment,
+						rules: props.rules,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						nodeCompat,
+						define: config.define,
+						checkFetch: false,
+					}
+			  );
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",

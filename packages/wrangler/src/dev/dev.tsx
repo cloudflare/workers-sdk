@@ -23,7 +23,8 @@ import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
 export type DevProps = {
-	name?: string;
+	name: string | undefined;
+	noBuild: boolean;
 	entry: Entry;
 	port: number;
 	ip: string;
@@ -149,6 +150,7 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		nodeCompat: props.nodeCompat,
 		define: props.define,
+		noBuild: props.noBuild,
 	});
 
 	return props.local ? (
