@@ -224,10 +224,18 @@ export default async function publish(props: Props): Promise<void> {
   // TODO: warn if git/hg has uncommitted changes
   const { config, accountId } = props;
 
-  assert(
-    props.compatibilityDate || config.compatibility_date,
-    "A compatibility_date is required when publishing. Add one to your wrangler.toml file, or pass it in your terminal as --compatibility-date. See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
-  );
+  if (!(props.compatibilityDate || config.compatibility_date)) {
+    const compatibilityDateStr = `${new Date().getFullYear()}-${(
+      new Date().getMonth() + ""
+    ).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
+
+    throw new Error(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+    \`\`\`
+    compatibility_date = "${compatibilityDateStr}"
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
+  }
 
   const triggers = props.triggers || config.triggers?.crons;
   const routes =

@@ -2876,6 +2876,25 @@ addEventListener('fetch', event => {});`
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
+    it("should error if a compatibility_date is not available in wrangler.toml or cli args", async () => {
+      writeWorkerSource();
+      let err: undefined | Error;
+      try {
+        await runWrangler("publish ./index.js");
+      } catch (e) {
+        err = e as Error;
+      }
+
+      expect(err?.message.replaceAll(/\d/g, "X")).toMatchInlineSnapshot(`
+        "A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+            \`\`\`
+            compatibility_date = \\"XXXX-XX-XX\\"
+            \`\`\`
+            Or you could pass it in your terminal as \`--compatibility-date XXXX-XX-XX\`
+        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+      `);
+    });
+
     it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
       writeWranglerToml();
       writeWorkerSource();
