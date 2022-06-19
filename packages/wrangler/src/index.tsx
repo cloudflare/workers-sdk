@@ -2435,7 +2435,9 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                await pubsub.describePubSubNamespace(accountId, args.name);
+                logger.log(
+                  await pubsub.describePubSubNamespace(accountId, args.name)
+                );
               }
             );
 
@@ -2500,7 +2502,7 @@ function createCLIParser(argv: string[]) {
                 }
                 if (args["on-publish-url"]) {
                   broker.on_publish = {
-                    url: args["on_publish_url"],
+                    url: args["on-publish-url"],
                   };
                 }
                 logger.log(
@@ -2558,6 +2560,7 @@ function createCLIParser(argv: string[]) {
                 if (args.description) {
                   broker.description = args.description;
                 }
+
                 if (args.expiration) {
                   const expiration = parseHumanDuration(args.expiration);
                   if (isNaN(expiration)) {
@@ -2567,21 +2570,19 @@ function createCLIParser(argv: string[]) {
                   }
                   broker.expiration = expiration;
                 }
+
                 if (args["on-publish-url"]) {
                   broker.on_publish = {
                     url: args["on-publish-url"],
                   };
                 }
+
                 logger.log(
-                  JSON.stringify(
-                    await pubsub.updatePubSubBroker(
-                      accountId,
-                      args.namespace,
-                      args.name,
-                      broker
-                    ),
-                    null,
-                    2
+                  await pubsub.updatePubSubBroker(
+                    accountId,
+                    args.namespace,
+                    args.name,
+                    broker
                   )
                 );
                 logger.log(`Successfully updated Pub/Sub Broker ${args.name}`);
@@ -2675,10 +2676,12 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                await pubsub.describePubSubBroker(
-                  accountId,
-                  args.namespace,
-                  args.name
+                logger.log(
+                  await pubsub.describePubSubBroker(
+                    accountId,
+                    args.namespace,
+                    args.name
+                  )
                 );
               }
             );
@@ -2689,7 +2692,8 @@ function createCLIParser(argv: string[]) {
               (yargs) => {
                 return yargs
                   .positional("name", {
-                    describe: "The name of the Broker to issue credentials for.",
+                    describe:
+                      "The name of the Broker to issue credentials for.",
                     type: "string",
                     demandOption: true,
                   })
@@ -2708,7 +2712,7 @@ function createCLIParser(argv: string[]) {
                   .option("type", {
                     describe: "The type of credential to generate.",
                     type: "string",
-                    default: "TOKEN"
+                    default: "TOKEN",
                   });
               },
               async (args) => {
@@ -2723,7 +2727,7 @@ function createCLIParser(argv: string[]) {
                       args.namespace,
                       args.name,
                       args.number,
-                      args.type,
+                      args.type
                     ),
                     null,
                     2
@@ -2737,7 +2741,8 @@ function createCLIParser(argv: string[]) {
               (yargs) => {
                 return yargs
                   .positional("name", {
-                    describe: "The name of the Broker to revoke credentials against.",
+                    describe:
+                      "The name of the Broker to revoke credentials against.",
                     type: "string",
                     demandOption: true,
                   })
@@ -2777,7 +2782,8 @@ function createCLIParser(argv: string[]) {
               (yargs) => {
                 return yargs
                   .positional("name", {
-                    describe: "The name of the Broker to revoke credentials against.",
+                    describe:
+                      "The name of the Broker to revoke credentials against.",
                     type: "string",
                     demandOption: true,
                   })
@@ -2803,8 +2809,8 @@ function createCLIParser(argv: string[]) {
 
                 await pubsub.unrevokePubSubBrokerTokens(
                   accountId,
-                  namespace,
-                  broker,
+                  args.namespace,
+                  args.name,
                   ...args.jti
                 );
 

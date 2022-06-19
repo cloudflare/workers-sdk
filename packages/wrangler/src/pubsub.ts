@@ -160,7 +160,6 @@ export async function updatePubSubBroker(
   broker: string,
   update: PubSubBrokerUpdate
 ): Promise<void> {
-  console.log("update", JSON.stringify(update));
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
     { method: "PATCH", body: JSON.stringify(update) }
@@ -195,7 +194,7 @@ export async function issuePubSubBrokerTokens(
   type: string
 ): Promise<Record<string, string>> {
   return await fetchResult<Record<string, string>>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}`
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}&type=${type}`
   );
 }
 
