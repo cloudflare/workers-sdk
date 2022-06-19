@@ -45,7 +45,9 @@ export interface PubSubBrokerUpdate {
 export async function listPubSubNamespaces(
   accountId: string
 ): Promise<PubSubNamespace[]> {
-  return await fetchResult<PubSubNamespace[]>(`/accounts/${accountId}/pubsub/namespaces`);
+  return await fetchResult<PubSubNamespace[]>(
+    `/accounts/${accountId}/pubsub/namespaces`
+  );
 }
 
 /**
@@ -56,14 +58,12 @@ export async function listPubSubNamespaces(
  */
 export async function createPubSubNamespace(
   accountId: string,
-  namespace: PubSubNamespace,
+  namespace: PubSubNamespace
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces`,
-    { method: "POST",
-      body: JSON.stringify(namespace)
-    }
-  );
+  return await fetchResult<void>(`/accounts/${accountId}/pubsub/namespaces`, {
+    method: "POST",
+    body: JSON.stringify(namespace),
+  });
 }
 
 /**
@@ -81,6 +81,18 @@ export async function deletePubSubNamespace(
   );
 }
 
+/**
+ * Describe a single Pub/Sub Namespace by its `namespace` name.
+ */
+export async function describePubSubNamespace(
+  accountId: string,
+  namespace: string
+): Promise<void> {
+  return await fetchResult<void>(
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}`,
+    { method: "GET" }
+  );
+}
 
 /**
  * Delete a Pub/Sub Broker with the given `broker` name within the associated `namespace`.
@@ -100,13 +112,29 @@ export async function deletePubSubBroker(
 }
 
 /**
+ * Describe a single Pub/Sub Broker for the given `broker` name within the associated `namespace`.
+ */
+export async function describePubSubBroker(
+  accountId: string,
+  namespace: string,
+  broker: string
+): Promise<void> {
+  return await fetchResult<void>(
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
+    { method: "GET" }
+  );
+}
+
+/**
  * Fetch a list of all the Pub/Sub Brokers under the given `namespace`.
  */
 export async function listPubSubBrokers(
   accountId: string,
-  namespace: string,
+  namespace: string
 ): Promise<PubSubBroker[]> {
-  return await fetchResult<PubSubBroker[]>(`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`);
+  return await fetchResult<PubSubBroker[]>(
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`
+  );
 }
 
 /**
@@ -115,13 +143,11 @@ export async function listPubSubBrokers(
 export async function createBroker(
   accountId: string,
   namespace: string,
-  broker: PubSubBroker,
+  broker: PubSubBroker
 ): Promise<void> {
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`,
-    { method: "POST",
-      body: JSON.stringify(broker)
-    }
+    { method: "POST", body: JSON.stringify(broker) }
   );
 }
 
@@ -132,14 +158,12 @@ export async function updatePubSubBroker(
   accountId: string,
   namespace: string,
   broker: string,
-  update: PubSubBrokerUpdate,
+  update: PubSubBrokerUpdate
 ): Promise<void> {
-  console.log('update', JSON.stringify(update))
+  console.log("update", JSON.stringify(update));
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
-    { method: "PATCH",
-      body: JSON.stringify(update)
-    }
+    { method: "PATCH", body: JSON.stringify(update) }
   );
 }
 
@@ -151,7 +175,7 @@ export async function updatePubSubBroker(
 export async function getPubSubBrokerPublicKeys(
   accountId: string,
   namespace: string,
-  broker: string,
+  broker: string
 ): Promise<Record<string, string>> {
   return await fetchResult<Record<string, string>>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/publickeys`
@@ -167,8 +191,9 @@ export async function issuePubSubBrokerTokens(
   accountId: string,
   namespace: string,
   broker: string,
-  number: number
-): Promise<Record<string,string>> {
+  number: number,
+  type: string
+): Promise<Record<string, string>> {
   return await fetchResult<Record<string, string>>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}`
   );
@@ -186,11 +211,11 @@ export async function revokePubSubBrokerTokens(
   broker: string,
   ...jti: string[]
 ): Promise<void> {
-  const q = new URLSearchParams()
-  jti.forEach(id => q.append('jti', id))
+  const q = new URLSearchParams();
+  jti.forEach((id) => q.append("jti", id));
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${q.toString()}`,
-    { method: "POST", body:'' }
+    { method: "POST", body: "" }
   );
 }
 
@@ -207,8 +232,8 @@ export async function unrevokePubSubBrokerTokens(
   broker: string,
   ...jti: string[]
 ): Promise<void> {
-  const q = new URLSearchParams()
-  jti.forEach(id => q.append('jti', id))
+  const q = new URLSearchParams();
+  jti.forEach((id) => q.append("jti", id));
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${q.toString()}`,
     { method: "DELETE" }
@@ -218,14 +243,13 @@ export async function unrevokePubSubBrokerTokens(
 /**
  * Lookup a Pub/Sub Broker by hostname.
  */
-export async function lookupBroker(host: string): Promise<[namespace: string, broker: string]> {
+export async function lookupBroker(
+  host: string
+): Promise<[namespace: string, broker: string]> {
   // Note: if we support custom broker hostnames later, this will need to be smarter
-  const [broker, namespace, ...rest] = host.split('.')
-  if (rest[0] != 'cloudflarepubsub' || rest[1] != 'com') {
-    throw new CommandLineArgsError(
-      `${args.broker} is not a valid Broker host`
-    )
+  const [broker, namespace, ...rest] = host.split(".");
+  if (rest[0] != "cloudflarepubsub" || rest[1] != "com") {
+    throw new CommandLineArgsError(`${args.broker} is not a valid Broker host`);
   }
-  return [namespace, broker]
+  return [namespace, broker];
 }
-

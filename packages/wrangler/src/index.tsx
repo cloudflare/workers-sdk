@@ -2361,10 +2361,7 @@ function createCLIParser(argv: string[]) {
                   });
               },
               async (args) => {
-                await printWranglerBanner();
-
                 const config = readConfig(args.config as ConfigPath, args);
-
                 const accountId = await requireAuth(config);
 
                 const namespace: pubsub.PubSubNamespace = {
@@ -2386,7 +2383,6 @@ function createCLIParser(argv: string[]) {
               {},
               async (args) => {
                 const config = readConfig(args.config as ConfigPath, args);
-
                 const accountId = await requireAuth(config);
 
                 logger.log(
@@ -2410,17 +2406,39 @@ function createCLIParser(argv: string[]) {
                 });
               },
               async (args) => {
-                await printWranglerBanner();
-
                 const config = readConfig(args.config as ConfigPath, args);
-
                 const accountId = await requireAuth(config);
 
-                logger.log(`Deleting namespace ${args.name}...`);
-                await pubsub.deletePubSubNamespace(accountId, args.name);
-                logger.log(`Deleted namespace ${args.name}.`);
+                if (
+                  await confirm(
+                    `️❗️ Are you sure you want to delete the Pub/Sub Namespace ${args.name}? This cannot be undone.\nThis name will be available for others to register.`
+                  )
+                ) {
+                  logger.log(`Deleting namespace ${args.name}...`);
+                  await pubsub.deletePubSubNamespace(accountId, args.name);
+                  logger.log(`Deleted namespace ${args.name}.`);
+                }
               }
             );
+
+            pubsubNamespaceYargs.command(
+              "describe <name>",
+              "Describe a Pub/Sub Namespace",
+              (yargs) => {
+                return yargs.positional("name", {
+                  describe: "The name of the namespace to describe.",
+                  type: "string",
+                  demandOption: true,
+                });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                await pubsub.describePubSubNamespace(accountId, args.name);
+              }
+            );
+
             return pubsubNamespaceYargs;
           }
         )
@@ -2533,7 +2551,10 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                const broker: pubsub.PubSubBroker = {};
+                const broker: pubsub.PubSubBroker = {
+                  name: args.name,
+                };
+
                 if (args.description) {
                   broker.description = args.description;
                 }
@@ -2604,7 +2625,7 @@ function createCLIParser(argv: string[]) {
                     demandOption: true,
                   })
                   .option("namespace", {
-                    describe: "The Namespace the Brokers are associated with.",
+                    describe: "The Namespace the Broker is associated with.",
                     type: "string",
                     alias: "ns",
                     demandOption: true,
@@ -2619,7 +2640,7 @@ function createCLIParser(argv: string[]) {
 
                 if (
                   await confirm(
-                    `Are you sure you want to delete the Pub/Sub Broker ${args.name}? This cannot be undone, and all connected clients will be disconnected.`
+                    `️❗️ Are you sure you want to delete the Pub/Sub Broker ${args.name}? This cannot be undone.\nAll existing clients will be disconnected.`
                   )
                 ) {
                   logger.log(`Deleting Pub/Sub Broker ${args.name}.`);
@@ -2633,114 +2654,165 @@ function createCLIParser(argv: string[]) {
               }
             );
 
-            return brokersYargs;
-          }
-        )
-        .command(
-          "issue <broker>",
-          "Issue new client credentials for a specific Pub/Sub Broker",
-          (yargs) => {
-            return yargs
-              .positional("broker", {
-                describe: "FQDN of the broker",
-                type: "string",
-                demandOption: true,
-              })
-              .option("number", {
-                describe: "The number of tokens to generate",
-                type: "number",
-                alias: "n",
-                default: 1,
-              });
-          },
-          async (args) => {
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
-            const [namespace, broker] = await pubsub.lookupBroker(args.broker);
+            brokersYargs.command(
+              "describe <name>",
+              "Describe an existing Pub/Sub Broker.",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe: "The name of the Broker to describe.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
 
-            logger.log(`Issuing ${args.number} tokens...`)
-            logger.log(
-              JSON.stringify(
-                await pubsub.issuePubSubBrokerTokens(
+                await pubsub.describePubSubBroker(
+                  accountId,
+                  args.namespace,
+                  args.name
+                );
+              }
+            );
+
+            brokersYargs.command(
+              "issue <broker>",
+              "Issue new client credentials for a specific Pub/Sub Broker.",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe: "The name of the Broker to issue credentials for.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  })
+                  .option("number", {
+                    describe: "The number of credentials to generate.",
+                    type: "number",
+                    alias: "n",
+                    default: 1,
+                  })
+                  .option("type", {
+                    describe: "The type of credential to generate.",
+                    type: "string",
+                    default: "TOKEN"
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                logger.log(`Issuing ${args.number} tokens...`);
+                logger.log(
+                  JSON.stringify(
+                    await pubsub.issuePubSubBrokerTokens(
+                      accountId,
+                      args.namespace,
+                      args.name,
+                      args.number,
+                      args.type,
+                    ),
+                    null,
+                    2
+                  )
+                );
+              }
+            );
+            brokersYargs.command(
+              "revoke <name> --jti=A,B,C",
+              "Revoke a set of active client credentials associated with the given Broker",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe: "The name of the Broker to revoke credentials against.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  })
+                  .option("jti", {
+                    describe: "Tokens to revoke",
+                    type: "string",
+                    demandOption: true,
+                    array: true,
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                logger.log(`Revoking access to ${args.broker} for:`);
+                logger.log(" ", args.jti.join(" "));
+
+                await pubsub.revokePubSubBrokerTokens(
+                  accountId,
+                  args.namespace,
+                  args.name,
+                  ...args.jti
+                );
+
+                logger.log("Revoked.");
+              }
+            );
+            brokersYargs.command(
+              "unrevoke <name> --jti=A,B,C",
+              "Restore access to a set of previously revoked client credentials.",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe: "The name of the Broker to revoke credentials against.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  })
+                  .option("jti", {
+                    describe: "Tokens to revoke",
+                    type: "string",
+                    demandOption: true,
+                    array: true,
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                logger.log(`Restoring access to ${args.broker} for:`);
+                logger.log(" ", args.jti.join(" "));
+
+                await pubsub.unrevokePubSubBrokerTokens(
                   accountId,
                   namespace,
                   broker,
-                  args.number
-                ),
-                null,
-                2
-              )
-            );
-          }
-        )
-        .command(
-          "revoke <broker> <jti..>",
-          "Revoke access for client tokens",
-          (yargs) => {
-            return yargs
-              .positional("broker", {
-                describe: "FQDN of the broker",
-                type: "string",
-                demandOption: true,
-              })
-              .positional("jti", {
-                describe: "Tokens to revoke",
-                type: "string",
-                demandOption: true,
-                array: true,
-              });
-          },
-          async (args) => {
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
-            const [namespace, broker] = await pubsub.lookupBroker(args.broker);
+                  ...args.jti
+                );
 
-            logger.log(`Revoking access to ${args.broker} for:`);
-            logger.log(" ", args.jti.join(" "));
-
-            await pubsub.revokePubSubBrokerTokens(
-              accountId,
-              namespace,
-              broker,
-              ...args.jti
+                logger.log(`Unrevoked ${args.jti.length} tokens`);
+              }
             );
 
-            logger.log("Revoked.");
-          }
-        )
-        .command(
-          "unrevoke <broker> <jti..>",
-          "Restore access for client tokens",
-          (yargs) => {
-            return yargs
-              .positional("broker", {
-                describe: "FQDN of the broker",
-                type: "string",
-                demandOption: true,
-              })
-              .positional("jti", {
-                describe: "Tokens to revoke",
-                type: "string",
-                demandOption: true,
-                array: true,
-              });
-          },
-          async (args) => {
-            const config = readConfig(args.config as ConfigPath, args);
-            const accountId = await requireAuth(config);
-            const [namespace, broker] = await pubsub.lookupBroker(args.broker);
-
-            logger.log(`Restoring access to ${args.broker} for:`);
-            logger.log(" ", args.jti.join(" "));
-
-            await pubsub.unrevokePubSubBrokerTokens(
-              accountId,
-              namespace,
-              broker,
-              ...args.jti
-            );
-
-            logger.log(`Unrevoked ${args.jti.length} tokens`);
+            return brokersYargs;
           }
         );
     }
