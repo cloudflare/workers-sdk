@@ -37,16 +37,16 @@ import type {
 } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
-export interface CreateDeploymentArgs {
+type PublishArgs = {
   directory: string;
   "project-name"?: string;
   branch?: string;
   "commit-hash"?: string;
   "commit-message"?: string;
   "commit-dirty"?: boolean;
-}
+};
 
-export function Options(yargs: Argv): Argv<CreateDeploymentArgs> {
+export function Options(yargs: Argv): Argv<PublishArgs> {
   return yargs
     .positional("directory", {
       type: "string",
@@ -86,7 +86,7 @@ export const Handler = async ({
   commitHash,
   commitMessage,
   commitDirty,
-}: ArgumentsCamelCase<CreateDeploymentArgs>) => {
+}: ArgumentsCamelCase<PublishArgs>) => {
   if (!directory) {
     throw new FatalError("Must specify a directory.", 1);
   }
