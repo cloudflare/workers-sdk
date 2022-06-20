@@ -6,5 +6,5 @@
     "resolveJsonModule": true,
     "jsx": "react"
   },
-  "exclude": ["vendor", "*-dist", "src/pages/templates", "templates"]
+  "exclude": ["vendor", "*-dist", "templates"]
 }

@@ -25,7 +25,7 @@ export function buildPlugin({
 }: Options) {
   return build({
     entryPoints: [
-      resolve(__dirname, "../src/pages/templates/template-plugin.ts"),
+      resolve(__dirname, "../templates/pages-template-plugin.ts"),
     ],
     inject: [routesModule],
     bundle: true,

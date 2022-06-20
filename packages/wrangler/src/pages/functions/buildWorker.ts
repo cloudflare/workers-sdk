@@ -30,7 +30,7 @@ export function buildWorker({
 }: Options) {
   return build({
     entryPoints: [
-      resolve(__dirname, "../src/pages/templates/template-worker.ts"),
+      resolve(__dirname, "../templates/pages-template-worker.ts"),
     ],
     inject: [routesModule],
     bundle: true,
