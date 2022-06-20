@@ -24,6 +24,7 @@ export interface PubSubBroker {
   id?: string;
   name: string;
   description?: string;
+  auth_type?: string;
   expiration?: number;
   created_on?: string;
   modified_on?: string;
@@ -140,7 +141,7 @@ export async function listPubSubBrokers(
 /**
  * Create a Pub/Sub Broker within given `namespace`.
  */
-export async function createBroker(
+export async function createPubSubBroker(
   accountId: string,
   namespace: string,
   broker: PubSubBroker
@@ -208,12 +209,11 @@ export async function revokePubSubBrokerTokens(
   accountId: string,
   namespace: string,
   broker: string,
-  ...jti: string[]
+  jti: string[]
 ): Promise<void> {
-  const q = new URLSearchParams();
-  jti.forEach((id) => q.append("jti", id));
+  const jtis = makeQueryString(jti, "jti");
   return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${q.toString()}`,
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${jtis}`,
     { method: "POST", body: "" }
   );
 }
@@ -229,12 +229,11 @@ export async function unrevokePubSubBrokerTokens(
   accountId: string,
   namespace: string,
   broker: string,
-  ...jti: string[]
+  jti: string[]
 ): Promise<void> {
-  const q = new URLSearchParams();
-  jti.forEach((id) => q.append("jti", id));
+  const jtis = makeQueryString(jti, "jti");
   return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${q.toString()}`,
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${jtis}`,
     { method: "DELETE" }
   );
 }
@@ -251,4 +250,17 @@ export async function lookupBroker(
     throw new CommandLineArgsError(`${args.broker} is not a valid Broker host`);
   }
   return [namespace, broker];
+}
+
+/**
+ * Helper function to build a the query string with repeated keys instead of
+ * comma-separated values.
+ */
+function makeQueryString(values: string[], key: string): string {
+  // Join the array of tokens: our API expects multiple "key" keys
+  // and NOT key=A,B,C as a single encoded query parameter.
+  const params: string[] = [];
+  values.forEach((val) => params.push(`${key}=${val}`));
+
+  return params.join("&");
 }

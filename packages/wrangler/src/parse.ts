@@ -264,22 +264,22 @@ const units = {
   d: 86400,
   w: 604800,
   y: 220752000,
-}
+};
 
 /**
  * Parse a Human time duration in seconds (including fractional)
- * 
+ *
  * Invalid values will return Nan
  */
 export function parseHumanDuration(s: string): number {
-  s = s.trim().toLowerCase()
-  let base = 1
+  s = s.trim().toLowerCase();
+  let base = 1;
   for (let name of units) {
     if (s.endsWith(name)) {
-      s = s.substring(0, s.length - name.length)
-      base = units[name]
+      s = s.substring(0, s.length - name.length);
+      base = units[name];
       break;
     }
   }
-  return Number(s) * base
+  return Number(s) * base;
 }

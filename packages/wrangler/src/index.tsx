@@ -2505,15 +2505,12 @@ function createCLIParser(argv: string[]) {
                     url: args["on-publish-url"],
                   };
                 }
+
                 logger.log(
-                  JSON.stringify(
-                    await pubsub.createBroker(
-                      accountId,
-                      args.namespace,
-                      broker
-                    ),
-                    null,
-                    2
+                  await pubsub.createPubSubBroker(
+                    accountId,
+                    args.namespace,
+                    broker
                   )
                 );
               }
@@ -2633,10 +2630,7 @@ function createCLIParser(argv: string[]) {
                   });
               },
               async (args) => {
-                await printWranglerBanner();
-
                 const config = readConfig(args.config as ConfigPath, args);
-
                 const accountId = await requireAuth(config);
 
                 if (
@@ -2687,7 +2681,7 @@ function createCLIParser(argv: string[]) {
             );
 
             brokersYargs.command(
-              "issue <broker>",
+              "issue <name>",
               "Issue new client credentials for a specific Pub/Sub Broker.",
               (yargs) => {
                 return yargs
@@ -2719,24 +2713,21 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                logger.log(`Issuing ${args.number} tokens...`);
+                logger.log(`Issuing ${args.number} token(s)...`);
                 logger.log(
-                  JSON.stringify(
-                    await pubsub.issuePubSubBrokerTokens(
-                      accountId,
-                      args.namespace,
-                      args.name,
-                      args.number,
-                      args.type
-                    ),
-                    null,
-                    2
+                  await pubsub.issuePubSubBrokerTokens(
+                    accountId,
+                    args.namespace,
+                    args.name,
+                    args.number,
+                    args.type
                   )
                 );
               }
             );
+
             brokersYargs.command(
-              "revoke <name> --jti=A,B,C",
+              "revoke <name>",
               "Revoke a set of active client credentials associated with the given Broker",
               (yargs) => {
                 return yargs
@@ -2763,21 +2754,25 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                logger.log(`Revoking access to ${args.broker} for:`);
-                logger.log(" ", args.jti.join(" "));
+                const numTokens = args.jti.length;
+
+                logger.log(
+                  `Revoking access to ${args.name} for ${numTokens} credential(s)...`
+                );
 
                 await pubsub.revokePubSubBrokerTokens(
                   accountId,
                   args.namespace,
                   args.name,
-                  ...args.jti
+                  args.jti
                 );
 
-                logger.log("Revoked.");
+                logger.log(`Revoked ${args.jti.length} credentials.`);
               }
             );
+
             brokersYargs.command(
-              "unrevoke <name> --jti=A,B,C",
+              "unrevoke <name>",
               "Restore access to a set of previously revoked client credentials.",
               (yargs) => {
                 return yargs
@@ -2804,17 +2799,19 @@ function createCLIParser(argv: string[]) {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                logger.log(`Restoring access to ${args.broker} for:`);
-                logger.log(" ", args.jti.join(" "));
+                const numTokens = args.jti.length;
+                logger.log(
+                  `Restoring access to ${args.broker} for ${numTokens} token(s)...`
+                );
 
                 await pubsub.unrevokePubSubBrokerTokens(
                   accountId,
                   args.namespace,
                   args.name,
-                  ...args.jti
+                  args.jti
                 );
 
-                logger.log(`Unrevoked ${args.jti.length} tokens`);
+                logger.log(`Unrevoked ${numTokens} token(s)`);
               }
             );
 
