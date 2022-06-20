@@ -2,7 +2,7 @@ import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import Table from "ink-table";
 import React from "react";
-import { format as timeagoFormat } from "timeago.js/lib/format";
+import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { FatalError } from "../errors";
