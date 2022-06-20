@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
@@ -2395,6 +2396,11 @@ function createCLIParser(argv: string[]) {
                 // In the case of getting key values we will default to non-preview mode
                 default: false,
                 describe: "Interact with a preview namespace",
+              })
+              .option("text", {
+                type: "boolean",
+                default: false,
+                describe: "Decode the returned value as a utf8 string",
               });
           },
           async ({ key, ...args }) => {
@@ -2402,10 +2408,16 @@ function createCLIParser(argv: string[]) {
             const namespaceId = getKVNamespaceId(args, config);
 
             const accountId = await requireAuth(config);
-
-            process.stdout.write(
-              Buffer.from(await getKVKeyValue(accountId, namespaceId, key))
+            const bufferKVValue = Buffer.from(
+              await getKVKeyValue(accountId, namespaceId, key)
             );
+
+            if (args.text) {
+              const decoder = new StringDecoder("utf8");
+              logger.log(decoder.write(bufferKVValue));
+            } else {
+              process.stdout.write(bufferKVValue);
+            }
           }
         )
         .command(
