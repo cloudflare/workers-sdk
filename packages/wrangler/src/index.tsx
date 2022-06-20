@@ -2707,20 +2707,30 @@ function createCLIParser(argv: string[]) {
                     describe: "The type of credential to generate.",
                     type: "string",
                     default: "TOKEN",
+                  })
+                  .option("client-id", {
+                    describe:
+                      "A list of existing clientIds to generate tokens for. By default, clientIds are randomly generated.",
+                    type: "string",
+                    alias: "jti",
+                    array: true,
                   });
               },
               async (args) => {
                 const config = readConfig(args.config as ConfigPath, args);
                 const accountId = await requireAuth(config);
 
-                logger.log(`Issuing ${args.number} token(s)...`);
+                logger.log(
+                  `🔑 Issuing credential(s) for ${args.name}.${args.namespace}...`
+                );
                 logger.log(
                   await pubsub.issuePubSubBrokerTokens(
                     accountId,
                     args.namespace,
                     args.name,
                     args.number,
-                    args.type
+                    args.type,
+                    args["client-id"]
                   )
                 );
               }
@@ -2757,7 +2767,7 @@ function createCLIParser(argv: string[]) {
                 const numTokens = args.jti.length;
 
                 logger.log(
-                  `Revoking access to ${args.name} for ${numTokens} credential(s)...`
+                  `🔴 Revoking access to ${args.name} for ${numTokens} credential(s)...`
                 );
 
                 await pubsub.revokePubSubBrokerTokens(
@@ -2767,7 +2777,7 @@ function createCLIParser(argv: string[]) {
                   args.jti
                 );
 
-                logger.log(`Revoked ${args.jti.length} credentials.`);
+                logger.log(`Revoked ${args.jti.length} credential(s).`);
               }
             );
 
@@ -2801,7 +2811,7 @@ function createCLIParser(argv: string[]) {
 
                 const numTokens = args.jti.length;
                 logger.log(
-                  `Restoring access to ${args.broker} for ${numTokens} token(s)...`
+                  `🟢 Restoring access to ${args.broker} for ${numTokens} credential(s)...`
                 );
 
                 await pubsub.unrevokePubSubBrokerTokens(
@@ -2811,7 +2821,74 @@ function createCLIParser(argv: string[]) {
                   args.jti
                 );
 
-                logger.log(`Unrevoked ${numTokens} token(s)`);
+                logger.log(`Unrevoked ${numTokens} credential(s)`);
+              }
+            );
+
+            brokersYargs.command(
+              "show-revocations <name>",
+              "Show all previously revoked client credentials.",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe:
+                      "The name of the Broker to revoke credentials against.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                logger.log(
+                  `Listing previously revoked tokens for ${args.name}...`
+                );
+                logger.log(
+                  await pubsub.listRevokedPubSubBrokerTokens(
+                    accountId,
+                    args.namespace,
+                    args.name
+                  )
+                );
+              }
+            );
+
+            brokersYargs.command(
+              "public-keys <name>",
+              "Show the public keys used for verifying on-publish hooks and credentials for a Broker.",
+              (yargs) => {
+                return yargs
+                  .positional("name", {
+                    describe:
+                      "The name of the Broker to revoke credentials against.",
+                    type: "string",
+                    demandOption: true,
+                  })
+                  .option("namespace", {
+                    describe: "The Namespace the Broker is associated with.",
+                    type: "string",
+                    alias: "ns",
+                    demandOption: true,
+                  });
+              },
+              async (args) => {
+                const config = readConfig(args.config as ConfigPath, args);
+                const accountId = await requireAuth(config);
+
+                logger.log(
+                  await pubsub.getPubSubBrokerPublicKeys(
+                    accountId,
+                    args.namespace,
+                    args.name
+                  )
+                );
               }
             );
 

@@ -17,6 +17,30 @@ describe("wrangler", () => {
 
   describe("pubsub", () => {
     describe("namespaces", () => {
+      describe("create", () => {
+        function mockCreateRequest(expectedNamespaceName: string) {
+          const requests = { count: 0 };
+          setMockResponse(
+            "/accounts/:accountId/pubsub/namespaces",
+            "POST",
+            ([_url, accountId], { body }) => {
+              expect(accountId).toEqual("some-account-id");
+              const namespaceName = JSON.parse(body as string).name;
+              expect(namespaceName).toEqual(expectedNamespaceName);
+              requests.count += 1;
+            }
+          );
+          return requests;
+        }
+
+        it("should create a namespace", async () => {
+          const requests = mockCreateRequest("my-namespace");
+          await runWrangler("pubsub namespaces create my-namespace");
+          // TODO: check returned object
+          expect(requests.count).toEqual(1);
+        });
+      });
+
       describe("list", () => {
         function mockListRequest(namespaces: PubSubNamespace[]) {
           const requests = { count: 0 };
@@ -123,6 +147,7 @@ describe("wrangler", () => {
               expect(accountId).toEqual("some-account-id");
               expect(namespaceName).toEqual("some-namespace");
               expect(brokerName).toEqual(broker.name);
+              requests.count += 1;
               return { result: broker };
             }
           );
@@ -134,7 +159,57 @@ describe("wrangler", () => {
           await runWrangler(
             "pubsub brokers describe my-broker --namespace=some-namespace"
           );
-          // TODO
+          // TODO(elithrar): check returned object
+        });
+      });
+
+      describe("issue", () => {
+        function mockIssueRequest(expectedBrokerName: string) {
+          const requests = { count: 0 };
+          setMockResponse(
+            "/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
+            ([_url, accountId, namespaceName, brokerName]) => {
+              expect(accountId).toEqual("some-account-id");
+              expect(namespaceName).toEqual("some-namespace");
+              expect(brokerName).toEqual(expectedBrokerName);
+              requests.count += 1;
+            }
+          );
+          return requests;
+        }
+
+        it("should issue a token for the broker", async () => {
+          const requests = mockIssueRequest("my-broker");
+          await runWrangler(
+            "pubsub brokers issue my-broker --namespace=some-namespace"
+          );
+          // TODO(elithrar): check returned object
+          expect(requests.count).toEqual(1);
+        });
+      });
+
+      describe("public-keys", () => {
+        function mockIssueRequest(expectedBrokerName: string) {
+          const requests = { count: 0 };
+          setMockResponse(
+            "/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
+            ([_url, accountId, namespaceName, brokerName]) => {
+              expect(accountId).toEqual("some-account-id");
+              expect(namespaceName).toEqual("some-namespace");
+              expect(brokerName).toEqual(expectedBrokerName);
+              requests.count += 1;
+            }
+          );
+          return requests;
+        }
+
+        it("should return the public keys for a broker", async () => {
+          const requests = mockIssueRequest("my-broker");
+          await runWrangler(
+            "pubsub brokers public-keys my-broker --namespace=some-namespace"
+          );
+          // TODO(elithrar): check returned object
+          expect(requests.count).toEqual(1);
         });
       });
     });

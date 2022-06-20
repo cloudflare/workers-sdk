@@ -192,11 +192,16 @@ export async function issuePubSubBrokerTokens(
   namespace: string,
   broker: string,
   number: number,
-  type: string
+  type: string,
+  clientIds?: string[]
 ): Promise<Record<string, string>> {
-  return await fetchResult<Record<string, string>>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}&type=${type}`
-  );
+  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}&type=${type}`;
+  if (clientIds) {
+    const ids = makeQueryString(clientIds, "clientid");
+    url = url + `&${ids}`;
+  }
+
+  return await fetchResult<Record<string, string>>(url);
 }
 
 /**
@@ -235,6 +240,22 @@ export async function unrevokePubSubBrokerTokens(
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${jtis}`,
     { method: "DELETE" }
+  );
+}
+
+/**
+ *
+ * List revoked client credentials for the given `broker`.
+ *
+ * This shows all existing revocations against a Broker.
+ */
+export async function listRevokedPubSubBrokerTokens(
+  accountId: string,
+  namespace: string,
+  broker: string
+): Promise<void> {
+  return await fetchResult<void>(
+    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
   );
 }
 
