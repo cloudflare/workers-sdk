@@ -901,6 +901,47 @@ describe("wrangler", () => {
         expect(std.err).toMatchInlineSnapshot(`""`);
       });
 
+      it("should get a key and decode the value from the response as a utf8 string if the `--text` flag is passed", async () => {
+        setMockFetchKVGetValue(
+          "some-account-id",
+          "some-namespace-id",
+          "my-key",
+          "my-value"
+        );
+        await runWrangler(
+          "kv:key get my-key --text --namespace-id some-namespace-id"
+        );
+        expect(proc.write).not.toEqual(Buffer.from("my-value"));
+        expect(std).toMatchInlineSnapshot(`
+          Object {
+            "debug": "",
+            "err": "",
+            "out": "my-value",
+            "warn": "",
+          }
+        `);
+      });
+
+      it("should get a binary and decode as utf8 text, resulting in improper decoding", async () => {
+        const buf = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAiSURBVHgB7coxEQAACMPAgH/PgAM6dGwu49fA/deIBXrgAj2cAhIFT4QxAAAAAElFTkSuQmCC",
+          "base64"
+        );
+        setMockFetchKVGetValue(
+          "some-account-id",
+          "some-namespace-id",
+          "my-key",
+          buf
+        );
+        await runWrangler(
+          "kv:key get my-key --text --namespace-id some-namespace-id"
+        );
+        expect(proc.write).not.toEqual(buf);
+        expect(JSON.stringify(std)).toMatchInlineSnapshot(
+          `"{\\"debug\\":\\"\\",\\"out\\":\\"�PNG\\\\n\\\\u001a\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\rIHDR\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\b\\\\u0006\\\\u0000\\\\u0000\\\\u0000�2Ͻ\\\\u0000\\\\u0000\\\\u0000\\\\tpHYs\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0001\\\\u0000��\\\\u0018\\\\u0000\\\\u0000\\\\u0000\\\\u0001sRGB\\\\u0000��\\\\u001c�\\\\u0000\\\\u0000\\\\u0000\\\\u0004gAMA\\\\u0000\\\\u0000��\\\\u000b�a\\\\u0005\\\\u0000\\\\u0000\\\\u0000\\\\\\"IDATx\\\\u0001��1\\\\u0011\\\\u0000\\\\u0000\\\\b���π\\\\u0003:tl.����׈\\\\u0005z�\\\\u0002=�\\\\u0002\\\\u0012\\\\u0005O�1\\\\u0000\\\\u0000\\\\u0000\\\\u0000IEND�B\`�\\",\\"err\\":\\"\\",\\"warn\\":\\"\\"}"`
+        );
+      });
+
       it("should get a binary file by key in a given namespace specified by namespace-id", async () => {
         const buf = Buffer.from(
           "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAiSURBVHgB7coxEQAACMPAgH/PgAM6dGwu49fA/deIBXrgAj2cAhIFT4QxAAAAAElFTkSuQmCC",
@@ -998,7 +1039,8 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]"
+                --preview       Interact with a preview namespace  [boolean] [default: false]
+                --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
         `);
         expect(std.err).toMatchInlineSnapshot(`
           "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1031,7 +1073,8 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]"
+                --preview       Interact with a preview namespace  [boolean] [default: false]
+                --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
         `);
         expect(std.err).toMatchInlineSnapshot(`
           "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
@@ -1065,7 +1108,8 @@ describe("wrangler", () => {
                 --binding       The name of the namespace to get from  [string]
                 --namespace-id  The id of the namespace to get from  [string]
             -e, --env           Perform on a specific environment  [string]
-                --preview       Interact with a preview namespace  [boolean] [default: false]"
+                --preview       Interact with a preview namespace  [boolean] [default: false]
+                --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
         `);
         expect(std.err).toMatchInlineSnapshot(`
           "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
