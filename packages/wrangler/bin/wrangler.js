@@ -46,6 +46,16 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
     pathToCACerts = certPath;
   }
 
+  let pathToWranglerCli;
+  try {
+    // try to use a local version of wrangler, if there is one.
+    // `require.resolve` throws if it can't find anything.
+    pathToWranglerCli = require.resolve("wrangler", { paths: [process.cwd()] });
+  } catch (e) {
+    // we couldn't find a local install, so just use this (presumably global) version instead.
+    pathToWranglerCli = path.join(__dirname, "../wrangler-dist/cli.js");
+  }
+
   wranglerProcess = spawn(
     process.execPath,
     [

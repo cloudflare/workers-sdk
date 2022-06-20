@@ -7,6 +7,7 @@
     "wrangler": "./bin/wrangler.js",
     "wrangler2": "./bin/wrangler.js"
   },
+  "main": "wrangler-dist/cli.js",
   "license": "MIT OR Apache-2.0",
   "bugs": {
     "url": "https://github.com/cloudflare/wrangler2/issues"
