@@ -23,7 +23,7 @@ import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { PagesBuildHandler, PagesBuildOptions } from "./build";
+import { buildFunctions, PagesBuildHandler, PagesBuildOptions } from "./build";
 import {
   BULK_UPLOAD_CONCURRENCY,
   MAX_BUCKET_FILE_COUNT,
@@ -32,7 +32,7 @@ import {
   PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
 import * as PagesDev from "./dev";
-import { buildFunctions, CLEANUP, pagesBetaWarning } from "./utils";
+import { CLEANUP, pagesBetaWarning } from "./utils";
 import type {
   Deployment,
   PagesConfigCache,

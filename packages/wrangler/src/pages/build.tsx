@@ -1,9 +1,16 @@
-import { dirname } from "node:path";
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { logger } from "../logger";
+import { toUrlPath } from "../paths";
 import { isInPagesCI } from "./constants";
-import { buildFunctions, pagesBetaWarning } from "./utils";
-import type { Argv } from "yargs";
-import type { ArgumentsCamelCase } from "yargs";
+import { buildPlugin } from "./functions/buildPlugin";
+import { buildWorker } from "./functions/buildWorker";
+import { generateConfigFromFileTree } from "./functions/filepath-routing";
+import { writeRoutesModule } from "./functions/routes";
+import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
+import type { Config} from "./functions/routes";
+import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type PagesBuildArgs = {
   directory: string;
@@ -74,6 +81,85 @@ export function PagesBuildOptions(yargs: Argv): Argv<PagesBuildArgs> {
       },
     })
     .epilogue(pagesBetaWarning);
+}
+
+export async function buildFunctions({
+  outfile,
+  outputConfigPath,
+  functionsDirectory,
+  minify = false,
+  sourcemap = false,
+  fallbackService = "ASSETS",
+  watch = false,
+  onEnd,
+  plugin = false,
+  buildOutputDirectory,
+  nodeCompat,
+}: {
+  outfile: string;
+  outputConfigPath?: string;
+  functionsDirectory: string;
+  minify?: boolean;
+  sourcemap?: boolean;
+  fallbackService?: string;
+  watch?: boolean;
+  onEnd?: () => void;
+  plugin?: boolean;
+  buildOutputDirectory?: string;
+  nodeCompat?: boolean;
+}) {
+  RUNNING_BUILDERS.forEach(
+    (runningBuilder) => runningBuilder.stop && runningBuilder.stop()
+  );
+
+  const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
+  const baseURL = toUrlPath("/");
+
+  const config: Config = await generateConfigFromFileTree({
+    baseDir: functionsDirectory,
+    baseURL,
+  });
+
+  if (outputConfigPath) {
+    writeFileSync(
+      outputConfigPath,
+      JSON.stringify({ ...config, baseURL }, null, 2)
+    );
+  }
+
+  await writeRoutesModule({
+    config,
+    srcDir: functionsDirectory,
+    outfile: routesModule,
+  });
+
+  if (plugin) {
+    RUNNING_BUILDERS.push(
+      await buildPlugin({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        watch,
+        nodeCompat,
+        onEnd,
+      })
+    );
+  } else {
+    RUNNING_BUILDERS.push(
+      await buildWorker({
+        routesModule,
+        outfile,
+        minify,
+        sourcemap,
+        fallbackService,
+        watch,
+        onEnd,
+        buildOutputDirectory,
+        nodeCompat,
+      })
+    );
+  }
 }
 
 export const PagesBuildHandler = async ({

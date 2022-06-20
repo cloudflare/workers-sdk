@@ -9,13 +9,9 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
 import openInBrowser from "../open-in-browser";
+import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import {
-  buildFunctions,
-  CLEANUP,
-  CLEANUP_CALLBACKS,
-  pagesBetaWarning,
-} from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type {
   fetch as miniflareFetch,
   Headers as MiniflareHeaders,
