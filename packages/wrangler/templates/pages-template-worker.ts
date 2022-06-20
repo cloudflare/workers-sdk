@@ -1,5 +1,5 @@
 import { match } from "path-to-regexp";
-import type { HTTPMethod } from "../src/pages/functions/routes";
+import type { HTTPMethod } from "./routes";
 
 /* TODO: Grab these from @cloudflare/workers-types instead */
 type Params<P extends string = string> = Record<P, string | string[]>;
