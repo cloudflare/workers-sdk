@@ -25,7 +25,7 @@ type PagesBuildArgs = {
   "node-compat": boolean;
 };
 
-export function PagesBuildOptions(yargs: Argv): Argv<PagesBuildArgs> {
+export function Options(yargs: Argv): Argv<PagesBuildArgs> {
   return yargs
     .positional("directory", {
       type: "string",
@@ -82,6 +82,45 @@ export function PagesBuildOptions(yargs: Argv): Argv<PagesBuildArgs> {
     })
     .epilogue(pagesBetaWarning);
 }
+
+export const Handler = async ({
+  directory,
+  outfile,
+  "output-config-path": outputConfigPath,
+  minify,
+  sourcemap,
+  fallbackService,
+  watch,
+  plugin,
+  "build-output-directory": buildOutputDirectory,
+  "node-compat": nodeCompat,
+}: ArgumentsCamelCase<PagesBuildArgs>) => {
+  if (!isInPagesCI) {
+    // Beta message for `wrangler pages <commands>` usage
+    logger.log(pagesBetaWarning);
+  }
+
+  if (nodeCompat) {
+    console.warn(
+      "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+    );
+  }
+
+  buildOutputDirectory ??= dirname(outfile);
+
+  await buildFunctions({
+    outfile,
+    outputConfigPath,
+    functionsDirectory: directory,
+    minify,
+    sourcemap,
+    fallbackService,
+    watch,
+    plugin,
+    buildOutputDirectory,
+    nodeCompat,
+  });
+};
 
 export async function buildFunctions({
   outfile,
@@ -161,42 +200,3 @@ export async function buildFunctions({
     );
   }
 }
-
-export const PagesBuildHandler = async ({
-  directory,
-  outfile,
-  "output-config-path": outputConfigPath,
-  minify,
-  sourcemap,
-  fallbackService,
-  watch,
-  plugin,
-  "build-output-directory": buildOutputDirectory,
-  "node-compat": nodeCompat,
-}: ArgumentsCamelCase<PagesBuildArgs>) => {
-  if (!isInPagesCI) {
-    // Beta message for `wrangler pages <commands>` usage
-    logger.log(pagesBetaWarning);
-  }
-
-  if (nodeCompat) {
-    console.warn(
-      "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-    );
-  }
-
-  buildOutputDirectory ??= dirname(outfile);
-
-  await buildFunctions({
-    outfile,
-    outputConfigPath,
-    functionsDirectory: directory,
-    minify,
-    sourcemap,
-    fallbackService,
-    watch,
-    plugin,
-    buildOutputDirectory,
-    nodeCompat,
-  });
-};

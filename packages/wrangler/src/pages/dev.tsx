@@ -33,7 +33,7 @@ type PagesDevArgs = {
   "node-compat": boolean;
 };
 
-export function options(yargs: Argv): Argv<PagesDevArgs> {
+export function Options(yargs: Argv): Argv<PagesDevArgs> {
   return yargs
     .positional("directory", {
       type: "string",
@@ -96,6 +96,236 @@ export function options(yargs: Argv): Argv<PagesDevArgs> {
     })
     .epilogue(pagesBetaWarning);
 }
+
+export const Handler = async ({
+  local,
+  directory,
+  port,
+  proxy: requestedProxyPort,
+  "script-path": singleWorkerScriptPath,
+  binding: bindings = [],
+  kv: kvs = [],
+  do: durableObjects = [],
+  "live-reload": liveReload,
+  "node-compat": nodeCompat,
+  _: [_pages, _dev, ...remaining],
+}: ArgumentsCamelCase<PagesDevArgs>) => {
+  // Beta message for `wrangler pages <commands>` usage
+  logger.log(pagesBetaWarning);
+
+  if (!local) {
+    logger.error("Only local mode is supported at the moment.");
+    return;
+  }
+
+  const functionsDirectory = "./functions";
+  const usingFunctions = existsSync(functionsDirectory);
+
+  const command = remaining as (string | number)[];
+
+  let proxyPort: number | void;
+
+  if (directory === undefined) {
+    proxyPort = await spawnProxyProcess({
+      port: requestedProxyPort,
+      command,
+    });
+    if (proxyPort === undefined) return undefined;
+  }
+
+  let miniflareArgs: MiniflareOptions = {};
+
+  let scriptReadyResolve: () => void;
+  const scriptReadyPromise = new Promise<void>(
+    (resolve) => (scriptReadyResolve = resolve)
+  );
+
+  if (usingFunctions) {
+    const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
+
+    if (nodeCompat) {
+      console.warn(
+        "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+      );
+    }
+
+    logger.log(`Compiling worker to "${outfile}"...`);
+
+    try {
+      await buildFunctions({
+        outfile,
+        functionsDirectory,
+        sourcemap: true,
+        watch: true,
+        onEnd: () => scriptReadyResolve(),
+        buildOutputDirectory: directory,
+        nodeCompat,
+      });
+    } catch {}
+
+    watch([functionsDirectory], {
+      persistent: true,
+      ignoreInitial: true,
+    }).on("all", async () => {
+      await buildFunctions({
+        outfile,
+        functionsDirectory,
+        sourcemap: true,
+        watch: true,
+        onEnd: () => scriptReadyResolve(),
+        buildOutputDirectory: directory,
+        nodeCompat,
+      });
+    });
+
+    miniflareArgs = {
+      scriptPath: outfile,
+    };
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    scriptReadyResolve!();
+
+    const scriptPath =
+      directory !== undefined
+        ? join(directory, singleWorkerScriptPath)
+        : singleWorkerScriptPath;
+
+    if (existsSync(scriptPath)) {
+      miniflareArgs = {
+        scriptPath,
+      };
+    } else {
+      logger.log("No functions. Shimming...");
+      miniflareArgs = {
+        // cfFetch sets the `cf` object that a function could expect
+        // If there are no functions, there's no reason to set this up (and not make that network call)
+        cfFetch: false,
+        // TODO: The fact that these request/response hacks are necessary is ridiculous.
+        // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
+        script: `
+          export default {
+            async fetch(request, env, context) {
+              const response = await env.ASSETS.fetch(request.url, request)
+              return new Response(response.body, response)
+            }
+          }`,
+      };
+    }
+  }
+
+  // Defer importing miniflare until we really need it
+  const { Miniflare, Log, LogLevel } = await import("miniflare");
+  const { Response, fetch } = await import("@miniflare/core");
+
+  // Wait for esbuild to finish building before starting Miniflare.
+  // This must be before the call to `new Miniflare`, as that will
+  // asynchronously start loading the script. `await startServer()`
+  // internally just waits for that promise to resolve.
+  await scriptReadyPromise;
+
+  // `assetsFetch()` will only be called if there is `proxyPort` defined.
+  // We only define `proxyPort`, above, when there is no `directory` defined.
+  const assetsFetch =
+    directory !== undefined
+      ? await generateAssetsFetch(directory)
+      : invalidAssetsFetch;
+
+  const requestContextCheckOptions = await getRequestContextCheckOptions();
+
+  const miniflare = new Miniflare({
+    port,
+    watch: true,
+    modules: true,
+
+    log: new Log(LogLevel.ERROR, { prefix: "pages" }),
+    logUnhandledRejections: true,
+    sourceMap: true,
+
+    kvNamespaces: kvs.map((kv) => kv.toString()),
+
+    durableObjects: Object.fromEntries(
+      durableObjects.map((durableObject) => durableObject.toString().split("="))
+    ),
+
+    // User bindings
+    bindings: {
+      ...Object.fromEntries(
+        bindings
+          .map((binding) => binding.toString().split("="))
+          .map(([key, ...values]) => [key, values.join("=")])
+      ),
+    },
+
+    // env.ASSETS.fetch
+    serviceBindings: {
+      async ASSETS(request: MiniflareRequest) {
+        if (proxyPort) {
+          try {
+            const url = new URL(request.url);
+            url.host = `localhost:${proxyPort}`;
+            return await fetch(url, request);
+          } catch (thrown) {
+            logger.error(`Could not proxy request: ${thrown}`);
+
+            // TODO: Pretty error page
+            return new Response(
+              `[wrangler] Could not proxy request: ${thrown}`,
+              { status: 502 }
+            );
+          }
+        } else {
+          try {
+            return await assetsFetch(request);
+          } catch (thrown) {
+            logger.error(`Could not serve static asset: ${thrown}`);
+
+            // TODO: Pretty error page
+            return new Response(
+              `[wrangler] Could not serve static asset: ${thrown}`,
+              { status: 502 }
+            );
+          }
+        }
+      },
+    },
+
+    kvPersist: true,
+    durableObjectsPersist: true,
+    cachePersist: true,
+    liveReload,
+
+    ...requestContextCheckOptions,
+    ...miniflareArgs,
+  });
+
+  try {
+    // `startServer` might throw if user code contains errors
+    const server = await miniflare.startServer();
+    logger.log(`Serving at http://localhost:${port}/`);
+
+    if (process.env.BROWSER !== "none") {
+      await openInBrowser(`http://localhost:${port}/`);
+    }
+
+    if (directory !== undefined && liveReload) {
+      watch([directory], {
+        persistent: true,
+        ignoreInitial: true,
+      }).on("all", async () => {
+        await miniflare.reload();
+      });
+    }
+
+    CLEANUP_CALLBACKS.push(() => {
+      server.close();
+      miniflare.dispose().catch((err) => miniflare.log.error(err));
+    });
+  } catch (e) {
+    miniflare.log.error(e as Error);
+    CLEANUP();
+    throw new FatalError("Could not start Miniflare.", 1);
+  }
+};
 
 function isWindows() {
   return process.platform === "win32";
@@ -711,235 +941,6 @@ async function generateAssetsFetch(
   };
 }
 
-export const handler = async ({
-  local,
-  directory,
-  port,
-  proxy: requestedProxyPort,
-  "script-path": singleWorkerScriptPath,
-  binding: bindings = [],
-  kv: kvs = [],
-  do: durableObjects = [],
-  "live-reload": liveReload,
-  "node-compat": nodeCompat,
-  _: [_pages, _dev, ...remaining],
-}: ArgumentsCamelCase<PagesDevArgs>) => {
-  // Beta message for `wrangler pages <commands>` usage
-  logger.log(pagesBetaWarning);
-
-  if (!local) {
-    logger.error("Only local mode is supported at the moment.");
-    return;
-  }
-
-  const functionsDirectory = "./functions";
-  const usingFunctions = existsSync(functionsDirectory);
-
-  const command = remaining as (string | number)[];
-
-  let proxyPort: number | void;
-
-  if (directory === undefined) {
-    proxyPort = await spawnProxyProcess({
-      port: requestedProxyPort,
-      command,
-    });
-    if (proxyPort === undefined) return undefined;
-  }
-
-  let miniflareArgs: MiniflareOptions = {};
-
-  let scriptReadyResolve: () => void;
-  const scriptReadyPromise = new Promise<void>(
-    (resolve) => (scriptReadyResolve = resolve)
-  );
-
-  if (usingFunctions) {
-    const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
-
-    if (nodeCompat) {
-      console.warn(
-        "Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-      );
-    }
-
-    logger.log(`Compiling worker to "${outfile}"...`);
-
-    try {
-      await buildFunctions({
-        outfile,
-        functionsDirectory,
-        sourcemap: true,
-        watch: true,
-        onEnd: () => scriptReadyResolve(),
-        buildOutputDirectory: directory,
-        nodeCompat,
-      });
-    } catch {}
-
-    watch([functionsDirectory], {
-      persistent: true,
-      ignoreInitial: true,
-    }).on("all", async () => {
-      await buildFunctions({
-        outfile,
-        functionsDirectory,
-        sourcemap: true,
-        watch: true,
-        onEnd: () => scriptReadyResolve(),
-        buildOutputDirectory: directory,
-        nodeCompat,
-      });
-    });
-
-    miniflareArgs = {
-      scriptPath: outfile,
-    };
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    scriptReadyResolve!();
-
-    const scriptPath =
-      directory !== undefined
-        ? join(directory, singleWorkerScriptPath)
-        : singleWorkerScriptPath;
-
-    if (existsSync(scriptPath)) {
-      miniflareArgs = {
-        scriptPath,
-      };
-    } else {
-      logger.log("No functions. Shimming...");
-      miniflareArgs = {
-        // cfFetch sets the `cf` object that a function could expect
-        // If there are no functions, there's no reason to set this up (and not make that network call)
-        cfFetch: false,
-        // TODO: The fact that these request/response hacks are necessary is ridiculous.
-        // We need to eliminate them from env.ASSETS.fetch (not sure if just local or prod as well)
-        script: `
-          export default {
-            async fetch(request, env, context) {
-              const response = await env.ASSETS.fetch(request.url, request)
-              return new Response(response.body, response)
-            }
-          }`,
-      };
-    }
-  }
-
-  // Defer importing miniflare until we really need it
-  const { Miniflare, Log, LogLevel } = await import("miniflare");
-  const { Response, fetch } = await import("@miniflare/core");
-
-  // Wait for esbuild to finish building before starting Miniflare.
-  // This must be before the call to `new Miniflare`, as that will
-  // asynchronously start loading the script. `await startServer()`
-  // internally just waits for that promise to resolve.
-  await scriptReadyPromise;
-
-  // `assetsFetch()` will only be called if there is `proxyPort` defined.
-  // We only define `proxyPort`, above, when there is no `directory` defined.
-  const assetsFetch =
-    directory !== undefined
-      ? await generateAssetsFetch(directory)
-      : invalidAssetsFetch;
-
-  const requestContextCheckOptions = await getRequestContextCheckOptions();
-
-  const miniflare = new Miniflare({
-    port,
-    watch: true,
-    modules: true,
-
-    log: new Log(LogLevel.ERROR, { prefix: "pages" }),
-    logUnhandledRejections: true,
-    sourceMap: true,
-
-    kvNamespaces: kvs.map((kv) => kv.toString()),
-
-    durableObjects: Object.fromEntries(
-      durableObjects.map((durableObject) => durableObject.toString().split("="))
-    ),
-
-    // User bindings
-    bindings: {
-      ...Object.fromEntries(
-        bindings
-          .map((binding) => binding.toString().split("="))
-          .map(([key, ...values]) => [key, values.join("=")])
-      ),
-    },
-
-    // env.ASSETS.fetch
-    serviceBindings: {
-      async ASSETS(request: MiniflareRequest) {
-        if (proxyPort) {
-          try {
-            const url = new URL(request.url);
-            url.host = `localhost:${proxyPort}`;
-            return await fetch(url, request);
-          } catch (thrown) {
-            logger.error(`Could not proxy request: ${thrown}`);
-
-            // TODO: Pretty error page
-            return new Response(
-              `[wrangler] Could not proxy request: ${thrown}`,
-              { status: 502 }
-            );
-          }
-        } else {
-          try {
-            return await assetsFetch(request);
-          } catch (thrown) {
-            logger.error(`Could not serve static asset: ${thrown}`);
-
-            // TODO: Pretty error page
-            return new Response(
-              `[wrangler] Could not serve static asset: ${thrown}`,
-              { status: 502 }
-            );
-          }
-        }
-      },
-    },
-
-    kvPersist: true,
-    durableObjectsPersist: true,
-    cachePersist: true,
-    liveReload,
-
-    ...requestContextCheckOptions,
-    ...miniflareArgs,
-  });
-
-  try {
-    // `startServer` might throw if user code contains errors
-    const server = await miniflare.startServer();
-    logger.log(`Serving at http://localhost:${port}/`);
-
-    if (process.env.BROWSER !== "none") {
-      await openInBrowser(`http://localhost:${port}/`);
-    }
-
-    if (directory !== undefined && liveReload) {
-      watch([directory], {
-        persistent: true,
-        ignoreInitial: true,
-      }).on("all", async () => {
-        await miniflare.reload();
-      });
-    }
-
-    CLEANUP_CALLBACKS.push(() => {
-      server.close();
-      miniflare.dispose().catch((err) => miniflare.log.error(err));
-    });
-  } catch (e) {
-    miniflare.log.error(e as Error);
-    CLEANUP();
-    throw new FatalError("Could not start Miniflare.", 1);
-  }
-};
 const invalidAssetsFetch: typeof miniflareFetch = () => {
   throw new Error(
     "Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."

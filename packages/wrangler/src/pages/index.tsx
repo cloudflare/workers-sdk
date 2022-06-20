@@ -1,10 +1,10 @@
 /* eslint-disable no-shadow */
 
-import { PagesBuildHandler, PagesBuildOptions } from "./build";
-import * as CreateDeployment from "./createDeployment";
+import * as Build from "./build";
 import * as Deployments from "./deployments";
-import * as PagesDev from "./dev";
+import * as Dev from "./dev";
 import * as Projects from "./projects";
+import * as Publish from "./publish";
 import { CLEANUP, pagesBetaWarning } from "./utils";
 import type { BuilderCallback } from "yargs";
 
@@ -22,8 +22,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
     .command(
       "dev [directory] [-- command..]",
       "🧑‍💻 Develop your full-stack Pages application locally",
-      PagesDev.options,
-      PagesDev.handler
+      Dev.Options,
+      Dev.Handler
     )
     .command("functions", false, (yargs) =>
       // we hide this command from help output because
@@ -32,8 +32,8 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
         return yargs.command(
           "build [directory]",
           "Compile a folder of Cloudflare Pages Functions into a single Worker",
-          PagesBuildOptions,
-          PagesBuildHandler
+          Build.Options,
+          Build.Handler
         );
       }
     )
@@ -64,20 +64,19 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
             Deployments.ListOptions,
             Deployments.ListHandler
           )
-          .command({
-            command: "create [directory]",
-            describe:
-              "🆙 Publish a directory of static assets as a Pages deployment",
-            builder: CreateDeployment.options,
-            handler: CreateDeployment.handler,
-          })
+          .command(
+            "create [directory]",
+            "🆙 Publish a directory of static assets as a Pages deployment",
+            Publish.Options,
+            Publish.Handler
+          )
           .epilogue(pagesBetaWarning)
     )
-    .command({
-      command: "create [directory]",
-      describe: "🆙 Publish a directory of static assets as a Pages deployment",
-      builder: CreateDeployment.options,
-      handler: CreateDeployment.handler,
-    })
+    .command(
+      "publish [directory]",
+      "🆙 Publish a directory of static assets as a Pages deployment",
+      Publish.Options,
+      Publish.Handler
+    )
     .epilogue(pagesBetaWarning);
 };

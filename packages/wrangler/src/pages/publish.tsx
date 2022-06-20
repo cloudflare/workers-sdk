@@ -46,7 +46,7 @@ export interface CreateDeploymentArgs {
   "commit-dirty"?: boolean;
 }
 
-export function options(yargs: Argv): Argv<CreateDeploymentArgs> {
+export function Options(yargs: Argv): Argv<CreateDeploymentArgs> {
   return yargs
     .positional("directory", {
       type: "string",
@@ -79,7 +79,7 @@ export function options(yargs: Argv): Argv<CreateDeploymentArgs> {
     .epilogue(pagesBetaWarning);
 }
 
-export const handler = async ({
+export const Handler = async ({
   directory,
   projectName,
   branch,
