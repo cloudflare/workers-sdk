@@ -40,7 +40,7 @@ import {
 } from "./kv";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
-import { index, pagesBetaWarning } from "./pages";
+import { pages } from "./pages";
 import {
   formatMessage,
   ParseError,
@@ -2668,7 +2668,7 @@ function createCLIParser(argv: string[]) {
     "pages",
     "⚡️ Configure Cloudflare Pages",
     async (pagesYargs) => {
-      await index(pagesYargs.command(subHelp).epilogue(pagesBetaWarning));
+      await pages(pagesYargs.command(subHelp));
     }
   );
 
