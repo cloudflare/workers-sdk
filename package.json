@@ -127,6 +127,10 @@
               "args": "after-used",
               "argsIgnorePattern": "^_"
             }
+					],
+					"no-mixed-spaces-and-tabs": [
+						"error",
+						"smart-tabs"
           ]
         }
       }
