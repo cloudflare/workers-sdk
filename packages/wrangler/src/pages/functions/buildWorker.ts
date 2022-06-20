@@ -29,7 +29,7 @@ export function buildWorker({
   nodeCompat,
 }: Options) {
   return build({
-    entryPoints: [resolve(__dirname, "../pages/functions/template-worker.ts")],
+    entryPoints: [resolve(__dirname, "../templates/pages-template-worker.ts")],
     inject: [routesModule],
     bundle: true,
     format: "esm",

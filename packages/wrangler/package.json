@@ -108,7 +108,6 @@
   "files": [
     "src",
     "bin",
-    "pages",
     "miniflare-config-stubs",
     "miniflare-dist",
     "wrangler-dist",

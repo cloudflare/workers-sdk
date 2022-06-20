@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
-import type { UrlPath } from "../../src/paths";
+import type { UrlPath } from "../../paths";
 
 export const HTTP_METHODS = [
   "HEAD",
@@ -13,11 +13,6 @@ export const HTTP_METHODS = [
   "DELETE",
 ] as const;
 export type HTTPMethod = typeof HTTP_METHODS[number];
-export function isHTTPMethod(
-  maybeHTTPMethod: string
-): maybeHTTPMethod is HTTPMethod {
-  return (HTTP_METHODS as readonly string[]).includes(maybeHTTPMethod);
-}
 
 export type RoutesCollection = Array<{
   routePath: UrlPath;

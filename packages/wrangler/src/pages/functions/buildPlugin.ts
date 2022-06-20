@@ -24,7 +24,7 @@ export function buildPlugin({
   onEnd = () => {},
 }: Options) {
   return build({
-    entryPoints: [resolve(__dirname, "../pages/functions/template-plugin.ts")],
+    entryPoints: [resolve(__dirname, "../templates/pages-template-plugin.ts")],
     inject: [routesModule],
     bundle: true,
     format: "esm",

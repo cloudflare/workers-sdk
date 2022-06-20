@@ -1,8 +1,8 @@
 import { writeFileSync, mkdirSync } from "fs";
-import { runInTempDir } from "../../src/__tests__/helpers/run-in-tmp";
-import { toUrlPath } from "../../src/paths";
+import { runInTempDir } from "../../__tests__/helpers/run-in-tmp";
+import { toUrlPath } from "../../paths";
 import { compareRoutes, generateConfigFromFileTree } from "./filepath-routing";
-import type { UrlPath } from "../../src/paths";
+import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
 
 describe("filepath-routing", () => {

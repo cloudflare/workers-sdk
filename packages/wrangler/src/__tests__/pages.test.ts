@@ -9,7 +9,7 @@ import {
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Deployment, Project, UploadPayloadFile } from "../pages";
+import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
 import type { FormData, RequestInit } from "undici";
 
 // Asserting within mock responses get swallowed, so run them out-of-band
