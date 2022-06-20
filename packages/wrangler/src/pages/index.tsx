@@ -1,95 +1,44 @@
 /* eslint-disable no-shadow */
 
-import { execSync, spawn } from "node:child_process";
-import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
-import { readdir, readFile, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join, sep, extname, basename } from "node:path";
-import { cwd } from "node:process";
-import { URL } from "node:url";
-import { hash } from "blake3-wasm";
-import { watch } from "chokidar";
-import { render, Text } from "ink";
+import {execSync, spawn} from "node:child_process";
+import {existsSync, lstatSync, readFileSync, writeFileSync} from "node:fs";
+import {readdir, readFile, stat} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {basename, dirname, extname, join, sep} from "node:path";
+import {cwd} from "node:process";
+import {URL} from "node:url";
+import {hash} from "blake3-wasm";
+import {watch} from "chokidar";
+import {render, Text} from "ink";
 import SelectInput from "ink-select-input";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
-import { getType } from "mime";
+import {getType} from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
-import { format as timeagoFormat } from "timeago.js";
-import { File, FormData } from "undici";
-import { buildPlugin } from "./pages/functions/buildPlugin";
-import { buildWorker } from "./pages/functions/buildWorker";
-import { generateConfigFromFileTree } from "./pages/functions/filepath-routing";
-import { writeRoutesModule } from "./pages/functions/routes";
-import { fetchResult } from "./cfetch";
-import { getConfigCache, saveToConfigCache } from "./config-cache";
-import { prompt } from "./dialogs";
-import { FatalError } from "./errors";
-import { logger } from "./logger";
-import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
-import openInBrowser from "./open-in-browser";
-import { toUrlPath } from "./paths";
-import { requireAuth } from "./user";
-import type { Config } from "./pages/functions/routes";
-import type {
-  Headers as MiniflareHeaders,
-  Request as MiniflareRequest,
-  fetch as miniflareFetch,
-} from "@miniflare/core";
-import type { BuildResult } from "esbuild";
-import type { MiniflareOptions } from "miniflare";
-import type { BuilderCallback, CommandModule } from "yargs";
-
-export type Project = {
-  name: string;
-  subdomain: string;
-  domains: Array<string>;
-  source?: {
-    type: string;
-  };
-  latest_deployment?: {
-    modified_on: string;
-  };
-  created_on: string;
-  production_branch: string;
-};
-
-export type Deployment = {
-  id: string;
-  environment: string;
-  deployment_trigger: {
-    metadata: {
-      commit_hash: string;
-      branch: string;
-    };
-  };
-  url: string;
-  latest_stage: {
-    status: string;
-    ended_on: string;
-  };
-  project_name: string;
-};
-
-export type UploadPayloadFile = {
-  key: string;
-  value: string;
-  metadata: { contentType: string };
-  base64: boolean;
-};
-
-interface PagesConfigCache {
-  account_id?: string;
-  project_name?: string;
-}
-
-const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
-const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
-const MAX_BUCKET_FILE_COUNT = 5000;
-const BULK_UPLOAD_CONCURRENCY = 3;
-const MAX_UPLOAD_ATTEMPTS = 5;
+import {format as timeagoFormat} from "timeago.js";
+import {File, FormData} from "undici";
+import {buildPlugin} from "./functions/buildPlugin";
+import {buildWorker} from "./functions/buildWorker";
+import {generateConfigFromFileTree} from "./functions/filepath-routing";
+import type {Config} from "./functions/routes";
+import {writeRoutesModule} from "./functions/routes";
+import {fetchResult} from "../cfetch";
+import {getConfigCache, saveToConfigCache} from "../config-cache";
+import {prompt} from "../dialogs";
+import {FatalError} from "../errors";
+import {logger} from "../logger";
+import {getRequestContextCheckOptions} from "../miniflare-cli/request-context";
+import openInBrowser from "../open-in-browser";
+import {toUrlPath} from "../paths";
+import {requireAuth} from "../user";
+import type {fetch as miniflareFetch, Headers as MiniflareHeaders, Request as MiniflareRequest,} from "@miniflare/core";
+import type {BuildResult} from "esbuild";
+import type {MiniflareOptions} from "miniflare";
+import type {BuilderCallback, CommandModule} from "yargs";
+import {Deployment, PagesConfigCache, Project, UploadPayloadFile} from "./types";
+import {BULK_UPLOAD_CONCURRENCY, MAX_BUCKET_FILE_COUNT, MAX_BUCKET_SIZE, MAX_UPLOAD_ATTEMPTS, PAGES_CONFIG_CACHE_FILENAME, SECONDS_TO_WAIT_FOR_PROXY} from "./constants";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
@@ -118,8 +67,6 @@ process.on("SIGTERM", () => {
 function isWindows() {
   return process.platform === "win32";
 }
-
-const SECONDS_TO_WAIT_FOR_PROXY = 5;
 
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -1417,7 +1364,7 @@ const createDeployment: CommandModule<
   },
 };
 
-export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
+export const index: BuilderCallback<unknown, unknown> = (yargs) => {
   return yargs
     .command(
       "dev [directory] [-- command..]",
