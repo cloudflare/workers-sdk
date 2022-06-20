@@ -215,23 +215,18 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { HostURL } from "@webcontainer/env";
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
+import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import { fetchListResult } from "../cfetch";
 import { purgeConfigCaches } from "../config-cache";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
-import {
-  getCloudflareAccountIdFromEnv,
-  getCloudflareAPITokenFromEnv,
-} from "./env-vars";
+import { ChooseAccount } from "./choose-account";
+import { getCloudflareAPITokenFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 
 /**
@@ -1073,72 +1068,21 @@ export async function getAccountId(
 ): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
-
-  const accountIdFromEnv = getCloudflareAccountIdFromEnv();
-  if (accountIdFromEnv) {
-    return accountIdFromEnv;
-  }
-
-  let accounts: { account: ChooseAccountItem }[] = [];
-  let accountId: string | undefined;
-  accounts = await fetchListResult<{
-    account: ChooseAccountItem;
-  }>(`/memberships`);
-  if (accounts.length === 0) {
-    throw new Error(
-      "Failed to automatically retrieve account IDs for the logged in user.\n" +
-        "In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
-    );
-  }
-  if (accounts.length === 1) {
-    accountId = accounts[0].account.id;
-  } else if (isInteractive) {
-    accountId = await new Promise((resolve) => {
-      const accountIds = accounts.map((x) => x.account);
-      const { unmount } = render(
-        <ChooseAccount
-          accounts={accountIds}
-          onSelect={async (selected) => {
-            resolve(selected.value.id);
-            unmount();
-          }}
-        />
-      );
-    });
-  } else {
-    throw new Error(
-      "More than one account available but unable to select one in non-interactive mode.\n" +
-        `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
-        `Available accounts are ("<name>" - "<id>"):\n` +
-        accounts
-          .map((x) => `  "${x.account.name}" - "${x.account.id}")`)
-          .join("\n")
-    );
-  }
-  return accountId;
-}
-
-type ChooseAccountItem = {
-  id: string;
-  name: string;
-};
-export function ChooseAccount(props: {
-  accounts: ChooseAccountItem[];
-  onSelect: (item: SelectInputItem<ChooseAccountItem>) => void;
-}) {
-  return (
-    <>
-      <Text bold>Select an account from below:</Text>
-      <SelectInput
-        items={props.accounts.map((item) => ({
-          key: item.id,
-          label: item.name,
-          value: item,
-        }))}
-        onSelect={props.onSelect}
+  return await new Promise((resolve, reject) => {
+    const { unmount } = render(
+      <ChooseAccount
+        isInteractive={isInteractive}
+        onSelect={async (selected) => {
+          resolve(selected);
+          unmount();
+        }}
+        onError={(err) => {
+          reject(err);
+          unmount();
+        }}
       />
-    </>
-  );
+    );
+  });
 }
 
 /**

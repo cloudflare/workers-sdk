@@ -1,13 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useErrorHandler } from "react-error-boundary";
 import { printBundleSize } from "../bundle-reporter";
 import { createWorkerPreview } from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
-import { requireApiToken, requireAuth } from "../user";
+import { ChooseAccount, requireApiToken } from "../user";
 import type { CfPreviewToken } from "../create-worker-preview";
 import type { AssetPaths } from "../sites";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "../worker";
@@ -33,12 +34,13 @@ export function Remote(props: {
   zone: string | undefined;
   host: string | undefined;
 }) {
+  const [accountId, setAccountId] = useState(props.accountId);
   const previewToken = useWorker({
     name: props.name,
     bundle: props.bundle,
     format: props.format,
     modules: props.bundle ? props.bundle.modules : [],
-    accountId: props.accountId,
+    accountId,
     bindings: props.bindings,
     assetPaths: props.assetPaths,
     isWorkersSite: props.isWorkersSite,
@@ -67,7 +69,16 @@ export function Remote(props: {
     port: props.inspectorPort,
     logToTerminal: true,
   });
-  return null;
+
+  const errorHandler = useErrorHandler();
+
+  return !accountId ? (
+    <ChooseAccount
+      isInteractive={true}
+      onSelect={(selectedAccountId) => setAccountId(selectedAccountId)}
+      onError={(err) => errorHandler(err)}
+    ></ChooseAccount>
+  ) : null;
 }
 
 export function useWorker(props: {
@@ -107,13 +118,13 @@ export function useWorker(props: {
   // something's "happened" in our system; We make a ref and
   // mark it once we log our initial message. Refs are vars!
   const startedRef = useRef(false);
-  // This ref holds the actual accountId being used, the `accountId` prop could be undefined
-  // as it is only what is retrieved from the wrangler.toml config.
-  const accountIdRef = useRef(accountId);
 
   useEffect(() => {
     const abortController = new AbortController();
     async function start() {
+      if (accountId === undefined) {
+        return;
+      }
       setToken(undefined); // reset token in case we're re-running
 
       if (!bundle || !format) return;
@@ -124,11 +135,6 @@ export function useWorker(props: {
         logger.log("⎔ Detected changes, restarted server.");
       }
 
-      // Ensure we have an account id, even if it means logging in here.
-      accountIdRef.current = await requireAuth({
-        account_id: accountIdRef.current,
-      });
-
       const content = await readFile(bundle.path, "utf-8");
 
       // TODO: For Dev we could show the reporter message in the interactive box.
@@ -138,7 +144,7 @@ export function useWorker(props: {
       );
 
       const assets = await syncAssets(
-        accountIdRef.current,
+        accountId,
         // When we're using the newer service environments, we wouldn't
         // have added the env name on to the script name. However, we must
         // include it in the kv namespace name regardless (since there's no
@@ -189,7 +195,7 @@ export function useWorker(props: {
         await createWorkerPreview(
           init,
           {
-            accountId: accountIdRef.current,
+            accountId,
             apiToken: requireApiToken(),
           },
           {
@@ -214,7 +220,7 @@ export function useWorker(props: {
             "Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
           const solutionMessage =
             "You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-          const onboardingLink = `https://dash.cloudflare.com/${accountIdRef.current}/workers/onboarding`;
+          const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
           logger.error(
             `${errorMessage}\n${solutionMessage}\n${onboardingLink}`
           );
