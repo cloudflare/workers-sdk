@@ -19,10 +19,10 @@ import prettyBytes from "pretty-bytes";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
 import { File, FormData } from "undici";
-import { buildPlugin } from "../pages/functions/buildPlugin";
-import { buildWorker } from "../pages/functions/buildWorker";
-import { generateConfigFromFileTree } from "../pages/functions/filepath-routing";
-import { writeRoutesModule } from "../pages/functions/routes";
+import { buildPlugin } from "./pages/functions/buildPlugin";
+import { buildWorker } from "./pages/functions/buildWorker";
+import { generateConfigFromFileTree } from "./pages/functions/filepath-routing";
+import { writeRoutesModule } from "./pages/functions/routes";
 import { fetchResult } from "./cfetch";
 import { getConfigCache, saveToConfigCache } from "./config-cache";
 import { prompt } from "./dialogs";
@@ -32,7 +32,7 @@ import { getRequestContextCheckOptions } from "./miniflare-cli/request-context";
 import openInBrowser from "./open-in-browser";
 import { toUrlPath } from "./paths";
 import { requireAuth } from "./user";
-import type { Config } from "../pages/functions/routes";
+import type { Config } from "./pages/functions/routes";
 import type {
   Headers as MiniflareHeaders,
   Request as MiniflareRequest,

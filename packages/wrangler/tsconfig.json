@@ -9,8 +9,7 @@
   "exclude": [
     "vendor",
     "*-dist",
-    "pages/functions/template-worker.ts",
-    "pages/functions/template-plugin.ts",
+    "src/pages/templates",
     "templates"
   ]
 }

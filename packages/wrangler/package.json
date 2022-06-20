@@ -108,7 +108,7 @@
   "files": [
     "src",
     "bin",
-    "pages",
+    "src/pages/templates",
     "miniflare-config-stubs",
     "miniflare-dist",
     "wrangler-dist",
