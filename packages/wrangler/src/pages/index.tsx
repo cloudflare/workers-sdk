@@ -1,44 +1,60 @@
 /* eslint-disable no-shadow */
 
-import {execSync, spawn} from "node:child_process";
-import {existsSync, lstatSync, readFileSync, writeFileSync} from "node:fs";
-import {readdir, readFile, stat} from "node:fs/promises";
-import {tmpdir} from "node:os";
-import {basename, dirname, extname, join, sep} from "node:path";
-import {cwd} from "node:process";
-import {URL} from "node:url";
-import {hash} from "blake3-wasm";
-import {watch} from "chokidar";
-import {render, Text} from "ink";
+import { execSync, spawn } from "node:child_process";
+import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, join, sep } from "node:path";
+import { cwd } from "node:process";
+import { URL } from "node:url";
+import { hash } from "blake3-wasm";
+import { watch } from "chokidar";
+import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import Spinner from "ink-spinner";
 import Table from "ink-table";
-import {getType} from "mime";
+import { getType } from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
-import {format as timeagoFormat} from "timeago.js";
-import {File, FormData} from "undici";
-import {buildPlugin} from "./functions/buildPlugin";
-import {buildWorker} from "./functions/buildWorker";
-import {generateConfigFromFileTree} from "./functions/filepath-routing";
-import type {Config} from "./functions/routes";
-import {writeRoutesModule} from "./functions/routes";
-import {fetchResult} from "../cfetch";
-import {getConfigCache, saveToConfigCache} from "../config-cache";
-import {prompt} from "../dialogs";
-import {FatalError} from "../errors";
-import {logger} from "../logger";
-import {getRequestContextCheckOptions} from "../miniflare-cli/request-context";
+import { format as timeagoFormat } from "timeago.js";
+import { File, FormData } from "undici";
+import { fetchResult } from "../cfetch";
+import { getConfigCache, saveToConfigCache } from "../config-cache";
+import { prompt } from "../dialogs";
+import { FatalError } from "../errors";
+import { logger } from "../logger";
+import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
 import openInBrowser from "../open-in-browser";
-import {toUrlPath} from "../paths";
-import {requireAuth} from "../user";
-import type {fetch as miniflareFetch, Headers as MiniflareHeaders, Request as MiniflareRequest,} from "@miniflare/core";
-import type {BuildResult} from "esbuild";
-import type {MiniflareOptions} from "miniflare";
-import type {BuilderCallback, CommandModule} from "yargs";
-import {Deployment, PagesConfigCache, Project, UploadPayloadFile} from "./types";
-import {BULK_UPLOAD_CONCURRENCY, MAX_BUCKET_FILE_COUNT, MAX_BUCKET_SIZE, MAX_UPLOAD_ATTEMPTS, PAGES_CONFIG_CACHE_FILENAME, SECONDS_TO_WAIT_FOR_PROXY} from "./constants";
+import { toUrlPath } from "../paths";
+import { requireAuth } from "../user";
+import {
+  BULK_UPLOAD_CONCURRENCY,
+  MAX_BUCKET_FILE_COUNT,
+  MAX_BUCKET_SIZE,
+  MAX_UPLOAD_ATTEMPTS,
+  PAGES_CONFIG_CACHE_FILENAME,
+  SECONDS_TO_WAIT_FOR_PROXY,
+} from "./constants";
+import { buildPlugin } from "./functions/buildPlugin";
+import { buildWorker } from "./functions/buildWorker";
+import { generateConfigFromFileTree } from "./functions/filepath-routing";
+import { writeRoutesModule } from "./functions/routes";
+import type { Config } from "./functions/routes";
+import type {
+  Deployment,
+  PagesConfigCache,
+  Project,
+  UploadPayloadFile,
+} from "./types";
+import type {
+  fetch as miniflareFetch,
+  Headers as MiniflareHeaders,
+  Request as MiniflareRequest,
+} from "@miniflare/core";
+import type { BuildResult } from "esbuild";
+import type { MiniflareOptions } from "miniflare";
+import type { BuilderCallback, CommandModule } from "yargs";
 
 // Defer importing miniflare until we really need it. This takes ~0.5s
 // and also modifies some `stream/web` and `undici` prototypes, so we
