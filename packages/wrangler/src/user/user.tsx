@@ -222,31 +222,18 @@ import React from "react";
 import { fetch } from "undici";
 import { getCloudflareApiBaseUrl } from "../cfetch";
 import { purgeConfigCaches } from "../config-cache";
-import { getEnvironmentVariableFactory } from "../environment-variables";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
+import {
+  getCloudflareAccountIdFromEnv,
+  getCloudflareAPITokenFromEnv,
+} from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
-
-/**
- * Try to read the API token from the environment.
- */
-export const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_API_TOKEN",
-  deprecatedName: "CF_API_TOKEN",
-});
-
-/**
- * Try to read the account ID from the environment.
- */
-const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_ACCOUNT_ID",
-  deprecatedName: "CF_ACCOUNT_ID",
-});
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
