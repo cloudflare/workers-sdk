@@ -5,8 +5,15 @@
 
 let writeSpy: jest.SpyInstance;
 
-function captureWriteCall(spy: jest.SpyInstance): Buffer {
-  return spy.mock.calls[0]?.[0] ?? Buffer.alloc(0);
+function captureLastWriteCall(spy: jest.SpyInstance): Buffer {
+  const buffer = spy.mock.calls.pop()?.pop() ?? Buffer.alloc(0);
+  if (buffer instanceof Buffer) {
+    return buffer;
+  } else {
+    throw new Error(
+      `Unexpected value passed to process.stdout.write(): "${buffer}"`
+    );
+  }
 }
 
 export function mockProcess() {
@@ -18,7 +25,7 @@ export function mockProcess() {
   });
   return {
     get write() {
-      return captureWriteCall(writeSpy);
+      return captureLastWriteCall(writeSpy);
     },
   };
 }
