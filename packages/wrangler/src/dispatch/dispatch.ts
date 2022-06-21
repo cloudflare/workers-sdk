@@ -3,7 +3,6 @@ import { requireAuth } from "../user";
 
 import createNamespace from './create-namespace'
 import deleteNamespace from './delete-namespace';
-import { wrangler } from '../.';
 
 import type { CommandModule } from 'yargs';
 
@@ -24,15 +23,6 @@ interface CreateArguments {
 interface DeleteArguments {
     "namespace-name": string
 }
-
-const subHelp: CommandModule = {
-    command: ["*"],
-    handler: async (args) => {
-        setImmediate(() =>
-        wrangler.parse([...args._.map((a) => `${a}`), "--help"])
-        );
-    },
-};
 
 const createNamespaceCommand: CommandModule<unknown, CreateArguments> = {
     command: "create <namespace-name>",

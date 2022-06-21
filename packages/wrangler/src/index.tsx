@@ -21,7 +21,7 @@ import { createWorkerUploadForm } from "./create-worker-upload-form";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { confirm, prompt, select } from "./dialogs";
-import { createNamespaceCommand, deleteNamespaceCommand } from "./dispatch"
+import { createNamespaceCommand, deleteNamespaceCommand } from "./dispatch/dispatch"
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import {

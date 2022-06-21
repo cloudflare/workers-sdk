@@ -1,8 +1,8 @@
 import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
 
-import { namespacesPath } from ".";
-import type { Namespace } from ".";
+import { namespacesPath } from "./dispatch";
+import type { Namespace } from "./dispatch";
 
 interface Props {
     accountId: string

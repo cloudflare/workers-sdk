@@ -1,7 +1,7 @@
 import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
 
-import { namespacePath } from ".";
+import { namespacePath } from "./dispatch";
 
 type Props = {
     accountId: string
