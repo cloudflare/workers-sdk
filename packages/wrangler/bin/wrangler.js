@@ -76,7 +76,7 @@ function runDelegatedWrangler() {
   // of the other work.
   return spawn(
     process.execPath,
-    [path.resolve(packageJsonPath, binaryPath), ...process.argv],
+    [path.resolve(packageJsonPath, "..", binaryPath), ...process.argv.slice(2)],
     {
       stdio: "inherit",
     }
