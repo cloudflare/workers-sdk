@@ -5,6 +5,7 @@ import * as Deployments from "./deployments";
 import * as Dev from "./dev";
 import * as Projects from "./projects";
 import * as Publish from "./publish";
+import * as Upload from "./upload";
 import { CLEANUP, pagesBetaWarning } from "./utils";
 import type { BuilderCallback } from "yargs";
 
@@ -51,6 +52,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
           Projects.CreateOptions,
           Projects.CreateHandler
         )
+        .command("upload [directory]", false, Upload.Options, Upload.Handler)
         .epilogue(pagesBetaWarning)
     )
     .command(
