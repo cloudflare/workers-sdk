@@ -1,5 +1,8 @@
 import { fetchResult } from "./cfetch";
 
+export const pubSubBetaWarning =
+  "👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/";
+
 /**
  * Namespaces represent a collection of Pub/Sub Brokers.
  */
@@ -257,20 +260,6 @@ export async function listRevokedPubSubBrokerTokens(
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
   );
-}
-
-/**
- * Lookup a Pub/Sub Broker by hostname.
- */
-export async function lookupBroker(
-  host: string
-): Promise<[namespace: string, broker: string]> {
-  // Note: if we support custom broker hostnames later, this will need to be smarter
-  const [broker, namespace, ...rest] = host.split(".");
-  if (rest[0] != "cloudflarepubsub" || rest[1] != "com") {
-    throw new CommandLineArgsError(`${args.broker} is not a valid Broker host`);
-  }
-  return [namespace, broker];
 }
 
 /**

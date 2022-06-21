@@ -267,17 +267,18 @@ const units = {
 };
 
 /**
- * Parse a Human time duration in seconds (including fractional)
+ * Parse a human-readable time duration in seconds (including fractional)
  *
- * Invalid values will return Nan
+ * Invalid values will return NaN
  */
 export function parseHumanDuration(s: string): number {
+  const unitsMap = new Map(Object.entries(units));
   s = s.trim().toLowerCase();
   let base = 1;
-  for (let name of units) {
+  for (const [name, _] of unitsMap) {
     if (s.endsWith(name)) {
       s = s.substring(0, s.length - name.length);
-      base = units[name];
+      base = unitsMap.get(name) || 1;
       break;
     }
   }

@@ -55,7 +55,7 @@ import {
 import publish from "./publish";
 import * as pubsub from "./pubsub";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
-import { getAssetPaths } from "./sites";
+import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
   createTail,
   jsonPrintLogs,
@@ -2338,6 +2338,8 @@ function createCLIParser(argv: string[]) {
     "pubsub",
     "📮 Interact and manage Pub/Sub Brokers",
     (pubsubYargs) => {
+      // TODO(elithrar): Remove when Pub/Sub goes GA.
+      logger.log(pubsub.pubSubBetaWarning);
       return pubsubYargs
         .command(subHelp)
         .command(
