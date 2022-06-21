@@ -2585,6 +2585,48 @@ addEventListener('fetch', event => {});`
       `);
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
+
+    it("should use the relative path from current working directory to Worker directory when using --site", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      const assets = [
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
+      ];
+      writeAssets(assets, "my-assets");
+
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+
+      mockSubDomainRequest();
+      writeWorkerSource();
+      mockUploadWorkerRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      process.chdir("./my-assets");
+      await runWrangler("publish --site .");
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
   });
 
   describe("workers_dev setting", () => {

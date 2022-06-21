@@ -349,20 +349,24 @@ export function getAssetPaths(
  */
 export function getSiteAssetPaths(
   config: Config,
-  assetDirectory = config.site?.bucket,
+  assetDirectory?: string,
   includePatterns = config.site?.include ?? [],
   excludePatterns = config.site?.exclude ?? []
 ): AssetPaths | undefined {
-  const baseDirectory = path.resolve(
-    path.dirname(config.configPath ?? "wrangler.toml")
-  );
+  const baseDirectory = assetDirectory
+    ? process.cwd()
+    : path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 
-  return assetDirectory
-    ? {
-        baseDirectory,
-        assetDirectory,
-        includePatterns,
-        excludePatterns,
-      }
-    : undefined;
+  assetDirectory ??= config.site?.bucket;
+
+  if (assetDirectory) {
+    return {
+      baseDirectory,
+      assetDirectory,
+      includePatterns,
+      excludePatterns,
+    };
+  } else {
+    return undefined;
+  }
 }
