@@ -11,9 +11,20 @@ let wranglerProcess;
 
 /**
  * Executes ../wrangler-dist/cli.js
- * @returns {ChildProcess} the wrangler process
  */
 function runWrangler() {
+  if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
+    // Note Volta and nvm are also recommended in the official docs:
+    // https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
+    console.error(
+      `Wrangler requires at least Node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}.
+You should use the latest Node.js version if possible, as Cloudflare Workers use a very up-to-date version of V8.
+Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   let pathToCACerts = process.env.NODE_EXTRA_CA_CERTS;
   if (pathToCACerts) {
     // TODO:
@@ -65,18 +76,25 @@ function runWrangler() {
 /**
  * Runs a locally-installed version of wrangler, delegating from this version.
  * @throws {MODULE_NOT_FOUND} if there isn't a locally installed version of wrangler.
- * @returns {ChildProcess} the delegated wrangler process
  */
 function runDelegatedWrangler() {
   const packageJsonPath = require.resolve("wrangler/package.json", {
     paths: [process.cwd()],
   });
-  const binaryPath = JSON.parse(fs.readFileSync(packageJsonPath)).bin.wrangler;
+  const {
+    bin: { wrangler: binaryPath },
+    version,
+  } = JSON.parse(fs.readFileSync(packageJsonPath));
+  const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
+
+  console.log(
+    `Delegating to locally-installed version of wrangler @ v${version}`
+  );
   // this call to `spawn` is simpler because the delegated version will do all
   // of the other work.
   return spawn(
     process.execPath,
-    [path.resolve(packageJsonPath, "..", binaryPath), ...process.argv.slice(2)],
+    [resolvedBinaryPath, ...process.argv.slice(2)],
     {
       stdio: "inherit",
     }
@@ -89,9 +107,7 @@ function runDelegatedWrangler() {
  * Indicates if this invocation of `wrangler` should delegate
  * to a locally-installed version.
  */
-const shouldDelegate = (function () {
-  // IIFE because we need to catch a MODULE_NOT_FOUND error thrown
-  // by `require.resolve`
+function shouldDelegate() {
   try {
     // `require.resolve` will throw if it can't find
     // a locally-installed version of `wrangler`
@@ -105,34 +121,17 @@ const shouldDelegate = (function () {
     // there's no local version to delegate to -- `require.resolve` threw
     return false;
   }
-})();
+}
 
 async function main() {
-  if (shouldDelegate) {
-    wranglerProcess = runDelegatedWrangler();
-    return;
-  }
-
-  if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
-    // Note Volta and nvm are also recommended in the official docs:
-    // https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
-    console.error(
-      `Wrangler requires at least Node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}.
-You should use the latest Node.js version if possible, as Cloudflare Workers use a very up-to-date version of V8.
-Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  wranglerProcess = runWrangler();
+  wranglerProcess = shouldDelegate() ? runDelegatedWrangler() : runWrangler();
 }
 
 process.on("SIGINT", () => {
-  wranglerProcess.kill();
+  wranglerProcess?.kill();
 });
 process.on("SIGTERM", () => {
-  wranglerProcess.kill();
+  wranglerProcess?.kill();
 });
 
 void main();
