@@ -10,7 +10,7 @@
   "homepage": "https://github.com/cloudflare/wrangler2#readme",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "fixtures/*"
   ],
   "dependencies": {
     "@changesets/changelog-github": "^0.4.4",
