@@ -71,7 +71,7 @@ function runDelegatedWrangler() {
   const packageJsonPath = require.resolve("wrangler/package.json", {
     paths: [process.cwd()],
   });
-  const binaryPath = JSON.parse(packageJsonPath).bin.wrangler;
+  const binaryPath = JSON.parse(fs.readFileSync(packageJsonPath)).bin.wrangler;
   // this call to `spawn` is simpler because the delegated version will do all
   // of the other work.
   return spawn(
