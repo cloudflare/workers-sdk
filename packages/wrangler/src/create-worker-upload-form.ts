@@ -6,6 +6,24 @@ import type {
   CfDurableObjectMigrations,
 } from "./worker.js";
 
+export function getWorkerUrl(
+  accountId?: string,
+  scriptName?: string,
+  envName?: string,
+  namespaceName?: string,
+  notProd?: boolean,
+): string {
+  if (namespaceName) {
+    return `/accounts/${accountId}/workers/dispatch/namespaces/${namespaceName}/scripts/${scriptName}`;
+  }
+
+  if (notProd) {
+    return `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`;
+  }
+
+  return `/accounts/${accountId}/workers/scripts/${scriptName}`;
+}
+
 export function toMimeType(type: CfModuleType): string {
   switch (type) {
     case "esm":

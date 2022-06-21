@@ -6,7 +6,10 @@ import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
-import { createWorkerUploadForm } from "./create-worker-upload-form";
+import {
+  createWorkerUploadForm,
+  getWorkerUrl,
+} from "./create-worker-upload-form";
 import { confirm } from "./dialogs";
 import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
@@ -267,7 +270,7 @@ export default async function publish(props: Props): Promise<void> {
     );
   }
 
-  // deployToWorkersDev defaults to true only if there aren't any routes defined
+  // deployToWorkersDev defaults to true only if there aren't any routes or a namespace defined
   const deployToWorkersDev = config.workers_dev ?? (routes.length === 0 && !namespaceName);
   if (namespaceName && deployToWorkersDev) {
     logger.warn(
@@ -313,23 +316,17 @@ export default async function publish(props: Props): Promise<void> {
   const destination = props.outDir ?? (await tmp.dir({ unsafeCleanup: true }));
   const envName = props.env ?? DEFAULT_ENV_NAME;
 
-  if (namespaceName && envName != DEFAULT_ENV_NAME) {
-      logger.warn(
-        `Publishing to namespace '${namespaceName}': a non-default environment was specified, but namespaced scripts do not have environments.`
-      );
+  if (namespaceName && envName !== DEFAULT_ENV_NAME) {
+    logger.warn(
+      `Publishing to namespace '${namespaceName}': a non-default environment was specified, but namespaced scripts do not have environments.`
+    );
   }
 
   const start = Date.now();
   const notProd = Boolean(!props.legacyEnv && props.env);
   const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-  const workerUrl = namespaceName
-    ? `/accounts/${accountId}/workers/dispatch/namespaces/${namespaceName}/scripts/${scriptName}`
-    : notProd
-      ? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-      : `/accounts/${accountId}/workers/scripts/${scriptName}`;
-
+  const workerUrl = getWorkerUrl( accountId, scriptName, envName, namespaceName, notProd);
   let available_on_subdomain; // we'll set this later
-
   const { format } = props.entry;
 
   if (props.experimentalPublic && format === "service-worker") {
