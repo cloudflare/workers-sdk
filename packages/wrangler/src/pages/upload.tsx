@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, extname, join, sep } from "node:path";
+import { basename, extname, join, relative, resolve, sep } from "node:path";
 import { hash as blake3hash } from "blake3-wasm";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
@@ -89,10 +89,12 @@ export const upload = async (
     ".git",
   ];
 
+  const directory = resolve(args.directory);
+
   const walk = async (
     dir: string,
     fileMap: Map<string, FileContainer> = new Map(),
-    depth = 0
+    startingDir: string = dir
   ) => {
     const files = await readdir(dir);
 
@@ -110,14 +112,9 @@ export const upload = async (
         }
 
         if (filestat.isDirectory()) {
-          fileMap = await walk(filepath, fileMap, depth + 1);
+          fileMap = await walk(filepath, fileMap, startingDir);
         } else {
-          let name;
-          if (depth) {
-            name = filepath.split(sep).slice(1).join("/");
-          } else {
-            name = file;
-          }
+          const name = relative(startingDir, filepath).split(sep).join("/");
 
           // TODO: Move this to later so we don't hold as much in memory
           const fileContent = await readFile(filepath);
@@ -149,7 +146,7 @@ export const upload = async (
     return fileMap;
   };
 
-  const fileMap = await walk(args.directory);
+  const fileMap = await walk(directory);
 
   if (fileMap.size > 20000) {
     throw new FatalError(
@@ -253,8 +250,8 @@ export const upload = async (
       } catch (e) {
         if (attempts < MAX_UPLOAD_ATTEMPTS) {
           // Linear backoff, 0 second first time, then 1 second etc.
-          await new Promise((resolve) =>
-            setTimeout(resolve, attempts++ * 1000)
+          await new Promise((resolvePromise) =>
+            setTimeout(resolvePromise, attempts++ * 1000)
           );
 
           if ((e as { code: number }).code === 8000013) {
@@ -314,7 +311,7 @@ export const upload = async (
         }),
       });
     } catch (e) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
       if ((e as { code: number }).code === 8000013) {
         // Looks like the JWT expired, fetch another one

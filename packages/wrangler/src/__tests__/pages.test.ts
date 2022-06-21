@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { chdir } from "node:process";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
   createFetchResult,
@@ -682,6 +683,235 @@ describe("pages", () => {
 
         ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
       `);
+    });
+
+    it("should resolve child directories correctly", async () => {
+      mkdirSync("public");
+      mkdirSync("public/imgs");
+      writeFileSync("public/logo.txt", "foobar");
+      writeFileSync("public/imgs/logo.png", "foobar");
+      writeFileSync("public/logo.html", "foobar");
+      writeFileSync("public/logo.js", "foobar");
+
+      mockGetToken("<<funfetti-auth-jwt>>");
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init) => {
+          const body = JSON.parse(init.body as string) as {
+            hashes: string[];
+          };
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: expect.arrayContaining([
+                "d96fef225537c9f5e44a3cb27fd0b492",
+                "2082190357cfd3617ccfe04f340c6247",
+                "6be321bef99e758250dac034474ddbb8",
+                "1a98fb08af91aca4a7df1764a2c4ddb0",
+              ]),
+            });
+          });
+          return body.hashes;
+        }
+      );
+
+      // Accumulate multiple requests then assert afterwards
+      const requests: RequestInit[] = [];
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        requests.push(init);
+      });
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async ([_url, accountId], init) => {
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
+                          Object {
+                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
+          });
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      await runWrangler(`pages publish public --project-name=foo`);
+
+      // We have 3 buckets, so expect 3 uploads
+      expect(requests.length).toBe(3);
+      const bodies: UploadPayloadFile[][] = [];
+      for (const init of requests) {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+        bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
+      }
+      // First bucket should end up with 2 files
+      expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+      // But we don't know the order, so flatten and test without ordering
+      expect(bodies.flatMap((b) => b)).toEqual(
+        expect.arrayContaining([
+          {
+            base64: true,
+            key: "d96fef225537c9f5e44a3cb27fd0b492",
+            metadata: { contentType: "text/html" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+            metadata: { contentType: "text/plain" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "6be321bef99e758250dac034474ddbb8",
+            metadata: { contentType: "application/javascript" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "2082190357cfd3617ccfe04f340c6247",
+            metadata: { contentType: "image/png" },
+            value: "Zm9vYmFy",
+          },
+        ])
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+          "✨ Success! Uploaded 4 files (TIMINGS)
+
+          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+        `);
+    });
+
+    it("should resolve the current directory correctly", async () => {
+      mkdirSync("public");
+      mkdirSync("public/imgs");
+      writeFileSync("public/logo.txt", "foobar");
+      writeFileSync("public/imgs/logo.png", "foobar");
+      writeFileSync("public/logo.html", "foobar");
+      writeFileSync("public/logo.js", "foobar");
+
+      mockGetToken("<<funfetti-auth-jwt>>");
+
+      setMockResponse(
+        "/pages/assets/check-missing",
+        "POST",
+        async (_, init) => {
+          const body = JSON.parse(init.body as string) as {
+            hashes: string[];
+          };
+          assertLater(() => {
+            expect(init.headers).toMatchObject({
+              Authorization: "Bearer <<funfetti-auth-jwt>>",
+            });
+            expect(body).toMatchObject({
+              hashes: expect.arrayContaining([
+                "d96fef225537c9f5e44a3cb27fd0b492",
+                "2082190357cfd3617ccfe04f340c6247",
+                "6be321bef99e758250dac034474ddbb8",
+                "1a98fb08af91aca4a7df1764a2c4ddb0",
+              ]),
+            });
+          });
+          return body.hashes;
+        }
+      );
+
+      // Accumulate multiple requests then assert afterwards
+      const requests: RequestInit[] = [];
+      setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+        requests.push(init);
+      });
+
+      setMockResponse(
+        "/accounts/:accountId/pages/projects/foo/deployments",
+        async ([_url, accountId], init) => {
+          assertLater(() => {
+            expect(accountId).toEqual("some-account-id");
+            expect(init.method).toEqual("POST");
+            const body = init.body as FormData;
+            const manifest = JSON.parse(body.get("manifest") as string);
+            expect(manifest).toMatchInlineSnapshot(`
+                          Object {
+                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+                          }
+                      `);
+          });
+
+          return {
+            url: "https://abcxyz.foo.pages.dev/",
+          };
+        }
+      );
+
+      chdir("public");
+      await runWrangler(`pages publish . --project-name=foo`);
+
+      // We have 3 buckets, so expect 3 uploads
+      expect(requests.length).toBe(3);
+      const bodies: UploadPayloadFile[][] = [];
+      for (const init of requests) {
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer <<funfetti-auth-jwt>>",
+        });
+        bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
+      }
+      // First bucket should end up with 2 files
+      expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+      // But we don't know the order, so flatten and test without ordering
+      expect(bodies.flatMap((b) => b)).toEqual(
+        expect.arrayContaining([
+          {
+            base64: true,
+            key: "d96fef225537c9f5e44a3cb27fd0b492",
+            metadata: { contentType: "text/html" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+            metadata: { contentType: "text/plain" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "6be321bef99e758250dac034474ddbb8",
+            metadata: { contentType: "application/javascript" },
+            value: "Zm9vYmFy",
+          },
+          {
+            base64: true,
+            key: "2082190357cfd3617ccfe04f340c6247",
+            metadata: { contentType: "image/png" },
+            value: "Zm9vYmFy",
+          },
+        ])
+      );
+
+      expect(std.out).toMatchInlineSnapshot(`
+          "✨ Success! Uploaded 4 files (TIMINGS)
+
+          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+        `);
     });
 
     it("should not error when directory names contain periods and houses a extensionless file", async () => {
