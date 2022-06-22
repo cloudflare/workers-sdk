@@ -30,5 +30,5 @@ interface DevOptions {
 }
 
 export async function dev(script: string, options: DevOptions) {
-  await wranglerDev({ script: script, ...options, isApi: true });
+  return await wranglerDev({ script: script, ...options, isApi: true });
 }

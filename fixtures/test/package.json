@@ -1,0 +1,26 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "Max Rozen",
+  "license": "ISC",
+  "jest": {
+    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
+    "transformIgnorePatterns": [
+      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+    ],
+    "transform": {
+      "^.+\\.c?(t|j)sx?$": [
+        "esbuild-jest",
+        {
+          "sourcemap": true
+        }
+      ]
+    }
+  }
+}

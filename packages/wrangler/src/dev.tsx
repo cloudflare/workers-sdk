@@ -204,9 +204,22 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
       hidden: true,
     });
 }
+export async function devYargsHandler(args: ArgumentsCamelCase<DevArgs>) {
+  let watcher;
+  try {
+    const devInstance = await devHandler(args);
+    watcher = devInstance.watcher;
+    const { waitUntilExit, rerender } = devInstance.instance;
+
+    await waitUntilExit();
+  } finally {
+    await watcher?.close();
+  }
+}
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
   let watcher: ReturnType<typeof watch> | undefined;
+  let rerender;
   try {
     await printWranglerBanner();
     const configPath =
@@ -432,10 +445,9 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
         />
       );
     }
-    const { waitUntilExit, rerender } = render(
-      await getDevReactElement(config)
-    );
-    await waitUntilExit();
+    const instance = render(await getDevReactElement(config));
+    rerender = instance.rerender;
+    return { instance, watcher };
   } finally {
     await watcher?.close();
   }
