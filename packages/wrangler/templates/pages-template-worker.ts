@@ -132,15 +132,15 @@ export default {
           throw new Error("Your Pages function should return a Response");
         }
 
-        return unlockResponse(response);
+        return cloneResponse(response);
       } else if (__FALLBACK_SERVICE__) {
         // There are no more handlers so finish with the fallback service (`env.ASSETS.fetch` in Pages' case)
         const response = await env[__FALLBACK_SERVICE__].fetch(request);
-        return unlockResponse(response);
+        return cloneResponse(response);
       } else {
         // There was not fallback service so actually make the request to the origin.
         const response = await fetch(request);
-        return unlockResponse(response);
+        return cloneResponse(response);
       }
     };
 
@@ -152,7 +152,8 @@ export default {
   },
 };
 
-const unlockResponse = (response: Response) =>
+// This makes a Response mutable
+const cloneResponse = (response: Response) =>
   // https://fetch.spec.whatwg.org/#null-body-status
   new Response(
     [101, 204, 205, 304].includes(response.status) ? null : response.body,
