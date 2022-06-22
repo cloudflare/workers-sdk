@@ -871,15 +871,13 @@ type LoginProps = {
   scopes?: Scope[];
 };
 
-export async function loginOrRefreshIfRequired(
-  isInteractive = true
-): Promise<boolean> {
+export async function loginOrRefreshIfRequired(): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
   if (!getAPIToken()) {
     // Not logged in.
     // If we are not interactive, we cannot ask the user to login
-    return isInteractive && (await login());
+    return isInteractive() && (await login());
   } else if (isAccessTokenExpired()) {
     // We're logged in, but the refresh token seems to have expired,
     // so let's try to refresh it
@@ -889,7 +887,7 @@ export async function loginOrRefreshIfRequired(
       return true;
     } else {
       // If the refresh token isn't valid, then we ask the user to login again
-      return isInteractive && (await login());
+      return isInteractive() && (await login());
     }
   } else {
     return true;
@@ -1063,9 +1061,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
   // TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(
-  isInteractive = true
-): Promise<string | undefined> {
+export async function getAccountId(): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
 
@@ -1074,7 +1070,7 @@ export async function getAccountId(
     return accounts[0].id;
   }
 
-  if (isInteractive) {
+  if (isInteractive()) {
     return await new Promise((resolve, reject) => {
       const { unmount } = render(
         <ChooseAccount
@@ -1108,13 +1104,12 @@ export async function getAccountId(
 export async function requireAuth(config: {
   account_id?: string;
 }): Promise<string> {
-  const isInteractive = process.stdin.isTTY;
-  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
+  const loggedIn = await loginOrRefreshIfRequired();
   if (!loggedIn) {
     // didn't login, let's just quit
     throw new Error("Did not login, quitting...");
   }
-  const accountId = config.account_id || (await getAccountId(isInteractive));
+  const accountId = config.account_id || (await getAccountId());
   if (!accountId) {
     throw new Error("No account id found, quitting...");
   }
@@ -1131,4 +1126,8 @@ export function requireApiToken(): string {
     throw new Error("No API token found.");
   }
   return authToken;
+}
+
+function isInteractive(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }

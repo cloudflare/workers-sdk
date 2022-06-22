@@ -9,7 +9,9 @@ import {
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockKeyListRequest } from "./helpers/mock-kv";
+import { mockGetMemberships } from "./helpers/mock-oauth-flow";
 import { mockProcess } from "./helpers/mock-process";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -1134,6 +1136,59 @@ describe("wrangler", () => {
 
           "
         `);
+      });
+
+      describe("non-interactive", () => {
+        const { setIsTTY } = useMockIsTTY();
+        mockAccountId({ accountId: null });
+
+        it("should error if there are multiple accounts available but not interactive on stdin", async () => {
+          mockGetMemberships([
+            { id: "xxx", account: { id: "1", name: "one" } },
+            { id: "yyy", account: { id: "2", name: "two" } },
+          ]);
+          setIsTTY({ stdin: false, stdout: true });
+          await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+            .rejects.toThrowErrorMatchingInlineSnapshot(`
+                  "More than one account available but unable to select one in non-interactive mode.
+                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+                    \\"one\\" - \\"1\\")
+                    \\"two\\" - \\"2\\")"
+                `);
+        });
+
+        it("should error if there are multiple accounts available but not interactive on stdout", async () => {
+          mockGetMemberships([
+            { id: "xxx", account: { id: "1", name: "one" } },
+            { id: "yyy", account: { id: "2", name: "two" } },
+          ]);
+          setIsTTY({ stdin: true, stdout: false });
+          await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+            .rejects.toThrowErrorMatchingInlineSnapshot(`
+                  "More than one account available but unable to select one in non-interactive mode.
+                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+                    \\"one\\" - \\"1\\")
+                    \\"two\\" - \\"2\\")"
+                `);
+        });
+
+        it("should error if there are multiple accounts available but not interactive at all", async () => {
+          mockGetMemberships([
+            { id: "xxx", account: { id: "1", name: "one" } },
+            { id: "yyy", account: { id: "2", name: "two" } },
+          ]);
+          setIsTTY(false);
+          await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+            .rejects.toThrowErrorMatchingInlineSnapshot(`
+                  "More than one account available but unable to select one in non-interactive mode.
+                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+                    \\"one\\" - \\"1\\")
+                    \\"two\\" - \\"2\\")"
+                `);
+        });
       });
     });
 

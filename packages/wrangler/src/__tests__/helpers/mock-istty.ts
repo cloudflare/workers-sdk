@@ -8,9 +8,14 @@ export function useMockIsTTY() {
   /**
    * Explicitly set `process.stdout.isTTY` to a given value
    */
-  const setIsTTY = (isTTY: boolean) => {
-    process.stdout.isTTY = isTTY;
-    process.stdin.isTTY = isTTY;
+  const setIsTTY = (isTTY: boolean | { stdin: boolean; stdout: boolean }) => {
+    if (typeof isTTY === "boolean") {
+      process.stdout.isTTY = isTTY;
+      process.stdin.isTTY = isTTY;
+    } else {
+      process.stdin.isTTY = isTTY.stdin;
+      process.stdout.isTTY = isTTY.stdout;
+    }
   };
 
   beforeEach(() => {
