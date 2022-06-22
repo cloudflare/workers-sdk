@@ -2576,7 +2576,7 @@ addEventListener('fetch', event => {});`
       expect(std.err).toMatchInlineSnapshot(`""`);
     });
 
-    it("should use the relative path from current working directory to Worker directory when using --site", async () => {
+    it("should use the relative path from current working directory to Worker directory when using `--site`", async () => {
       writeWranglerToml({
         main: "./index.js",
       });
@@ -2610,6 +2610,48 @@ addEventListener('fetch', event => {});`
         Uploading as file-2.5938485188.txt...
         ↗️  Done syncing assets
         Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "",
+        }
+      `);
+    });
+
+    it("should use the relative path from current working directory to Worker directory when using `--assets`", async () => {
+      const assets = [
+        { filePath: "file-1.txt", content: "Content of file-1" },
+        { filePath: "file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      writeWorkerSource();
+      writeAssets(assets, "my-assets");
+      mockUploadWorkerRequest({
+        expectedMainModule: "stdin.js",
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+      process.chdir("./my-assets");
+      await runWrangler("publish --assets .");
+
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading file-1.txt...
+        Uploading as file-1.2ca234f380.txt...
+        Reading file-2.txt...
+        Uploading as file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Total Upload: 52xx KiB / gzip: 13xx KiB
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",

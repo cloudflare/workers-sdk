@@ -311,9 +311,9 @@ export function getAssetPaths(
   config: Config,
   assetDirectory: string | undefined
 ): AssetPaths | undefined {
-  const baseDirectory = path.resolve(
-    path.dirname(config.configPath ?? "wrangler.toml")
-  );
+  const baseDirectory = assetDirectory
+    ? process.cwd()
+    : path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 
   assetDirectory ??=
     typeof config.assets === "string"
