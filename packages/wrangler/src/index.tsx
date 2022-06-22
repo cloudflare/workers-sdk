@@ -17,7 +17,7 @@ import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { dev } from "./dev";
+import { devHandler, devOptions } from "./dev";
 import Dev from "./dev/dev";
 import { confirm, prompt, select } from "./dialogs";
 import { getEntry } from "./entry";
@@ -887,158 +887,8 @@ function createCLIParser(argv: string[]) {
   wrangler.command(
     "dev [script]",
     "👂 Start a local server for developing your worker",
-    (yargs) => {
-      return yargs
-        .positional("script", {
-          describe: "The path to an entry point for your worker",
-          type: "string",
-        })
-        .option("name", {
-          describe: "Name of the worker",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("format", {
-          choices: ["modules", "service-worker"] as const,
-          describe: "Choose an entry type",
-          deprecated: true,
-        })
-        .option("env", {
-          describe: "Perform on a specific environment",
-          type: "string",
-          requiresArg: true,
-          alias: "e",
-        })
-        .option("compatibility-date", {
-          describe: "Date to use for compatibility checks",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("compatibility-flags", {
-          describe: "Flags to use for compatibility checks",
-          alias: "compatibility-flag",
-          type: "string",
-          requiresArg: true,
-          array: true,
-        })
-        .option("latest", {
-          describe: "Use the latest version of the worker runtime",
-          type: "boolean",
-          default: true,
-        })
-        .option("ip", {
-          describe: "IP address to listen on, defaults to `localhost`",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("port", {
-          describe: "Port to listen on",
-          type: "number",
-        })
-        .option("inspector-port", {
-          describe: "Port for devtools to connect to",
-          type: "number",
-        })
-        .option("routes", {
-          describe: "Routes to upload",
-          alias: "route",
-          type: "string",
-          requiresArg: true,
-          array: true,
-        })
-        .option("host", {
-          type: "string",
-          requiresArg: true,
-          describe:
-            "Host to forward requests to, defaults to the zone of project",
-        })
-        .option("local-protocol", {
-          describe: "Protocol to listen to requests on, defaults to http.",
-          choices: ["http", "https"] as const,
-        })
-        .option("experimental-public", {
-          describe: "Static assets to be served",
-          type: "string",
-          requiresArg: true,
-          deprecated: true,
-          hidden: true,
-        })
-        .option("assets", {
-          describe: "Static assets to be served",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("site", {
-          describe: "Root folder of static assets for Workers Sites",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("site-include", {
-          describe:
-            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
-          type: "string",
-          requiresArg: true,
-          array: true,
-        })
-        .option("site-exclude", {
-          describe:
-            "Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
-          type: "string",
-          requiresArg: true,
-          array: true,
-        })
-        .option("upstream-protocol", {
-          describe:
-            "Protocol to forward requests to host on, defaults to https.",
-          choices: ["http", "https"] as const,
-        })
-        .option("jsx-factory", {
-          describe: "The function that is called for each JSX element",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("jsx-fragment", {
-          describe: "The function that is called for each JSX fragment",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("tsconfig", {
-          describe: "Path to a custom tsconfig.json file",
-          type: "string",
-          requiresArg: true,
-        })
-        .option("local", {
-          alias: "l",
-          describe: "Run on my machine",
-          type: "boolean",
-          default: false, // I bet this will a point of contention. We'll revisit it.
-        })
-        .option("minify", {
-          describe: "Minify the script",
-          type: "boolean",
-        })
-        .option("node-compat", {
-          describe: "Enable node.js compatibility",
-          type: "boolean",
-        })
-        .option("experimental-enable-local-persistence", {
-          describe: "Enable persistence for this session (only for local mode)",
-          type: "boolean",
-        })
-        .option("inspect", {
-          describe: "Enable dev tools",
-          type: "boolean",
-          deprecated: true,
-        })
-        .option("legacy-env", {
-          type: "boolean",
-          describe: "Use legacy environments",
-          hidden: true,
-        });
-    },
-    async (args) => {
-      await dev(args);
-    }
+    devOptions,
+    devHandler
   );
 
   // publish

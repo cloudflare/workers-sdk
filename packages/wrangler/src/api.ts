@@ -1,4 +1,4 @@
-import { dev as wranglerDev } from "./dev";
+import { devHandler as wranglerDev } from "./dev";
 
 interface DevOptions {
   name?: string;
@@ -25,6 +25,8 @@ interface DevOptions {
   minify?: boolean;
   nodeCompat?: boolean;
   experimentalEnableLocalPersistence?: boolean;
+  _: (string | number)[]; //yargs wants this
+  $0: string; //yargs wants this
 }
 
 export async function dev(script: string, options: DevOptions) {
