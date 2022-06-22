@@ -50,6 +50,7 @@ export type DevProps = {
   legacyEnv: boolean;
   zone: string | undefined;
   host: string | undefined;
+  isApi?: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {

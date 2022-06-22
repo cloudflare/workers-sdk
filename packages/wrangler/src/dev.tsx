@@ -54,6 +54,7 @@ interface DevArgs {
   minify?: boolean;
   "node-compat"?: boolean;
   "experimental-enable-local-persistence"?: boolean;
+  isApi?: boolean;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -427,6 +428,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
           usageModel={config.usage_model}
           bindings={bindings}
           crons={config.triggers.crons}
+          isApi={Boolean(args.isApi)}
         />
       );
     }
