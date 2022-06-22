@@ -1,5 +1,103 @@
 # wrangler
 
+## 2.0.15
+
+### Patch Changes
+
+- [#1301](https://github.com/cloudflare/wrangler2/pull/1301) [`9074990`](https://github.com/cloudflare/wrangler2/commit/9074990ead8ce74862601dc9a7c827689e0e3328) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.5.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.5.1)
+
+* [#1272](https://github.com/cloudflare/wrangler2/pull/1272) [`f7d362e`](https://github.com/cloudflare/wrangler2/commit/f7d362e31c83a1a32facfce771d2eb1e261e7b0b) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: print bundle size during `publish` and `dev`
+
+  This logs the complete bundle size of the Worker (as well as when compressed) during `publish` and `dev`.
+
+  Via https://github.com/cloudflare/wrangler2/issues/405#issuecomment-1156762297)
+
+- [#1287](https://github.com/cloudflare/wrangler2/pull/1287) [`2072e27`](https://github.com/cloudflare/wrangler2/commit/2072e278479bf66b255eb2858dea83bf0608530c) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put/get binary file
+
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler 1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+
+  Subsequently https://github.com/cloudflare/wrangler2/issues/1273 was raised in relation to a similar issue with gets from wrangler 2. This was happening due to the downloaded file being converted to `utf-8` encoding as it was pushed through `console.log`. By leveraging `process.stdout.write` we can push the fetched `ArrayBuffer` to std out directly without inferring any specific encoding value.
+
+* [#1325](https://github.com/cloudflare/wrangler2/pull/1325) [`bcd066d`](https://github.com/cloudflare/wrangler2/commit/bcd066d2ad82c2bfcc97b4394fe7d1e77a17add6) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: Ensure Response is mutable in Pages functions
+
+- [#1265](https://github.com/cloudflare/wrangler2/pull/1265) [`e322475`](https://github.com/cloudflare/wrangler2/commit/e32247589bf90e9b8e7a8282ff41f2754a147057) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: support all git versions for `wrangler init`
+
+  If `git` does not support the `--initial-branch` argument then just fallback to the default initial branch name.
+
+  We tried to be more clever about this but there are two many weird corner cases with different git versions on different architectures.
+  Now we do our best, with recent versions of git, to ensure that the branch is called `main` but otherwise just make sure we don't crash.
+
+  Fixes #1228
+
+* [#1311](https://github.com/cloudflare/wrangler2/pull/1311) [`374655d`](https://github.com/cloudflare/wrangler2/commit/374655d74a2687b54954e706058c1e999d9f16e5) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: add `--text` flag to decode `kv:key get` response values as utf8 strings
+
+  Previously, all kv values were being rendered directly as bytes to the stdout, which makes sense if the value is a binary blob that you are going to pipe into a file, but doesn't make sense if the value is a simple string.
+
+  resolves #1306
+
+- [#1327](https://github.com/cloudflare/wrangler2/pull/1327) [`4880d54`](https://github.com/cloudflare/wrangler2/commit/4880d54341ab442d7dca81ae0e0374ef8032fea3) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: resolve `--site` cli arg relative to current working directory
+
+  Before we were resolving the Site directory relative to the location of `wrangler.toml` at all times.
+  Now the `--site` cli arg is resolved relative to current working directory.
+
+  resolves #1243
+
+* [#1270](https://github.com/cloudflare/wrangler2/pull/1270) [`7ed5e1a`](https://github.com/cloudflare/wrangler2/commit/7ed5e1aaec90cdbacf986fc719cb93b5abf784ae) Thanks [@caass](https://github.com/caass)! - Delegate to a local install of `wrangler` if one exists.
+
+  Users will frequently install `wrangler` globally to run commands like `wrangler init`, but we also recommend pinning a specific version of `wrangler` in a project's `package.json`. Now, when a user invokes a global install of `wrangler`, we'll check to see if they also have a local installation. If they do, we'll delegate to that version.
+
+- [#1289](https://github.com/cloudflare/wrangler2/pull/1289) [`0d6098c`](https://github.com/cloudflare/wrangler2/commit/0d6098ca9b28c64be54ced160933894eeed77983) Thanks [@threepointone](https://github.com/threepointone)! - feat: entry point is not mandatory if `--assets` is passed
+
+  Since we use a facade worker with `--assets`, an entry point is not strictly necessary. This makes a common usecase of "deploy a bunch of static assets" extremely easy to start, as a one liner `npx wrangler dev --assets path/to/folder` (and same with `publish`).
+
+* [#1293](https://github.com/cloudflare/wrangler2/pull/1293) [`ee57d77`](https://github.com/cloudflare/wrangler2/commit/ee57d77b51d24c94464fada9afe5c80169d0f3c3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash in `wrangler dev` if user has multiple accounts
+
+  When a user has multiple accounts we show a prompt to allow the user to select which they should use.
+  This was broken in `wrangler dev` as we were trying to start a new ink.js app (to show the prompt)
+  from inside a running ink.js app (the UI for `wrangler dev`).
+
+  This fix refactors the `ChooseAccount` component so that it can be used directly within another component.
+
+  Fixes #1258
+
+- [#1299](https://github.com/cloudflare/wrangler2/pull/1299) [`0fd0c30`](https://github.com/cloudflare/wrangler2/commit/0fd0c301e538ab1f1dbabbf7cbe203bc03ccc6db) Thanks [@threepointone](https://github.com/threepointone)! - polish: include a copy-pastable message when trying to publish without a compatibility date
+
+* [#1269](https://github.com/cloudflare/wrangler2/pull/1269) [`fea87cf`](https://github.com/cloudflare/wrangler2/commit/fea87cf142030c6bbd2647f8aba87479763bfffe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not consider ancestor files when initializing a project with a specified name
+
+  When initializing a new project (via `wrangler init`) we attempt to reuse files in the current
+  directory, or in an ancestor directory. In particular we look up the directory tree for
+  package.json and tsconfig.json and use those instead of creating new ones.
+
+  Now we only do this if you do not specify a name for the new Worker. If you do specify a name,
+  we now only consider files in the directory where the Worker will be initialized.
+
+  Fixes #859
+
+- [#1321](https://github.com/cloudflare/wrangler2/pull/1321) [`8e2b92f`](https://github.com/cloudflare/wrangler2/commit/8e2b92f899604b7514ca977c9a591c21964c2dc9) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Correctly resolve directories for 'wrangler pages publish'
+
+  Previously, attempting to publish a nested directory or the current directory would result in parsing mangled paths which broke deployments. This has now been fixed.
+
+* [#1293](https://github.com/cloudflare/wrangler2/pull/1293) [`ee57d77`](https://github.com/cloudflare/wrangler2/commit/ee57d77b51d24c94464fada9afe5c80169d0f3c3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not hang waiting for account choice when in non-interactive mode
+
+  The previous tests for non-interactive only checked the stdin.isTTY, but
+  you can have scenarios where the stdin is interactive but the stdout is not.
+  For example when writing the output of a `kv:key get` command to a file.
+
+  We now check that both stdin and stdout are interactive before trying to
+  interact with the user.
+
+- [#1275](https://github.com/cloudflare/wrangler2/pull/1275) [`35482da`](https://github.com/cloudflare/wrangler2/commit/35482da2570066cd4764f3f47bfa7a2264e578a6) Thanks [@alankemp](https://github.com/alankemp)! - Add environment variable WRANGLER_LOG to set log level
+
+* [#1294](https://github.com/cloudflare/wrangler2/pull/1294) [`f6836b0`](https://github.com/cloudflare/wrangler2/commit/f6836b001b86d1d79cd86c44dcb9376ee29e15bc) Thanks [@threepointone](https://github.com/threepointone)! - fix: serve `--assets` in dev + local mode
+
+  A quick bugfix to make sure --assets/config.assets gets served correctly in `dev --local`.
+
+- [#1237](https://github.com/cloudflare/wrangler2/pull/1237) [`e1b8ac4`](https://github.com/cloudflare/wrangler2/commit/e1b8ac410f23bc5923429b8c77b63a93b39b918e) Thanks [@threepointone](https://github.com/threepointone)! - feat: `--assets` / `config.assets` to serve a folder of static assets
+
+  This adds support for defining `assets` in `wrangler.toml`. You can configure it with a string path, or a `{bucket, include, exclude}` object (much like `[site]`). This also renames the `--experimental-public` arg as `--assets`.
+
+  Via https://github.com/cloudflare/wrangler2/issues/1162
+
 ## 2.0.14
 
 ### Patch Changes
