@@ -1,8 +1,26 @@
 import fetchMock from "jest-fetch-mock";
 import { Request } from "undici";
-import { getCloudflareApiBaseUrl } from "../../cfetch";
 import openInBrowser from "../../open-in-browser";
+import {
+  createFetchResult,
+  setMockRawResponse,
+  setMockResponse,
+} from "./mock-cfetch";
 import { mockHttpServer } from "./mock-http-server";
+
+export function mockGetMemberships(
+  accounts: { id: string; account: { id: string; name: string } }[]
+) {
+  setMockResponse("/memberships", "GET", () => {
+    return accounts;
+  });
+}
+
+export function mockGetMembershipsFail() {
+  setMockRawResponse("/memberships", () => {
+    return createFetchResult([], false);
+  });
+}
 
 // the response to send when wrangler wants an oauth grant
 let oauthGrantResponse: GrantResponseOptions | "timeout" = {};
@@ -86,28 +104,6 @@ export const mockOAuthFlow = () => {
     return outcome;
   };
 
-  const mockGetMemberships = (args: {
-    success: boolean;
-    result: { id: string; account: { id: string; name: string } }[];
-  }) => {
-    const outcome = {
-      actual: new Request("https://example.org"),
-      expected: new Request(`${getCloudflareApiBaseUrl()}/memberships`, {
-        method: "GET",
-      }),
-    };
-
-    fetchMock.mockIf(outcome.expected.url, async (req) => {
-      outcome.actual = req;
-      return {
-        status: 200,
-        body: JSON.stringify(args),
-      };
-    });
-
-    return outcome;
-  };
-
   const mockGrantAccessToken = ({
     respondWith,
   }: {
@@ -173,7 +169,6 @@ export const mockOAuthFlow = () => {
   };
 
   return {
-    mockGetMemberships,
     mockGrantAccessToken,
     mockGrantAuthorization,
     mockOAuthServerCallback,

@@ -9,14 +9,16 @@ import {
   clearConfirmMocks,
   clearPromptMocks,
 } from "./helpers/mock-dialogs";
-import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import {
+  mockGetMemberships,
+  mockGetMembershipsFail,
+} from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("wrangler secret", () => {
   const std = mockConsoleMethods();
-  const { mockGetMemberships } = mockOAuthFlow();
 
   runInTempDir();
   mockAccountId();
@@ -212,16 +214,22 @@ describe("wrangler secret", () => {
       describe("with accountId", () => {
         mockAccountId({ accountId: null });
 
-        it("should error if a user has no account", async () => {
-          mockGetMemberships({
-            success: false,
-            result: [],
-          });
+        it("should error if request for memberships fails", async () => {
+          mockGetMembershipsFail();
           await expect(
             runWrangler("secret put the-key --name script-name")
           ).rejects.toThrowErrorMatchingInlineSnapshot(
-            `"Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."`
+            `"A request to the Cloudflare API (/memberships) failed."`
           );
+        });
+
+        it("should error if a user has no account", async () => {
+          mockGetMemberships([]);
+          await expect(runWrangler("secret put the-key --name script-name"))
+            .rejects.toThrowErrorMatchingInlineSnapshot(`
+                  "Failed to automatically retrieve account IDs for the logged in user.
+                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
+                `);
         });
 
         it("should use the account from wrangler.toml", async () => {
@@ -244,23 +252,20 @@ describe("wrangler secret", () => {
         });
 
         it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
-          mockGetMemberships({
-            success: true,
-            result: [
-              {
-                id: "1",
-                account: { id: "account-id-1", name: "account-name-1" },
-              },
-              {
-                id: "2",
-                account: { id: "account-id-2", name: "account-name-2" },
-              },
-              {
-                id: "3",
-                account: { id: "account-id-3", name: "account-name-3" },
-              },
-            ],
-          });
+          mockGetMemberships([
+            {
+              id: "1",
+              account: { id: "account-id-1", name: "account-name-1" },
+            },
+            {
+              id: "2",
+              account: { id: "account-id-2", name: "account-name-2" },
+            },
+            {
+              id: "3",
+              account: { id: "account-id-3", name: "account-name-3" },
+            },
+          ]);
 
           await expect(runWrangler("secret put the-key --name script-name"))
             .rejects.toThrowErrorMatchingInlineSnapshot(`

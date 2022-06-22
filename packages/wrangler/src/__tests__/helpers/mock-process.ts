@@ -5,8 +5,23 @@
 
 let writeSpy: jest.SpyInstance;
 
-function captureWriteCall(spy: jest.SpyInstance): Buffer {
-  return spy.mock.calls[0]?.[0] ?? Buffer.alloc(0);
+function captureLastWriteCall(spy: jest.SpyInstance): Buffer {
+  const calls = spy.mock.calls;
+  if (calls.length > 1) {
+    throw new Error(
+      "Unexpected calls to `stdout.write()`: " + JSON.stringify(calls)
+    );
+  }
+  const buffer = calls[0]?.[0] ?? Buffer.alloc(0);
+  if (buffer instanceof Buffer) {
+    return buffer;
+  } else {
+    throw new Error(
+      `Unexpected non-Buffer passed to \`stdout.write()\`: "${JSON.stringify(
+        buffer
+      )}"`
+    );
+  }
 }
 
 export function mockProcess() {
@@ -18,7 +33,7 @@ export function mockProcess() {
   });
   return {
     get write() {
-      return captureWriteCall(writeSpy);
+      return captureLastWriteCall(writeSpy);
     },
   };
 }

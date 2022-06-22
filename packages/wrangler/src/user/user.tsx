@@ -215,38 +215,19 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { HostURL } from "@webcontainer/env";
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
+import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import { getCloudflareApiBaseUrl } from "./cfetch";
-import { purgeConfigCaches } from "./config-cache";
-import { getEnvironmentVariableFactory } from "./environment-variables";
+import { purgeConfigCaches } from "../config-cache";
+import { logger } from "../logger";
+import openInBrowser from "../open-in-browser";
+import { parseTOML, readFileSync } from "../parse";
+import { ChooseAccount, getAccountChoices } from "./choose-account";
+import { getCloudflareAPITokenFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import { logger } from "./logger";
-import openInBrowser from "./open-in-browser";
-import { parseTOML, readFileSync } from "./parse";
-import type { Item as SelectInputItem } from "ink-select-input/build/SelectInput";
 import type { ParsedUrlQuery } from "node:querystring";
-import type { Response } from "undici";
-
-/**
- * Try to read the API token from the environment.
- */
-export const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_API_TOKEN",
-  deprecatedName: "CF_API_TOKEN",
-});
-
-/**
- * Try to read the account ID from the environment.
- */
-const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_ACCOUNT_ID",
-  deprecatedName: "CF_ACCOUNT_ID",
-});
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -890,15 +871,13 @@ type LoginProps = {
   scopes?: Scope[];
 };
 
-export async function loginOrRefreshIfRequired(
-  isInteractive = true
-): Promise<boolean> {
+export async function loginOrRefreshIfRequired(): Promise<boolean> {
   // TODO: if there already is a token, then try refreshing
   // TODO: ask permission before opening browser
   if (!getAPIToken()) {
     // Not logged in.
     // If we are not interactive, we cannot ask the user to login
-    return isInteractive && (await login());
+    return isInteractive() && (await login());
   } else if (isAccessTokenExpired()) {
     // We're logged in, but the refresh token seems to have expired,
     // so let's try to refresh it
@@ -908,7 +887,7 @@ export async function loginOrRefreshIfRequired(
       return true;
     } else {
       // If the refresh token isn't valid, then we ask the user to login again
-      return isInteractive && (await login());
+      return isInteractive() && (await login());
     }
   } else {
     return true;
@@ -1082,91 +1061,40 @@ export function listScopes(message = "💁 Available scopes:"): void {
   // TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(
-  isInteractive = true
-): Promise<string | undefined> {
+export async function getAccountId(): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
 
-  const accountIdFromEnv = getCloudflareAccountIdFromEnv();
-  if (accountIdFromEnv) {
-    return accountIdFromEnv;
+  const accounts = await getAccountChoices();
+  if (accounts.length === 1) {
+    return accounts[0].id;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(`${getCloudflareApiBaseUrl()}/memberships`, {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer " + apiToken,
-      },
+  if (isInteractive()) {
+    return await new Promise((resolve, reject) => {
+      const { unmount } = render(
+        <ChooseAccount
+          accounts={accounts}
+          onSelect={async (selected) => {
+            resolve(selected);
+            unmount();
+          }}
+          onError={(err) => {
+            reject(err);
+            unmount();
+          }}
+        />
+      );
     });
-  } catch (err) {
-    // probably offline
-    return;
   }
 
-  let accountId: string | undefined;
-  const responseJSON = (await response.json()) as {
-    success: boolean;
-    result: { id: string; account: { id: string; name: string } }[];
-  };
-
-  if (responseJSON.success === true) {
-    if (responseJSON.result.length === 1) {
-      accountId = responseJSON.result[0].account.id;
-    } else if (isInteractive) {
-      accountId = await new Promise((resolve) => {
-        const accounts = responseJSON.result.map((x) => x.account);
-        const { unmount } = render(
-          <ChooseAccount
-            accounts={accounts}
-            onSelect={async (selected) => {
-              resolve(selected.value.id);
-              unmount();
-            }}
-          />
-        );
-      });
-    } else {
-      throw new Error(
-        "More than one account available but unable to select one in non-interactive mode.\n" +
-          `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
-          `Available accounts are ("<name>" - "<id>"):\n` +
-          responseJSON.result
-            .map((x) => `  "${x.account.name}" - "${x.account.id}")`)
-            .join("\n")
-      );
-    }
-  } else {
-    if (!isInteractive)
-      throw new Error(
-        `Failed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.`
-      );
-  }
-  return accountId;
-}
-
-type ChooseAccountItem = {
-  id: string;
-  name: string;
-};
-export function ChooseAccount(props: {
-  accounts: ChooseAccountItem[];
-  onSelect: (item: SelectInputItem<ChooseAccountItem>) => void;
-}) {
-  return (
-    <>
-      <Text bold>Select an account from below:</Text>
-      <SelectInput
-        items={props.accounts.map((item) => ({
-          key: item.id,
-          label: item.name,
-          value: item,
-        }))}
-        onSelect={props.onSelect}
-      />
-    </>
+  throw new Error(
+    "More than one account available but unable to select one in non-interactive mode.\n" +
+      `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
+      `Available accounts are ("<name>" - "<id>"):\n` +
+      accounts
+        .map((account) => `  "${account.name}" - "${account.id}")`)
+        .join("\n")
   );
 }
 
@@ -1176,13 +1104,12 @@ export function ChooseAccount(props: {
 export async function requireAuth(config: {
   account_id?: string;
 }): Promise<string> {
-  const isInteractive = process.stdin.isTTY;
-  const loggedIn = await loginOrRefreshIfRequired(isInteractive);
+  const loggedIn = await loginOrRefreshIfRequired();
   if (!loggedIn) {
     // didn't login, let's just quit
     throw new Error("Did not login, quitting...");
   }
-  const accountId = config.account_id || (await getAccountId(isInteractive));
+  const accountId = config.account_id || (await getAccountId());
   if (!accountId) {
     throw new Error("No account id found, quitting...");
   }
@@ -1199,4 +1126,8 @@ export function requireApiToken(): string {
     throw new Error("No API token found.");
   }
   return authToken;
+}
+
+function isInteractive(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }

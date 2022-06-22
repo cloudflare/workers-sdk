@@ -1,5 +1,5 @@
 import { webcrypto as crypto } from "node:crypto";
-import { PKCE_CHARSET } from "./user";
+import { PKCE_CHARSET } from "../user";
 
 /**
  * Generates random state to be passed for anti-csrf.

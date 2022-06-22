@@ -15,7 +15,7 @@ import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockKeyListRequest } from "./helpers/mock-kv";
-import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
@@ -36,7 +36,6 @@ describe("publish", () => {
     mockOAuthServerCallback,
     mockGrantAccessToken,
     mockGrantAuthorization,
-    mockGetMemberships,
   } = mockOAuthFlow();
 
   beforeEach(() => {
@@ -170,10 +169,7 @@ describe("publish", () => {
         mockSubDomainRequest();
         mockUploadWorkerRequest();
         mockOAuthServerCallback();
-        mockGetMemberships({
-          success: true,
-          result: [],
-        });
+        mockGetMemberships([]);
 
         await runWrangler("publish index.js");
 
@@ -199,13 +195,10 @@ describe("publish", () => {
         mockSubDomainRequest();
         mockUploadWorkerRequest();
         mockOAuthServerCallback();
-        mockGetMemberships({
-          success: true,
-          result: [
-            { id: "IG-88", account: { id: "1701", name: "enterprise" } },
-            { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-          ],
-        });
+        mockGetMemberships([
+          { id: "IG-88", account: { id: "1701", name: "enterprise" } },
+          { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+        ]);
 
         await expect(runWrangler("publish index.js")).rejects
           .toMatchInlineSnapshot(`
@@ -230,13 +223,10 @@ describe("publish", () => {
         mockSubDomainRequest();
         mockUploadWorkerRequest();
         mockOAuthServerCallback();
-        mockGetMemberships({
-          success: true,
-          result: [
-            { id: "IG-88", account: { id: "1701", name: "enterprise" } },
-            { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-          ],
-        });
+        mockGetMemberships([
+          { id: "IG-88", account: { id: "1701", name: "enterprise" } },
+          { id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+        ]);
 
         await expect(runWrangler("publish index.js")).rejects.toThrowError();
 
@@ -259,15 +249,15 @@ describe("publish", () => {
         mockSubDomainRequest();
         mockUploadWorkerRequest();
         mockOAuthServerCallback();
-        mockGetMemberships({
-          success: false,
-          result: [],
-        });
+        mockGetMemberships([]);
 
         await expect(runWrangler("publish index.js")).rejects.toThrowError();
 
         expect(std.err).toMatchInlineSnapshot(`
-          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user. In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.[0m
+          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
+
+            In a non-interactive environment, it is mandatory to specify an account ID, either by assigning
+            its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.
 
           "
         `);

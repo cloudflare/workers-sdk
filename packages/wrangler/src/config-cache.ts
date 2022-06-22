@@ -37,7 +37,6 @@ export const saveToConfigCache = <T>(
     configCacheLocation,
     JSON.stringify({ ...existingValues, ...newValues }, null, 2)
   );
-  showCacheMessage();
 };
 
 export const purgeConfigCaches = () => {

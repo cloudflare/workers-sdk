@@ -97,5 +97,5 @@ export async function ListHandler({
     account_id: accountId,
   });
 
-  render(<Table data={data}></Table>);
+  render(<Table data={data}></Table>, { patchConsole: false });
 }
