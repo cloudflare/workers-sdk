@@ -126,19 +126,20 @@ export default {
           waitUntil: workerContext.waitUntil.bind(workerContext),
         };
 
-        const response: Response = await handler(context);
+        const response = await handler(context);
 
-        // https://fetch.spec.whatwg.org/#null-body-status
+        if (!(response instanceof Response)) {
+          throw new Error("Your Pages function should return a Response");
+        }
+
         return unlockResponse(response);
       } else if (__FALLBACK_SERVICE__) {
-        const response: Response = await env[__FALLBACK_SERVICE__].fetch(
-          request
-        );
         // There are no more handlers so finish with the fallback service (`env.ASSETS.fetch` in Pages' case)
+        const response = await env[__FALLBACK_SERVICE__].fetch(request);
         return unlockResponse(response);
       } else {
-        const response: Response = await fetch(request);
         // There was not fallback service so actually make the request to the origin.
+        const response = await fetch(request);
         return unlockResponse(response);
       }
     };
@@ -152,6 +153,7 @@ export default {
 };
 
 const unlockResponse = (response: Response) =>
+  // https://fetch.spec.whatwg.org/#null-body-status
   new Response(
     [101, 204, 205, 304].includes(response.status) ? null : response.body,
     response
