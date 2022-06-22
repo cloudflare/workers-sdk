@@ -427,6 +427,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
       usage_model: config.usage_model,
     };
 
+    void printBundleSize(
+      { name: path.basename(resolvedEntryPointPath), content: content },
+      modules
+    );
+
     const withoutStaticAssets = {
       ...bindings,
       kv_namespaces: config.kv_namespaces,
@@ -453,10 +458,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
         )
       ).available_on_subdomain;
     }
-    void printBundleSize(
-      { name: path.basename(resolvedEntryPointPath), content: content },
-      modules
-    );
   } finally {
     if (typeof destination !== "string") {
       // this means we're using a temp dir,

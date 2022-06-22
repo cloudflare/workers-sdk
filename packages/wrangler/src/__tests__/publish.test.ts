@@ -5753,6 +5753,67 @@ addEventListener('fetch', event => {});`
         }
       `);
     });
+    it("should print the bundle size, with API errors", async () => {
+      setMockRawResponse(
+        "/accounts/:accountId/workers/scripts/:scriptName",
+        "PUT",
+        () => {
+          return createFetchResult({}, false, [
+            {
+              code: 11337,
+              message:
+                "Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+            },
+          ]);
+        }
+      );
+      fs.writeFileSync(
+        "./hello.html",
+        `<!DOCTYPE html>
+      <html>
+        <body>
+            <h2>Hello World!</h2>
+        </body>
+      </html>
+      `
+      );
+
+      fs.writeFileSync(
+        "index.js",
+        `import hello from "./hello.html";
+        export default {
+          async fetch(request) {
+            return new Response(json.stringify({ hello }));
+        },
+      };`
+      );
+      writeWranglerToml({
+        main: "index.js",
+      });
+      mockSubDomainRequest();
+      mockUploadWorkerRequest();
+      await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+        `[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+      );
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+
+        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+
+          Script startup timed out. This could be due to script exceeding size limits or expensive code in
+          the global scope. [code: 11337]
+
+          If you think this is a bug, please open an issue at:
+          [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+
+        ",
+          "warn": "",
+        }
+      `);
+    });
   });
 });
 
