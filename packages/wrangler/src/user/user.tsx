@@ -223,7 +223,7 @@ import { purgeConfigCaches } from "../config-cache";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
-import { ChooseAccount } from "./choose-account";
+import { ChooseAccount, getAccountChoices } from "./choose-account";
 import { getCloudflareAPITokenFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
@@ -1068,21 +1068,38 @@ export async function getAccountId(
 ): Promise<string | undefined> {
   const apiToken = getAPIToken();
   if (!apiToken) return;
-  return await new Promise((resolve, reject) => {
-    const { unmount } = render(
-      <ChooseAccount
-        isInteractive={isInteractive}
-        onSelect={async (selected) => {
-          resolve(selected);
-          unmount();
-        }}
-        onError={(err) => {
-          reject(err);
-          unmount();
-        }}
-      />
-    );
-  });
+
+  const accounts = await getAccountChoices();
+  if (accounts.length === 1) {
+    return accounts[0].id;
+  }
+
+  if (isInteractive) {
+    return await new Promise((resolve, reject) => {
+      const { unmount } = render(
+        <ChooseAccount
+          accounts={accounts}
+          onSelect={async (selected) => {
+            resolve(selected);
+            unmount();
+          }}
+          onError={(err) => {
+            reject(err);
+            unmount();
+          }}
+        />
+      );
+    });
+  }
+
+  throw new Error(
+    "More than one account available but unable to select one in non-interactive mode.\n" +
+      `Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
+      `Available accounts are ("<name>" - "<id>"):\n` +
+      accounts
+        .map((account) => `  "${account.name}" - "${account.id}")`)
+        .join("\n")
+  );
 }
 
 /**

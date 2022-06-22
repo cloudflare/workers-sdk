@@ -8,9 +8,10 @@ import useInspector from "../inspect";
 import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
-import { ChooseAccount, requireApiToken } from "../user";
+import { ChooseAccount, getAccountChoices, requireApiToken } from "../user";
 import type { CfPreviewToken } from "../create-worker-preview";
 import type { AssetPaths } from "../sites";
+import type { ChooseAccountItem } from "../user";
 import type { CfModule, CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -35,6 +36,9 @@ export function Remote(props: {
   host: string | undefined;
 }) {
   const [accountId, setAccountId] = useState(props.accountId);
+  const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
+  const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
+
   const previewToken = useWorker({
     name: props.name,
     bundle: props.bundle,
@@ -72,9 +76,32 @@ export function Remote(props: {
 
   const errorHandler = useErrorHandler();
 
-  return !accountId ? (
+  // This effect handles the async step of fetching the available accounts for the current user.
+  // If only one account is available then it is just used by calling `setAccountId()`.
+  useEffect(() => {
+    if (accountChoicesRef.current !== undefined) {
+      return;
+    }
+    accountChoicesRef.current = getAccountChoices();
+    accountChoicesRef.current.then(
+      (accounts) => {
+        if (accounts.length === 1) {
+          setAccountId(accounts[0].id);
+        } else {
+          setAccountChoices(accounts);
+        }
+      },
+      (err) => {
+        errorHandler(err);
+      }
+    );
+  });
+
+  // If we have not already chosen an account and there are multiple accounts available
+  // allow the users to select one.
+  return accountId === undefined && accountChoices !== undefined ? (
     <ChooseAccount
-      isInteractive={true}
+      accounts={accountChoices}
       onSelect={(selectedAccountId) => setAccountId(selectedAccountId)}
       onError={(err) => errorHandler(err)}
     ></ChooseAccount>
