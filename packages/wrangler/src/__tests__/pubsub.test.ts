@@ -3,7 +3,12 @@ import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { PubSubNamespace, PubSubBroker } from "../pubsub";
+import type {
+  PubSubNamespace,
+  PubSubBroker,
+  PubSubBrokerUpdate,
+  PubSubBrokerOnPublish,
+} from "../pubsub";
 
 describe("wrangler", () => {
   mockAccountId();
@@ -104,6 +109,53 @@ describe("wrangler", () => {
           ).rejects.toThrowErrorMatchingInlineSnapshot(
             `"Missing required argument: namespace"`
           );
+        });
+      });
+
+      describe("update", () => {
+        function mockUpdateRequest(
+          expectedBrokerName: string,
+          expectedExpiration: number,
+          expectedDescription: string,
+          expectedOnPublishConfig: PubSubBrokerOnPublish
+        ) {
+          const requests = { count: 0 };
+          setMockResponse(
+            "/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
+            "PATCH",
+            ([_url, accountId, namespaceName, brokerName], { body }) => {
+              expect(accountId).toEqual("some-account-id");
+              expect(namespaceName).toEqual("some-namespace");
+              expect(brokerName).toEqual(expectedBrokerName);
+
+              const patchBody: PubSubBrokerUpdate = JSON.parse(body as string);
+              expect(patchBody.expiration).toEqual(expectedExpiration);
+              expect(patchBody.description).toEqual(expectedDescription);
+              expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
+
+              requests.count += 1;
+            }
+          );
+          return requests;
+        }
+
+        it("should update a broker's properties", async () => {
+          const expectedOnPublish: PubSubBrokerOnPublish = {
+            url: "https://foo.bar.example.com",
+          };
+          const requests = mockUpdateRequest(
+            "my-broker",
+            86400,
+            "hello",
+            expectedOnPublish
+          );
+          await runWrangler(
+            "pubsub brokers update my-broker --namespace=some-namespace --expiration=24h --description='hello' --on-publish-url='https://foo.bar.example.com'"
+          );
+
+          // TODO: check std.out is as expected
+          expect(std.err).toMatchInlineSnapshot(`""`);
+          expect(requests.count).toEqual(1);
         });
       });
 
