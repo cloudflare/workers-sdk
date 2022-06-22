@@ -5,8 +5,6 @@ import { StringDecoder } from "node:string_decoder";
 import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
-import { watch } from "chokidar";
-import { execa } from "execa";
 import { findUp } from "find-up";
 import getPort from "get-port";
 import { render } from "ink";
@@ -1039,7 +1037,6 @@ function createCLIParser(argv: string[]) {
         });
     },
     async (args) => {
-      console.log("args: ", args);
       await dev(args);
     }
   );
