@@ -92,6 +92,11 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
         type: "boolean",
         hidden: true,
       },
+      config: {
+        describe: "Pages does not support wrangler.toml",
+        type: "string",
+        hidden: true,
+      },
       //   // TODO: Miniflare user options
     })
     .epilogue(pagesBetaWarning);
@@ -108,14 +113,18 @@ export const Handler = async ({
   do: durableObjects = [],
   "live-reload": liveReload,
   "node-compat": nodeCompat,
+  config: config,
   _: [_pages, _dev, ...remaining],
 }: ArgumentsCamelCase<PagesDevArgs>) => {
   // Beta message for `wrangler pages <commands>` usage
   logger.log(pagesBetaWarning);
 
   if (!local) {
-    logger.error("Only local mode is supported at the moment.");
-    return;
+    throw new FatalError("Only local mode is supported at the moment.", 1);
+  }
+
+  if (config) {
+    throw new FatalError("Pages does not support wrangler.toml", 1);
   }
 
   const functionsDirectory = "./functions";
