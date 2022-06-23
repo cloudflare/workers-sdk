@@ -196,12 +196,17 @@ export async function issuePubSubBrokerTokens(
   broker: string,
   number: number,
   type: string,
-  clientIds?: string[]
+  clientIds?: string[],
+  expiration?: number
 ): Promise<Record<string, string>> {
   let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}&type=${type}`;
   if (clientIds) {
     const ids = makeQueryString(clientIds, "clientid");
     url = url + `&${ids}`;
+  }
+
+  if (expiration) {
+    url = url + `&expiration=${expiration}`;
   }
 
   return await fetchResult<Record<string, string>>(url);

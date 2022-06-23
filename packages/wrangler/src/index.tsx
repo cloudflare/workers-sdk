@@ -2728,6 +2728,12 @@ function createCLIParser(argv: string[]) {
                       type: "string",
                       default: "TOKEN",
                     })
+                    .option("expiration", {
+                      describe:
+                        "The expiration to set on the issued credentials. This overrides any Broker-level expiration that is set.",
+                      type: "string",
+                      alias: "exp",
+                    })
                     .option("client-id", {
                       describe:
                         "A list of existing clientIds to generate tokens for. By default, clientIds are randomly generated.",
@@ -2740,19 +2746,44 @@ function createCLIParser(argv: string[]) {
                   const config = readConfig(args.config as ConfigPath, args);
                   const accountId = await requireAuth(config);
 
+                  let parsedExpiration: number | undefined;
+                  if (args.expiration) {
+                    const expiration = parseHumanDuration(args.expiration);
+                    if (isNaN(expiration)) {
+                      throw new CommandLineArgsError(
+                        `${args.expiration} is not a time duration. Example of valid values are: 1y, 6 days.`
+                      );
+                    }
+                    parsedExpiration = expiration;
+                  }
+
                   logger.log(
                     `🔑 Issuing credential(s) for ${args.name}.${args.namespace}...`
                   );
-                  logger.log(
-                    await pubsub.issuePubSubBrokerTokens(
-                      accountId,
-                      args.namespace,
-                      args.name,
-                      args.number,
-                      args.type,
-                      args["client-id"]
-                    )
+
+                  const resp = await pubsub.issuePubSubBrokerTokens(
+                    accountId,
+                    args.namespace,
+                    args.name,
+                    args.number,
+                    args.type,
+                    args["client-id"],
+                    parsedExpiration
                   );
+
+                  console.log(resp);
+
+                  // logger.log(
+                  //   await pubsub.issuePubSubBrokerTokens(
+                  //     accountId,
+                  //     args.namespace,
+                  //     args.name,
+                  //     args.number,
+                  //     args.type,
+                  //     args["client-id"],
+                  //     parsedExpiration
+                  //   )
+                  // );
                 }
               )
               .epilogue(pubsub.pubSubBetaWarning);
