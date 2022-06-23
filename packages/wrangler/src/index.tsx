@@ -22,6 +22,7 @@ import Dev from "./dev/dev";
 import { confirm, prompt, select } from "./dialogs";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
+import { generateHandler, generateOptions } from "./generate";
 import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import {
   getKVNamespaceId,
@@ -284,28 +285,8 @@ function createCLIParser(argv: string[]) {
     // we can do something better here, let's see
     "generate [name] [template]",
     false,
-    (yargs) => {
-      return yargs
-        .positional("name", {
-          describe: "Name of the Workers project",
-          default: "worker",
-        })
-        .positional("template", {
-          describe: "The URL of a GitHub template",
-          default: "https://github.com/cloudflare/worker-template",
-        });
-    },
-    (generateArgs) => {
-      // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
-      throw new DeprecationError(
-        "`wrangler generate` has been deprecated.\n" +
-          "Try running `wrangler init` to generate a basic Worker, or cloning the template repository instead:\n\n" +
-          "```\n" +
-          `git clone ${generateArgs.template}\n` +
-          "```\n\n" +
-          "Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
-      );
-    }
+    generateOptions,
+    generateHandler
   );
 
   // init
