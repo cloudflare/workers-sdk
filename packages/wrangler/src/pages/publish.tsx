@@ -59,6 +59,11 @@ export function Options(yargs: Argv): Argv<PublishArgs> {
         description:
           "Whether or not the workspace should be considered dirty for this deployment",
       },
+      config: {
+        describe: "Pages does not support wrangler.toml",
+        type: "string",
+        hidden: true,
+      },
     })
     .epilogue(pagesBetaWarning);
 }
@@ -70,7 +75,12 @@ export const Handler = async ({
   commitHash,
   commitMessage,
   commitDirty,
+  config: wranglerConfig,
 }: ArgumentsCamelCase<PublishArgs>) => {
+  if (wranglerConfig) {
+    throw new FatalError("Pages does not support wrangler.toml", 1);
+  }
+
   if (!directory) {
     throw new FatalError("Must specify a directory.", 1);
   }

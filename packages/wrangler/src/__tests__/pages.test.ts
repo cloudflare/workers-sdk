@@ -299,7 +299,6 @@ describe("pages", () => {
           directory  The directory of static files to upload  [string]
 
         Flags:
-          -c, --config   Path to .toml configuration file  [string]
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]
 
@@ -968,6 +967,19 @@ describe("pages", () => {
       await runWrangler("pages publish . --project-name=foo");
 
       expect(std.err).toMatchInlineSnapshot(`""`);
+    });
+
+    it("should throw an error if user attempts to use config with pages", async () => {
+      await expect(
+        runWrangler("pages dev --config foo.toml")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Pages does not support wrangler.toml"`
+      );
+      await expect(
+        runWrangler("pages publish --config foo.toml")
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Pages does not support wrangler.toml"`
+      );
     });
   });
 
