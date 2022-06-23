@@ -6,7 +6,7 @@ interface GenerateArgs {
   template: string;
 }
 
-export const generateOptions = (yargs: Argv) => {
+export function generateOptions(yargs: Argv) {
   return yargs
     .positional("name", {
       describe: "Name of the Workers project",
@@ -16,11 +16,11 @@ export const generateOptions = (yargs: Argv) => {
       describe: "The URL of a GitHub template",
       default: "https://github.com/cloudflare/worker-template",
     });
-};
+}
 
-export const generateHandler = (
+export function generateHandler(
   generateArgs: ArgumentsCamelCase<GenerateArgs>
-) => {
+) {
   // "👯 [DEPRECATED]. Scaffold a Cloudflare Workers project from a public GitHub repository.",
   throw new DeprecationError(
     "`wrangler generate` has been deprecated.\n" +
@@ -30,4 +30,4 @@ export const generateHandler = (
       "```\n\n" +
       "Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
   );
-};
+}
