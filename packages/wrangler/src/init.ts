@@ -10,7 +10,7 @@ import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
-import { CommandLineArgsError, printWranglerBanner } from ".";
+import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
