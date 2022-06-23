@@ -1,5 +1,13 @@
-import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { hash as blake3hash } from "blake3-wasm";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
@@ -22,6 +30,7 @@ import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type UploadArgs = {
   directory: string;
+  "output-manifest-path"?: string;
 };
 
 export function Options(yargs: Argv): Argv<UploadArgs> {
@@ -31,11 +40,18 @@ export function Options(yargs: Argv): Argv<UploadArgs> {
       demandOption: true,
       description: "The directory of static files to upload",
     })
+    .options({
+      "output-manifest-path": {
+        type: "string",
+        description: "The name of the project you want to deploy to",
+      },
+    })
     .epilogue(pagesBetaWarning);
 }
 
 export const Handler = async ({
   directory,
+  outputManifestPath,
 }: ArgumentsCamelCase<UploadArgs>) => {
   if (!directory) {
     throw new FatalError("Must specify a directory.", 1);
@@ -45,10 +61,15 @@ export const Handler = async ({
     throw new FatalError("No JWT given.", 1);
   }
 
-  await upload({
+  const manifest = await upload({
     directory,
     jwt: process.env.CF_PAGES_UPLOAD_JWT,
   });
+
+  if (outputManifestPath) {
+    await mkdir(dirname(outputManifestPath), { recursive: true });
+    await writeFile(outputManifestPath, JSON.stringify(manifest));
+  }
 
   logger.log(`✨ Upload complete!`);
 };
