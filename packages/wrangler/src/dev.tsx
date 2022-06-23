@@ -19,7 +19,7 @@ import {
   getDevCompatibilityDate,
   getRules,
   isLegacyEnv,
-} from ".";
+} from "./index";
 
 import type { Config } from "./config";
 import type { Argv, ArgumentsCamelCase } from "yargs";
