@@ -207,7 +207,7 @@
 
 import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -224,9 +224,10 @@ import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
 import { ChooseAccount, getAccountChoices } from "./choose-account";
-import { getCloudflareAPITokenFromEnv } from "./env-vars";
+import { getAuthFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import type { ApiCredentials } from "./env-vars";
 import type { ParsedUrlQuery } from "node:querystring";
 
 /**
@@ -335,24 +336,18 @@ const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
  */
 const CALLBACK_URL = HostURL.parse("http://localhost:8976/oauth/callback").href;
 
-let LocalState: State = getAuthTokens();
+let LocalState: State = {
+  ...getAuthTokens(),
+};
 
 /**
  * Compute the current auth tokens.
  */
-function getAuthTokens(config?: UserAuthConfig): AuthTokens {
+function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
   // get refreshToken/accessToken from fs if exists
   try {
-    // if the environment variable is available, use that
-    const apiTokenFromEnv = getCloudflareAPITokenFromEnv();
-    if (apiTokenFromEnv) {
-      return {
-        accessToken: {
-          value: apiTokenFromEnv,
-          expiry: "3021-12-31T23:59:59+00:00",
-        },
-      };
-    }
+    // if the environment variable is available, we don't need to do anything here
+    if (getAuthFromEnv()) return;
 
     // otherwise try loading from the user auth config file.
     const { oauth_token, refresh_token, expiration_time, api_token } =
@@ -369,11 +364,9 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens {
       };
     } else if (api_token) {
       return { apiToken: api_token };
-    } else {
-      return {};
     }
   } catch {
-    return {};
+    return undefined;
   }
 }
 
@@ -392,11 +385,13 @@ export function reinitialiseAuthTokens(): void;
 export function reinitialiseAuthTokens(config: UserAuthConfig): void;
 
 export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
-  LocalState = getAuthTokens(config);
+  LocalState = {
+    ...getAuthTokens(config),
+  };
 }
 
-export function getAPIToken(): string | undefined {
-  if (LocalState.apiToken) {
+export function getAPIToken(): ApiCredentials | undefined {
+  if ("apiToken" in LocalState) {
     logger.warn(
       "It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
         "This is no longer supported in the current version of Wrangler.\n" +
@@ -404,19 +399,17 @@ export function getAPIToken(): string | undefined {
     );
   }
 
-  const localAPIToken = getCloudflareAPITokenFromEnv();
+  const localAPIToken = getAuthFromEnv();
+  if (localAPIToken) return localAPIToken;
 
-  if (
-    !process.stdout.isTTY &&
-    !localAPIToken &&
-    !LocalState.accessToken?.value
-  ) {
+  const storedAccessToken = LocalState.accessToken?.value;
+  if (storedAccessToken) return { apiToken: storedAccessToken };
+
+  if (!process.stdout.isTTY) {
     throw new Error(
       "In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
     );
   }
-
-  return localAPIToken ?? LocalState.accessToken?.value;
 }
 
 interface AccessContext {
@@ -1120,12 +1113,12 @@ export async function requireAuth(config: {
 /**
  * Throw an error if there is no API token available.
  */
-export function requireApiToken(): string {
-  const authToken = getAPIToken();
-  if (!authToken) {
+export function requireApiToken(): ApiCredentials {
+  const credentials = getAPIToken();
+  if (!credentials) {
     throw new Error("No API token found.");
   }
-  return authToken;
+  return credentials;
 }
 
 function isInteractive(): boolean {

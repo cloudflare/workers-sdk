@@ -51,7 +51,7 @@ describe("getUserInfo()", () => {
 
     const userInfo = await getUserInfo();
     expect(userInfo).toEqual({
-      authType: "API",
+      authType: "API Token",
       apiToken: "123456789",
       email: "user@example.com",
       accounts: [
@@ -60,6 +60,67 @@ describe("getUserInfo()", () => {
         { name: "Account Three", id: "account-3" },
       ],
     });
+  });
+
+  it("should say it's using a Global API Key when one is set", async () => {
+    process.env = {
+      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
+      CLOUDFLARE_GLOBAL_API_EMAIL: "user@example.com",
+    };
+    setMockResponse("/accounts", () => {
+      return [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ];
+    });
+
+    const userInfo = await getUserInfo();
+    expect(userInfo).toEqual({
+      authType: "Global API Key",
+      apiToken: "123456789",
+      email: "user@example.com",
+      accounts: [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ],
+    });
+  });
+
+  it("should use a Global API Key in preference to an API key", async () => {
+    process.env = {
+      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
+      CLOUDFLARE_GLOBAL_API_EMAIL: "user@example.com",
+      CLOUDFLARE_API_TOKEN: "123456789",
+    };
+    setMockResponse("/accounts", () => {
+      return [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ];
+    });
+
+    const userInfo = await getUserInfo();
+    expect(userInfo).toEqual({
+      authType: "Global API Key",
+      apiToken: "123456789",
+      email: "user@example.com",
+      accounts: [
+        { name: "Account One", id: "account-1" },
+        { name: "Account Two", id: "account-2" },
+        { name: "Account Three", id: "account-3" },
+      ],
+    });
+  });
+
+  it("should return undefined only a Global API Key, but not Email, is set", async () => {
+    process.env = {
+      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
+    };
+    const userInfo = await getUserInfo();
+    expect(userInfo).toEqual(undefined);
   });
 
   it("should return the user's email and accounts if authenticated via config token", async () => {
@@ -79,7 +140,7 @@ describe("getUserInfo()", () => {
     const userInfo = await getUserInfo();
 
     expect(userInfo).toEqual({
-      authType: "OAuth",
+      authType: "OAuth Token",
       apiToken: "some-oauth-token",
       email: "user@example.com",
       accounts: [
@@ -116,7 +177,7 @@ describe("WhoAmI component", () => {
 
   it("should display the user's email and accounts", async () => {
     const user: UserInfo = {
-      authType: "OAuth",
+      authType: "OAuth Token",
       apiToken: "some-oauth-token",
       email: "user@example.com",
       accounts: [

@@ -1,13 +1,15 @@
 /**
  * A Cloudflare account.
  */
+import type { ApiCredentials } from "./user";
+
 export interface CfAccount {
   /**
    * An API token.
    *
    * @link https://api.cloudflare.com/#user-api-tokens-properties
    */
-  apiToken: string;
+  apiToken: ApiCredentials;
   /**
    * An account ID.
    */
