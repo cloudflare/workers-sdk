@@ -1416,7 +1416,10 @@ addEventListener('fetch', event => {});`
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+
+        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
@@ -1501,7 +1504,9 @@ addEventListener('fetch', event => {});`
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
-          "warn": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+        ",
         }
       `);
     });
@@ -1525,7 +1530,9 @@ addEventListener('fetch', event => {});`
         ",
           "out": "
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
-          "warn": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+        ",
         }
       `);
     });
@@ -1633,6 +1640,97 @@ addEventListener('fetch', event => {});`
         ",
           "out": "
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"assets\\" fields are experimental and may change or break at any time.
+
+        ",
+        }
+      `);
+    });
+
+    it("should warn if --assets is used", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      const assets = [
+        { filePath: "subdir/file-1.txt", content: "Content of file-1" },
+        { filePath: "subdir/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      fs.writeFileSync("index.js", `export default {};`);
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedMainModule: "stdin.js",
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish --assets ./assets");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading subdir/file-1.txt...
+        Uploading as subdir/file-1.2ca234f380.txt...
+        Reading subdir/file-2.txt...
+        Uploading as subdir/file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Total Upload: 52xx KiB / gzip: 13xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+        ",
+        }
+      `);
+    });
+
+    it("should warn if config.assets is used", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        assets: "./assets",
+      });
+      const assets = [
+        { filePath: "subdir/file-1.txt", content: "Content of file-1" },
+        { filePath: "subdir/file-2.txt", content: "Content of file-2" },
+      ];
+      const kvNamespace = {
+        title: "__test-name-workers_sites_assets",
+        id: "__test-name-workers_sites_assets-id",
+      };
+      fs.writeFileSync("index.js", `export default {};`);
+      writeWorkerSource();
+      writeAssets(assets);
+      mockUploadWorkerRequest({
+        expectedMainModule: "stdin.js",
+      });
+      mockSubDomainRequest();
+      mockListKVNamespacesRequest(kvNamespace);
+      mockKeyListRequest(kvNamespace.id, []);
+      mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+
+      await runWrangler("publish");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Reading subdir/file-1.txt...
+        Uploading as subdir/file-1.2ca234f380.txt...
+        Reading subdir/file-2.txt...
+        Uploading as subdir/file-2.5938485188.txt...
+        ↗️  Done syncing assets
+        Total Upload: 52xx KiB / gzip: 13xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
           "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
             - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2655,7 +2753,9 @@ addEventListener('fetch', event => {});`
         Uploaded test-name (TIMINGS)
         Published test-name (TIMINGS)
           test-name.test-sub-domain.workers.dev",
-          "warn": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+        ",
         }
       `);
     });

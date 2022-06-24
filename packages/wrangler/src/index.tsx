@@ -501,6 +501,12 @@ function createCLIParser(argv: string[]) {
         );
       }
 
+      if (args.assets) {
+        logger.warn(
+          "The --assets argument is experimental and may change or break at any time"
+        );
+      }
+
       if (args.latest) {
         logger.warn(
           "Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
