@@ -29,10 +29,10 @@ describe("Pages Functions", () => {
       cwd: path.resolve(__dirname, "../"),
       env: { BROWSER: "none", ...process.env },
     });
-    wranglerProcess.stdout.on("data", (chunk) => {
+    wranglerProcess.stdout?.on("data", (chunk) => {
       console.log(chunk.toString());
     });
-    wranglerProcess.stderr.on("data", (chunk) => {
+    wranglerProcess.stderr?.on("data", (chunk) => {
       console.log(chunk.toString());
     });
   });
@@ -64,6 +64,12 @@ describe("Pages Functions", () => {
       ASSETS: {},
       NAME: "VALUE",
       OTHER_NAME: "THING=WITH=EQUALS",
+      VAR_1: "var #1 value",
+      VAR_3: "var #3 value",
+      VAR_MULTI_LINE_1: "A: line 1\nline 2",
+      VAR_MULTI_LINE_2: "B: line 1\nline 2",
+      EMPTY: "",
+      UNQUOTED: "unquoted value", // Note that whitespace is trimmed
     });
   });
 
