@@ -1,4 +1,10 @@
-## ⛅️ wrangler
+<h1 align="center"> ⛅️ wrangler </h1>
+<section align="center" id="shieldio-badges">
+<a href="https://www.npmjs.com/package/wrangler"><img alt="npm"  src="https://img.shields.io/npm/dw/wrangler?style=flat-square"></a>
+<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/cloudflare/wrangler2?style=flat-square">
+<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/w/cloudflare/wrangler2/main?style=flat-square">
+<a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
+</section>
 
 > This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler.
 
