@@ -275,6 +275,12 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
       );
     }
 
+    if (args.assets) {
+      logger.warn(
+        "The --assets argument is experimental and may change or break at any time"
+      );
+    }
+
     const upstreamProtocol =
       args["upstream-protocol"] || config.dev.upstream_protocol;
     if (upstreamProtocol === "http") {

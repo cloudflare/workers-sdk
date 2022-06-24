@@ -969,6 +969,47 @@ describe("wrangler dev", () => {
       await runWrangler("dev --assets abc");
       expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
     });
+
+    it("should warn if --assets is used", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+
+      await runWrangler('dev --assets "./assets"');
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+        ",
+        }
+      `);
+    });
+
+    it("should warn if config.assets is used", async () => {
+      writeWranglerToml({
+        main: "./index.js",
+        assets: "./assets",
+      });
+      fs.writeFileSync("index.js", `export default {};`);
+
+      await runWrangler("dev");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - \\"assets\\" fields are experimental and may change or break at any time.
+
+        ",
+        }
+      `);
+    });
   });
 
   describe("--inspect", () => {
