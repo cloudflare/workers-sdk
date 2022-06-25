@@ -1,5 +1,4 @@
 ---
-"pages-functions-app": patch
 "wrangler": patch
 ---
 
