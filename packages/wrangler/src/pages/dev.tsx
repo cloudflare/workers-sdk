@@ -1,10 +1,11 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { URL } from "node:url";
 import { watch } from "chokidar";
 import { getType } from "mime";
+import { getVarsForDev } from "../dev/dev-vars";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
@@ -12,6 +13,7 @@ import openInBrowser from "../open-in-browser";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
+import type { Config } from "../config";
 import type {
   fetch as miniflareFetch,
   Headers as MiniflareHeaders,
@@ -241,6 +243,10 @@ export const Handler = async ({
 
   const requestContextCheckOptions = await getRequestContextCheckOptions();
 
+  const vars = getVarsForDev({
+    configPath: resolvePath(".dev.vars"),
+  } as Config);
+
   const miniflare = new Miniflare({
     port,
     watch: true,
@@ -258,6 +264,7 @@ export const Handler = async ({
 
     // User bindings
     bindings: {
+      ...vars,
       ...Object.fromEntries(
         bindings
           .map((binding) => binding.toString().split("="))
