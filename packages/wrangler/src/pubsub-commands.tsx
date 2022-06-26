@@ -5,10 +5,13 @@ import { parseHumanDuration } from "./parse";
 import * as pubsub from "./pubsub";
 import { requireAuth } from "./user";
 import { type ConfigPath } from ".";
-import { CommandLineArgsError } from "./index"
+import { CommandLineArgsError } from "./index";
 import type { Argv, CommandModule } from "yargs";
 
-export function pubSubCommands(pubsubYargs: Argv, subHelp: CommandModule): Argv {
+export function pubSubCommands(
+  pubsubYargs: Argv,
+  subHelp: CommandModule
+): Argv {
   return pubsubYargs
     .command(subHelp)
     .command(
@@ -59,13 +62,7 @@ export function pubSubCommands(pubsubYargs: Argv, subHelp: CommandModule): Argv 
               const config = readConfig(args.config as ConfigPath, args);
               const accountId = await requireAuth(config);
 
-              logger.log(
-                JSON.stringify(
-                  await pubsub.listPubSubNamespaces(accountId),
-                  null,
-                  2
-                )
-              );
+              logger.log(await pubsub.listPubSubNamespaces(accountId));
             }
           )
           .epilogue(pubsub.pubSubBetaWarning);
@@ -162,7 +159,6 @@ export function pubSubCommands(pubsubYargs: Argv, subHelp: CommandModule): Argv 
                 }),
             async (args) => {
               const config = readConfig(args.config as ConfigPath, args);
-
               const accountId = await requireAuth(config);
 
               const broker: pubsub.PubSubBroker = {
@@ -281,15 +277,10 @@ export function pubSubCommands(pubsubYargs: Argv, subHelp: CommandModule): Argv 
             },
             async (args) => {
               const config = readConfig(args.config as ConfigPath, args);
-
               const accountId = await requireAuth(config);
 
               logger.log(
-                JSON.stringify(
-                  await pubsub.listPubSubBrokers(accountId, args.namespace),
-                  null,
-                  2
-                )
+                await pubsub.listPubSubBrokers(accountId, args.namespace)
               );
             }
           )
@@ -428,29 +419,17 @@ export function pubSubCommands(pubsubYargs: Argv, subHelp: CommandModule): Argv 
                 `🔑 Issuing credential(s) for ${args.name}.${args.namespace}...`
               );
 
-              const resp = await pubsub.issuePubSubBrokerTokens(
-                accountId,
-                args.namespace,
-                args.name,
-                args.number,
-                args.type,
-                args["client-id"],
-                parsedExpiration
+              logger.log(
+                await pubsub.issuePubSubBrokerTokens(
+                  accountId,
+                  args.namespace,
+                  args.name,
+                  args.number,
+                  args.type,
+                  args["client-id"],
+                  parsedExpiration
+                )
               );
-
-              console.log(resp);
-
-              // logger.log(
-              //   await pubsub.issuePubSubBrokerTokens(
-              //     accountId,
-              //     args.namespace,
-              //     args.name,
-              //     args.number,
-              //     args.type,
-              //     args["client-id"],
-              //     parsedExpiration
-              //   )
-              // );
             }
           )
           .epilogue(pubsub.pubSubBetaWarning);

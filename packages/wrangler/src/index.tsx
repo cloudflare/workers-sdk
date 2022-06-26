@@ -52,7 +52,7 @@ import {
   readFileSyncToBuffer,
 } from "./parse";
 import publish from "./publish";
-import { pubSubCommands } from "./pubsub-commands"
+import { pubSubCommands } from "./pubsub-commands";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
@@ -2337,7 +2337,7 @@ function createCLIParser(argv: string[]) {
     "pubsub",
     "📮 Interact and manage Pub/Sub Brokers",
     (pubsubYargs) => {
-      return pubSubCommands(pubsubYargs, subHelp)
+      return pubSubCommands(pubsubYargs, subHelp);
     }
   );
 

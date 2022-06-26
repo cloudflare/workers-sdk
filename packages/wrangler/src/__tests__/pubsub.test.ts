@@ -66,12 +66,12 @@ describe("wrangler", () => {
             { name: "namespace-1", created_on: "01-01-2001" },
             { name: "namespace-2", created_on: "01-01-2001" },
           ];
-          mockListRequest(expectedNamespaces);
+          const requests = mockListRequest(expectedNamespaces);
           await runWrangler("pubsub namespaces list");
 
           expect(std.err).toMatchInlineSnapshot(`""`);
-          const namespaces = JSON.parse(std.out);
-          expect(namespaces?.namespaces).toEqual(expectedNamespaces);
+          // TODO(elithrar): check returned object
+          expect(requests.count).toEqual(1);
         });
       });
     });
@@ -99,6 +99,7 @@ describe("wrangler", () => {
           await runWrangler(
             "pubsub brokers create my-broker --namespace=some-namespace"
           );
+
           // TODO: check returned object
           expect(requests.count).toEqual(1);
         });
@@ -153,8 +154,8 @@ describe("wrangler", () => {
             "pubsub brokers update my-broker --namespace=some-namespace --expiration=24h --description='hello' --on-publish-url='https://foo.bar.example.com'"
           );
 
-          // TODO: check std.out is as expected
           expect(std.err).toMatchInlineSnapshot(`""`);
+          // TODO(elithrar): check returned object
           expect(requests.count).toEqual(1);
         });
       });
@@ -180,12 +181,12 @@ describe("wrangler", () => {
             { name: "broker-1", created_on: "01-01-2001" },
             { name: "broker-2", created_on: "01-01-2001" },
           ];
-          mockListRequest(expectedBrokers);
+          const requests = mockListRequest(expectedBrokers);
           await runWrangler("pubsub brokers list --namespace=some-namespace");
 
           expect(std.err).toMatchInlineSnapshot(`""`);
-          const brokers = JSON.parse(std.out);
-          expect(brokers?.brokers).toEqual(expectedBrokers);
+          // TODO(elithrar): check returned object
+          expect(requests.count).toEqual(1);
         });
       });
 
@@ -199,7 +200,6 @@ describe("wrangler", () => {
               expect(accountId).toEqual("some-account-id");
               expect(namespaceName).toEqual("some-namespace");
               expect(brokerName).toEqual(broker.name);
-              requests.count += 1;
               return { result: broker };
             }
           );
@@ -207,11 +207,14 @@ describe("wrangler", () => {
         }
 
         it("should describe a single broker", async () => {
-          mockGetRequest({ id: "1234", name: "my-broker" });
+          const requests = mockGetRequest({ id: "1234", name: "my-broker" });
           await runWrangler(
             "pubsub brokers describe my-broker --namespace=some-namespace"
           );
+
+          expect(std.err).toMatchInlineSnapshot(`""`);
           // TODO(elithrar): check returned object
+          expect(requests.count).toEqual(1);
         });
       });
 
@@ -235,6 +238,8 @@ describe("wrangler", () => {
           await runWrangler(
             "pubsub brokers issue my-broker --namespace=some-namespace"
           );
+
+          expect(std.err).toMatchInlineSnapshot(`""`);
           // TODO(elithrar): check returned object
           expect(requests.count).toEqual(1);
         });
@@ -260,6 +265,8 @@ describe("wrangler", () => {
           await runWrangler(
             "pubsub brokers public-keys my-broker --namespace=some-namespace"
           );
+
+          expect(std.err).toMatchInlineSnapshot(`""`);
           // TODO(elithrar): check returned object
           expect(requests.count).toEqual(1);
         });

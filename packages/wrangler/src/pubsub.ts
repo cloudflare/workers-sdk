@@ -58,7 +58,8 @@ export async function listPubSubNamespaces(
  *
  * Create a Namespace with the given `namespace` within the account given by `accountId`.
  *
- * A 400 is returned if this Namespace already exists, as Namespaces are globally unique.
+ * A HTTP 400 (Bad Request) is returned if this Namespace already exists, as
+ * Namespaces are globally unique.
  */
 export async function createPubSubNamespace(
   accountId: string,
@@ -199,15 +200,25 @@ export async function issuePubSubBrokerTokens(
   clientIds?: string[],
   expiration?: number
 ): Promise<Record<string, string>> {
-  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials?number=${number}&type=${type}`;
+  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials`;
+
+  const params = new URLSearchParams();
+  params.append("number", `${number}`);
+  params.append("type", type);
+
   if (clientIds) {
-    const ids = makeQueryString(clientIds, "clientid");
-    url = url + `&${ids}`;
+    for (const id of clientIds) {
+      params.append("clientid", id);
+    }
   }
 
   if (expiration) {
-    url = url + `&expiration=${expiration}`;
+    params.append("expiration", `${expiration}`);
   }
+
+  // We have to concat these as the URL class requires a base URL, which we
+  // don't know within the scope of this function.
+  url = url + `?${params.toString()}`;
 
   return await fetchResult<Record<string, string>>(url);
 }
@@ -224,11 +235,15 @@ export async function revokePubSubBrokerTokens(
   broker: string,
   jti: string[]
 ): Promise<void> {
-  const jtis = makeQueryString(jti, "jti");
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${jtis}`,
-    { method: "POST", body: "" }
-  );
+  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
+
+  const params = new URLSearchParams();
+  for (const j of jti) {
+    params.append("jti", j);
+  }
+
+  url = url + `?${params.toString()}`;
+  return await fetchResult<void>(url, { method: "POST", body: "" });
 }
 
 /**
@@ -244,11 +259,14 @@ export async function unrevokePubSubBrokerTokens(
   broker: string,
   jti: string[]
 ): Promise<void> {
-  const jtis = makeQueryString(jti, "jti");
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations?${jtis}`,
-    { method: "DELETE" }
-  );
+  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
+  const params = new URLSearchParams();
+  for (const j of jti) {
+    params.append("jti", j);
+  }
+
+  url = url + `?${params.toString()}`;
+  return await fetchResult<void>(url, { method: "DELETE" });
 }
 
 /**
@@ -265,17 +283,4 @@ export async function listRevokedPubSubBrokerTokens(
   return await fetchResult<void>(
     `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
   );
-}
-
-/**
- * Helper function to build a the query string with repeated keys instead of
- * comma-separated values.
- */
-function makeQueryString(values: string[], key: string): string {
-  // Join the array of tokens: our API expects multiple "key" keys
-  // and NOT key=A,B,C as a single encoded query parameter.
-  const params: string[] = [];
-  values.forEach((val) => params.push(`${key}=${val}`));
-
-  return params.join("&");
 }
