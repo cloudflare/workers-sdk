@@ -33,6 +33,7 @@ type PagesDevArgs = {
   do?: (string | number)[];
   "live-reload": boolean;
   "node-compat": boolean;
+  config?: string;
 };
 
 export function Options(yargs: Argv): Argv<PagesDevArgs> {
@@ -99,6 +100,11 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
         type: "string",
         hidden: true,
       },
+      "local-protocol": {
+        describe: "Configure whether to use http or https protocol",
+        default: "http",
+        type: "string",
+      },
       //   // TODO: Miniflare user options
     })
     .epilogue(pagesBetaWarning);
@@ -115,7 +121,8 @@ export const Handler = async ({
   do: durableObjects = [],
   "live-reload": liveReload,
   "node-compat": nodeCompat,
-  config: config,
+  config,
+  "local-protocol": localProtocol,
   _: [_pages, _dev, ...remaining],
 }: ArgumentsCamelCase<PagesDevArgs>) => {
   // Beta message for `wrangler pages <commands>` usage
@@ -127,6 +134,10 @@ export const Handler = async ({
 
   if (config) {
     throw new FatalError("Pages does not support wrangler.toml", 1);
+  }
+
+  if (localProtocol !== "http" && localProtocol !== "https") {
+    throw new FatalError("Pages does not support this protocol option", 1);
   }
 
   const functionsDirectory = "./functions";
@@ -309,6 +320,7 @@ export const Handler = async ({
     durableObjectsPersist: true,
     cachePersist: true,
     liveReload,
+    https: localProtocol === "https",
 
     ...requestContextCheckOptions,
     ...miniflareArgs,
@@ -317,10 +329,10 @@ export const Handler = async ({
   try {
     // `startServer` might throw if user code contains errors
     const server = await miniflare.startServer();
-    logger.log(`Serving at http://localhost:${port}/`);
+    logger.log(`Serving at ${localProtocol}://localhost:${port}/`);
 
     if (process.env.BROWSER !== "none") {
-      await openInBrowser(`http://localhost:${port}/`);
+      await openInBrowser(`${localProtocol}://localhost:${port}/`);
     }
 
     if (directory !== undefined && liveReload) {

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npx wrangler pages dev public  --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS  --port 8789",
+    "devHttps": "npx wrangler pages dev public --local-protocol https --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS  --port 8790",
     "test": "npx jest --forceExit"
   },
   "devDependencies": {

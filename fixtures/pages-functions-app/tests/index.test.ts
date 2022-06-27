@@ -57,6 +57,37 @@ describe("Pages Functions", () => {
     expect(text).toContain("Hello, world!");
   });
 
+  it("renders static pages in https mode", async () => {
+    const wranglerProcessHttps = spawn("npm", ["run", "devHttps"], {
+      shell: isWindows,
+      cwd: path.resolve(__dirname, "../"),
+      env: { BROWSER: "none", ...process.env },
+    });
+    wranglerProcessHttps.stdout?.on("data", (chunk) => {
+      console.log(chunk.toString());
+    });
+    wranglerProcessHttps.stderr?.on("data", (chunk) => {
+      console.log(chunk.toString());
+    });
+
+    const response = await waitUntilReady("https://localhost:8790/");
+    expect(response.headers.get("x-custom")).toBe("header value");
+    const text = await response.text();
+    expect(text).toContain("Hello, world!");
+
+    // kill https server
+    await new Promise((resolve, reject) => {
+      wranglerProcessHttps.once("exit", (code) => {
+        if (!code) {
+          resolve(code);
+        } else {
+          reject(code);
+        }
+      });
+      wranglerProcessHttps.kill("SIGTERM");
+    });
+  });
+
   it("passes environment variables", async () => {
     const response = await waitUntilReady("http://localhost:8789/variables");
     const env = await response.json();
