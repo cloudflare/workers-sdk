@@ -671,6 +671,25 @@ function isValidRouteValue(item: unknown): boolean {
 }
 
 /**
+ * Normalize empty string to `undefined` by mutating rawEnv.route value.
+ * As part of backward compatibility with Wrangler1 converting empty string to `undefined`
+ */
+function mutateEmptyStringRouteValue(
+  rawEnv: RawEnvironment,
+  diagnostics: Diagnostics
+): RawEnvironment {
+  if (rawEnv["route"] === "") {
+    diagnostics.warnings.push(
+      `Route assignment ${JSON.stringify(rawEnv["route"])} will be ignored.`
+    );
+    rawEnv["route"] = undefined;
+    return rawEnv;
+  }
+
+  return rawEnv;
+}
+
+/**
  * Validate that the field is a route.
  */
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
@@ -716,7 +735,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
   return invalidRoutes.length === 0;
 };
 
-function validateRoute(
+function normalizeAndValidateRoute(
   diagnostics: Diagnostics,
   topLevelEnv: Environment | undefined,
   rawEnv: RawEnvironment
@@ -724,7 +743,7 @@ function validateRoute(
   return inheritable(
     diagnostics,
     topLevelEnv,
-    rawEnv,
+    mutateEmptyStringRouteValue(rawEnv, diagnostics),
     "route",
     isRoute,
     undefined
@@ -795,7 +814,7 @@ function normalizeAndValidateEnvironment(
   experimental(diagnostics, rawEnv, "unsafe");
   experimental(diagnostics, rawEnv, "services");
 
-  const route = validateRoute(diagnostics, topLevelEnv, rawEnv);
+  const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
   const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
 

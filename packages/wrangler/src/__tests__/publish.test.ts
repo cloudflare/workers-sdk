@@ -495,6 +495,33 @@ describe("publish", () => {
       await runWrangler("publish ./index");
     });
 
+    it("should publish with an empty string route", async () => {
+      writeWranglerToml({
+        route: "",
+      });
+      writeWorkerSource();
+      mockUpdateWorkerRequest({ enabled: false });
+      mockUploadWorkerRequest({ expectedType: "esm" });
+      mockSubDomainRequest();
+      mockPublishRoutesRequest({ routes: [] });
+      await runWrangler("publish ./index");
+      expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
+        Uploaded test-name (TIMINGS)
+        Published test-name (TIMINGS)
+          test-name.test-sub-domain.workers.dev",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+            - Route assignment \\"\\" will be ignored.
+
+        ",
+        }
+      `);
+    });
+
     it("should publish to a route with a pattern/{zone_id|zone_name} combo", async () => {
       writeWranglerToml({
         routes: [
