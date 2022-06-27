@@ -64,8 +64,8 @@ describe("getUserInfo()", () => {
 
   it("should say it's using a Global API Key when one is set", async () => {
     process.env = {
-      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
-      CLOUDFLARE_GLOBAL_API_EMAIL: "user@example.com",
+      CLOUDFLARE_API_KEY: "123456789",
+      CLOUDFLARE_EMAIL: "user@example.com",
     };
     setMockResponse("/accounts", () => {
       return [
@@ -90,8 +90,8 @@ describe("getUserInfo()", () => {
 
   it("should use a Global API Key in preference to an API key", async () => {
     process.env = {
-      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
-      CLOUDFLARE_GLOBAL_API_EMAIL: "user@example.com",
+      CLOUDFLARE_API_KEY: "123456789",
+      CLOUDFLARE_EMAIL: "user@example.com",
       CLOUDFLARE_API_TOKEN: "123456789",
     };
     setMockResponse("/accounts", () => {
@@ -117,7 +117,7 @@ describe("getUserInfo()", () => {
 
   it("should return undefined only a Global API Key, but not Email, is set", async () => {
     process.env = {
-      CLOUDFLARE_GLOBAL_API_KEY: "123456789",
+      CLOUDFLARE_API_KEY: "123456789",
     };
     const userInfo = await getUserInfo();
     expect(userInfo).toEqual(undefined);

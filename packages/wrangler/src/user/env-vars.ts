@@ -14,11 +14,11 @@ const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
   deprecatedName: "CF_API_TOKEN",
 });
 const getCloudflareGlobalAuthKeyFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_GLOBAL_API_KEY",
+  variableName: "CLOUDFLARE_API_KEY",
   deprecatedName: "CF_API_KEY",
 });
 const getCloudflareGlobalAuthEmailFromEnv = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_GLOBAL_API_EMAIL",
+  variableName: "CLOUDFLARE_EMAIL",
   deprecatedName: "CF_EMAIL",
 });
 
