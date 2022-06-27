@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
 import {
+  loginOrRefreshIfRequired,
   readAuthConfigFile,
   requireAuth,
   USER_AUTH_CONFIG_FILE,
   writeAuthConfigFile,
-  isInteractive,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -131,8 +131,13 @@ describe("User", () => {
     expect(std.err).toContain("");
   });
 
-  it("should handle errors when stdin is not a tty", async () => {
-    setIsTTY(false);
-    expect(isInteractive()).toBeFalsy();
+  it("should revert to non-interactive mode if isTTY throws an error", async () => {
+    setIsTTY({
+      stdin() {
+        throw new Error("stdin is not tty");
+      },
+      stdout: true,
+    });
+    await expect(loginOrRefreshIfRequired()).resolves.toEqual(false);
   });
 });
