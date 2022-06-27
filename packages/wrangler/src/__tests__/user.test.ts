@@ -7,6 +7,7 @@ import {
   requireAuth,
   USER_AUTH_CONFIG_FILE,
   writeAuthConfigFile,
+  isInteractive,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -128,5 +129,10 @@ describe("User", () => {
     // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
     await expect(requireAuth({} as Config)).rejects.toThrowError();
     expect(std.err).toContain("");
+  });
+
+  it("should handle errors when stdin is not a tty", async () => {
+    setIsTTY(false);
+    expect(isInteractive()).toBeFalsy();
   });
 });
