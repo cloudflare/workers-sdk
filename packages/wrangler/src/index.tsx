@@ -43,6 +43,7 @@ import {
 } from "./parse";
 import { previewHandler, previewOptions } from "./preview";
 import publish from "./publish";
+import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { createR2Bucket, deleteR2Bucket, listR2Buckets } from "./r2";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
@@ -1692,6 +1693,14 @@ function createCLIParser(argv: string[]) {
         return r2BucketYargs;
       });
   });
+
+  wrangler.command(
+    "pubsub",
+    "📮 Interact and manage Pub/Sub Brokers",
+    (pubsubYargs) => {
+      return pubSubCommands(pubsubYargs, subHelp);
+    }
+  );
 
   /**
    * User Group: login, logout, and whoami

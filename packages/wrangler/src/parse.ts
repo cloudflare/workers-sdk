@@ -220,3 +220,67 @@ export function searchLocation(file: File, query: unknown): Location {
   }
   return { lineText, line, column, length, ...file };
 }
+
+const units = {
+  nanoseconds: 0.000000001,
+  nanosecond: 0.000000001,
+  microseconds: 0.000001,
+  microsecond: 0.000001,
+  milliseconds: 0.001,
+  millisecond: 0.001,
+  seconds: 1,
+  second: 1,
+  minutes: 60,
+  minute: 60,
+  hours: 3600,
+  hour: 3600,
+  days: 86400,
+  day: 86400,
+  weeks: 604800,
+  week: 604800,
+  month: 18144000,
+  year: 220752000,
+
+  nsecs: 0.000000001,
+  nsec: 0.000000001,
+  usecs: 0.000001,
+  usec: 0.000001,
+  msecs: 0.001,
+  msec: 0.001,
+  secs: 1,
+  sec: 1,
+  mins: 60,
+  min: 60,
+
+  ns: 0.000000001,
+  us: 0.000001,
+  ms: 0.001,
+  mo: 18144000,
+  yr: 220752000,
+
+  s: 1,
+  m: 60,
+  h: 3600,
+  d: 86400,
+  w: 604800,
+  y: 220752000,
+};
+
+/**
+ * Parse a human-readable time duration in seconds (including fractional)
+ *
+ * Invalid values will return NaN
+ */
+export function parseHumanDuration(s: string): number {
+  const unitsMap = new Map(Object.entries(units));
+  s = s.trim().toLowerCase();
+  let base = 1;
+  for (const [name, _] of unitsMap) {
+    if (s.endsWith(name)) {
+      s = s.substring(0, s.length - name.length);
+      base = unitsMap.get(name) || 1;
+      break;
+    }
+  }
+  return Number(s) * base;
+}
