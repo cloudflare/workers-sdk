@@ -1,11 +1,11 @@
-import { readConfig } from "./config";
-import { confirm } from "./dialogs";
-import { logger } from "./logger";
-import { parseHumanDuration } from "./parse";
-import * as pubsub from "./pubsub";
-import { requireAuth } from "./user";
-import { type ConfigPath } from ".";
-import { CommandLineArgsError } from "./index";
+import { type ConfigPath } from "..";
+import { readConfig } from "../config";
+import { confirm } from "../dialogs";
+import { CommandLineArgsError } from "../index";
+import { logger } from "../logger";
+import { parseHumanDuration } from "../parse";
+import { requireAuth } from "../user";
+import * as pubsub from ".";
 import type { Argv, CommandModule } from "yargs";
 
 export function pubSubCommands(
