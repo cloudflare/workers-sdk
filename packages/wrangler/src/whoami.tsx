@@ -3,7 +3,7 @@ import Table from "ink-table";
 import React from "react";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { logger } from "./logger";
-import { getAPIToken, getCloudflareAPITokenFromEnv } from "./user";
+import { getAPIToken, getAuthFromEnv } from "./user";
 
 export async function whoami() {
   logger.log("Getting User settings...");
@@ -25,8 +25,8 @@ export function WhoAmI({ user }: { user: UserInfo | undefined }) {
 function Email(props: { tokenType: string; email: string }) {
   return (
     <Text>
-      👋 You are logged in with an {props.tokenType} Token, associated with the
-      email &apos;{props.email}&apos;!
+      👋 You are logged in with an {props.tokenType}, associated with the email
+      &apos;{props.email}&apos;!
     </Text>
   );
 }
@@ -48,15 +48,20 @@ export interface UserInfo {
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
   const apiToken = getAPIToken();
-  const apiTokenFromEnv = getCloudflareAPITokenFromEnv();
-  return apiToken
-    ? {
-        apiToken,
-        authType: apiTokenFromEnv ? "API" : "OAuth",
-        email: await getEmail(),
-        accounts: await getAccounts(),
-      }
-    : undefined;
+  if (!apiToken) return;
+
+  const usingEnvAuth = !!getAuthFromEnv();
+  const usingGlobalAuthKey = "authKey" in apiToken;
+  return {
+    apiToken: usingGlobalAuthKey ? apiToken.authKey : apiToken.apiToken,
+    authType: usingGlobalAuthKey
+      ? "Global API Key"
+      : usingEnvAuth
+      ? "API Token"
+      : "OAuth Token",
+    email: await getEmail(),
+    accounts: await getAccounts(),
+  };
 }
 
 async function getEmail(): Promise<string> {

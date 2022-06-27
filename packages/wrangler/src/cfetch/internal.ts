@@ -4,6 +4,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
+import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
 
@@ -97,10 +98,15 @@ async function requireLoggedIn(): Promise<void> {
 
 function addAuthorizationHeaderIfUnspecified(
   headers: Record<string, string>,
-  apiToken: string
+  auth: ApiCredentials
 ): void {
   if (!("Authorization" in headers)) {
-    headers["Authorization"] = `Bearer ${apiToken}`;
+    if ("apiToken" in auth) {
+      headers["Authorization"] = `Bearer ${auth.apiToken}`;
+    } else {
+      headers["X-Auth-Key"] = auth.authKey;
+      headers["X-Auth-Email"] = auth.authEmail;
+    }
   }
 }
 
@@ -125,8 +131,9 @@ export async function fetchKVGetValue(
   key: string
 ): Promise<ArrayBuffer> {
   await requireLoggedIn();
-  const apiToken = requireApiToken();
-  const headers = { Authorization: `Bearer ${apiToken}` };
+  const auth = requireApiToken();
+  const headers: Record<string, string> = {};
+  addAuthorizationHeaderIfUnspecified(headers, auth);
   const resource = `${getCloudflareAPIBaseURL()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
   const response = await fetch(resource, {
     method: "GET",
