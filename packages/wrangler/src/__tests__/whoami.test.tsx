@@ -88,7 +88,7 @@ describe("getUserInfo()", () => {
     });
   });
 
-  it("should use a Global API Key in preference to an API key", async () => {
+  it("should use a Global API Key in preference to an API token", async () => {
     process.env = {
       CLOUDFLARE_API_KEY: "123456789",
       CLOUDFLARE_EMAIL: "user@example.com",
