@@ -784,7 +784,6 @@ function normalizeAndValidateEnvironment(
   );
 
   // The field "experimental_services" doesn't exist anymore in the config, but we still want to error about any older usage.
-  // TODO: remove this before GA.
   deprecated(
     diagnostics,
     rawEnv,
