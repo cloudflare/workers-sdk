@@ -671,19 +671,38 @@ function isValidRouteValue(item: unknown): boolean {
 }
 
 /**
+ * If account_id has been passed as an empty string, normalise it to undefined.
+ * This is to workaround older wrangler1-era templates that have account_id = '',
+ * which isn't a valid value anyway
+ */
+function mutateEmptyStringAccountIDValue(
+	diagnostics: Diagnostics,
+	rawEnv: RawEnvironment
+) {
+	if (rawEnv.account_id === "") {
+		diagnostics.warnings.push(
+			`The "account_id" field in your configuration is an empty string and will be ignored.\n` +
+				`Please remove the "account_id" field from your configuration.`
+		);
+		rawEnv.account_id = undefined;
+	}
+	return rawEnv;
+}
+
+/**
  * Normalize empty string to `undefined` by mutating rawEnv.route value.
  * As part of backward compatibility with Wrangler1 converting empty string to `undefined`
  */
 function mutateEmptyStringRouteValue(
-	rawEnv: RawEnvironment,
-	diagnostics: Diagnostics
+	diagnostics: Diagnostics,
+	rawEnv: RawEnvironment
 ): RawEnvironment {
 	if (rawEnv["route"] === "") {
 		diagnostics.warnings.push(
-			`Route assignment ${JSON.stringify(rawEnv["route"])} will be ignored.`
+			`The "route" field in your configuration is an empty string and will be ignored.\n` +
+				`Please remove the "route" field from your configuration.`
 		);
 		rawEnv["route"] = undefined;
-		return rawEnv;
 	}
 
 	return rawEnv;
@@ -743,7 +762,7 @@ function normalizeAndValidateRoute(
 	return inheritable(
 		diagnostics,
 		topLevelEnv,
-		mutateEmptyStringRouteValue(rawEnv, diagnostics),
+		mutateEmptyStringRouteValue(diagnostics, rawEnv),
 		"route",
 		isRoute,
 		undefined
@@ -816,6 +835,17 @@ function normalizeAndValidateEnvironment(
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
+	const account_id = inheritableInLegacyEnvironments(
+		diagnostics,
+		isLegacyEnv,
+		topLevelEnv,
+		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
+		"account_id",
+		isString,
+		undefined,
+		undefined
+	);
+
 	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
 
 	const workers_dev = inheritable(
@@ -836,16 +866,7 @@ function normalizeAndValidateEnvironment(
 
 	const environment: Environment = {
 		// Inherited fields
-		account_id: inheritableInLegacyEnvironments(
-			diagnostics,
-			isLegacyEnv,
-			topLevelEnv,
-			rawEnv,
-			"account_id",
-			isString,
-			undefined,
-			undefined
-		),
+		account_id,
 		compatibility_date: inheritable(
 			diagnostics,
 			topLevelEnv,
