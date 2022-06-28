@@ -11,7 +11,7 @@
  */
 
 export default {
-  async scheduled(controller, env, ctx) {
-    console.log(`Hello World!`);
-  },
+	async scheduled(controller, env, ctx) {
+		console.log(`Hello World!`);
+	},
 };

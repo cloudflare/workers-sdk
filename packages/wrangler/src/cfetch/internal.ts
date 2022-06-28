@@ -12,9 +12,9 @@ import type { RequestInit, HeadersInit } from "undici";
  * Get the URL to use to access the Cloudflare API.
  */
 export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
-  variableName: "CLOUDFLARE_API_BASE_URL",
-  deprecatedName: "CF_API_BASE_URL",
-  defaultValue: "https://api.cloudflare.com/client/v4",
+	variableName: "CLOUDFLARE_API_BASE_URL",
+	deprecatedName: "CF_API_BASE_URL",
+	defaultValue: "https://api.cloudflare.com/client/v4",
 });
 
 /**
@@ -27,91 +27,91 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
  * This function should not be used directly, instead use the functions in `cfetch/index.ts`.
  */
 export async function fetchInternal<ResponseType>(
-  resource: string,
-  init: RequestInit = {},
-  queryParams?: URLSearchParams,
-  abortSignal?: AbortSignal
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
-  assert(
-    resource.startsWith("/"),
-    `CF API fetch - resource path must start with a "/" but got "${resource}"`
-  );
-  await requireLoggedIn();
-  const apiToken = requireApiToken();
-  const headers = cloneHeaders(init.headers);
-  addAuthorizationHeaderIfUnspecified(headers, apiToken);
-  addUserAgent(headers);
+	assert(
+		resource.startsWith("/"),
+		`CF API fetch - resource path must start with a "/" but got "${resource}"`
+	);
+	await requireLoggedIn();
+	const apiToken = requireApiToken();
+	const headers = cloneHeaders(init.headers);
+	addAuthorizationHeaderIfUnspecified(headers, apiToken);
+	addUserAgent(headers);
 
-  const queryString = queryParams ? `?${queryParams.toString()}` : "";
-  const method = init.method ?? "GET";
-  const response = await fetch(
-    `${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-    {
-      method,
-      ...init,
-      headers,
-      signal: abortSignal,
-    }
-  );
-  const jsonText = await response.text();
-  try {
-    return parseJSON<ResponseType>(jsonText);
-  } catch (err) {
-    throw new ParseError({
-      text: "Received a malformed response from the API",
-      notes: [
-        {
-          text: truncate(jsonText, 100),
-        },
-        {
-          text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
-        },
-      ],
-    });
-  }
+	const queryString = queryParams ? `?${queryParams.toString()}` : "";
+	const method = init.method ?? "GET";
+	const response = await fetch(
+		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
+		{
+			method,
+			...init,
+			headers,
+			signal: abortSignal,
+		}
+	);
+	const jsonText = await response.text();
+	try {
+		return parseJSON<ResponseType>(jsonText);
+	} catch (err) {
+		throw new ParseError({
+			text: "Received a malformed response from the API",
+			notes: [
+				{
+					text: truncate(jsonText, 100),
+				},
+				{
+					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
+				},
+			],
+		});
+	}
 }
 
 function truncate(text: string, maxLength: number): string {
-  const { length } = text;
-  if (length <= maxLength) {
-    return text;
-  }
-  return `${text.substring(0, maxLength)}... (length = ${length})`;
+	const { length } = text;
+	if (length <= maxLength) {
+		return text;
+	}
+	return `${text.substring(0, maxLength)}... (length = ${length})`;
 }
 
 function cloneHeaders(
-  headers: HeadersInit | undefined
+	headers: HeadersInit | undefined
 ): Record<string, string> {
-  return headers instanceof Headers
-    ? Object.fromEntries(headers.entries())
-    : Array.isArray(headers)
-    ? Object.fromEntries(headers)
-    : { ...headers };
+	return headers instanceof Headers
+		? Object.fromEntries(headers.entries())
+		: Array.isArray(headers)
+		? Object.fromEntries(headers)
+		: { ...headers };
 }
 
 async function requireLoggedIn(): Promise<void> {
-  const loggedIn = await loginOrRefreshIfRequired();
-  if (!loggedIn) {
-    throw new Error("Not logged in.");
-  }
+	const loggedIn = await loginOrRefreshIfRequired();
+	if (!loggedIn) {
+		throw new Error("Not logged in.");
+	}
 }
 
 function addAuthorizationHeaderIfUnspecified(
-  headers: Record<string, string>,
-  auth: ApiCredentials
+	headers: Record<string, string>,
+	auth: ApiCredentials
 ): void {
-  if (!("Authorization" in headers)) {
-    if ("apiToken" in auth) {
-      headers["Authorization"] = `Bearer ${auth.apiToken}`;
-    } else {
-      headers["X-Auth-Key"] = auth.authKey;
-      headers["X-Auth-Email"] = auth.authEmail;
-    }
-  }
+	if (!("Authorization" in headers)) {
+		if ("apiToken" in auth) {
+			headers["Authorization"] = `Bearer ${auth.apiToken}`;
+		} else {
+			headers["X-Auth-Key"] = auth.authKey;
+			headers["X-Auth-Email"] = auth.authEmail;
+		}
+	}
 }
 
 function addUserAgent(headers: Record<string, string>): void {
-  headers["User-Agent"] = `wrangler/${wranglerVersion}`;
+	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 }
 
 /**
@@ -126,24 +126,24 @@ function addUserAgent(headers: Record<string, string>): void {
  */
 
 export async function fetchKVGetValue(
-  accountId: string,
-  namespaceId: string,
-  key: string
+	accountId: string,
+	namespaceId: string,
+	key: string
 ): Promise<ArrayBuffer> {
-  await requireLoggedIn();
-  const auth = requireApiToken();
-  const headers: Record<string, string> = {};
-  addAuthorizationHeaderIfUnspecified(headers, auth);
-  const resource = `${getCloudflareAPIBaseURL()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
-  const response = await fetch(resource, {
-    method: "GET",
-    headers,
-  });
-  if (response.ok) {
-    return await response.arrayBuffer();
-  } else {
-    throw new Error(
-      `Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-    );
-  }
+	await requireLoggedIn();
+	const auth = requireApiToken();
+	const headers: Record<string, string> = {};
+	addAuthorizationHeaderIfUnspecified(headers, auth);
+	const resource = `${getCloudflareAPIBaseURL()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+	const response = await fetch(resource, {
+		method: "GET",
+		headers,
+	});
+	if (response.ok) {
+		return await response.arrayBuffer();
+	} else {
+		throw new Error(
+			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
+		);
+	}
 }

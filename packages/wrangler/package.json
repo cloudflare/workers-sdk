@@ -1,157 +1,157 @@
 {
-  "name": "wrangler",
-  "version": "2.0.15",
-  "author": "wrangler@cloudflare.com",
-  "description": "Command-line interface for all things Cloudflare Workers",
-  "bin": {
-    "wrangler": "./bin/wrangler.js",
-    "wrangler2": "./bin/wrangler.js"
-  },
-  "license": "MIT OR Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/cloudflare/wrangler2/issues"
-  },
-  "homepage": "https://github.com/cloudflare/wrangler2#readme",
-  "keywords": [
-    "wrangler",
-    "cloudflare",
-    "workers",
-    "cloudflare workers",
-    "edge",
-    "compute",
-    "serverless",
-    "serverless application",
-    "serverless module",
-    "wasm",
-    "web",
-    "assembly",
-    "webassembly",
-    "rust",
-    "emscripten",
-    "rust",
-    "typescript",
-    "graphql",
-    "router",
-    "http",
-    "cli"
-  ],
-  "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.2.0",
-    "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
-    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-    "blake3-wasm": "^2.1.5",
-    "esbuild": "0.14.34",
-    "miniflare": "^2.5.1",
-    "nanoid": "^3.3.3",
-    "path-to-regexp": "^6.2.0",
-    "selfsigned": "^2.0.1",
-    "semiver": "^1.1.0",
-    "xxhash-wasm": "^1.0.1"
-  },
-  "optionalDependencies": {
-    "fsevents": "~2.3.2"
-  },
-  "devDependencies": {
-    "@iarna/toml": "^3.0.0",
-    "@types/command-exists": "^1.2.0",
-    "@types/glob-to-regexp": "0.4.1",
-    "@types/mime": "^2.0.3",
-    "@types/prompts": "^2.0.14",
-    "@types/react": "^17.0.37",
-    "@types/serve-static": "^1.13.10",
-    "@types/signal-exit": "^3.0.1",
-    "@types/supports-color": "^8.1.1",
-    "@types/ws": "^8.5.3",
-    "@types/yargs": "^17.0.10",
-    "@webcontainer/env": "^1.0.1",
-    "chokidar": "^3.5.3",
-    "clipboardy": "^3.0.0",
-    "cmd-shim": "^4.1.0",
-    "command-exists": "^1.2.9",
-    "concurrently": "^7.2.2",
-    "devtools-protocol": "^0.0.955664",
-    "dotenv": "^16.0.0",
-    "execa": "^6.1.0",
-    "faye-websocket": "^0.11.4",
-    "finalhandler": "^1.2.0",
-    "find-up": "^6.3.0",
-    "get-port": "^6.1.2",
-    "glob-to-regexp": "0.4.1",
-    "http-terminator": "^3.2.0",
-    "ignore": "^5.2.0",
-    "ink": "^3.2.0",
-    "ink-select-input": "^4.2.1",
-    "ink-spinner": "^4.0.3",
-    "ink-table": "^3.0.0",
-    "ink-testing-library": "^2.1.0",
-    "ink-text-input": "^4.0.3",
-    "jest-fetch-mock": "^3.0.3",
-    "jest-websocket-mock": "^2.3.0",
-    "mime": "^3.0.0",
-    "open": "^8.4.0",
-    "p-queue": "^7.2.0",
-    "pretty-bytes": "^6.0.0",
-    "prompts": "^2.4.2",
-    "react": "^17.0.2",
-    "react-error-boundary": "^3.1.4",
-    "serve-static": "^1.15.0",
-    "signal-exit": "^3.0.7",
-    "supports-color": "^9.2.2",
-    "timeago.js": "^4.0.2",
-    "tmp-promise": "^3.0.3",
-    "ts-dedent": "^2.2.0",
-    "undici": "^5.5.1",
-    "update-check": "^1.5.4",
-    "ws": "^8.5.0",
-    "yargs": "^17.4.1"
-  },
-  "files": [
-    "src",
-    "bin",
-    "miniflare-config-stubs",
-    "miniflare-dist",
-    "wrangler-dist",
-    "templates",
-    "vendor",
-    "import_meta_url.js",
-    "kv-asset-handler.js",
-    "Cloudflare_CA.pem"
-  ],
-  "scripts": {
-    "clean": "rm -rf wrangler-dist miniflare-dist",
-    "check:type": "tsc",
-    "bundle": "node -r esbuild-register scripts/bundle.ts",
-    "build": "npm run clean && npm run bundle",
-    "dev": "npm run clean && concurrently -c black,blue 'npm run bundle -- --watch' 'npm run check:type -- --watch --preserveWatchOutput'",
-    "prepublishOnly": "SOURCEMAPS=false npm run build",
-    "start": "npm run bundle && NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-    "test": "jest --silent=false --verbose=true",
-    "test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch"
-  },
-  "engines": {
-    "node": ">=16.7.0"
-  },
-  "jest": {
-    "restoreMocks": true,
-    "testTimeout": 30000,
-    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
-    "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
-    ],
-    "moduleNameMapper": {
-      "clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
-      "miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
-    },
-    "transform": {
-      "^.+\\.c?(t|j)sx?$": [
-        "esbuild-jest",
-        {
-          "sourcemap": true
-        }
-      ]
-    },
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/__tests__/jest.setup.ts"
-    ]
-  }
+	"name": "wrangler",
+	"version": "2.0.15",
+	"author": "wrangler@cloudflare.com",
+	"description": "Command-line interface for all things Cloudflare Workers",
+	"bin": {
+		"wrangler": "./bin/wrangler.js",
+		"wrangler2": "./bin/wrangler.js"
+	},
+	"license": "MIT OR Apache-2.0",
+	"bugs": {
+		"url": "https://github.com/cloudflare/wrangler2/issues"
+	},
+	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"keywords": [
+		"wrangler",
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"edge",
+		"compute",
+		"serverless",
+		"serverless application",
+		"serverless module",
+		"wasm",
+		"web",
+		"assembly",
+		"webassembly",
+		"rust",
+		"emscripten",
+		"rust",
+		"typescript",
+		"graphql",
+		"router",
+		"http",
+		"cli"
+	],
+	"dependencies": {
+		"@cloudflare/kv-asset-handler": "^0.2.0",
+		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
+		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+		"blake3-wasm": "^2.1.5",
+		"esbuild": "0.14.34",
+		"miniflare": "^2.5.1",
+		"nanoid": "^3.3.3",
+		"path-to-regexp": "^6.2.0",
+		"selfsigned": "^2.0.1",
+		"semiver": "^1.1.0",
+		"xxhash-wasm": "^1.0.1"
+	},
+	"optionalDependencies": {
+		"fsevents": "~2.3.2"
+	},
+	"devDependencies": {
+		"@iarna/toml": "^3.0.0",
+		"@types/command-exists": "^1.2.0",
+		"@types/glob-to-regexp": "0.4.1",
+		"@types/mime": "^2.0.3",
+		"@types/prompts": "^2.0.14",
+		"@types/react": "^17.0.37",
+		"@types/serve-static": "^1.13.10",
+		"@types/signal-exit": "^3.0.1",
+		"@types/supports-color": "^8.1.1",
+		"@types/ws": "^8.5.3",
+		"@types/yargs": "^17.0.10",
+		"@webcontainer/env": "^1.0.1",
+		"chokidar": "^3.5.3",
+		"clipboardy": "^3.0.0",
+		"cmd-shim": "^4.1.0",
+		"command-exists": "^1.2.9",
+		"concurrently": "^7.2.2",
+		"devtools-protocol": "^0.0.955664",
+		"dotenv": "^16.0.0",
+		"execa": "^6.1.0",
+		"faye-websocket": "^0.11.4",
+		"finalhandler": "^1.2.0",
+		"find-up": "^6.3.0",
+		"get-port": "^6.1.2",
+		"glob-to-regexp": "0.4.1",
+		"http-terminator": "^3.2.0",
+		"ignore": "^5.2.0",
+		"ink": "^3.2.0",
+		"ink-select-input": "^4.2.1",
+		"ink-spinner": "^4.0.3",
+		"ink-table": "^3.0.0",
+		"ink-testing-library": "^2.1.0",
+		"ink-text-input": "^4.0.3",
+		"jest-fetch-mock": "^3.0.3",
+		"jest-websocket-mock": "^2.3.0",
+		"mime": "^3.0.0",
+		"open": "^8.4.0",
+		"p-queue": "^7.2.0",
+		"pretty-bytes": "^6.0.0",
+		"prompts": "^2.4.2",
+		"react": "^17.0.2",
+		"react-error-boundary": "^3.1.4",
+		"serve-static": "^1.15.0",
+		"signal-exit": "^3.0.7",
+		"supports-color": "^9.2.2",
+		"timeago.js": "^4.0.2",
+		"tmp-promise": "^3.0.3",
+		"ts-dedent": "^2.2.0",
+		"undici": "^5.5.1",
+		"update-check": "^1.5.4",
+		"ws": "^8.5.0",
+		"yargs": "^17.4.1"
+	},
+	"files": [
+		"src",
+		"bin",
+		"miniflare-config-stubs",
+		"miniflare-dist",
+		"wrangler-dist",
+		"templates",
+		"vendor",
+		"import_meta_url.js",
+		"kv-asset-handler.js",
+		"Cloudflare_CA.pem"
+	],
+	"scripts": {
+		"clean": "rm -rf wrangler-dist miniflare-dist",
+		"check:type": "tsc",
+		"bundle": "node -r esbuild-register scripts/bundle.ts",
+		"build": "npm run clean && npm run bundle",
+		"dev": "npm run clean && concurrently -c black,blue 'npm run bundle -- --watch' 'npm run check:type -- --watch --preserveWatchOutput'",
+		"prepublishOnly": "SOURCEMAPS=false npm run build",
+		"start": "npm run bundle && NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
+		"test": "jest --silent=false --verbose=true",
+		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch"
+	},
+	"engines": {
+		"node": ">=16.7.0"
+	},
+	"jest": {
+		"restoreMocks": true,
+		"testTimeout": 30000,
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
+		],
+		"moduleNameMapper": {
+			"clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
+			"miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
+		},
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"setupFilesAfterEnv": [
+			"<rootDir>/src/__tests__/jest.setup.ts"
+		]
+	}
 }

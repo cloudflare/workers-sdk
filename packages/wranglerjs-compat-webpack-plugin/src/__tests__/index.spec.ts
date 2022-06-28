@@ -1,8 +1,8 @@
 import { execa } from "execa";
 import webpack from "webpack";
 import {
-  mockAccountId,
-  mockApiToken,
+	mockAccountId,
+	mockApiToken,
 } from "wrangler/src/__tests__/helpers/mock-account-id";
 import { unsetAllMocks } from "wrangler/src/__tests__/helpers/mock-cfetch";
 import { mockConsoleMethods } from "wrangler/src/__tests__/helpers/mock-console";
@@ -21,63 +21,63 @@ runInTempDir({ homedir: "./home" });
 mockConfigDir({ homedir: "./home" });
 
 afterEach(() => {
-  unsetAllMocks();
+	unsetAllMocks();
 });
 
 describe("messaging", () => {
-  const std = mockConsoleMethods();
+	const std = mockConsoleMethods();
 
-  it('warns if target is not "weborker"', async () => {
-    writeWorkerSource({ basePath: "." });
-    writeWranglerToml();
-    const config: webpack.Configuration = {
-      entry: "./index.js",
-      plugins: [new WranglerJsCompatWebpackPlugin()],
-    };
+	it('warns if target is not "weborker"', async () => {
+		writeWorkerSource({ basePath: "." });
+		writeWranglerToml();
+		const config: webpack.Configuration = {
+			entry: "./index.js",
+			plugins: [new WranglerJsCompatWebpackPlugin()],
+		};
 
-    await expect(runWebpack(config)).resolves.not.toThrow();
+		await expect(runWebpack(config)).resolves.not.toThrow();
 
-    expect(cleanMessage(std.out)).toMatchInlineSnapshot(`""`);
-    expect(cleanMessage(std.err)).toMatchInlineSnapshot(`""`);
-    expect(cleanMessage(std.warn)).toMatchInlineSnapshot(`
+		expect(cleanMessage(std.out)).toMatchInlineSnapshot(`""`);
+		expect(cleanMessage(std.err)).toMatchInlineSnapshot(`""`);
+		expect(cleanMessage(std.warn)).toMatchInlineSnapshot(`
       "Setting \`target\` to \\"webworker\\"...
       Running \`npm install\` in [dir]..."
     `);
-  });
+	});
 });
 
 describe("wrangler 1 parity", () => {
-  beforeAll(async () => {
-    await installWrangler1();
-    await execa("npm", ["run", "build:js"]); // ensure tests use latest changes
-  });
+	beforeAll(async () => {
+		await installWrangler1();
+		await execa("npm", ["run", "build:js"]); // ensure tests use latest changes
+	});
 
-  it("works with a basic configuration", async () => {
-    const { wrangler1, wrangler2 } = await compareOutputs({
-      webpackConfig: {
-        entry: "./index.js",
-        target: "webworker",
-      },
-      wranglerConfig: {
-        main: "./worker/script.js",
-      },
-      worker: { type: "sw" },
-    });
+	it("works with a basic configuration", async () => {
+		const { wrangler1, wrangler2 } = await compareOutputs({
+			webpackConfig: {
+				entry: "./index.js",
+				target: "webworker",
+			},
+			wranglerConfig: {
+				main: "./worker/script.js",
+			},
+			worker: { type: "sw" },
+		});
 
-    expect(wrangler1.result).not.toBeInstanceOf(Error);
-    expect(wrangler2.result).not.toBeInstanceOf(Error);
+		expect(wrangler1.result).not.toBeInstanceOf(Error);
+		expect(wrangler2.result).not.toBeInstanceOf(Error);
 
-    expect(wrangler1.output).toStrictEqual(wrangler2.output);
+		expect(wrangler1.output).toStrictEqual(wrangler2.output);
 
-    expect(wrangler1.std.out).toMatchInlineSnapshot(`
+		expect(wrangler1.std.out).toMatchInlineSnapshot(`
       "up to date, audited 1 package in [timing]
       found [some] vulnerabilities
       Built successfully, built project size is 503 bytes."
     `);
-    expect(wrangler1.std.err).toMatchInlineSnapshot(`""`);
-    expect(wrangler1.std.warn).toMatchInlineSnapshot(`""`);
+		expect(wrangler1.std.err).toMatchInlineSnapshot(`""`);
+		expect(wrangler1.std.warn).toMatchInlineSnapshot(`""`);
 
-    expect(wrangler2.std.out).toMatchInlineSnapshot(`
+		expect(wrangler2.std.out).toMatchInlineSnapshot(`
       "running: npm run build
       > build
       > webpack --no-color
@@ -97,30 +97,30 @@ describe("wrangler 1 parity", () => {
       Published test-name (TIMINGS)
         test-name.test-sub-domain.workers.dev"
     `);
-    expect(wrangler2.std.err).toMatchInlineSnapshot(`""`);
-    expect(wrangler2.std.warn).toMatchInlineSnapshot(`
+		expect(wrangler2.std.err).toMatchInlineSnapshot(`""`);
+		expect(wrangler2.std.warn).toMatchInlineSnapshot(`
       "WARNING  in configuration
       The 'mode' option has not been set, webpack will fallback to 'production' for this value. Set 'mode' option to 'development' or 'production' to enable defaults for each environment.
       You can also set it to 'none' to disable any default behavior. Learn more: https://webpack.js.org/configuration/mode/"
     `);
-  });
+	});
 
-  it.todo("works with webassembly");
+	it.todo("works with webassembly");
 
-  it.todo("works with sites");
+	it.todo("works with sites");
 });
 
 async function runWebpack(
-  config: webpack.Configuration
+	config: webpack.Configuration
 ): Promise<webpack.Stats> {
-  const compiler = webpack(config);
-  return await new Promise((resolve, reject) => {
-    compiler.run((error, stats) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(stats);
-      }
-    });
-  });
+	const compiler = webpack(config);
+	return await new Promise((resolve, reject) => {
+		compiler.run((error, stats) => {
+			if (error) {
+				reject(error);
+			} else {
+				resolve(stats);
+			}
+		});
+	});
 }

@@ -17,12 +17,12 @@
  * CLI description or see the documentation for `ApiFilter`.
  */
 export type TailCLIFilters = {
-  status?: ("ok" | "error" | "canceled")[];
-  header?: string;
-  method?: string[];
-  search?: string;
-  samplingRate?: number;
-  clientIp?: string[];
+	status?: ("ok" | "error" | "canceled")[];
+	header?: string;
+	method?: string[];
+	search?: string;
+	samplingRate?: number;
+	clientIp?: string[];
 };
 
 /**
@@ -33,12 +33,12 @@ export type TailCLIFilters = {
  * TailAPIFilter to be the union of those types.
  */
 export type TailAPIFilter =
-  | SamplingRateFilter
-  | OutcomeFilter
-  | MethodFilter
-  | HeaderFilter
-  | ClientIPFilter
-  | QueryFilter;
+	| SamplingRateFilter
+	| OutcomeFilter
+	| MethodFilter
+	| HeaderFilter
+	| ClientIPFilter
+	| QueryFilter;
 
 /**
  * Filters logs based on a given sampling rate.
@@ -46,14 +46,14 @@ export type TailAPIFilter =
  * logs through.
  */
 type SamplingRateFilter = {
-  sampling_rate: number;
+	sampling_rate: number;
 };
 
 /**
  * Filters logs based on the outcome of the worker's event handler.
  */
 type OutcomeFilter = {
-  outcome: Outcome[];
+	outcome: Outcome[];
 };
 
 /**
@@ -61,18 +61,18 @@ type OutcomeFilter = {
  * (exception, exceededCpu, and unknown) are considered errors
  */
 export type Outcome =
-  | "ok"
-  | "canceled"
-  | "exception"
-  | "exceededCpu"
-  | "unknown";
+	| "ok"
+	| "canceled"
+	| "exception"
+	| "exceededCpu"
+	| "unknown";
 
 /**
  * Filters logs based on the HTTP method used for the request
  * that triggered the worker.
  */
 type MethodFilter = {
-  method: string[];
+	method: string[];
 };
 
 /**
@@ -80,21 +80,21 @@ type MethodFilter = {
  * triggered the worker.
  */
 type HeaderFilter = {
-  header: {
-    /**
-     * Filters on the header "key", e.g. "X-CLOUDFLARE-HEADER"
-     * or "X-CUSTOM-HEADER"
-     */
-    key: string;
+	header: {
+		/**
+		 * Filters on the header "key", e.g. "X-CLOUDFLARE-HEADER"
+		 * or "X-CUSTOM-HEADER"
+		 */
+		key: string;
 
-    /**
-     * Filters on the header "value", e.g. if this is set to
-     * "filter-for-me" and the "key" is "X-SHOULD-LOG", only
-     * events triggered by requests with the header
-     * "X-SHOULD-LOG:filter-for-me" will be logged.
-     */
-    query?: string;
-  };
+		/**
+		 * Filters on the header "value", e.g. if this is set to
+		 * "filter-for-me" and the "key" is "X-SHOULD-LOG", only
+		 * events triggered by requests with the header
+		 * "X-SHOULD-LOG:filter-for-me" will be logged.
+		 */
+		query?: string;
+	};
 };
 
 /**
@@ -103,7 +103,7 @@ type HeaderFilter = {
  * address that is running `wrangler tail`
  */
 type ClientIPFilter = {
-  client_ip: string[];
+	client_ip: string[];
 };
 
 /**
@@ -112,7 +112,7 @@ type ClientIPFilter = {
  * that don't will be discarded by the tail worker.
  */
 type QueryFilter = {
-  query: string;
+	query: string;
 };
 
 /**
@@ -120,8 +120,8 @@ type QueryFilter = {
  * filters and a debug flag.
  */
 export type TailFilterMessage = {
-  filters: TailAPIFilter[];
-  debug: boolean;
+	filters: TailAPIFilter[];
+	debug: boolean;
 };
 
 /**
@@ -133,39 +133,39 @@ export type TailFilterMessage = {
  * @returns A filter message ready to be sent to the tail worker
  */
 export function translateCLICommandToFilterMessage(
-  cliFilters: TailCLIFilters,
-  debug: boolean
+	cliFilters: TailCLIFilters,
+	debug: boolean
 ): TailFilterMessage {
-  const apiFilters: TailAPIFilter[] = [];
+	const apiFilters: TailAPIFilter[] = [];
 
-  if (cliFilters.samplingRate) {
-    apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
-  }
+	if (cliFilters.samplingRate) {
+		apiFilters.push(parseSamplingRate(cliFilters.samplingRate));
+	}
 
-  if (cliFilters.status) {
-    apiFilters.push(parseOutcome(cliFilters.status));
-  }
+	if (cliFilters.status) {
+		apiFilters.push(parseOutcome(cliFilters.status));
+	}
 
-  if (cliFilters.method) {
-    apiFilters.push(parseMethod(cliFilters.method));
-  }
+	if (cliFilters.method) {
+		apiFilters.push(parseMethod(cliFilters.method));
+	}
 
-  if (cliFilters.header) {
-    apiFilters.push(parseHeader(cliFilters.header));
-  }
+	if (cliFilters.header) {
+		apiFilters.push(parseHeader(cliFilters.header));
+	}
 
-  if (cliFilters.clientIp) {
-    apiFilters.push(parseIP(cliFilters.clientIp));
-  }
+	if (cliFilters.clientIp) {
+		apiFilters.push(parseIP(cliFilters.clientIp));
+	}
 
-  if (cliFilters.search) {
-    apiFilters.push(parseQuery(cliFilters.search));
-  }
+	if (cliFilters.search) {
+		apiFilters.push(parseQuery(cliFilters.search));
+	}
 
-  return {
-    filters: apiFilters,
-    debug,
-  };
+	return {
+		filters: apiFilters,
+		debug,
+	};
 }
 
 /**
@@ -176,13 +176,13 @@ export function translateCLICommandToFilterMessage(
  * @returns a SamplingRateFilter for use with the API
  */
 function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
-  if (sampling_rate <= 0 || sampling_rate >= 1) {
-    throw new Error(
-      "A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
-    );
-  }
+	if (sampling_rate <= 0 || sampling_rate >= 1) {
+		throw new Error(
+			"A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
+		);
+	}
 
-  return { sampling_rate };
+	return { sampling_rate };
 }
 
 /**
@@ -193,34 +193,34 @@ function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
  * @returns an OutcomeFilter for use with the API
  */
 function parseOutcome(
-  statuses: ("ok" | "error" | "canceled")[]
+	statuses: ("ok" | "error" | "canceled")[]
 ): OutcomeFilter {
-  const outcomes = new Set<Outcome>();
+	const outcomes = new Set<Outcome>();
 
-  for (const status of statuses) {
-    switch (status) {
-      case "ok":
-        outcomes.add("ok");
-        break;
+	for (const status of statuses) {
+		switch (status) {
+			case "ok":
+				outcomes.add("ok");
+				break;
 
-      case "canceled":
-        outcomes.add("canceled");
-        break;
+			case "canceled":
+				outcomes.add("canceled");
+				break;
 
-      case "error":
-        outcomes.add("exception");
-        outcomes.add("exceededCpu");
-        outcomes.add("unknown");
-        break;
+			case "error":
+				outcomes.add("exception");
+				outcomes.add("exceededCpu");
+				outcomes.add("unknown");
+				break;
 
-      default:
-        break;
-    }
-  }
+			default:
+				break;
+		}
+	}
 
-  return {
-    outcome: Array.from(outcomes),
-  };
+	return {
+		outcome: Array.from(outcomes),
+	};
 }
 
 /**
@@ -231,7 +231,7 @@ function parseOutcome(
  * @returns a MethodFilter for use with the API
  */
 function parseMethod(method: string[]): MethodFilter {
-  return { method };
+	return { method };
 }
 
 /**
@@ -243,14 +243,14 @@ function parseMethod(method: string[]): MethodFilter {
  * @returns a HeaderFilter for use with the API
  */
 function parseHeader(header: string): HeaderFilter {
-  const [headerKey, headerQuery] = header.split(":", 2);
+	const [headerKey, headerQuery] = header.split(":", 2);
 
-  return {
-    header: {
-      key: headerKey.trim(),
-      query: headerQuery?.trim(),
-    },
-  };
+	return {
+		header: {
+			key: headerKey.trim(),
+			query: headerQuery?.trim(),
+		},
+	};
 }
 
 /**
@@ -263,7 +263,7 @@ function parseHeader(header: string): HeaderFilter {
  * @returns a ClientIPFilter for use with the API
  */
 function parseIP(client_ip: string[]): ClientIPFilter {
-  return { client_ip };
+	return { client_ip };
 }
 
 /**
@@ -275,5 +275,5 @@ function parseIP(client_ip: string[]): ClientIPFilter {
  * @returns a QueryFilter for use with the API
  */
 function parseQuery(query: string): QueryFilter {
-  return { query };
+	return { query };
 }

@@ -7,54 +7,54 @@ import { logger } from "../../logger";
  */
 
 let debugSpy: jest.SpyInstance,
-  logSpy: jest.SpyInstance,
-  errorSpy: jest.SpyInstance,
-  warnSpy: jest.SpyInstance;
+	logSpy: jest.SpyInstance,
+	errorSpy: jest.SpyInstance,
+	warnSpy: jest.SpyInstance;
 
 const std = {
-  get debug() {
-    return normalizeOutput(debugSpy);
-  },
-  get out() {
-    return normalizeOutput(logSpy);
-  },
-  get err() {
-    return normalizeOutput(errorSpy);
-  },
-  get warn() {
-    return normalizeOutput(warnSpy);
-  },
+	get debug() {
+		return normalizeOutput(debugSpy);
+	},
+	get out() {
+		return normalizeOutput(logSpy);
+	},
+	get err() {
+		return normalizeOutput(errorSpy);
+	},
+	get warn() {
+		return normalizeOutput(warnSpy);
+	},
 };
 
 function normalizeOutput(spy: jest.SpyInstance): string {
-  return normalizeErrorMarkers(
-    replaceByte(
-      stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
-    )
-  );
+	return normalizeErrorMarkers(
+		replaceByte(
+			stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
+		)
+	);
 }
 
 function captureCalls(spy: jest.SpyInstance): string {
-  return spy.mock.calls
-    .map((args: unknown[]) => util.format("%s", ...args))
-    .join("\n");
+	return spy.mock.calls
+		.map((args: unknown[]) => util.format("%s", ...args))
+		.join("\n");
 }
 
 export function mockConsoleMethods() {
-  beforeEach(() => {
-    logger.columns = 100;
-    debugSpy = jest.spyOn(console, "debug").mockImplementation();
-    logSpy = jest.spyOn(console, "log").mockImplementation();
-    errorSpy = jest.spyOn(console, "error").mockImplementation();
-    warnSpy = jest.spyOn(console, "warn").mockImplementation();
-  });
-  afterEach(() => {
-    debugSpy.mockRestore();
-    logSpy.mockRestore();
-    errorSpy.mockRestore();
-    warnSpy.mockRestore();
-  });
-  return std;
+	beforeEach(() => {
+		logger.columns = 100;
+		debugSpy = jest.spyOn(console, "debug").mockImplementation();
+		logSpy = jest.spyOn(console, "log").mockImplementation();
+		errorSpy = jest.spyOn(console, "error").mockImplementation();
+		warnSpy = jest.spyOn(console, "warn").mockImplementation();
+	});
+	afterEach(() => {
+		debugSpy.mockRestore();
+		logSpy.mockRestore();
+		errorSpy.mockRestore();
+		warnSpy.mockRestore();
+	});
+	return std;
 }
 
 /**
@@ -63,7 +63,7 @@ export function mockConsoleMethods() {
  * Windows gets a different character.
  */
 function normalizeErrorMarkers(str: string): string {
-  return str.replaceAll("✘", "X");
+	return str.replaceAll("✘", "X");
 }
 
 /**
@@ -72,7 +72,7 @@ function normalizeErrorMarkers(str: string): string {
  * Use this in snapshot tests to be resilient to file-system differences.
  */
 export function normalizeSlashes(str: string): string {
-  return str.replace(/\\/g, "/");
+	return str.replace(/\\/g, "/");
 }
 
 /**
@@ -81,11 +81,11 @@ export function normalizeSlashes(str: string): string {
  * Use this in snapshot tests to be resilient to slight changes in timing of processing.
  */
 export function stripTimings(stdout: string): string {
-  return stdout.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)");
+	return stdout.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)");
 }
 
 export function stripTrailingWhitespace(str: string): string {
-  return str.replace(/[^\S\n]+\n/g, "\n");
+	return str.replace(/[^\S\n]+\n/g, "\n");
 }
 
 /**
@@ -93,5 +93,5 @@ export function stripTrailingWhitespace(str: string): string {
  * variation causing every few tests the value to change by ± .01
  */
 function replaceByte(stdout: string): string {
-  return stdout.replaceAll(/.[0-9][0-9] KiB/g, "xx KiB");
+	return stdout.replaceAll(/.[0-9][0-9] KiB/g, "xx KiB");
 }

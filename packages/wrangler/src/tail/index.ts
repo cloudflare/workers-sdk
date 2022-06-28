@@ -14,9 +14,9 @@ import type { Request } from "undici";
  * - an expiration date when the tail is no longer guaranteed to be valid
  */
 type TailCreationApiResponse = {
-  id: string;
-  url: string;
-  expires_at: Date;
+	id: string;
+	url: string;
+	expires_at: Date;
 };
 
 /**
@@ -29,13 +29,13 @@ type TailCreationApiResponse = {
  * @returns a `cfetch`-ready URL for creating a new tail
  */
 function makeCreateTailUrl(
-  accountId: string,
-  workerName: string,
-  env: string | undefined
+	accountId: string,
+	workerName: string,
+	env: string | undefined
 ): string {
-  return env
-    ? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails`
-    : `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
+	return env
+		? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails`
+		: `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
 }
 
 /**
@@ -49,14 +49,14 @@ function makeCreateTailUrl(
  * @returns a `cfetch`-ready URL for deleting a tail
  */
 function makeDeleteTailUrl(
-  accountId: string,
-  workerName: string,
-  tailId: string,
-  env: string | undefined
+	accountId: string,
+	workerName: string,
+	tailId: string,
+	env: string | undefined
 ): string {
-  return env
-    ? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails/${tailId}`
-    : `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
+	return env
+		? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails/${tailId}`
+		: `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
 /**
@@ -73,53 +73,53 @@ function makeDeleteTailUrl(
  * @returns a websocket connection, an expiration, and a function to call to delete the tail
  */
 export async function createTail(
-  accountId: string,
-  workerName: string,
-  message: TailFilterMessage,
-  env: string | undefined
+	accountId: string,
+	workerName: string,
+	message: TailFilterMessage,
+	env: string | undefined
 ): Promise<{
-  tail: WebSocket;
-  expiration: Date;
-  deleteTail: () => Promise<void>;
+	tail: WebSocket;
+	expiration: Date;
+	deleteTail: () => Promise<void>;
 }> {
-  // create the tail
-  const createTailUrl = makeCreateTailUrl(accountId, workerName, env);
-  const {
-    id: tailId,
-    url: websocketUrl,
-    expires_at: expiration,
-  } = await fetchResult<TailCreationApiResponse>(createTailUrl, {
-    method: "POST",
-  });
+	// create the tail
+	const createTailUrl = makeCreateTailUrl(accountId, workerName, env);
+	const {
+		id: tailId,
+		url: websocketUrl,
+		expires_at: expiration,
+	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
+		method: "POST",
+	});
 
-  // delete the tail (not yet!)
-  const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
-  async function deleteTail() {
-    await fetchResult(deleteUrl, { method: "DELETE" });
-  }
+	// delete the tail (not yet!)
+	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
+	async function deleteTail() {
+		await fetchResult(deleteUrl, { method: "DELETE" });
+	}
 
-  // connect to the tail
-  const tail = new WebSocket(websocketUrl, "trace-v1", {
-    headers: {
-      "Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
-      "User-Agent": `wrangler-js/${packageVersion}`,
-    },
-  });
+	// connect to the tail
+	const tail = new WebSocket(websocketUrl, "trace-v1", {
+		headers: {
+			"Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
+			"User-Agent": `wrangler-js/${packageVersion}`,
+		},
+	});
 
-  // send filters when we open up
-  tail.on("open", function () {
-    tail.send(
-      JSON.stringify(message),
-      { binary: false, compress: false, mask: false, fin: true },
-      (err) => {
-        if (err) {
-          throw err;
-        }
-      }
-    );
-  });
+	// send filters when we open up
+	tail.on("open", function () {
+		tail.send(
+			JSON.stringify(message),
+			{ binary: false, compress: false, mask: false, fin: true },
+			(err) => {
+				if (err) {
+					throw err;
+				}
+			}
+		);
+	});
 
-  return { tail, expiration, deleteTail };
+	return { tail, expiration, deleteTail };
 }
 
 /**
@@ -127,59 +127,59 @@ export async function createTail(
  * `wrangler tail` is structured JSON that deserializes to this type.
  */
 export type TailEventMessage = {
-  /**
-   * Whether the execution of this worker succeeded or failed
-   */
-  outcome: Outcome;
+	/**
+	 * Whether the execution of this worker succeeded or failed
+	 */
+	outcome: Outcome;
 
-  /**
-   * The name of the script we're tailing
-   */
-  scriptName?: string;
+	/**
+	 * The name of the script we're tailing
+	 */
+	scriptName?: string;
 
-  /**
-   * Any exceptions raised by the worker
-   */
-  exceptions: {
-    /**
-     * The name of the exception.
-     */
-    name: string;
+	/**
+	 * Any exceptions raised by the worker
+	 */
+	exceptions: {
+		/**
+		 * The name of the exception.
+		 */
+		name: string;
 
-    /**
-     * The error message
-     */
-    message: unknown;
+		/**
+		 * The error message
+		 */
+		message: unknown;
 
-    /**
-     * When the exception was raised/thrown
-     */
-    timestamp: number;
-  }[];
+		/**
+		 * When the exception was raised/thrown
+		 */
+		timestamp: number;
+	}[];
 
-  /**
-   * Any logs sent out by the worker
-   */
-  logs: {
-    message: unknown[];
-    level: string; // TODO: make this a union of possible values
-    timestamp: number;
-  }[];
+	/**
+	 * Any logs sent out by the worker
+	 */
+	logs: {
+		message: unknown[];
+		level: string; // TODO: make this a union of possible values
+		timestamp: number;
+	}[];
 
-  /**
-   * When the event was triggered
-   */
-  eventTimestamp: number;
+	/**
+	 * When the event was triggered
+	 */
+	eventTimestamp: number;
 
-  /**
-   * The event that triggered the worker. In the case of an HTTP request,
-   * this will be a RequestEvent. If it's a cron trigger, it'll be a
-   * ScheduledEvent.
-   *
-   * Until workers-types exposes individual types for export, we'll have
-   * to just re-define these types ourselves.
-   */
-  event: RequestEvent | ScheduledEvent | undefined | null;
+	/**
+	 * The event that triggered the worker. In the case of an HTTP request,
+	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
+	 * ScheduledEvent.
+	 *
+	 * Until workers-types exposes individual types for export, we'll have
+	 * to just re-define these types ourselves.
+	 */
+	event: RequestEvent | ScheduledEvent | undefined | null;
 };
 
 /**
@@ -187,113 +187,113 @@ export type TailEventMessage = {
  */
 
 export type RequestEvent = {
-  request: Pick<Request, "url" | "method" | "headers"> & {
-    /**
-     * Cloudflare-specific properties
-     * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties
-     */
-    cf: {
-      /**
-       * How long (in ms) it took for the client's TCP connection to make a
-       * round trip to the worker and back. For all my gamers out there,
-       * this is the request's ping
-       */
-      clientTcpRtt?: number;
+	request: Pick<Request, "url" | "method" | "headers"> & {
+		/**
+		 * Cloudflare-specific properties
+		 * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties
+		 */
+		cf: {
+			/**
+			 * How long (in ms) it took for the client's TCP connection to make a
+			 * round trip to the worker and back. For all my gamers out there,
+			 * this is the request's ping
+			 */
+			clientTcpRtt?: number;
 
-      /**
-       * Longitude and Latitude of where the request originated from
-       */
-      longitude?: string;
-      latitude?: string;
+			/**
+			 * Longitude and Latitude of where the request originated from
+			 */
+			longitude?: string;
+			latitude?: string;
 
-      /**
-       * What cipher was used to establish the TLS connection
-       */
-      tlsCipher: string;
+			/**
+			 * What cipher was used to establish the TLS connection
+			 */
+			tlsCipher: string;
 
-      /**
-       * Which continent the request came from.
-       */
-      continent?: "NA";
+			/**
+			 * Which continent the request came from.
+			 */
+			continent?: "NA";
 
-      /**
-       * ASN of the incoming request
-       */
-      asn: number;
+			/**
+			 * ASN of the incoming request
+			 */
+			asn: number;
 
-      /**
-       * The country the incoming request is coming from
-       */
-      country?: string;
+			/**
+			 * The country the incoming request is coming from
+			 */
+			country?: string;
 
-      /**
-       * The TLS version the connection used
-       */
-      tlsVersion: string;
+			/**
+			 * The TLS version the connection used
+			 */
+			tlsVersion: string;
 
-      /**
-       * The colo that processed the request (i.e. the airport code
-       * of the closest city to the server that spun up the worker)
-       */
-      colo: string;
+			/**
+			 * The colo that processed the request (i.e. the airport code
+			 * of the closest city to the server that spun up the worker)
+			 */
+			colo: string;
 
-      /**
-       * The timezone where the request came from
-       */
-      timezone?: string;
+			/**
+			 * The timezone where the request came from
+			 */
+			timezone?: string;
 
-      /**
-       * The city where the request came from
-       */
-      city?: string;
+			/**
+			 * The city where the request came from
+			 */
+			city?: string;
 
-      /**
-       * The browser-requested prioritization information in the request object
-       */
-      requestPriority?: string;
+			/**
+			 * The browser-requested prioritization information in the request object
+			 */
+			requestPriority?: string;
 
-      /**
-       * Which version of HTTP the request came over e.g. "HTTP/2"
-       */
-      httpProtocol: string;
+			/**
+			 * Which version of HTTP the request came over e.g. "HTTP/2"
+			 */
+			httpProtocol: string;
 
-      /**
-       * The region where the request originated from
-       */
-      region?: string;
-      regionCode?: string;
+			/**
+			 * The region where the request originated from
+			 */
+			region?: string;
+			regionCode?: string;
 
-      /**
-       * The organization which owns the ASN of the incoming request, for example, Google Cloud.
-       */
-      asOrganization: string;
+			/**
+			 * The organization which owns the ASN of the incoming request, for example, Google Cloud.
+			 */
+			asOrganization: string;
 
-      /**
-       * Metro code (DMA) of the incoming request, for example, "635".
-       */
-      metroCode?: string;
+			/**
+			 * Metro code (DMA) of the incoming request, for example, "635".
+			 */
+			metroCode?: string;
 
-      /**
-       * Postal code of the incoming request, for example, "78701".
-       */
-      postalCode?: string;
-    };
-  };
+			/**
+			 * Postal code of the incoming request, for example, "78701".
+			 */
+			postalCode?: string;
+		};
+	};
 };
 
 /**
  * An event that was triggered at a certain time
  */
 export type ScheduledEvent = {
-  /**
-   * The cron pattern that matched when this event fired
-   */
-  cron: string;
+	/**
+	 * The cron pattern that matched when this event fired
+	 */
+	cron: string;
 
-  /**
-   * The time this worker was scheduled to run.
-   * For some reason, this doesn't...work correctly when we
-   * do it directly as a Date. So parse it later on your own.
-   */
-  scheduledTime: number;
+	/**
+	 * The time this worker was scheduled to run.
+	 * For some reason, this doesn't...work correctly when we
+	 * do it directly as a Date. So parse it later on your own.
+	 */
+	scheduledTime: number;
 };

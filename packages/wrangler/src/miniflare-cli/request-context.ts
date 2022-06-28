@@ -16,25 +16,25 @@ import type { MiniflareOptions } from "miniflare";
  * that indicate to miniflare whether to run the checks or not.
  */
 export const getRequestContextCheckOptions = async (): Promise<
-  Pick<MiniflareOptions, "globalAsyncIO" | "globalTimers" | "globalRandom">
+	Pick<MiniflareOptions, "globalAsyncIO" | "globalTimers" | "globalRandom">
 > => {
-  // check that there's an implementation of AsyncLocalStorage
-  let hasAsyncLocalStorage = true;
-  try {
-    // ripped from  the example here https://nodejs.org/api/async_context.html#class-asynclocalstorage
-    const { AsyncLocalStorage } = await import("node:async_hooks");
-    const storage = new AsyncLocalStorage<string>();
+	// check that there's an implementation of AsyncLocalStorage
+	let hasAsyncLocalStorage = true;
+	try {
+		// ripped from  the example here https://nodejs.org/api/async_context.html#class-asynclocalstorage
+		const { AsyncLocalStorage } = await import("node:async_hooks");
+		const storage = new AsyncLocalStorage<string>();
 
-    hasAsyncLocalStorage = storage.run("some-value", () => {
-      return storage.getStore() === "some-value";
-    });
-  } catch (e) {
-    hasAsyncLocalStorage = false;
-  }
+		hasAsyncLocalStorage = storage.run("some-value", () => {
+			return storage.getStore() === "some-value";
+		});
+	} catch (e) {
+		hasAsyncLocalStorage = false;
+	}
 
-  return {
-    globalAsyncIO: hasAsyncLocalStorage,
-    globalRandom: hasAsyncLocalStorage,
-    globalTimers: hasAsyncLocalStorage,
-  };
+	return {
+		globalAsyncIO: hasAsyncLocalStorage,
+		globalRandom: hasAsyncLocalStorage,
+		globalTimers: hasAsyncLocalStorage,
+	};
 };

@@ -7,27 +7,27 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { PackageManager } from "../package-manager";
 
 describe("wrangler", () => {
-  let mockPackageManager: PackageManager;
-  runInTempDir();
+	let mockPackageManager: PackageManager;
+	runInTempDir();
 
-  beforeEach(() => {
-    mockPackageManager = {
-      cwd: process.cwd(),
-      // @ts-expect-error we're making a fake package manager here
-      type: "mockpm",
-      addDevDeps: jest.fn(),
-      install: jest.fn(),
-    };
-    (getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
-  });
+	beforeEach(() => {
+		mockPackageManager = {
+			cwd: process.cwd(),
+			// @ts-expect-error we're making a fake package manager here
+			type: "mockpm",
+			addDevDeps: jest.fn(),
+			install: jest.fn(),
+		};
+		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+	});
 
-  const std = mockConsoleMethods();
+	const std = mockConsoleMethods();
 
-  describe("no command", () => {
-    it("should display a list of available commands", async () => {
-      await runWrangler();
+	describe("no command", () => {
+		it("should display a list of available commands", async () => {
+			await runWrangler();
 
-      expect(std.out).toMatchInlineSnapshot(`
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler
 
         Commands:
@@ -52,19 +52,19 @@ describe("wrangler", () => {
           -v, --version  Show version number  [boolean]"
       `);
 
-      expect(std.err).toMatchInlineSnapshot(`""`);
-    });
-  });
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
 
-  describe("invalid command", () => {
-    it("should display an error", async () => {
-      await expect(
-        runWrangler("invalid-command")
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Unknown argument: invalid-command"`
-      );
+	describe("invalid command", () => {
+		it("should display an error", async () => {
+			await expect(
+				runWrangler("invalid-command")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Unknown argument: invalid-command"`
+			);
 
-      expect(std.out).toMatchInlineSnapshot(`
+			expect(std.out).toMatchInlineSnapshot(`
         "
         wrangler
 
@@ -89,38 +89,38 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-      expect(std.err).toMatchInlineSnapshot(`
+			expect(std.err).toMatchInlineSnapshot(`
         "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
 
         "
       `);
-    });
-  });
+		});
+	});
 
-  describe("preview", () => {
-    it("should throw an error if the deprecated command is used with positional arguments", async () => {
-      await expect(runWrangler("preview GET")).rejects
-        .toThrowErrorMatchingInlineSnapshot(`
+	describe("preview", () => {
+		it("should throw an error if the deprecated command is used with positional arguments", async () => {
+			await expect(runWrangler("preview GET")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
               "Deprecation:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
             `);
-      await expect(runWrangler(`preview GET "SomeBody"`)).rejects
-        .toThrowErrorMatchingInlineSnapshot(`
+			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
               "Deprecation:
               The \`wrangler preview\` command has been deprecated.
               Try using \`wrangler dev\` to to try out a worker during development.
               "
             `);
-    });
-  });
+		});
+	});
 
-  describe("subcommand implicit help ran on incomplete command execution", () => {
-    it("no subcommand for 'secret' should display a list of available subcommands", async () => {
-      await runWrangler("secret");
-      await endEventLoop();
-      expect(std.out).toMatchInlineSnapshot(`
+	describe("subcommand implicit help ran on incomplete command execution", () => {
+		it("no subcommand for 'secret' should display a list of available subcommands", async () => {
+			await runWrangler("secret");
+			await endEventLoop();
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler secret
 
         🤫 Generate a secret that can be referenced in the worker script
@@ -135,12 +135,12 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-    });
+		});
 
-    it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {
-      await runWrangler("kv:namespace");
-      await endEventLoop();
-      expect(std.out).toMatchInlineSnapshot(`
+		it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {
+			await runWrangler("kv:namespace");
+			await endEventLoop();
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler kv:namespace
 
         🗂️  Interact with your Workers KV Namespaces
@@ -155,12 +155,12 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-    });
+		});
 
-    it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
-      await runWrangler("kv:key");
-      await endEventLoop();
-      expect(std.out).toMatchInlineSnapshot(`
+		it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
+			await runWrangler("kv:key");
+			await endEventLoop();
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler kv:key
 
         🔑 Individually manage Workers KV key-value pairs
@@ -176,12 +176,12 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-    });
+		});
 
-    it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
-      await runWrangler("kv:bulk");
-      await endEventLoop();
-      expect(std.out).toMatchInlineSnapshot(`
+		it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
+			await runWrangler("kv:bulk");
+			await endEventLoop();
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler kv:bulk
 
         💪 Interact with multiple Workers KV key-value pairs at once
@@ -195,12 +195,12 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-    });
+		});
 
-    it("no subcommand 'r2' should display a list of available subcommands", async () => {
-      await runWrangler("r2");
-      await endEventLoop();
-      expect(std.out).toMatchInlineSnapshot(`
+		it("no subcommand 'r2' should display a list of available subcommands", async () => {
+			await runWrangler("r2");
+			await endEventLoop();
+			expect(std.out).toMatchInlineSnapshot(`
         "wrangler r2
 
         📦 Interact with an R2 store
@@ -213,13 +213,13 @@ describe("wrangler", () => {
           -h, --help     Show help  [boolean]
           -v, --version  Show version number  [boolean]"
       `);
-    });
-  });
+		});
+	});
 
-  describe("Deprecated commands", () => {
-    it("should print a deprecation message for 'generate'", async () => {
-      await runWrangler("generate").catch((err) => {
-        expect(err.message).toMatchInlineSnapshot(`
+	describe("Deprecated commands", () => {
+		it("should print a deprecation message for 'generate'", async () => {
+			await runWrangler("generate").catch((err) => {
+				expect(err.message).toMatchInlineSnapshot(`
           "Deprecation:
           \`wrangler generate\` has been deprecated.
           Try running \`wrangler init\` to generate a basic Worker, or cloning the template repository instead:
@@ -230,18 +230,18 @@ describe("wrangler", () => {
 
           Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
         `);
-      });
-    });
-  });
+			});
+		});
+	});
 
-  it("should print a deprecation message for 'build' and then try to run `publish --dry-run --outdir`", async () => {
-    writeWranglerToml({
-      main: "index.js",
-    });
-    writeWorkerSource();
-    await runWrangler("build");
-    await endEventLoop();
-    expect(std.out).toMatchInlineSnapshot(`
+	it("should print a deprecation message for 'build' and then try to run `publish --dry-run --outdir`", async () => {
+		writeWranglerToml({
+			main: "index.js",
+		});
+		writeWorkerSource();
+		await runWrangler("build");
+		await endEventLoop();
+		expect(std.out).toMatchInlineSnapshot(`
       "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
         Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
@@ -252,9 +252,9 @@ describe("wrangler", () => {
       --dry-run: exiting now.
       Total Upload: 0xx KiB / gzip: 0xx KiB"
     `);
-  });
+	});
 });
 
 function endEventLoop() {
-  return new Promise((resolve) => setImmediate(resolve));
+	return new Promise((resolve) => setImmediate(resolve));
 }

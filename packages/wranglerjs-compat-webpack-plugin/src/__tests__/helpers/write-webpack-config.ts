@@ -4,27 +4,27 @@ import toSource from "tosource";
 import type { Configuration } from "webpack";
 
 export function writeWebpackConfig(
-  config: Configuration = {},
-  {
-    filepath = "webpack.config.js",
-    usePlugin = false,
-  }: { filepath?: string; usePlugin?: boolean } = {}
+	config: Configuration = {},
+	{
+		filepath = "webpack.config.js",
+		usePlugin = false,
+	}: { filepath?: string; usePlugin?: boolean } = {}
 ) {
-  let stringified = "";
+	let stringified = "";
 
-  if (usePlugin) {
-    stringified += `const { WranglerJsCompatWebpackPlugin } = require("wranglerjs-compat-webpack-plugin");\n`;
+	if (usePlugin) {
+		stringified += `const { WranglerJsCompatWebpackPlugin } = require("wranglerjs-compat-webpack-plugin");\n`;
 
-    config.plugins = config.plugins || [];
-    // @ts-expect-error we replace this with `new WranglerJsCompatWebpackPlugin()`
-    // after everything has been stringified
-    config.plugins.push("REPLACE_ME");
-  }
+		config.plugins = config.plugins || [];
+		// @ts-expect-error we replace this with `new WranglerJsCompatWebpackPlugin()`
+		// after everything has been stringified
+		config.plugins.push("REPLACE_ME");
+	}
 
-  stringified += `module.exports = ${toSource(config)}`.replace(
-    '"REPLACE_ME"',
-    "new WranglerJsCompatWebpackPlugin()"
-  );
+	stringified += `module.exports = ${toSource(config)}`.replace(
+		'"REPLACE_ME"',
+		"new WranglerJsCompatWebpackPlugin()"
+	);
 
-  fs.writeFileSync(path.resolve(filepath), stringified);
+	fs.writeFileSync(path.resolve(filepath), stringified);
 }

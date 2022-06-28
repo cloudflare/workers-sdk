@@ -20,17 +20,17 @@ import type { Config } from "../config";
  * bindings provided in the `wrangler.toml`.
  */
 export function getVarsForDev(config: Config): Config["vars"] {
-  const configDir = path.resolve(path.dirname(config.configPath ?? "."));
-  const devVarsPath = path.resolve(configDir, ".dev.vars");
-  if (fs.existsSync(devVarsPath)) {
-    const devVarsRelativePath = path.relative(process.cwd(), devVarsPath);
-    logger.log(`Using vars defined in ${devVarsRelativePath}`);
-    const devVars = dotenv.parse(fs.readFileSync(devVarsPath, "utf8"));
-    return {
-      ...config.vars,
-      ...devVars,
-    };
-  } else {
-    return config.vars;
-  }
+	const configDir = path.resolve(path.dirname(config.configPath ?? "."));
+	const devVarsPath = path.resolve(configDir, ".dev.vars");
+	if (fs.existsSync(devVarsPath)) {
+		const devVarsRelativePath = path.relative(process.cwd(), devVarsPath);
+		logger.log(`Using vars defined in ${devVarsRelativePath}`);
+		const devVars = dotenv.parse(fs.readFileSync(devVarsPath, "utf8"));
+		return {
+			...config.vars,
+			...devVars,
+		};
+	} else {
+		return config.vars;
+	}
 }

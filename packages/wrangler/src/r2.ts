@@ -4,20 +4,20 @@ import { fetchResult } from "./cfetch";
  * Information about a bucket, returned from `listR2Buckets()`.
  */
 export interface R2BucketInfo {
-  name: string;
-  creation_date: string;
+	name: string;
+	creation_date: string;
 }
 
 /**
  * Fetch a list of all the buckets under the given `accountId`.
  */
 export async function listR2Buckets(
-  accountId: string
+	accountId: string
 ): Promise<R2BucketInfo[]> {
-  const results = await fetchResult<{
-    buckets: R2BucketInfo[];
-  }>(`/accounts/${accountId}/r2/buckets`);
-  return results.buckets;
+	const results = await fetchResult<{
+		buckets: R2BucketInfo[];
+	}>(`/accounts/${accountId}/r2/buckets`);
+	return results.buckets;
 }
 
 /**
@@ -27,24 +27,24 @@ export async function listR2Buckets(
  * A bucket must be explicitly deleted to be replaced.
  */
 export async function createR2Bucket(
-  accountId: string,
-  bucketName: string
+	accountId: string,
+	bucketName: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/r2/buckets/${bucketName}`,
-    { method: "PUT" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{ method: "PUT" }
+	);
 }
 
 /**
  * Delete a bucket with the given name
  */
 export async function deleteR2Bucket(
-  accountId: string,
-  bucketName: string
+	accountId: string,
+	bucketName: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/r2/buckets/${bucketName}`,
-    { method: "DELETE" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{ method: "DELETE" }
+	);
 }
