@@ -2,7 +2,12 @@ import { render } from "ink-testing-library";
 import React from "react";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
-import { setMockResponse } from "./helpers/mock-cfetch";
+import {
+	createFetchResult,
+	setMockRawResponse,
+	setMockResponse,
+	unsetAllMocks,
+} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -21,6 +26,7 @@ describe("getUserInfo()", () => {
 
 	afterEach(() => {
 		process.env = ENV_COPY;
+		unsetAllMocks();
 	});
 
 	it("should return undefined if there is no config file", async () => {
@@ -32,6 +38,20 @@ describe("getUserInfo()", () => {
 		writeAuthConfigFile({});
 		const userInfo = await getUserInfo();
 		expect(userInfo).toBeUndefined();
+	});
+
+	it("should return undefined for email if the user settings API request fails with 9109", async () => {
+		process.env = {
+			CLOUDFLARE_API_TOKEN: "123456789",
+		};
+		setMockRawResponse("/user", () =>
+			createFetchResult(undefined, false, [
+				{ code: 9109, message: "Uauthorized to access requested resource" },
+			])
+		);
+		setMockResponse("/accounts", () => []);
+		const userInfo = await getUserInfo();
+		expect(userInfo?.email).toBeUndefined();
 	});
 
 	it("should say it's using an API token when one is set", async () => {
