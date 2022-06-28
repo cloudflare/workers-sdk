@@ -118,7 +118,21 @@ async function createPreviewToken(
 			: `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
 
 	const mode: CfPreviewMode = ctx.zone
-		? { routes: ["*/*"] } // TODO: should we support routes here? how?
+		? {
+				routes: ctx.routes
+					? // extract all the route patterns
+					  ctx.routes.map((route) => {
+							if (typeof route === "string") {
+								return route;
+							}
+							if (route.custom_domain) {
+								return `${route.pattern}/*`;
+							}
+							return route.pattern;
+					  })
+					: // if there aren't any patterns, then just match on all routes
+					  ["*/*"],
+		  }
 		: { workers_dev: true };
 
 	const formData = createWorkerUploadForm(worker);
