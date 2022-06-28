@@ -22,8 +22,14 @@ export function WhoAmI({ user }: { user: UserInfo | undefined }) {
 	);
 }
 
-function Email(props: { tokenType: string; email: string }) {
-	return (
+function Email(props: { tokenType: string; email: string | undefined }) {
+	return props.email === undefined ? (
+		<Text>
+			👋 You are logged in with an {props.tokenType}. Unable to retrieve email
+			for this user. Are you missing the `User-&gt;User Details-&gt;Read`
+			permission?
+		</Text>
+	) : (
 		<Text>
 			👋 You are logged in with an {props.tokenType}, associated with the email
 			&apos;{props.email}&apos;!
@@ -42,7 +48,7 @@ function Accounts(props: { accounts: AccountInfo[] }) {
 export interface UserInfo {
 	apiToken: string;
 	authType: string;
-	email: string;
+	email: string | undefined;
 	accounts: AccountInfo[];
 }
 
@@ -59,14 +65,22 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 			: usingEnvAuth
 			? "API Token"
 			: "OAuth Token",
-		email: await getEmail(),
+		email: "authEmail" in apiToken ? apiToken.authEmail : await getEmail(),
 		accounts: await getAccounts(),
 	};
 }
 
-async function getEmail(): Promise<string> {
-	const { email } = await fetchResult<{ email: string }>("/user");
-	return email;
+async function getEmail(): Promise<string | undefined> {
+	try {
+		const { email } = await fetchResult<{ email: string }>("/user");
+		return email;
+	} catch (e) {
+		if ((e as { code?: number }).code === 9109) {
+			return undefined;
+		} else {
+			throw e;
+		}
+	}
 }
 
 type AccountInfo = { name: string; id: string };
