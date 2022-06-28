@@ -78,6 +78,7 @@ export async function previewHandler(args: ArgumentsCamelCase<PreviewArgs>) {
 			host={undefined}
 			legacyEnv={isLegacyEnv(config)}
 			build={config.build || {}}
+			define={config.define}
 			minify={undefined}
 			nodeCompat={config.node_compat}
 			initialMode={args.local ? "local" : "remote"}

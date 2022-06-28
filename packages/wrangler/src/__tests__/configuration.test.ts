@@ -57,6 +57,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			usage_model: undefined,
 			vars: {},
+			define: {},
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
@@ -165,7 +166,7 @@ describe("normalizeAndValidateConfig()", () => {
       `);
 		});
 
-		describe("migrations", () => {
+		describe("[migrations]", () => {
 			it("should override `migrations` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
 					migrations: [
@@ -271,7 +272,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("site", () => {
+		describe("[site]", () => {
 			it("should override `site` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
 					site: {
@@ -412,7 +413,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("assets", () => {
+		describe("[assets]", () => {
 			it("should error if `assets` config is missing `bucket`", () => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
@@ -748,6 +749,10 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: "CWD",
 					watch_dir: "WATCH_DIR",
 				},
+				define: {
+					DEF1: "DEFINE_1",
+					DEF2: "DEFINE_2",
+				},
 				vars: {
 					VAR1: "VALUE_1",
 					VAR2: "VALUE_2",
@@ -870,6 +875,9 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: 1555,
 					watch_dir: 1666,
 				},
+				define: {
+					DEF1: 1777,
+				},
 				minify: "INVALID",
 				node_compat: "INVALID",
 			} as unknown as RawEnvironment;
@@ -935,6 +943,7 @@ describe("normalizeAndValidateConfig()", () => {
           - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
           - Expected \\"main\\" to be of type string but got 1333.
           - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+          - The field \\"define.DEF1\\" should be a string but got 1777.
           - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
           - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
       `);
@@ -1015,7 +1024,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("build", () => {
+		describe("[build]", () => {
 			it("should override build.upload config defaults with provided values and warn about deprecations", () => {
 				const expectedConfig: RawEnvironment = {
 					build: {
@@ -1186,7 +1195,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("durable_objects field", () => {
+		describe("[durable_objects]", () => {
 			it("should error if durable_objects is an array", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: [] } as unknown as RawConfig,
@@ -1429,7 +1438,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("kv_namespaces field", () => {
+		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: {} } as unknown as RawConfig,
@@ -1534,7 +1543,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("r2_buckets field", () => {
+		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: {} } as unknown as RawConfig,
@@ -1639,7 +1648,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("services field", () => {
+		describe("[services]", () => {
 			it("should error if services is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ services: {} } as unknown as RawConfig,
@@ -1784,7 +1793,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("unsafe field", () => {
+		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: [] } as unknown as RawConfig,
@@ -2378,6 +2387,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		it("should warn for non-inherited fields that are missing in environments", () => {
+			const define: RawConfig["define"] = {
+				abc: "123",
+			};
 			const vars: RawConfig["vars"] = {
 				FOO: "foo",
 			};
@@ -2388,6 +2400,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const r2_buckets: RawConfig["r2_buckets"] = [];
 			const unsafe: RawConfig["unsafe"] = { bindings: [] };
 			const rawConfig: RawConfig = {
+				define,
 				vars,
 				durable_objects,
 				kv_namespaces,
@@ -2406,6 +2419,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(config).toEqual(
 				expect.not.objectContaining({
+					define,
 					vars,
 					durable_objects,
 					kv_namespaces,
@@ -2421,6 +2435,9 @@ describe("normalizeAndValidateConfig()", () => {
             - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
               This is not what you probably want, since \\"vars\\" is not inherited by environments.
               Please add \\"vars\\" to \\"env.ENV1\\".
+            - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
+              This is not what you probably want, since \\"define\\" is not inherited by environments.
+              Please add \\"define\\" to \\"env.ENV1\\".
             - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
               This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
               Please add \\"durable_objects\\" to \\"env.ENV1\\".
@@ -2496,7 +2513,229 @@ describe("normalizeAndValidateConfig()", () => {
       `);
 		});
 
-		describe("durable_objects field", () => {
+		describe("[define]", () => {
+			it("should accept valid values for config.define", () => {
+				const rawConfig: RawConfig = {
+					define: {
+						abc: "def",
+						ghi: "123",
+					},
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(rawConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if config.define is not an object", () => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					define: 123,
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(rawConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"define\\" should be an object but got 123.
+          "
+        `);
+			});
+
+			it("should error if the values on config.define are not strings", () => {
+				const rawConfig: RawConfig = {
+					define: {
+						// @ts-expect-error purposely using an invalid value
+						abc: 123,
+						// This one's valid
+						def: "xyz",
+						// @ts-expect-error purposely using an invalid value
+						ghi: true,
+						// @ts-expect-error purposely using an invalid value
+						jkl: {
+							nested: "value",
+						},
+					},
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(rawConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+          "Processing wrangler configuration:
+            - The field \\"define.abc\\" should be a string but got 123.
+            - The field \\"define.ghi\\" should be a string but got true.
+            - The field \\"define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
+        `);
+			});
+
+			describe("named environments", () => {
+				it("should accept valid values for config.define inside an environment", () => {
+					const rawConfig: RawConfig = {
+						define: {
+							abc: "def",
+							ghi: "123",
+						},
+						env: {
+							ENV1: {
+								define: {
+									abc: "xyz",
+									ghi: "456",
+								},
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						{ env: "ENV1" }
+					);
+
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("should error if config.define is not an object inside an environment", () => {
+					const rawConfig: RawConfig = {
+						define: {
+							abc: "def",
+							ghi: "123",
+						},
+						env: {
+							ENV1: {
+								// @ts-expect-error purposely using an invalid value
+								define: 123,
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						{ env: "ENV1" }
+					);
+
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(true);
+
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+            "Processing wrangler configuration:
+
+              - \\"env.ENV1\\" environment configuration
+                - The field \\"env.ENV1.define\\" should be an object but got 123.
+            "
+          `);
+				});
+
+				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", () => {
+					const rawConfig: RawConfig = {
+						define: {
+							abc: "def",
+							ghi: "123",
+						},
+						env: {
+							ENV1: {
+								define: {
+									abc: "def",
+									xyz: "123",
+								},
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						{ env: "ENV1" }
+					);
+
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					expect(diagnostics.hasWarnings()).toBe(true);
+					expect(diagnostics.hasErrors()).toBe(false);
+
+					expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+            "Processing wrangler configuration:
+
+              - \\"env.ENV1\\" environment configuration
+                - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
+                  This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
+                  Please add \\"define.ghi\\" to \\"env.ENV1\\".
+                - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
+                  This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
+                  Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
+          `);
+				});
+
+				it("should error if the values on config.define in an environment are not strings", () => {
+					const rawConfig: RawConfig = {
+						define: {
+							abc: "123",
+							def: "xyz",
+							ghi: "true",
+							jkl: "some value",
+						},
+						env: {
+							ENV1: {
+								define: {
+									// @ts-expect-error purposely using an invalid value
+									abc: 123,
+									// This one's valid
+									def: "xyz",
+									// @ts-expect-error purposely using an invalid value
+									ghi: true,
+									// @ts-expect-error purposely using an invalid value
+									jkl: {
+										nested: "value",
+									},
+								},
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						{ env: "ENV1" }
+					);
+
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(true);
+
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+            "Processing wrangler configuration:
+
+              - \\"env.ENV1\\" environment configuration
+                - The field \\"env.ENV1.define.abc\\" should be a string but got 123.
+                - The field \\"env.ENV1.define.ghi\\" should be a string but got true.
+                - The field \\"env.ENV1.define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
+          `);
+				});
+			});
+		});
+
+		describe("[durable_objects]", () => {
 			it("should error if durable_objects is an array", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
@@ -2739,7 +2978,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("kv_namespaces field", () => {
+		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
@@ -2858,7 +3097,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("r2_buckets field", () => {
+		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
@@ -2977,7 +3216,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("unsafe field", () => {
+		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,

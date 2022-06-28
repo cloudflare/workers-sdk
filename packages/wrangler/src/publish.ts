@@ -352,6 +352,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				tsconfig: props.tsconfig ?? config.tsconfig,
 				minify,
 				nodeCompat,
+				define: config.define,
 			}
 		);
 

@@ -3404,6 +3404,84 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("[define]", () => {
+		it("should be able to define values that will be substituted into top-level identifiers", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+        // this should get replaced
+        console.log(abc);
+        // this should not get replaced
+        console.log(globalThis.abc);
+
+        function foo(){
+          const abc = "a string";
+          // this should not get replaced
+          console.log(abc);
+        }
+
+        console.log(foo);
+      `
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("build");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatchInlineSnapshot(`
+        "(() => {
+          // index.js
+          console.log(123);
+          console.log(globalThis.abc);
+          function foo() {
+            const abc2 = \\"a string\\";
+            console.log(abc2);
+          }
+          console.log(foo);
+        })();
+        //# sourceMappingURL=index.js.map
+        "
+      `);
+		});
+
+		it("can be overriden in environments", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+				env: {
+					staging: {
+						define: {
+							abc: "456",
+						},
+					},
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+        console.log(abc);
+      `
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("build --env staging");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatchInlineSnapshot(`
+        "(() => {
+          // index.js
+          console.log(456);
+        })();
+        //# sourceMappingURL=index.js.map
+        "
+      `);
+		});
+	});
+
 	describe("custom builds", () => {
 		beforeEach(() => {
 			// @ts-expect-error disable the mock we'd setup earlier

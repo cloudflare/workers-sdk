@@ -38,6 +38,7 @@ export type DevProps = {
 	localUpstream: string | undefined;
 	enableLocalPersistence: boolean;
 	bindings: CfWorkerInit["bindings"];
+	define: Config["define"];
 	crons: Config["triggers"]["crons"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
@@ -145,6 +146,7 @@ function DevSession(props: DevSessionProps) {
 		tsconfig: props.tsconfig,
 		minify: props.minify,
 		nodeCompat: props.nodeCompat,
+		define: props.define,
 	});
 
 	return props.local ? (

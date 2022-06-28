@@ -420,6 +420,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 					minify={args.minify ?? config.minify}
 					nodeCompat={nodeCompat}
 					build={config.build || {}}
+					define={config.define}
 					initialMode={args.local ? "local" : "remote"}
 					jsxFactory={args["jsx-factory"] || config.jsx_factory}
 					jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
