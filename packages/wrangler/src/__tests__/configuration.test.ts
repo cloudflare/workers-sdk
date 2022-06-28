@@ -114,13 +114,13 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-          - Expected \\"dev.ip\\" to be of type string but got 222.
-          - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
-          - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
-          - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
-      `);
+			        "Processing wrangler configuration:
+			          - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
+			          - Expected \\"dev.ip\\" to be of type string but got 222.
+			          - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
+			          - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
+			          - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
+		      `);
 		});
 
 		it("should warn on and remove unexpected top level fields", () => {
@@ -139,9 +139,9 @@ describe("normalizeAndValidateConfig()", () => {
 			expect("unexpected" in config).toBe(false);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Unexpected fields found in top-level field: \\"unexpected\\""
-      `);
+			        "Processing wrangler configuration:
+			          - Unexpected fields found in top-level field: \\"unexpected\\""
+		      `);
 		});
 
 		it("should report a deprecation warning if `miniflare` appears at the top level", () => {
@@ -160,10 +160,52 @@ describe("normalizeAndValidateConfig()", () => {
 			expect("miniflare" in config).toBe(false);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - [1m😶 Ignored[0m: \\"miniflare\\":
-            Wrangler does not use configuration in the \`miniflare\` section. Unless you are using Miniflare directly you can remove this section."
-      `);
+			        "Processing wrangler configuration:
+			          - [1m😶 Ignored[0m: \\"miniflare\\":
+			            Wrangler does not use configuration in the \`miniflare\` section. Unless you are using Miniflare directly you can remove this section."
+		      `);
+		});
+
+		it("should normalise a blank route value to be undefined", () => {
+			const expectedConfig = {
+				route: "",
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig as unknown as RawConfig,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(config.route).toBeUndefined();
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(true);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The \\"route\\" field in your configuration is an empty string and will be ignored.
+			    Please remove the \\"route\\" field from your configuration."
+		`);
+		});
+
+		it("should normalise a blank account_id value to be undefined", () => {
+			const expectedConfig = {
+				account_id: "",
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig as unknown as RawConfig,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(config.account_id).toBeUndefined();
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(true);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The \\"account_id\\" field in your configuration is an empty string and will be ignored.
+			    Please remove the \\"account_id\\" field from your configuration."
+		`);
 		});
 
 		describe("[migrations]", () => {
@@ -221,14 +263,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
-            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
-            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
-            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
-            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
+			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
+			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
+			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
+			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+		        `);
 			});
 
 			it("should warn/error on unexpected fields on `migrations`", async () => {
@@ -262,13 +304,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
-        `);
+			          "Processing wrangler configuration:
+			            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
+		        `);
 			});
 		});
 
@@ -295,13 +337,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeSlashes(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1mDeprecation[0m: \\"site.entry-point\\":
-              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-              \`\`\`
-              main = \\"my-site/index.js\\"
-              \`\`\`"
-        `);
+			          "Processing wrangler configuration:
+			            - [1mDeprecation[0m: \\"site.entry-point\\":
+			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+			              \`\`\`
+			              main = \\"my-site/index.js\\"
+			              \`\`\`"
+		        `);
 			});
 
 			it("should error if `site` config is missing `bucket`", () => {
@@ -326,18 +368,18 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeSlashes(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1mDeprecation[0m: \\"site.entry-point\\":
-              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-              \`\`\`
-              main = \\"workers-site/index.js\\"
-              \`\`\`"
-        `);
+			          "Processing wrangler configuration:
+			            - [1mDeprecation[0m: \\"site.entry-point\\":
+			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+			              \`\`\`
+			              main = \\"workers-site/index.js\\"
+			              \`\`\`"
+		        `);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"site.bucket\\" is a required field."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"site.bucket\\" is a required field."
+		        `);
 			});
 
 			it("should error on invalid `site` values", () => {
@@ -359,23 +401,23 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"sites.include.[0]\\" to be of type string but got 222.
-            - Expected \\"sites.include.[1]\\" to be of type string but got 333.
-            - Expected \\"sites.exclude.[0]\\" to be of type string but got 444.
-            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555.
-            - Expected \\"site.entry-point\\" to be of type string but got 111."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"sites.include.[0]\\" to be of type string but got 222.
+			            - Expected \\"sites.include.[1]\\" to be of type string but got 333.
+			            - Expected \\"sites.exclude.[0]\\" to be of type string but got 444.
+			            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555.
+			            - Expected \\"site.entry-point\\" to be of type string but got 111."
+		        `);
 
 				expect(normalizeSlashes(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1mDeprecation[0m: \\"site.entry-point\\":
-              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-              \`\`\`
-              main = \\"111/index.js\\"
-              \`\`\`"
-        `);
+			          "Processing wrangler configuration:
+			            - [1mDeprecation[0m: \\"site.entry-point\\":
+			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+			              \`\`\`
+			              main = \\"111/index.js\\"
+			              \`\`\`"
+		        `);
 			});
 
 			it("should log a deprecation warning if entry-point is defined", async () => {
@@ -391,25 +433,25 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config.site).toMatchInlineSnapshot(`
-          Object {
-            "bucket": "some/path",
-            "entry-point": "some/other/script.js",
-            "exclude": Array [],
-            "include": Array [],
-          }
-        `);
+			          Object {
+			            "bucket": "some/path",
+			            "entry-point": "some/other/script.js",
+			            "exclude": Array [],
+			            "include": Array [],
+			          }
+		        `);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 
 				expect(normalizeSlashes(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1mDeprecation[0m: \\"site.entry-point\\":
-              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-              \`\`\`
-              main = \\"some/other/script.js\\"
-              \`\`\`"
-        `);
+			          "Processing wrangler configuration:
+			            - [1mDeprecation[0m: \\"site.entry-point\\":
+			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+			              \`\`\`
+			              main = \\"some/other/script.js\\"
+			              \`\`\`"
+		        `);
 			});
 		});
 
@@ -434,13 +476,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"assets\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"assets\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"assets.bucket\\" is a required field."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"assets.bucket\\" is a required field."
+		        `);
 			});
 
 			it("should error on invalid `assets` values", () => {
@@ -461,16 +503,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"assets\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"assets\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"assets.include.[0]\\" to be of type string but got 222.
-            - Expected \\"assets.include.[1]\\" to be of type string but got 333.
-            - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
-            - Expected \\"assets.exclude.[1]\\" to be of type string but got 555."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"assets.include.[0]\\" to be of type string but got 222.
+			            - Expected \\"assets.include.[1]\\" to be of type string but got 333.
+			            - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
+			            - Expected \\"assets.exclude.[1]\\" to be of type string but got 555."
+		        `);
 			});
 		});
 
@@ -529,9 +571,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(normalizePath(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - Unexpected fields found in triggers field: \\"someOtherfield\\""
-      `);
+			        "Processing project/wrangler.toml configuration:
+			          - Unexpected fields found in triggers field: \\"someOtherfield\\""
+		      `);
 		});
 
 		it("should error on invalid `wasm_modules` paths", () => {
@@ -555,10 +597,10 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - Expected \\"wasm_modules['MODULE_1']\\" to be of type string but got 111.
-          - Expected \\"wasm_modules['MODULE_2']\\" to be of type string but got 222."
-      `);
+			        "Processing project/wrangler.toml configuration:
+			          - Expected \\"wasm_modules['MODULE_1']\\" to be of type string but got 111.
+			          - Expected \\"wasm_modules['MODULE_2']\\" to be of type string but got 222."
+		      `);
 		});
 
 		it("should map `text_blobs` paths from relative to the config path to relative to the cwd", () => {
@@ -608,10 +650,10 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
-          - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
-      `);
+			        "Processing project/wrangler.toml configuration:
+			          - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
+			          - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
+		      `);
 		});
 
 		it("should map `data_blobs` paths from relative to the config path to relative to the cwd", () => {
@@ -661,10 +703,10 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-        "Processing project/wrangler.toml configuration:
-          - Expected \\"data_blobs['MODULE_1']\\" to be of type string but got 111.
-          - Expected \\"data_blobs['MODULE_2']\\" to be of type string but got 222."
-      `);
+			        "Processing project/wrangler.toml configuration:
+			          - Expected \\"data_blobs['MODULE_1']\\" to be of type string but got 111.
+			          - Expected \\"data_blobs['MODULE_2']\\" to be of type string but got 222."
+		      `);
 		});
 
 		it("should resolve tsconfig relative to wrangler.toml", async () => {
@@ -711,12 +753,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1m😶 Ignored[0m: \\"type\\":
-              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-            - [1m😶 Ignored[0m: \\"webpack_config\\":
-              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
-        `);
+			          "Processing wrangler configuration:
+			            - [1m😶 Ignored[0m: \\"type\\":
+			              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
+			            - [1m😶 Ignored[0m: \\"webpack_config\\":
+			              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
+		        `);
 			});
 		});
 	});
@@ -821,19 +863,19 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time.
-          - \\"services\\" fields are experimental and may change or break at any time.
-          - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+			        "Processing wrangler configuration:
+			          - \\"unsafe\\" fields are experimental and may change or break at any time.
+			          - \\"services\\" fields are experimental and may change or break at any time.
+			          - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-              \`\`\`
-              [[migrations]]
-              tag = \\"v1\\" # Should be unique for each entry
-              new_classes = [\\"CLASS1\\"]
-              \`\`\`
+			              \`\`\`
+			              [[migrations]]
+			              tag = \\"v1\\" # Should be unique for each entry
+			              new_classes = [\\"CLASS1\\"]
+			              \`\`\`
 
-            Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
-      `);
+			            Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+		      `);
 		});
 
 		it("should error on invalid environment values", () => {
@@ -891,62 +933,62 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-          - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
-              666,
-              777,
-              {
-                \\"pattern\\": 123,
-                \\"zone_id\\": \\"zone_id_1\\"
-              },
-              {
-                \\"pattern\\": \\"route_2\\",
-                \\"zone_id\\": 123
-              },
-              {
-                \\"pattern\\": \\"route_2\\",
-                \\"zone_name\\": 123
-              },
-              {
-                \\"pattern\\": \\"route_3\\"
-              },
-              {
-                \\"zone_id\\": \\"zone_id_4\\"
-              },
-              {
-                \\"zone_name\\": \\"zone_name_4\\"
-              },
-              {},
-              {
-                \\"pattern\\": \\"route_5\\",
-                \\"zone_id\\": \\"zone_id_5\\",
-                \\"some_other_key\\": 123
-              },
-              {
-                \\"pattern\\": \\"route_5\\",
-                \\"zone_name\\": \\"zone_name_5\\",
-                \\"some_other_key\\": 123
-              }
-            ].
-          - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-          - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-          - Expected \\"build.command\\" to be of type string but got 1444.
-          - Expected \\"build.cwd\\" to be of type string but got 1555.
-          - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-          - Expected \\"account_id\\" to be of type string but got 222.
-          - Expected \\"compatibility_date\\" to be of type string but got 333.
-          - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-          - Expected \\"jsx_factory\\" to be of type string but got 999.
-          - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-          - Expected \\"tsconfig\\" to be of type string but got true.
-          - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-          - Expected \\"main\\" to be of type string but got 1333.
-          - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
-          - The field \\"define.DEF1\\" should be a string but got 1777.
-          - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-          - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
-      `);
+			"Processing wrangler configuration:
+			  - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+			  - Expected \\"account_id\\" to be of type string but got 222.
+			  - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+			      666,
+			      777,
+			      {
+			        \\"pattern\\": 123,
+			        \\"zone_id\\": \\"zone_id_1\\"
+			      },
+			      {
+			        \\"pattern\\": \\"route_2\\",
+			        \\"zone_id\\": 123
+			      },
+			      {
+			        \\"pattern\\": \\"route_2\\",
+			        \\"zone_name\\": 123
+			      },
+			      {
+			        \\"pattern\\": \\"route_3\\"
+			      },
+			      {
+			        \\"zone_id\\": \\"zone_id_4\\"
+			      },
+			      {
+			        \\"zone_name\\": \\"zone_name_4\\"
+			      },
+			      {},
+			      {
+			        \\"pattern\\": \\"route_5\\",
+			        \\"zone_id\\": \\"zone_id_5\\",
+			        \\"some_other_key\\": 123
+			      },
+			      {
+			        \\"pattern\\": \\"route_5\\",
+			        \\"zone_name\\": \\"zone_name_5\\",
+			        \\"some_other_key\\": 123
+			      }
+			    ].
+			  - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+			  - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+			  - Expected \\"build.command\\" to be of type string but got 1444.
+			  - Expected \\"build.cwd\\" to be of type string but got 1555.
+			  - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+			  - Expected \\"compatibility_date\\" to be of type string but got 333.
+			  - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+			  - Expected \\"jsx_factory\\" to be of type string but got 999.
+			  - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+			  - Expected \\"tsconfig\\" to be of type string but got true.
+			  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+			  - Expected \\"main\\" to be of type string but got 1333.
+			  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+			  - The field \\"define.DEF1\\" should be a string but got 1777.
+			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
+		`);
 		});
 
 		describe("name", () => {
@@ -964,9 +1006,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
+		        `);
 			});
 
 			it("should be valid `name` with underscores", () => {
@@ -999,9 +1041,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
+		        `);
 			});
 
 			it("should error on invalid `name` value with only special characters", () => {
@@ -1018,9 +1060,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
+		        `);
 			});
 		});
 
@@ -1049,25 +1091,25 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(normalizePath(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - [1mDeprecation[0m: \\"build.upload.format\\":
-              The format is inferred automatically from the code.
-            - [1mDeprecation[0m: \\"build.upload.main\\":
-              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-              Then add the top level \`main\` field to your configuration file:
-              \`\`\`
-              main = \\"src/index.ts\\"
-              \`\`\`
-            - [1mDeprecation[0m: \\"build.upload.dir\\":
-              Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-            - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-              \`\`\`
-              [[rules]]
-              type = \\"Text\\"
-              globs = [ \\"GLOB\\" ]
-              fallthrough = true
-              \`\`\`"
-        `);
+			          "Processing project/wrangler.toml configuration:
+			            - [1mDeprecation[0m: \\"build.upload.format\\":
+			              The format is inferred automatically from the code.
+			            - [1mDeprecation[0m: \\"build.upload.main\\":
+			              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+			              Then add the top level \`main\` field to your configuration file:
+			              \`\`\`
+			              main = \\"src/index.ts\\"
+			              \`\`\`
+			            - [1mDeprecation[0m: \\"build.upload.dir\\":
+			              Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
+			            - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
+			              \`\`\`
+			              [[rules]]
+			              type = \\"Text\\"
+			              globs = [ \\"GLOB\\" ]
+			              fallthrough = true
+			              \`\`\`"
+		        `);
 			});
 
 			it("should default custom build watch directories to src", () => {
@@ -1188,10 +1230,10 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizePath(diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
-          "Processing project/wrangler.toml configuration:
-            - Expected \\"build.watch_dir.[2]\\" to be of type string but got 123.
-            - Expected \\"build.watch_dir.[4]\\" to be of type string but got false."
-        `);
+			          "Processing project/wrangler.toml configuration:
+			            - Expected \\"build.watch_dir.[2]\\" to be of type string but got 123.
+			            - Expected \\"build.watch_dir.[4]\\" to be of type string but got false."
+		        `);
 			});
 		});
 
@@ -1208,9 +1250,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects\\" should be an object but got []."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects\\" should be an object but got []."
+		              `);
 			});
 
 			it("should error if durable_objects is a string", () => {
@@ -1225,9 +1267,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects\\" should be an object but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects\\" should be an object but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if durable_objects is a number", () => {
@@ -1242,9 +1284,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects\\" should be an object but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects\\" should be an object but got 999."
+		              `);
 			});
 
 			it("should error if durable_objects is null", () => {
@@ -1259,9 +1301,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects\\" should be an object but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects\\" should be an object but got null."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings is not defined", () => {
@@ -1276,9 +1318,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects\\" is missing the required \\"bindings\\" property."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects\\" is missing the required \\"bindings\\" property."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings is an object", () => {
@@ -1295,9 +1337,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects.bindings\\" should be an array but got {}."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects.bindings\\" should be an array but got {}."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings is a string", () => {
@@ -1314,9 +1356,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects.bindings\\" should be an array but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects.bindings\\" should be an array but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings is a number", () => {
@@ -1333,9 +1375,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects.bindings\\" should be an array but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects.bindings\\" should be an array but got 999."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings is null", () => {
@@ -1352,9 +1394,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"durable_objects.bindings\\" should be an array but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"durable_objects.bindings\\" should be an array but got null."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
@@ -1402,39 +1444,39 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"durable_objects.bindings[0]\\": {}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"class_name\\" field.
+			            - \\"durable_objects.bindings[0]\\": {}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"class_name\\" field.
 
-            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"MISSING_CLASS\\"}
-              - binding should have a string \\"class_name\\" field.
+			            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"MISSING_CLASS\\"}
+			              - binding should have a string \\"class_name\\" field.
 
-            - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"class_name\\" field.
+			            - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"class_name\\" field.
 
-            - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"class_name\\" field.
-              - the field \\"script_name\\", when present, should be a string.
+			            - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"class_name\\" field.
+			              - the field \\"script_name\\", when present, should be a string.
 
-            - \\"durable_objects.bindings[4]\\": {\\"name\\":\\"SOMENAME\\",\\"class_name\\":\\"SomeClass\\",\\"environment\\":\\"staging\\"}
-              - binding should have a \\"script_name\\" field if \\"environment\\" is present.
+			            - \\"durable_objects.bindings[4]\\": {\\"name\\":\\"SOMENAME\\",\\"class_name\\":\\"SomeClass\\",\\"environment\\":\\"staging\\"}
+			              - binding should have a \\"script_name\\" field if \\"environment\\" is present.
 
-            - \\"durable_objects.bindings[5]\\": {\\"name\\":1778,\\"class_name\\":1889,\\"script_name\\":1992,\\"environment\\":2111}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"class_name\\" field.
-              - the field \\"script_name\\", when present, should be a string.
-              - the field \\"environment\\", when present, should be a string.
+			            - \\"durable_objects.bindings[5]\\": {\\"name\\":1778,\\"class_name\\":1889,\\"script_name\\":1992,\\"environment\\":2111}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"class_name\\" field.
+			              - the field \\"script_name\\", when present, should be a string.
+			              - the field \\"environment\\", when present, should be a string.
 
-            - \\"durable_objects.bindings[6]\\": {\\"name\\":1772,\\"class_name\\":1883,\\"environment\\":2112}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"class_name\\" field.
-              - the field \\"environment\\", when present, should be a string.
-              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
-        `);
+			            - \\"durable_objects.bindings[6]\\": {\\"name\\":1772,\\"class_name\\":1883,\\"environment\\":2112}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"class_name\\" field.
+			              - the field \\"environment\\", when present, should be a string.
+			              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
+		        `);
 			});
 		});
 
@@ -1451,9 +1493,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"kv_namespaces\\" should be an array but got {}."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"kv_namespaces\\" should be an array but got {}."
+		              `);
 			});
 
 			it("should error if kv_namespaces is a string", () => {
@@ -1468,9 +1510,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"kv_namespaces\\" should be an array but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"kv_namespaces\\" should be an array but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if kv_namespaces is a number", () => {
@@ -1485,9 +1527,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"kv_namespaces\\" should be an array but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"kv_namespaces\\" should be an array but got 999."
+		              `);
 			});
 
 			it("should error if kv_namespaces is null", () => {
@@ -1502,9 +1544,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"kv_namespaces\\" should be an array but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"kv_namespaces\\" should be an array but got null."
+		              `);
 			});
 
 			it("should error if kv_namespaces.bindings are not valid", () => {
@@ -1532,14 +1574,14 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-            - \\"kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			            - \\"kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
+			            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
+			            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+		        `);
 			});
 		});
 
@@ -1556,9 +1598,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"r2_buckets\\" should be an array but got {}."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"r2_buckets\\" should be an array but got {}."
+		              `);
 			});
 
 			it("should error if r2_buckets is a string", () => {
@@ -1573,9 +1615,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"r2_buckets\\" should be an array but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"r2_buckets\\" should be an array but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if r2_buckets is a number", () => {
@@ -1590,9 +1632,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"r2_buckets\\" should be an array but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"r2_buckets\\" should be an array but got 999."
+		              `);
 			});
 
 			it("should error if r2_buckets is null", () => {
@@ -1607,9 +1649,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"r2_buckets\\" should be an array but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"r2_buckets\\" should be an array but got null."
+		              `);
 			});
 
 			it("should error if r2_buckets.bindings are not valid", () => {
@@ -1637,14 +1679,14 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-            - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			            - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+			            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+			            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+			            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+		        `);
 			});
 		});
 
@@ -1662,13 +1704,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"services\\" should be an array but got {}."
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"services\\" should be an array but got {}."
+		        `);
 			});
 
 			it("should error if services is a string", () => {
@@ -1684,13 +1726,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"services\\" should be an array but got \\"BAD\\"."
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"services\\" should be an array but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if services is a number", () => {
@@ -1706,13 +1748,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"services\\" should be an array but got 999."
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"services\\" should be an array but got 999."
+		        `);
 			});
 
 			it("should error if services is null", () => {
@@ -1728,13 +1770,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"services\\" should be an array but got null."
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"services\\" should be an array but got null."
+		        `);
 			});
 
 			it("should error if services bindings are not valid", () => {
@@ -1770,26 +1812,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services\\" fields are experimental and may change or break at any time."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
-            - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
-            - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
-            - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-            - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
-            - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-            - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-            - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-            - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-            - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-            - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-            - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
-            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
-        `);
+			          "Processing wrangler configuration:
+			            - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			            - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
+			            - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
+			            - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			            - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			            - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			            - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			            - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			            - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+			            - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+			            - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+			            - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+			            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+			            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
+		        `);
 			});
 		});
 
@@ -1805,13 +1847,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe\\" should be an object but got []."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe\\" should be an object but got []."
+		              `);
 			});
 
 			it("should error if unsafe is a string", () => {
@@ -1825,13 +1867,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe\\" should be an object but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe\\" should be an object but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if unsafe is a number", () => {
@@ -1845,13 +1887,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe\\" should be an object but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe\\" should be an object but got 999."
+		              `);
 			});
 
 			it("should error if unsafe is null", () => {
@@ -1865,13 +1907,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe\\" should be an object but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe\\" should be an object but got null."
+		              `);
 			});
 
 			it("should error if unsafe.bindings is not defined", () => {
@@ -1885,13 +1927,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe\\" is missing the required \\"bindings\\" property."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe\\" is missing the required \\"bindings\\" property."
+		              `);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
@@ -1907,13 +1949,13 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe.bindings\\" should be an array but got {}."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.bindings\\" should be an array but got {}."
+		              `);
 			});
 
 			it("should error if unsafe.bindings is a string", () => {
@@ -1929,13 +1971,13 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe.bindings\\" should be an array but got \\"BAD\\"."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.bindings\\" should be an array but got \\"BAD\\"."
+		              `);
 			});
 
 			it("should error if unsafe.bindings is a number", () => {
@@ -1951,13 +1993,13 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe.bindings\\" should be an array but got 999."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.bindings\\" should be an array but got 999."
+		              `);
 			});
 
 			it("should error if unsafe.bindings is null", () => {
@@ -1973,13 +2015,13 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - The field \\"unsafe.bindings\\" should be an array but got null."
-              `);
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.bindings\\" should be an array but got null."
+		              `);
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
@@ -2008,23 +2050,23 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-                  "Processing wrangler configuration:
-                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-              `);
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"unsafe.bindings[0]\\": {}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"type\\" field.
+			            - \\"unsafe.bindings[0]\\": {}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"type\\" field.
 
-            - \\"unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-              - binding should have a string \\"type\\" field.
+			            - \\"unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
+			              - binding should have a string \\"type\\" field.
 
-            - \\"unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-              - binding should have a string \\"name\\" field.
-              - binding should have a string \\"type\\" field."
-        `);
+			            - \\"unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
+			              - binding should have a string \\"name\\" field.
+			              - binding should have a string \\"type\\" field."
+		        `);
 			});
 		});
 
@@ -2053,12 +2095,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - [1mDeprecation[0m: \\"zone_id\\":
-              This is unnecessary since we can deduce this from routes directly.
-            - [1mDeprecation[0m: \\"experimental_services\\":
-              The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
-        `);
+			          "Processing wrangler configuration:
+			            - [1mDeprecation[0m: \\"zone_id\\":
+			              This is unnecessary since we can deduce this from routes directly.
+			            - [1mDeprecation[0m: \\"experimental_services\\":
+			              The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
+		        `);
 			});
 		});
 
@@ -2076,9 +2118,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+		        `);
 			});
 		});
 	});
@@ -2090,20 +2132,20 @@ describe("normalizeAndValidateConfig()", () => {
 				env: "DEV",
 			});
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-        "
-      `);
+			        "Processing wrangler configuration:
+			        "
+		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - No environment found in configuration with name \\"DEV\\".
-            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+			        "Processing wrangler configuration:
+			          - No environment found in configuration with name \\"DEV\\".
+			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
 
-            Consider adding an environment configuration section to the wrangler.toml file:
-            \`\`\`
-            [env.DEV]
-            \`\`\`
-        "
-      `);
+			            Consider adding an environment configuration section to the wrangler.toml file:
+			            \`\`\`
+			            [env.DEV]
+			            \`\`\`
+			        "
+		      `);
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {
@@ -2112,21 +2154,21 @@ describe("normalizeAndValidateConfig()", () => {
 				env: "DEV",
 			});
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - No environment found in configuration with name \\"DEV\\".
-            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
-            The available configured environment names are: [\\"ENV1\\"]
+			        "Processing wrangler configuration:
+			          - No environment found in configuration with name \\"DEV\\".
+			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+			            The available configured environment names are: [\\"ENV1\\"]
 
-            Consider adding an environment configuration section to the wrangler.toml file:
-            \`\`\`
-            [env.DEV]
-            \`\`\`
-        "
-      `);
+			            Consider adding an environment configuration section to the wrangler.toml file:
+			            \`\`\`
+			            [env.DEV]
+			            \`\`\`
+			        "
+		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-        "
-      `);
+			        "Processing wrangler configuration:
+			        "
+		      `);
 		});
 
 		it("should use top-level values for inheritable config fields", () => {
@@ -2251,9 +2293,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-        `);
+			          "Processing wrangler configuration:
+			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+		        `);
 			});
 
 			it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
@@ -2276,16 +2318,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-        `);
+			          "Processing wrangler configuration:
+			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.DEV\\" environment configuration
-              - The \\"name\\" field is not allowed in named service environments.
-                Please remove the field from this environment."
-        `);
+			            - \\"env.DEV\\" environment configuration
+			              - The \\"name\\" field is not allowed in named service environments.
+			                Please remove the field from this environment."
+		        `);
 			});
 
 			it("should error if top-level config and a named environment both contain a `name` field", () => {
@@ -2309,16 +2351,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-        `);
+			          "Processing wrangler configuration:
+			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.DEV\\" environment configuration
-              - The \\"name\\" field is not allowed in named service environments.
-                Please remove the field from this environment."
-        `);
+			            - \\"env.DEV\\" environment configuration
+			              - The \\"name\\" field is not allowed in named service environments.
+			                Please remove the field from this environment."
+		        `);
 			});
 		});
 
@@ -2341,16 +2383,16 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(true);
 			expect(config.account_id).toBeUndefined();
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-      `);
+			        "Processing wrangler configuration:
+			          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+		      `);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
+			        "Processing wrangler configuration:
 
-          - \\"env.DEV\\" environment configuration
-            - The \\"account_id\\" field is not allowed in named service environments.
-              Please remove the field from this environment."
-      `);
+			          - \\"env.DEV\\" environment configuration
+			            - The \\"account_id\\" field is not allowed in named service environments.
+			              Please remove the field from this environment."
+		      `);
 		});
 
 		it("should error if top-level config and a named environment both contain a `account_id` field", () => {
@@ -2374,16 +2416,16 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(true);
 			expect(diagnostics.hasWarnings()).toBe(true);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-      `);
+			        "Processing wrangler configuration:
+			          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+		      `);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
+			        "Processing wrangler configuration:
 
-          - \\"env.DEV\\" environment configuration
-            - The \\"account_id\\" field is not allowed in named service environments.
-              Please remove the field from this environment."
-      `);
+			          - \\"env.DEV\\" environment configuration
+			            - The \\"account_id\\" field is not allowed in named service environments.
+			              Please remove the field from this environment."
+		      `);
 		});
 
 		it("should warn for non-inherited fields that are missing in environments", () => {
@@ -2429,28 +2471,28 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
-          - \\"unsafe\\" fields are experimental and may change or break at any time.
-          - \\"env.ENV1\\" environment configuration
-            - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"vars\\" is not inherited by environments.
-              Please add \\"vars\\" to \\"env.ENV1\\".
-            - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"define\\" is not inherited by environments.
-              Please add \\"define\\" to \\"env.ENV1\\".
-            - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-              Please add \\"durable_objects\\" to \\"env.ENV1\\".
-            - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
-              Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
-            - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
-              Please add \\"r2_buckets\\" to \\"env.ENV1\\".
-            - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
-              This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-              Please add \\"unsafe\\" to \\"env.ENV1\\"."
-      `);
+			        "Processing wrangler configuration:
+			          - \\"unsafe\\" fields are experimental and may change or break at any time.
+			          - \\"env.ENV1\\" environment configuration
+			            - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"vars\\" is not inherited by environments.
+			              Please add \\"vars\\" to \\"env.ENV1\\".
+			            - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"define\\" is not inherited by environments.
+			              Please add \\"define\\" to \\"env.ENV1\\".
+			            - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
+			              Please add \\"durable_objects\\" to \\"env.ENV1\\".
+			            - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
+			              Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
+			            - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
+			              Please add \\"r2_buckets\\" to \\"env.ENV1\\".
+			            - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
+			              This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
+			              Please add \\"unsafe\\" to \\"env.ENV1\\"."
+		      `);
 		});
 
 		it("should error on invalid environment values", () => {
@@ -2486,31 +2528,31 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-        "Processing wrangler configuration:
+			"Processing wrangler configuration:
 
-          - \\"env.ENV1\\" environment configuration
-            - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-            - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
-                666,
-                777
-              ].
-            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-            - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-            - Expected \\"build.command\\" to be of type string but got 1444.
-            - Expected \\"build.cwd\\" to be of type string but got 1555.
-            - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-            - Expected \\"account_id\\" to be of type string but got 222.
-            - Expected \\"compatibility_date\\" to be of type string but got 333.
-            - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-            - Expected \\"jsx_factory\\" to be of type string but got 999.
-            - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-            - Expected \\"tsconfig\\" to be of type string but got 123.
-            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-            - Expected \\"main\\" to be of type string but got 1333.
-            - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
-            - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-            - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
-      `);
+			  - \\"env.ENV1\\" environment configuration
+			    - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+			    - Expected \\"account_id\\" to be of type string but got 222.
+			    - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+			        666,
+			        777
+			      ].
+			    - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+			    - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+			    - Expected \\"build.command\\" to be of type string but got 1444.
+			    - Expected \\"build.cwd\\" to be of type string but got 1555.
+			    - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+			    - Expected \\"compatibility_date\\" to be of type string but got 333.
+			    - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+			    - Expected \\"jsx_factory\\" to be of type string but got 999.
+			    - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+			    - Expected \\"tsconfig\\" to be of type string but got 123.
+			    - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+			    - Expected \\"main\\" to be of type string but got 1333.
+			    - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
+		`);
 		});
 
 		describe("[define]", () => {
@@ -2548,10 +2590,10 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"define\\" should be an object but got 123.
-          "
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"define\\" should be an object but got 123.
+			          "
+		        `);
 			});
 
 			it("should error if the values on config.define are not strings", () => {
@@ -2580,11 +2622,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - The field \\"define.abc\\" should be a string but got 123.
-            - The field \\"define.ghi\\" should be a string but got true.
-            - The field \\"define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
-        `);
+			          "Processing wrangler configuration:
+			            - The field \\"define.abc\\" should be a string but got 123.
+			            - The field \\"define.ghi\\" should be a string but got true.
+			            - The field \\"define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
+		        `);
 			});
 
 			describe("named environments", () => {
@@ -2640,12 +2682,12 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(true);
 
 					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-            "Processing wrangler configuration:
+				            "Processing wrangler configuration:
 
-              - \\"env.ENV1\\" environment configuration
-                - The field \\"env.ENV1.define\\" should be an object but got 123.
-            "
-          `);
+				              - \\"env.ENV1\\" environment configuration
+				                - The field \\"env.ENV1.define\\" should be an object but got 123.
+				            "
+			          `);
 				});
 
 				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", () => {
@@ -2675,16 +2717,16 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 
 					expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-            "Processing wrangler configuration:
+				            "Processing wrangler configuration:
 
-              - \\"env.ENV1\\" environment configuration
-                - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
-                  This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
-                  Please add \\"define.ghi\\" to \\"env.ENV1\\".
-                - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
-                  This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
-                  Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
-          `);
+				              - \\"env.ENV1\\" environment configuration
+				                - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
+				                  This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
+				                  Please add \\"define.ghi\\" to \\"env.ENV1\\".
+				                - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
+				                  This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
+				                  Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
+			          `);
 				});
 
 				it("should error if the values on config.define in an environment are not strings", () => {
@@ -2724,13 +2766,13 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(true);
 
 					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-            "Processing wrangler configuration:
+				            "Processing wrangler configuration:
 
-              - \\"env.ENV1\\" environment configuration
-                - The field \\"env.ENV1.define.abc\\" should be a string but got 123.
-                - The field \\"env.ENV1.define.ghi\\" should be a string but got true.
-                - The field \\"env.ENV1.define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
-          `);
+				              - \\"env.ENV1\\" environment configuration
+				                - The field \\"env.ENV1.define.abc\\" should be a string but got 123.
+				                - The field \\"env.ENV1.define.ghi\\" should be a string but got true.
+				                - The field \\"env.ENV1.define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
+			          `);
 				});
 			});
 		});
@@ -2748,11 +2790,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects\\" should be an object but got []."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects\\" should be an object but got []."
+		        `);
 			});
 
 			it("should error if durable_objects is a string", () => {
@@ -2767,11 +2809,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects\\" should be an object but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects\\" should be an object but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if durable_objects is a number", () => {
@@ -2786,11 +2828,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects\\" should be an object but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects\\" should be an object but got 999."
+		        `);
 			});
 
 			it("should error if durable_objects is null", () => {
@@ -2805,11 +2847,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects\\" should be an object but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects\\" should be an object but got null."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings is not defined", () => {
@@ -2824,11 +2866,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects\\" is missing the required \\"bindings\\" property."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects\\" is missing the required \\"bindings\\" property."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings is an object", () => {
@@ -2847,11 +2889,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got {}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got {}."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings is a string", () => {
@@ -2870,11 +2912,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings is a number", () => {
@@ -2893,11 +2935,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got 999."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings is null", () => {
@@ -2916,11 +2958,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got null."
+		        `);
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
@@ -2955,26 +2997,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
+			            - \\"env.ENV1\\" environment configuration
 
-              - \\"env.ENV1.durable_objects.bindings[0]\\": {}
-                - binding should have a string \\"name\\" field.
-                - binding should have a string \\"class_name\\" field.
+			              - \\"env.ENV1.durable_objects.bindings[0]\\": {}
+			                - binding should have a string \\"name\\" field.
+			                - binding should have a string \\"class_name\\" field.
 
-              - \\"env.ENV1.durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
-                - binding should have a string \\"class_name\\" field.
+			              - \\"env.ENV1.durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
+			                - binding should have a string \\"class_name\\" field.
 
-              - \\"env.ENV1.durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-                - binding should have a string \\"name\\" field.
-                - binding should have a string \\"class_name\\" field.
+			              - \\"env.ENV1.durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
+			                - binding should have a string \\"name\\" field.
+			                - binding should have a string \\"class_name\\" field.
 
-              - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-                - binding should have a string \\"name\\" field.
-                - binding should have a string \\"class_name\\" field.
-                - the field \\"script_name\\", when present, should be a string."
-        `);
+			              - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
+			                - binding should have a string \\"name\\" field.
+			                - binding should have a string \\"class_name\\" field.
+			                - the field \\"script_name\\", when present, should be a string."
+		        `);
 			});
 		});
 
@@ -2991,11 +3033,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got {}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got {}."
+		        `);
 			});
 
 			it("should error if kv_namespaces is a string", () => {
@@ -3010,11 +3052,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if kv_namespaces is a number", () => {
@@ -3029,11 +3071,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got 999."
+		        `);
 			});
 
 			it("should error if kv_namespaces is null", () => {
@@ -3048,11 +3090,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got null."
+		        `);
 			});
 
 			it("should error if kv_namespaces.bindings are not valid", () => {
@@ -3084,16 +3126,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-              - \\"env.ENV1.kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-              - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
+			              - \\"env.ENV1.kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
+			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			              - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+		        `);
 			});
 		});
 
@@ -3110,11 +3152,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.r2_buckets\\" should be an array but got {}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got {}."
+		        `);
 			});
 
 			it("should error if r2_buckets is a string", () => {
@@ -3129,11 +3171,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.r2_buckets\\" should be an array but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if r2_buckets is a number", () => {
@@ -3148,11 +3190,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.r2_buckets\\" should be an array but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got 999."
+		        `);
 			});
 
 			it("should error if r2_buckets is null", () => {
@@ -3167,11 +3209,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.r2_buckets\\" should be an array but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got null."
+		        `);
 			});
 
 			it("should error if r2_buckets.bindings are not valid", () => {
@@ -3203,16 +3245,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-              - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-              - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+			              - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+			              - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+		        `);
 			});
 		});
 
@@ -3228,17 +3270,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe\\" should be an object but got []."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe\\" should be an object but got []."
+		        `);
 			});
 
 			it("should error if unsafe is a string", () => {
@@ -3252,17 +3294,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe\\" should be an object but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe\\" should be an object but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if unsafe is a number", () => {
@@ -3276,17 +3318,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe\\" should be an object but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe\\" should be an object but got 999."
+		        `);
 			});
 
 			it("should error if unsafe is null", () => {
@@ -3300,17 +3342,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe\\" should be an object but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe\\" should be an object but got null."
+		        `);
 			});
 
 			it("should error if unsafe.bindings is not defined", () => {
@@ -3324,17 +3366,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect.not.objectContaining({ unsafe: expect.anything })
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe\\" is missing the required \\"bindings\\" property."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe\\" is missing the required \\"bindings\\" property."
+		        `);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
@@ -3352,17 +3394,17 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got {}."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got {}."
+		        `);
 			});
 
 			it("should error if unsafe.bindings is a string", () => {
@@ -3380,17 +3422,17 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got \\"BAD\\"."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got \\"BAD\\"."
+		        `);
 			});
 
 			it("should error if unsafe.bindings is a number", () => {
@@ -3408,17 +3450,17 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got 999."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got 999."
+		        `);
 			});
 
 			it("should error if unsafe.bindings is null", () => {
@@ -3436,17 +3478,17 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got null."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got null."
+		        `);
 			});
 
 			it("should error if unsafe.bindings are not valid", () => {
@@ -3479,27 +3521,27 @@ describe("normalizeAndValidateConfig()", () => {
 					})
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - \\"unsafe\\" fields are experimental and may change or break at any time."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
+			            - \\"env.ENV1\\" environment configuration
 
-              - \\"env.ENV1.unsafe.bindings[0]\\": {}
-                - binding should have a string \\"name\\" field.
-                - binding should have a string \\"type\\" field.
+			              - \\"env.ENV1.unsafe.bindings[0]\\": {}
+			                - binding should have a string \\"name\\" field.
+			                - binding should have a string \\"type\\" field.
 
-              - \\"env.ENV1.unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-                - binding should have a string \\"type\\" field.
+			              - \\"env.ENV1.unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
+			                - binding should have a string \\"type\\" field.
 
-              - \\"env.ENV1.unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-                - binding should have a string \\"name\\" field.
-                - binding should have a string \\"type\\" field."
-        `);
+			              - \\"env.ENV1.unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
+			                - binding should have a string \\"name\\" field.
+			                - binding should have a string \\"type\\" field."
+		        `);
 			});
 		});
 
@@ -3532,14 +3574,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - [1mDeprecation[0m: \\"zone_id\\":
-                This is unnecessary since we can deduce this from routes directly.
-              - [1mDeprecation[0m: \\"experimental_services\\":
-                The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - [1mDeprecation[0m: \\"zone_id\\":
+			                This is unnecessary since we can deduce this from routes directly.
+			              - [1mDeprecation[0m: \\"experimental_services\\":
+			                The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
+		        `);
 			});
 		});
 
@@ -3585,11 +3627,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
+			          "Processing wrangler configuration:
 
-            - \\"env.ENV1\\" environment configuration
-              - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-        `);
+			            - \\"env.ENV1\\" environment configuration
+			              - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+		        `);
 			});
 
 			it("should error if both route and routes are specified in the top-level environment", () => {
@@ -3633,9 +3675,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-          "Processing wrangler configuration:
-            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-        `);
+			          "Processing wrangler configuration:
+			            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
+		        `);
 			});
 
 			it("should not error if <env>.route and <top-level>.routes are specified", () => {
