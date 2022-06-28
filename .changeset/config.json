@@ -1,13 +1,13 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@1.6.2/schema.json",
-  "changelog": [
-    "@changesets/changelog-github",
-    { "repo": "cloudflare/wrangler2" }
-  ],
-  "commit": false,
-  "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": []
+	"$schema": "https://unpkg.com/@changesets/config@1.6.2/schema.json",
+	"changelog": [
+		"@changesets/changelog-github",
+		{ "repo": "cloudflare/wrangler2" }
+	],
+	"commit": false,
+	"linked": [],
+	"access": "public",
+	"baseBranch": "main",
+	"updateInternalDependencies": "patch",
+	"ignore": []
 }

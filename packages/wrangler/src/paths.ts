@@ -1,7 +1,7 @@
 import { assert } from "console";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
-  _discriminator: Discriminator;
+	_discriminator: Discriminator;
 };
 
 /**
@@ -18,9 +18,9 @@ export type UrlPath = DiscriminatedPath<"UrlPath">;
  * Replaces all back-slashes with forward-slashes, and throws an error if the path contains a drive letter (e.g. `C:`).
  */
 export function toUrlPath(path: string): UrlPath {
-  assert(
-    !/^[a-z]:/i.test(path),
-    "Tried to convert a Windows file path with a drive to a URL path."
-  );
-  return path.replace(/\\/g, "/") as UrlPath;
+	assert(
+		!/^[a-z]:/i.test(path),
+		"Tried to convert a Windows file path with a drive to a URL path."
+	);
+	return path.replace(/\\/g, "/") as UrlPath;
 }

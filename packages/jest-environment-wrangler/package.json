@@ -1,22 +1,22 @@
 {
-  "name": "jest-environment-wrangler",
-  "version": "0.0.31",
-  "description": "A jest environment for Cloudflare Workers, powered by wrangler.",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "esbuild src/index.ts --outfile=dist/index.js --target=es2020 --sourcemap --platform=node --format=cjs",
-    "check:type": "tsc"
-  },
-  "prepublishOnly": "npm run build",
-  "keywords": [
-    "jest",
-    "wrangler",
-    "cloudflare",
-    "cloudflare-workers"
-  ],
-  "author": "wrangler@cloudflare.com",
-  "license": "ISC",
-  "dependencies": {
-    "jest-environment-miniflare": "^2.5.1"
-  }
+	"name": "jest-environment-wrangler",
+	"version": "0.0.31",
+	"description": "A jest environment for Cloudflare Workers, powered by wrangler.",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "esbuild src/index.ts --outfile=dist/index.js --target=es2020 --sourcemap --platform=node --format=cjs",
+		"check:type": "tsc"
+	},
+	"prepublishOnly": "npm run build",
+	"keywords": [
+		"jest",
+		"wrangler",
+		"cloudflare",
+		"cloudflare-workers"
+	],
+	"author": "wrangler@cloudflare.com",
+	"license": "ISC",
+	"dependencies": {
+		"jest-environment-miniflare": "^2.5.1"
+	}
 }

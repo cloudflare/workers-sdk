@@ -1,18 +1,18 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "target": "ES2018",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "jsx": "react",
-    "noEmit": false,
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "outDir": "lib",
-    "types": ["jest"]
-  },
-  "include": ["src"],
-  "exclude": ["src/__tests__"]
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"target": "ES2018",
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"jsx": "react",
+		"noEmit": false,
+		"emitDeclarationOnly": true,
+		"declaration": true,
+		"outDir": "lib",
+		"types": ["jest"]
+	},
+	"include": ["src"],
+	"exclude": ["src/__tests__"]
 }

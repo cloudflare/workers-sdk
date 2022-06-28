@@ -8,17 +8,17 @@ import type { RequestInit } from "undici";
  * The signature of the function that will handle a mock request.
  */
 export type MockHandler<ResponseType> = (
-  uri: RegExpExecArray,
-  init: RequestInit,
-  queryParams: URLSearchParams
+	uri: RegExpExecArray,
+	init: RequestInit,
+	queryParams: URLSearchParams
 ) => ResponseType | Promise<ResponseType>;
 
 type RemoveMockFn = () => void;
 
 interface MockFetch<ResponseType> {
-  regexp: RegExp;
-  method: string | undefined;
-  handler: MockHandler<ResponseType>;
+	regexp: RegExp;
+	method: string | undefined;
+	handler: MockHandler<ResponseType>;
 }
 const mocks: MockFetch<unknown>[] = [];
 
@@ -30,23 +30,23 @@ const mocks: MockFetch<unknown>[] = [];
  * Once found the handler will be used to generate a mock response.
  */
 export async function mockFetchInternal(
-  resource: string,
-  init: RequestInit = {},
-  queryParams: URLSearchParams = new URLSearchParams()
+	resource: string,
+	init: RequestInit = {},
+	queryParams: URLSearchParams = new URLSearchParams()
 ) {
-  for (const { regexp, method, handler } of mocks) {
-    const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
-    const uri = regexp.exec(resourcePath);
-    // Do the resource path and (if specified) the HTTP method match?
-    if (uri !== null && (!method || method === (init.method ?? "GET"))) {
-      // The `resource` regular expression will extract the labelled groups from the URL.
-      // These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
-      return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
-    }
-  }
-  throw new Error(
-    `no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
-  );
+	for (const { regexp, method, handler } of mocks) {
+		const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
+		const uri = regexp.exec(resourcePath);
+		// Do the resource path and (if specified) the HTTP method match?
+		if (uri !== null && (!method || method === (init.method ?? "GET"))) {
+			// The `resource` regular expression will extract the labelled groups from the URL.
+			// These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
+			return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+		}
+	}
+	throw new Error(
+		`no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
+	);
 }
 
 /**
@@ -57,8 +57,8 @@ export async function mockFetchInternal(
  * @param handler The function that will generate the mock response for this request.
  */
 export function setMockRawResponse<ResponseType>(
-  resource: string,
-  handler: MockHandler<ResponseType>
+	resource: string,
+	handler: MockHandler<ResponseType>
 ): RemoveMockFn;
 /**
  * Specify an expected resource path that is to be handled, resulting in a raw JSON response.
@@ -69,32 +69,32 @@ export function setMockRawResponse<ResponseType>(
  * @param handler The function that will generate the mock response for this request.
  */
 export function setMockRawResponse<ResponseType>(
-  resource: string,
-  method: string,
-  handler: MockHandler<ResponseType>
+	resource: string,
+	method: string,
+	handler: MockHandler<ResponseType>
 ): RemoveMockFn;
 /**
  * Specify an expected resource path that is to be handled, resulting in a raw JSON response.
  */
 export function setMockRawResponse<ResponseType>(
-  resource: string,
-  ...args: [string, MockHandler<ResponseType>] | [MockHandler<ResponseType>]
+	resource: string,
+	...args: [string, MockHandler<ResponseType>] | [MockHandler<ResponseType>]
 ): RemoveMockFn {
-  const handler = args.pop() as MockHandler<ResponseType>;
-  const method = args.pop() as string;
-  const mock = {
-    resource,
-    method,
-    handler,
-    regexp: pathToRegexp(resource),
-  };
-  mocks.push(mock);
-  return () => {
-    const mockIndex = mocks.indexOf(mock);
-    if (mockIndex !== -1) {
-      mocks.splice(mockIndex, 1);
-    }
-  };
+	const handler = args.pop() as MockHandler<ResponseType>;
+	const method = args.pop() as string;
+	const mock = {
+		resource,
+		method,
+		handler,
+		regexp: pathToRegexp(resource),
+	};
+	mocks.push(mock);
+	return () => {
+		const mockIndex = mocks.indexOf(mock);
+		if (mockIndex !== -1) {
+			mocks.splice(mockIndex, 1);
+		}
+	};
 }
 
 /**
@@ -107,8 +107,8 @@ export function setMockRawResponse<ResponseType>(
  * @param handler The function that will generate the mock response for this request.
  */
 export function setMockResponse<ResponseType>(
-  resource: string,
-  handler: MockHandler<ResponseType>
+	resource: string,
+	handler: MockHandler<ResponseType>
 ): RemoveMockFn;
 /**
  * Specify an expected resource path that is to be handled, resulting in a FetchRequest..
@@ -119,48 +119,48 @@ export function setMockResponse<ResponseType>(
  * @param handler The function that will generate the mock response for this request.
  */
 export function setMockResponse<ResponseType>(
-  resource: string,
-  method: string,
-  handler: MockHandler<ResponseType>
+	resource: string,
+	method: string,
+	handler: MockHandler<ResponseType>
 ): RemoveMockFn;
 /**
  * Specify an expected resource path that is to be handled, resulting in a FetchRequest.
  */
 export function setMockResponse<ResponseType>(
-  resource: string,
-  ...args: [string, MockHandler<ResponseType>] | [MockHandler<ResponseType>]
+	resource: string,
+	...args: [string, MockHandler<ResponseType>] | [MockHandler<ResponseType>]
 ): RemoveMockFn {
-  const handler = args.pop() as MockHandler<ResponseType>;
-  const method = args.pop() as string;
-  return setMockRawResponse(resource, method, (...handlerArgs) =>
-    createFetchResult(handler(...handlerArgs))
-  );
+	const handler = args.pop() as MockHandler<ResponseType>;
+	const method = args.pop() as string;
+	return setMockRawResponse(resource, method, (...handlerArgs) =>
+		createFetchResult(handler(...handlerArgs))
+	);
 }
 
 /**
  * A helper to make it easier to create `FetchResult` objects in tests.
  */
 export async function createFetchResult<ResponseType>(
-  result: ResponseType | Promise<ResponseType>,
-  success = true,
-  errors: FetchError[] = [],
-  messages: string[] = [],
-  result_info?: unknown
+	result: ResponseType | Promise<ResponseType>,
+	success = true,
+	errors: FetchError[] = [],
+	messages: string[] = [],
+	result_info?: unknown
 ): Promise<FetchResult<ResponseType>> {
-  return result_info
-    ? {
-        result: await result,
-        success,
-        errors,
-        messages,
-        result_info,
-      }
-    : {
-        result: await result,
-        success,
-        errors,
-        messages,
-      };
+	return result_info
+		? {
+				result: await result,
+				success,
+				errors,
+				messages,
+				result_info,
+		  }
+		: {
+				result: await result,
+				success,
+				errors,
+				messages,
+		  };
 }
 
 /**
@@ -169,7 +169,7 @@ export async function createFetchResult<ResponseType>(
  * This should be called in an `afterEach()` block to ensure that mock handlers do not leak between tests.
  */
 export function unsetAllMocks() {
-  mocks.length = 0;
+	mocks.length = 0;
 }
 
 /**
@@ -185,27 +185,27 @@ const kvGetMocks = new Map<string, string | Buffer>();
  * @mocked typeof fetchKVGetValue
  */
 export function mockFetchKVGetValue(
-  accountId: string,
-  namespaceId: string,
-  key: string
+	accountId: string,
+	namespaceId: string,
+	key: string
 ) {
-  const mapKey = `${accountId}/${namespaceId}/${key}`;
-  if (kvGetMocks.has(mapKey)) {
-    const value = kvGetMocks.get(mapKey);
-    if (value !== undefined) return Promise.resolve(value);
-  }
-  throw new Error(`no mock value found for \`kv:key get\` - ${mapKey}`);
+	const mapKey = `${accountId}/${namespaceId}/${key}`;
+	if (kvGetMocks.has(mapKey)) {
+		const value = kvGetMocks.get(mapKey);
+		if (value !== undefined) return Promise.resolve(value);
+	}
+	throw new Error(`no mock value found for \`kv:key get\` - ${mapKey}`);
 }
 
 export function setMockFetchKVGetValue(
-  accountId: string,
-  namespaceId: string,
-  key: string,
-  value: string | Buffer
+	accountId: string,
+	namespaceId: string,
+	key: string,
+	value: string | Buffer
 ) {
-  kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
+	kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
 }
 
 export function unsetMockFetchKVGetValues() {
-  kvGetMocks.clear();
+	kvGetMocks.clear();
 }

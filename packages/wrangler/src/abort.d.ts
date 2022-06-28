@@ -1,3 +1,3 @@
 declare interface AbortSignal {
-  addEventListener(event: "abort", handler: () => void);
+	addEventListener(event: "abort", handler: () => void);
 }

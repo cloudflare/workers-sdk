@@ -1,138 +1,142 @@
 {
-  "name": "wrangler-root",
-  "version": "0.0.0",
-  "author": "wrangler@cloudflare.com",
-  "description": "Monorepo for wrangler and associated packages",
-  "license": "MIT OR Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/cloudflare/wrangler2/issues"
-  },
-  "homepage": "https://github.com/cloudflare/wrangler2#readme",
-  "workspaces": [
-    "packages/*",
-    "fixtures/*"
-  ],
-  "dependencies": {
-    "@changesets/changelog-github": "^0.4.4",
-    "@changesets/cli": "^2.22.0",
-    "@types/jest": "^27.4.1",
-    "@types/node": "^16.11.11",
-    "@typescript-eslint/eslint-plugin": "^5.18.0",
-    "@typescript-eslint/parser": "^5.18.0",
-    "esbuild-jest": "0.5.0",
-    "esbuild-register": "^3.3.2",
-    "eslint": "^8.13.0",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-react": "^7.29.4",
-    "eslint-plugin-react-hooks": "^4.4.0",
-    "eslint-plugin-unused-imports": "^2.0.0",
-    "ioredis": "^4.28.2",
-    "jest": "^27.5.1",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^2.6.2",
-    "typescript": "^4.6.3"
-  },
-  "scripts": {
-    "check": "run-p check:* --aggregate-output --continue-on-error",
-    "check:type": "npm run check:type --workspaces --if-present",
-    "check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
-    "check:format": "prettier packages/** .changeset --check --ignore-unknown",
-    "build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
-    "test": "npm run test --workspaces --if-present",
-    "fix": "npm run prettify && npm run check:lint -- --fix",
-    "prettify": "prettier packages/** --write --ignore-unknown"
-  },
-  "engines": {
-    "node": ">=16.7.0"
-  },
-  "eslintConfig": {
-    "root": true,
-    "ignorePatterns": [
-      "packages/wrangler/vendor",
-      "packages/wrangler/*-dist",
-      "packages/wrangler/pages/functions/template-worker.ts",
-      "packages/wrangler/templates",
-      "examples/remix-pages-app/public",
-      "packages/jest-environment-wrangler/dist"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": 2020,
-      "project": [
-        "tsconfig.json"
-      ],
-      "sourceType": "module"
-    },
-    "plugins": [
-      "@typescript-eslint",
-      "eslint-plugin-react",
-      "eslint-plugin-react-hooks",
-      "import",
-      "unused-imports"
-    ],
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    },
-    "overrides": [
-      {
-        "files": [
-          "*.ts",
-          "*.tsx"
-        ],
-        "extends": [
-          "eslint:recommended",
-          "plugin:@typescript-eslint/recommended",
-          "plugin:react/recommended",
-          "plugin:react-hooks/recommended",
-          "plugin:import/typescript"
-        ],
-        "rules": {
-          "@typescript-eslint/consistent-type-imports": [
-            "error"
-          ],
-          "no-shadow": "error",
-          "@typescript-eslint/no-floating-promises": "error",
-          "@typescript-eslint/no-explicit-any": "error",
-          "no-empty": "off",
-          "require-yield": "off",
-          "no-empty-function": "off",
-          "@typescript-eslint/no-empty-function": "off",
-          "@typescript-eslint/no-unused-vars": "off",
-          "import/order": [
-            "warn",
-            {
-              "groups": [
-                "builtin",
-                "external",
-                "internal",
-                "parent",
-                "sibling",
-                "index",
-                "object",
-                "type"
-              ],
-              "alphabetize": {
-                "order": "asc"
-              }
-            }
-          ],
-          "unused-imports/no-unused-imports": "error",
-          "unused-imports/no-unused-vars": [
-            "warn",
-            {
-              "vars": "all",
-              "varsIgnorePattern": "^_",
-              "args": "after-used",
-              "argsIgnorePattern": "^_"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  "volta": {
-    "node": "16.7.0"
-  }
+	"name": "wrangler-root",
+	"version": "0.0.0",
+	"author": "wrangler@cloudflare.com",
+	"description": "Monorepo for wrangler and associated packages",
+	"license": "MIT OR Apache-2.0",
+	"bugs": {
+		"url": "https://github.com/cloudflare/wrangler2/issues"
+	},
+	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"workspaces": [
+		"packages/*",
+		"fixtures/*"
+	],
+	"dependencies": {
+		"@changesets/changelog-github": "^0.4.4",
+		"@changesets/cli": "^2.22.0",
+		"@types/jest": "^27.4.1",
+		"@types/node": "^16.11.11",
+		"@typescript-eslint/eslint-plugin": "^5.18.0",
+		"@typescript-eslint/parser": "^5.18.0",
+		"esbuild-jest": "0.5.0",
+		"esbuild-register": "^3.3.2",
+		"eslint": "^8.13.0",
+		"eslint-plugin-import": "^2.26.0",
+		"eslint-plugin-react": "^7.29.4",
+		"eslint-plugin-react-hooks": "^4.4.0",
+		"eslint-plugin-unused-imports": "^2.0.0",
+		"ioredis": "^4.28.2",
+		"jest": "^27.5.1",
+		"npm-run-all": "^4.1.5",
+		"prettier": "^2.6.2",
+		"typescript": "^4.6.3"
+	},
+	"scripts": {
+		"check": "run-p check:* --aggregate-output --continue-on-error",
+		"check:type": "npm run check:type --workspaces --if-present",
+		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
+		"check:format": "prettier packages/** .changeset --check --ignore-unknown",
+		"build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
+		"test": "npm run test --workspaces --if-present",
+		"fix": "npm run prettify && npm run check:lint -- --fix",
+		"prettify": "prettier packages/** --write --ignore-unknown"
+	},
+	"engines": {
+		"node": ">=16.7.0"
+	},
+	"eslintConfig": {
+		"root": true,
+		"ignorePatterns": [
+			"packages/wrangler/vendor",
+			"packages/wrangler/*-dist",
+			"packages/wrangler/pages/functions/template-worker.ts",
+			"packages/wrangler/templates",
+			"examples/remix-pages-app/public",
+			"packages/jest-environment-wrangler/dist"
+		],
+		"parser": "@typescript-eslint/parser",
+		"parserOptions": {
+			"ecmaVersion": 2020,
+			"project": [
+				"tsconfig.json"
+			],
+			"sourceType": "module"
+		},
+		"plugins": [
+			"@typescript-eslint",
+			"eslint-plugin-react",
+			"eslint-plugin-react-hooks",
+			"import",
+			"unused-imports"
+		],
+		"settings": {
+			"react": {
+				"version": "detect"
+			}
+		},
+		"overrides": [
+			{
+				"files": [
+					"*.ts",
+					"*.tsx"
+				],
+				"extends": [
+					"eslint:recommended",
+					"plugin:@typescript-eslint/recommended",
+					"plugin:react/recommended",
+					"plugin:react-hooks/recommended",
+					"plugin:import/typescript"
+				],
+				"rules": {
+					"@typescript-eslint/consistent-type-imports": [
+						"error"
+					],
+					"no-shadow": "error",
+					"@typescript-eslint/no-floating-promises": "error",
+					"@typescript-eslint/no-explicit-any": "error",
+					"no-empty": "off",
+					"require-yield": "off",
+					"no-empty-function": "off",
+					"@typescript-eslint/no-empty-function": "off",
+					"@typescript-eslint/no-unused-vars": "off",
+					"import/order": [
+						"warn",
+						{
+							"groups": [
+								"builtin",
+								"external",
+								"internal",
+								"parent",
+								"sibling",
+								"index",
+								"object",
+								"type"
+							],
+							"alphabetize": {
+								"order": "asc"
+							}
+						}
+					],
+					"unused-imports/no-unused-imports": "error",
+					"unused-imports/no-unused-vars": [
+						"warn",
+						{
+							"vars": "all",
+							"varsIgnorePattern": "^_",
+							"args": "after-used",
+							"argsIgnorePattern": "^_"
+						}
+					],
+					"no-mixed-spaces-and-tabs": [
+						"error",
+						"smart-tabs"
+					]
+				}
+			}
+		]
+	},
+	"volta": {
+		"node": "16.7.0"
+	}
 }

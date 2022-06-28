@@ -4,11 +4,11 @@ import * as path from "node:path";
 import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import {
-  createKVNamespace,
-  listKVNamespaceKeys,
-  listKVNamespaces,
-  putKVBulkKeyValue,
-  deleteKVBulkKeyValue,
+	createKVNamespace,
+	listKVNamespaceKeys,
+	listKVNamespaces,
+	putKVBulkKeyValue,
+	deleteKVBulkKeyValue,
 } from "./kv";
 import { logger } from "./logger";
 import type { Config } from "./config";
@@ -18,27 +18,27 @@ import type { XXHashAPI } from "xxhash-wasm";
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = new Set(["node_modules"]);
 const HIDDEN_FILES_TO_INCLUDE = new Set([
-  ".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
+	".well-known", // See https://datatracker.ietf.org/doc/html/rfc8615
 ]);
 
 async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
-  const files = await readdir(dirPath, { withFileTypes: true });
-  for (const file of files) {
-    // Skip files that we never want to process.
-    if (ALWAYS_IGNORE.has(file.name)) {
-      continue;
-    }
-    // Skip hidden files (starting with .) except for some special ones
-    if (file.name.startsWith(".") && !HIDDEN_FILES_TO_INCLUDE.has(file.name)) {
-      continue;
-    }
-    // TODO: follow symlinks??
-    if (file.isDirectory()) {
-      yield* await getFilesInFolder(path.join(dirPath, file.name));
-    } else {
-      yield path.join(dirPath, file.name);
-    }
-  }
+	const files = await readdir(dirPath, { withFileTypes: true });
+	for (const file of files) {
+		// Skip files that we never want to process.
+		if (ALWAYS_IGNORE.has(file.name)) {
+			continue;
+		}
+		// Skip hidden files (starting with .) except for some special ones
+		if (file.name.startsWith(".") && !HIDDEN_FILES_TO_INCLUDE.has(file.name)) {
+			continue;
+		}
+		// TODO: follow symlinks??
+		if (file.isDirectory()) {
+			yield* await getFilesInFolder(path.join(dirPath, file.name));
+		} else {
+			yield path.join(dirPath, file.name);
+		}
+	}
 }
 
 /**
@@ -49,7 +49,7 @@ async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
  * it's impossible to serve two different files with the same name
  */
 function hashFileContent(hasher: XXHashAPI, content: string): string {
-  return hasher.h64ToString(content).substring(0, 10);
+	return hasher.h64ToString(content).substring(0, 10);
 }
 
 /**
@@ -59,37 +59,37 @@ function hashFileContent(hasher: XXHashAPI, content: string): string {
  * The algorithm used here matches that of Wrangler 1.
  */
 function hashAsset(
-  hasher: XXHashAPI,
-  filePath: string,
-  content: string
+	hasher: XXHashAPI,
+	filePath: string,
+	content: string
 ): string {
-  const extName = path.extname(filePath) || "";
-  const baseName = path.basename(filePath, extName);
-  const directory = path.dirname(filePath);
-  const hash = hashFileContent(hasher, content);
-  return urlSafe(path.join(directory, `${baseName}.${hash}${extName}`));
+	const extName = path.extname(filePath) || "";
+	const baseName = path.basename(filePath, extName);
+	const directory = path.dirname(filePath);
+	const hash = hashFileContent(hasher, content);
+	return urlSafe(path.join(directory, `${baseName}.${hash}${extName}`));
 }
 
 async function createKVNamespaceIfNotAlreadyExisting(
-  title: string,
-  accountId: string
+	title: string,
+	accountId: string
 ) {
-  // check if it already exists
-  // TODO: this is super inefficient, should be made better
-  const namespaces = await listKVNamespaces(accountId);
-  const found = namespaces.find((x) => x.title === title);
-  if (found) {
-    return { created: false, id: found.id };
-  }
+	// check if it already exists
+	// TODO: this is super inefficient, should be made better
+	const namespaces = await listKVNamespaces(accountId);
+	const found = namespaces.find((x) => x.title === title);
+	if (found) {
+		return { created: false, id: found.id };
+	}
 
-  // else we make the namespace
-  const id = await createKVNamespace(accountId, title);
-  logger.log(`🌀 Created namespace for Workers Site "${title}"`);
+	// else we make the namespace
+	const id = await createKVNamespace(accountId, title);
+	logger.log(`🌀 Created namespace for Workers Site "${title}"`);
 
-  return {
-    created: true,
-    id,
-  };
+	return {
+		created: true,
+		id,
+	};
 }
 
 /**
@@ -104,139 +104,139 @@ async function createKVNamespaceIfNotAlreadyExisting(
  * asset in the KV namespace.
  */
 export async function syncAssets(
-  accountId: string | undefined,
-  scriptName: string,
-  siteAssets: AssetPaths | undefined,
-  preview: boolean,
-  dryRun: boolean | undefined
+	accountId: string | undefined,
+	scriptName: string,
+	siteAssets: AssetPaths | undefined,
+	preview: boolean,
+	dryRun: boolean | undefined
 ): Promise<{
-  manifest: { [filePath: string]: string } | undefined;
-  namespace: string | undefined;
+	manifest: { [filePath: string]: string } | undefined;
+	namespace: string | undefined;
 }> {
-  if (siteAssets === undefined) {
-    return { manifest: undefined, namespace: undefined };
-  }
+	if (siteAssets === undefined) {
+		return { manifest: undefined, namespace: undefined };
+	}
 
-  if (dryRun) {
-    logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
-    return { manifest: undefined, namespace: undefined };
-  }
-  assert(accountId, "Missing accountId");
+	if (dryRun) {
+		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
+		return { manifest: undefined, namespace: undefined };
+	}
+	assert(accountId, "Missing accountId");
 
-  const title = `__${scriptName}-workers_sites_assets${
-    preview ? "_preview" : ""
-  }`;
+	const title = `__${scriptName}-workers_sites_assets${
+		preview ? "_preview" : ""
+	}`;
 
-  const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
-    title,
-    accountId
-  );
+	const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
+		title,
+		accountId
+	);
 
-  // let's get all the keys in this namespace
-  const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
-  const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
+	// let's get all the keys in this namespace
+	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
+	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
-  const manifest: Record<string, string> = {};
+	const manifest: Record<string, string> = {};
 
-  // A batch of uploads where each bucket has to be less than 100mb
-  const uploadBuckets: KeyValue[][] = [];
-  // The "live" bucket that we'll keep filling until it's just below 100mb
-  let uploadBucket: KeyValue[] = [];
-  // A size counter for the live bucket
-  let uploadBucketSize = 0;
+	// A batch of uploads where each bucket has to be less than 100mb
+	const uploadBuckets: KeyValue[][] = [];
+	// The "live" bucket that we'll keep filling until it's just below 100mb
+	let uploadBucket: KeyValue[] = [];
+	// A size counter for the live bucket
+	let uploadBucketSize = 0;
 
-  const include = createPatternMatcher(siteAssets.includePatterns, false);
-  const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
-  const hasher = await xxhash();
+	const include = createPatternMatcher(siteAssets.includePatterns, false);
+	const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
+	const hasher = await xxhash();
 
-  const assetDirectory = path.join(
-    siteAssets.baseDirectory,
-    siteAssets.assetDirectory
-  );
-  for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
-    const assetFile = path.relative(assetDirectory, absAssetFile);
-    if (!include(assetFile)) {
-      continue;
-    }
-    if (exclude(assetFile)) {
-      continue;
-    }
+	const assetDirectory = path.join(
+		siteAssets.baseDirectory,
+		siteAssets.assetDirectory
+	);
+	for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
+		const assetFile = path.relative(assetDirectory, absAssetFile);
+		if (!include(assetFile)) {
+			continue;
+		}
+		if (exclude(assetFile)) {
+			continue;
+		}
 
-    logger.log(`Reading ${assetFile}...`);
-    const content = await readFile(absAssetFile, "base64");
-    await validateAssetSize(absAssetFile, assetFile);
-    // while KV accepts files that are 25 MiB **before** b64 encoding
-    // the overall bucket size must be below 100 MiB **after** b64 encoding
-    const assetSize = Buffer.from(content).length;
-    const assetKey = hashAsset(hasher, assetFile, content);
-    validateAssetKey(assetKey);
+		logger.log(`Reading ${assetFile}...`);
+		const content = await readFile(absAssetFile, "base64");
+		await validateAssetSize(absAssetFile, assetFile);
+		// while KV accepts files that are 25 MiB **before** b64 encoding
+		// the overall bucket size must be below 100 MiB **after** b64 encoding
+		const assetSize = Buffer.from(content).length;
+		const assetKey = hashAsset(hasher, assetFile, content);
+		validateAssetKey(assetKey);
 
-    // now put each of the files into kv
-    if (!namespaceKeys.has(assetKey)) {
-      logger.log(`Uploading as ${assetKey}...`);
+		// now put each of the files into kv
+		if (!namespaceKeys.has(assetKey)) {
+			logger.log(`Uploading as ${assetKey}...`);
 
-      // Check if adding this asset to the bucket would
-      // push it over the 100 MiB limit KV bulk API limit
-      if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
-        // If so, move the current bucket into the batch,
-        // and reset the counter/bucket
-        uploadBuckets.push(uploadBucket);
-        uploadBucketSize = 0;
-        uploadBucket = [];
-      }
+			// Check if adding this asset to the bucket would
+			// push it over the 100 MiB limit KV bulk API limit
+			if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
+				// If so, move the current bucket into the batch,
+				// and reset the counter/bucket
+				uploadBuckets.push(uploadBucket);
+				uploadBucketSize = 0;
+				uploadBucket = [];
+			}
 
-      // Update the bucket and the size counter
-      uploadBucketSize += assetSize;
-      uploadBucket.push({
-        key: assetKey,
-        value: content,
-        base64: true,
-      });
-    } else {
-      logger.log(`Skipping - already uploaded.`);
-    }
+			// Update the bucket and the size counter
+			uploadBucketSize += assetSize;
+			uploadBucket.push({
+				key: assetKey,
+				value: content,
+				base64: true,
+			});
+		} else {
+			logger.log(`Skipping - already uploaded.`);
+		}
 
-    // Remove the key from the set so we know what we've already uploaded
-    namespaceKeys.delete(assetKey);
+		// Remove the key from the set so we know what we've already uploaded
+		namespaceKeys.delete(assetKey);
 
-    // Prevent different manifest keys on windows
-    const manifestKey = urlSafe(path.relative(assetDirectory, absAssetFile));
-    manifest[manifestKey] = assetKey;
-  }
+		// Prevent different manifest keys on windows
+		const manifestKey = urlSafe(path.relative(assetDirectory, absAssetFile));
+		manifest[manifestKey] = assetKey;
+	}
 
-  // Add the last (potentially only) bucket to the batch
-  uploadBuckets.push(uploadBucket);
+	// Add the last (potentially only) bucket to the batch
+	uploadBuckets.push(uploadBucket);
 
-  // keys now contains all the files we're deleting
-  for (const key of namespaceKeys) {
-    logger.log(`Deleting ${key} from the asset store...`);
-  }
+	// keys now contains all the files we're deleting
+	for (const key of namespaceKeys) {
+		logger.log(`Deleting ${key} from the asset store...`);
+	}
 
-  // upload each bucket in parallel
-  const bucketsToPut = [];
-  for (const bucket of uploadBuckets) {
-    bucketsToPut.push(putKVBulkKeyValue(accountId, namespace, bucket));
-  }
-  await Promise.all(bucketsToPut);
+	// upload each bucket in parallel
+	const bucketsToPut = [];
+	for (const bucket of uploadBuckets) {
+		bucketsToPut.push(putKVBulkKeyValue(accountId, namespace, bucket));
+	}
+	await Promise.all(bucketsToPut);
 
-  // then delete all the assets that aren't used anymore
-  await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
+	// then delete all the assets that aren't used anymore
+	await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
 
-  logger.log("↗️  Done syncing assets");
+	logger.log("↗️  Done syncing assets");
 
-  return { manifest, namespace };
+	return { manifest, namespace };
 }
 
 function createPatternMatcher(
-  patterns: string[],
-  exclude: boolean
+	patterns: string[],
+	exclude: boolean
 ): (filePath: string) => boolean {
-  if (patterns.length === 0) {
-    return (_filePath) => !exclude;
-  } else {
-    const ignorer = ignore().add(patterns);
-    return (filePath) => ignorer.test(filePath).ignored;
-  }
+	if (patterns.length === 0) {
+		return (_filePath) => !exclude;
+	} else {
+		const ignorer = ignore().add(patterns);
+		return (filePath) => ignorer.test(filePath).ignored;
+	}
 }
 
 /**
@@ -246,23 +246,23 @@ function createPatternMatcher(
  * @param relativeFilePath
  */
 async function validateAssetSize(
-  absFilePath: string,
-  relativeFilePath: string
+	absFilePath: string,
+	relativeFilePath: string
 ): Promise<void> {
-  const { size } = await stat(absFilePath);
-  if (size > 25 * 1024 * 1024) {
-    throw new Error(
-      `File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
-    );
-  }
+	const { size } = await stat(absFilePath);
+	if (size > 25 * 1024 * 1024) {
+		throw new Error(
+			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+		);
+	}
 }
 
 function validateAssetKey(assetKey: string) {
-  if (assetKey.length > 512) {
-    throw new Error(
-      `The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
-    );
-  }
+	if (assetKey.length > 512) {
+		throw new Error(
+			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
+		);
+	}
 }
 
 /**
@@ -271,31 +271,31 @@ function validateAssetKey(assetKey: string) {
  * Primarily this involves converting Windows backslashes to forward slashes.
  */
 function urlSafe(filePath: string): string {
-  return filePath.replace(/\\/g, "/");
+	return filePath.replace(/\\/g, "/");
 }
 
 /**
  * Information about the assets that should be uploaded
  */
 export interface AssetPaths {
-  /**
-   * Absolute path to the root of the project.
-   *
-   * This is the directory containing wrangler.toml or cwd if no config.
-   */
-  baseDirectory: string;
-  /**
-   * The path to the assets directory, relative to the `baseDirectory`.
-   */
-  assetDirectory: string;
-  /**
-   * An array of patterns that match files that should be uploaded.
-   */
-  includePatterns: string[];
-  /**
-   * An array of patterns that match files that should not be uploaded.
-   */
-  excludePatterns: string[];
+	/**
+	 * Absolute path to the root of the project.
+	 *
+	 * This is the directory containing wrangler.toml or cwd if no config.
+	 */
+	baseDirectory: string;
+	/**
+	 * The path to the assets directory, relative to the `baseDirectory`.
+	 */
+	assetDirectory: string;
+	/**
+	 * An array of patterns that match files that should be uploaded.
+	 */
+	includePatterns: string[];
+	/**
+	 * An array of patterns that match files that should not be uploaded.
+	 */
+	excludePatterns: string[];
 }
 
 /**
@@ -308,34 +308,34 @@ export interface AssetPaths {
  *
  */
 export function getAssetPaths(
-  config: Config,
-  assetDirectory: string | undefined
+	config: Config,
+	assetDirectory: string | undefined
 ): AssetPaths | undefined {
-  const baseDirectory = assetDirectory
-    ? process.cwd()
-    : path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
+	const baseDirectory = assetDirectory
+		? process.cwd()
+		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 
-  assetDirectory ??=
-    typeof config.assets === "string"
-      ? config.assets
-      : config.assets !== undefined
-      ? config.assets.bucket
-      : undefined;
+	assetDirectory ??=
+		typeof config.assets === "string"
+			? config.assets
+			: config.assets !== undefined
+			? config.assets.bucket
+			: undefined;
 
-  const includePatterns =
-    (typeof config.assets !== "string" && config.assets?.include) || [];
+	const includePatterns =
+		(typeof config.assets !== "string" && config.assets?.include) || [];
 
-  const excludePatterns =
-    (typeof config.assets !== "string" && config.assets?.exclude) || [];
+	const excludePatterns =
+		(typeof config.assets !== "string" && config.assets?.exclude) || [];
 
-  return assetDirectory
-    ? {
-        baseDirectory,
-        assetDirectory,
-        includePatterns,
-        excludePatterns,
-      }
-    : undefined;
+	return assetDirectory
+		? {
+				baseDirectory,
+				assetDirectory,
+				includePatterns,
+				excludePatterns,
+		  }
+		: undefined;
 }
 
 /**
@@ -348,25 +348,25 @@ export function getAssetPaths(
  *
  */
 export function getSiteAssetPaths(
-  config: Config,
-  assetDirectory?: string,
-  includePatterns = config.site?.include ?? [],
-  excludePatterns = config.site?.exclude ?? []
+	config: Config,
+	assetDirectory?: string,
+	includePatterns = config.site?.include ?? [],
+	excludePatterns = config.site?.exclude ?? []
 ): AssetPaths | undefined {
-  const baseDirectory = assetDirectory
-    ? process.cwd()
-    : path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
+	const baseDirectory = assetDirectory
+		? process.cwd()
+		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 
-  assetDirectory ??= config.site?.bucket;
+	assetDirectory ??= config.site?.bucket;
 
-  if (assetDirectory) {
-    return {
-      baseDirectory,
-      assetDirectory,
-      includePatterns,
-      excludePatterns,
-    };
-  } else {
-    return undefined;
-  }
+	if (assetDirectory) {
+		return {
+			baseDirectory,
+			assetDirectory,
+			includePatterns,
+			excludePatterns,
+		};
+	} else {
+		return undefined;
+	}
 }

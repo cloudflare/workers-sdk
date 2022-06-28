@@ -5,39 +5,39 @@ import manifest from "__STATIC_CONTENT_MANIFEST";
 const ASSET_MANIFEST = JSON.parse(manifest);
 
 export default {
-  async fetch(request, env, ctx) {
-    let options = {
-      ASSET_MANIFEST,
-      ASSET_NAMESPACE: env.__STATIC_CONTENT,
-    };
+	async fetch(request, env, ctx) {
+		let options = {
+			ASSET_MANIFEST,
+			ASSET_NAMESPACE: env.__STATIC_CONTENT,
+		};
 
-    try {
-      const page = await getAssetFromKV(
-        {
-          request,
-          waitUntil(promise) {
-            return ctx.waitUntil(promise);
-          },
-        },
-        options
-      );
+		try {
+			const page = await getAssetFromKV(
+				{
+					request,
+					waitUntil(promise) {
+						return ctx.waitUntil(promise);
+					},
+				},
+				options
+			);
 
-      // allow headers to be altered
-      const response = new Response(page.body, page);
+			// allow headers to be altered
+			const response = new Response(page.body, page);
 
-      response.headers.set("X-XSS-Protection", "1; mode=block");
-      response.headers.set("X-Content-Type-Options", "nosniff");
-      response.headers.set("X-Frame-Options", "DENY");
-      response.headers.set("Referrer-Policy", "unsafe-url");
-      response.headers.set("Feature-Policy", "none");
+			response.headers.set("X-XSS-Protection", "1; mode=block");
+			response.headers.set("X-Content-Type-Options", "nosniff");
+			response.headers.set("X-Frame-Options", "DENY");
+			response.headers.set("Referrer-Policy", "unsafe-url");
+			response.headers.set("Feature-Policy", "none");
 
-      return response;
-    } catch (e) {
-      console.error(e);
-      // if an error is thrown then serve from actual worker
-      return worker.fetch(request, env, ctx);
-      // TODO: throw here if worker is not available
-      // (which implies it may be a service-worker)
-    }
-  },
+			return response;
+		} catch (e) {
+			console.error(e);
+			// if an error is thrown then serve from actual worker
+			return worker.fetch(request, env, ctx);
+			// TODO: throw here if worker is not available
+			// (which implies it may be a service-worker)
+		}
+	},
 };

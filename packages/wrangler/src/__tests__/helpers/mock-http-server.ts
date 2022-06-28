@@ -7,40 +7,40 @@ import type { Request } from "undici";
  * @returns a `fetch`-like function that will trigger the mock server to handle the request.
  */
 export function mockHttpServer() {
-  let listener: http.RequestListener;
+	let listener: http.RequestListener;
 
-  beforeEach(() => {
-    jest
-      .spyOn(http, "createServer")
-      .mockImplementation((...args: unknown[]) => {
-        listener = args.pop() as http.RequestListener;
-        return {
-          listen: jest.fn(),
-          close(callback?: (err?: Error) => void) {
-            callback?.();
-            return this;
-          },
-        } as unknown as http.Server;
-      });
-  });
+	beforeEach(() => {
+		jest
+			.spyOn(http, "createServer")
+			.mockImplementation((...args: unknown[]) => {
+				listener = args.pop() as http.RequestListener;
+				return {
+					listen: jest.fn(),
+					close(callback?: (err?: Error) => void) {
+						callback?.();
+						return this;
+					},
+				} as unknown as http.Server;
+			});
+	});
 
-  return async (req: Request) => {
-    const resp = new http.ServerResponse(
-      // If you squint you can just about see that an `IncomingMessages` is like a `Request`!
-      req as unknown as http.IncomingMessage
-    );
+	return async (req: Request) => {
+		const resp = new http.ServerResponse(
+			// If you squint you can just about see that an `IncomingMessages` is like a `Request`!
+			req as unknown as http.IncomingMessage
+		);
 
-    // The listener will attache a callback to the response by calling `resp.end(callback)`.
-    // We want to capture that so that we can trigger it after the listener has completed its work.
-    const endSpy = jest.spyOn(resp, "end");
+		// The listener will attache a callback to the response by calling `resp.end(callback)`.
+		// We want to capture that so that we can trigger it after the listener has completed its work.
+		const endSpy = jest.spyOn(resp, "end");
 
-    // The `await` here is important to allow the listener to complete its async work before we end the response.
-    await listener(req as unknown as http.IncomingMessage, resp);
+		// The `await` here is important to allow the listener to complete its async work before we end the response.
+		await listener(req as unknown as http.IncomingMessage, resp);
 
-    // Now trigger the end callback.
-    const endCallback = endSpy.mock.calls[0].pop();
-    endCallback?.();
+		// Now trigger the end callback.
+		const endCallback = endSpy.mock.calls[0].pop();
+		endCallback?.();
 
-    return resp;
-  };
+		return resp;
+	};
 }

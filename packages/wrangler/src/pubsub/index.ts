@@ -1,57 +1,57 @@
 import { fetchResult } from "../cfetch";
 
 export const pubSubBetaWarning =
-  "👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/";
+	"👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/";
 
 /**
  * Namespaces represent a collection of Pub/Sub Brokers.
  */
 export interface PubSubNamespace {
-  id?: string;
-  name: string;
-  description?: string;
-  created_on?: string;
-  modified_on?: string;
+	id?: string;
+	name: string;
+	description?: string;
+	created_on?: string;
+	modified_on?: string;
 }
 
 /**
  * A Pub/Sub Broker's on-publish hook configuration.
  */
 export interface PubSubBrokerOnPublish {
-  url: string;
+	url: string;
 }
 /**
  * PubSubBroker represents a single Broker configuration and endpoint.
  */
 export interface PubSubBroker {
-  id?: string;
-  name: string;
-  description?: string;
-  auth_type?: string;
-  expiration?: number;
-  created_on?: string;
-  modified_on?: string;
-  on_publish?: PubSubBrokerOnPublish;
+	id?: string;
+	name: string;
+	description?: string;
+	auth_type?: string;
+	expiration?: number;
+	created_on?: string;
+	modified_on?: string;
+	on_publish?: PubSubBrokerOnPublish;
 }
 
 /**
  * PubSubBrokerUpdate is the set of values that can be updated on an existing Broker.
  */
 export interface PubSubBrokerUpdate {
-  description?: string;
-  expiration?: number;
-  on_publish?: PubSubBrokerOnPublish;
+	description?: string;
+	expiration?: number;
+	on_publish?: PubSubBrokerOnPublish;
 }
 
 /**
  * Fetch a list of all the Namespaces under the given `accountId`.
  */
 export async function listPubSubNamespaces(
-  accountId: string
+	accountId: string
 ): Promise<PubSubNamespace[]> {
-  return await fetchResult<PubSubNamespace[]>(
-    `/accounts/${accountId}/pubsub/namespaces`
-  );
+	return await fetchResult<PubSubNamespace[]>(
+		`/accounts/${accountId}/pubsub/namespaces`
+	);
 }
 
 /**
@@ -62,13 +62,13 @@ export async function listPubSubNamespaces(
  * Namespaces are globally unique.
  */
 export async function createPubSubNamespace(
-  accountId: string,
-  namespace: PubSubNamespace
+	accountId: string,
+	namespace: PubSubNamespace
 ): Promise<void> {
-  return await fetchResult<void>(`/accounts/${accountId}/pubsub/namespaces`, {
-    method: "POST",
-    body: JSON.stringify(namespace),
-  });
+	return await fetchResult<void>(`/accounts/${accountId}/pubsub/namespaces`, {
+		method: "POST",
+		body: JSON.stringify(namespace),
+	});
 }
 
 /**
@@ -77,26 +77,26 @@ export async function createPubSubNamespace(
  * Deleting a namespace is destructive and should be done with care.
  */
 export async function deletePubSubNamespace(
-  accountId: string,
-  namespace: string
+	accountId: string,
+	namespace: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}`,
-    { method: "DELETE" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}`,
+		{ method: "DELETE" }
+	);
 }
 
 /**
  * Describe a single Pub/Sub Namespace by its `namespace` name.
  */
 export async function describePubSubNamespace(
-  accountId: string,
-  namespace: string
+	accountId: string,
+	namespace: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}`,
-    { method: "GET" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}`,
+		{ method: "GET" }
+	);
 }
 
 /**
@@ -106,69 +106,69 @@ export async function describePubSubNamespace(
  * connections to the Broker.
  */
 export async function deletePubSubBroker(
-  accountId: string,
-  namespace: string,
-  broker: string
+	accountId: string,
+	namespace: string,
+	broker: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
-    { method: "DELETE" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
+		{ method: "DELETE" }
+	);
 }
 
 /**
  * Describe a single Pub/Sub Broker for the given `broker` name within the associated `namespace`.
  */
 export async function describePubSubBroker(
-  accountId: string,
-  namespace: string,
-  broker: string
+	accountId: string,
+	namespace: string,
+	broker: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
-    { method: "GET" }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
+		{ method: "GET" }
+	);
 }
 
 /**
  * Fetch a list of all the Pub/Sub Brokers under the given `namespace`.
  */
 export async function listPubSubBrokers(
-  accountId: string,
-  namespace: string
+	accountId: string,
+	namespace: string
 ): Promise<PubSubBroker[]> {
-  return await fetchResult<PubSubBroker[]>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`
-  );
+	return await fetchResult<PubSubBroker[]>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`
+	);
 }
 
 /**
  * Create a Pub/Sub Broker within given `namespace`.
  */
 export async function createPubSubBroker(
-  accountId: string,
-  namespace: string,
-  broker: PubSubBroker
+	accountId: string,
+	namespace: string,
+	broker: PubSubBroker
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`,
-    { method: "POST", body: JSON.stringify(broker) }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers`,
+		{ method: "POST", body: JSON.stringify(broker) }
+	);
 }
 
 /**
  * Update a Pub/Sub Broker configuration.
  */
 export async function updatePubSubBroker(
-  accountId: string,
-  namespace: string,
-  broker: string,
-  update: PubSubBrokerUpdate
+	accountId: string,
+	namespace: string,
+	broker: string,
+	update: PubSubBrokerUpdate
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
-    { method: "PATCH", body: JSON.stringify(update) }
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}`,
+		{ method: "PATCH", body: JSON.stringify(update) }
+	);
 }
 
 /**
@@ -177,13 +177,13 @@ export async function updatePubSubBroker(
  * These keys can be used for verifying Pub/Sub on-publish hooks over HTTPS.
  */
 export async function getPubSubBrokerPublicKeys(
-  accountId: string,
-  namespace: string,
-  broker: string
+	accountId: string,
+	namespace: string,
+	broker: string
 ): Promise<Record<string, string>> {
-  return await fetchResult<Record<string, string>>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/publickeys`
-  );
+	return await fetchResult<Record<string, string>>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/publickeys`
+	);
 }
 
 /**
@@ -192,35 +192,35 @@ export async function getPubSubBrokerPublicKeys(
  * Multiple credentials can be generated at once by providing a `number`.
  */
 export async function issuePubSubBrokerTokens(
-  accountId: string,
-  namespace: string,
-  broker: string,
-  number: number,
-  type: string,
-  clientIds?: string[],
-  expiration?: number
+	accountId: string,
+	namespace: string,
+	broker: string,
+	number: number,
+	type: string,
+	clientIds?: string[],
+	expiration?: number
 ): Promise<Record<string, string>> {
-  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials`;
+	let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/credentials`;
 
-  const params = new URLSearchParams();
-  params.append("number", `${number}`);
-  params.append("type", type);
+	const params = new URLSearchParams();
+	params.append("number", `${number}`);
+	params.append("type", type);
 
-  if (clientIds) {
-    for (const id of clientIds) {
-      params.append("clientid", id);
-    }
-  }
+	if (clientIds) {
+		for (const id of clientIds) {
+			params.append("clientid", id);
+		}
+	}
 
-  if (expiration) {
-    params.append("expiration", `${expiration}`);
-  }
+	if (expiration) {
+		params.append("expiration", `${expiration}`);
+	}
 
-  // We have to concat these as the URL class requires a base URL, which we
-  // don't know within the scope of this function.
-  url = url + `?${params.toString()}`;
+	// We have to concat these as the URL class requires a base URL, which we
+	// don't know within the scope of this function.
+	url = url + `?${params.toString()}`;
 
-  return await fetchResult<Record<string, string>>(url);
+	return await fetchResult<Record<string, string>>(url);
 }
 
 /**
@@ -230,20 +230,20 @@ export async function issuePubSubBrokerTokens(
  * Multiple credentials can be revoked at once.
  */
 export async function revokePubSubBrokerTokens(
-  accountId: string,
-  namespace: string,
-  broker: string,
-  jti: string[]
+	accountId: string,
+	namespace: string,
+	broker: string,
+	jti: string[]
 ): Promise<void> {
-  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
+	let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
 
-  const params = new URLSearchParams();
-  for (const j of jti) {
-    params.append("jti", j);
-  }
+	const params = new URLSearchParams();
+	for (const j of jti) {
+		params.append("jti", j);
+	}
 
-  url = url + `?${params.toString()}`;
-  return await fetchResult<void>(url, { method: "POST", body: "" });
+	url = url + `?${params.toString()}`;
+	return await fetchResult<void>(url, { method: "POST", body: "" });
 }
 
 /**
@@ -254,19 +254,19 @@ export async function revokePubSubBrokerTokens(
  * Credentials that have expired may be unrevoked, but will no longer be valid.
  */
 export async function unrevokePubSubBrokerTokens(
-  accountId: string,
-  namespace: string,
-  broker: string,
-  jti: string[]
+	accountId: string,
+	namespace: string,
+	broker: string,
+	jti: string[]
 ): Promise<void> {
-  let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
-  const params = new URLSearchParams();
-  for (const j of jti) {
-    params.append("jti", j);
-  }
+	let url = `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`;
+	const params = new URLSearchParams();
+	for (const j of jti) {
+		params.append("jti", j);
+	}
 
-  url = url + `?${params.toString()}`;
-  return await fetchResult<void>(url, { method: "DELETE" });
+	url = url + `?${params.toString()}`;
+	return await fetchResult<void>(url, { method: "DELETE" });
 }
 
 /**
@@ -276,11 +276,11 @@ export async function unrevokePubSubBrokerTokens(
  * This shows all existing revocations against a Broker.
  */
 export async function listRevokedPubSubBrokerTokens(
-  accountId: string,
-  namespace: string,
-  broker: string
+	accountId: string,
+	namespace: string,
+	broker: string
 ): Promise<void> {
-  return await fetchResult<void>(
-    `/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
-  );
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
+	);
 }

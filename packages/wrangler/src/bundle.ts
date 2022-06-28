@@ -11,10 +11,10 @@ import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
 type BundleResult = {
-  modules: CfModule[];
-  resolvedEntryPointPath: string;
-  bundleType: "esm" | "commonjs";
-  stop: (() => void) | undefined;
+	modules: CfModule[];
+	resolvedEntryPointPath: string;
+	bundleType: "esm" | "commonjs";
+	stop: (() => void) | undefined;
 };
 
 /**
@@ -23,135 +23,135 @@ type BundleResult = {
  * Supports both regular node builtins, and the new "node:<MODULE>" format.
  */
 const checkForNodeBuiltinsPlugin = {
-  name: "checkForNodeBuiltins",
-  setup(build: esbuild.PluginBuild) {
-    build.onResolve(
-      {
-        filter: new RegExp(
-          "^(" +
-            builtinModules.join("|") +
-            "|" +
-            builtinModules.map((module) => "node:" + module).join("|") +
-            ")$"
-        ),
-      },
-      () => {
-        throw new Error(
-          `Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
-        );
-      }
-    );
-  },
+	name: "checkForNodeBuiltins",
+	setup(build: esbuild.PluginBuild) {
+		build.onResolve(
+			{
+				filter: new RegExp(
+					"^(" +
+						builtinModules.join("|") +
+						"|" +
+						builtinModules.map((module) => "node:" + module).join("|") +
+						")$"
+				),
+			},
+			() => {
+				throw new Error(
+					`Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
+				);
+			}
+		);
+	},
 };
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
  */
 export async function bundleWorker(
-  entry: Entry,
-  destination: string,
-  options: {
-    serveAssetsFromWorker: boolean;
-    jsxFactory: string | undefined;
-    jsxFragment: string | undefined;
-    rules: Config["rules"];
-    watch?: esbuild.WatchMode;
-    tsconfig: string | undefined;
-    minify: boolean | undefined;
-    nodeCompat: boolean | undefined;
-  }
+	entry: Entry,
+	destination: string,
+	options: {
+		serveAssetsFromWorker: boolean;
+		jsxFactory: string | undefined;
+		jsxFragment: string | undefined;
+		rules: Config["rules"];
+		watch?: esbuild.WatchMode;
+		tsconfig: string | undefined;
+		minify: boolean | undefined;
+		nodeCompat: boolean | undefined;
+	}
 ): Promise<BundleResult> {
-  const {
-    serveAssetsFromWorker,
-    jsxFactory,
-    jsxFragment,
-    rules,
-    watch,
-    tsconfig,
-    minify,
-    nodeCompat,
-  } = options;
-  const entryDirectory = path.dirname(entry.file);
-  const moduleCollector = createModuleCollector({
-    wrangler1xlegacyModuleReferences: {
-      rootDirectory: entryDirectory,
-      fileNames: new Set(
-        fs
-          .readdirSync(entryDirectory, { withFileTypes: true })
-          .filter(
-            (dirEntry) =>
-              dirEntry.isFile() && dirEntry.name !== path.basename(entry.file)
-          )
-          .map((dirEnt) => dirEnt.name)
-      ),
-    },
-    format: entry.format,
-    rules,
-  });
+	const {
+		serveAssetsFromWorker,
+		jsxFactory,
+		jsxFragment,
+		rules,
+		watch,
+		tsconfig,
+		minify,
+		nodeCompat,
+	} = options;
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = createModuleCollector({
+		wrangler1xlegacyModuleReferences: {
+			rootDirectory: entryDirectory,
+			fileNames: new Set(
+				fs
+					.readdirSync(entryDirectory, { withFileTypes: true })
+					.filter(
+						(dirEntry) =>
+							dirEntry.isFile() && dirEntry.name !== path.basename(entry.file)
+					)
+					.map((dirEnt) => dirEnt.name)
+			),
+		},
+		format: entry.format,
+		rules,
+	});
 
-  const result = await esbuild.build({
-    ...getEntryPoint(entry.file, serveAssetsFromWorker),
-    bundle: true,
-    absWorkingDir: entry.directory,
-    outdir: destination,
-    external: ["__STATIC_CONTENT_MANIFEST"],
-    format: entry.format === "modules" ? "esm" : "iife",
-    target: "es2020",
-    sourcemap: true,
-    minify,
-    metafile: true,
-    conditions: ["worker", "browser"],
-    ...(process.env.NODE_ENV && {
-      define: {
-        "process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
-        ...(nodeCompat ? { global: "globalThis" } : {}),
-      },
-    }),
-    loader: {
-      ".js": "jsx",
-      ".mjs": "jsx",
-      ".cjs": "jsx",
-    },
-    plugins: [
-      moduleCollector.plugin,
-      ...(nodeCompat
-        ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
-        : // we use checkForNodeBuiltinsPlugin to throw a nicer error
-          // if we find node builtins when nodeCompat isn't turned on
-          [checkForNodeBuiltinsPlugin]),
-    ],
-    ...(jsxFactory && { jsxFactory }),
-    ...(jsxFragment && { jsxFragment }),
-    ...(tsconfig && { tsconfig }),
-    watch,
-  });
+	const result = await esbuild.build({
+		...getEntryPoint(entry.file, serveAssetsFromWorker),
+		bundle: true,
+		absWorkingDir: entry.directory,
+		outdir: destination,
+		external: ["__STATIC_CONTENT_MANIFEST"],
+		format: entry.format === "modules" ? "esm" : "iife",
+		target: "es2020",
+		sourcemap: true,
+		minify,
+		metafile: true,
+		conditions: ["worker", "browser"],
+		...(process.env.NODE_ENV && {
+			define: {
+				"process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+				...(nodeCompat ? { global: "globalThis" } : {}),
+			},
+		}),
+		loader: {
+			".js": "jsx",
+			".mjs": "jsx",
+			".cjs": "jsx",
+		},
+		plugins: [
+			moduleCollector.plugin,
+			...(nodeCompat
+				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
+				  // if we find node builtins when nodeCompat isn't turned on
+				  [checkForNodeBuiltinsPlugin]),
+		],
+		...(jsxFactory && { jsxFactory }),
+		...(jsxFragment && { jsxFragment }),
+		...(tsconfig && { tsconfig }),
+		watch,
+	});
 
-  const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
-    ([_path, output]) => output.entryPoint !== undefined
-  );
-  assert(
-    entryPointOutputs.length > 0,
-    `Cannot find entry-point "${entry.file}" in generated bundle.` +
-      listEntryPoints(entryPointOutputs)
-  );
-  assert(
-    entryPointOutputs.length < 2,
-    "More than one entry-point found for generated bundle." +
-      listEntryPoints(entryPointOutputs)
-  );
+	const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
+		([_path, output]) => output.entryPoint !== undefined
+	);
+	assert(
+		entryPointOutputs.length > 0,
+		`Cannot find entry-point "${entry.file}" in generated bundle.` +
+			listEntryPoints(entryPointOutputs)
+	);
+	assert(
+		entryPointOutputs.length < 2,
+		"More than one entry-point found for generated bundle." +
+			listEntryPoints(entryPointOutputs)
+	);
 
-  const entryPointExports = entryPointOutputs[0][1].exports;
-  const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
+	const entryPointExports = entryPointOutputs[0][1].exports;
+	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
-  return {
-    modules: moduleCollector.modules,
-    resolvedEntryPointPath: path.resolve(
-      entry.directory,
-      entryPointOutputs[0][0]
-    ),
-    bundleType,
-    stop: result.stop,
-  };
+	return {
+		modules: moduleCollector.modules,
+		resolvedEntryPointPath: path.resolve(
+			entry.directory,
+			entryPointOutputs[0][0]
+		),
+		bundleType,
+		stop: result.stop,
+	};
 }
 
 type EntryPoint = { stdin: esbuild.StdinOptions } | { entryPoints: string[] };
@@ -164,41 +164,41 @@ type EntryPoint = { stdin: esbuild.StdinOptions } | { entryPoints: string[] };
  * or delegate to the actual worker.
  */
 function getEntryPoint(
-  entryFile: string,
-  serveAssetsFromWorker: boolean
+	entryFile: string,
+	serveAssetsFromWorker: boolean
 ): EntryPoint {
-  if (serveAssetsFromWorker) {
-    return {
-      stdin: {
-        contents: fs
-          .readFileSync(
-            path.join(__dirname, "../templates/static-asset-facade.js"),
-            "utf8"
-          )
-          // on windows, escape backslashes in the path (`\`)
-          .replace("__ENTRY_POINT__", entryFile.replaceAll("\\", "\\\\"))
-          .replace(
-            "__KV_ASSET_HANDLER__",
-            path
-              .join(__dirname, "../kv-asset-handler.js")
-              .replaceAll("\\", "\\\\")
-          ),
-        sourcefile: "static-asset-facade.js",
-        resolveDir: path.dirname(entryFile),
-      },
-    };
-  } else {
-    return { entryPoints: [entryFile] };
-  }
+	if (serveAssetsFromWorker) {
+		return {
+			stdin: {
+				contents: fs
+					.readFileSync(
+						path.join(__dirname, "../templates/static-asset-facade.js"),
+						"utf8"
+					)
+					// on windows, escape backslashes in the path (`\`)
+					.replace("__ENTRY_POINT__", entryFile.replaceAll("\\", "\\\\"))
+					.replace(
+						"__KV_ASSET_HANDLER__",
+						path
+							.join(__dirname, "../kv-asset-handler.js")
+							.replaceAll("\\", "\\\\")
+					),
+				sourcefile: "static-asset-facade.js",
+				resolveDir: path.dirname(entryFile),
+			},
+		};
+	} else {
+		return { entryPoints: [entryFile] };
+	}
 }
 
 /**
  * Generate a string that describes the entry-points that were identified by esbuild.
  */
 function listEntryPoints(
-  outputs: [string, ValueOf<esbuild.Metafile["outputs"]>][]
+	outputs: [string, ValueOf<esbuild.Metafile["outputs"]>][]
 ): string {
-  return outputs.map(([_input, output]) => output.entryPoint).join("\n");
+	return outputs.map(([_input, output]) => output.entryPoint).join("\n");
 }
 
 type ValueOf<T> = T[keyof T];
