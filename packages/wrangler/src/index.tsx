@@ -353,127 +353,144 @@ function createCLIParser(argv: string[]) {
 		"publish [script]",
 		"🆙 Publish your Worker to Cloudflare.",
 		(yargs) => {
-			return yargs
-				.option("env", {
-					type: "string",
-					requiresArg: true,
-					describe: "Perform on a specific environment",
-					alias: "e",
-				})
-				.positional("script", {
-					describe: "The path to an entry point for your worker",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("name", {
-					describe: "Name of the worker",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("outdir", {
-					describe: "Output directory for the bundled worker",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("format", {
-					choices: ["modules", "service-worker"] as const,
-					describe: "Choose an entry type",
-					deprecated: true,
-				})
-				.option("compatibility-date", {
-					describe: "Date to use for compatibility checks",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("compatibility-flags", {
-					describe: "Flags to use for compatibility checks",
-					alias: "compatibility-flag",
-					type: "string",
-					requiresArg: true,
-					array: true,
-				})
-				.option("latest", {
-					describe: "Use the latest version of the worker runtime",
-					type: "boolean",
-					default: false,
-				})
-				.option("experimental-public", {
-					describe: "Static assets to be served",
-					type: "string",
-					requiresArg: true,
-					deprecated: true,
-					hidden: true,
-				})
-				.option("assets", {
-					describe: "Static assets to be served",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("site", {
-					describe: "Root folder of static assets for Workers Sites",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("site-include", {
-					describe:
-						"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
-					type: "string",
-					requiresArg: true,
-					array: true,
-				})
-				.option("site-exclude", {
-					describe:
-						"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
-					type: "string",
-					requiresArg: true,
-					array: true,
-				})
-				.option("triggers", {
-					describe: "cron schedules to attach",
-					alias: ["schedule", "schedules"],
-					type: "string",
-					requiresArg: true,
-					array: true,
-				})
-				.option("routes", {
-					describe: "Routes to upload",
-					alias: "route",
-					type: "string",
-					requiresArg: true,
-					array: true,
-				})
-				.option("jsx-factory", {
-					describe: "The function that is called for each JSX element",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("jsx-fragment", {
-					describe: "The function that is called for each JSX fragment",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("tsconfig", {
-					describe: "Path to a custom tsconfig.json file",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("minify", {
-					describe: "Minify the script",
-					type: "boolean",
-				})
-				.option("node-compat", {
-					describe: "Enable node.js compatibility",
-					type: "boolean",
-				})
-				.option("dry-run", {
-					describe: "Don't actually publish",
-					type: "boolean",
-				})
-				.option("legacy-env", {
-					type: "boolean",
-					describe: "Use legacy environments",
-					hidden: true,
-				});
+			return (
+				yargs
+					.option("env", {
+						type: "string",
+						requiresArg: true,
+						describe: "Perform on a specific environment",
+						alias: "e",
+					})
+					.positional("script", {
+						describe: "The path to an entry point for your worker",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("name", {
+						describe: "Name of the worker",
+						type: "string",
+						requiresArg: true,
+					})
+					// We want to have a --no-build flag, but yargs requires that
+					// we also have a --build flag (that it adds the --no to by itself)
+					// So we make a --build flag, but hide it, and then add a --no-build flag
+					// that's visible to the user but doesn't "do" anything.
+					.option("build", {
+						describe: "Run wrangler's compilation step before publishing",
+						type: "boolean",
+						default: true,
+						hidden: true,
+					})
+					.option("no-build", {
+						describe: "Skip internal build steps and directly publish script",
+						type: "boolean",
+						default: false,
+					})
+					.option("outdir", {
+						describe: "Output directory for the bundled worker",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("format", {
+						choices: ["modules", "service-worker"] as const,
+						describe: "Choose an entry type",
+						deprecated: true,
+					})
+					.option("compatibility-date", {
+						describe: "Date to use for compatibility checks",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("compatibility-flags", {
+						describe: "Flags to use for compatibility checks",
+						alias: "compatibility-flag",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("latest", {
+						describe: "Use the latest version of the worker runtime",
+						type: "boolean",
+						default: false,
+					})
+					.option("experimental-public", {
+						describe: "Static assets to be served",
+						type: "string",
+						requiresArg: true,
+						deprecated: true,
+						hidden: true,
+					})
+					.option("assets", {
+						describe: "Static assets to be served",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("site", {
+						describe: "Root folder of static assets for Workers Sites",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("site-include", {
+						describe:
+							"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("site-exclude", {
+						describe:
+							"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("triggers", {
+						describe: "cron schedules to attach",
+						alias: ["schedule", "schedules"],
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("routes", {
+						describe: "Routes to upload",
+						alias: "route",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("jsx-factory", {
+						describe: "The function that is called for each JSX element",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("jsx-fragment", {
+						describe: "The function that is called for each JSX fragment",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("tsconfig", {
+						describe: "Path to a custom tsconfig.json file",
+						type: "string",
+						requiresArg: true,
+					})
+					.option("minify", {
+						describe: "Minify the script",
+						type: "boolean",
+					})
+					.option("node-compat", {
+						describe: "Enable node.js compatibility",
+						type: "boolean",
+					})
+					.option("dry-run", {
+						describe: "Don't actually publish",
+						type: "boolean",
+					})
+					.option("legacy-env", {
+						type: "boolean",
+						describe: "Use legacy environments",
+						hidden: true,
+					})
+			);
 		},
 		async (args) => {
 			await printWranglerBanner();
@@ -546,6 +563,7 @@ function createCLIParser(argv: string[]) {
 				isWorkersSite: Boolean(args.site || config.site),
 				outDir: args.outdir,
 				dryRun: args.dryRun,
+				noBuild: !args.build,
 			});
 		}
 	);

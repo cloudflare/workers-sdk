@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker } from "../bundle";
@@ -27,6 +28,7 @@ export function useEsbuild({
 	minify,
 	nodeCompat,
 	define,
+	noBuild,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -38,25 +40,30 @@ export function useEsbuild({
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
+	noBuild: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
 
+		function updateBundle() {
+			// nothing really changes here, so let's increment the id
+			// to change the return object's identity
+			setBundle((previousBundle) => {
+				assert(
+					previousBundle,
+					"Rebuild triggered with no previous build available"
+				);
+				return { ...previousBundle, id: previousBundle.id + 1 };
+			});
+		}
+
 		const watchMode: WatchMode = {
 			async onRebuild(error) {
 				if (error) logger.error("Watch build failed:", error);
 				else {
-					// nothing really changes here, so let's increment the id
-					// to change the return object's identity
-					setBundle((previousBundle) => {
-						assert(
-							previousBundle,
-							"Rebuild triggered with no previous build available"
-						);
-						return { ...previousBundle, id: previousBundle.id + 1 };
-					});
+					updateBundle();
 				}
 			},
 		};
@@ -64,22 +71,47 @@ export function useEsbuild({
 		async function build() {
 			if (!destination) return;
 
-			const { resolvedEntryPointPath, bundleType, modules, stop } =
-				await bundleWorker(entry, destination, {
-					serveAssetsFromWorker,
-					jsxFactory,
-					jsxFragment,
-					rules,
-					watch: watchMode,
-					tsconfig,
-					minify,
-					nodeCompat,
-					define,
-					checkFetch: true,
-				});
+			const {
+				resolvedEntryPointPath,
+				bundleType,
+				modules,
+				stop,
+			}: Awaited<ReturnType<typeof bundleWorker>> = noBuild
+				? {
+						modules: [],
+						resolvedEntryPointPath: entry.file,
+						bundleType: entry.format === "modules" ? "esm" : "commonjs",
+						stop: undefined,
+				  }
+				: await bundleWorker(entry, destination, {
+						serveAssetsFromWorker,
+						jsxFactory,
+						jsxFragment,
+						rules,
+						watch: watchMode,
+						tsconfig,
+						minify,
+						nodeCompat,
+						define,
+						checkFetch: true,
+				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = stop;
+
+			// if "noBuild" is true, then we need to manually watch the entry point and
+			// trigger "builds" when it changes
+			if (noBuild) {
+				const watcher = watch(entry.file, {
+					persistent: true,
+				}).on("change", async (_event) => {
+					updateBundle();
+				});
+
+				stopWatching = () => {
+					watcher.close();
+				};
+			}
 
 			setBundle({
 				id: 0,
@@ -109,6 +141,7 @@ export function useEsbuild({
 		rules,
 		tsconfig,
 		exit,
+		noBuild,
 		minify,
 		nodeCompat,
 		define,
