@@ -60,6 +60,7 @@ export async function bundleWorker(
 		minify: boolean | undefined;
 		nodeCompat: boolean | undefined;
 		define: Config["define"];
+		checkFetch: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -71,6 +72,7 @@ export async function bundleWorker(
 		tsconfig,
 		minify,
 		nodeCompat,
+		checkFetch,
 	} = options;
 	const entryDirectory = path.dirname(entry.file);
 	const moduleCollector = createModuleCollector({
@@ -95,6 +97,9 @@ export async function bundleWorker(
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		inject: checkFetch
+			? [path.resolve(__dirname, "../templates/checked-fetch.js")]
+			: [],
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
@@ -106,6 +111,7 @@ export async function bundleWorker(
 			define: {
 				"process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
+				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
 			},
 		}),

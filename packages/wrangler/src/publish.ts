@@ -353,6 +353,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				minify,
 				nodeCompat,
 				define: config.define,
+				checkFetch: false,
 			}
 		);
 

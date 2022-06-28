@@ -75,6 +75,7 @@ export function useEsbuild({
 					minify,
 					nodeCompat,
 					define,
+					checkFetch: true,
 				});
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
