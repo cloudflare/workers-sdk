@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
 import {
+  loginOrRefreshIfRequired,
   readAuthConfigFile,
   requireAuth,
   USER_AUTH_CONFIG_FILE,
@@ -128,5 +129,15 @@ describe("User", () => {
     // Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
     await expect(requireAuth({} as Config)).rejects.toThrowError();
     expect(std.err).toContain("");
+  });
+
+  it("should revert to non-interactive mode if isTTY throws an error", async () => {
+    setIsTTY({
+      stdin() {
+        throw new Error("stdin is not tty");
+      },
+      stdout: true,
+    });
+    await expect(loginOrRefreshIfRequired()).resolves.toEqual(false);
   });
 });

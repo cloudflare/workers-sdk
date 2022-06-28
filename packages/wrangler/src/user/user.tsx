@@ -1122,5 +1122,9 @@ export function requireApiToken(): ApiCredentials {
 }
 
 function isInteractive(): boolean {
-  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  try {
+    return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  } catch {
+    return false;
+  }
 }
