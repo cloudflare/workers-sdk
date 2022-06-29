@@ -1,16 +1,19 @@
 {
-  "compilerOptions": {
-    "target": "esnext",
-    "esModuleInterop": true,
-    "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "lib": ["esnext"],
-    "incremental": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "types": ["jest"]
-  },
-  "exclude": ["node_modules/"]
+	"compilerOptions": {
+		"target": "esnext",
+		"esModuleInterop": true,
+		"allowJs": true,
+		"allowSyntheticDefaultImports": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"lib": ["esnext"],
+		"incremental": true,
+		"strict": true,
+		// `alwaysStrict: false` is needed because otherwise esbuild will add `"use strict";`
+		// statements throughout the imported libraries which can break them.
+		"alwaysStrict": false,
+		"skipLibCheck": true,
+		"types": ["jest"]
+	},
+	"exclude": ["node_modules/"]
 }
