@@ -13,6 +13,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
+import { identifyD1BindingsAsBeta } from "./worker";
 import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
 import {
 	printWranglerBanner,
@@ -668,7 +669,6 @@ async function validateDevServerSettings(
 			"The --assets argument is experimental and may change or break at any time"
 		);
 	}
-
 	const upstreamProtocol =
 		args["upstream-protocol"] || config.dev.upstream_protocol;
 	if (upstreamProtocol === "http") {
@@ -826,6 +826,8 @@ async function getBindings(
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
+
+		d1_databases: identifyD1BindingsAsBeta(configParam.d1_databases),
 	};
 
 	return bindings;

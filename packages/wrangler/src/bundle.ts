@@ -63,6 +63,7 @@ export async function bundleWorker(
 	options: {
 		serveAssetsFromWorker: boolean;
 		assets: StaticAssetsConfig;
+		betaD1Shims?: string[];
 		jsxFactory: string | undefined;
 		jsxFragment: string | undefined;
 		rules: Config["rules"];
@@ -80,6 +81,7 @@ export async function bundleWorker(
 ): Promise<BundleResult> {
 	const {
 		serveAssetsFromWorker,
+		betaD1Shims,
 		jsxFactory,
 		jsxFragment,
 		rules,
@@ -187,6 +189,12 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade === true &&
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
+			}),
+
+		Array.isArray(betaD1Shims) &&
+			betaD1Shims.length > 0 &&
+			((currentEntry: Entry) => {
+				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims);
 			}),
 
 		// Middleware loader: to add middleware, we add the path to the middleware
@@ -679,6 +687,42 @@ async function applyFirstPartyWorkerDevFacade(
 				__ENTRY_POINT__: entry.file,
 			}),
 		],
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+/**
+ * A middleware that injects the beta D1 API in JS.
+ *
+ * This code be removed from here when the API is in Workers core,
+ * but moved inside Miniflare for simulating D1.
+ */
+
+async function applyD1BetaFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	betaD1Shims: string[]
+): Promise<Entry> {
+	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
+
+	await esbuild.build({
+		entryPoints: [path.resolve(__dirname, "../templates/d1-beta-facade.js")],
+		bundle: true,
+		format: "esm",
+		sourcemap: true,
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
+		define: {
+			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
+		},
 		outfile: targetPath,
 	});
 

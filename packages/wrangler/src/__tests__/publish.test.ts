@@ -123,14 +123,14 @@ describe("publish", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Attempting to login via OAuth...
-			        Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
-			        Successfully logged in.
+			"Attempting to login via OAuth...
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Successfully logged in.
 			        Total Upload: xx KiB / gzip: xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
 			          https://test-name.test-sub-domain.workers.dev"
-		      `);
+		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -559,7 +559,6 @@ describe("publish", () => {
 			}
 		`);
 		});
-
 		it("should publish to a route with a pattern/{zone_id|zone_name} combo", async () => {
 			writeWranglerToml({
 				routes: [
@@ -3669,7 +3668,6 @@ addEventListener('fetch', event => {});`
 			);
 		});
 	});
-
 	describe("custom builds", () => {
 		beforeEach(() => {
 			// @ts-expect-error disable the mock we'd setup earlier

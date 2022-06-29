@@ -42,6 +42,7 @@ interface DevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	d1Databases?: string[];
 	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
