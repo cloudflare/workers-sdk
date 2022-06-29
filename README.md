@@ -4,6 +4,8 @@
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
+The Wrangler roadmap is tracked via GitHub Projects and can be found [here](https://github.com/orgs/cloudflare/projects/1).
+
 ## Quick Start
 
 ```bash
