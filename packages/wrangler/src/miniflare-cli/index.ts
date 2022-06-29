@@ -4,6 +4,16 @@ import { hideBin } from "yargs/helpers";
 import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
 
+// miniflare defines this but importing it throws:
+// Dynamic require of "path" is not supported
+class NoOpLog extends Log {
+	log(): void {}
+
+	error(message: Error): void {
+		throw message;
+	}
+}
+
 async function main() {
 	const args = await yargs(hideBin(process.argv))
 		.help(false)
@@ -17,9 +27,8 @@ async function main() {
 	const config = {
 		...JSON.parse((args._[0] as string) ?? "{}"),
 		...requestContextCheckOptions,
-		log: new Log(logLevel),
 	};
-
+	config.log = config.isApi ? new NoOpLog() : new Log(logLevel);
 	if (logLevel > LogLevel.INFO) {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
 	}

@@ -31,6 +31,8 @@ interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
+	isApi?: boolean;
+	onReady?: () => void;
 }
 
 export function Local(props: LocalProps) {
@@ -59,6 +61,8 @@ function useLocalWorker({
 	crons,
 	localProtocol,
 	localUpstream,
+	isApi,
+	onReady,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ReturnType<typeof spawn>>();
@@ -186,6 +190,7 @@ function useLocalWorker({
 						(value) => [value.name, value.class_name]
 					)
 				),
+				isApi,
 				...(localPersistencePath
 					? {
 							kvPersist: path.join(localPersistencePath, "kv"),
@@ -232,21 +237,22 @@ function useLocalWorker({
 			const optionsArg = JSON.stringify(options, null);
 
 			logger.log("⎔ Starting a local server...");
-			local.current = spawn(
-				"node",
-				[
-					"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-					"--no-warnings", // hide annoying Node warnings
-					"--inspect", // start Miniflare listening for a debugger to attach
-					miniflareCLIPath,
-					optionsArg,
-					// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-				],
-				{
-					cwd: path.dirname(scriptPath),
-				}
-			);
-
+			const localServerOptions = [
+				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+				"--no-warnings", // hide annoying Node warnings
+				miniflareCLIPath,
+				optionsArg,
+				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+			];
+			if (!isApi) {
+				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
+			}
+			// spawn isn't technically synchronous here
+			local.current = spawn("node", localServerOptions, {
+				cwd: path.dirname(scriptPath),
+			});
+			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
+			onReady && onReady();
 			local.current.on("close", (code) => {
 				if (code) {
 					logger.log(`Miniflare process exited with code ${code}`);
@@ -330,6 +336,8 @@ function useLocalWorker({
 		crons,
 		localProtocol,
 		localUpstream,
+		isApi,
+		onReady,
 	]);
 	return { inspectorUrl };
 }

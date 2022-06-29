@@ -57,6 +57,8 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	isApi?: boolean;
+	onReady?: () => void;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -231,9 +233,25 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 }
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
-	let watcher: ReturnType<typeof watch> | undefined;
+	let watcher;
 	try {
-		await printWranglerBanner();
+		const devInstance = await startDev(args);
+		watcher = devInstance.watcher;
+		const { waitUntilExit } = devInstance.devReactElement;
+		await waitUntilExit();
+	} finally {
+		await watcher?.close();
+	}
+}
+
+export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
+	let watcher: ReturnType<typeof watch> | undefined;
+	let rerender: (node: React.ReactNode) => void | undefined;
+	try {
+		if (!args.isApi) {
+			await printWranglerBanner();
+		}
+
 		const configPath =
 			(args.config as ConfigPath) ||
 			((args.script &&
@@ -469,13 +487,14 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 					usageModel={config.usage_model}
 					bindings={bindings}
 					crons={config.triggers.crons}
+					isApi={args.isApi}
+					onReady={args.onReady}
 				/>
 			);
 		}
-		const { waitUntilExit, rerender } = render(
-			await getDevReactElement(config)
-		);
-		await waitUntilExit();
+		const devReactElement = render(await getDevReactElement(config));
+		rerender = devReactElement.rerender;
+		return { devReactElement, watcher };
 	} finally {
 		await watcher?.close();
 	}
