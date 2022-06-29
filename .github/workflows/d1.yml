@@ -1,0 +1,52 @@
+name: D1
+
+on:
+  push:
+    branches:
+      - d1
+
+jobs:
+  release:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.7
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.7
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - uses: actions/cache@v3
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install NPM Dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check for errors
+        run: npm run check
+
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
+      - name: Publish to NPM
+        run: npm publish --tag d1
+        env:
+          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/wrangler
