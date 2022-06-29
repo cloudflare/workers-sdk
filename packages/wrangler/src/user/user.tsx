@@ -218,12 +218,12 @@ import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import xdgAppPaths from "xdg-app-paths";
 import {
 	getConfigCache,
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { getConfigPath } from "../config-path";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -271,9 +271,8 @@ interface AuthTokens {
  * relative to the user's home directory.
  */
 export const USER_AUTH_CONFIG_FILE = "config/default.toml";
-const configDir = xdgAppPaths(".wrangler").config();
 
-const getUserAuthConfigPath = path.join(configDir, USER_AUTH_CONFIG_FILE);
+const getUserAuthConfigPath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -846,7 +845,7 @@ async function generatePKCECodes(): Promise<PKCECodes> {
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	const authConfigFilePath = path.join(configDir, USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
 	mkdirSync(path.dirname(authConfigFilePath), {
 		recursive: true,
 	});
@@ -860,7 +859,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const authConfigFilePath = path.join(configDir, USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
 	const toml = parseTOML(readFileSync(authConfigFilePath));
 	return toml;
 }

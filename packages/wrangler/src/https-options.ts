@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { getConfigPath } from "./config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
 
@@ -17,7 +18,7 @@ const ONE_DAY_IN_MS = 86400000;
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
 export async function getHttpsOptions() {
-	const certDirectory = path.join(os.homedir(), ".wrangler/local-cert");
+	const certDirectory = path.join(getConfigPath(), "local-cert");
 	const keyPath = path.join(certDirectory, "key.pem");
 	const certPath = path.join(certDirectory, "cert.pem");
 
