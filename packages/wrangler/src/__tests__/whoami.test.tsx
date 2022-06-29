@@ -53,7 +53,6 @@ describe("getUserInfo()", () => {
 		const userInfo = await getUserInfo();
 		expect(userInfo?.email).toBeUndefined();
 	});
-
 	it("should say it's using an API token when one is set", async () => {
 		process.env = {
 			CLOUDFLARE_API_TOKEN: "123456789",
@@ -68,7 +67,6 @@ describe("getUserInfo()", () => {
 				{ name: "Account Three", id: "account-3" },
 			];
 		});
-
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
 			authType: "API Token",
