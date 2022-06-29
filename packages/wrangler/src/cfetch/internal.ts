@@ -19,21 +19,13 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
 	defaultValue: "https://api.cloudflare.com/client/v4",
 });
 
-/**
- * Make a fetch request to the Cloudflare API.
- *
- * This function handles acquiring the API token and logging the caller in, as necessary.
- *
- * Check out https://api.cloudflare.com/ for API docs.
- *
- * This function should not be used directly, instead use the functions in `cfetch/index.ts`.
- */
-export async function fetchInternal<ResponseType>(
+export async function performApiFetch(
 	resource: string,
+	method = "GET",
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal
-): Promise<ResponseType> {
+) {
 	assert(
 		resource.startsWith("/"),
 		`CF API fetch - resource path must start with a "/" but got "${resource}"`
@@ -53,14 +45,38 @@ export async function fetchInternal<ResponseType>(
 	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
 	logger.debug("INIT:", JSON.stringify(init, null, 2));
 	logger.debug("-- END CF API REQUEST");
-	const response = await fetch(
+	return await fetch(
 		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
 		{
-			method,
-			...init,
-			headers,
-			signal: abortSignal,
-		}
+		method,
+		...init,
+		headers,
+		signal: abortSignal,
+	});
+}
+
+/**
+ * Make a fetch request to the Cloudflare API.
+ *
+ * This function handles acquiring the API token and logging the caller in, as necessary.
+ *
+ * Check out https://api.cloudflare.com/ for API docs.
+ *
+ * This function should not be used directly, instead use the functions in `cfetch/index.ts`.
+ */
+export async function fetchInternal<ResponseType>(
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+): Promise<ResponseType> {
+	const method = init.method ?? "GET";
+	const response = await performApiFetch(
+		resource,
+		method,
+		init,
+		queryParams,
+		abortSignal
 	);
 	const jsonText = await response.text();
 	logger.debug(
