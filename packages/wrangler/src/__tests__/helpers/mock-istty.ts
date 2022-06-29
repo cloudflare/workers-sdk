@@ -6,7 +6,7 @@ const ORIGINAL_STDIN = process.stdin;
  */
 export function useMockIsTTY() {
 	/**
-	 * Explicitly set `process.stdout.isTTY` to a given value (or to a getter function).
+	 * Explicitly set `process.stdout.isTTY` to a given value(or to a getter function).
 	 */
 	const setIsTTY = (
 		isTTY:

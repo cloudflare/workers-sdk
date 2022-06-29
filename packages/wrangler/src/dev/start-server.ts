@@ -319,6 +319,7 @@ export async function startLocalServer({
 			usageModel,
 			kv_namespaces: bindings?.kv_namespaces,
 			r2_buckets: bindings?.r2_buckets,
+			d1_databases: bindings?.d1_databases,
 			internalDurableObjects,
 			externalDurableObjects,
 			localPersistencePath,

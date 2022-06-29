@@ -138,6 +138,10 @@ export function select(
 	});
 }
 
+export function logDim(msg: string) {
+	console.log(chalk.gray(msg));
+}
+
 export async function fromDashMessagePrompt(
 	deploySource: "dash" | "wrangler" | "api"
 ): Promise<boolean | void> {
