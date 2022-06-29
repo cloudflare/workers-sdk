@@ -161,7 +161,6 @@ describe("wrangler dev", () => {
 			);
 		});
 	});
-
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
 			writeWranglerToml({
@@ -1079,7 +1078,6 @@ describe("wrangler dev", () => {
 			await runWrangler("dev --assets abc");
 			expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
-
 		it("should warn if --assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",

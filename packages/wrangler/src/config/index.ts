@@ -1,6 +1,7 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
+import { D1_BETA_PREFIX } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
@@ -84,6 +85,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		d1_databases,
 		r2_buckets,
 		services,
 		text_blobs,
@@ -132,6 +134,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: id,
+				};
+			}),
+		});
+	}
+
+	if (d1_databases !== undefined && d1_databases.length > 0) {
+		output.push({
+			type: "D1 Databases",
+			entries: d1_databases.map(({ binding, database_name, database_id }) => {
+				return {
+					key: binding.slice(D1_BETA_PREFIX.length),
+					value: database_name
+						? `${database_name} (${database_id})`
+						: database_id,
 				};
 			}),
 		});

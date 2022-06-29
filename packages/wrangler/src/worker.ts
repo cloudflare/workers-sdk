@@ -1,9 +1,11 @@
+import type { Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { ApiCredentials } from "./user";
 
 /**
  * A Cloudflare account.
  */
+
 export interface CfAccount {
 	/**
 	 * An API token.
@@ -116,6 +118,15 @@ interface CfR2Bucket {
 	bucket_name: string;
 }
 
+export const D1_BETA_PREFIX = `__D1_BETA__` as const;
+interface CfD1Database {
+	// For now, all D1 bindings are beta
+	binding: `${typeof D1_BETA_PREFIX}${string}`;
+	database_id: string;
+	database_name?: string;
+	preview_database_id?: string;
+}
+
 interface CfService {
 	binding: string;
 	service: string;
@@ -172,6 +183,7 @@ export interface CfWorkerInit {
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
+		d1_databases: CfD1Database[] | undefined;
 		services: CfService[] | undefined;
 		worker_namespaces: CfWorkerNamespace[] | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;
@@ -188,4 +200,15 @@ export interface CfWorkerContext {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
+}
+
+// Prefix binding with identifier which will then get picked up by the D1 shim.
+// Once the D1 Api is out of beta, this function can be removed.
+export function identifyD1BindingsAsBeta(
+	dbs: Environment["d1_databases"]
+): CfD1Database[] | undefined {
+	return dbs?.map((db) => ({
+		...db,
+		binding: `${D1_BETA_PREFIX}${db.binding}`,
+	}));
 }

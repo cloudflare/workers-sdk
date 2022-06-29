@@ -306,6 +306,7 @@ const Scopes = {
 	"workers_scripts:write":
 		"See and change Cloudflare Workers scripts, durable objects, subdomains, triggers, and tail data.",
 	"workers_tail:read": "See Cloudflare Workers tail and script data.",
+	"d1:write": "See and change D1 Databases.",
 	"pages:write":
 		"See and change Cloudflare Pages projects, settings and deployments.",
 	"zone:read": "Grants read level access to account zone.",

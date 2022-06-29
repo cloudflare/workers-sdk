@@ -42,6 +42,7 @@ describe("wrangler", () => {
 			  wrangler pages             ⚡️ Configure Cloudflare Pages
 			  wrangler r2                📦 Interact with an R2 store
 			  wrangler worker-namespace  📦 Interact with a worker namespace
+			  wrangler d1                🗄  Interact with a D1 database
 			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
 			  wrangler login             🔓 Login to Cloudflare
 			  wrangler logout            🚪 Logout from Cloudflare
@@ -80,6 +81,7 @@ describe("wrangler", () => {
 			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
 			  wrangler pages             ⚡️ Configure Cloudflare Pages
 			  wrangler r2                📦 Interact with an R2 store
+			  wrangler d1                🗄  Interact with a D1 database
 			  wrangler worker-namespace  📦 Interact with a worker namespace
 			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
 			  wrangler login             🔓 Login to Cloudflare
@@ -123,20 +125,20 @@ describe("wrangler", () => {
 			await runWrangler("secret");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler secret
+			        "wrangler secret
 
 			🤫 Generate a secret that can be referenced in a Worker
 
-			Commands:
+			        Commands:
 			  wrangler secret put <key>     Create or update a secret variable for a Worker
 			  wrangler secret delete <key>  Delete a secret variable from a Worker
 			  wrangler secret list          List all secrets for a Worker
 
-			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
-		`);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 
 		it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {

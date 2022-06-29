@@ -25,6 +25,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_date: undefined,
 			compatibility_flags: [],
 			configPath: undefined,
+			d1_databases: [],
 			dev: {
 				ip: "localhost",
 				local_protocol: "http",
@@ -2590,28 +2591,28 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - \\"unsafe\\" fields are experimental and may change or break at any time.
-			          - \\"env.ENV1\\" environment configuration
-			            - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"vars\\" is not inherited by environments.
-			              Please add \\"vars\\" to \\"env.ENV1\\".
-			            - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"define\\" is not inherited by environments.
-			              Please add \\"define\\" to \\"env.ENV1\\".
-			            - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-			              Please add \\"durable_objects\\" to \\"env.ENV1\\".
-			            - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
-			              Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
-			            - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
-			              Please add \\"r2_buckets\\" to \\"env.ENV1\\".
-			            - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-			              Please add \\"unsafe\\" to \\"env.ENV1\\"."
-		      `);
+			"Processing wrangler configuration:
+			  - \\"unsafe\\" fields are experimental and may change or break at any time.
+			  - \\"env.ENV1\\" environment configuration
+			    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"vars\\" is not inherited by environments.
+			      Please add \\"vars\\" to \\"env.ENV1\\".
+			    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"define\\" is not inherited by environments.
+			      Please add \\"define\\" to \\"env.ENV1\\".
+			    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
+			      Please add \\"durable_objects\\" to \\"env.ENV1\\".
+			    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
+			      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
+			    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
+			      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
+			    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
+			      Please add \\"unsafe\\" to \\"env.ENV1\\"."
+		`);
 		});
 
 		it("should error on invalid environment values", () => {
