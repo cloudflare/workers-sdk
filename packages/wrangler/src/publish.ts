@@ -468,21 +468,33 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
-			available_on_subdomain = (
-				await fetchResult<{ available_on_subdomain: boolean }>(
-					workerUrl,
-					{
-						method: "PUT",
-						body: createWorkerUploadForm(worker),
-					},
-					new URLSearchParams({
-						include_subdomain_availability: "true",
-						// pass excludeScript so the whole body of the
-						// script doesn't get included in the response
-						excludeScript: "true",
-					})
-				)
-			).available_on_subdomain;
+			const result = await fetchResult<{
+				available_on_subdomain: boolean;
+				id: string | null;
+				etag: string | null;
+				pipeline_hash: string | null;
+			}>(
+				workerUrl,
+				{
+					method: "PUT",
+					body: createWorkerUploadForm(worker),
+				},
+				new URLSearchParams({
+					include_subdomain_availability: "true",
+					// pass excludeScript so the whole body of the
+					// script doesn't get included in the response
+					excludeScript: "true",
+				})
+			);
+
+			available_on_subdomain = result.available_on_subdomain;
+
+			// Print some useful information returned after publishing
+			// Not all fields will be populated for every worker
+			// These fields are likely to be scraped by tools, so do not rename
+			logger.debug("Worker ID: ", result.id ?? "Not available");
+			logger.debug("ETag: ", result.etag ?? "Not available");
+			logger.debug("PipelineHash: ", result.pipeline_hash ?? "Not available");
 		}
 	} finally {
 		if (typeof destination !== "string") {
