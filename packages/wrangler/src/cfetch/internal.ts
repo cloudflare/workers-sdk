@@ -6,7 +6,7 @@ import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { RequestInit, HeadersInit } from "undici";
+import type { HeadersInit, RequestInit } from "undici";
 
 /**
  * Get the URL to use to access the Cloudflare API.
@@ -16,6 +16,33 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
 	deprecatedName: "CF_API_BASE_URL",
 	defaultValue: "https://api.cloudflare.com/client/v4",
 });
+
+export async function performApiFetch(
+	resource: string,
+	method = "GET",
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+) {
+	assert(
+		resource.startsWith("/"),
+		`CF API fetch - resource path must start with a "/" but got "${resource}"`
+	);
+	await requireLoggedIn();
+	const apiToken = requireApiToken();
+	const headers = cloneHeaders(init.headers);
+	addAuthorizationHeaderIfUnspecified(headers, apiToken);
+	addUserAgent(headers);
+
+	const queryString = queryParams ? `?${queryParams.toString()}` : "";
+	const url = `${getCloudflareAPIBaseURL()}${resource}${queryString}`;
+	return await fetch(url, {
+		method,
+		...init,
+		headers,
+		signal: abortSignal,
+	});
+}
 
 /**
  * Make a fetch request to the Cloudflare API.
@@ -32,26 +59,13 @@ export async function fetchInternal<ResponseType>(
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
-	assert(
-		resource.startsWith("/"),
-		`CF API fetch - resource path must start with a "/" but got "${resource}"`
-	);
-	await requireLoggedIn();
-	const apiToken = requireApiToken();
-	const headers = cloneHeaders(init.headers);
-	addAuthorizationHeaderIfUnspecified(headers, apiToken);
-	addUserAgent(headers);
-
-	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	const method = init.method ?? "GET";
-	const response = await fetch(
-		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-		{
-			method,
-			...init,
-			headers,
-			signal: abortSignal,
-		}
+	const response = await performApiFetch(
+		resource,
+		method,
+		init,
+		queryParams,
+		abortSignal
 	);
 	const jsonText = await response.text();
 	try {

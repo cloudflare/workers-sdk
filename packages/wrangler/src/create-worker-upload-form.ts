@@ -49,6 +49,7 @@ export interface WorkerMetadata {
 				environment?: string;
 		  }
 		| { type: "r2_bucket"; name: string; bucket_name: string }
+		| { type: "d1"; name: string; id: string }
 		| { type: "service"; name: string; service: string; environment?: string }
 		| { type: "namespace"; name: string; namespace: string }
 	)[];
@@ -105,6 +106,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "r2_bucket",
 			bucket_name,
+		});
+	});
+
+	bindings.d1_databases?.forEach(({ binding, database_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "d1",
+			id: database_id,
 		});
 	});
 

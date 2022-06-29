@@ -52,6 +52,7 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
+		betaD1Shims?: string[];
 		jsxFactory: string | undefined;
 		jsxFragment: string | undefined;
 		rules: Config["rules"];
@@ -65,6 +66,7 @@ export async function bundleWorker(
 ): Promise<BundleResult> {
 	const {
 		serveAssetsFromWorker,
+		betaD1Shims,
 		jsxFactory,
 		jsxFragment,
 		rules,
@@ -117,7 +119,7 @@ export async function bundleWorker(
 	// plan on injecting/referencing.
 
 	const result = await esbuild.build({
-		...getEntryPoint(entry.file, serveAssetsFromWorker),
+		...getEntryPoint(entry.file, serveAssetsFromWorker, betaD1Shims),
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
@@ -195,14 +197,23 @@ type EntryPoint = { stdin: esbuild.StdinOptions } | { entryPoints: string[] };
  */
 function getEntryPoint(
 	entryFile: string,
-	serveAssetsFromWorker: boolean
+	serveAssetsFromWorker: boolean,
+	betaD1Shims: string[] | undefined
 ): EntryPoint {
-	if (serveAssetsFromWorker) {
+	if (
+		serveAssetsFromWorker ||
+		(Array.isArray(betaD1Shims) && betaD1Shims.length > 0)
+	) {
 		return {
 			stdin: {
 				contents: fs
 					.readFileSync(
-						path.join(__dirname, "../templates/static-asset-facade.js"),
+						path.join(
+							__dirname,
+							serveAssetsFromWorker
+								? "../templates/static-asset-facade.js"
+								: "../templates/d1-beta-facade.js"
+						),
 						"utf8"
 					)
 					// on windows, escape backslashes in the path (`\`)
@@ -212,8 +223,11 @@ function getEntryPoint(
 						path
 							.join(__dirname, "../kv-asset-handler.js")
 							.replaceAll("\\", "\\\\")
-					),
-				sourcefile: "static-asset-facade.js",
+					)
+					.replace("__D1_IMPORTS__", JSON.stringify(betaD1Shims)),
+				sourcefile: serveAssetsFromWorker
+					? "static-asset-facade.js"
+					: "d1-beta-facade.js",
 				resolveDir: path.dirname(entryFile),
 			},
 		};

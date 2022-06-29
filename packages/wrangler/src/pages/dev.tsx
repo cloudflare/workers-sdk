@@ -22,6 +22,7 @@ type PagesDevArgs = {
 	binding?: (string | number)[];
 	kv?: (string | number)[];
 	do?: (string | number)[];
+	d1?: (string | number)[];
 	"live-reload": boolean;
 	"local-protocol"?: "https" | "http";
 	"node-compat": boolean;
@@ -70,6 +71,10 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				description: "KV namespace to bind",
 				alias: "k",
 			},
+			d1: {
+				type: "array",
+				description: "D1 database to bind",
+			},
 			do: {
 				type: "array",
 				description: "Durable Object to bind (NAME=CLASS)",
@@ -108,6 +113,7 @@ export const Handler = async ({
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
+	d1: d1s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
 	"node-compat": nodeCompat,
@@ -232,6 +238,8 @@ export const Handler = async ({
 					class_name,
 				};
 			}),
+
+			d1Databases: d1s.map((d1) => d1.toString()),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,

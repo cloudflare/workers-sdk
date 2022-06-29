@@ -13,6 +13,7 @@ import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { ParseError } from "./parse";
 import { syncAssets } from "./sites";
+import { identifyD1BindingsAsBeta } from "./worker";
 import { getZoneForRoute } from "./zones";
 import type { Config } from "./config";
 import type {
@@ -383,6 +384,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{
 						serveAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.assetPaths),
+						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
+							(db) => db.binding
+						),
 						jsxFactory,
 						jsxFragment,
 						rules: props.rules,
@@ -438,6 +442,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
 			r2_buckets: config.r2_buckets,
+			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
 			worker_namespaces: config.worker_namespaces,
 			unsafe: config.unsafe?.bindings,

@@ -4,7 +4,7 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
@@ -156,6 +156,27 @@ function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
+	const handleError = useErrorHandler();
+
+	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
+	const betaD1Shims = useMemo(
+		() => props.bindings.d1_databases?.map((db) => db.binding),
+		[props.bindings.d1_databases]
+	);
+	const everyD1BindingHasPreview = props.bindings.d1_databases?.every(
+		(binding) => binding.preview_database_id
+	);
+	if (
+		betaD1Shims &&
+		betaD1Shims.length > 0 &&
+		!(props.local || everyD1BindingHasPreview)
+	) {
+		handleError(
+			new Error(
+				"D1 bindings require dev --local or preview_database_id for now"
+			)
+		);
+	}
 
 	const bundle = useEsbuild({
 		entry: props.entry,
@@ -169,6 +190,7 @@ function DevSession(props: DevSessionProps) {
 		tsconfig: props.tsconfig,
 		minify: props.minify,
 		nodeCompat: props.nodeCompat,
+		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
 	});
