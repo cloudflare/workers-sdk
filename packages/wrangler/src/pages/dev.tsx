@@ -11,9 +11,11 @@ import { logger } from "../logger";
 import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
 import openInBrowser from "../open-in-browser";
 import { buildFunctions } from "./build";
+import { readPagesConfig } from "./config";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { Config } from "../config";
+import type { PagesConfig } from "./config/config";
 import type {
 	fetch as miniflareFetch,
 	Headers as MiniflareHeaders,
@@ -33,6 +35,7 @@ type PagesDevArgs = {
 	do?: (string | number)[];
 	"live-reload": boolean;
 	"node-compat": boolean;
+	config: string | undefined;
 };
 
 export function Options(yargs: Argv): Argv<PagesDevArgs> {
@@ -104,20 +107,21 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 		.epilogue(pagesBetaWarning);
 }
 
-export const Handler = async ({
-	local,
-	directory,
-	port,
-	proxy: requestedProxyPort,
-	"script-path": singleWorkerScriptPath,
-	binding: bindings = [],
-	kv: kvs = [],
-	do: durableObjects = [],
-	"live-reload": liveReload,
-	"node-compat": nodeCompat,
-	config: config,
-	_: [_pages, _dev, ...remaining],
-}: ArgumentsCamelCase<PagesDevArgs>) => {
+export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
+	const {
+		local,
+		directory,
+		port,
+		proxy: requestedProxyPort,
+		"script-path": singleWorkerScriptPath,
+		binding: bindings = [],
+		kv: kvs = [],
+		do: durableObjects = [],
+		"live-reload": liveReload,
+		"node-compat": nodeCompat,
+		config: config,
+		_: [_pages, _dev, ...remaining],
+	} = args;
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
@@ -125,8 +129,9 @@ export const Handler = async ({
 		throw new FatalError("Only local mode is supported at the moment.", 1);
 	}
 
+	let pagesConfig: PagesConfig;
 	if (config) {
-		throw new FatalError("Pages does not support wrangler.toml", 1);
+		pagesConfig = readPagesConfig(config, args);
 	}
 
 	const functionsDirectory = "./functions";
