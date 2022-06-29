@@ -889,6 +889,7 @@ function normalizeAndValidateEnvironment(
 	);
 
 	// The field "experimental_services" doesn't exist anymore in the config, but we still want to error about any older usage.
+
 	deprecated(
 		diagnostics,
 		rawEnv,
@@ -1073,6 +1074,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"r2_buckets",
 			validateBindingArray(envName, validateR2Binding),
+			[]
+		),
+		d1_databases: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"d1_databases",
+			validateBindingArray(envName, validateD1Binding),
 			[]
 		),
 		services: notInheritable(
@@ -1679,6 +1690,48 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "preview_bucket_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "preview_bucket_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	return isValid;
+};
+
+const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"d1_databases" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// D1 databases must have a binding and either a database_name or database_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		// TODO: allow name only, where we look up the ID dynamically
+		// !isOptionalProperty(value, "database_name", "string") &&
+		!isRequiredProperty(value, "database_id", "string")
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "preview_database_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "preview_database_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
