@@ -21,10 +21,11 @@ export async function unstable_dev(script: string, options: DevOptions) {
 	);
 
 	return new Promise<void>((resolve) => {
+		//startDev returns a stop function... how do we simulultaneously resolve here, and pass the result of startDev to the caller?
 		return startDev({
 			script: script,
 			...options,
-			local: false,
+			local: true,
 			onReady: resolve,
 			inspect: false,
 			logLevel: "none",

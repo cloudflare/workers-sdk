@@ -500,7 +500,14 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		}
 		const devReactElement = render(await getDevReactElement(config));
 		rerender = devReactElement.rerender;
-		return { devReactElement, watcher };
+		return {
+			devReactElement,
+			watcher,
+			stop: async () => {
+				devReactElement.unmount();
+				await devReactElement.waitUntilExit();
+			},
+		};
 	} finally {
 		await watcher?.close();
 	}
