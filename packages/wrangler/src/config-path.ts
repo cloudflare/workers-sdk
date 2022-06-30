@@ -1,49 +1,26 @@
-import { mkdirSync, statSync, writeFileSync } from "node:fs";
+import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import xdgAppPaths from "xdg-app-paths";
 
-const configDirs = xdgAppPaths(".wrangler").configDirs();
-
 export function getConfigPath() {
-	//TODO: We implement a custom path --global-config
+	//TODO: We should implement a custom path --global-config
+	const configDir = xdgAppPaths(".wrangler").config(); // new XDG compliant config path
+	const legacyConfigDir = path.join(homedir(), ".wrangler"); // legacy config in user's home directory
 
-	const possibleConfigPaths = [
-		...configDirs, // newest config directory
-		path.join(homedir(), ".wrangler"), // legacy config in user's home directory
-	];
-
-	// Check for the .wrangler directory in root,
-	// If it does not exist, use the XDG path compliant .wrangler directory.
-	return (
-		possibleConfigPaths.find((configPath) =>
-			statSync(configPath).isDirectory()
-		) || configDirs[0]
-	);
-}
-
-export function createConfigs({
-	subConfigDir,
-	subConfigFile,
-}: {
-	subConfigDir?: string;
-	subConfigFile?: string[];
-}): void {
-	const configPath = configDirs[0]; // newest XDG config directory
-	const subConfigDirPath = subConfigDir && path.join(configPath, subConfigDir);
-	const subConfigFilePaths =
-		subConfigFile &&
-		subConfigFile.map((file) =>
-			path.join(subConfigDirPath ?? configPath, file)
-		);
-
-	if (subConfigDirPath) {
-		mkdirSync(subConfigDirPath, { recursive: true });
+	function isDirectory(configPath: string) {
+		try {
+			return statSync(configPath).isDirectory();
+		} catch (error) {
+			// ignore error
+			return false;
+		}
 	}
-	if (subConfigFilePaths) {
-		subConfigFilePaths.forEach((filePath) => {
-			mkdirSync(path.dirname(filePath), { recursive: true });
-			writeFileSync(filePath, "");
-		});
+	// Check for the .wrangler directory in root or in other possible XDG compliant paths,
+	// If it does not exist, use the XDG path compliant .wrangler directory.
+	if (isDirectory(legacyConfigDir)) {
+		return legacyConfigDir;
+	} else {
+		return configDir;
 	}
 }

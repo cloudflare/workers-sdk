@@ -1,5 +1,6 @@
-import fs from "node:fs";
-import { resolve } from "node:path";
+import fs, { mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import path, { resolve } from "node:path";
 import { getConfigPath } from "../config-path";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -84,6 +85,29 @@ describe("getHttpsOptions()", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should warn if not able to write to the cache (legacy config path)", async () => {
+		mkdirSync(path.join(homedir(), ".wrangler"));
+		mockWriteFileSyncThrow(/\.pem$/);
+		await getHttpsOptions();
+		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/key.pem"))).toBe(
+			false
+		);
+		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/cert.pem"))).toBe(
+			false
+		);
+		expect(std.out).toMatchInlineSnapshot(
+			`"Generating new self-signed certificate..."`
+		);
+		expect(std.warn).toMatchInlineSnapshot(`
+		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in home/.wrangler/local-cert.[0m
+
+		        ERROR: Cannot write file
+
+		      "
+	    `);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should warn if not able to write to the cache", async () => {
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
@@ -97,12 +121,12 @@ describe("getHttpsOptions()", () => {
 			`"Generating new self-signed certificate..."`
 		);
 		expect(std.warn).toMatchInlineSnapshot(`
-      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in home/.wrangler/local-cert.[0m
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in test-xdg-config/local-cert.[0m
 
-        ERROR: Cannot write file
+		  ERROR: Cannot write file
 
-      "
-    `);
+		"
+	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });

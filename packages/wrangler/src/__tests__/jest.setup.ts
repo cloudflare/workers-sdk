@@ -105,3 +105,16 @@ jest.mock("../user/generate-random-state", () => {
 		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 	};
 });
+
+jest.mock("xdg-app-paths", () => {
+	return {
+		__esModule: true,
+		default: jest.fn().mockImplementation(() => {
+			return {
+				config() {
+					return "./test-xdg-config";
+				},
+			};
+		}),
+	};
+});
