@@ -23,7 +23,7 @@ export function previewOptions(yargs: Argv) {
 		});
 }
 
-export async function previewHandler() {
+export function previewHandler() {
 	throw new DeprecationError(
 		"The `wrangler preview` command has been deprecated.\n" +
 			"Try using `wrangler dev` to to try out a worker during development.\n"
