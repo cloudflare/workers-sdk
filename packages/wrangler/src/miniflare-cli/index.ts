@@ -28,7 +28,9 @@ async function main() {
 		...JSON.parse((args._[0] as string) ?? "{}"),
 		...requestContextCheckOptions,
 	};
-	config.log = config.isApi ? new NoOpLog() : new Log(logLevel);
+	//miniflare's logLevel 0 still logs routes, so lets override the logger
+	config.log = config.disableLogs ? new NoOpLog() : new Log(logLevel);
+
 	if (logLevel > LogLevel.INFO) {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
 	}

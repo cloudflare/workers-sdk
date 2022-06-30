@@ -19,14 +19,16 @@ export async function unstable_dev(script: string, options: DevOptions) {
 	logger.warn(
 		`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 	);
-	logger.loggerLevel = "error";
+
 	return new Promise<void>((resolve) => {
 		return startDev({
 			script: script,
 			...options,
-			isApi: true,
-			local: true,
+			local: false,
 			onReady: resolve,
+			inspect: false,
+			logLevel: "none",
+			showInteractiveDevSession: false,
 		});
 	});
 }

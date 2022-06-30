@@ -31,8 +31,9 @@ interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
-	isApi?: boolean;
-	onReady?: () => void;
+	inspect: boolean | undefined;
+	onReady: (() => void) | undefined;
+	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 }
 
 export function Local(props: LocalProps) {
@@ -61,8 +62,9 @@ function useLocalWorker({
 	crons,
 	localProtocol,
 	localUpstream,
-	isApi,
+	inspect,
 	onReady,
+	logLevel,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ReturnType<typeof spawn>>();
@@ -190,7 +192,6 @@ function useLocalWorker({
 						(value) => [value.name, value.class_name]
 					)
 				),
-				isApi,
 				...(localPersistencePath
 					? {
 							kvPersist: path.join(localPersistencePath, "kv"),
@@ -225,6 +226,7 @@ function useLocalWorker({
 				logUnhandledRejections: true,
 				crons,
 				upstream,
+				disableLogs: logLevel === "none",
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -244,7 +246,7 @@ function useLocalWorker({
 				optionsArg,
 				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 			];
-			if (!isApi) {
+			if (inspect) {
 				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
 			// spawn isn't technically synchronous here
@@ -336,7 +338,8 @@ function useLocalWorker({
 		crons,
 		localProtocol,
 		localUpstream,
-		isApi,
+		inspect,
+		logLevel,
 		onReady,
 	]);
 	return { inspectorUrl };
