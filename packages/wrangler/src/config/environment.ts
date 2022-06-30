@@ -202,6 +202,22 @@ interface EnvironmentInheritable {
 	node_compat: boolean | undefined;
 
 	/**
+	 * Specifies namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	worker_namespaces: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+		/** The namespace to bind to. */
+		namespace: string;
+	}[];
+
+	/**
 	 * TODO: remove this as it has been deprecated.
 	 *
 	 * This is just here for now because the `route` commands use it.

@@ -5303,6 +5303,48 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
+		describe("[worker_namespaces]", () => {
+			it("should support bindings to a worker namespace", async () => {
+				writeWranglerToml({
+					worker_namespaces: [
+						{
+							binding: "foo",
+							namespace: "Foo",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "namespace",
+							name: "foo",
+							namespace: "Foo",
+						},
+					],
+				});
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			          "Your worker has access to the following bindings:
+			          - Worker Namespaces:
+			            - foo: Foo
+			          Total Upload: 0xx KiB / gzip: 0xx KiB
+			          Uploaded test-name (TIMINGS)
+			          Published test-name (TIMINGS)
+			            test-name.test-sub-domain.workers.dev"
+		        `);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - \\"worker_namespaces\\" fields are experimental and may change or break at any time.
+
+			"
+		`);
+			});
+		});
+
 		describe("[unsafe]", () => {
 			it("should warn if using unsafe bindings", async () => {
 				writeWranglerToml({
@@ -5962,6 +6004,7 @@ addEventListener('fetch', event => {});`
 			        }
 		      `);
 		});
+
 		it("should print the bundle size, with API errors", async () => {
 			setMockRawResponse(
 				"/accounts/:accountId/workers/scripts/:scriptName",
