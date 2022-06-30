@@ -968,19 +968,6 @@ describe("pages", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
-
-		it("should throw an error if user attempts to use config with pages", async () => {
-			await expect(
-				runWrangler("pages dev --config foo.toml")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Pages does not support wrangler.toml"`
-			);
-			await expect(
-				runWrangler("pages publish --config foo.toml")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Pages does not support wrangler.toml"`
-			);
-		});
 	});
 
 	describe("project upload", () => {
@@ -1247,6 +1234,86 @@ describe("pages", () => {
 			});
 
 			await runWrangler("pages project upload .");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should support pages.toml", async () => {
+			writeFileSync('pages.toml', `
+			name = "foo"
+			account_id = "some-account-id"
+			output_directory = "build"
+			`);
+
+			mkdirSync('build')
+			writeFileSync('build/index.html', '<h1>Hello, World!</h1>');
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["94fb1f4f4d96c10b53483279c5737d3b"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "94fb1f4f4d96c10b53483279c5737d3b",
+							value: Buffer.from("<h1>Hello, World!</h1>").toString("base64"),
+							metadata: {
+								contentType: "text/html",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+                          Object {
+                            "/index.html": "94fb1f4f4d96c10b53483279c5737d3b",
+                          }
+                      `);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish --config=pages.toml");
+
+			expect(std.out).toMatchInlineSnapshot(`
+        "✨ Success! Uploaded 1 files (TIMINGS)
+
+        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+      `);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

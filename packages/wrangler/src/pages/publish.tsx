@@ -8,16 +8,18 @@ import SelectInput from "ink-select-input";
 import React from "react";
 import { File, FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { getConfigCache, saveToConfigCache } from "../config-cache";
+import { saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
+import { readPagesConfig } from './config';
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
+import type { PagesConfig } from './config/config';
 import type { Deployment, PagesConfigCache, Project } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
@@ -28,6 +30,7 @@ type PublishArgs = {
 	"commit-hash"?: string;
 	"commit-message"?: string;
 	"commit-dirty"?: boolean;
+	config?: string;
 };
 
 export function Options(yargs: Argv): Argv<PublishArgs> {
@@ -75,20 +78,25 @@ export const Handler = async ({
 	commitHash,
 	commitMessage,
 	commitDirty,
-	config: wranglerConfig,
+	config,
 }: ArgumentsCamelCase<PublishArgs>) => {
-	if (wranglerConfig) {
-		throw new FatalError("Pages does not support wrangler.toml", 1);
+	let pagesConfig: PagesConfig | null = null;
+	if (config) {
+		pagesConfig = readPagesConfig(config, { directory, projectName, branch, commitHash, commitMessage, commitDirty });
+	}
+
+	const accountId = await requireAuth({ account_id: pagesConfig?.account_id });
+	// const cachedConfig = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
+
+	if (!directory && pagesConfig?.output_directory) {
+		directory = pagesConfig.output_directory;
 	}
 
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
 	}
 
-	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
-	const accountId = await requireAuth(config);
-
-	projectName ??= config.project_name;
+	projectName ??= pagesConfig?.name;
 
 	const isInteractive = process.stdin.isTTY;
 	if (!projectName && isInteractive) {
@@ -285,6 +293,8 @@ export const Handler = async ({
 	if (commitDirty !== undefined) {
 		formData.append("commit_dirty", commitDirty);
 	}
+
+	// TODO: Support updating env vars
 
 	let _headers: string | undefined,
 		_redirects: string | undefined,

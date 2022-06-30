@@ -15,18 +15,25 @@ export type PagesConfig = {
 	account_id: string | undefined;
 
 	/**
+	 * The output directory of your Pages project. This is the directory where your static/built files live.
+	 * We will publish this directory during "wrangler pages publish"
+	 */
+	output_directory: string | undefined;
+
+	/**
+	 * Build image version (we don't know how this is versioned exactly yet :^) )
+	 *
+	 * More details at https://developers.cloudflare.com/
+	 */
+	build_image: string | undefined;
+
+	/**
 	 * A date in the form yyyy-mm-dd, which will be used to determine
-	 * which version of the Workers runtime is used. Alternately,
-	 * an object of shape {build_image, runtime} that can specify different
-	 * compatibility levels for the build image and the runtime.
+	 * which version of the Workers runtime is used.
 	 *
 	 * More details at https://pages/something
 	 */
-
-	compatibility_date:
-		| string
-		| { build_image: string; runtime: string }
-		| undefined;
+	compatibility_date: string | undefined;
 
 	/**
 	 * A list of flags that enable features from upcoming features of

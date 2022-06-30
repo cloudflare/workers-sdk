@@ -110,7 +110,6 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 	const {
 		local,
-		directory,
 		port,
 		proxy: requestedProxyPort,
 		"script-path": singleWorkerScriptPath,
@@ -122,6 +121,7 @@ export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 		config: config,
 		_: [_pages, _dev, ...remaining],
 	} = args;
+	let { directory } = args;
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
@@ -129,9 +129,13 @@ export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 		throw new FatalError("Only local mode is supported at the moment.", 1);
 	}
 
-	let pagesConfig: PagesConfig;
+	let pagesConfig: PagesConfig | null = null;
 	if (config) {
 		pagesConfig = readPagesConfig(config, args);
+	}
+
+	if (!directory && pagesConfig?.output_directory) {
+		directory = pagesConfig.output_directory;
 	}
 
 	const functionsDirectory = "./functions";
@@ -144,7 +148,7 @@ export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 	if (directory === undefined) {
 		proxyPort = await spawnProxyProcess({
 			port: requestedProxyPort,
-			command,
+			command: pagesConfig?.output_directory ? [pagesConfig?.output_directory, ...command] : command,
 		});
 		if (proxyPort === undefined) return undefined;
 	}
@@ -159,7 +163,7 @@ export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 	if (usingFunctions) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 
-		if (nodeCompat) {
+		if (nodeCompat || pagesConfig?.node_compat) {
 			console.warn(
 				"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 			);
@@ -270,6 +274,7 @@ export const Handler = async (args: ArgumentsCamelCase<PagesDevArgs>) => {
 		// User bindings
 		bindings: {
 			...vars,
+			...pagesConfig?.vars,
 			...Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))

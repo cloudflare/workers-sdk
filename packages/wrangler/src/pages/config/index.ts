@@ -9,10 +9,12 @@ export function readPagesConfig(
 ): PagesConfig {
 	let rawConfig: RawPagesConfig = {};
 
-	// TODO: for now, throw an error if name of the file isn't exactly "pages.toml"
-
 	// Load the configuration from disk if available
 	if (configPath) {
+		if (!configPath.endsWith("pages.toml")) {
+			throw new Error("Config file needs to be named 'pages.toml'");
+		}
+
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
 	}
 
