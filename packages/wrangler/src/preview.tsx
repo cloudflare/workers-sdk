@@ -1,12 +1,5 @@
 import { DeprecationError } from "./errors";
-import type { Argv, ArgumentsCamelCase } from "yargs";
-
-interface PreviewArgs {
-	method: string;
-	body: string;
-	env: string;
-	watch: boolean;
-}
+import type { Argv } from "yargs";
 
 export function previewOptions(yargs: Argv) {
 	return yargs
@@ -30,7 +23,7 @@ export function previewOptions(yargs: Argv) {
 		});
 }
 
-export async function previewHandler(args: ArgumentsCamelCase<PreviewArgs>) {
+export async function previewHandler() {
 	throw new DeprecationError(
 		"The `wrangler preview` command has been deprecated.\n" +
 			"Try using `wrangler dev` to to try out a worker during development.\n"
