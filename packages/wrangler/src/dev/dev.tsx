@@ -55,6 +55,10 @@ export type DevProps = {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
+	inspect: boolean | undefined;
+	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	onReady: (() => void) | undefined;
+	showInteractiveDevSession: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -88,7 +92,8 @@ export function DevImplementation(props: DevProps): JSX.Element {
 
 	// only load the UI if we're running in a supported environment
 	const { isRawModeSupported } = useStdin();
-	return isRawModeSupported ? (
+
+	return props.showInteractiveDevSession ?? isRawModeSupported ? (
 		<InteractiveDevSession {...props} />
 	) : (
 		<DevSession {...props} local={props.initialMode === "local"} />
@@ -171,6 +176,9 @@ function DevSession(props: DevSessionProps) {
 			crons={props.crons}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
+			logLevel={props.logLevel}
+			inspect={props.inspect}
+			onReady={props.onReady}
 		/>
 	) : (
 		<Remote
@@ -193,6 +201,7 @@ function DevSession(props: DevSessionProps) {
 			zone={props.zone}
 			host={props.host}
 			routes={props.routes}
+			onReady={props.onReady}
 		/>
 	);
 }

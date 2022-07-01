@@ -31,6 +31,9 @@ interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
+	inspect: boolean | undefined;
+	onReady: (() => void) | undefined;
+	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 }
 
 export function Local(props: LocalProps) {
@@ -59,6 +62,9 @@ function useLocalWorker({
 	crons,
 	localProtocol,
 	localUpstream,
+	inspect,
+	onReady,
+	logLevel,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ReturnType<typeof spawn>>();
@@ -220,6 +226,7 @@ function useLocalWorker({
 				logUnhandledRejections: true,
 				crons,
 				upstream,
+				disableLogs: logLevel === "none",
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -232,20 +239,25 @@ function useLocalWorker({
 			const optionsArg = JSON.stringify(options, null);
 
 			logger.log("⎔ Starting a local server...");
-			local.current = spawn(
-				"node",
-				[
-					"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-					"--no-warnings", // hide annoying Node warnings
-					"--inspect", // start Miniflare listening for a debugger to attach
-					miniflareCLIPath,
-					optionsArg,
-					// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-				],
-				{
-					cwd: path.dirname(scriptPath),
-				}
-			);
+			const localServerOptions = [
+				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+				"--no-warnings", // hide annoying Node warnings
+				miniflareCLIPath,
+				optionsArg,
+				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+			];
+			if (inspect) {
+				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
+			}
+			// spawn isn't technically synchronous here
+			local.current = spawn("node", localServerOptions, {
+				cwd: path.dirname(scriptPath),
+			});
+			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
+			if (onReady) {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				onReady();
+			}
 
 			local.current.on("close", (code) => {
 				if (code) {
@@ -330,6 +342,9 @@ function useLocalWorker({
 		crons,
 		localProtocol,
 		localUpstream,
+		inspect,
+		logLevel,
+		onReady,
 	]);
 	return { inspectorUrl };
 }

@@ -36,6 +36,7 @@ export function Remote(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
+	onReady?: () => void;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -59,6 +60,7 @@ export function Remote(props: {
 		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
+		onReady: props.onReady,
 	});
 
 	usePreviewServer({
@@ -129,6 +131,7 @@ export function useWorker(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
+	onReady?: () => void;
 }): CfPreviewToken | undefined {
 	const {
 		name,
@@ -142,6 +145,7 @@ export function useWorker(props: {
 		compatibilityFlags,
 		usageModel,
 		port,
+		onReady,
 	} = props;
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
 
@@ -239,6 +243,7 @@ export function useWorker(props: {
 					abortController.signal
 				)
 			);
+			onReady?.();
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -283,6 +288,7 @@ export function useWorker(props: {
 		props.zone,
 		props.host,
 		props.routes,
+		onReady,
 	]);
 	return token;
 }

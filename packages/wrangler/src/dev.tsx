@@ -57,6 +57,9 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	onReady?: () => void;
+	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	showInteractiveDevSession?: boolean;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -231,9 +234,27 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 }
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
-	let watcher: ReturnType<typeof watch> | undefined;
+	let watcher;
 	try {
+		const devInstance = await startDev(args);
+		watcher = devInstance.watcher;
+		const { waitUntilExit } = devInstance.devReactElement;
+		await waitUntilExit();
+	} finally {
+		await watcher?.close();
+	}
+}
+
+export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
+	let watcher: ReturnType<typeof watch> | undefined;
+	let rerender: (node: React.ReactNode) => void | undefined;
+	try {
+		if (args.logLevel) {
+			// we don't define a "none" logLevel, so "error" will do for now.
+			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+		}
 		await printWranglerBanner();
+
 		const configPath =
 			(args.config as ConfigPath) ||
 			((args.script &&
@@ -274,6 +295,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 		}
 
 		if (args.inspect) {
+			//devtools are enabled by default, but we still need to disable them if the caller doesn't want them
 			logger.warn(
 				"Passing --inspect is unnecessary, now you can always connect to devtools."
 			);
@@ -469,13 +491,25 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 					usageModel={config.usage_model}
 					bindings={bindings}
 					crons={config.triggers.crons}
+					logLevel={args.logLevel}
+					onReady={args.onReady}
+					inspect={args.inspect}
+					showInteractiveDevSession={args.showInteractiveDevSession}
 				/>
 			);
 		}
-		const { waitUntilExit, rerender } = render(
-			await getDevReactElement(config)
-		);
-		await waitUntilExit();
+		const devReactElement = render(await getDevReactElement(config));
+		rerender = devReactElement.rerender;
+		return {
+			devReactElement,
+			watcher,
+			stop: async () => {
+				devReactElement.unmount();
+				await devReactElement.waitUntilExit();
+				await watcher?.close();
+				process.exit(0);
+			},
+		};
 	} finally {
 		await watcher?.close();
 	}
