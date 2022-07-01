@@ -87,9 +87,6 @@ function runDelegatedWrangler() {
 	} = JSON.parse(fs.readFileSync(packageJsonPath));
 	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
 
-	console.log(
-		`Delegating to locally-installed version of wrangler @ v${version}`
-	);
 	// this call to `spawn` is simpler because the delegated version will do all
 	// of the other work.
 	return spawn(
