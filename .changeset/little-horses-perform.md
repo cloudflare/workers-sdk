@@ -1,5 +1,4 @@
 ---
-"wrangler-dev-api-app": patch
 "wrangler": patch
 ---
 
