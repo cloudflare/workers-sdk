@@ -1,19 +1,19 @@
 {
-  "name": "wrangler-devtools",
-  "private": "true",
-  "version": "0.0.0",
-  "author": "wrangler@cloudflare.com",
-  "description": "Chrome Devtools with polyfills to work across browsers",
-  "license": "BSD-3-Clause",
-  "bugs": {
-    "url": "https://github.com/cloudflare/wrangler2/issues"
-  },
-  "homepage": "https://github.com/cloudflare/wrangler2#readme",
-  "scripts": {
-    "publish": "npx wrangler pages publish built-devtools",
-    "prepublish": "node ./build-devtools.mjs"
-  },
-  "devDependencies": {
-    "execa": "^6.1.0"
-  }
+	"name": "wrangler-devtools",
+	"private": "true",
+	"version": "0.0.0",
+	"author": "wrangler@cloudflare.com",
+	"description": "Chrome Devtools hosted for easy use with Wrangler",
+	"license": "BSD-3-Clause",
+	"bugs": {
+		"url": "https://github.com/cloudflare/wrangler2/issues"
+	},
+	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"scripts": {
+		"publish": "npx wrangler pages publish built-devtools",
+		"prepublish": "node ./build-devtools.mjs"
+	},
+	"devDependencies": {
+		"execa": "^6.1.0"
+	}
 }
