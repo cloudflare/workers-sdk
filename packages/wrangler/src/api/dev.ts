@@ -20,16 +20,20 @@ export async function unstable_dev(script: string, options: DevOptions) {
 		`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 	);
 
-	return new Promise<void>((resolve) => {
-		//startDev returns a stop function... how do we simulultaneously resolve here, and pass the result of startDev to the caller?
-		return startDev({
-			script: script,
-			...options,
-			local: true,
-			onReady: resolve,
-			inspect: false,
-			logLevel: "none",
-			showInteractiveDevSession: false,
+	return new Promise<{ stop: () => void }>((resolve) => {
+		//lmao
+		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
+			const devServer = startDev({
+				script: script,
+				...options,
+				local: true,
+				onReady: () => ready(devServer),
+				inspect: false,
+				logLevel: "none",
+				showInteractiveDevSession: false,
+			});
+		}).then((devServer) => {
+			resolve({ stop: devServer.stop });
 		});
 	});
 }
