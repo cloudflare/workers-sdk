@@ -254,7 +254,11 @@ function useLocalWorker({
 				cwd: path.dirname(scriptPath),
 			});
 			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
-			onReady && onReady();
+			if (onReady) {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				onReady();
+			}
+
 			local.current.on("close", (code) => {
 				if (code) {
 					logger.log(`Miniflare process exited with code ${code}`);

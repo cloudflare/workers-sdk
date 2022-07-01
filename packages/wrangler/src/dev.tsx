@@ -506,6 +506,8 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			stop: async () => {
 				devReactElement.unmount();
 				await devReactElement.waitUntilExit();
+				await watcher?.close();
+				process.exit(0);
 			},
 		};
 	} finally {
