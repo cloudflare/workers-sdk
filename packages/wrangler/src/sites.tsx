@@ -138,9 +138,9 @@ export async function syncAssets(
 
 	const manifest: Record<string, string> = {};
 
-	// A batch of uploads where each bucket has to be less than 100mb
+	// A batch of uploads where each bucket has to be less than 98mb
 	const uploadBuckets: KeyValue[][] = [];
-	// The "live" bucket that we'll keep filling until it's just below 100mb
+	// The "live" bucket that we'll keep filling until it's just below 98mb
 	let uploadBucket: KeyValue[] = [];
 	// A size counter for the live bucket
 	let uploadBucketSize = 0;
@@ -166,7 +166,7 @@ export async function syncAssets(
 		const content = await readFile(absAssetFile, "base64");
 		await validateAssetSize(absAssetFile, assetFile);
 		// while KV accepts files that are 25 MiB **before** b64 encoding
-		// the overall bucket size must be below 100 MiB **after** b64 encoding
+		// the overall bucket size must be below 100 MB **after** b64 encoding
 		const assetSize = Buffer.from(content).length;
 		const assetKey = hashAsset(hasher, assetFile, content);
 		validateAssetKey(assetKey);
@@ -176,8 +176,8 @@ export async function syncAssets(
 			logger.log(`Uploading as ${assetKey}...`);
 
 			// Check if adding this asset to the bucket would
-			// push it over the 100 MiB limit KV bulk API limit
-			if (uploadBucketSize + assetSize > 100 * 1024 * 1024) {
+			// push it over the 98 MiB limit KV bulk API limit
+			if (uploadBucketSize + assetSize > 98 * 1000 * 1000) {
 				// If so, move the current bucket into the batch,
 				// and reset the counter/bucket
 				uploadBuckets.push(uploadBucket);
