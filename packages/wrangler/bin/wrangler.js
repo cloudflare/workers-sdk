@@ -52,9 +52,6 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 	return spawn(
 		process.execPath,
 		[
-			...(semiver(process.versions.node, "18.0.0") >= 0
-				? ["--no-experimental-fetch"] // TODO: remove this when https://github.com/cloudflare/wrangler2/issues/834 is properly fixed
-				: []),
 			"--no-warnings",
 			"--experimental-vm-modules",
 			...process.execArgv,
