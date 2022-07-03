@@ -11,6 +11,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
+import { getAccountFromCache } from "./user";
 import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
 import {
 	printWranglerBanner,
@@ -477,7 +478,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					enableLocalPersistence={
 						args["experimental-enable-local-persistence"] || false
 					}
-					accountId={config.account_id}
+					accountId={config.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
 					port={args.port || config.dev.port || (await getLocalPort())}
 					ip={args.ip || config.dev.ip}

@@ -1,44 +1,83 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
+import * as path from "path";
+import { findUpSync } from "find-up";
+import isInteractive from "./is-interactive";
+import { logger } from "./logger";
 
 let cacheMessageShown = false;
 
-const cacheFolder = "node_modules/.cache/wrangler";
+let __cacheFolder: string | null;
+function getCacheFolder() {
+	if (__cacheFolder || __cacheFolder === null) return __cacheFolder;
 
-const showCacheMessage = () => {
-	if (!cacheMessageShown) {
-		console.log(
-			`Using cached values in '${cacheFolder}'. This is used as a temporary store to improve the developer experience for some commands. It may be purged at any time. It doesn't contain any sensitive information, but it should not be commited into source control.`
-		);
-		cacheMessageShown = true;
+	const closestNodeModulesDirectory = findUpSync("node_modules", {
+		type: "directory",
+	});
+	__cacheFolder = closestNodeModulesDirectory
+		? path.join(closestNodeModulesDirectory, ".cache/wrangler")
+		: null;
+
+	if (!__cacheFolder) {
+		logger.debug("No folder available to cache configuration");
 	}
-};
+	return __cacheFolder;
+}
 
-export const getConfigCache = <T>(fileName: string): Partial<T> => {
+const arrayFormatter = new Intl.ListFormat("en", {
+	style: "long",
+	type: "conjunction",
+});
+
+function showCacheMessage(fields: string[], folder: string) {
+	if (!cacheMessageShown && isInteractive()) {
+		if (fields.length > 0) {
+			logger.log(
+				`Retrieving cached values for ${arrayFormatter.format(
+					fields
+				)} from ${path.relative(process.cwd(), folder)}`
+			);
+			cacheMessageShown = true;
+		}
+	}
+}
+
+export function getConfigCache<T>(fileName: string): Partial<T> {
 	try {
-		const configCacheLocation = join(cacheFolder, fileName);
-		const configCache = JSON.parse(readFileSync(configCacheLocation, "utf-8"));
-		showCacheMessage();
-		return configCache;
-	} catch {
+		const cacheFolder = getCacheFolder();
+		if (cacheFolder) {
+			const configCacheLocation = path.join(cacheFolder, fileName);
+			const configCache = JSON.parse(
+				readFileSync(configCacheLocation, "utf-8")
+			);
+			showCacheMessage(Object.keys(configCache), cacheFolder);
+			return configCache;
+		} else return {};
+	} catch (err) {
 		return {};
 	}
-};
+}
 
-export const saveToConfigCache = <T>(
+export function saveToConfigCache<T>(
 	fileName: string,
 	newValues: Partial<T>
-) => {
-	const configCacheLocation = join(cacheFolder, fileName);
-	const existingValues = getConfigCache(fileName);
+): void {
+	const cacheFolder = getCacheFolder();
+	if (cacheFolder) {
+		logger.debug(`Saving to cache: ${JSON.stringify(newValues)}`);
+		const configCacheLocation = path.join(cacheFolder, fileName);
+		const existingValues = getConfigCache(fileName);
 
-	mkdirSync(dirname(configCacheLocation), { recursive: true });
-	writeFileSync(
-		configCacheLocation,
-		JSON.stringify({ ...existingValues, ...newValues }, null, 2)
-	);
-};
+		mkdirSync(path.dirname(configCacheLocation), { recursive: true });
+		writeFileSync(
+			configCacheLocation,
+			JSON.stringify({ ...existingValues, ...newValues }, null, 2)
+		);
+	}
+}
 
-export const purgeConfigCaches = () => {
-	rmSync(cacheFolder, { recursive: true, force: true });
-};
+export function purgeConfigCaches() {
+	const cacheFolder = getCacheFolder();
+	if (cacheFolder) {
+		rmSync(cacheFolder, { recursive: true, force: true });
+	}
+}

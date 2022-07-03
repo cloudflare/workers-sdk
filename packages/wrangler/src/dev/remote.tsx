@@ -11,7 +11,12 @@ import useInspector from "../inspect";
 import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
-import { ChooseAccount, getAccountChoices, requireApiToken } from "../user";
+import {
+	ChooseAccount,
+	getAccountChoices,
+	requireApiToken,
+	saveAccountToCache,
+} from "../user";
 import type { Route } from "../config/environment";
 import type {
 	CfPreviewToken,
@@ -96,13 +101,20 @@ export function Remote(props: {
 	// This effect handles the async step of fetching the available accounts for the current user.
 	// If only one account is available then it is just used by calling `setAccountId()`.
 	useEffect(() => {
-		if (accountChoicesRef.current !== undefined) {
+		if (
+			accountChoicesRef.current !== undefined ||
+			props.accountId !== undefined
+		) {
 			return;
 		}
 		accountChoicesRef.current = getAccountChoices();
 		accountChoicesRef.current.then(
 			(accounts) => {
 				if (accounts.length === 1) {
+					saveAccountToCache({
+						id: accounts[0].id,
+						name: accounts[0].name,
+					});
 					setAccountId(accounts[0].id);
 				} else {
 					setAccountChoices(accounts);
@@ -119,7 +131,10 @@ export function Remote(props: {
 	return accountId === undefined && accountChoices !== undefined ? (
 		<ChooseAccount
 			accounts={accountChoices}
-			onSelect={(selectedAccountId) => setAccountId(selectedAccountId)}
+			onSelect={(selectedAccount) => {
+				saveAccountToCache(selectedAccount);
+				setAccountId(selectedAccount.id);
+			}}
 			onError={(err) => errorHandler(err)}
 		></ChooseAccount>
 	) : null;

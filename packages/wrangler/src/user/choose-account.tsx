@@ -15,7 +15,7 @@ export type ChooseAccountItem = {
  */
 export function ChooseAccount(props: {
 	accounts: ChooseAccountItem[];
-	onSelect: (accountId: string) => void;
+	onSelect: (account: { name: string; id: string }) => void;
 	onError: (error: Error) => void;
 }) {
 	return (
@@ -29,7 +29,7 @@ export function ChooseAccount(props: {
 				}))}
 				onSelect={(item) => {
 					logger.log(`Using account: "${item.value.name} - ${item.value.id}"`);
-					props.onSelect(item.value.id);
+					props.onSelect({ id: item.value.id, name: item.value.name });
 				}}
 			/>
 		</>
