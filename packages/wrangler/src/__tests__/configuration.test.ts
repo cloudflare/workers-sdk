@@ -62,6 +62,7 @@ describe("normalizeAndValidateConfig()", () => {
 			data_blobs: undefined,
 			workers_dev: undefined,
 			zone_id: undefined,
+			no_bundle: undefined,
 			minify: undefined,
 			node_compat: undefined,
 		});
@@ -848,6 +849,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					],
 				},
+				no_bundle: true,
 				minify: true,
 				node_compat: true,
 			};
@@ -920,6 +922,7 @@ describe("normalizeAndValidateConfig()", () => {
 				define: {
 					DEF1: 1777,
 				},
+				no_bundle: "INVALID",
 				minify: "INVALID",
 				node_compat: "INVALID",
 			} as unknown as RawEnvironment;
@@ -986,6 +989,7 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"main\\" to be of type string but got 1333.
 			  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
 			  - The field \\"define.DEF1\\" should be a string but got 1777.
+			  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
 		`);
@@ -2192,6 +2196,7 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: "CWD",
 					watch_dir: "WATCH_DIR",
 				},
+				no_bundle: true,
 				minify: true,
 				node_compat: true,
 			};
@@ -2234,6 +2239,7 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: "ENV_CWD",
 					watch_dir: "ENV_WATCH_DIR",
 				},
+				no_bundle: false,
 				minify: false,
 				node_compat: false,
 			};
@@ -2255,6 +2261,7 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: "CWD",
 					watch_dir: "WATCH_DIR",
 				},
+				no_bundle: true,
 				minify: true,
 				node_compat: true,
 				env: {
@@ -2515,6 +2522,7 @@ describe("normalizeAndValidateConfig()", () => {
 					cwd: 1555,
 					watch_dir: 1666,
 				},
+				no_bundle: "INVALID",
 				minify: "INVALID",
 				node_compat: "INVALID",
 			} as unknown as RawEnvironment;
@@ -2550,6 +2558,7 @@ describe("normalizeAndValidateConfig()", () => {
 			    - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
 			    - Expected \\"main\\" to be of type string but got 1333.
 			    - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+			    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\"."
 		`);

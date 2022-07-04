@@ -82,7 +82,6 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 			.option("bundle", {
 				describe: "Run wrangler's compilation step before publishing",
 				type: "boolean",
-				default: true,
 				hidden: true,
 			})
 			.option("no-bundle", {
@@ -454,7 +453,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			return (
 				<Dev
 					name={getScriptName({ name: args.name, env: args.env }, config)}
-					noBundle={!args.bundle}
+					noBundle={!(args.bundle ?? !config.no_bundle)}
 					entry={entry}
 					env={args.env}
 					zone={zoneId}

@@ -6026,7 +6026,7 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--no-bundle", () => {
-		it("should not transform the source code before publishing it", async () => {
+		it("(cli) should not transform the source code before publishing it", async () => {
 			writeWranglerToml();
 			const scriptContent = `
       import X from '@cloudflare/no-such-package'; // let's add an import that doesn't exist
@@ -6034,6 +6034,19 @@ addEventListener('fetch', event => {});`
     `;
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("publish index.js --no-bundle --dry-run --outdir dist");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
+		});
+
+		it("(config) should not transform the source code before publishing it", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+			});
+			const scriptContent = `
+			import X from '@cloudflare/no-such-package'; // let's add an import that doesn't exist
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("publish index.js --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
