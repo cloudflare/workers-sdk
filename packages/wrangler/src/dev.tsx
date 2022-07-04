@@ -29,6 +29,7 @@ interface DevArgs {
 	config?: string;
 	script?: string;
 	name?: string;
+	bundle?: boolean;
 	build?: boolean;
 	format?: string;
 	env?: string;
@@ -74,17 +75,17 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "string",
 				requiresArg: true,
 			})
-			// We want to have a --no-build flag, but yargs requires that
-			// we also have a --build flag (that it adds the --no to by itself)
-			// So we make a --build flag, but hide it, and then add a --no-build flag
+			// We want to have a --no-bundle flag, but yargs requires that
+			// we also have a --bundle flag (that it adds the --no to by itself)
+			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
 			// that's visible to the user but doesn't "do" anything.
-			.option("build", {
+			.option("bundle", {
 				describe: "Run wrangler's compilation step before publishing",
 				type: "boolean",
 				default: true,
 				hidden: true,
 			})
-			.option("no-build", {
+			.option("no-bundle", {
 				describe: "Skip internal build steps and directly publish script",
 				type: "boolean",
 				default: false,
@@ -453,7 +454,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			return (
 				<Dev
 					name={getScriptName({ name: args.name, env: args.env }, config)}
-					noBuild={!args.build}
+					noBundle={!args.bundle}
 					entry={entry}
 					env={args.env}
 					zone={zoneId}

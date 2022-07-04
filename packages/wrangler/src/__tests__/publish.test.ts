@@ -6025,7 +6025,7 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
-	describe("--no-build", () => {
+	describe("--no-bundle", () => {
 		it("should not transform the source code before publishing it", async () => {
 			writeWranglerToml();
 			const scriptContent = `
@@ -6033,7 +6033,7 @@ addEventListener('fetch', event => {});`
       const xyz = 123; // a statement that would otherwise be compiled out
     `;
 			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("publish index.js --no-build --dry-run --outdir dist");
+			await runWrangler("publish index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});

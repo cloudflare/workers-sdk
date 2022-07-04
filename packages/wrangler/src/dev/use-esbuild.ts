@@ -28,7 +28,7 @@ export function useEsbuild({
 	minify,
 	nodeCompat,
 	define,
-	noBuild,
+	noBundle,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -40,7 +40,7 @@ export function useEsbuild({
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
-	noBuild: boolean;
+	noBundle: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -76,7 +76,7 @@ export function useEsbuild({
 				bundleType,
 				modules,
 				stop,
-			}: Awaited<ReturnType<typeof bundleWorker>> = noBuild
+			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
 				? {
 						modules: [],
 						resolvedEntryPointPath: entry.file,
@@ -99,9 +99,9 @@ export function useEsbuild({
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = stop;
 
-			// if "noBuild" is true, then we need to manually watch the entry point and
+			// if "noBundle" is true, then we need to manually watch the entry point and
 			// trigger "builds" when it changes
-			if (noBuild) {
+			if (noBundle) {
 				const watcher = watch(entry.file, {
 					persistent: true,
 				}).on("change", async (_event) => {
@@ -141,7 +141,7 @@ export function useEsbuild({
 		rules,
 		tsconfig,
 		exit,
-		noBuild,
+		noBundle,
 		minify,
 		nodeCompat,
 		define,
