@@ -40,7 +40,7 @@ describe("wrangler", () => {
 
 				it("should create a namespace", async () => {
 					const requests = mockCreateRequest("my-namespace");
-					await runWrangler("pubsub namespaces create my-namespace");
+					await runWrangler("pubsub namespace create my-namespace");
 					// TODO: check returned object
 					expect(requests.count).toEqual(1);
 				});
@@ -67,7 +67,7 @@ describe("wrangler", () => {
 						{ name: "namespace-2", created_on: "01-01-2001" },
 					];
 					const requests = mockListRequest(expectedNamespaces);
-					await runWrangler("pubsub namespaces list");
+					await runWrangler("pubsub namespace list");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					// TODO(elithrar): check returned object
@@ -97,7 +97,7 @@ describe("wrangler", () => {
 				it("should create a broker", async () => {
 					const requests = mockCreateRequest("my-broker");
 					await runWrangler(
-						"pubsub brokers create my-broker --namespace=some-namespace"
+						"pubsub broker create my-broker --namespace=some-namespace"
 					);
 
 					// TODO: check returned object
@@ -106,7 +106,7 @@ describe("wrangler", () => {
 
 				it("fail to create broker when no namespace is set", async () => {
 					await expect(
-						runWrangler("pubsub brokers create my-broker")
+						runWrangler("pubsub broker create my-broker")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`"Missing required argument: namespace"`
 					);
@@ -151,7 +151,7 @@ describe("wrangler", () => {
 						expectedOnPublish
 					);
 					await runWrangler(
-						"pubsub brokers update my-broker --namespace=some-namespace --expiration=24h --description='hello' --on-publish-url='https://foo.bar.example.com'"
+						"pubsub broker update my-broker --namespace=some-namespace --expiration=24h --description='hello' --on-publish-url='https://foo.bar.example.com'"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
@@ -182,7 +182,7 @@ describe("wrangler", () => {
 						{ name: "broker-2", created_on: "01-01-2001" },
 					];
 					const requests = mockListRequest(expectedBrokers);
-					await runWrangler("pubsub brokers list --namespace=some-namespace");
+					await runWrangler("pubsub broker list --namespace=some-namespace");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					// TODO(elithrar): check returned object
@@ -209,7 +209,7 @@ describe("wrangler", () => {
 				it("should describe a single broker", async () => {
 					const requests = mockGetRequest({ id: "1234", name: "my-broker" });
 					await runWrangler(
-						"pubsub brokers describe my-broker --namespace=some-namespace"
+						"pubsub broker describe my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
@@ -236,7 +236,7 @@ describe("wrangler", () => {
 				it("should issue a token for the broker", async () => {
 					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
-						"pubsub brokers issue my-broker --namespace=some-namespace"
+						"pubsub broker issue my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
@@ -263,7 +263,7 @@ describe("wrangler", () => {
 				it("should return the public keys for a broker", async () => {
 					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
-						"pubsub brokers public-keys my-broker --namespace=some-namespace"
+						"pubsub broker public-keys my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
