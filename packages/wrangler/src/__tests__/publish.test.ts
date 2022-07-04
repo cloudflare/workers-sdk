@@ -2480,13 +2480,16 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 
-			// We expect this to be uploaded in 3 batches
-			// The first batch has 11 files (88mb)
+			// We expect this to be uploaded in 4 batches
+
+			// The first batch has 11 files
 			expect(requests[0].uploads.length).toEqual(11);
-			// The next batch has 5 files (93mb)
+			// The next batch has 5 files
 			expect(requests[1].uploads.length).toEqual(5);
-			// And the last one has 4 files (98mb)
-			expect(requests[2].uploads.length).toEqual(4);
+			// And the next one has 3 files
+			expect(requests[2].uploads.length).toEqual(3);
+			// And just 1 in the last batch
+			expect(requests[3].uploads.length).toEqual(1);
 
 			let assetIndex = 0;
 			for (const request of requests) {
