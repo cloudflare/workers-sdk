@@ -184,6 +184,12 @@ interface EnvironmentInheritable {
 	};
 
 	/**
+	 * Skip internal build steps and directly publish script
+	 * @inheritable
+	 */
+	no_bundle: boolean | undefined;
+
+	/**
 	 * Minify the script before uploading.
 	 * @inheritable
 	 */
@@ -191,6 +197,7 @@ interface EnvironmentInheritable {
 
 	/**
 	 * Add polyfills for node builtin modules and globals
+	 * @inheritable
 	 */
 	node_compat: boolean | undefined;
 

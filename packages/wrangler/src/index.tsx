@@ -379,7 +379,6 @@ function createCLIParser(argv: string[]) {
 					.option("bundle", {
 						describe: "Run wrangler's compilation step before publishing",
 						type: "boolean",
-						default: true,
 						hidden: true,
 					})
 					.option("no-bundle", {
@@ -564,7 +563,7 @@ function createCLIParser(argv: string[]) {
 				isWorkersSite: Boolean(args.site || config.site),
 				outDir: args.outdir,
 				dryRun: args.dryRun,
-				noBundle: !args.bundle,
+				noBundle: !(args.bundle ?? !config.no_bundle),
 			});
 		}
 	);

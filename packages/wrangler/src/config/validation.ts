@@ -1030,6 +1030,14 @@ function normalizeAndValidateEnvironment(
 			}
 		),
 		zone_id: rawEnv.zone_id,
+		no_bundle: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"no_bundle",
+			isBoolean,
+			undefined
+		),
 		minify: inheritable(
 			diagnostics,
 			topLevelEnv,
