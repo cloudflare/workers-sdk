@@ -28,29 +28,30 @@ describe("wrangler", () => {
 			await runWrangler();
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler
+			"wrangler
 
-        Commands:
-          wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler dev [script]      👂 Start a local server for developing your worker
-          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
-          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
-          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
-          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
-          wrangler pages             ⚡️ Configure Cloudflare Pages
-          wrangler r2                📦 Interact with an R2 store
-          wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
-          wrangler login             🔓 Login to Cloudflare
-          wrangler logout            🚪 Logout from Cloudflare
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
+			Commands:
+			  wrangler init [name]       📥 Create a wrangler.toml configuration file
+			  wrangler dev [script]      👂 Start a local server for developing your worker
+			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages             ⚡️ Configure Cloudflare Pages
+			  wrangler r2                📦 Interact with an R2 store
+			  wrangler worker-namespace  📦 Interact with a worker namespace
+			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
+			  wrangler login             🔓 Login to Cloudflare
+			  wrangler logout            🚪 Logout from Cloudflare
+			  wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -65,35 +66,36 @@ describe("wrangler", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "
-        wrangler
+			"
+			wrangler
 
-        Commands:
-          wrangler init [name]       📥 Create a wrangler.toml configuration file
-          wrangler dev [script]      👂 Start a local server for developing your worker
-          wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-          wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-          wrangler secret            🤫 Generate a secret that can be referenced in the worker script
-          wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
-          wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
-          wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
-          wrangler pages             ⚡️ Configure Cloudflare Pages
-          wrangler r2                📦 Interact with an R2 store
-          wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
-          wrangler login             🔓 Login to Cloudflare
-          wrangler logout            🚪 Logout from Cloudflare
-          wrangler whoami            🕵️  Retrieve your user info and test your auth config
+			Commands:
+			  wrangler init [name]       📥 Create a wrangler.toml configuration file
+			  wrangler dev [script]      👂 Start a local server for developing your worker
+			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
+			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages             ⚡️ Configure Cloudflare Pages
+			  wrangler r2                📦 Interact with an R2 store
+			  wrangler worker-namespace  📦 Interact with a worker namespace
+			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
+			  wrangler login             🔓 Login to Cloudflare
+			  wrangler logout            🚪 Logout from Cloudflare
+			  wrangler whoami            🕵️  Retrieve your user info and test your auth config
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
+			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
 
-        "
-      `);
+			        "
+		      `);
 		});
 	});
 
@@ -121,98 +123,98 @@ describe("wrangler", () => {
 			await runWrangler("secret");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler secret
+			        "wrangler secret
 
-        🤫 Generate a secret that can be referenced in the worker script
+			        🤫 Generate a secret that can be referenced in the worker script
 
-        Commands:
-          wrangler secret put <key>     Create or update a secret variable for a script
-          wrangler secret delete <key>  Delete a secret variable from a script
-          wrangler secret list          List all secrets for a script
+			        Commands:
+			          wrangler secret put <key>     Create or update a secret variable for a script
+			          wrangler secret delete <key>  Delete a secret variable from a script
+			          wrangler secret list          List all secrets for a script
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 
 		it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {
 			await runWrangler("kv:namespace");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler kv:namespace
+			        "wrangler kv:namespace
 
-        🗂️  Interact with your Workers KV Namespaces
+			        🗂️  Interact with your Workers KV Namespaces
 
-        Commands:
-          wrangler kv:namespace create <namespace>  Create a new namespace
-          wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
-          wrangler kv:namespace delete              Deletes a given namespace.
+			        Commands:
+			          wrangler kv:namespace create <namespace>  Create a new namespace
+			          wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
+			          wrangler kv:namespace delete              Deletes a given namespace.
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 
 		it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
 			await runWrangler("kv:key");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler kv:key
+			        "wrangler kv:key
 
-        🔑 Individually manage Workers KV key-value pairs
+			        🔑 Individually manage Workers KV key-value pairs
 
-        Commands:
-          wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-          wrangler kv:key list               Outputs a list of all keys in a given namespace.
-          wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-          wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+			        Commands:
+			          wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+			          wrangler kv:key list               Outputs a list of all keys in a given namespace.
+			          wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+			          wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 
 		it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
 			await runWrangler("kv:bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler kv:bulk
+			        "wrangler kv:bulk
 
-        💪 Interact with multiple Workers KV key-value pairs at once
+			        💪 Interact with multiple Workers KV key-value pairs at once
 
-        Commands:
-          wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-          wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
+			        Commands:
+			          wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+			          wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 
 		it("no subcommand 'r2' should display a list of available subcommands", async () => {
 			await runWrangler("r2");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler r2
+			        "wrangler r2
 
-        📦 Interact with an R2 store
+			        📦 Interact with an R2 store
 
-        Commands:
-          wrangler r2 bucket  Manage R2 buckets
+			        Commands:
+			          wrangler r2 bucket  Manage R2 buckets
 
-        Flags:
-          -c, --config   Path to .toml configuration file  [string]
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]"
-      `);
+			        Flags:
+			          -c, --config   Path to .toml configuration file  [string]
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]"
+		      `);
 		});
 	});
 
@@ -220,16 +222,16 @@ describe("wrangler", () => {
 		it("should print a deprecation message for 'generate'", async () => {
 			await runWrangler("generate").catch((err) => {
 				expect(err.message).toMatchInlineSnapshot(`
-          "Deprecation:
-          \`wrangler generate\` has been deprecated.
-          Try running \`wrangler init\` to generate a basic Worker, or cloning the template repository instead:
+			          "Deprecation:
+			          \`wrangler generate\` has been deprecated.
+			          Try running \`wrangler init\` to generate a basic Worker, or cloning the template repository instead:
 
-          \`\`\`
-          git clone https://github.com/cloudflare/worker-template
-          \`\`\`
+			          \`\`\`
+			          git clone https://github.com/cloudflare/worker-template
+			          \`\`\`
 
-          Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
-        `);
+			          Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
+		        `);
 			});
 		});
 	});
@@ -242,16 +244,16 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-        for more information.
-        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
+		        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+		        for more information.
+		        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-      --dry-run: exiting now.
-      Total Upload: 0xx KiB / gzip: 0xx KiB"
-    `);
+		      --dry-run: exiting now.
+		      Total Upload: 0xx KiB / gzip: 0xx KiB"
+	    `);
 	});
 });
 

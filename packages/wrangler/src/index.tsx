@@ -62,6 +62,7 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
+import { workerNamespaceCommands } from "./worker-namespace";
 import type { Config } from "./config";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
@@ -1711,6 +1712,14 @@ function createCLIParser(argv: string[]) {
 				return r2BucketYargs;
 			});
 	});
+
+	wrangler.command(
+		"worker-namespace",
+		"📦 Interact with a worker namespace",
+		(workerNamespaceYargs) => {
+			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
+		}
+	);
 
 	wrangler.command(
 		"pubsub",
