@@ -3,17 +3,29 @@ import path from "node:path";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { printBundleSize } from "../bundle-reporter";
-import { createWorkerPreview } from "../create-worker-preview";
+import {
+	createPreviewSession,
+	createWorkerPreview,
+} from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import { ChooseAccount, getAccountChoices, requireApiToken } from "../user";
 import type { Route } from "../config/environment";
-import type { CfPreviewToken } from "../create-worker-preview";
+import type {
+	CfPreviewToken,
+	CfPreviewSession,
+} from "../create-worker-preview";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
-import type { CfModule, CfWorkerInit, CfScriptFormat } from "../worker";
+import type {
+	CfModule,
+	CfWorkerInit,
+	CfScriptFormat,
+	CfAccount,
+	CfWorkerContext,
+} from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 
 export function Remote(props: {
@@ -147,6 +159,7 @@ export function useWorker(props: {
 		port,
 		onReady,
 	} = props;
+	const [session, setSession] = useState<CfPreviewSession | undefined>();
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
 
 	// This is the most reliable way to detect whether
@@ -154,10 +167,63 @@ export function useWorker(props: {
 	// mark it once we log our initial message. Refs are vars!
 	const startedRef = useRef(false);
 
+	// This effect sets up the preview session
 	useEffect(() => {
 		const abortController = new AbortController();
 		async function start() {
 			if (accountId === undefined) {
+				return;
+			}
+
+			const workerAccount: CfAccount = {
+				accountId,
+				apiToken: requireApiToken(),
+			};
+
+			const workerCtx: CfWorkerContext = {
+				env: props.env,
+				legacyEnv: props.legacyEnv,
+				zone: props.zone,
+				host: props.host,
+				routes: props.routes,
+			};
+
+			setSession(
+				await createPreviewSession(
+					workerAccount,
+					workerCtx,
+					abortController.signal
+				)
+			);
+		}
+		start().catch((err) => {
+			// we want to log the error, but not end the process
+			// since it could recover after the developer fixes whatever's wrong
+			if ((err as { code: string }).code !== "ABORT_ERR") {
+				logger.error("Error while creating remote dev session:", err);
+			}
+		});
+
+		return () => {
+			abortController.abort();
+		};
+	}, [
+		accountId,
+		props.env,
+		props.host,
+		props.legacyEnv,
+		props.routes,
+		props.zone,
+	]);
+
+	// This effect uses the session to upload the worker and create a preview
+	useEffect(() => {
+		const abortController = new AbortController();
+		async function start() {
+			if (accountId === undefined) {
+				return;
+			}
+			if (session === undefined) {
 				return;
 			}
 			setToken(undefined); // reset token in case we're re-running
@@ -226,20 +292,26 @@ export function useWorker(props: {
 				compatibility_flags: compatibilityFlags,
 				usage_model: usageModel,
 			};
+
+			const workerAccount: CfAccount = {
+				accountId,
+				apiToken: requireApiToken(),
+			};
+
+			const workerCtx: CfWorkerContext = {
+				env: props.env,
+				legacyEnv: props.legacyEnv,
+				zone: props.zone,
+				host: props.host,
+				routes: props.routes,
+			};
+
 			setToken(
 				await createWorkerPreview(
 					init,
-					{
-						accountId,
-						apiToken: requireApiToken(),
-					},
-					{
-						env: props.env,
-						legacyEnv: props.legacyEnv,
-						zone: props.zone,
-						host: props.host,
-						routes: props.routes,
-					},
+					workerAccount,
+					workerCtx,
+					session,
 					abortController.signal
 				)
 			);
@@ -288,6 +360,7 @@ export function useWorker(props: {
 		props.zone,
 		props.host,
 		props.routes,
+		session,
 		onReady,
 	]);
 	return token;

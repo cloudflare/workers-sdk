@@ -6,6 +6,46 @@ import { logger } from "./logger";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 
 /**
+ * A Preview Session on the edge
+ */
+export interface CfPreviewSession {
+	/**
+	 * A randomly generated id for this session
+	 */
+	id: string;
+	/**
+	 * A value to use when creating a worker preview under a session
+	 */
+	value: string;
+	/**
+	 * The host where the session is available.
+	 */
+	host: string;
+	/**
+	 * A websocket url to a DevTools inspector.
+	 *
+	 * Workers does not have a fully-featured implementation
+	 * of the Chrome DevTools protocol, but supports the following:
+	 *  * `console.log()` output.
+	 *  * `Error` stack traces.
+	 *  * `fetch()` events.
+	 *
+	 * There is no support for breakpoints, but we want to implement
+	 * this eventually.
+	 *
+	 * @link https://chromedevtools.github.io/devtools-protocol/
+	 */
+	inspectorUrl: URL;
+	/**
+	 * A url to prewarm the preview session.
+	 *
+	 * @example
+	 * fetch(prewarmUrl, { method: 'POST' })
+	 */
+	prewarmUrl: URL;
+}
+
+/**
  * A preview mode.
  *
  * * If true, then using a `workers.dev` subdomain.
@@ -48,19 +88,32 @@ export interface CfPreviewToken {
 	 * A url to prewarm the preview session.
 	 *
 	 * @example
-	 * fetch(prewarmUrl, { method: 'POST' })
+	 * fetch(prewarmUrl, { method: 'POST',
+	 * 	 headers: {
+	 *     "cf-workers-preview-token": (preview)token.value,
+	 *   }
+	 * })
 	 */
 	prewarmUrl: URL;
+}
+
+// Credit: https://stackoverflow.com/a/2117523
+function randomId(): string {
+	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+		const r = (Math.random() * 16) | 0,
+			v = c == "x" ? r : (r & 0x3) | 0x8;
+		return v.toString(16);
+	});
 }
 
 /**
  * Generates a preview session token.
  */
-async function sessionToken(
+export async function createPreviewSession(
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
-): Promise<CfPreviewToken> {
+): Promise<CfPreviewSession> {
 	const { accountId } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
@@ -79,20 +132,12 @@ async function sessionToken(
 	const query = `cf_workers_preview_token=${token}`;
 
 	return {
+		id: randomId(),
 		value: token,
 		host,
 		inspectorUrl: new URL(`${inspector_websocket}?${query}`),
 		prewarmUrl: new URL(prewarm),
 	};
-}
-
-// Credit: https://stackoverflow.com/a/2117523
-function randomId(): string {
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0,
-			v = c == "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
 }
 
 /**
@@ -102,16 +147,12 @@ async function createPreviewToken(
 	account: CfAccount,
 	worker: CfWorkerInit,
 	ctx: CfWorkerContext,
+	session: CfPreviewSession,
 	abortSignal: AbortSignal
 ): Promise<CfPreviewToken> {
-	const { value, host, inspectorUrl, prewarmUrl } = await sessionToken(
-		account,
-		ctx,
-		abortSignal
-	);
-
+	const { value, host, inspectorUrl, prewarmUrl } = session;
 	const { accountId } = account;
-	const scriptId = worker.name || (ctx.zone ? randomId() : host.split(".")[0]);
+	const scriptId = worker.name || (ctx.zone ? session.id : host.split(".")[0]);
 	const url =
 		ctx.env && !ctx.legacyEnv
 			? `/accounts/${accountId}/workers/services/${scriptId}/environments/${ctx.env}/edge-preview`
@@ -182,18 +223,33 @@ export async function createWorkerPreview(
 	init: CfWorkerInit,
 	account: CfAccount,
 	ctx: CfWorkerContext,
+	session: CfPreviewSession,
 	abortSignal: AbortSignal
 ): Promise<CfPreviewToken> {
-	const token = await createPreviewToken(account, init, ctx, abortSignal);
-	const response = await fetch(token.prewarmUrl.href, {
+	const token = await createPreviewToken(
+		account,
+		init,
+		ctx,
+		session,
+		abortSignal
+	);
+	// fire and forget the prewarm call
+	fetch(token.prewarmUrl.href, {
 		method: "POST",
 		signal: abortSignal,
 		headers: {
 			"cf-workers-preview-token": token.value,
 		},
-	});
-	if (!response.ok) {
-		logger.warn("worker failed to prewarm: ", response.statusText);
-	}
+	}).then(
+		(response) => {
+			if (!response.ok) {
+				logger.warn("worker failed to prewarm: ", response.statusText);
+			}
+		},
+		(err) => {
+			logger.warn("worker failed to prewarm: ", err);
+		}
+	);
+
 	return token;
 }
