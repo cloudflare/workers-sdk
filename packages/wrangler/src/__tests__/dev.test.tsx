@@ -889,7 +889,7 @@ describe("wrangler dev", () => {
 
 			Options:
 			      --name                                       Name of the worker  [string]
-			      --no-build                                   Skip internal build steps and directly publish script  [boolean] [default: false]
+			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
 			      --format                                     Choose an entry type  [deprecated] [choices: \\"modules\\", \\"service-worker\\"]
 			  -e, --env                                        Perform on a specific environment  [string]
 			      --compatibility-date                         Date to use for compatibility checks  [string]

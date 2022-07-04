@@ -46,7 +46,7 @@ type Props = {
 	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
-	noBuild: boolean | undefined;
+	noBundle: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -341,7 +341,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 	try {
-		if (props.noBuild) {
+		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
 			const destinationDir =
 				typeof destination === "string" ? destination : destination.path;
@@ -356,7 +356,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			modules,
 			resolvedEntryPointPath,
 			bundleType,
-		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBuild
+		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
 			? // we can skip the whole bundling step and mock a bundle here
 			  {
 					modules: [],
