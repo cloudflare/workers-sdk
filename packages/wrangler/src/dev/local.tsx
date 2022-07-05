@@ -13,7 +13,7 @@ import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
-
+import type { ChildProcess } from "node:child_process";
 interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -67,7 +67,7 @@ function useLocalWorker({
 	logLevel,
 }: LocalProps) {
 	// TODO: pass vars via command line
-	const local = useRef<ReturnType<typeof fork>>();
+	const local = useRef<ChildProcess>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 	// if we're using local persistence for data, we should use the cwd
