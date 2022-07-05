@@ -252,8 +252,8 @@ function useLocalWorker({
 				execArgv: nodeOptions,
 			});
 			local.current.on("message", (message) => {
-				if (message === "ready" && onReady) {
-					onReady(local?.current?.pid);
+				if (message === "ready") {
+					onReady.?(local?.current?.pid);
 				}
 			});
 
