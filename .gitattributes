@@ -1,1 +1,3 @@
 * text=auto eol=lf
+api-extractor.json linguist-language=JSON-with-Comments
+tsconfig.emit.json linguist-language=JSON-with-Comments

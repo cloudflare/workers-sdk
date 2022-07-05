@@ -1,5 +1,6 @@
 import path from "node:path";
 import { build } from "esbuild";
+import { EXTERNAL_DEPENDENCIES } from "./deps";
 import type { WatchMode } from "esbuild";
 
 // the expectation is that this is being run from the project root
@@ -26,17 +27,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		outdir: "./wrangler-dist",
 		platform: "node",
 		format: "cjs",
-		external: [
-			"fsevents",
-			"esbuild",
-			"blake3-wasm",
-			"miniflare",
-			"@miniflare/core",
-			// todo - bundle miniflare too
-			"selfsigned",
-			"@esbuild-plugins/node-globals-polyfill",
-			"@esbuild-plugins/node-modules-polyfill",
-		],
+		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],
 		define: {
