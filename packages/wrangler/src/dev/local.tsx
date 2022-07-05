@@ -255,7 +255,7 @@ function useLocalWorker({
 			});
 			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
 			if (onReady) {
-				await new Promise((resolve) => setTimeout(resolve, 200));
+				await new Promise((resolve) => setTimeout(resolve, 500));
 				onReady();
 			}
 

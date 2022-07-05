@@ -9,7 +9,7 @@ import { main } from ".";
  * The main entrypoint for the CLI.
  * main only gets called when the script is run directly, not when it's imported as a module.
  */
-if (require.main) {
+if (typeof jest === "undefined" && require.main) {
 	main(hideBin(process.argv)).catch((e) => {
 		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
 		// Here we just want to ensure that the process exits with a non-zero code.

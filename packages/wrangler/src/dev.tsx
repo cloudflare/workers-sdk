@@ -3,6 +3,7 @@ import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
+import { fetch } from "undici";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -23,6 +24,7 @@ import {
 
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
+import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -505,9 +507,13 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			watcher,
 			stop: async () => {
 				devReactElement.unmount();
-				await devReactElement.waitUntilExit();
 				await watcher?.close();
-				process.exit(0);
+			},
+			fetch: async (init?: RequestInit) => {
+				const port = args.port || config.dev.port || (await getLocalPort());
+				const address = args.ip || config.dev.ip || "localhost";
+
+				return await fetch(`http://${address}:${port}/`, init);
 			},
 		};
 	} finally {
