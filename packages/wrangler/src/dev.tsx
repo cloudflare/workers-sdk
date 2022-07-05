@@ -510,6 +510,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 				await watcher?.close();
 			},
 			fetch: async (init?: RequestInit) => {
+				//TODO: we are not guaranteed to be assigned this port, we should fix this ASAP
 				const port = args.port || config.dev.port || (await getLocalPort());
 				const address = args.ip || config.dev.ip || "localhost";
 
