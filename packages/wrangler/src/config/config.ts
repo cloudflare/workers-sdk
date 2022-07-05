@@ -127,8 +127,13 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * This can either be a string, or an object with additional config fields.
 	 */
 	assets:
-		| string
-		| { bucket: string; include: string[]; exclude: string[] }
+		| {
+				bucket: string;
+				include: string[];
+				exclude: string[];
+				browser_TTL: number | undefined;
+				serve_single_page_app: boolean;
+		  }
 		| undefined;
 
 	/**
