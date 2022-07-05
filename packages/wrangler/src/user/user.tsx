@@ -219,7 +219,12 @@ import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetch } from "undici";
-import { purgeConfigCaches } from "../config-cache";
+import {
+	getConfigCache,
+	purgeConfigCaches,
+	saveToConfigCache,
+} from "../config-cache";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
@@ -1058,27 +1063,37 @@ export async function getAccountId(): Promise<string | undefined> {
 	const apiToken = getAPIToken();
 	if (!apiToken) return;
 
+	// check if we have a cached value
+	const cachedAccount = getAccountFromCache();
+	if (cachedAccount) {
+		return cachedAccount.id;
+	}
 	const accounts = await getAccountChoices();
 	if (accounts.length === 1) {
+		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
 	}
 
 	if (isInteractive()) {
-		return await new Promise((resolve, reject) => {
-			const { unmount } = render(
-				<ChooseAccount
-					accounts={accounts}
-					onSelect={async (selected) => {
-						resolve(selected);
-						unmount();
-					}}
-					onError={(err) => {
-						reject(err);
-						unmount();
-					}}
-				/>
-			);
-		});
+		const account = await new Promise<{ id: string; name: string }>(
+			(resolve, reject) => {
+				const { unmount } = render(
+					<ChooseAccount
+						accounts={accounts}
+						onSelect={async (selected) => {
+							saveAccountToCache(selected);
+							resolve(selected);
+							unmount();
+						}}
+						onError={(err) => {
+							reject(err);
+							unmount();
+						}}
+					/>
+				);
+			}
+		);
+		return account.id;
 	}
 
 	throw new Error(
@@ -1121,10 +1136,26 @@ export function requireApiToken(): ApiCredentials {
 	return credentials;
 }
 
-function isInteractive(): boolean {
-	try {
-		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-	} catch {
-		return false;
-	}
+/**
+ * Save the given account details to a cache
+ */
+export function saveAccountToCache(account: {
+	id: string;
+	name: string;
+}): void {
+	saveToConfigCache<{ account: { id: string; name: string } }>(
+		"wrangler-account.json",
+		{ account }
+	);
+}
+
+/**
+ * Fetch the given account details from a cache if available
+ */
+export function getAccountFromCache():
+	| undefined
+	| { id: string; name: string } {
+	return getConfigCache<{ account: { id: string; name: string } }>(
+		"wrangler-account.json"
+	).account;
 }
