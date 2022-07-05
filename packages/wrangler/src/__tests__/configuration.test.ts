@@ -16,6 +16,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		expect(config).toEqual({
 			account_id: undefined,
+			assets: undefined,
 			build: {
 				command: undefined,
 				cwd: undefined,
@@ -55,6 +56,7 @@ describe("normalizeAndValidateConfig()", () => {
 			unsafe: {
 				bindings: [],
 			},
+			worker_namespaces: [],
 			usage_model: undefined,
 			vars: {},
 			define: {},
@@ -1836,6 +1838,112 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
 			            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
 		        `);
+			});
+		});
+
+		describe("[worker_namespaces]", () => {
+			it("should log an experimental warning when worker_namespaces is used", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						worker_namespaces: [
+							{
+								binding: "BINDING_1",
+								namespace: "NAMESPACE_1",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+				expect(config).toEqual(
+					expect.not.objectContaining({ worker_namespaces: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+		`);
+			});
+
+			it("should error if worker_namespaces is not an array", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						worker_namespaces: "just a string",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ worker_namespaces: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"worker_namespaces\\" should be an array but got \\"just a string\\"."
+		`);
+			});
+
+			it("should error on non valid worker_namespaces", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						worker_namespaces: [
+							"a string",
+							123,
+							{
+								binding: 123,
+								namespace: 456,
+							},
+							{
+								binding: "WORKER_NAMESPACE_BINDING_1",
+								namespace: 456,
+							},
+							// this one is valid
+							{
+								binding: "WORKER_NAMESPACE_BINDING_1",
+								namespace: "WORKER_NAMESPACE_BINDING_NAMESPACE_1",
+							},
+							{
+								binding: 123,
+								namespace: "WORKER_NAMESPACE_BINDING_SERVICE_1",
+							},
+							{
+								binding: 123,
+								service: 456,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+				expect(config).toEqual(
+					expect.not.objectContaining({
+						worker_namespaces: expect.anything,
+					})
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+		`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"worker_namespaces[0]\\" binding should be objects, but got \\"a string\\"
+			  - \\"worker_namespaces[1]\\" binding should be objects, but got 123
+			  - \\"worker_namespaces[2]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
+			  - \\"worker_namespaces[2]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
+			  - \\"worker_namespaces[3]\\" should have a string \\"namespace\\" field but got {\\"binding\\":\\"WORKER_NAMESPACE_BINDING_1\\",\\"namespace\\":456}.
+			  - \\"worker_namespaces[5]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":\\"WORKER_NAMESPACE_BINDING_SERVICE_1\\"}.
+			  - \\"worker_namespaces[6]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			  - \\"worker_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
+		`);
 			});
 		});
 

@@ -25,6 +25,7 @@ import {
 
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
+import type { CfWorkerInit } from "./worker";
 import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
@@ -371,7 +372,9 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		}
 
 		// eslint-disable-next-line no-inner-declarations
-		async function getBindings(configParam: Config) {
+		async function getBindings(
+			configParam: Config
+		): Promise<CfWorkerInit["bindings"]> {
 			return {
 				kv_namespaces: configParam.kv_namespaces?.map(
 					({ binding, preview_id, id: _id }) => {
@@ -415,6 +418,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 						};
 					}
 				),
+				worker_namespaces: configParam.worker_namespaces,
 				services: configParam.services,
 				unsafe: configParam.unsafe?.bindings,
 			};

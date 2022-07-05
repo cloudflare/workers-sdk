@@ -122,6 +122,11 @@ interface CfService {
 	environment?: string;
 }
 
+interface CfWorkerNamespace {
+	binding: string;
+	namespace: string;
+}
+
 interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -168,6 +173,7 @@ export interface CfWorkerInit {
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		services: CfService[] | undefined;
+		worker_namespaces: CfWorkerNamespace[] | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;
 	};
 	migrations: CfDurableObjectMigrations | undefined;

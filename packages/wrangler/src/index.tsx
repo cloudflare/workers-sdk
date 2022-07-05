@@ -916,6 +916,7 @@ function createCLIParser(argv: string[]) {
 											wasm_modules: {},
 											text_blobs: {},
 											data_blobs: {},
+											worker_namespaces: [],
 											unsafe: [],
 										},
 										modules: [],
