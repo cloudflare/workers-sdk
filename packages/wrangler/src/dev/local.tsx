@@ -247,30 +247,34 @@ function useLocalWorker({
 			if (inspect) {
 				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
-			local.current = fork(miniflareCLIPath, [miniflareOptions], {
-				cwd: path.dirname(scriptPath),
-				execArgv: nodeOptions,
-			});
-			local.current.on("message", (message) => {
+			const child = (local.current = fork(
+				miniflareCLIPath,
+				[miniflareOptions],
+				{
+					cwd: path.dirname(scriptPath),
+					execArgv: nodeOptions,
+				}
+			));
+			child.on("message", (message) => {
 				if (message === "ready") {
 					onReady?.(local?.current?.pid);
 				}
 			});
 
-			local.current.on("close", (code) => {
+			child.on("close", (code) => {
 				if (code) {
 					logger.log(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.stdout?.on("data", (data: Buffer) => {
+			child.stdout?.on("data", (data: Buffer) => {
 				process.stdout.write(data);
 			});
 
 			// parse the node inspector url (which may be received in chunks) from stderr
 			let stderrData = "";
 			let inspectorUrlFound = false;
-			local.current.stderr?.on("data", (data: Buffer) => {
+			child.stderr?.on("data", (data: Buffer) => {
 				if (!inspectorUrlFound) {
 					stderrData += data.toString();
 					const matches =
@@ -286,20 +290,20 @@ function useLocalWorker({
 				process.stderr.write(data);
 			});
 
-			local.current.on("exit", (code) => {
+			child.on("exit", (code) => {
 				if (code) {
 					logger.error(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.on("error", (error: Error) => {
+			child.on("error", (error: Error) => {
 				logger.error(`Miniflare process failed to spawn`);
 				logger.error(error);
 			});
 
 			removeSignalExitListener.current = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down local server.");
-				local.current?.kill();
+				child.kill();
 				local.current = undefined;
 			});
 		}
