@@ -44,6 +44,11 @@ export async function fetchInternal<ResponseType>(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	const method = init.method ?? "GET";
+	console.log({
+		url: `${getCloudflareAPIBaseURL()}${resource}${queryString}`,
+		method,
+		headers,
+	});
 	const response = await fetch(
 		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
 		{
@@ -54,6 +59,7 @@ export async function fetchInternal<ResponseType>(
 		}
 	);
 	const jsonText = await response.text();
+	console.log({ text: jsonText });
 	try {
 		return parseJSON<ResponseType>(jsonText);
 	} catch (err) {

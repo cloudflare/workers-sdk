@@ -293,12 +293,7 @@ export const upload = async (
 					rerender(<Progress done={counter} total={fileMap.size} />);
 				},
 				(error) => {
-					return Promise.reject(
-						new FatalError(
-							"Failed to upload files. Please try again.",
-							error.code || 1
-						)
-					);
+					return Promise.reject(new FatalError(error.message, error.code || 1));
 				}
 			)
 		);
