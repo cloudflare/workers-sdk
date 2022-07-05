@@ -253,7 +253,7 @@ function useLocalWorker({
 			});
 			local.current.on("message", (message) => {
 				if (message === "ready") {
-					onReady.?(local?.current?.pid);
+					onReady?.(local?.current?.pid);
 				}
 			});
 
