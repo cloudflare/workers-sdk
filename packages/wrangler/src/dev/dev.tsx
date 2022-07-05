@@ -57,7 +57,7 @@ export type DevProps = {
 	routes: Route[] | undefined;
 	inspect: boolean | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
-	onReady: (() => void) | undefined;
+	onReady: ((pid?: number) => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 };
 

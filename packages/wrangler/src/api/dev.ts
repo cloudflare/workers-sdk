@@ -32,18 +32,32 @@ export async function unstable_dev(script: string, options: DevOptions) {
 		fetch: (init?: RequestInit) => Promise<Response | undefined>;
 	}>((resolve) => {
 		//lmao
+		let pidToKill: number;
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 			const devServer = startDev({
 				script: script,
 				...options,
 				local: true,
-				onReady: () => ready(devServer),
+				onReady: (pid) => {
+					if (pid) {
+						pidToKill = pid;
+					}
+					ready(devServer);
+				},
 				inspect: false,
 				logLevel: "none",
 				showInteractiveDevSession: false,
 			});
 		}).then((devServer) => {
-			resolve({ stop: devServer.stop, fetch: devServer.fetch });
+			resolve({
+				stop: async () => {
+					await devServer.stop();
+					if (pidToKill) {
+						process.kill(pidToKill);
+					}
+				},
+				fetch: devServer.fetch,
+			});
 		});
 	});
 }

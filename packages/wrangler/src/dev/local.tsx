@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -32,7 +32,7 @@ interface LocalProps {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean | undefined;
-	onReady: (() => void) | undefined;
+	onReady: ((pid?: number) => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 }
 
@@ -67,7 +67,7 @@ function useLocalWorker({
 	logLevel,
 }: LocalProps) {
 	// TODO: pass vars via command line
-	const local = useRef<ReturnType<typeof spawn>>();
+	const local = useRef<ReturnType<typeof fork>>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 	// if we're using local persistence for data, we should use the cwd
@@ -236,28 +236,26 @@ function useLocalWorker({
 				__dirname,
 				"../miniflare-dist/index.mjs"
 			);
-			const optionsArg = JSON.stringify(options, null);
+			const miniflareOptions = JSON.stringify(options, null);
 
 			logger.log("⎔ Starting a local server...");
-			const localServerOptions = [
+			const nodeOptions = [
 				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
 				"--no-warnings", // hide annoying Node warnings
-				miniflareCLIPath,
-				optionsArg,
 				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 			];
 			if (inspect) {
-				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
+				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
-			// spawn isn't technically synchronous here
-			local.current = spawn("node", localServerOptions, {
+			local.current = fork(miniflareCLIPath, [miniflareOptions], {
 				cwd: path.dirname(scriptPath),
+				execArgv: nodeOptions,
 			});
-			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
-			if (onReady) {
-				await new Promise((resolve) => setTimeout(resolve, 500));
-				onReady();
-			}
+			local.current.on("message", (message) => {
+				if (message === "ready" && onReady) {
+					onReady(local?.current?.pid);
+				}
+			});
 
 			local.current.on("close", (code) => {
 				if (code) {
