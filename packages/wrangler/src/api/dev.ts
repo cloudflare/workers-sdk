@@ -39,7 +39,7 @@ export async function unstable_dev(script: string, options: DevOptions) {
 				...options,
 				local: true,
 				onReady: (pid) => {
-					pidToKill = pid;
+					localDevServerProcessPID = pid;
 
 					ready(devServer);
 				},
