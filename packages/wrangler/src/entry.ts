@@ -39,7 +39,7 @@ export async function getEntry(
 				? path.resolve(config.site?.["entry-point"])
 				: // site.entry-point could be a directory
 				  path.resolve(config.site?.["entry-point"], "index.js");
-		} else if (args.assets) {
+		} else if (args.assets || config.assets) {
 			file = path.resolve(__dirname, "../templates/no-op-worker.js");
 		} else {
 			throw new Error(
