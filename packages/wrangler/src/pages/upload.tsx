@@ -18,6 +18,7 @@ import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
+import { ParseError } from "../parse";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
@@ -27,7 +28,6 @@ import {
 import { pagesBetaWarning } from "./utils";
 import type { UploadPayloadFile } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
-import { ParseError } from "../parse";
 
 type UploadArgs = {
 	directory: string;
