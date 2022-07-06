@@ -257,7 +257,7 @@ function useLocalWorker({
 			));
 			child.on("message", (message) => {
 				if (message === "ready") {
-					onReady?.(local?.current?.pid);
+					onReady?.(child.pid);
 				}
 			});
 
