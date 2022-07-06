@@ -6,6 +6,10 @@ const os = require("os");
 const semiver = require("semiver");
 
 const MIN_NODE_VERSION = "16.7.0";
+const debug =
+	process.env["WRANGLER_LOG"] === "debug"
+		? (...args) => console.log(...args)
+		: () => {};
 
 let wranglerProcess;
 
@@ -84,9 +88,8 @@ function runDelegatedWrangler() {
 	} = JSON.parse(fs.readFileSync(packageJsonPath));
 	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
 
-	console.log(
-		`Delegating to locally-installed version of wrangler @ v${version}`
-	);
+	debug(`Delegating to locally-installed version of wrangler @ v${version}`);
+
 	// this call to `spawn` is simpler because the delegated version will do all
 	// of the other work.
 	return spawn(
