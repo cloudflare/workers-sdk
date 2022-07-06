@@ -32,7 +32,7 @@ export async function unstable_dev(script: string, options: DevOptions) {
 		fetch: (init?: RequestInit) => Promise<Response | undefined>;
 	}>((resolve) => {
 		//lmao
-		let pidToKill: number | undefined;
+		let localDevServerProcessPID: number | undefined;
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 			const devServer = startDev({
 				script: script,
