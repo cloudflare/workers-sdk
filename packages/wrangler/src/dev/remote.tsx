@@ -53,7 +53,7 @@ export function Remote(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: ((pid?: number) => void) | undefined;
+	onReady?: (() => void) | undefined;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -158,7 +158,7 @@ export function useWorker(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady: ((pid?: number) => void) | undefined;
+	onReady: (() => void) | undefined;
 }): CfPreviewToken | undefined {
 	const {
 		name,

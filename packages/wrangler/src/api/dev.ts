@@ -32,15 +32,12 @@ export async function unstable_dev(script: string, options: DevOptions) {
 		fetch: (init?: RequestInit) => Promise<Response | undefined>;
 	}>((resolve) => {
 		//lmao
-		let localDevServerProcessPID: number | undefined;
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 			const devServer = startDev({
 				script: script,
 				...options,
 				local: true,
-				onReady: (pid) => {
-					localDevServerProcessPID = pid;
-
+				onReady: () => {
 					ready(devServer);
 				},
 				inspect: false,
@@ -51,10 +48,6 @@ export async function unstable_dev(script: string, options: DevOptions) {
 			resolve({
 				stop: async () => {
 					await devServer.stop();
-					if (localDevServerProcessPID) {
-						process.kill(localDevServerProcessPID);
-						localDevServerProcessPID = undefined;
-					}
 				},
 				fetch: devServer.fetch,
 			});

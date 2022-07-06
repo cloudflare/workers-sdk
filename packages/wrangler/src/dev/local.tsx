@@ -32,7 +32,7 @@ interface LocalProps {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean | undefined;
-	onReady: ((pid?: number) => void) | undefined;
+	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 }
 
@@ -257,7 +257,7 @@ function useLocalWorker({
 			));
 			child.on("message", (message) => {
 				if (message === "ready") {
-					onReady?.(child.pid);
+					onReady?.();
 				}
 			});
 
