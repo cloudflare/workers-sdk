@@ -27,6 +27,7 @@ import {
 import { pagesBetaWarning } from "./utils";
 import type { UploadPayloadFile } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
+import { ParseError } from "../parse";
 
 type UploadArgs = {
 	directory: string;
@@ -275,7 +276,7 @@ export const upload = async (
 						setTimeout(resolvePromise, attempts++ * 1000)
 					);
 
-					if ((e as { code: number }).code === 8000013) {
+					if (isJwtExpiredError(e)) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
 					}
@@ -286,7 +287,7 @@ export const upload = async (
 			}
 		};
 
-		queue.add(() =>
+		await queue.add(() =>
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
@@ -367,6 +368,13 @@ export const upload = async (
 		])
 	);
 };
+
+function isJwtExpiredError(error: unknown): boolean {
+	return (
+		error instanceof ParseError &&
+		error?.notes.some((m) => m.text === "Expired JWT")
+	);
+}
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
