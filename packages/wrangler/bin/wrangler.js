@@ -6,7 +6,10 @@ const os = require("os");
 const semiver = require("semiver");
 
 const MIN_NODE_VERSION = "16.7.0";
-const debug = process.env["WRANGLER_LOG"] === "debug" ? console.log : () => {};
+const debug =
+	process.env["WRANGLER_LOG"] === "debug"
+		? (...args) => console.log(...args)
+		: () => {};
 
 let wranglerProcess;
 
