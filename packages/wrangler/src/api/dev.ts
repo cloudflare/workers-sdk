@@ -37,18 +37,14 @@ export async function unstable_dev(script: string, options: DevOptions) {
 				script: script,
 				...options,
 				local: true,
-				onReady: () => {
-					ready(devServer);
-				},
+				onReady: () => ready(devServer),
 				inspect: false,
 				logLevel: "none",
 				showInteractiveDevSession: false,
 			});
 		}).then((devServer) => {
 			resolve({
-				stop: async () => {
-					await devServer.stop();
-				},
+				stop: devServer.stop,
 				fetch: devServer.fetch,
 			});
 		});
