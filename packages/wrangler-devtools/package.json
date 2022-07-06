@@ -11,7 +11,7 @@
 	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"scripts": {
 		"publish": "wrangler publish --assets ./built-devtools",
-		"build": "node ./build-devtools.mjs"
+		"prepublish": "node ./build-devtools.mjs"
 	},
 	"devDependencies": {
 		"execa": "^6.1.0",
