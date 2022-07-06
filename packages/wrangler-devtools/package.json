@@ -14,6 +14,6 @@
 		"prepublish": "node ./build-devtools.mjs"
 	},
 	"devDependencies": {
-		"execa": "^6.1.0",
+		"execa": "^6.1.0"
 	}
 }
