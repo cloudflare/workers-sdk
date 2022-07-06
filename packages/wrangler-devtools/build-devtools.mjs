@@ -1,3 +1,7 @@
+/*
+ * Builds `devtools-frontend` according to the instructions [here](https://github.com/ChromeDevTools/devtools-frontend/blob/main/docs/workflows.md).
+ */
+
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
