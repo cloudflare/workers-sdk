@@ -655,7 +655,7 @@ function generateRedirectsMatcher(redirectsFile: string) {
 
 					let status: number | undefined = parseInt(tokens[tokens.length - 1]);
 					let index: number;
-					if (status) {
+					if (status && !isNaN(status)) {
 						index = tokens.length - 2;
 					} else {
 						index = tokens.length - 1;
