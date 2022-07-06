@@ -10,10 +10,11 @@
 	},
 	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"scripts": {
-		"publish": "npx wrangler pages publish built-devtools",
-		"prepublish": "node ./build-devtools.mjs"
+		"publish": "wrangler publish --assets ./built-devtools",
+		"build": "node ./build-devtools.mjs"
 	},
 	"devDependencies": {
-		"execa": "^6.1.0"
+		"execa": "^6.1.0",
+		"wrangler": "file:../wrangler"
 	}
 }

@@ -17,6 +17,8 @@ const inTempDir = (fn) => {
 	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chrome-devtools"));
 	const cwd = process.cwd();
 
+	console.log(`Running in temporary directory: ${tempDir}`);
+
 	return (...args) => {
 		process.chdir(tempDir);
 		const result = fn(...args);
@@ -36,6 +38,8 @@ function installDepotTools() {
 		throw new Error("please only build devtools on unix for now");
 	}
 
+	console.log("Installing depot_tools...");
+
 	const status = execaSync("git", [
 		"clone",
 		"https://chromium.googlesource.com/chromium/tools/depot_tools.git",
@@ -45,9 +49,11 @@ function installDepotTools() {
 	}
 
 	const depotToolsPath = path.resolve(process.cwd(), "depot_tools");
+
 	const fetch = path.join(depotToolsPath, "fetch");
 	const gn = path.join(depotToolsPath, "gn");
 	const autoninja = path.join(depotToolsPath, "autoninja");
+
 	return { fetch, gn, autoninja };
 }
 
@@ -56,6 +62,8 @@ function installDepotTools() {
  * @param {string} fetch path to the `fetch` tool from `depot_tools`
  */
 function checkoutDevtools(fetch) {
+	console.log("Downloading devtools source...");
+
 	const result = execaSync(fetch, ["devtools-frontend"]);
 	if (result.failed) {
 		throw new Error(result.stderr);
@@ -71,10 +79,14 @@ function checkoutDevtools(fetch) {
 function buildDevtools(gn, autoninja) {
 	const outDir = path.join("out", "Default");
 
+	console.log("Generating build scripts...");
+
 	const gnResult = execaSync(gn, ["gen", outDir]);
 	if (gnResult.failed) {
 		throw new Error(gnResult.stderr);
 	}
+
+	console.log("Running build scripts...");
 
 	const autoninjaResult = execaSync(autoninja, ["-C", outDir]);
 	if (autoninjaResult.failed) {
@@ -100,8 +112,12 @@ const runDevtoolsBuild = inTempDir((outputDir) => {
 	process.chdir("devtools-frontend");
 	const builtDevToolsPath = buildDevtools(gn, autoninja);
 
+	console.log(`Copying build output to ${outputDir}...`);
+
 	// copy files
 	fs.cpSync(builtDevToolsPath, outputDir, { recursive: true });
 });
 
 runDevtoolsBuild(OUTPUT_DIR);
+
+console.log("Done!");
