@@ -41,6 +41,7 @@ async function main() {
 		// Start Miniflare development server
 		await mf.startServer();
 		await mf.startScheduler();
+		process.send && process.send("ready");
 	} catch (e) {
 		mf.log.error(e as Error);
 		process.exitCode = 1;

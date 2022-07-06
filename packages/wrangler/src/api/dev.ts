@@ -43,7 +43,10 @@ export async function unstable_dev(script: string, options: DevOptions) {
 				showInteractiveDevSession: false,
 			});
 		}).then((devServer) => {
-			resolve({ stop: devServer.stop, fetch: devServer.fetch });
+			resolve({
+				stop: devServer.stop,
+				fetch: devServer.fetch,
+			});
 		});
 	});
 }

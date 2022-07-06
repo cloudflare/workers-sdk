@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -13,7 +13,7 @@ import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
-
+import type { ChildProcess } from "node:child_process";
 interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -67,7 +67,7 @@ function useLocalWorker({
 	logLevel,
 }: LocalProps) {
 	// TODO: pass vars via command line
-	const local = useRef<ReturnType<typeof spawn>>();
+	const local = useRef<ChildProcess>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 	// if we're using local persistence for data, we should use the cwd
@@ -236,43 +236,45 @@ function useLocalWorker({
 				__dirname,
 				"../miniflare-dist/index.mjs"
 			);
-			const optionsArg = JSON.stringify(options, null);
+			const miniflareOptions = JSON.stringify(options, null);
 
 			logger.log("⎔ Starting a local server...");
-			const localServerOptions = [
+			const nodeOptions = [
 				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
 				"--no-warnings", // hide annoying Node warnings
-				miniflareCLIPath,
-				optionsArg,
 				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 			];
 			if (inspect) {
-				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
+				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
-			// spawn isn't technically synchronous here
-			local.current = spawn("node", localServerOptions, {
-				cwd: path.dirname(scriptPath),
+			const child = (local.current = fork(
+				miniflareCLIPath,
+				[miniflareOptions],
+				{
+					cwd: path.dirname(scriptPath),
+					execArgv: nodeOptions,
+				}
+			));
+			child.on("message", (message) => {
+				if (message === "ready") {
+					onReady?.();
+				}
 			});
-			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
-			if (onReady) {
-				await new Promise((resolve) => setTimeout(resolve, 500));
-				onReady();
-			}
 
-			local.current.on("close", (code) => {
+			child.on("close", (code) => {
 				if (code) {
 					logger.log(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.stdout?.on("data", (data: Buffer) => {
+			child.stdout?.on("data", (data: Buffer) => {
 				process.stdout.write(data);
 			});
 
 			// parse the node inspector url (which may be received in chunks) from stderr
 			let stderrData = "";
 			let inspectorUrlFound = false;
-			local.current.stderr?.on("data", (data: Buffer) => {
+			child.stderr?.on("data", (data: Buffer) => {
 				if (!inspectorUrlFound) {
 					stderrData += data.toString();
 					const matches =
@@ -288,20 +290,20 @@ function useLocalWorker({
 				process.stderr.write(data);
 			});
 
-			local.current.on("exit", (code) => {
+			child.on("exit", (code) => {
 				if (code) {
 					logger.error(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.on("error", (error: Error) => {
+			child.on("error", (error: Error) => {
 				logger.error(`Miniflare process failed to spawn`);
 				logger.error(error);
 			});
 
 			removeSignalExitListener.current = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down local server.");
-				local.current?.kill();
+				child.kill();
 				local.current = undefined;
 			});
 		}
