@@ -51,8 +51,9 @@ export async function unstable_dev(script: string, options: DevOptions) {
 			resolve({
 				stop: async () => {
 					await devServer.stop();
-					if (pidToKill) {
-						process.kill(pidToKill);
+					if (localDevServerProcessPID) {
+						process.kill(localDevServerProcessPID);
+						localDevServerProcessPID = undefined;
 					}
 				},
 				fetch: devServer.fetch,
