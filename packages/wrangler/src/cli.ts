@@ -1,7 +1,6 @@
 import "dotenv/config"; // Grab locally specified env params from a `.env` file.
 import process from "process";
 import { hideBin } from "yargs/helpers";
-import { unstable_dev } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
 
@@ -18,10 +17,3 @@ if (typeof jest === "undefined" && require.main) {
 		process.exit(exitCode);
 	});
 }
-
-/**
- * This is how we're exporting the API.
- * It makes it possible to import wrangler from 'wrangler',
- * and call wrangler.unstable_dev().
- */
-module.exports = { unstable_dev };

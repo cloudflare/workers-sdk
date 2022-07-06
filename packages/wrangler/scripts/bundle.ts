@@ -43,7 +43,7 @@ async function buildMain(flags: BuildFlags = {}) {
 			"import.meta.url": "import_meta_url",
 			"process.env.NODE_ENV": '"production"',
 		},
-		watch: flags.watch ? watchLogger("./wrangler-dist") : false,
+		watch: flags.watch ? watchLogger("./wrangler-dist/cli.js") : false,
 	});
 }
 
@@ -63,6 +63,34 @@ async function buildMiniflareCLI(flags: BuildFlags = {}) {
 	});
 }
 
+async function buildWranglerApi(flags: BuildFlags = {}) {
+	await build({
+		entryPoints: ["./src/api/index.ts"],
+		bundle: true,
+		outfile: "./wrangler-dist/api.js",
+		platform: "node",
+		format: "cjs",
+		external: [
+			"fsevents",
+			"esbuild",
+			"blake3-wasm",
+			"miniflare",
+			"@miniflare/core",
+			// todo - bundle miniflare too
+			"selfsigned",
+			"@esbuild-plugins/node-globals-polyfill",
+			"@esbuild-plugins/node-modules-polyfill",
+		],
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		inject: [path.join(__dirname, "../import_meta_url.js")],
+		define: {
+			"import.meta.url": "import_meta_url",
+			"process.env.NODE_ENV": '"production"',
+		},
+		watch: flags.watch ? watchLogger("./wrangler-dist/api.js") : false,
+	});
+}
+
 async function run() {
 	// main cli
 	await buildMain();
@@ -70,11 +98,15 @@ async function run() {
 	// custom miniflare cli
 	await buildMiniflareCLI();
 
-	// After built once completely, rerun them both in watch mode
+	// wrangler api
+	await buildWranglerApi();
+
+	// After built once completely, rerun them all in watch mode
 	if (process.argv.includes("--watch")) {
 		console.log("Built. Watching for changes...");
 		await Promise.all([
 			buildMain({ watch: true }),
+			buildWranglerApi({ watch: true }),
 			buildMiniflareCLI({ watch: true }),
 		]);
 	}
