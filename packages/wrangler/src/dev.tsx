@@ -62,7 +62,7 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
-	onReady?: (() => void) | undefined;
+	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	showInteractiveDevSession?: boolean;
 }
