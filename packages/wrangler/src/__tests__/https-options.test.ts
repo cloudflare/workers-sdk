@@ -1,5 +1,5 @@
-import fs, { mkdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import fs from "node:fs";
+import os from "node:os";
 import path, { resolve } from "node:path";
 import { getConfigPath } from "../config-path";
 import { getHttpsOptions } from "../https-options";
@@ -86,7 +86,7 @@ describe("getHttpsOptions()", () => {
 	});
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
-		mkdirSync(path.join(homedir(), ".wrangler"));
+		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/key.pem"))).toBe(
@@ -106,6 +106,7 @@ describe("getHttpsOptions()", () => {
 		      "
 	    `);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+		fs.rmSync(path.join(os.homedir(), ".wrangler"), { recursive: true });
 	});
 
 	it("should warn if not able to write to the cache", async () => {
