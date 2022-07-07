@@ -16,7 +16,7 @@ import type { UserInfo } from "../whoami";
 describe("getUserInfo()", () => {
 	const ENV_COPY = process.env;
 
-	runInTempDir({ homedir: "./home" });
+	runInTempDir();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
@@ -173,6 +173,16 @@ describe("getUserInfo()", () => {
 
 	it("should display a warning message if the config file contains a legacy api_token field", async () => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
+		setMockResponse("/user", () => {
+			return { email: "user@example.com" };
+		});
+		setMockResponse("/accounts", () => {
+			return [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			];
+		});
 		await getUserInfo();
 		expect(std.warn).toMatchInlineSnapshot(`
       "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m

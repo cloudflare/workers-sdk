@@ -6,7 +6,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("getHttpsOptions()", () => {
-	runInTempDir({ homedir: "./home" });
+	runInTempDir();
 	const std = mockConsoleMethods();
 
 	it("should use cached values if they have not expired", async () => {

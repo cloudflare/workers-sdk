@@ -29,7 +29,7 @@ import type { FormData, File } from "undici";
 describe("publish", () => {
 	mockAccountId();
 	mockApiToken();
-	runInTempDir({ homedir: "./home" });
+	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
@@ -97,33 +97,23 @@ describe("publish", () => {
 				api_token: "some-api-token",
 			});
 
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
-			mockGrantAuthorization({ respondWith: "success" });
-
 			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
 
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
-
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Attempting to login via OAuth...
-			        Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
-			        Successfully logged in.
-			        Total Upload: 0xx KiB / gzip: 0xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
-		      `);
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  test-name.test-sub-domain.workers.dev"
+		`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
 
-			          This is no longer supported in the current version of Wrangler.
-			          If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			          environment variable.
+			  This is no longer supported in the current version of Wrangler.
+			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+			  environment variable.
 
-			        "
-		      `);
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
