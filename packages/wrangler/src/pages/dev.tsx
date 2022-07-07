@@ -640,9 +640,10 @@ function generateRedirectsMatcher(redirectsFile: string) {
 	if (existsSync(redirectsFile)) {
 		const contents = readFileSync(redirectsFile).toString();
 
-		let staticRules = 0;
-		let dynamicRules = 0;
-		let canCreateStaticRule = true;
+		let staticRules = 0,
+			dynamicRules = 0,
+			canCreateStaticRule = true,
+			hasLoggedDynamicLimit = false;
 		const MAX_LINE_LENGTH = 2000,
 			MAX_STATIC_REDIRECT_RULES = 2000,
 			MAX_DYNAMIC_REDIRECT_RULES = 100;
@@ -705,19 +706,27 @@ function generateRedirectsMatcher(redirectsFile: string) {
 						!from.includes("?")
 					) {
 						staticRules += 1;
+
+						if (staticRules > MAX_STATIC_REDIRECT_RULES) {
+							//set from to undefined to easily filter out the rule at the end
+							from = undefined;
+							logger.warn(
+								`Static rules exceeded maximum of ${MAX_STATIC_REDIRECT_RULES} (currently ${staticRules}). Skipping line.`
+							);
+						}
 					} else {
 						dynamicRules += 1;
 						canCreateStaticRule = false;
-					}
-					if (staticRules > MAX_STATIC_REDIRECT_RULES) {
-						logger.warn(
-							`Static rules exceeded maximum of ${MAX_STATIC_REDIRECT_RULES} (currently ${staticRules}).`
-						);
-					}
-					if (dynamicRules > MAX_DYNAMIC_REDIRECT_RULES) {
-						logger.warn(
-							`Dynamic rules exceeded maximum of ${MAX_DYNAMIC_REDIRECT_RULES} (currently ${dynamicRules}).`
-						);
+						if (dynamicRules > MAX_DYNAMIC_REDIRECT_RULES) {
+							//set from to undefined to easily filter out the rule at the end
+							from = undefined;
+							hasLoggedDynamicLimit = true;
+							if (!hasLoggedDynamicLimit) {
+								logger.warn(
+									`Dynamic rules exceeded maximum of ${MAX_DYNAMIC_REDIRECT_RULES} (currently ${dynamicRules}). Skipping rest of file.`
+								);
+							}
+						}
 					}
 
 					status = [301, 302, 303, 307, 308].includes(status || 302)
