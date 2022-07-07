@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { homedir, networkInterfaces } from "node:os";
+import os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { logger } from "./logger";
@@ -17,7 +17,7 @@ const ONE_DAY_IN_MS = 86400000;
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
 export async function getHttpsOptions() {
-	const certDirectory = path.join(homedir(), ".wrangler/local-cert");
+	const certDirectory = path.join(os.homedir(), ".wrangler/local-cert");
 	const keyPath = path.join(certDirectory, "key.pem");
 	const certPath = path.join(certDirectory, "cert.pem");
 
@@ -37,7 +37,10 @@ export async function getHttpsOptions() {
 		} catch (e) {
 			const message = e instanceof Error ? e.message : `${e}`;
 			logger.warn(
-				`Unable to cache generated self-signed certificate in ${certDirectory}.\n${message}`
+				`Unable to cache generated self-signed certificate in ${path.relative(
+					process.cwd(),
+					certDirectory
+				)}.\n${message}`
 			);
 		}
 		return { key, cert };
@@ -114,7 +117,7 @@ async function generateCertificate() {
  */
 function getAccessibleHosts(ipv4 = false): string[] {
 	const hosts: string[] = [];
-	Object.values(networkInterfaces()).forEach((net) =>
+	Object.values(os.networkInterfaces()).forEach((net) =>
 		net?.forEach(({ family, address }) => {
 			if (!ipv4 || family === "IPv4") hosts.push(address);
 		})
