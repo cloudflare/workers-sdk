@@ -40,6 +40,7 @@ describe("normalizeAndValidateConfig()", () => {
 			tsconfig: undefined,
 			kv_namespaces: [],
 			legacy_env: true,
+			send_metrics: undefined,
 			main: undefined,
 			migrations: [],
 			name: undefined,
@@ -76,6 +77,7 @@ describe("normalizeAndValidateConfig()", () => {
 		it("should override config defaults with provided values", () => {
 			const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
 				legacy_env: true,
+				send_metrics: false,
 				dev: {
 					ip: "255.255.255.255",
 					port: 9999,
@@ -98,6 +100,7 @@ describe("normalizeAndValidateConfig()", () => {
 		it("should error on invalid top level fields", () => {
 			const expectedConfig = {
 				legacy_env: "FOO",
+				send_metrics: "BAD",
 				dev: {
 					ip: 222,
 					port: "FOO",
@@ -117,13 +120,14 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-			          - Expected \\"dev.ip\\" to be of type string but got 222.
-			          - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
-			          - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
-			          - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
-		      `);
+			"Processing wrangler configuration:
+			  - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
+			  - Expected \\"send_metrics\\" to be of type boolean but got \\"BAD\\".
+			  - Expected \\"dev.ip\\" to be of type string but got 222.
+			  - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
+			  - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
+			  - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
+		`);
 		});
 
 		it("should warn on and remove unexpected top level fields", () => {

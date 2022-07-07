@@ -94,6 +94,14 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"send_metrics",
+		rawConfig.send_metrics,
+		"boolean"
+	);
+
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
 		(args as { "legacy-env": boolean | undefined })["legacy-env"] ??
@@ -173,6 +181,7 @@ export function normalizeAndValidateConfig(
 	const config: Config = {
 		configPath,
 		legacy_env: isLegacyEnv,
+		send_metrics: rawConfig.send_metrics,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
 		migrations: normalizeAndValidateMigrations(

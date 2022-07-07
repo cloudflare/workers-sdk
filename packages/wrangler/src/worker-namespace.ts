@@ -1,6 +1,7 @@
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { printWranglerBanner } from ".";
 import type { ConfigPath } from ".";
@@ -113,6 +114,7 @@ export function workerNamespaceCommands(
 			const config = readConfig(args.config as ConfigPath, args);
 			const accountId = await requireAuth(config);
 			await listWorkerNamespaces(accountId);
+			metrics.sendMetricsEvent("list worker namespaces", config);
 		})
 		.command(
 			"get <name>",
@@ -128,6 +130,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await getWorkerNamespaceInfo(accountId, args.name);
+				metrics.sendMetricsEvent("view worker namespace", config);
 			}
 		)
 		.command(
@@ -145,6 +148,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await createWorkerNamespace(accountId, args.name);
+				metrics.sendMetricsEvent("create worker namespace", config);
 			}
 		)
 		.command(
@@ -162,6 +166,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
+				metrics.sendMetricsEvent("delete worker namespace", config);
 			}
 		)
 		.command(
@@ -185,6 +190,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await renameWorkerNamespace(accountId, args.oldName, args.newName);
+				metrics.sendMetricsEvent("rename worker namespace", config);
 			}
 		);
 }

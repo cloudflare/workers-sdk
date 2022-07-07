@@ -8,6 +8,7 @@ import { getType } from "mime";
 import { getVarsForDev } from "../dev/dev-vars";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
 import openInBrowser from "../open-in-browser";
 import { buildFunctions } from "./build";
@@ -172,6 +173,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
+			metrics.sendMetricsEvent("build pages functions");
 		} catch {}
 
 		watch([functionsDirectory], {
@@ -187,6 +189,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
+			metrics.sendMetricsEvent("build pages functions");
 		});
 
 		miniflareArgs = {
@@ -318,6 +321,7 @@ export const Handler = async ({
 		// `startServer` might throw if user code contains errors
 		const server = await miniflare.startServer();
 		logger.log(`Serving at http://localhost:${port}/`);
+		metrics.sendMetricsEvent("run pages dev");
 
 		if (process.env.BROWSER !== "none") {
 			await openInBrowser(`http://localhost:${port}/`);

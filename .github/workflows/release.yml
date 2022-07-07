@@ -38,6 +38,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # this is the "production" key for sparrow
+          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Check for errors
         run: npm run check

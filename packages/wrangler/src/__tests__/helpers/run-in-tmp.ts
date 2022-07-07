@@ -6,7 +6,7 @@ import { reinitialiseAuthTokens } from "../../user";
 const originalCwd = process.cwd();
 
 export function runInTempDir({ homedir } = { homedir: "./home" }) {
-	let tmpDir: string | undefined;
+	let tmpDir: string;
 
 	beforeEach(() => {
 		// Use realpath because the temporary path can point to a symlink rather than the actual path.
@@ -30,7 +30,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	});
 
 	afterEach(() => {
-		if (tmpDir && fs.existsSync(tmpDir)) {
+		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			fs.rmSync(tmpDir, { recursive: true });
 		}

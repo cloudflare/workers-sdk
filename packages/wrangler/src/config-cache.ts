@@ -6,7 +6,7 @@ import { logger } from "./logger";
 
 let cacheMessageShown = false;
 
-let __cacheFolder: string | null;
+let __cacheFolder: string | null | undefined;
 function getCacheFolder() {
 	if (__cacheFolder || __cacheFolder === null) return __cacheFolder;
 
@@ -80,4 +80,5 @@ export function purgeConfigCaches() {
 	if (cacheFolder) {
 		rmSync(cacheFolder, { recursive: true, force: true });
 	}
+	__cacheFolder = undefined;
 }

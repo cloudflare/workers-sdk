@@ -33,6 +33,9 @@ async function buildMain(flags: BuildFlags = {}) {
 		define: {
 			"import.meta.url": "import_meta_url",
 			"process.env.NODE_ENV": '"production"',
+			...(process.env.SPARROW_SOURCE_KEY
+				? { SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY}"` }
+				: {}),
 		},
 		watch: flags.watch ? watchLogger("./wrangler-dist") : false,
 	});

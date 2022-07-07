@@ -6,6 +6,7 @@ import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { FatalError } from "../errors";
+import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
@@ -98,4 +99,5 @@ export async function ListHandler({
 	});
 
 	render(<Table data={data}></Table>, { patchConsole: false });
+	metrics.sendMetricsEvent("list pages projects deployments");
 }

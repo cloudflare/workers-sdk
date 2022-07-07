@@ -39,6 +39,14 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	legacy_env: boolean;
 
 	/**
+	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
+	 *
+	 * When defined this will override any user settings.
+	 * Otherwise, Wrangler will use the user's preference.
+	 */
+	send_metrics: boolean | undefined;
+
+	/**
 	 * Options to configure the development server that your worker will use.
 	 */
 	dev: Dev;
