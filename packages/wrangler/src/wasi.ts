@@ -32,11 +32,11 @@ function makeEntrypoint(wasmPath: string, modulePath: string): string {
 		: {};
 
 	return `
-import { WASI } from '${
+import { WASI } from './${
 		// escape slashes so this works on windows
 		modulePath.replaceAll("\\", "\\\\")
 	}';
-import wasm from '${
+import wasm from './${
 		// escape slashes so this works on windows
 		wasmPath.replaceAll("\\", "\\\\")
 	}';
