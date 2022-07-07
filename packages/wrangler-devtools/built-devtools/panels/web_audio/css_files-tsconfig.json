@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "audioContextSelector.css.js",
+        "webAudio.css.js"
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "editFileSystemView.css.js",
+        "workspaceSettingsTab.css.js"
+    ]
+}

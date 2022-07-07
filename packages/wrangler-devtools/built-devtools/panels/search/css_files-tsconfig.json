@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "searchResultsPane.css.js",
+        "searchView.css.js"
+    ]
+}

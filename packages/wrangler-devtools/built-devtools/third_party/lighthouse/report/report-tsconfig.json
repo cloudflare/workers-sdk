@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../front_end/third_party/lighthouse/report"},"files":["../../../../../../../front_end/third_party/lighthouse/report/report.ts"],"references":[{"path":"./bundle-tsconfig.json"}]}

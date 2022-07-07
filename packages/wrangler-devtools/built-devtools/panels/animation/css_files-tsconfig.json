@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "animationScreenshotPopover.css.js",
+        "animationTimeline.css.js"
+    ]
+}

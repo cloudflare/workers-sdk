@@ -1,0 +1,73 @@
+import * as UI from '../../ui/legacy/legacy.js';
+import type { NetworkNode } from './NetworkDataGridNode.js';
+import type { NetworkTimeCalculator } from './NetworkTimeCalculator.js';
+export declare class NetworkWaterfallColumn extends UI.Widget.VBox {
+    private canvas;
+    private canvasPosition;
+    private readonly leftPadding;
+    private readonly fontSize;
+    private rightPadding;
+    private scrollTop;
+    private headerHeight;
+    private calculator;
+    private rawRowHeight;
+    private rowHeight;
+    private offsetWidth;
+    private offsetHeight;
+    private startTime;
+    private endTime;
+    private readonly popoverHelper;
+    private nodes;
+    private hoveredNode;
+    private eventDividers;
+    private updateRequestID;
+    private readonly styleForTimeRangeName;
+    private readonly styleForWaitingResourceType;
+    private readonly styleForDownloadingResourceType;
+    private readonly wiskerStyle;
+    private readonly hoverDetailsStyle;
+    private readonly pathForStyle;
+    private textLayers;
+    constructor(calculator: NetworkTimeCalculator);
+    private static buildRequestTimeRangeStyle;
+    private static buildResourceTypeStyle;
+    private resetPaths;
+    willHide(): void;
+    wasShown(): void;
+    private onMouseMove;
+    private onClick;
+    private getPopoverRequest;
+    private setHoveredNode;
+    private setSelectedNode;
+    setRowHeight(height: number): void;
+    private updateRowHeight;
+    setHeaderHeight(height: number): void;
+    setRightPadding(padding: number): void;
+    setCalculator(calculator: NetworkTimeCalculator): void;
+    getNodeFromPoint(x: number, y: number): NetworkNode | null;
+    scheduleDraw(): void;
+    update(scrollTop?: number, eventDividers?: Map<string, number[]>, nodes?: NetworkNode[]): void;
+    private resetCanvas;
+    onResize(): void;
+    private calculateCanvasSize;
+    private timeToPosition;
+    private didDrawForTest;
+    private draw;
+    private drawLayers;
+    private drawEventDividers;
+    private getBarHeight;
+    private getSimplifiedBarRange;
+    private buildSimplifiedBarLayers;
+    private buildTimingBarLayers;
+    private decorateRow;
+}
+export interface _TextLayer {
+    x: number;
+    y: number;
+    text: string;
+}
+export interface _LayerStyle {
+    fillStyle?: string;
+    lineWidth?: number;
+    borderColor?: string;
+}

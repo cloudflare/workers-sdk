@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "eventDisplayTable.css.js",
+        "playerListView.css.js",
+        "playerMessagesView.css.js",
+        "playerPropertiesView.css.js"
+    ]
+}

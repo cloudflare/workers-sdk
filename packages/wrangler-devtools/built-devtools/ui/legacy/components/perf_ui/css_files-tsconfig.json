@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "pieChart.css.js",
+        "timelineOverviewInfo.css.js"
+    ]
+}

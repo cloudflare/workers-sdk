@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "report.css.js",
+        "reportKey.css.js",
+        "reportSection.css.js",
+        "reportSectionDivider.css.js",
+        "reportSectionHeader.css.js",
+        "reportValue.css.js"
+    ]
+}

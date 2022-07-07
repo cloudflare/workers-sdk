@@ -1,0 +1,72 @@
+export declare class ConsoleViewport {
+    element: HTMLElement;
+    private topGapElement;
+    private topGapElementActive;
+    private contentElementInternal;
+    private bottomGapElement;
+    private bottomGapElementActive;
+    private provider;
+    private virtualSelectedIndex;
+    private firstActiveIndex;
+    private lastActiveIndex;
+    private renderedItems;
+    private anchorSelection;
+    private headSelection;
+    private itemCount;
+    private cumulativeHeights;
+    private muteCopyHandler;
+    private readonly observer;
+    private readonly observerConfig;
+    private stickToBottomInternal;
+    private selectionIsBackward;
+    private lastSelectedElement?;
+    private cachedProviderElements?;
+    constructor(provider: ConsoleViewportProvider);
+    stickToBottom(): boolean;
+    setStickToBottom(value: boolean): void;
+    hasVirtualSelection(): boolean;
+    copyWithStyles(): void;
+    private onCopy;
+    private onFocusIn;
+    private onFocusOut;
+    private isOutsideViewport;
+    private onDragStart;
+    private onKeyDown;
+    private updateFocusedItem;
+    contentElement(): Element;
+    invalidate(): void;
+    private providerElement;
+    private rebuildCumulativeHeights;
+    private rebuildCumulativeHeightsIfNeeded;
+    private cachedItemHeight;
+    private isSelectionBackwards;
+    private createSelectionModel;
+    private updateSelectionModel;
+    private restoreSelection;
+    private selectionContainsTable;
+    refresh(): void;
+    private innerRefresh;
+    private partialViewportUpdate;
+    private selectedText;
+    private textOffsetInNode;
+    private onScroll;
+    firstVisibleIndex(): number;
+    lastVisibleIndex(): number;
+    renderedElementAt(index: number): HTMLElement | null;
+    scrollItemIntoView(index: number, makeLast?: boolean): void;
+    forceScrollItemToBeFirst(index: number): void;
+    forceScrollItemToBeLast(index: number): void;
+    private visibleHeight;
+}
+export interface ConsoleViewportProvider {
+    fastHeight(index: number): number;
+    itemCount(): number;
+    minimumRowHeight(): number;
+    itemElement(index: number): ConsoleViewportElement | null;
+}
+export interface ConsoleViewportElement {
+    willHide(): void;
+    wasShown(): void;
+    element(): HTMLElement;
+    focusLastChildOrSelf(): void;
+}

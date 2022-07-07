@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "frameworkIgnoreListSettingsTab.css.js",
+        "keybindsSettingsTab.css.js",
+        "settingsScreen.css.js"
+    ]
+}

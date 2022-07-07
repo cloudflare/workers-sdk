@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "historyToolbarButton.css.js",
+        "invalidationsTree.css.js",
+        "timelineFlamechartPopover.css.js",
+        "timelineHistoryManager.css.js",
+        "timelinePaintProfiler.css.js",
+        "timelinePanel.css.js",
+        "timelineStatusDialog.css.js"
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "fontView.css.legacy.js",
+        "imageView.css.legacy.js",
+        "jsonView.css.legacy.js",
+        "resourceSourceFrame.css.legacy.js",
+        "xmlTree.css.legacy.js",
+        "xmlView.css.legacy.js"
+    ]
+}

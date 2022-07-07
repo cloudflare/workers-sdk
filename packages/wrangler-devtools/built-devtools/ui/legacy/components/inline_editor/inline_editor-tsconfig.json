@@ -1,0 +1,87 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../../../../front_end/ui/legacy/components/inline_editor",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "inline_editor-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/BezierEditor.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/BezierUI.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSAngle.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSAngleEditor.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSAngleSwatch.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSAngleUtils.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSLength.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSLengthUtils.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSShadowEditor.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSShadowModel.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/CSSVarSwatch.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/ColorSwatch.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/FontEditor.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/FontEditorUnitConverter.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/FontEditorUtils.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/InlineEditorUtils.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/SwatchPopoverHelper.ts",
+    "../../../../../../../../front_end/ui/legacy/components/inline_editor/Swatches.ts",
+    "../../../../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../core/common/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/i18n/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/platform/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/sdk/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../models/bindings/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../models/text_utils/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../panels/css_overview/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../components/helpers/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../bundle-tsconfig.json"
+    },
+    {
+      "path": "../utils/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../lit-html/bundle-tsconfig.json"
+    }
+  ]
+}

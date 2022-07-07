@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../front_end/ui/components/report_view"},"files":["../../../../../../../front_end/ui/components/report_view/report_view.ts"],"references":[{"path":"./css_files-tsconfig.json"},{"path":"./report_view-tsconfig.json"}]}

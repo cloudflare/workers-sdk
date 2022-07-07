@@ -1,0 +1,31 @@
+<!--
+  Copyright 2021 The Chromium Authors. All rights reserved.
+  Use of this source code is governed by a BSD-style license that can be
+  found in the LICENSE file.
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Input example</title>
+    <style>
+      #container {
+        padding: 25px;
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        font-size: 16px;
+      }
+      #container > * {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <input class="devtools-text-input" placeholder="placeholder" />
+    </div>
+    <script type="module" src="./basic.js"></script>
+  </body>
+</html>

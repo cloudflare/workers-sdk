@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../front_end/ui/components/chrome_link"},"files":["../../../../../../../front_end/ui/components/chrome_link/chrome_link.ts"],"references":[{"path":"./chrome_link-tsconfig.json"},{"path":"./css_files-tsconfig.json"}]}

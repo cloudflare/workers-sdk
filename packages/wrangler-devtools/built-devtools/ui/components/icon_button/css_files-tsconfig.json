@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "icon.css.js",
+        "iconButton.css.js"
+    ]
+}

@@ -1,0 +1,51 @@
+/*
+ * Copyright 2021 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: ".SFNSDisplay-Regular", "Helvetica Neue", "Lucida Grande", sans-serif;
+}
+
+#index-page h1 {
+  text-align: left;
+  border-bottom: 1px solid var(--color-details-hairline);
+  padding: 10px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.components-list {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+}
+
+.components-list li {
+  width: 20%;
+  min-width: 150px;
+  max-width: 300px;
+  margin: 0 12px 12px 0;
+}
+
+.components-list a {
+  display: block;
+  padding: 10px;
+}
+
+.components-list a:link,
+.components-list a:visited {
+  text-transform: capitalize;
+  color: var(--color-primary);
+  text-decoration: none;
+  box-shadow: var(--drop-shadow);
+}
+
+.components-list a:hover {
+  box-shadow: var(--drop-shadow-depth-3);
+}
