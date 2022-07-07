@@ -3,6 +3,7 @@
 import * as Build from "./build";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
+import * as Dev2 from "./dev2";
 import * as Projects from "./projects";
 import * as Publish from "./publish";
 import * as Upload from "./upload";
@@ -25,6 +26,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 			"🧑‍💻 Develop your full-stack Pages application locally",
 			Dev.Options,
 			Dev.Handler
+		)
+		.command(
+			"dev2 [directory] [-- command..]",
+			"🧑‍💻 Develop your full-stack Pages application locally",
+			Dev2.Options,
+			Dev2.Handler
 		)
 		.command("functions", false, (yargs) =>
 			// we hide this command from help output because

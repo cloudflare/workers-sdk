@@ -9,11 +9,13 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
+import type { MiniflareCLIOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+
 interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -28,12 +30,15 @@ interface LocalProps {
 	rules: Config["rules"];
 	inspectorPort: number;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean | undefined;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+
+	miniflareCLIOptions?: MiniflareCLIOptions;
 }
 
 export function Local(props: LocalProps) {
@@ -58,6 +63,7 @@ function useLocalWorker({
 	port,
 	rules,
 	enableLocalPersistence,
+	liveReload,
 	ip,
 	crons,
 	localProtocol,
@@ -65,6 +71,8 @@ function useLocalWorker({
 	inspect,
 	onReady,
 	logLevel,
+
+	miniflareCLIOptions,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
@@ -212,6 +220,7 @@ function useLocalWorker({
 							r2Persist: true,
 					  }),
 
+				liveReload,
 				sitePath: assetPaths?.assetDirectory
 					? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
 					: undefined,
@@ -250,14 +259,14 @@ function useLocalWorker({
 			if (inspect) {
 				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
-			const child = (local.current = fork(
-				miniflareCLIPath,
-				[miniflareOptions],
-				{
-					cwd: path.dirname(scriptPath),
-					execArgv: nodeOptions,
-				}
-			));
+
+			const forkOpts = [miniflareOptions];
+			if (miniflareCLIOptions)
+				forkOpts.push(JSON.stringify(miniflareCLIOptions));
+			const child = (local.current = fork(miniflareCLIPath, forkOpts, {
+				cwd: path.dirname(scriptPath),
+				execArgv: nodeOptions,
+			}));
 			child.on("message", (message) => {
 				if (message === "ready") {
 					onReady?.();
@@ -339,6 +348,7 @@ function useLocalWorker({
 		compatibilityDate,
 		compatibilityFlags,
 		localPersistencePath,
+		liveReload,
 		assetPaths,
 		isWorkersSite,
 		rules,
@@ -351,6 +361,8 @@ function useLocalWorker({
 		inspect,
 		logLevel,
 		onReady,
+
+		miniflareCLIOptions,
 	]);
 	return { inspectorUrl };
 }

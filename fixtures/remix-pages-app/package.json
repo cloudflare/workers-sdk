@@ -9,7 +9,7 @@
 		"dev": "cross-env NODE_ENV=development run-p dev:*",
 		"postinstall": "remix setup cloudflare-pages",
 		"dev:remix": "remix watch",
-		"dev:wrangler": "wrangler pages dev ./public",
+		"dev:wrangler": "wrangler pages dev2 ./public",
 		"start": "npm run dev:wrangler",
 		"test": "npx jest --forceExit"
 	},

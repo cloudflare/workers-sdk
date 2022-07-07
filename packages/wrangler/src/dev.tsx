@@ -26,6 +26,7 @@ import {
 
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
+import type { MiniflareCLIOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
 import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
@@ -63,9 +64,12 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	"live-reload"?: boolean;
 	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	showInteractiveDevSession?: boolean;
+	forceLocal?: boolean;
+	miniflareCLIOptions?: MiniflareCLIOptions;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -225,6 +229,10 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Enable persistence for this session (only for local mode)",
 				type: "boolean",
 			})
+			.option("live-reload", {
+				describe: "Auto reload HTML pages when change is detected",
+				type: "boolean",
+			})
 			.option("inspect", {
 				describe: "Enable dev tools",
 				type: "boolean",
@@ -250,7 +258,18 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 	}
 }
 
-export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
+export async function startDev(
+	args: ArgumentsCamelCase<DevArgs> & {
+		vars?: {
+			[key: string]: unknown;
+		};
+		kv?: {
+			binding: string;
+			id: string;
+			preview_id?: string;
+		}[];
+	}
+) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
@@ -293,7 +312,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 
 		if (config.services && config.services.length > 0) {
 			logger.warn(
-				`This worker is bound to live services: ${config.services
+				`This worker is bound to  services: ${config.services
 					.map(
 						(service) =>
 							`${service.binding} (${service.service}${
@@ -351,6 +370,10 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		const routes: Route[] | undefined =
 			args.routes || (config.route && [config.route]) || config.routes;
 
+		if (args.forceLocal) {
+			args.local = true;
+		}
+
 		if (!args.local) {
 			if (host) {
 				zoneId = await getZoneIdFromHost(host);
@@ -370,7 +393,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			}
 		}
 
-		const nodeCompat = args["node-compat"] ?? config.node_compat;
+		const nodeCompat = args.nodeCompat ?? config.node_compat;
 		if (nodeCompat) {
 			logger.warn(
 				"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
@@ -381,30 +404,38 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		async function getBindings(
 			configParam: Config
 		): Promise<CfWorkerInit["bindings"]> {
+			if (!args.kv) args.kv = [];
+			if (!configParam.kv_namespaces) configParam.kv_namespaces = [];
 			return {
-				kv_namespaces: configParam.kv_namespaces?.map(
-					({ binding, preview_id, id: _id }) => {
-						// In `dev`, we make folks use a separate kv namespace called
-						// `preview_id` instead of `id` so that they don't
-						// break production data. So here we check that a `preview_id`
-						// has actually been configured.
-						// This whole block of code will be obsoleted in the future
-						// when we have copy-on-write for previews on edge workers.
-						if (!preview_id) {
-							// TODO: This error has to be a _lot_ better, ideally just asking
-							// to create a preview namespace for the user automatically
-							throw new Error(
-								`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
-							); // Ugh, I really don't like this message very much
+				kv_namespaces: [
+					...configParam.kv_namespaces.map(
+						({ binding, preview_id, id: _id }) => {
+							// In `dev`, we make folks use a separate kv namespace called
+							// `preview_id` instead of `id` so that they don't
+							// break production data. So here we check that a `preview_id`
+							// has actually been configured.
+							// This whole block of code will be obsoleted in the future
+							// when we have copy-on-write for previews on edge workers.
+							if (!preview_id) {
+								// TODO: This error has to be a _lot_ better, ideally just asking
+								// to create a preview namespace for the user automatically
+								throw new Error(
+									`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+								); // Ugh, I really don't like this message very much
+							}
+							return {
+								binding,
+								id: preview_id,
+							};
 						}
-						return {
-							binding,
-							id: preview_id,
-						};
-					}
-				),
+					),
+					...args.kv,
+				],
 				// Use a copy of combinedVars since we're modifying it later
-				vars: getVarsForDev(configParam),
+				vars: {
+					...getVarsForDev(configParam),
+					...args.vars,
+				},
 				wasm_modules: configParam.wasm_modules,
 				text_blobs: configParam.text_blobs,
 				data_blobs: configParam.data_blobs,
@@ -488,6 +519,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					enableLocalPersistence={
 						args["experimental-enable-local-persistence"] || false
 					}
+					liveReload={args.liveReload || false}
 					accountId={config.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
 					port={args.port || config.dev.port || (await getLocalPort())}
@@ -508,6 +540,8 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					onReady={args.onReady}
 					inspect={args.inspect}
 					showInteractiveDevSession={args.showInteractiveDevSession}
+					forceLocal={args.forceLocal}
+					miniflareCLIOptions={args.miniflareCLIOptions}
 				/>
 			);
 		}

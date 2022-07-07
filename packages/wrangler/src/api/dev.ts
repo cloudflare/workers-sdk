@@ -1,6 +1,7 @@
 import { startDev } from "../dev";
 import { logger } from "../logger";
 
+import type { MiniflareCLIOptions } from "../miniflare-cli";
 import type { RequestInit, Response } from "undici";
 
 interface DevOptions {
@@ -14,6 +15,19 @@ interface DevOptions {
 	siteExclude?: string[];
 	nodeCompat?: boolean;
 	experimentalEnableLocalPersistence?: boolean;
+	showInteractiveDevSession?: boolean;
+	liveReload?: boolean;
+	vars: {
+		[key: string]: unknown;
+	};
+	kv?: {
+		binding: string;
+		id: string;
+		preview_id?: string;
+	}[];
+	miniflareCLIOptions?: MiniflareCLIOptions;
+
+	forceLocal?: boolean;
 	_: (string | number)[]; //yargs wants this
 	$0: string; //yargs wants this
 }
@@ -35,12 +49,12 @@ export async function unstable_dev(script: string, options: DevOptions) {
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 			const devServer = startDev({
 				script: script,
+				showInteractiveDevSession: false,
 				...options,
 				local: true,
 				onReady: () => ready(devServer),
 				inspect: false,
 				logLevel: "none",
-				showInteractiveDevSession: false,
 			});
 		}).then((devServer) => {
 			resolve({

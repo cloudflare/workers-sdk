@@ -19,6 +19,7 @@ import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
+import type { MiniflareCLIOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -39,6 +40,7 @@ export type DevProps = {
 	localProtocol: "https" | "http";
 	localUpstream: string | undefined;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
@@ -59,6 +61,8 @@ export type DevProps = {
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
+	forceLocal: boolean | undefined;
+	miniflareCLIOptions?: MiniflareCLIOptions;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -109,7 +113,8 @@ function InteractiveDevSession(props: DevProps) {
 		props.port,
 		props.ip,
 		props.inspectorPort,
-		props.localProtocol
+		props.localProtocol,
+		props.forceLocal
 	);
 
 	useTunnel(toggles.tunnel);
@@ -122,8 +127,12 @@ function InteractiveDevSession(props: DevProps) {
 				<Text> open a browser, </Text>
 				<Text bold={true}>[d]</Text>
 				<Text> open Devtools, </Text>
-				<Text bold={true}>[l]</Text>
-				<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+				{!props.forceLocal && (
+					<>
+						<Text bold={true}>[l]</Text>
+						<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+					</>
+				)}
 				<Text bold={true}>[c]</Text>
 				<Text> clear console, </Text>
 				<Text bold={true}>[x]</Text>
@@ -173,12 +182,14 @@ function DevSession(props: DevSessionProps) {
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			enableLocalPersistence={props.enableLocalPersistence}
+			liveReload={props.liveReload}
 			crons={props.crons}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
 			inspect={props.inspect}
 			onReady={props.onReady}
+			miniflareCLIOptions={props.miniflareCLIOptions}
 		/>
 	) : (
 		<Remote
@@ -193,6 +204,8 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			localProtocol={props.localProtocol}
 			inspectorPort={props.inspectorPort}
+			//TODO: @threepointone
+			// liveReload={props.liveReload}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
@@ -351,7 +364,8 @@ function useHotkeys(
 	port: number,
 	ip: string,
 	inspectorPort: number,
-	localProtocol: "http" | "https"
+	localProtocol: "http" | "https",
+	forceLocal: boolean | undefined
 ) {
 	// UGH, we should put port in context instead
 	const [toggles, setToggles] = useState(initial);
@@ -382,6 +396,7 @@ function useHotkeys(
 				}
 				// toggle local
 				case "l":
+					if (forceLocal) return;
 					setToggles((previousToggles) => ({
 						...previousToggles,
 						local: !previousToggles.local,
