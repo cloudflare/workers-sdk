@@ -1,5 +1,6 @@
 /*
  * Builds `devtools-frontend` according to the instructions [here](https://github.com/ChromeDevTools/devtools-frontend/blob/main/docs/workflows.md).
+ * Run this script anytime you want to update the files in `./built-devtools`.
  */
 
 import fs from "node:fs";
