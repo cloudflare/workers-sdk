@@ -112,7 +112,7 @@ jest.mock("xdg-app-paths", () => {
 		default: jest.fn().mockImplementation(() => {
 			return {
 				config() {
-					return "test-xdg-config";
+					return jest.requireActual("node:path").resolve("test-xdg-config");
 				},
 			};
 		}),

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
-import path, { resolve } from "node:path";
-import { getConfigPath } from "../config-path";
+import path from "node:path";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -11,15 +11,15 @@ describe("getHttpsOptions()", () => {
 	const std = mockConsoleMethods();
 
 	it("should use cached values if they have not expired", async () => {
-		fs.mkdirSync(resolve(getConfigPath(), "local-cert"), {
+		fs.mkdirSync(path.resolve(getGlobalWranglerConfigPath(), "local-cert"), {
 			recursive: true,
 		});
 		fs.writeFileSync(
-			resolve(getConfigPath(), "local-cert/key.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
 			"PRIVATE KEY"
 		);
 		fs.writeFileSync(
-			resolve(getConfigPath(), "local-cert/cert.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			"PUBLIC KEY"
 		);
 		const result = await getHttpsOptions();
@@ -33,11 +33,11 @@ describe("getHttpsOptions()", () => {
 	it("should generate and cache new keys if none are cached", async () => {
 		const result = await getHttpsOptions();
 		const key = fs.readFileSync(
-			resolve(getConfigPath(), "local-cert/key.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
 			"utf8"
 		);
 		const cert = fs.readFileSync(
-			resolve(getConfigPath(), "local-cert/cert.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			"utf8"
 		);
 		expect(result.key).toEqual(key);
@@ -50,28 +50,28 @@ describe("getHttpsOptions()", () => {
 	});
 
 	it("should generate and cache new keys if cached files have expired", async () => {
-		fs.mkdirSync(resolve(getConfigPath(), "local-cert"), {
+		fs.mkdirSync(path.resolve(getGlobalWranglerConfigPath(), "local-cert"), {
 			recursive: true,
 		});
 		const ORIGINAL_KEY = "EXPIRED PRIVATE KEY";
 		const ORIGINAL_CERT = "EXPIRED PUBLIC KEY";
 		fs.writeFileSync(
-			resolve(getConfigPath(), "local-cert/key.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
 			ORIGINAL_KEY
 		);
 		fs.writeFileSync(
-			resolve(getConfigPath(), "local-cert/cert.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			ORIGINAL_CERT
 		);
 		mockStatSync(/\.pem$/, { mtimeMs: new Date(2000).valueOf() });
 
 		const result = await getHttpsOptions();
 		const key = fs.readFileSync(
-			resolve(getConfigPath(), "local-cert/key.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
 			"utf8"
 		);
 		const cert = fs.readFileSync(
-			resolve(getConfigPath(), "local-cert/cert.pem"),
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			"utf8"
 		);
 		expect(key).not.toEqual(ORIGINAL_KEY);
@@ -89,12 +89,16 @@ describe("getHttpsOptions()", () => {
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
-		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/key.pem"))).toBe(
-			false
-		);
-		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/cert.pem"))).toBe(
-			false
-		);
+		expect(
+			fs.existsSync(
+				path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem")
+			)
+		).toBe(false);
+		expect(
+			fs.existsSync(
+				path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem")
+			)
+		).toBe(false);
 		expect(std.out).toMatchInlineSnapshot(
 			`"Generating new self-signed certificate..."`
 		);
@@ -112,12 +116,16 @@ describe("getHttpsOptions()", () => {
 	it("should warn if not able to write to the cache", async () => {
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
-		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/key.pem"))).toBe(
-			false
-		);
-		expect(fs.existsSync(resolve(getConfigPath(), "local-cert/cert.pem"))).toBe(
-			false
-		);
+		expect(
+			fs.existsSync(
+				path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem")
+			)
+		).toBe(false);
+		expect(
+			fs.existsSync(
+				path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem")
+			)
+		).toBe(false);
 		expect(std.out).toMatchInlineSnapshot(
 			`"Generating new self-signed certificate..."`
 		);

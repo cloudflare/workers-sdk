@@ -223,7 +223,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
-import { getConfigPath } from "../config-path";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -271,8 +271,6 @@ interface AuthTokens {
  * relative to the user's home directory.
  */
 export const USER_AUTH_CONFIG_FILE = "config/default.toml";
-
-const getUserAuthConfigPath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -845,7 +843,10 @@ async function generatePKCECodes(): Promise<PKCECodes> {
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	const authConfigFilePath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
+	);
 	mkdirSync(path.dirname(authConfigFilePath), {
 		recursive: true,
 	});
@@ -859,7 +860,10 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const authConfigFilePath = path.join(getConfigPath(), USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
+	);
 	const toml = parseTOML(readFileSync(authConfigFilePath));
 	return toml;
 }
@@ -1044,7 +1048,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(getUserAuthConfigPath);
+	rmSync(path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_FILE));
 	logger.log(`Successfully logged out.`);
 }
 
