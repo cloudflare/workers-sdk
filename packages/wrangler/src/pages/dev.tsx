@@ -640,15 +640,37 @@ function generateRedirectsMatcher(redirectsFile: string) {
 	if (existsSync(redirectsFile)) {
 		const contents = readFileSync(redirectsFile).toString();
 
-		// TODO: Log errors
-		const lines = contents
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => !line.startsWith("#") && line !== "");
+		let staticRules = 0;
+		let dynamicRules = 0;
+		let canCreateStaticRule = true;
+		const MAX_LINE_LENGTH = 2000,
+			MAX_STATIC_REDIRECT_RULES = 2000,
+			MAX_DYNAMIC_REDIRECT_RULES = 100;
 
 		const rules = Object.fromEntries(
-			lines
-				.map((line) => line.split(" "))
+			contents
+				.split("\n")
+				.map((line, i) => {
+					line = line.trim();
+					if (line.startsWith("#") || line == "") return [];
+					if (line.length > MAX_LINE_LENGTH) {
+						logger.warn(
+							`Ignoring line ${
+								i + 1
+							} as it exceeds the maximum allowed length of ${MAX_LINE_LENGTH}.`
+						);
+						return [];
+					}
+					const tokens = line.split(" ");
+					if (tokens.length < 2) {
+						logger.warn(
+							`Expected at least 2 whitespace-separated tokens on line ${
+								i + 1
+							}. Got ${tokens.length}.`
+						);
+					}
+					return tokens;
+				})
 				.filter((tokens) => tokens.length >= 2)
 				.map((tokens) => {
 					let from = validateURL(tokens[0], true, false, false);
@@ -662,12 +684,40 @@ function generateRedirectsMatcher(redirectsFile: string) {
 					}
 					const to = validateURL(tokens[index], false, true, true);
 
-					const queryParams = tokens
-						.slice(1, index)
-						.filter((param) => !param.includes("&"));
+					const queryParams = tokens.slice(1, index).filter((param) => {
+						if (param.includes("&")) {
+							logger.warn('Query parameters cannot contain "&".');
+							return false;
+						}
+						return true;
+					});
 
 					if (queryParams.length) {
 						from = `${from}?${queryParams.join("&")}`;
+					}
+
+					if (!from) return undefined;
+
+					if (
+						canCreateStaticRule &&
+						!from.match(/\*/g) &&
+						!from.match(/:\w+/g) &&
+						!from.includes("?")
+					) {
+						staticRules += 1;
+					} else {
+						dynamicRules += 1;
+						canCreateStaticRule = false;
+					}
+					if (staticRules > MAX_STATIC_REDIRECT_RULES) {
+						logger.warn(
+							`Static rules exceeded maximum of ${MAX_STATIC_REDIRECT_RULES} (currently ${staticRules}).`
+						);
+					}
+					if (dynamicRules > MAX_DYNAMIC_REDIRECT_RULES) {
+						logger.warn(
+							`Dynamic rules exceeded maximum of ${MAX_DYNAMIC_REDIRECT_RULES} (currently ${dynamicRules}).`
+						);
 					}
 
 					status = [301, 302, 303, 307, 308].includes(status || 302)
