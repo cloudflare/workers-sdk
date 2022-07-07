@@ -11,7 +11,7 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build-devtools": "node ./build-devtools.mjs",
-		"publish": "npx wrangler publish"
+		"publish": "npx wrangler publish --assets built-devtools"
 	},
 	"devDependencies": {
 		"execa": "^6.1.0"
