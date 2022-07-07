@@ -32,8 +32,14 @@ function makeEntrypoint(wasmPath: string, modulePath: string): string {
 		: {};
 
 	return `
-import { WASI } from '${modulePath}';
-import wasm from '${wasmPath}';
+import { WASI } from '${
+		// escape slashes so this works on windows
+		modulePath.replaceAll("\\", "\\\\")
+	}';
+import wasm from '${
+		// escape slashes so this works on windows
+		wasmPath.replaceAll("\\", "\\\\")
+	}';
 export default {
   async fetch(request, environment, context) {
     const stdout = new TransformStream()
