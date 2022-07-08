@@ -1,3 +1,4 @@
+import { execSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,7 +10,8 @@ import * as metrics from "../metrics";
 import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
 import openInBrowser from "../open-in-browser";
 import { buildFunctions } from "./build";
-import { pagesBetaWarning } from "./utils";
+import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type PagesDevArgs = {
@@ -113,7 +115,7 @@ export async function Handler({
 	"node-compat": nodeCompat,
 	"local-protocol": localProtocol,
 	config,
-	_: [_pages, _dev, ..._remaining],
+	_: [_pages, _dev, ...remaining],
 }: ArgumentsCamelCase<PagesDevArgs>) {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
@@ -124,6 +126,18 @@ export async function Handler({
 
 	if (config) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
+	}
+
+	const command = remaining;
+
+	let proxyPort: number | void;
+
+	if (directory === undefined) {
+		proxyPort = await spawnProxyProcess({
+			port: requestedProxyPort,
+			command,
+		});
+		if (proxyPort === undefined) return undefined;
 	}
 
 	const kv = kvs.map((val) => ({
@@ -227,7 +241,7 @@ export async function Handler({
 			forceLocal: true,
 			miniflareCLIOptions: {
 				enableAssetsServiceBinding: true,
-				proxyPort: requestedProxyPort,
+				proxyPort: proxyPort ?? undefined,
 				directory,
 			},
 			watch: true,
@@ -241,4 +255,137 @@ export async function Handler({
 		},
 		true
 	);
+}
+
+function isWindows() {
+	return process.platform === "win32";
+}
+
+async function sleep(ms: number) {
+	await new Promise((promiseResolve) => setTimeout(promiseResolve, ms));
+}
+
+function getPids(pid: number) {
+	const pids: number[] = [pid];
+	let command: string, regExp: RegExp;
+
+	if (isWindows()) {
+		command = `wmic process where (ParentProcessId=${pid}) get ProcessId`;
+		regExp = new RegExp(/(\d+)/);
+	} else {
+		command = `pgrep -P ${pid}`;
+		regExp = new RegExp(/(\d+)/);
+	}
+
+	try {
+		const newPids = (
+			execSync(command)
+				.toString()
+				.split("\n")
+				.map((line) => line.match(regExp))
+				.filter((line) => line !== null) as RegExpExecArray[]
+		).map((match) => parseInt(match[1]));
+
+		pids.push(...newPids.map(getPids).flat());
+	} catch {}
+
+	return pids;
+}
+
+function getPort(pid: number) {
+	let command: string, regExp: RegExp;
+
+	if (isWindows()) {
+		command = "\\windows\\system32\\netstat.exe -nao";
+		regExp = new RegExp(`TCP\\s+.*:(\\d+)\\s+.*:\\d+\\s+LISTENING\\s+${pid}`);
+	} else {
+		command = "lsof -nPi";
+		regExp = new RegExp(`${pid}\\s+.*TCP\\s+.*:(\\d+)\\s+\\(LISTEN\\)`);
+	}
+
+	try {
+		const matches = execSync(command)
+			.toString()
+			.split("\n")
+			.map((line) => line.match(regExp))
+			.filter((line) => line !== null) as RegExpExecArray[];
+
+		const match = matches[0];
+		if (match) return parseInt(match[1]);
+	} catch (thrown) {
+		logger.error(
+			`Error scanning for ports of process with PID ${pid}: ${thrown}`
+		);
+	}
+}
+
+async function spawnProxyProcess({
+	port,
+	command,
+}: {
+	port?: number;
+	command: (string | number)[];
+}): Promise<void | number> {
+	if (command.length === 0) {
+		CLEANUP();
+		throw new FatalError(
+			"Must specify a directory of static assets to serve or a command to run.",
+			1
+		);
+	}
+
+	logger.log(`Running ${command.join(" ")}...`);
+	const proxy = spawn(
+		command[0].toString(),
+		command.slice(1).map((value) => value.toString()),
+		{
+			shell: isWindows(),
+			env: {
+				BROWSER: "none",
+				...process.env,
+			},
+		}
+	);
+	CLEANUP_CALLBACKS.push(() => {
+		proxy.kill();
+	});
+
+	proxy.stdout.on("data", (data) => {
+		logger.log(`[proxy]: ${data}`);
+	});
+
+	proxy.stderr.on("data", (data) => {
+		logger.error(`[proxy]: ${data}`);
+	});
+
+	proxy.on("close", (code) => {
+		logger.error(`Proxy exited with status ${code}.`);
+	});
+
+	// Wait for proxy process to start...
+	while (!proxy.pid) {}
+
+	if (port === undefined) {
+		logger.log(
+			`Sleeping ${SECONDS_TO_WAIT_FOR_PROXY} seconds to allow proxy process to start before attempting to automatically determine port...`
+		);
+		logger.log("To skip, specify the proxy port with --proxy.");
+		await sleep(SECONDS_TO_WAIT_FOR_PROXY * 1000);
+
+		port = getPids(proxy.pid)
+			.map(getPort)
+			.filter((nr) => nr !== undefined)[0];
+
+		if (port === undefined) {
+			CLEANUP();
+			throw new FatalError(
+				"Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
+				1
+			);
+		} else {
+			logger.log(`Automatically determined the proxy port to be ${port}.`);
+		}
+	}
+
+	return port;
 }
