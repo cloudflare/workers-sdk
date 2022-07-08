@@ -1,0 +1,51 @@
+import * as SDK from '../../core/sdk/sdk.js';
+import * as NetworkForward from '../../panels/network/forward/forward.js';
+import * as UI from '../../ui/legacy/legacy.js';
+export declare class RequestHeadersView extends UI.Widget.VBox {
+    #private;
+    private request;
+    private showRequestHeadersText;
+    private showResponseHeadersText;
+    private highlightedElement;
+    private readonly root;
+    private urlItem;
+    private readonly requestMethodItem;
+    private readonly statusCodeItem;
+    private readonly remoteAddressItem;
+    private readonly referrerPolicyItem;
+    readonly responseHeadersCategory: Category;
+    private readonly requestHeadersCategory;
+    constructor(request: SDK.NetworkRequest.NetworkRequest);
+    wasShown(): void;
+    willHide(): void;
+    private addEntryContextMenuHandler;
+    private formatHeader;
+    private formatHeaderObject;
+    private refreshURL;
+    private populateTreeElementWithSourceText;
+    private refreshRequestHeaders;
+    private refreshResponseHeaders;
+    private refreshHTTPInformation;
+    private refreshHeadersTitle;
+    private refreshHeaders;
+    private refreshHeadersText;
+    private refreshRemoteAddress;
+    private refreshReferrerPolicy;
+    private toggleRequestHeadersText;
+    private toggleResponseHeadersText;
+    private createToggleButton;
+    private createHeadersToggleButton;
+    private clearHighlight;
+    private revealAndHighlight;
+    private getCategoryForSection;
+    revealHeader(section: NetworkForward.UIRequestLocation.UIHeaderSection, header?: string): void;
+}
+export declare class Category extends UI.TreeOutline.TreeElement {
+    toggleOnClick: boolean;
+    private readonly expandedSetting;
+    expanded: boolean;
+    constructor(root: UI.TreeOutline.TreeOutline, name: string, title?: string);
+    createLeaf(): UI.TreeOutline.TreeElement;
+    onexpand(): void;
+    oncollapse(): void;
+}

@@ -110,7 +110,8 @@
 			"packages/wrangler/templates",
 			"packages/wrangler/emitted-types",
 			"examples/remix-pages-app/public",
-			"packages/jest-environment-wrangler/dist"
+			"packages/jest-environment-wrangler/dist",
+			"packages/wrangler-devtools/built-devtools"
 		],
 		"root": true
 	},

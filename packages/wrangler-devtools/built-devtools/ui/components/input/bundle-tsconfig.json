@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../front_end/ui/components/input"},"files":["../../../../../../../front_end/ui/components/input/input.ts"],"references":[{"path":"./css_files-tsconfig.json"}]}

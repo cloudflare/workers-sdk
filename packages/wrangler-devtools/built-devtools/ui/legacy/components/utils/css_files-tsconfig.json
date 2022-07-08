@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "imagePreview.css.js",
+        "jsUtils.css.js"
+    ]
+}

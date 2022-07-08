@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "appManifestView.css.js",
+        "backgroundServiceView.css.js",
+        "cookieItemsView.css.js",
+        "frameDetailsReportView.css.js",
+        "indexedDBViews.css.js",
+        "interestGroupStorageView.css.js",
+        "reportingApiReportsView.css.js",
+        "resourcesPanel.css.js",
+        "resourcesSidebar.css.js",
+        "serviceWorkerCacheViews.css.js",
+        "serviceWorkerUpdateCycleView.css.js",
+        "serviceWorkersView.css.js",
+        "storageView.css.js"
+    ]
+}

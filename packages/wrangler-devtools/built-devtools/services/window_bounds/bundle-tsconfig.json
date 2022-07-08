@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/services/window_bounds"},"files":["../../../../../../front_end/services/window_bounds/window_bounds.ts"],"references":[{"path":"./window_bounds-tsconfig.json"}]}

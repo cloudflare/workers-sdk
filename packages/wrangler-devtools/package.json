@@ -1,0 +1,19 @@
+{
+	"name": "wrangler-devtools",
+	"version": "0.0.0",
+	"private": "true",
+	"description": "Chrome Devtools hosted for easy use with Wrangler",
+	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/wrangler2/issues"
+	},
+	"license": "BSD-3-Clause",
+	"author": "wrangler@cloudflare.com",
+	"scripts": {
+		"build-devtools": "node ./build-devtools.mjs",
+		"publish": "npx wrangler publish --assets built-devtools"
+	},
+	"devDependencies": {
+		"execa": "^6.1.0"
+	}
+}

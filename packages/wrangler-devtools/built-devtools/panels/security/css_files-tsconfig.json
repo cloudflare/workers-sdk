@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "lockIcon.css.js",
+        "mainView.css.js",
+        "originView.css.js",
+        "sidebar.css.js"
+    ]
+}

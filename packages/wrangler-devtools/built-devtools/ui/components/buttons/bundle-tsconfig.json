@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../front_end/ui/components/buttons"},"files":["../../../../../../../front_end/ui/components/buttons/buttons.ts"],"references":[{"path":"./button-tsconfig.json"},{"path":"./css_files-tsconfig.json"}]}

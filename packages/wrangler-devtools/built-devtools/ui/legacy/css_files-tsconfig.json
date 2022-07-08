@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "emptyWidget.css.js",
+        "inspectorCommon.css.js"
+    ]
+}

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   sodipodi:docname="error_icon.svg"
+   inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
+   id="svg1121"
+   version="1.1"
+   viewBox="0 0 10 10"
+   height="10mm"
+   width="10mm">
+  <defs
+     id="defs1115">
+    <linearGradient
+       xlink:href="#sprite6_b"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0,-1.5748158,-1.5748158,0,18.897638,37.795279)"
+       x2="24"
+       id="sprite6_a" />
+    <linearGradient
+       id="sprite6_b">
+      <stop
+         id="stop4236"
+         offset="0"
+         stop-color="#d7687d" />
+      <stop
+         id="stop4238"
+         offset="1"
+         stop-color="#b21402" />
+    </linearGradient>
+    <linearGradient
+       xlink:href="#sprite6_b"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0,-0.41667,-0.41667,0,25,10)"
+       x2="24"
+       id="linearGradient1111" />
+  </defs>
+  <sodipodi:namedview
+     inkscape:window-maximized="1"
+     inkscape:window-y="0"
+     inkscape:window-x="0"
+     inkscape:window-height="1391"
+     inkscape:window-width="2560"
+     showgrid="false"
+     inkscape:document-rotation="0"
+     inkscape:current-layer="g4221"
+     inkscape:document-units="mm"
+     inkscape:cy="20.40916"
+     inkscape:cx="19.123631"
+     inkscape:zoom="22.4"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     borderopacity="1.0"
+     bordercolor="#666666"
+     pagecolor="#ffffff"
+     id="base" />
+  <metadata
+     id="metadata1118">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(-151.37946,-77.296131)"
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <g
+       transform="matrix(0.26458333,0,0,0.26458333,151.37946,77.296131)"
+       id="g4221">
+      <path
+         style="fill:url(#sprite6_a);stroke-width:3.77951"
+         inkscape:connector-curvature="0"
+         id="path4225"
+         d="M 18.897638,-4.7795e-7 C 8.4661418,-4.7795e-7 0,8.4661417 0,18.897638 c 0,10.431497 8.4661418,18.897638 18.897638,18.897638 10.431496,0 18.897638,-8.466141 18.897638,-18.897638 C 37.795276,8.4661417 29.329134,-4.7795e-7 18.897638,-4.7795e-7" />
+      <path
+         style="fill:#eb3941;stroke-width:3.77951"
+         inkscape:connector-curvature="0"
+         id="path4227"
+         d="m 1.3606299,18.89764 c 0,9.675591 7.8614175,17.537009 17.5370081,17.537009 9.675591,0 17.537008,-7.861418 17.537008,-17.537009 0,-9.6755911 -7.861417,-17.5370087 -17.537008,-17.5370087 -9.6755906,0 -17.5370081,7.8614176 -17.5370081,17.5370087" />
+      <path
+         style="stroke:#ffffff;stroke-width:3.77951"
+         inkscape:connector-curvature="0"
+         id="path4229"
+         d="m 11.338583,11.338585 15.11811,15.11811" />
+      <path
+         style="stroke:#ffffff;stroke-width:3.77951"
+         inkscape:connector-curvature="0"
+         id="path4231"
+         d="m 26.456693,11.338585 -15.11811,15.11811" />
+      <defs
+         id="defs4233">
+        <linearGradient
+           id="RESERVED_FOR_INKSCAPE_DUPLICATE_DEF_000000000">
+          <stop
+             id="stop1105"
+             offset="0"
+             stop-color="#d7687d" />
+          <stop
+             id="stop1107"
+             offset="1"
+             stop-color="#b21402" />
+        </linearGradient>
+        <linearGradient
+           xlink:href="#sprite6_b"
+           gradientUnits="userSpaceOnUse"
+           gradientTransform="matrix(0,-0.41667,-0.41667,0,25,10)"
+           x2="24"
+           id="linearGradient1714" />
+      </defs>
+    </g>
+  </g>
+</svg>

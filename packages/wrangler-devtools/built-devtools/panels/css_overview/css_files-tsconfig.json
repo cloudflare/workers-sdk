@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "cssOverview.css.js",
+        "cssOverviewCompletedView.css.js",
+        "cssOverviewProcessingView.css.js",
+        "cssOverviewSidebarPanel.css.js"
+    ]
+}

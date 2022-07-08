@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "settingCheckbox.css.js"
+    ]
+}

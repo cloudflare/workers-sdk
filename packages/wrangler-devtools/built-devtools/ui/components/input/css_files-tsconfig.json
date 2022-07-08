@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "checkbox.css.js",
+        "textInput.css.js"
+    ]
+}

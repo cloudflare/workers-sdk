@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/entrypoints/lighthouse_worker"},"files":["../../../../../../front_end/entrypoints/lighthouse_worker/lighthouse_worker.ts"],"references":[{"path":"./lighthouse_worker-tsconfig.json"}]}

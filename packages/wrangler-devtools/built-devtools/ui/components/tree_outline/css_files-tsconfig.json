@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "treeOutline.css.js"
+    ]
+}

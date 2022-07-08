@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../../front_end/entrypoints/inspector",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "devtools_entrypoint-entrypoint-typescript-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../../front_end/entrypoints/inspector/inspector.ts",
+    "../../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../panels/screencast/meta-tsconfig.json"
+    },
+    {
+      "path": "../devtools_app/entrypoint-tsconfig.json"
+    }
+  ]
+}

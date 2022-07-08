@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/models/source_map_scopes"},"files":["../../../../../../front_end/models/source_map_scopes/source_map_scopes.ts"],"references":[{"path":"./source_map_scopes-tsconfig.json"}]}
