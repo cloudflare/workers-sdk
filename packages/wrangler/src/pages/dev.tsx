@@ -257,14 +257,12 @@ export async function Handler({
 	);
 
 	waitUntilExit().then(() => {
-		console.log("MANUAL EXIT");
 		CLEANUP();
 		stop();
 		process.exit(0);
 	});
 
 	process.on("exit", () => {
-		console.log("EXIT");
 		CLEANUP();
 		stop();
 	});
