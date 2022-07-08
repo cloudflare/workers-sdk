@@ -193,7 +193,7 @@ export async function Handler({
 	//todo when this is not provided
 	await unstable_dev(scriptPath, {
 		port,
-		showInteractiveDevSession: true,
+		showInteractiveDevSession: undefined,
 		liveReload,
 		nodeCompat,
 		vars: Object.fromEntries(
