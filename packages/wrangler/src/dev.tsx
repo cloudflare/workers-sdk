@@ -312,7 +312,7 @@ export async function startDev(
 
 		if (config.services && config.services.length > 0) {
 			logger.warn(
-				`This worker is bound to  services: ${config.services
+				`This worker is bound to live services: ${config.services
 					.map(
 						(service) =>
 							`${service.binding} (${service.service}${
