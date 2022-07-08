@@ -382,7 +382,7 @@ function createCLIParser(argv: string[]) {
 						hidden: true,
 					})
 					.option("no-bundle", {
-						describe: "Skip internal build steps and directly publish script",
+						describe: "Skip internal build steps and directly publish Worker",
 						type: "boolean",
 						default: false,
 					})
@@ -474,7 +474,7 @@ function createCLIParser(argv: string[]) {
 						requiresArg: true,
 					})
 					.option("minify", {
-						describe: "Minify the script",
+						describe: "Minify the Worker",
 						type: "boolean",
 					})
 					.option("node-compat", {
@@ -643,7 +643,9 @@ function createCLIParser(argv: string[]) {
 			const scriptName = getLegacyScriptName(args, config);
 
 			if (!scriptName) {
-				throw new Error("Missing script name");
+				throw new Error(
+					"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
+				);
 			}
 
 			const accountId = await requireAuth(config);
@@ -820,7 +822,7 @@ function createCLIParser(argv: string[]) {
 	// secret
 	wrangler.command(
 		"secret",
-		"🤫 Generate a secret that can be referenced in the worker script",
+		"🤫 Generate a secret that can be referenced in a Worker",
 		(secretYargs) => {
 			return secretYargs
 				.command(subHelp)
@@ -831,15 +833,15 @@ function createCLIParser(argv: string[]) {
 				})
 				.command(
 					"put <key>",
-					"Create or update a secret variable for a script",
+					"Create or update a secret variable for a Worker",
 					(yargs) => {
 						return yargs
 							.positional("key", {
-								describe: "The variable name to be accessible in the script",
+								describe: "The variable name to be accessible in the Worker",
 								type: "string",
 							})
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -857,7 +859,9 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);
@@ -870,7 +874,7 @@ function createCLIParser(argv: string[]) {
 						);
 
 						logger.log(
-							`🌀 Creating the secret for script ${scriptName} ${
+							`🌀 Creating the secret for the Worker "${scriptName}" ${
 								args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
 							}`
 						);
@@ -955,16 +959,16 @@ function createCLIParser(argv: string[]) {
 				)
 				.command(
 					"delete <key>",
-					"Delete a secret variable from a script",
+					"Delete a secret variable from a Worker",
 					async (yargs) => {
 						await printWranglerBanner();
 						return yargs
 							.positional("key", {
-								describe: "The variable name to be accessible in the script",
+								describe: "The variable name to be accessible in the Worker",
 								type: "string",
 							})
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -981,22 +985,26 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);
 
 						if (
 							await confirm(
-								`Are you sure you want to permanently delete the variable ${
+								`Are you sure you want to permanently delete the secret ${
 									args.key
-								} on the script ${scriptName}${
+								} on the Worker ${scriptName}${
 									args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
 								}?`
 							)
 						) {
 							logger.log(
-								`🌀 Deleting the secret ${args.key} on script ${scriptName}${
+								`🌀 Deleting the secret ${
+									args.key
+								} on the Worker ${scriptName}${
 									args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
 								}`
 							);
@@ -1013,11 +1021,11 @@ function createCLIParser(argv: string[]) {
 				)
 				.command(
 					"list",
-					"List all secrets for a script",
+					"List all secrets for a Worker",
 					(yargs) => {
 						return yargs
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -1034,7 +1042,9 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);

@@ -73,9 +73,9 @@ describe("wrangler secret", () => {
 				mockPutRequest({ name: `secret-name`, text: `hunter2` });
 				await runWrangler("secret put secret-name --name script-name");
 				expect(std.out).toMatchInlineSnapshot(`
-          "🌀 Creating the secret for script script-name
-          ✨ Success! Uploaded secret secret-name"
-        `);
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Uploaded secret secret-name"
+		`);
 			});
 
 			it("should create a secret", async () => {
@@ -89,9 +89,9 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-                  "🌀 Creating the secret for script script-name
-                  ✨ Success! Uploaded secret the-key"
-              `);
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Uploaded secret the-key"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -112,9 +112,9 @@ describe("wrangler secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-                  "🌀 Creating the secret for script script-name-some-env
-                  ✨ Success! Uploaded secret the-key"
-              `);
+			"🌀 Creating the secret for the Worker \\"script-name-some-env\\"
+			✨ Success! Uploaded secret the-key"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -135,9 +135,9 @@ describe("wrangler secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-                  "🌀 Creating the secret for script script-name (some-env)
-                  ✨ Success! Uploaded secret the-key"
-              `);
+			"🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
+			✨ Success! Uploaded secret the-key"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -149,15 +149,17 @@ describe("wrangler secret", () => {
 					error = e as Error;
 				}
 				expect(std.out).toMatchInlineSnapshot(`
-          "
-          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-        `);
+			          "
+			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		        `);
 				expect(std.err).toMatchInlineSnapshot(`
-          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mRequired Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`[0m
 
-          "
-        `);
-				expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
+			"
+		`);
+				expect(error).toMatchInlineSnapshot(
+					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+				);
 			});
 		});
 
@@ -176,9 +178,9 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-          "🌀 Creating the secret for script script-name
-          ✨ Success! Uploaded secret the-key"
-        `);
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Uploaded secret the-key"
+		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -190,9 +192,9 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-          "🌀 Creating the secret for script script-name
-          ✨ Success! Uploaded secret the-key"
-        `);
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Uploaded secret the-key"
+		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -205,9 +207,9 @@ describe("wrangler secret", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
 
 				expect(std.out).toMatchInlineSnapshot(`
-          "
-          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-        `);
+			          "
+			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		        `);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -244,9 +246,9 @@ describe("wrangler secret", () => {
 					mockPutRequest({ name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.out).toMatchInlineSnapshot(`
-            "🌀 Creating the secret for script script-name
-            ✨ Success! Uploaded secret the-key"
-          `);
+				"🌀 Creating the secret for the Worker \\"script-name\\"
+				✨ Success! Uploaded secret the-key"
+			`);
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 				});
@@ -317,14 +319,14 @@ describe("wrangler secret", () => {
 		it("should delete a secret", async () => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
-				text: "Are you sure you want to permanently delete the variable the-key on the script script-name?",
+				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
 				result: true,
 			});
 			await runWrangler("secret delete the-key --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Deleting the secret the-key on script script-name
-        ✨ Success! Deleted secret the-key"
-      `);
+			"🌀 Deleting the secret the-key on the Worker script-name
+			✨ Success! Deleted secret the-key"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -335,16 +337,16 @@ describe("wrangler secret", () => {
 				true
 			);
 			mockConfirm({
-				text: "Are you sure you want to permanently delete the variable the-key on the script script-name-some-env?",
+				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?",
 				result: true,
 			});
 			await runWrangler(
 				"secret delete the-key --name script-name --env some-env --legacy-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Deleting the secret the-key on script script-name-some-env
-        ✨ Success! Deleted secret the-key"
-      `);
+			"🌀 Deleting the secret the-key on the Worker script-name-some-env
+			✨ Success! Deleted secret the-key"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -354,16 +356,16 @@ describe("wrangler secret", () => {
 				"some-env"
 			);
 			mockConfirm({
-				text: "Are you sure you want to permanently delete the variable the-key on the script script-name (some-env)?",
+				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?",
 				result: true,
 			});
 			await runWrangler(
 				"secret delete the-key --name script-name --env some-env --legacy-env false"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-        "🌀 Deleting the secret the-key on script script-name (some-env)
-        ✨ Success! Deleted secret the-key"
-      `);
+			"🌀 Deleting the secret the-key on the Worker script-name (some-env)
+			✨ Success! Deleted secret the-key"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -376,15 +378,17 @@ describe("wrangler secret", () => {
 				error = e as Error;
 			}
 			expect(std.out).toMatchInlineSnapshot(`
-        "
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-      `);
+			        "
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mRequired Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`[0m
 
-        "
-      `);
-			expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
+			"
+		`);
+			expect(error).toMatchInlineSnapshot(
+				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+			);
 		});
 	});
 
@@ -422,13 +426,13 @@ describe("wrangler secret", () => {
 			mockListRequest({ scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-        "[
-          {
-            \\"name\\": \\"the-secret-name\\",
-            \\"type\\": \\"secret_text\\"
-          }
-        ]"
-      `);
+			        "[
+			          {
+			            \\"name\\": \\"the-secret-name\\",
+			            \\"type\\": \\"secret_text\\"
+			          }
+			        ]"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -438,13 +442,13 @@ describe("wrangler secret", () => {
 				"secret list --name script-name --env some-env --legacy-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-        "[
-          {
-            \\"name\\": \\"the-secret-name\\",
-            \\"type\\": \\"secret_text\\"
-          }
-        ]"
-      `);
+			        "[
+			          {
+			            \\"name\\": \\"the-secret-name\\",
+			            \\"type\\": \\"secret_text\\"
+			          }
+			        ]"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -454,13 +458,13 @@ describe("wrangler secret", () => {
 				"secret list --name script-name --env some-env --legacy-env false"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-        "[
-          {
-            \\"name\\": \\"the-secret-name\\",
-            \\"type\\": \\"secret_text\\"
-          }
-        ]"
-      `);
+			        "[
+			          {
+			            \\"name\\": \\"the-secret-name\\",
+			            \\"type\\": \\"secret_text\\"
+			          }
+			        ]"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -472,15 +476,17 @@ describe("wrangler secret", () => {
 				error = e as Error;
 			}
 			expect(std.out).toMatchInlineSnapshot(`
-        "
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-      `);
+			        "
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing script name[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mRequired Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`[0m
 
-        "
-      `);
-			expect(error).toMatchInlineSnapshot(`[Error: Missing script name]`);
+			"
+		`);
+			expect(error).toMatchInlineSnapshot(
+				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+			);
 		});
 	});
 });
