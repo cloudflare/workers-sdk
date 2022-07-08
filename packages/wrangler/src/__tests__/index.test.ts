@@ -35,7 +35,7 @@ describe("wrangler", () => {
 			  wrangler dev [script]      👂 Start a local server for developing your worker
 			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
 			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-			  wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+			  wrangler secret            🤫 Generate a secret that can be referenced in a Worker
 			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
@@ -74,7 +74,7 @@ describe("wrangler", () => {
 			  wrangler dev [script]      👂 Start a local server for developing your worker
 			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
 			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-			  wrangler secret            🤫 Generate a secret that can be referenced in the worker script
+			  wrangler secret            🤫 Generate a secret that can be referenced in a Worker
 			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
@@ -123,20 +123,20 @@ describe("wrangler", () => {
 			await runWrangler("secret");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler secret
+			"wrangler secret
 
-			        🤫 Generate a secret that can be referenced in the worker script
+			🤫 Generate a secret that can be referenced in a Worker
 
-			        Commands:
-			          wrangler secret put <key>     Create or update a secret variable for a script
-			          wrangler secret delete <key>  Delete a secret variable from a script
-			          wrangler secret list          List all secrets for a script
+			Commands:
+			  wrangler secret put <key>     Create or update a secret variable for a Worker
+			  wrangler secret delete <key>  Delete a secret variable from a Worker
+			  wrangler secret list          List all secrets for a Worker
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {
