@@ -720,8 +720,8 @@ function generateRedirectsMatcher(redirectsFile: string) {
 						if (dynamicRules > MAX_DYNAMIC_REDIRECT_RULES) {
 							//set from to undefined to easily filter out the rule at the end
 							from = undefined;
-							hasLoggedDynamicLimit = true;
 							if (!hasLoggedDynamicLimit) {
+								hasLoggedDynamicLimit = true;
 								logger.warn(
 									`Dynamic rules exceeded maximum of ${MAX_DYNAMIC_REDIRECT_RULES} (currently ${dynamicRules}). Skipping rest of file.`
 								);
