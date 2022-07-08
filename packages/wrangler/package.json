@@ -31,6 +31,7 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"main": "wrangler-dist/cli.js",
+	"types": "wrangler-dist/cli.d.ts",
 	"bin": {
 		"wrangler": "./bin/wrangler.js",
 		"wrangler2": "./bin/wrangler.js"
@@ -48,7 +49,7 @@
 		"Cloudflare_CA.pem"
 	],
 	"scripts": {
-		"build": "npm run clean && npm run bundle",
+		"build": "npm run clean && npm run bundle && npm run emit-types",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
 		"check:type": "tsc",
 		"clean": "rm -rf wrangler-dist miniflare-dist emitted-types",
