@@ -269,6 +269,12 @@ export async function startDev(
 			id: string;
 			preview_id?: string;
 		}[];
+		durableObjects?: {
+			name: string;
+			class_name: string;
+			script_name?: string | undefined;
+			environment?: string | undefined;
+		}[];
 	}
 ) {
 	let watcher: ReturnType<typeof watch> | undefined;
@@ -407,6 +413,10 @@ export async function startDev(
 		): Promise<CfWorkerInit["bindings"]> {
 			if (!args.kv) args.kv = [];
 			if (!configParam.kv_namespaces) configParam.kv_namespaces = [];
+
+			if (!args.durableObjects) args.durableObjects = [];
+			if (!configParam.durable_objects)
+				configParam.durable_objects = { bindings: [] };
 			return {
 				kv_namespaces: [
 					...configParam.kv_namespaces.map(
@@ -440,7 +450,12 @@ export async function startDev(
 				wasm_modules: configParam.wasm_modules,
 				text_blobs: configParam.text_blobs,
 				data_blobs: configParam.data_blobs,
-				durable_objects: configParam.durable_objects,
+				durable_objects: {
+					bindings: [
+						...configParam.durable_objects.bindings,
+						...args.durableObjects,
+					],
+				},
 				r2_buckets: configParam.r2_buckets?.map(
 					({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
 						// same idea as kv namespace preview id,

@@ -25,6 +25,12 @@ interface DevOptions {
 		id: string;
 		preview_id?: string;
 	}[];
+	durableObjects?: {
+		name: string;
+		class_name: string;
+		script_name?: string | undefined;
+		environment?: string | undefined;
+	}[];
 	miniflareCLIOptions?: MiniflareCLIOptions;
 	watch?: boolean;
 	compatibilityDate?: string;
