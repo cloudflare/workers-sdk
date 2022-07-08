@@ -914,7 +914,7 @@ describe("wrangler dev", () => {
 			      --minify                                     Minify the script  [boolean]
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
-						--live-reload                                Auto reload HTML pages when change is detected  [boolean]
+			      --live-reload                                Auto reload HTML pages when change is detected  [boolean]
 			      --inspect                                    Enable dev tools  [deprecated] [boolean]",
 			  "warn": "",
 			}
