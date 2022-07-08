@@ -48,7 +48,7 @@
 		"Cloudflare_CA.pem"
 	],
 	"scripts": {
-		"build": "npm run clean && npm run bundle",
+		"build": "npm run clean && npm run bundle && npm run emit-types",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
 		"check:type": "tsc",
 		"clean": "rm -rf wrangler-dist miniflare-dist emitted-types",
