@@ -1,16 +1,29 @@
-import { spawnWranglerDev } from "./helpers";
+import wrangler from "wrangler";
 
-it("renders", async () => {
-  const { fetchWhenReady, terminateProcess } = spawnWranglerDev(
-    "src/sw.ts",
-    "src/wrangler.sw.toml",
-    9000
-  );
+describe("worker", () => {
+	let worker: {
+		fetch: (init?: RequestInit) => Promise<Response | undefined>;
+		stop: () => Promise<void>;
+	};
 
-  try {
-    const response = await fetchWhenReady("http://localhost");
-    const text = await response.text();
-    expect(text).toMatchInlineSnapshot(`
+	beforeAll(async () => {
+		//since the script is invoked from the directory above, need to specify index.js is in src/
+		worker = await wrangler.unstable_dev("src/sw.ts", {
+			config: "src/wrangler.sw.toml",
+		});
+	});
+
+	afterAll(async () => {
+		await worker.stop();
+	});
+
+	it("renders", async () => {
+		const resp = await worker.fetch();
+		expect(resp).not.toBe(undefined);
+
+		if (resp) {
+			const text = await resp.text();
+			expect(text).toMatchInlineSnapshot(`
     "{
       \\"VAR1\\": \\"value1\\",
       \\"VAR2\\": 123,
@@ -23,7 +36,6 @@ it("renders", async () => {
       \\"DATA\\": \\"Here be some data\\"
     }"
   `);
-  } finally {
-    await terminateProcess();
-  }
+		}
+	});
 });

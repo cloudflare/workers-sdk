@@ -8,10 +8,7 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
-		worker = await wrangler.unstable_dev("src/basicModule.ts", {
-			ip: "127.0.0.1",
-			port: 1337,
-		});
+		worker = await wrangler.unstable_dev("src/basicModule.ts");
 	});
 
 	afterAll(async () => {
