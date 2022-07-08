@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
 	base = new Headers(base ?? {})
 	extra = new Headers(extra ?? {})
@@ -19,7 +21,7 @@ export class OkResponse extends Response {
 }
 
 export class NotModifiedResponse extends Response {
-	constructor(...[body, init]: ConstructorParameters<typeof Response>) {
+	constructor() {
 		super(undefined, {
 			status: 304,
 			statusText: "Not Modified",
@@ -33,7 +35,8 @@ export class PermanentRedirectResponse extends Response {
 			...init,
 			status: 308,
 			statusText: 'Permanent Redirect',
-			headers: mergeHeaders(init?.headers, {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			headers: mergeHeaders(init?.headers as any, {
 				location,
 			}),
 		})
