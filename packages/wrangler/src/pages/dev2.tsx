@@ -185,7 +185,6 @@ export async function Handler({
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
-			console.log(scriptPath);
 		}
 	}
 

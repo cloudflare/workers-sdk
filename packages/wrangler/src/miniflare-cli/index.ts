@@ -68,7 +68,7 @@ async function main() {
 		await mf.startScheduler();
 		process.send && process.send("ready");
 	} catch (e) {
-		console.log(e);
+		// console.log(e);
 		mf?.log.error(e as Error);
 		process.exitCode = 1;
 		// Unmount any mounted workers
