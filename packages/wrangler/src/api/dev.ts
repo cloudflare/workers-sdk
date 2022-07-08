@@ -60,6 +60,7 @@ export async function unstable_dev(
 	return new Promise<{
 		stop: () => void;
 		fetch: (init?: RequestInit) => Promise<Response | undefined>;
+		waitUntilExit: () => Promise<void>;
 	}>((resolve) => {
 		//lmao
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
@@ -76,6 +77,7 @@ export async function unstable_dev(
 			resolve({
 				stop: devServer.stop,
 				fetch: devServer.fetch,
+				waitUntilExit: devServer.devReactElement.waitUntilExit,
 			});
 		});
 	});
