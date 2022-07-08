@@ -2,7 +2,7 @@ import wrangler from "wrangler";
 
 describe("worker", () => {
 	let worker: {
-		fetch: (init?: RequestInit) => Promise<Response | undefined>;
+		fetch: (init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
 
@@ -18,10 +18,8 @@ describe("worker", () => {
 	it("should invoke the worker and exit", async () => {
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
-		if (resp) {
-			const text = await resp.text();
 
-			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-		}
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"Hello World!"`);
 	});
 });

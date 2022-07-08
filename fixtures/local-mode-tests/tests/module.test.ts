@@ -2,7 +2,7 @@ import wrangler from "wrangler";
 
 describe("worker", () => {
 	let worker: {
-		fetch: (init?: RequestInit) => Promise<Response | undefined>;
+		fetch: (init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
 
@@ -21,9 +21,8 @@ describe("worker", () => {
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 
-		if (resp) {
-			const text = await resp.text();
-			expect(text).toMatchInlineSnapshot(`
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`
     "{
       \\"VAR1\\": \\"value1\\",
       \\"VAR2\\": 123,
@@ -34,6 +33,5 @@ describe("worker", () => {
       \\"data\\": \\"Here be some data\\"
     }"
   `);
-		}
 	});
 });
