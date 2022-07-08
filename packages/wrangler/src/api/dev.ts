@@ -46,10 +46,16 @@ interface DevOptions {
  *  @param {string} script
  *  @param {DevOptions} options
  */
-export async function unstable_dev(script: string, options: DevOptions) {
-	logger.warn(
-		`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
-	);
+export async function unstable_dev(
+	script: string,
+	options: DevOptions,
+	disableWarning?: boolean
+) {
+	if (!disableWarning) {
+		logger.warn(
+			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
+		);
+	}
 
 	return new Promise<{
 		stop: () => void;

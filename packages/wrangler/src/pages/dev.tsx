@@ -204,37 +204,41 @@ export async function Handler({
 	await scriptReadyPromise;
 
 	//todo when this is not provided
-	await unstable_dev(scriptPath, {
-		port,
-		showInteractiveDevSession: undefined,
-		liveReload,
-		nodeCompat,
-		vars: Object.fromEntries(
-			bindings
-				.map((binding) => binding.toString().split("="))
-				.map(([key, ...values]) => [key, values.join("=")])
-		),
-		kv,
-		durableObjects: durableObjects.map((durableObject) => {
-			const [name, class_name] = durableObject.toString().split("=");
-			return {
-				name,
-				class_name,
-			};
-		}),
-		forceLocal: true,
-		miniflareCLIOptions: {
-			enableAssetsServiceBinding: true,
-			proxyPort: requestedProxyPort,
-			directory,
-		},
-		watch: true,
-		localProtocol,
-		compatibilityDate: "2021-11-02",
-		logLevel: "error",
-		cfFetch,
+	await unstable_dev(
+		scriptPath,
+		{
+			port,
+			showInteractiveDevSession: undefined,
+			liveReload,
+			nodeCompat,
+			vars: Object.fromEntries(
+				bindings
+					.map((binding) => binding.toString().split("="))
+					.map(([key, ...values]) => [key, values.join("=")])
+			),
+			kv,
+			durableObjects: durableObjects.map((durableObject) => {
+				const [name, class_name] = durableObject.toString().split("=");
+				return {
+					name,
+					class_name,
+				};
+			}),
+			forceLocal: true,
+			miniflareCLIOptions: {
+				enableAssetsServiceBinding: true,
+				proxyPort: requestedProxyPort,
+				directory,
+			},
+			watch: true,
+			localProtocol,
+			compatibilityDate: "2021-11-02",
+			logLevel: "error",
+			cfFetch,
 
-		_: [],
-		$0: "",
-	});
+			_: [],
+			$0: "",
+		},
+		true
+	);
 }
