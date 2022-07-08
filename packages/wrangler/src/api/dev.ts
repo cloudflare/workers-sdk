@@ -28,7 +28,7 @@ interface DevOptions {
 	miniflareCLIOptions?: MiniflareCLIOptions;
 	watch?: boolean;
 	compatibilityDate?: string;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug"
+	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	cfFetch?: boolean;
 
 	forceLocal?: boolean;
@@ -58,7 +58,7 @@ export async function unstable_dev(script: string, options: DevOptions) {
 				local: true,
 				onReady: () => ready(devServer),
 				inspect: false,
-				logLevel: "none"
+				logLevel: "none",
 			});
 		}).then((devServer) => {
 			resolve({

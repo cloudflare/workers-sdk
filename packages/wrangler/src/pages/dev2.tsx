@@ -21,7 +21,7 @@ type PagesDevArgs = {
 	do?: (string | number)[]; //.
 	"live-reload": boolean;
 	"node-compat": boolean;
-	"local-protocol"?: "https" | "http"
+	"local-protocol"?: "https" | "http";
 };
 
 export function Options(yargs: Argv): Argv<PagesDevArgs> {
@@ -218,8 +218,8 @@ export async function Handler({
 		},
 		watch: true,
 		localProtocol,
-		compatibilityDate: '2021-11-02',
-		logLevel: 'error',
+		compatibilityDate: "2021-11-02",
+		logLevel: "error",
 		cfFetch,
 
 		_: [],
