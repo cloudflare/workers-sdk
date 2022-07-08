@@ -10,3 +10,4 @@ packages/examples/remix-pages-app/public/
 packages/prerelease-registry/_worker.js
 packages/jest-environment-wrangler/dist/
 packages/wranglerjs-compat-webpack-plugin/lib
+packages/wrangler-devtools/built-devtools
