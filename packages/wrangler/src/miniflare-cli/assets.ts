@@ -312,22 +312,22 @@ async function generateAssetsFetch(
 	let redirectsMatcher = generateRedirectsMatcher(redirectsFile);
 	let headersMatcher = generateHeadersMatcher(headersFile);
 
-	// watch([headersFile, redirectsFile], {
-	// 	persistent: true,
-	// }).on("change", (path) => {
-	// 	switch (path) {
-	// 		case headersFile: {
-	// 			logger.log("_headers modified. Re-evaluating...");
-	// 			headersMatcher = generateHeadersMatcher(headersFile);
-	// 			break;
-	// 		}
-	// 		case redirectsFile: {
-	// 			logger.log("_redirects modified. Re-evaluating...");
-	// 			redirectsMatcher = generateRedirectsMatcher(redirectsFile);
-	// 			break;
-	// 		}
-	// 	}
-	// });
+	watch([headersFile, redirectsFile], {
+		persistent: true,
+	}).on("change", (path) => {
+		switch (path) {
+			case headersFile: {
+				logger.log("_headers modified. Re-evaluating...");
+				headersMatcher = generateHeadersMatcher(headersFile);
+				break;
+			}
+			case redirectsFile: {
+				logger.log("_redirects modified. Re-evaluating...");
+				redirectsMatcher = generateRedirectsMatcher(redirectsFile);
+				break;
+			}
+		}
+	});
 
 	const serveAsset = (file: string) => {
 		return readFileSync(file);

@@ -26,6 +26,10 @@ interface DevOptions {
 		preview_id?: string;
 	}[];
 	miniflareCLIOptions?: MiniflareCLIOptions;
+	watch?: boolean;
+	compatibilityDate?: string;
+	logLevel?: "none" | "error" | "log" | "warn" | "debug"
+	cfFetch?: boolean;
 
 	forceLocal?: boolean;
 	_: (string | number)[]; //yargs wants this
@@ -54,7 +58,7 @@ export async function unstable_dev(script: string, options: DevOptions) {
 				local: true,
 				onReady: () => ready(devServer),
 				inspect: false,
-				logLevel: "none",
+				logLevel: "none"
 			});
 		}).then((devServer) => {
 			resolve({

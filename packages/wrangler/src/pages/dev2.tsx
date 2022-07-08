@@ -21,6 +21,7 @@ type PagesDevArgs = {
 	do?: (string | number)[]; //.
 	"live-reload": boolean;
 	"node-compat": boolean;
+	"local-protocol"?: "https" | "http"
 };
 
 export function Options(yargs: Argv): Argv<PagesDevArgs> {
@@ -82,6 +83,10 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				type: "boolean",
 				hidden: true,
 			},
+			"local-protocol": {
+				describe: "Protocol to listen to requests on, defaults to http.",
+				choices: ["http", "https"] as const,
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -103,6 +108,7 @@ export async function Handler({
 	do: durableObjects = [],
 	"live-reload": liveReload,
 	"node-compat": nodeCompat,
+	"local-protocol": localProtocol,
 	config,
 	_: [_pages, _dev, ..._remaining],
 }: ArgumentsCamelCase<PagesDevArgs>) {
@@ -134,7 +140,8 @@ export async function Handler({
 		directory = resolve(directory);
 	}
 
-	let scriptPath: string;
+	let scriptPath: string,
+		cfFetch = undefined;
 	if (usingFunctions) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		scriptPath = outfile;
@@ -185,6 +192,7 @@ export async function Handler({
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
+			cfFetch = false;
 		}
 	}
 
@@ -208,6 +216,11 @@ export async function Handler({
 			proxyPort: requestedProxyPort,
 			directory,
 		},
+		watch: true,
+		localProtocol,
+		compatibilityDate: '2021-11-02',
+		logLevel: 'error',
+		cfFetch,
 
 		_: [],
 		$0: "",

@@ -37,6 +37,7 @@ interface LocalProps {
 	inspect: boolean | undefined;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	cfFetch: boolean | undefined;
 
 	miniflareCLIOptions?: MiniflareCLIOptions;
 }
@@ -71,6 +72,7 @@ function useLocalWorker({
 	inspect,
 	onReady,
 	logLevel,
+	cfFetch,
 
 	miniflareCLIOptions,
 }: LocalProps) {
@@ -239,6 +241,7 @@ function useLocalWorker({
 				crons,
 				upstream,
 				disableLogs: logLevel === "none",
+				cfFetch,
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -361,6 +364,7 @@ function useLocalWorker({
 		inspect,
 		logLevel,
 		onReady,
+		cfFetch,
 
 		miniflareCLIOptions,
 	]);

@@ -62,6 +62,7 @@ export type DevProps = {
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
+	cfFetch: boolean | undefined;
 	miniflareCLIOptions?: MiniflareCLIOptions;
 };
 
@@ -189,6 +190,7 @@ function DevSession(props: DevSessionProps) {
 			logLevel={props.logLevel}
 			inspect={props.inspect}
 			onReady={props.onReady}
+			cfFetch={props.cfFetch}
 			miniflareCLIOptions={props.miniflareCLIOptions}
 		/>
 	) : (
