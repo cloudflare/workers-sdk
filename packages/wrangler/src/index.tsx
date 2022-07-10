@@ -64,6 +64,7 @@ import { whoami } from "./whoami";
 
 import { workerNamespaceCommands } from "./worker-namespace";
 import type { Config } from "./config";
+import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
 import type { CommandModule } from "yargs";
@@ -1263,6 +1264,15 @@ function createCLIParser(argv: string[]) {
 								describe:
 									"Time since the UNIX epoch after which the entry expires",
 							})
+							.option("metadata", {
+								type: "string",
+								describe: "Arbitrary JSON that is associated with a key",
+								coerce: (jsonStr: string): KeyValue["metadata"] => {
+									try {
+										return JSON.parse(jsonStr);
+									} catch (_) {}
+								},
+							})
 							.option("path", {
 								type: "string",
 								requiresArg: true,
@@ -1270,7 +1280,7 @@ function createCLIParser(argv: string[]) {
 							})
 							.check(demandOneOfOption("value", "path"));
 					},
-					async ({ key, ttl, expiration, ...args }) => {
+					async ({ key, ttl, expiration, metadata, ...args }) => {
 						await printWranglerBanner();
 						const config = readConfig(args.config as ConfigPath, args);
 						const namespaceId = getKVNamespaceId(args, config);
@@ -1280,13 +1290,17 @@ function createCLIParser(argv: string[]) {
 							: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 							  args.value!;
 
+						const metadataLog = metadata
+							? ` with metadata "${JSON.stringify(metadata)}"`
+							: "";
+
 						if (args.path) {
 							logger.log(
-								`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}.`
+								`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}${metadataLog}.`
 							);
 						} else {
 							logger.log(
-								`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}.`
+								`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}${metadataLog}.`
 							);
 						}
 
@@ -1297,6 +1311,7 @@ function createCLIParser(argv: string[]) {
 							value,
 							expiration,
 							expiration_ttl: ttl,
+							metadata: metadata as KeyValue["metadata"],
 						});
 					}
 				)
