@@ -1,6 +1,10 @@
 // DO NOT IMPORT THIS DIRECTLY
 import worker from "__ENTRY_POINT__";
-import { getAssetFromKV } from "__KV_ASSET_HANDLER__";
+import {
+	getAssetFromKV,
+	NotFoundError,
+	MethodNotAllowedError,
+} from "__KV_ASSET_HANDLER__";
 import manifest from "__STATIC_CONTENT_MANIFEST";
 const ASSET_MANIFEST = JSON.parse(manifest);
 
@@ -33,11 +37,13 @@ export default {
 
 			return response;
 		} catch (e) {
+			if (e instanceof NotFoundError || e instanceof MethodNotAllowedError) {
+				// if a known error is thrown then serve from actual worker
+				return worker.fetch(request, env, ctx);
+			}
+			// otherwise it's a real error, so throw it
 			console.error(e);
-			// if an error is thrown then serve from actual worker
-			return worker.fetch(request, env, ctx);
-			// TODO: throw here if worker is not available
-			// (which implies it may be a service-worker)
+			return new Response(e.message, { status: 500 });
 		}
 	},
 };
