@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { Headers } from "undici";
+import { FormData, Headers } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
 	setMockResponse,
@@ -330,7 +330,15 @@ describe("wrangler", () => {
 						expect(accountId).toEqual("some-account-id");
 						expect(namespaceId).toEqual(expectedNamespaceId);
 						expect(key).toEqual(expectedKV.key);
-						expect(body).toEqual(expectedKV.value);
+						if (expectedKV.metadata) {
+							expect(body).toBeInstanceOf(FormData);
+							expect((body as FormData).get("value")).toEqual(expectedKV.value);
+							expect((body as FormData).get("metadata")).toEqual(
+								JSON.stringify(expectedKV.metadata)
+							);
+						} else {
+							expect(body).toEqual(expectedKV.value);
+						}
 						if (expectedKV.expiration !== undefined) {
 							expect(query.get("expiration")).toEqual(
 								`${expectedKV.expiration}`
@@ -488,6 +496,24 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
+			it("should put a key with metadata", async () => {
+				const requests = mockKeyPutRequest("some-namespace-id", {
+					key: "dKey",
+					value: "dVal",
+					metadata: {
+						mKey: "mValue",
+					},
+				});
+				await runWrangler(
+					`kv:key put dKey dVal --namespace-id some-namespace-id --metadata {"mKey":"mValue"}`
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(
+					`"Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."`
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
 			it("should error if no key is provided", async () => {
 				await expect(
 					runWrangler("kv:key put")
@@ -517,6 +543,7 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
+                --metadata      Arbitrary JSON that is associated with a key  [string]
                 --path          Read value from the file at a given path  [string]"
         `);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -555,6 +582,7 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
+                --metadata      Arbitrary JSON that is associated with a key  [string]
                 --path          Read value from the file at a given path  [string]"
         `);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -593,6 +621,7 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
+                --metadata      Arbitrary JSON that is associated with a key  [string]
                 --path          Read value from the file at a given path  [string]"
         `);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -631,6 +660,7 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
+                --metadata      Arbitrary JSON that is associated with a key  [string]
                 --path          Read value from the file at a given path  [string]"
         `);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -669,6 +699,7 @@ describe("wrangler", () => {
                 --preview       Interact with a preview namespace  [boolean]
                 --ttl           Time for which the entries should be visible  [number]
                 --expiration    Time since the UNIX epoch after which the entry expires  [number]
+                --metadata      Arbitrary JSON that is associated with a key  [string]
                 --path          Read value from the file at a given path  [string]"
         `);
 				expect(std.err).toMatchInlineSnapshot(`
