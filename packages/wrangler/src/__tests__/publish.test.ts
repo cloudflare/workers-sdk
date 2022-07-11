@@ -51,6 +51,31 @@ describe("publish", () => {
 		unsetMockFetchKVGetValues();
 	});
 
+	describe("output additional script information", () => {
+		mockApiToken();
+
+		it("should print worker information at log level", async () => {
+			setIsTTY(false);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockOAuthServerCallback();
+
+			await runWrangler("publish ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Worker ID:  abc12345
+			Worker ETag:  etag98765
+			Worker PipelineHash:  hash9999
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  test-name.test-sub-domain.workers.dev"
+		`);
+		});
+	});
+
 	describe("authentication", () => {
 		mockApiToken({ apiToken: null });
 		beforeEach(() => {
@@ -6113,6 +6138,7 @@ function mockUploadWorkerRequest(
 		expectedMigrations?: CfWorkerInit["migrations"];
 		env?: string;
 		legacyEnv?: boolean;
+		sendScriptIds?: boolean;
 	} = {}
 ) {
 	const {
@@ -6127,6 +6153,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		sendScriptIds,
 	} = options;
 	setMockResponse(
 		env && !legacyEnv
@@ -6175,7 +6202,16 @@ function mockUploadWorkerRequest(
 				expect(await (formBody.get(name) as File).text()).toEqual(content);
 			}
 
-			return { available_on_subdomain };
+			return {
+				available_on_subdomain,
+				...(sendScriptIds
+					? {
+							id: "abc12345",
+							etag: "etag98765",
+							pipeline_hash: "hash9999",
+					  }
+					: {}),
+			};
 		}
 	);
 }
