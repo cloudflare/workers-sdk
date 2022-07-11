@@ -187,6 +187,7 @@ function useLocalWorker({
 				compatibilityDate,
 				compatibilityFlags,
 				kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
+				r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
 				durableObjects: Object.fromEntries(
 					(bindings.durable_objects?.bindings ?? []).map<[string, string]>(
 						(value) => [value.name, value.class_name]
@@ -330,6 +331,7 @@ function useLocalWorker({
 		ip,
 		bindings.durable_objects?.bindings,
 		bindings.kv_namespaces,
+		bindings.r2_buckets,
 		bindings.vars,
 		bindings.services,
 		compatibilityDate,
