@@ -16,7 +16,7 @@
 		"check:type": "tsc"
 	},
 	"dependencies": {
-		"jest-environment-miniflare": "^2.5.1"
+		"jest-environment-miniflare": "^2.6.0"
 	},
 	"prepublishOnly": "npm run build"
 }
