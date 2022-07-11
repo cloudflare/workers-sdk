@@ -51,6 +51,34 @@ describe("publish", () => {
 		unsetMockFetchKVGetValues();
 	});
 
+	describe("output additional script information", () => {
+		const ENV_COPY = process.env;
+
+		afterEach(() => {
+			process.env = ENV_COPY;
+		});
+
+		it("should print worker information at log level", async () => {
+			process.env = {
+				WRANGLER_LOG: "log",
+			};
+
+			writeWranglerToml();
+			writeWorkerSource();
+			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockSubDomainRequest();
+			mockOAuthServerCallback();
+
+			await runWrangler("publish ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+						"Worker ID: Not available"
+						"Worker ETag: Not available"
+						"Worker PipeineHash: Not available"
+						`);
+		});
+	});
+
 	describe("authentication", () => {
 		mockApiToken({ apiToken: null });
 		beforeEach(() => {
@@ -6083,6 +6111,8 @@ addEventListener('fetch', event => {});`
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
+
+
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -6113,6 +6143,7 @@ function mockUploadWorkerRequest(
 		expectedMigrations?: CfWorkerInit["migrations"];
 		env?: string;
 		legacyEnv?: boolean;
+		sendScriptIds?: boolean;
 	} = {}
 ) {
 	const {
@@ -6127,6 +6158,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		sendScriptIds,
 	} = options;
 	setMockResponse(
 		env && !legacyEnv
@@ -6175,7 +6207,21 @@ function mockUploadWorkerRequest(
 				expect(await (formBody.get(name) as File).text()).toEqual(content);
 			}
 
-			return { available_on_subdomain };
+			class PublishResponse {
+				available_on_subdomain = true;
+				id?: string;
+				etag?: string;
+				pipeline_hash?: string;
+			}
+
+			const response = new PublishResponse();
+			response.available_on_subdomain = available_on_subdomain;
+			if (sendScriptIds) {
+				response.id = "abc12345";
+				response.etag = "etag98765";
+				response.pipeline_hash = "hash9999"
+			}
+			return response;
 		}
 	);
 }
