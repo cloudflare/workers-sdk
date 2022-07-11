@@ -1,5 +1,5 @@
 {
-	"name": "wrangler-devtools",
+	"name": "@cloudflare/wrangler-devtools",
 	"version": "0.0.0",
 	"private": "true",
 	"description": "Chrome Devtools hosted for easy use with Wrangler",
