@@ -52,30 +52,27 @@ describe("publish", () => {
 	});
 
 	describe("output additional script information", () => {
-		const ENV_COPY = process.env;
-
-		afterEach(() => {
-			process.env = ENV_COPY;
-		});
+		mockApiToken();
 
 		it("should print worker information at log level", async () => {
-			process.env = {
-				WRANGLER_LOG: "log",
-			};
-
+			setIsTTY(false);
 			writeWranglerToml();
 			writeWorkerSource();
-			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
 			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
 			mockOAuthServerCallback();
 
 			await runWrangler("publish ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-						"Worker ID: Not available"
-						"Worker ETag: Not available"
-						"Worker PipeineHash: Not available"
-						`);
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Worker ID:  abc12345
+			Worker ETag:  etag98765
+			Worker PipelineHash:  hash9999
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  test-name.test-sub-domain.workers.dev"
+		`);
 		});
 	});
 
@@ -6111,8 +6108,6 @@ addEventListener('fetch', event => {});`
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
-
-
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -6207,21 +6202,16 @@ function mockUploadWorkerRequest(
 				expect(await (formBody.get(name) as File).text()).toEqual(content);
 			}
 
-			class PublishResponse {
-				available_on_subdomain = true;
-				id?: string;
-				etag?: string;
-				pipeline_hash?: string;
-			}
-
-			const response = new PublishResponse();
-			response.available_on_subdomain = available_on_subdomain;
-			if (sendScriptIds) {
-				response.id = "abc12345";
-				response.etag = "etag98765";
-				response.pipeline_hash = "hash9999"
-			}
-			return response;
+			return {
+				available_on_subdomain,
+				...(sendScriptIds
+					? {
+							id: "abc12345",
+							etag: "etag98765",
+							pipeline_hash: "hash9999",
+					  }
+					: {}),
+			};
 		}
 	);
 }
