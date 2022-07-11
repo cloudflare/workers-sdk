@@ -1,5 +1,5 @@
 ---
-"wrangler-devtools": patch
+"wrangler": patch
 ---
 
 Include devtools in wrangler monorepo
