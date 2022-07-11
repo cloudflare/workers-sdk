@@ -1,7 +1,7 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import {
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
@@ -86,7 +86,10 @@ describe("User", () => {
 			expect(fetchMock).toHaveBeenCalledTimes(1);
 
 			// Make sure that logout removed the config file containing the auth tokens.
-			const config = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
+			const config = path.join(
+				getGlobalWranglerConfigPath(),
+				USER_AUTH_CONFIG_FILE
+			);
 			expect(fs.existsSync(config)).toBeFalsy();
 		});
 	});

@@ -209,7 +209,6 @@ import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
@@ -224,6 +223,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -270,7 +270,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_FILE = ".wrangler/config/default.toml";
+export const USER_AUTH_CONFIG_FILE = "config/default.toml";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -843,7 +843,10 @@ async function generatePKCECodes(): Promise<PKCECodes> {
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	const authConfigFilePath = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
+	);
 	mkdirSync(path.dirname(authConfigFilePath), {
 		recursive: true,
 	});
@@ -857,7 +860,10 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const authConfigFilePath = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
+	);
 	const toml = parseTOML(readFileSync(authConfigFilePath));
 	return toml;
 }
@@ -1042,7 +1048,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE));
+	rmSync(path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_FILE));
 	logger.log(`Successfully logged out.`);
 }
 
