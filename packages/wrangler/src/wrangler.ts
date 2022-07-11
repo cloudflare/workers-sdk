@@ -1,22 +1,30 @@
 #!/usr/bin/env node
-const { spawn } = require("child_process");
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
-const semiver = require("semiver");
+
+/**
+ * This is the entry point for the wrangler cli. It will be compiled
+ * out to bin/wrangler.js by the build process, so be careful when
+ * referring to any paths in this file.
+ */
+
+import { spawn } from "child_process";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import semiver from "semiver";
+import type { ChildProcess } from "child_process";
 
 const MIN_NODE_VERSION = "16.7.0";
 const debug =
 	process.env["WRANGLER_LOG"] === "debug"
-		? (...args) => console.log(...args)
+		? (...args: unknown[]) => console.log(...args)
 		: () => {};
 
-let wranglerProcess;
+let maybeWranglerProcess: ChildProcess | undefined;
 
 /**
  * Executes ../wrangler-dist/cli.js
  */
-function runWrangler() {
+function runWrangler(): ChildProcess | undefined {
 	if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
 		// Note Volta and nvm are also recommended in the official docs:
 		// https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
@@ -36,7 +44,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		// - maybe we can generate a certificate that concatenates with ours?
 		//
 		//  I do think it'll be rare that someone wants to add a cert AND
-		//  use cloudflare WARP, but let's wait till the situation actually
+		//  use Cloudflare WARP, but let's wait till the situation actually
 		//  arises before we do anything about it
 	} else {
 		const osTempDir = os.tmpdir();
@@ -78,14 +86,14 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
  * Runs a locally-installed version of wrangler, delegating from this version.
  * @throws {MODULE_NOT_FOUND} if there isn't a locally installed version of wrangler.
  */
-function runDelegatedWrangler() {
+function runDelegatedWrangler(): ChildProcess {
 	const packageJsonPath = require.resolve("wrangler/package.json", {
 		paths: [process.cwd()],
 	});
 	const {
 		bin: { wrangler: binaryPath },
 		version,
-	} = JSON.parse(fs.readFileSync(packageJsonPath));
+	} = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
 	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
 
 	debug(`Delegating to locally-installed version of wrangler @ v${version}`);
@@ -124,14 +132,16 @@ function shouldDelegate() {
 }
 
 async function main() {
-	wranglerProcess = shouldDelegate() ? runDelegatedWrangler() : runWrangler();
+	maybeWranglerProcess = shouldDelegate()
+		? runDelegatedWrangler()
+		: runWrangler();
 }
 
 process.on("SIGINT", () => {
-	wranglerProcess?.kill();
+	maybeWranglerProcess?.kill();
 });
 process.on("SIGTERM", () => {
-	wranglerProcess?.kill();
+	maybeWranglerProcess?.kill();
 });
 
 void main();

@@ -54,6 +54,18 @@ async function buildMiniflareCLI(flags: BuildFlags = {}) {
 	});
 }
 
+async function buildCLIEntryPoint(flags: BuildFlags = {}) {
+	await build({
+		entryPoints: ["./src/wrangler.js"],
+		outfile: "./bin/wrangler.js",
+		platform: "node",
+		format: "cjs",
+		target: "node10",
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		watch: flags.watch ? watchLogger("./bin") : false,
+	});
+}
+
 async function run() {
 	// main cli
 	await buildMain();
@@ -61,12 +73,16 @@ async function run() {
 	// custom miniflare cli
 	await buildMiniflareCLI();
 
+	// cli entry point
+	await buildCLIEntryPoint();
+
 	// After built once completely, rerun them both in watch mode
 	if (process.argv.includes("--watch")) {
 		console.log("Built. Watching for changes...");
 		await Promise.all([
 			buildMain({ watch: true }),
 			buildMiniflareCLI({ watch: true }),
+			buildCLIEntryPoint({ watch: true }),
 		]);
 	}
 }
