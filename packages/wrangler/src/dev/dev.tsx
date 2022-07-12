@@ -6,6 +6,13 @@ import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
 import React, { useState, useEffect, useRef } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import {
+	useQuery,
+	useMutation,
+	useQueryClient,
+	QueryClient,
+	QueryClientProvider,
+} from "react-query";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
@@ -61,6 +68,16 @@ export type DevProps = {
 	showInteractiveDevSession: boolean | undefined;
 };
 
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+			staleTime: 100000,
+			retry: 0,
+		},
+	},
+});
+
 export function DevImplementation(props: DevProps): JSX.Element {
 	if (
 		!props.isWorkersSite &&
@@ -94,9 +111,13 @@ export function DevImplementation(props: DevProps): JSX.Element {
 	const { isRawModeSupported } = useStdin();
 
 	return props.showInteractiveDevSession ?? isRawModeSupported ? (
-		<InteractiveDevSession {...props} />
+		<QueryClientProvider client={queryClient}>
+			<InteractiveDevSession {...props} />
+		</QueryClientProvider>
 	) : (
-		<DevSession {...props} local={props.initialMode === "local"} />
+		<QueryClientProvider client={queryClient}>
+			<DevSession {...props} local={props.initialMode === "local"} />
+		</QueryClientProvider>
 	);
 }
 
@@ -112,7 +133,11 @@ function InteractiveDevSession(props: DevProps) {
 		props.localProtocol
 	);
 
-	useTunnel(toggles.tunnel);
+	const { isError, error } = useTunnel(toggles.tunnel);
+
+	if (isError) {
+		logger.error("tunnel:", error);
+	}
 
 	return (
 		<>
@@ -283,63 +308,58 @@ async function findTunnelHostname() {
  * Create a tunnel to the remote worker.
  * We've disabled this for now until we figure out a better user experience.
  */
+
 function useTunnel(toggle: boolean) {
 	const tunnel = useRef<ReturnType<typeof spawn>>();
 	const removeSignalExitListener = useRef<() => void>();
 	// TODO: test if cloudflared is available, if not
 	// point them to a url where they can get docs to install it
-	useEffect(() => {
-		async function startTunnel() {
-			if (toggle) {
-				try {
-					await commandExists("cloudflared");
-				} catch (e) {
-					logger.warn(
-						"To share your worker on the Internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
-					);
-					return;
-				}
-				logger.log("⎔ Starting a tunnel...");
-				tunnel.current = spawn("cloudflared", [
-					"tunnel",
-					"--url",
-					"http://localhost:8787",
-					"--metrics",
-					"localhost:8789",
-				]);
-
-				tunnel.current.on("close", (code) => {
-					if (code) {
-						logger.log(`Tunnel process exited with code ${code}`);
-					}
-				});
-
-				removeSignalExitListener.current = onExit((_code, _signal) => {
-					logger.log("⎔ Shutting down local tunnel.");
-					tunnel.current?.kill();
-					tunnel.current = undefined;
-				});
-
-				const hostName = await findTunnelHostname();
-				await clipboardy.write(hostName);
-				logger.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
-			}
+	async function startTunnel() {
+		if (tunnel.current) {
+			logger.log("⎔ Shutting down tunnel.");
+			tunnel.current?.kill();
+			tunnel.current = undefined;
+			removeSignalExitListener.current && removeSignalExitListener.current();
+			removeSignalExitListener.current = undefined;
 		}
 
-		startTunnel().catch(async (err) => {
-			logger.error("tunnel:", err);
-		});
+		if (toggle) {
+			try {
+				await commandExists("cloudflared");
+			} catch (e) {
+				logger.warn(
+					"To share your worker on the Internet, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+				);
+				return;
+			}
+			logger.log("⎔ Starting a tunnel...");
+			tunnel.current = spawn("cloudflared", [
+				"tunnel",
+				"--url",
+				"http://localhost:8787",
+				"--metrics",
+				"localhost:8789",
+			]);
 
-		return () => {
-			if (tunnel.current) {
-				logger.log("⎔ Shutting down tunnel.");
+			tunnel.current.on("close", (code) => {
+				if (code) {
+					logger.log(`Tunnel process exited with code ${code}`);
+				}
+			});
+
+			removeSignalExitListener.current = onExit((_code, _signal) => {
+				logger.log("⎔ Shutting down local tunnel.");
 				tunnel.current?.kill();
 				tunnel.current = undefined;
-				removeSignalExitListener.current && removeSignalExitListener.current();
-				removeSignalExitListener.current = undefined;
-			}
-		};
-	}, [toggle]);
+			});
+
+			const hostName = await findTunnelHostname();
+			await clipboardy.write(hostName);
+			logger.log(`⬣ Sharing at ${hostName}, copied to clipboard.`);
+		}
+	}
+
+	return useQuery([toggle], async () => await startTunnel());
 }
 
 type useHotkeysInitialState = {
