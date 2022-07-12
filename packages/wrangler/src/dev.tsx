@@ -554,6 +554,7 @@ export async function startDev(args: StartDevOptions) {
 					bindings={bindings}
 					crons={config.triggers.crons}
 					logLevel={args.logLevel}
+					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect}
 					showInteractiveDevSession={args.showInteractiveDevSession}
