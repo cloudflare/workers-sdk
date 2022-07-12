@@ -282,9 +282,9 @@ export const upload = async (
 				});
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					// Linear backoff, 0 second first time, then 1 second etc.
+					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, attempts++ * 1000)
+						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 					);
 
 					if ((e as { code: number }).code === 8000013) {
