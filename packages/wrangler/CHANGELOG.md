@@ -1,5 +1,20 @@
 # wrangler
 
+## 2.0.18
+
+### Patch Changes
+
+- [#1451](https://github.com/cloudflare/wrangler2/pull/1451) [`62649097`](https://github.com/cloudflare/wrangler2/commit/62649097ca1d4bc8e3753cc68e6b230c213d59bd) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixed an issue where Pages upload would OOM. This was caused by us loading all the file content into memory instead of only when required.
+
+* [#1375](https://github.com/cloudflare/wrangler2/pull/1375) [`e9e98721`](https://github.com/cloudflare/wrangler2/commit/e9e987212e0eb7fe8669f13800ca98b39a348ca6) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - polish: Compliance with the XDG Base Directory Specification
+  Wrangler was creating a config file in the home directory of the operating system `~/.wrangler`. The XDG path spec is a
+  standard for storing files, these changes include XDG pathing compliance for `.wrangler/*` location and backwards compatibility with previous
+  `~/.wrangler` locations.
+
+  resolves #1053
+
+- [#1449](https://github.com/cloudflare/wrangler2/pull/1449) [`ee6c421b`](https://github.com/cloudflare/wrangler2/commit/ee6c421bbcf166ca7699d3cb21f6c18cf2062c55) Thanks [@alankemp](https://github.com/alankemp)! - Output additional information about uploaded scripts at WRANGLER_LOG=log level
+
 ## 2.0.17
 
 ### Patch Changes
