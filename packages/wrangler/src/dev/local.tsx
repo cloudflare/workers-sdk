@@ -195,9 +195,10 @@ function useLocalWorker({
 				),
 				...(localPersistencePath
 					? {
-							kvPersist: path.join(localPersistencePath, "kv"),
-							durableObjectsPersist: path.join(localPersistencePath, "do"),
 							cachePersist: path.join(localPersistencePath, "cache"),
+							durableObjectsPersist: path.join(localPersistencePath, "do"),
+							kvPersist: path.join(localPersistencePath, "kv"),
+							r2Persist: path.join(localPersistencePath, "r2"),
 					  }
 					: {
 							// We mark these as true, so that they'll
@@ -205,9 +206,10 @@ function useLocalWorker({
 							// This means they'll persist across a dev session,
 							// even if we change source and reload,
 							// and be deleted when the dev session ends
-							durableObjectsPersist: true,
 							cachePersist: true,
+							durableObjectsPersist: true,
 							kvPersist: true,
+							r2Persist: true,
 					  }),
 
 				sitePath: assetPaths?.assetDirectory
