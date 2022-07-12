@@ -531,7 +531,7 @@ export async function startDev(args: StartDevOptions) {
 					jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
 					tsconfig={args.tsconfig ?? config.tsconfig}
 					upstreamProtocol={upstreamProtocol}
-					localProtocol={args["local-protocol"] || config.dev.local_protocol}
+					localProtocol={args.localProtocol || config.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
 					enableLocalPersistence={
 						args["experimental-enable-local-persistence"] || false
