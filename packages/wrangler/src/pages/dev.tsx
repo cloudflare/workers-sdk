@@ -19,14 +19,14 @@ type PagesDevArgs = {
 	command?: string;
 	local: boolean;
 	port: number;
-	proxy?: number; //.
+	proxy?: number;
 	"script-path": string;
 	binding?: (string | number)[];
-	kv?: (string | number)[]; //.
-	do?: (string | number)[]; //.
+	kv?: (string | number)[];
+	do?: (string | number)[];
 	"live-reload": boolean;
-	"node-compat": boolean;
 	"local-protocol"?: "https" | "http";
+	"node-compat": boolean;
 };
 
 export function Options(yargs: Argv): Argv<PagesDevArgs> {
@@ -82,27 +82,26 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				default: false,
 				description: "Auto reload HTML pages when change is detected",
 			},
+			"local-protocol": {
+				describe: "Protocol to listen to requests on, defaults to http.",
+				choices: ["http", "https"] as const,
+			},
 			"node-compat": {
 				describe: "Enable node.js compatibility",
 				default: false,
 				type: "boolean",
 				hidden: true,
 			},
-			"local-protocol": {
-				describe: "Protocol to listen to requests on, defaults to http.",
-				choices: ["http", "https"] as const,
-			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
 				hidden: true,
 			},
-			//   // TODO: Miniflare user options
 		})
 		.epilogue(pagesBetaWarning);
 }
 
-export async function Handler({
+export const Handler = async ({
 	local,
 	directory,
 	port,
@@ -112,11 +111,11 @@ export async function Handler({
 	kv: kvs = [],
 	do: durableObjects = [],
 	"live-reload": liveReload,
-	"node-compat": nodeCompat,
 	"local-protocol": localProtocol,
-	config,
+	"node-compat": nodeCompat,
+	config: config,
 	_: [_pages, _dev, ...remaining],
-}: ArgumentsCamelCase<PagesDevArgs>) {
+}: ArgumentsCamelCase<PagesDevArgs>) => {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
@@ -128,9 +127,12 @@ export async function Handler({
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
 
+	const functionsDirectory = "./functions";
+	const usingFunctions = existsSync(functionsDirectory);
+
 	const command = remaining;
 
-	let proxyPort: number | void;
+	let proxyPort: number | undefined;
 
 	if (directory === undefined) {
 		proxyPort = await spawnProxyProcess({
@@ -138,27 +140,18 @@ export async function Handler({
 			command,
 		});
 		if (proxyPort === undefined) return undefined;
+	} else {
+		directory = resolve(directory);
 	}
-
-	const kv = kvs.map((val) => ({
-		binding: val.toString(),
-		id: "",
-	}));
 
 	let scriptReadyResolve: () => void;
 	const scriptReadyPromise = new Promise<void>(
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
-	const functionsDirectory = "./functions";
-	const usingFunctions = existsSync(functionsDirectory);
+	let scriptPath: string;
+	let cfFetch = undefined;
 
-	if (directory) {
-		directory = resolve(directory);
-	}
-
-	let scriptPath: string,
-		cfFetch = undefined;
 	if (usingFunctions) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		scriptPath = outfile;
@@ -217,20 +210,25 @@ export async function Handler({
 
 	await scriptReadyPromise;
 
-	//todo when this is not provided
 	const { stop, waitUntilExit } = await unstable_dev(
 		scriptPath,
 		{
 			port,
-			showInteractiveDevSession: undefined,
+			watch: true,
+			localProtocol,
 			liveReload,
+
+			compatibilityDate: "2021-11-02",
 			nodeCompat,
 			vars: Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))
 					.map(([key, ...values]) => [key, values.join("=")])
 			),
-			kv,
+			kv: kvs.map((val) => ({
+				binding: val.toString(),
+				id: "",
+			})),
 			durableObjects: durableObjects.map((durableObject) => {
 				const [name, class_name] = durableObject.toString().split("=");
 				return {
@@ -238,20 +236,17 @@ export async function Handler({
 					class_name,
 				};
 			}),
-			forceLocal: true,
+
 			miniflareCLIOptions: {
-				enableAssetsServiceBinding: true,
-				proxyPort: proxyPort ?? undefined,
-				directory,
+				enableAssetsServiceBinding: {
+					proxyPort,
+					directory,
+				},
 			},
-			watch: true,
-			localProtocol,
-			compatibilityDate: "2021-11-02",
+			forceLocal: true,
+			showInteractiveDevSession: undefined,
 			logLevel: "error",
 			cfFetch,
-
-			_: [],
-			$0: "",
 		},
 		true
 	);
@@ -267,16 +262,14 @@ export async function Handler({
 		stop();
 	});
 	process.on("SIGINT", () => {
-		console.log("SIGINT");
 		CLEANUP();
 		stop();
 	});
 	process.on("SIGTERM", () => {
-		console.log("SIGTERM");
 		CLEANUP();
 		stop();
 	});
-}
+};
 
 function isWindows() {
 	return process.platform === "win32";
@@ -346,7 +339,7 @@ async function spawnProxyProcess({
 }: {
 	port?: number;
 	command: (string | number)[];
-}): Promise<void | number> {
+}): Promise<undefined | number> {
 	if (command.length === 0) {
 		CLEANUP();
 		throw new FatalError(

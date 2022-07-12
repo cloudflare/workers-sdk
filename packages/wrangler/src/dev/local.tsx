@@ -15,7 +15,6 @@ import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
-
 interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -38,7 +37,6 @@ interface LocalProps {
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	cfFetch: boolean | undefined;
-
 	miniflareCLIOptions?: MiniflareCLIOptions;
 }
 
@@ -73,7 +71,6 @@ function useLocalWorker({
 	onReady,
 	logLevel,
 	cfFetch,
-
 	miniflareCLIOptions,
 }: LocalProps) {
 	// TODO: pass vars via command line
@@ -263,13 +260,17 @@ function useLocalWorker({
 				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
 
-			const forkOpts = [miniflareOptions];
-			if (miniflareCLIOptions)
-				forkOpts.push(JSON.stringify(miniflareCLIOptions));
-			const child = (local.current = fork(miniflareCLIPath, forkOpts, {
+			const forkOptions = [miniflareOptions];
+
+			if (miniflareCLIOptions) {
+				forkOptions.push(JSON.stringify(miniflareCLIOptions));
+			}
+
+			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
 				cwd: path.dirname(scriptPath),
 				execArgv: nodeOptions,
 			}));
+
 			child.on("message", (message) => {
 				if (message === "ready") {
 					onReady?.();
@@ -365,7 +366,6 @@ function useLocalWorker({
 		logLevel,
 		onReady,
 		cfFetch,
-
 		miniflareCLIOptions,
 	]);
 	return { inspectorUrl };

@@ -68,9 +68,6 @@ interface DevArgs {
 	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	showInteractiveDevSession?: boolean;
-	forceLocal?: boolean;
-	cfFetch?: boolean;
-	miniflareCLIOptions?: MiniflareCLIOptions;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -231,7 +228,9 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 			})
 			.option("live-reload", {
-				describe: "Auto reload HTML pages when change is detected",
+				// TODO: Add back in once we have remote `--live-reload`
+				hidden: true,
+				// describe: "Auto reload HTML pages when change is detected",
 				type: "boolean",
 			})
 			.option("inspect", {
@@ -259,24 +258,29 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 	}
 }
 
-export async function startDev(
-	args: ArgumentsCamelCase<DevArgs> & {
-		vars?: {
-			[key: string]: unknown;
-		};
-		kv?: {
-			binding: string;
-			id: string;
-			preview_id?: string;
-		}[];
-		durableObjects?: {
-			name: string;
-			class_name: string;
-			script_name?: string | undefined;
-			environment?: string | undefined;
-		}[];
-	}
-) {
+type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
+	// These options can be passed in directly when called with the `wrangler.dev()` API.
+	// They aren't exposed as CLI arguments.
+	vars?: {
+		[key: string]: unknown;
+	};
+	kv?: {
+		binding: string;
+		id: string;
+		preview_id?: string;
+	}[];
+	durableObjects?: {
+		name: string;
+		class_name: string;
+		script_name?: string | undefined;
+		environment?: string | undefined;
+	}[];
+	forceLocal?: boolean;
+	cfFetch?: boolean;
+	miniflareCLIOptions?: MiniflareCLIOptions;
+};
+
+export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
@@ -411,12 +415,8 @@ export async function startDev(
 		async function getBindings(
 			configParam: Config
 		): Promise<CfWorkerInit["bindings"]> {
-			if (!args.kv) args.kv = [];
-			if (!configParam.kv_namespaces) configParam.kv_namespaces = [];
-
-			if (!args.durableObjects) args.durableObjects = [];
-			if (!configParam.durable_objects)
-				configParam.durable_objects = { bindings: [] };
+			configParam.kv_namespaces ??= [];
+			configParam.durable_objects ??= { bindings: [] };
 			return {
 				kv_namespaces: [
 					...configParam.kv_namespaces.map(
@@ -440,7 +440,7 @@ export async function startDev(
 							};
 						}
 					),
-					...args.kv,
+					...(args.kv || []),
 				],
 				// Use a copy of combinedVars since we're modifying it later
 				vars: {
@@ -453,7 +453,7 @@ export async function startDev(
 				durable_objects: {
 					bindings: [
 						...configParam.durable_objects.bindings,
-						...args.durableObjects,
+						...(args.durableObjects || []),
 					],
 				},
 				r2_buckets: configParam.r2_buckets?.map(
@@ -557,8 +557,8 @@ export async function startDev(
 					inspect={args.inspect}
 					showInteractiveDevSession={args.showInteractiveDevSession}
 					forceLocal={args.forceLocal}
-					miniflareCLIOptions={args.miniflareCLIOptions}
 					cfFetch={args.cfFetch}
+					miniflareCLIOptions={args.miniflareCLIOptions}
 				/>
 			);
 		}

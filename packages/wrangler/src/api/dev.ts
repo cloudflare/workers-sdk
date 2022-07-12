@@ -14,9 +14,10 @@ interface DevOptions {
 	siteInclude?: string[];
 	siteExclude?: string[];
 	nodeCompat?: boolean;
+	compatibilityDate?: string;
 	experimentalEnableLocalPersistence?: boolean;
-	showInteractiveDevSession?: boolean;
 	liveReload?: boolean;
+	watch?: boolean;
 	vars: {
 		[key: string]: unknown;
 	};
@@ -31,15 +32,14 @@ interface DevOptions {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
-	miniflareCLIOptions?: MiniflareCLIOptions;
-	watch?: boolean;
-	compatibilityDate?: string;
+	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
-	cfFetch?: boolean;
-
+	inspect?: boolean;
 	forceLocal?: boolean;
-	_: (string | number)[]; //yargs wants this
-	$0: string; //yargs wants this
+	cfFetch?: boolean;
+	miniflareCLIOptions?: MiniflareCLIOptions;
+	_?: (string | number)[]; //yargs wants this
+	$0?: string; //yargs wants this
 }
 /**
  *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
@@ -66,12 +66,14 @@ export async function unstable_dev(
 		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 			const devServer = startDev({
 				script: script,
+				inspect: false,
+				logLevel: "none",
 				showInteractiveDevSession: false,
+				_: [],
+				$0: "",
 				...options,
 				local: true,
 				onReady: () => ready(devServer),
-				inspect: false,
-				logLevel: "none",
 			});
 		}).then((devServer) => {
 			resolve({

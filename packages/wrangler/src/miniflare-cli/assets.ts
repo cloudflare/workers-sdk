@@ -4,8 +4,8 @@ import { fetch as miniflareFetch } from "@miniflare/core";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { Response } from "miniflare";
-import type { Logger } from "../logger";
 import type { Headers as MiniflareHeaders } from "@miniflare/core";
+import type { Log } from "miniflare";
 import type {
 	Request as MiniflareRequest,
 	RequestInfo,
@@ -13,15 +13,15 @@ import type {
 } from "miniflare";
 
 export interface Options {
-	logger: Logger;
+	log: Log;
 	proxyPort?: number;
 	directory?: string;
 }
 
-export default async function generateFunctions(options: Options) {
+export default async function generateASSETSBinding(options: Options) {
 	const assetsFetch =
 		options.directory !== undefined
-			? await generateAssetsFetch(options.directory, options.logger)
+			? await generateAssetsFetch(options.directory, options.log)
 			: invalidAssetsFetch;
 
 	return async function (request: MiniflareRequest) {
@@ -31,7 +31,7 @@ export default async function generateFunctions(options: Options) {
 				url.host = `localhost:${options.proxyPort}`;
 				return await miniflareFetch(url, request);
 			} catch (thrown) {
-				options.logger.error(`Could not proxy request: ${thrown}`);
+				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
 				// TODO: Pretty error page
 				return new Response(`[wrangler] Could not proxy request: ${thrown}`, {
@@ -42,7 +42,7 @@ export default async function generateFunctions(options: Options) {
 			try {
 				return await assetsFetch(request);
 			} catch (thrown) {
-				options.logger.error(`Could not serve static asset: ${thrown}`);
+				options.log.error(new Error(`Could not serve static asset: ${thrown}`));
 
 				// TODO: Pretty error page
 				return new Response(
@@ -283,7 +283,7 @@ function hasFileExtension(pathname: string) {
 
 async function generateAssetsFetch(
 	directory: string,
-	logger: Logger
+	log: Log
 ): Promise<typeof miniflareFetch> {
 	// Defer importing miniflare until we really need it
 	const { Headers, Request } = await import("@miniflare/core");
@@ -317,12 +317,12 @@ async function generateAssetsFetch(
 	}).on("change", (path) => {
 		switch (path) {
 			case headersFile: {
-				logger.log("_headers modified. Re-evaluating...");
+				log.log("_headers modified. Re-evaluating...");
 				headersMatcher = generateHeadersMatcher(headersFile);
 				break;
 			}
 			case redirectsFile: {
-				logger.log("_redirects modified. Re-evaluating...");
+				log.log("_redirects modified. Re-evaluating...");
 				redirectsMatcher = generateRedirectsMatcher(redirectsFile);
 				break;
 			}
@@ -538,6 +538,6 @@ async function generateAssetsFetch(
 
 const invalidAssetsFetch: typeof miniflareFetch = () => {
 	throw new Error(
-		"Trying to fetch assets directly when there is no `directory` option specified, and not in `local` mode."
+		"Trying to fetch assets directly when there is no `directory` option specified."
 	);
 };

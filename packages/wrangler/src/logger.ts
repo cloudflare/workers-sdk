@@ -24,7 +24,7 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	defaultValue: "log",
 });
 
-export class Logger {
+class Logger {
 	constructor() {}
 
 	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";

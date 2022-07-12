@@ -206,7 +206,7 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			localProtocol={props.localProtocol}
 			inspectorPort={props.inspectorPort}
-			//TODO: @threepointone
+			// TODO: @threepointone #1167
 			// liveReload={props.liveReload}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
