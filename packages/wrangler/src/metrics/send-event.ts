@@ -1,47 +1,12 @@
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "./metrics-dispatcher";
-import type { Config } from "../config";
+import type { MetricsConfigOptions } from "./metrics-config";
 import type { Properties } from "./metrics-dispatcher";
 
-export type EventNames = DashEventNames | WranglerEventNames;
-
-/** These are related event names currently in use in the dashboard. */
-type DashEventNames =
-	| "add cron trigger"
-	| "add workers route"
-	| "begin zone activation flow"
-	| "begin log stream"
-	| "change zone setting"
-	| "Change zone setup confirmation"
-	| "change zone status"
-	| "Change zone status confirmation"
-	| "check nameservers"
-	| "create notification"
-	| "create rate limiting rule"
-	| "create service"
-	| "create user"
-	| "create zone"
-	| "edit cron trigger"
-	| "edit service environment variables"
-	| "edit service kv bindings"
-	| "edit service r2 bindings"
-	| "edit service to service bindings"
-	| "edit workers route"
-	| "enable workers"
-	| "encrypt variable"
-	| "purge everything from cache"
+/** These are event names used by this wrangler client. */
+export type EventNames =
+	| "view accounts"
 	| "deploy worker script"
-	| "register site"
-	| "set up custom domain"
-	| "set up subdomain"
-	| "submit domain name"
-	| "update site"
-	| "User selected account"
-	| "User selected zone"
-	| "view accounts";
-
-/** These are new event names specifically(?) for the wrangler client. */
-type WranglerEventNames =
 	| "begin log stream"
 	| "end log stream"
 	| "create encrypted variable"
@@ -88,19 +53,26 @@ type WranglerEventNames =
 	| "run dev"
 	| "run pages dev";
 
+export function sendMetricsEvent(event: EventNames): void;
+export function sendMetricsEvent(
+	event: EventNames,
+	options: MetricsConfigOptions
+): void;
+export function sendMetricsEvent(
+	event: EventNames,
+	properties: Properties,
+	options: MetricsConfigOptions
+): void;
 /**
  * Send a metrics event to Cloudflare, if usage tracking is enabled.
  */
 export function sendMetricsEvent(
 	event: EventNames,
-	config?: Config,
-	properties: Properties = {},
-	offline = false
+	...args: [] | [MetricsConfigOptions] | [Properties, MetricsConfigOptions]
 ): void {
-	getMetricsDispatcher({
-		sendMetrics: config?.send_metrics,
-		offline,
-	})
+	const options = args.pop() ?? {};
+	const properties = (args.pop() ?? {}) as Properties;
+	getMetricsDispatcher(options)
 		.then((metricsDispatcher) => metricsDispatcher.sendEvent(event, properties))
 		.catch((err) => {
 			logger.debug("Error sending metrics event", err);

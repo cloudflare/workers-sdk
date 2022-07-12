@@ -267,9 +267,8 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		let config = readConfig(configPath, args);
 		metrics.sendMetricsEvent(
 			"run dev",
-			config,
 			{ local: args.local },
-			args.local
+			{ sendMetrics: config.send_metrics, offline: args.local }
 		);
 
 		if (config.configPath) {

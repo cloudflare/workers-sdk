@@ -21,6 +21,19 @@ import { getAPIToken } from "../user";
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 export const USER_ID_CACHE_PATH = "user-id.json";
 
+export interface MetricsConfigOptions {
+	/**
+	 * Defines whether to send metrics to Cloudflare:
+	 * If defined, then use this value for whether the dispatch is enabled.
+	 * Otherwise, infer the enabled value from the user configuration.
+	 */
+	sendMetrics?: boolean;
+	/**
+	 * When true, do not make any CF API requests.
+	 */
+	offline?: boolean;
+}
+
 /**
  * The information needed to set up the MetricsDispatcher.
  */
@@ -51,11 +64,8 @@ export interface MetricsConfig {
  */
 export async function getMetricsConfig({
 	sendMetrics,
-	offline,
-}: {
-	sendMetrics: boolean | undefined;
-	offline: boolean;
-}): Promise<MetricsConfig> {
+	offline = false,
+}: MetricsConfigOptions): Promise<MetricsConfig> {
 	const config = await readMetricsConfig();
 	const deviceId = await getDeviceId(config);
 	const userId = await getUserId(offline);

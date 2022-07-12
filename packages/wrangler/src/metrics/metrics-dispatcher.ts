@@ -2,16 +2,14 @@ import { fetch } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { getMetricsConfig } from "./metrics-config";
+import type { MetricsConfigOptions } from "./metrics-config";
 
 // The SPARROW_SOURCE_KEY is provided at esbuild time as a `define` for production and beta
 // releases. Otherwise it is left undefined, which automatically disables metrics requests.
 declare const SPARROW_SOURCE_KEY: string;
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
-export async function getMetricsDispatcher(options: {
-	sendMetrics: boolean | undefined;
-	offline: boolean;
-}) {
+export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 	return {
 		/**
 		 * Dispatch a event to the analytics target.
