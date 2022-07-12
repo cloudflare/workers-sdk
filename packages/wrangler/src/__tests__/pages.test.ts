@@ -45,6 +45,13 @@ describe("pages", () => {
 		outOfBandTests.forEach((fn) => fn());
 	});
 
+	beforeEach(() => {
+		// @ts-expect-error we're using a very simple setTimeout mock here
+		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+			setImmediate(fn);
+		});
+	});
+
 	it("should should display a list of available subcommands, for pages with no subcommand", async () => {
 		await runWrangler("pages");
 		await endEventLoop();
@@ -645,8 +652,8 @@ describe("pages", () => {
 				});
 				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
 			}
-			// First bucket should end up with 2 files
-			expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+			// One bucket should end up with 2 files
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
 			expect(bodies.flatMap((b) => b)).toEqual(
 				expect.arrayContaining([
@@ -759,8 +766,8 @@ describe("pages", () => {
 				});
 				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
 			}
-			// First bucket should end up with 2 files
-			expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+			// One bucket should end up with 2 files
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
 			expect(bodies.flatMap((b) => b)).toEqual(
 				expect.arrayContaining([
@@ -874,8 +881,8 @@ describe("pages", () => {
 				});
 				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
 			}
-			// First bucket should end up with 2 files
-			expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+			// One bucket should end up with 2 files
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
 			expect(bodies.flatMap((b) => b)).toEqual(
 				expect.arrayContaining([
@@ -1163,8 +1170,8 @@ describe("pages", () => {
 				});
 				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
 			}
-			// First bucket should end up with 2 files
-			expect(bodies.map((b) => b.length)).toEqual([2, 1, 1]);
+			// One bucket should end up with 2 files
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
 			expect(bodies.flatMap((b) => b)).toEqual(
 				expect.arrayContaining([
