@@ -36,6 +36,7 @@ interface LocalProps {
 	inspect: boolean | undefined;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
 	cfFetch: boolean | undefined;
 	miniflareCLIOptions?: MiniflareCLIOptions;
 }
@@ -70,6 +71,7 @@ function useLocalWorker({
 	inspect,
 	onReady,
 	logLevel,
+	logPrefix,
 	cfFetch,
 	miniflareCLIOptions,
 }: LocalProps) {
@@ -238,6 +240,7 @@ function useLocalWorker({
 				crons,
 				upstream,
 				disableLogs: logLevel === "none",
+				logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 				cfFetch,
 			};
 
@@ -364,6 +367,7 @@ function useLocalWorker({
 		localUpstream,
 		inspect,
 		logLevel,
+		logPrefix,
 		onReady,
 		cfFetch,
 		miniflareCLIOptions,

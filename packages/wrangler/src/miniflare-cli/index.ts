@@ -38,7 +38,9 @@ async function main() {
 		...requestContextCheckOptions,
 	};
 	//miniflare's logLevel 0 still logs routes, so lets override the logger
-	config.log = config.disableLogs ? new NoOpLog() : new Log(logLevel);
+	config.log = config.disableLogs
+		? new NoOpLog()
+		: new Log(logLevel, config.logOptions);
 
 	if (logLevel > LogLevel.INFO) {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));

@@ -59,6 +59,7 @@ export type DevProps = {
 	routes: Route[] | undefined;
 	inspect: boolean | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
@@ -188,6 +189,7 @@ function DevSession(props: DevSessionProps) {
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
+			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}
 			cfFetch={props.cfFetch}

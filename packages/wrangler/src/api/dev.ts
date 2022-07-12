@@ -34,6 +34,7 @@ interface DevOptions {
 	}[];
 	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logPrefix?: string;
 	inspect?: boolean;
 	forceLocal?: boolean;
 	cfFetch?: boolean;

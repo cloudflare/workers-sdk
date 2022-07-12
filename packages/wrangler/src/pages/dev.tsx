@@ -246,6 +246,7 @@ export const Handler = async ({
 			forceLocal: true,
 			showInteractiveDevSession: undefined,
 			logLevel: "error",
+			logPrefix: "pages",
 			cfFetch,
 		},
 		true

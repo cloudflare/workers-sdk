@@ -67,6 +67,7 @@ interface DevArgs {
 	"live-reload"?: boolean;
 	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 }
 
