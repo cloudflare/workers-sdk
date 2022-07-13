@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { toUrlPath } from "../paths";
 import { isInPagesCI } from "./constants";
 import { buildPlugin } from "./functions/buildPlugin";
@@ -120,6 +121,7 @@ export const Handler = async ({
 		buildOutputDirectory,
 		nodeCompat,
 	});
+	metrics.sendMetricsEvent("build pages functions");
 };
 
 export async function buildFunctions({

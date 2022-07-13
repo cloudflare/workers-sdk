@@ -10,6 +10,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 
 import { getEntry } from "./entry";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
 import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
@@ -264,6 +265,11 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			((args.script &&
 				findWranglerToml(path.dirname(args.script))) as ConfigPath);
 		let config = readConfig(configPath, args);
+		metrics.sendMetricsEvent(
+			"run dev",
+			{ local: args.local },
+			{ sendMetrics: config.send_metrics, offline: args.local }
+		);
 
 		if (config.configPath) {
 			watcher = watch(config.configPath, {

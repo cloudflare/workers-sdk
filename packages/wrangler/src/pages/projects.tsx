@@ -8,6 +8,7 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { pagesBetaWarning } from "./utils";
@@ -44,6 +45,7 @@ export async function ListHandler() {
 	});
 
 	render(<Table data={data}></Table>, { patchConsole: false });
+	metrics.sendMetricsEvent("list pages projects");
 }
 
 export const listProjects = async ({
@@ -154,4 +156,5 @@ export async function CreateHandler({
 	logger.log(
 		`To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
 	);
+	metrics.sendMetricsEvent("create pages project");
 }
