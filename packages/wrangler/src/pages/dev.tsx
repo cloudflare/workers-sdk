@@ -7,8 +7,6 @@ import { unstable_dev } from "../api";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { getRequestContextCheckOptions } from "../miniflare-cli/request-context";
-import openInBrowser from "../open-in-browser";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
@@ -252,6 +250,7 @@ export const Handler = async ({
 		},
 		true
 	);
+	metrics.sendMetricsEvent("run pages dev");
 
 	waitUntilExit().then(() => {
 		CLEANUP();
