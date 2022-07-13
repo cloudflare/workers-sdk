@@ -36,13 +36,10 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
-      - name: Build
+      - name: Check the build
         run: npm run build
-        env:
-          # this is the "production" key for sparrow
-          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
-      - name: Check for errors
+      - name: Check for other errors
         run: npm run check
 
       - name: Create Version PR or Publish to NPM
@@ -54,3 +51,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          # This is the "production" key for sparrow analytics.
+          # Include this here because this step will rebuild Wrangler and needs to have this available
+          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
