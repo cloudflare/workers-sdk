@@ -1,5 +1,35 @@
 # wrangler
 
+## 2.0.19
+
+### Patch Changes
+
+- [#1410](https://github.com/cloudflare/wrangler2/pull/1410) [`52fb634`](https://github.com/cloudflare/wrangler2/commit/52fb6342c16f862da4d4e3df42227a72c8cbe0ce) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add opt-in usage metrics gathering
+
+  This change adds support in Wrangler for sending usage metrics to Cloudflare.
+  This is an opt-in only feature. We will ask the user for permission only once per device.
+  The user must grant permission, on a per device basis, before we send usage metrics to Cloudflare.
+  The permission can also be overridden on a per project basis by setting `send_metrics = false` in the `wrangler.toml`.
+  If Wrangler is running in non-interactive mode (such as in a CI job) and the user has not already given permission
+  we will assume that we cannot send usage metrics.
+
+  The aim of this feature is to help us learn what and how features of Wrangler (and also the Cloudflare dashboard)
+  are being used in order to improve the developer experience.
+
+* [#1457](https://github.com/cloudflare/wrangler2/pull/1457) [`de03f7f`](https://github.com/cloudflare/wrangler2/commit/de03f7fc044b3a7d90b3c762722ef90eceab6d09) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add r2Persist key to miniflare options
+
+  Closes #1454
+
+- [#1463](https://github.com/cloudflare/wrangler2/pull/1463) [`a7ae733`](https://github.com/cloudflare/wrangler2/commit/a7ae733d242b906928bcdd2c15a392a383ab887b) Thanks [@threepointone](https://github.com/threepointone)! - fix: ensure that a helpful error message is shown when on unsupported versions of node.js
+
+  Our entrypoint for wrangler (`bin/wrangler.js`) needs to run in older versions of node and log a message to the user that they need to upgrade their version of node. Sometimes we use syntax in this entrypoint that doesn't run in older versions of node. crashing the script and failing to log the message. This fix adds a test in CI to make sure we don't regress on that behaviour (as well as fixing the current newer syntax usage)
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1443
+
+* [#1459](https://github.com/cloudflare/wrangler2/pull/1459) [`4e425c6`](https://github.com/cloudflare/wrangler2/commit/4e425c62da2a59e6aa3a78d654c252e177c2b6ad) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - fix: `wrangler pages publish` now more reliably retries an upload in case of a failure
+
+  When `wrangler pages publish` is run, we make calls to an upload endpoint which could be rate limited and therefore fail. We currently retry those calls after a linear backoff. This change makes that backoff exponential which should reduce the likelihood of subsequent calls being rate limited.
+
 ## 2.0.18
 
 ### Patch Changes
