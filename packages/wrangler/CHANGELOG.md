@@ -1,5 +1,16 @@
 # wrangler
 
+## 2.0.20
+
+### Patch Changes
+
+- [#1464](https://github.com/cloudflare/wrangler2/pull/1464) [`0059d84`](https://github.com/cloudflare/wrangler2/commit/0059d842d7efc3c0938a21284ee3a67950c9d252) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: ensure that the SPARROW_SOURCE_KEY is included in release builds
+
+  Previously, we were including the key in the "build" step of the release job.
+  But this is only there to check that the build doesn't fail.
+  The build is re-run inside the publish step, which is part of the "changeset" step.
+  Now, we include the key in the "changeset" step to ensure it is there in the build that is published.
+
 ## 2.0.19
 
 ### Patch Changes
