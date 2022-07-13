@@ -114,7 +114,7 @@ export function workerNamespaceCommands(
 			const config = readConfig(args.config as ConfigPath, args);
 			const accountId = await requireAuth(config);
 			await listWorkerNamespaces(accountId);
-			metrics.sendMetricsEvent("list worker namespaces", {
+			await metrics.sendMetricsEvent("list worker namespaces", {
 				sendMetrics: config.send_metrics,
 			});
 		})
@@ -132,7 +132,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await getWorkerNamespaceInfo(accountId, args.name);
-				metrics.sendMetricsEvent("view worker namespace", {
+				await metrics.sendMetricsEvent("view worker namespace", {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -152,7 +152,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await createWorkerNamespace(accountId, args.name);
-				metrics.sendMetricsEvent("create worker namespace", {
+				await metrics.sendMetricsEvent("create worker namespace", {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -172,7 +172,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
-				metrics.sendMetricsEvent("delete worker namespace", {
+				await metrics.sendMetricsEvent("delete worker namespace", {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -198,7 +198,7 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await renameWorkerNamespace(accountId, args.oldName, args.newName);
-				metrics.sendMetricsEvent("rename worker namespace", {
+				await metrics.sendMetricsEvent("rename worker namespace", {
 					sendMetrics: config.send_metrics,
 				});
 			}

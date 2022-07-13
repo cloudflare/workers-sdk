@@ -501,7 +501,7 @@ function createCLIParser(argv: string[]) {
 				(args.config as ConfigPath) ||
 				(args.script && findWranglerToml(path.dirname(args.script)));
 			const config = readConfig(configPath, args);
-			metrics.sendMetricsEvent("deploy worker script", {
+			await metrics.sendMetricsEvent("deploy worker script", {
 				sendMetrics: config.send_metrics,
 			});
 			const entry = await getEntry(args, config, "publish");
@@ -644,7 +644,7 @@ function createCLIParser(argv: string[]) {
 				await printWranglerBanner();
 			}
 			const config = readConfig(args.config as ConfigPath, args);
-			metrics.sendMetricsEvent("begin log stream", {
+			await metrics.sendMetricsEvent("begin log stream", {
 				sendMetrics: config.send_metrics,
 			});
 
@@ -692,7 +692,7 @@ function createCLIParser(argv: string[]) {
 			onExit(async () => {
 				tail.terminate();
 				await deleteTail();
-				metrics.sendMetricsEvent("end log stream", {
+				await metrics.sendMetricsEvent("end log stream", {
 					sendMetrics: config.send_metrics,
 				});
 			});
@@ -711,7 +711,7 @@ function createCLIParser(argv: string[]) {
 						await setTimeout(100);
 						break;
 					case tail.CLOSED:
-						metrics.sendMetricsEvent("end log stream", {
+						await metrics.sendMetricsEvent("end log stream", {
 							sendMetrics: config.send_metrics,
 						});
 						throw new Error(
@@ -727,7 +727,7 @@ function createCLIParser(argv: string[]) {
 			tail.on("close", async () => {
 				tail.terminate();
 				await deleteTail();
-				metrics.sendMetricsEvent("end log stream", {
+				await metrics.sendMetricsEvent("end log stream", {
 					sendMetrics: config.send_metrics,
 				});
 			});
@@ -960,7 +960,7 @@ function createCLIParser(argv: string[]) {
 
 						try {
 							await submitSecret();
-							metrics.sendMetricsEvent("create encrypted variable", {
+							await metrics.sendMetricsEvent("create encrypted variable", {
 								sendMetrics: config.send_metrics,
 							});
 						} catch (e) {
@@ -1035,7 +1035,7 @@ function createCLIParser(argv: string[]) {
 									: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 							await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
-							metrics.sendMetricsEvent("delete encrypted variable", {
+							await metrics.sendMetricsEvent("delete encrypted variable", {
 								sendMetrics: config.send_metrics,
 							});
 							logger.log(`✨ Success! Deleted secret ${args.key}`);
@@ -1078,7 +1078,7 @@ function createCLIParser(argv: string[]) {
 								: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 						logger.log(JSON.stringify(await fetchResult(url), null, "  "));
-						metrics.sendMetricsEvent("list encrypted variables", {
+						await metrics.sendMetricsEvent("list encrypted variables", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1142,7 +1142,7 @@ function createCLIParser(argv: string[]) {
 
 						logger.log(`🌀 Creating namespace with title "${title}"`);
 						const namespaceId = await createKVNamespace(accountId, title);
-						metrics.sendMetricsEvent("create kv namespace", {
+						await metrics.sendMetricsEvent("create kv namespace", {
 							sendMetrics: config.send_metrics,
 						});
 
@@ -1173,7 +1173,7 @@ function createCLIParser(argv: string[]) {
 						logger.log(
 							JSON.stringify(await listKVNamespaces(accountId), null, "  ")
 						);
-						metrics.sendMetricsEvent("list kv namespaces", {
+						await metrics.sendMetricsEvent("list kv namespaces", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1221,7 +1221,7 @@ function createCLIParser(argv: string[]) {
 						const accountId = await requireAuth(config);
 
 						await deleteKVNamespace(accountId, id);
-						metrics.sendMetricsEvent("delete kv namespace", {
+						await metrics.sendMetricsEvent("delete kv namespace", {
 							sendMetrics: config.send_metrics,
 						});
 
@@ -1347,7 +1347,7 @@ function createCLIParser(argv: string[]) {
 							expiration_ttl: ttl,
 							metadata: metadata as KeyValue["metadata"],
 						});
-						metrics.sendMetricsEvent("write kv key-value", {
+						await metrics.sendMetricsEvent("write kv key-value", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1399,7 +1399,7 @@ function createCLIParser(argv: string[]) {
 							prefix
 						);
 						logger.log(JSON.stringify(results, undefined, 2));
-						metrics.sendMetricsEvent("list kv keys", {
+						await metrics.sendMetricsEvent("list kv keys", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1462,7 +1462,7 @@ function createCLIParser(argv: string[]) {
 						} else {
 							process.stdout.write(bufferKVValue);
 						}
-						metrics.sendMetricsEvent("read kv value", {
+						await metrics.sendMetricsEvent("read kv value", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1511,7 +1511,7 @@ function createCLIParser(argv: string[]) {
 						const accountId = await requireAuth(config);
 
 						await deleteKVKeyValue(accountId, namespaceId, key);
-						metrics.sendMetricsEvent("delete kv key-value", {
+						await metrics.sendMetricsEvent("delete kv key-value", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1618,7 +1618,7 @@ function createCLIParser(argv: string[]) {
 
 						const accountId = await requireAuth(config);
 						await putKVBulkKeyValue(accountId, namespaceId, content);
-						metrics.sendMetricsEvent("write kv key-values (bulk)", {
+						await metrics.sendMetricsEvent("write kv key-values (bulk)", {
 							sendMetrics: config.send_metrics,
 						});
 
@@ -1711,7 +1711,7 @@ function createCLIParser(argv: string[]) {
 						const accountId = await requireAuth(config);
 
 						await deleteKVBulkKeyValue(accountId, namespaceId, content);
-						metrics.sendMetricsEvent("delete kv key-values (bulk)", {
+						await metrics.sendMetricsEvent("delete kv key-values (bulk)", {
 							sendMetrics: config.send_metrics,
 						});
 
@@ -1753,7 +1753,7 @@ function createCLIParser(argv: string[]) {
 						logger.log(`Creating bucket ${args.name}.`);
 						await createR2Bucket(accountId, args.name);
 						logger.log(`Created bucket ${args.name}.`);
-						metrics.sendMetricsEvent("create r2 bucket", {
+						await metrics.sendMetricsEvent("create r2 bucket", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1765,7 +1765,7 @@ function createCLIParser(argv: string[]) {
 					const accountId = await requireAuth(config);
 
 					logger.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
-					metrics.sendMetricsEvent("list r2 buckets", {
+					await metrics.sendMetricsEvent("list r2 buckets", {
 						sendMetrics: config.send_metrics,
 					});
 				});
@@ -1790,7 +1790,7 @@ function createCLIParser(argv: string[]) {
 						logger.log(`Deleting bucket ${args.name}.`);
 						await deleteR2Bucket(accountId, args.name);
 						logger.log(`Deleted bucket ${args.name}.`);
-						metrics.sendMetricsEvent("delete r2 bucket", {
+						await metrics.sendMetricsEvent("delete r2 bucket", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -1862,7 +1862,7 @@ function createCLIParser(argv: string[]) {
 			}
 			await login();
 			const config = readConfig(args.config as ConfigPath, args);
-			metrics.sendMetricsEvent("login user", {
+			await metrics.sendMetricsEvent("login user", {
 				sendMetrics: config.send_metrics,
 			});
 
@@ -1882,7 +1882,7 @@ function createCLIParser(argv: string[]) {
 			await printWranglerBanner();
 			await logout();
 			const config = readConfig(undefined, {});
-			metrics.sendMetricsEvent("logout user", {
+			await metrics.sendMetricsEvent("logout user", {
 				sendMetrics: config.send_metrics,
 			});
 		}
@@ -1897,7 +1897,7 @@ function createCLIParser(argv: string[]) {
 			await printWranglerBanner();
 			await whoami();
 			const config = readConfig(undefined, {});
-			metrics.sendMetricsEvent("view accounts", {
+			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
 			});
 		}

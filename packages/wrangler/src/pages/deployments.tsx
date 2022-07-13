@@ -98,6 +98,9 @@ export async function ListHandler({
 		account_id: accountId,
 	});
 
-	render(<Table data={data}></Table>, { patchConsole: false });
-	metrics.sendMetricsEvent("list pages projects deployments");
+	const { unmount } = render(<Table data={data}></Table>, {
+		patchConsole: false,
+	});
+	unmount();
+	await metrics.sendMetricsEvent("list pages projects deployments");
 }

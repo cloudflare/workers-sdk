@@ -194,7 +194,7 @@ export const Handler = async ({
 				});
 
 				logger.log(`✨ Successfully created the '${projectName}' project.`);
-				metrics.sendMetricsEvent("create pages project");
+				await metrics.sendMetricsEvent("create pages project");
 				break;
 			}
 		}
@@ -334,5 +334,5 @@ export const Handler = async ({
 	logger.log(
 		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 	);
-	metrics.sendMetricsEvent("deploy pages project");
+	await metrics.sendMetricsEvent("deploy pages project");
 };

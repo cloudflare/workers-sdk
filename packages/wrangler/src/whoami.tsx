@@ -8,7 +8,8 @@ import { getAPIToken, getAuthFromEnv } from "./user";
 export async function whoami() {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
-	render(<WhoAmI user={user}></WhoAmI>);
+	const { unmount } = render(<WhoAmI user={user}></WhoAmI>);
+	unmount();
 }
 
 export function WhoAmI({ user }: { user: UserInfo | undefined }) {
