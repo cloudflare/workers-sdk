@@ -1058,7 +1058,8 @@ export function listScopes(message = "💁 Available scopes:"): void {
 		Scope: scope,
 		Description: Scopes[scope],
 	}));
-	render(<Table data={data} />);
+	const { unmount } = render(<Table data={data} />);
+	unmount();
 	// TODO: maybe a good idea to show usage here
 }
 

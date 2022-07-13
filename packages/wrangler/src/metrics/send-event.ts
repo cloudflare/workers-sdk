@@ -53,28 +53,40 @@ export type EventNames =
 	| "run dev"
 	| "run pages dev";
 
-export function sendMetricsEvent(event: EventNames): void;
+/**
+ * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
+ *
+ * This overload assumes that you do not want to configure analytics with options.
+ */
+export function sendMetricsEvent(event: EventNames): Promise<void>;
+/**
+ * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
+ */
 export function sendMetricsEvent(
 	event: EventNames,
 	options: MetricsConfigOptions
-): void;
+): Promise<void>;
+/**
+ * Send a metrics event to Cloudflare, if usage tracking is enabled.
+ *
+ * Generally you should pass the `send_metrics` property from the wrangler.toml config here,
+ * which would override any user permissions.
+ */
 export function sendMetricsEvent(
 	event: EventNames,
 	properties: Properties,
 	options: MetricsConfigOptions
-): void;
-/**
- * Send a metrics event to Cloudflare, if usage tracking is enabled.
- */
-export function sendMetricsEvent(
+): Promise<void>;
+export async function sendMetricsEvent(
 	event: EventNames,
 	...args: [] | [MetricsConfigOptions] | [Properties, MetricsConfigOptions]
-): void {
-	const options = args.pop() ?? {};
-	const properties = (args.pop() ?? {}) as Properties;
-	getMetricsDispatcher(options)
-		.then((metricsDispatcher) => metricsDispatcher.sendEvent(event, properties))
-		.catch((err) => {
-			logger.debug("Error sending metrics event", err);
-		});
+): Promise<void> {
+	try {
+		const options = args.pop() ?? {};
+		const properties = (args.pop() ?? {}) as Properties;
+		const metricsDispatcher = await getMetricsDispatcher(options);
+		await metricsDispatcher.sendEvent(event, properties);
+	} catch (err) {
+		logger.debug("Error sending metrics event", err);
+	}
 }

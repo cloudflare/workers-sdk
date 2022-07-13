@@ -47,6 +47,8 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		}
 
 		// Lazily get the config for this dispatcher only when an event is being dispatched.
+		// We must await this since it might trigger user interaction that would break other UI
+		// in Wrangler if it was allowed to run in parallel.
 		const metricsConfig = await getMetricsConfig(options);
 		if (!metricsConfig.enabled) {
 			logger.debug(
@@ -57,36 +59,36 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 			return;
 		}
 
-		try {
-			logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(event)}`);
-			const body = JSON.stringify({
-				deviceId: metricsConfig.deviceId,
-				userId: metricsConfig.userId,
-				event: event.name,
-				properties: {
-					category: "Workers",
-					wranglerVersion,
-					...event.properties,
-				},
-			});
+		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(event)}`);
+		const body = JSON.stringify({
+			deviceId: metricsConfig.deviceId,
+			userId: metricsConfig.userId,
+			event: event.name,
+			properties: {
+				category: "Workers",
+				wranglerVersion,
+				...event.properties,
+			},
+		});
 
-			await fetch(`${SPARROW_URL}/api/v1/${event.type}`, {
-				method: "POST",
-				headers: {
-					Accept: "*/*",
-					"Content-Type": "application/json",
-					"Sparrow-Source-Key": SPARROW_SOURCE_KEY,
-				},
-				mode: "cors",
-				keepalive: true,
-				body,
-			});
-		} catch (e) {
+		// Do not await this fetch call.
+		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
+		fetch(`${SPARROW_URL}/api/v1/${event.type}`, {
+			method: "POST",
+			headers: {
+				Accept: "*/*",
+				"Content-Type": "application/json",
+				"Sparrow-Source-Key": SPARROW_SOURCE_KEY,
+			},
+			mode: "cors",
+			keepalive: true,
+			body,
+		}).catch((e) => {
 			logger.debug(
 				"Metrics dispatcher: Failed to send request:",
 				(e as Error).message
 			);
-		}
+		});
 	}
 }
 

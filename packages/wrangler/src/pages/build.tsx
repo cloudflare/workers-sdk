@@ -121,7 +121,7 @@ export const Handler = async ({
 		buildOutputDirectory,
 		nodeCompat,
 	});
-	metrics.sendMetricsEvent("build pages functions");
+	await metrics.sendMetricsEvent("build pages functions");
 };
 
 export async function buildFunctions({

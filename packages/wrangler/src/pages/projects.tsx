@@ -44,8 +44,11 @@ export async function ListHandler() {
 		account_id: accountId,
 	});
 
-	render(<Table data={data}></Table>, { patchConsole: false });
-	metrics.sendMetricsEvent("list pages projects");
+	const { unmount } = render(<Table data={data}></Table>, {
+		patchConsole: false,
+	});
+	unmount();
+	await metrics.sendMetricsEvent("list pages projects");
 }
 
 export const listProjects = async ({
@@ -156,5 +159,5 @@ export async function CreateHandler({
 	logger.log(
 		`To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
 	);
-	metrics.sendMetricsEvent("create pages project");
+	await metrics.sendMetricsEvent("create pages project");
 }

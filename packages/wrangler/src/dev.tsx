@@ -265,7 +265,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			((args.script &&
 				findWranglerToml(path.dirname(args.script))) as ConfigPath);
 		let config = readConfig(configPath, args);
-		metrics.sendMetricsEvent(
+		await metrics.sendMetricsEvent(
 			"run dev",
 			{ local: args.local },
 			{ sendMetrics: config.send_metrics, offline: args.local }
