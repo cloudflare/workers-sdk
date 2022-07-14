@@ -1,5 +1,21 @@
 # wrangler
 
+## 2.0.21
+
+### Patch Changes
+
+- [#1474](https://github.com/cloudflare/wrangler2/pull/1474) [`f602df7`](https://github.com/cloudflare/wrangler2/commit/f602df74b07d1a57a6e575bd1a546c969c8057fa) Thanks [@threepointone](https://github.com/threepointone)! - fix: enable debugger in local mode
+
+  During a refactor, we missed enabling the inspector by default in local mode. We also broke the logic that detects the inspector url exposed by the local server. This patch passes the argument correctly, fixes the detection logic. Further, it also lets you disable the inspector altogether with `--inspect false`, if required (for both remote and local mode).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1436
+
+* [#1470](https://github.com/cloudflare/wrangler2/pull/1470) [`01f49f1`](https://github.com/cloudflare/wrangler2/commit/01f49f15797398797b96789606504a10f257d8e1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that metrics user interactions do not break other UI
+
+  The new metrics usage capture may interact with the user if they have not yet set their metrics permission.
+  Sending metrics was being done concurrently with other commands, so there was a chance that the metrics UI broke the other command's UI.
+  Now we ensure that metrics UI will happen synchronously.
+
 ## 2.0.20
 
 ### Patch Changes
