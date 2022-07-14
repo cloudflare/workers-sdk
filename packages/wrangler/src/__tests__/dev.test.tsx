@@ -1049,6 +1049,50 @@ describe("wrangler dev", () => {
 			        }
 		      `);
 		});
+
+		it("should default to true, without a warning", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js");
+			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should pass true, with a warning", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect");
+			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
+
+			",
+			}
+		`);
+		});
+
+		it("should pass false, without a warning", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect false");
+			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(false);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
+		});
 	});
 
 	describe("service bindings", () => {

@@ -506,7 +506,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					crons={config.triggers.crons}
 					logLevel={args.logLevel}
 					onReady={args.onReady}
-					inspect={args.inspect}
+					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
 				/>
 			);
