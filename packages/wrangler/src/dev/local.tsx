@@ -31,7 +31,7 @@ interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
-	inspect: boolean | undefined;
+	inspect: boolean;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 }
@@ -256,6 +256,7 @@ function useLocalWorker({
 				{
 					cwd: path.dirname(scriptPath),
 					execArgv: nodeOptions,
+					stdio: "pipe",
 				}
 			));
 			child.on("message", (message) => {
