@@ -604,6 +604,7 @@ async function getBindings(
 		worker_namespaces: configParam.worker_namespaces,
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
+		logfwdr: configParam.logfwdr,
 	};
 
 	return bindings;
