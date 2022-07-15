@@ -5,6 +5,7 @@ import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
+import { getEnvironmentVariableFactory } from "../environment-variables";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
@@ -20,6 +21,10 @@ import { getAPIToken } from "../user";
  */
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 export const USER_ID_CACHE_PATH = "user-id.json";
+
+export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_SEND_METRICS",
+});
 
 export interface MetricsConfigOptions {
 	/**
@@ -69,6 +74,17 @@ export async function getMetricsConfig({
 	const config = readMetricsConfig();
 	const deviceId = getDeviceId(config);
 	const userId = await getUserId(offline);
+
+	// If the WRANGLER_SEND_METRICS environment variable has been set use that
+	// and ignore everything else.
+	const sendMetricsEnv = getWranglerSendMetricsFromEnv();
+	if (sendMetricsEnv !== undefined) {
+		return {
+			enabled: sendMetricsEnv.toLowerCase() === "true",
+			deviceId,
+			userId,
+		};
+	}
 
 	// If the project is explicitly set the `send_metrics` options in `wrangler.toml`
 	// then use that and ignore any user preference.

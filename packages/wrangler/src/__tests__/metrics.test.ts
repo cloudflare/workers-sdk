@@ -207,6 +207,25 @@ describe("metrics", () => {
 		});
 
 		describe("enabled", () => {
+			const ORIGINAL_ENV = process.env;
+			beforeEach(() => {
+				process.env = { ...ORIGINAL_ENV };
+			});
+			afterEach(() => {
+				process.env = ORIGINAL_ENV;
+			});
+
+			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async () => {
+				process.env.WRANGLER_SEND_METRICS = "false";
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: false,
+				});
+				process.env.WRANGLER_SEND_METRICS = "true";
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: true,
+				});
+			});
+
 			it("should return the sendMetrics argument for enabled if it is defined", async () => {
 				expect(
 					await getMetricsConfig({ sendMetrics: false, offline: false })
