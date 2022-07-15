@@ -61,6 +61,13 @@
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch"
 	},
 	"jest": {
+		"collectCoverage": true,
+		"coverageReporters": [
+			"json",
+			"html",
+			"text",
+			"cobertura"
+		],
 		"moduleNameMapper": {
 			"clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
 			"miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
