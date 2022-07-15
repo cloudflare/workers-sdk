@@ -1,7 +1,9 @@
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
+import { handleResponseAsJSON } from "../../cfetch/internal";
 import type { FetchResult, FetchError } from "../../cfetch";
+import type { Response } from "undici";
 import type { RequestInit } from "undici";
 
 /**
@@ -32,16 +34,36 @@ const mocks: MockFetch<unknown>[] = [];
 export async function mockFetchInternal(
 	resource: string,
 	init: RequestInit = {},
-	queryParams: URLSearchParams = new URLSearchParams()
+	queryParams: URLSearchParams = new URLSearchParams(),
+	abortSignal?: AbortSignal
+) {
+	if (abortSignal) throw new Error("mockFetchInternal Aborted");
+	const rawResponse = await mockFetchInternalResponse(
+		resource,
+		init,
+		queryParams,
+		abortSignal
+	);
+
+	return rawResponse;
+	return await handleResponseAsJSON(resource, init, rawResponse);
+}
+
+export async function mockFetchInternalResponse(
+	resource: string,
+	init: RequestInit = {},
+	queryParams: URLSearchParams = new URLSearchParams(),
+	abortSignal?: AbortSignal
 ) {
 	for (const { regexp, method, handler } of mocks) {
 		const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
 		const uri = regexp.exec(resourcePath);
 		// Do the resource path and (if specified) the HTTP method match?
 		if (uri !== null && (!method || method === (init.method ?? "GET"))) {
+			if (abortSignal) throw new Error("mockFetchInternal Aborted");
 			// The `resource` regular expression will extract the labelled groups from the URL.
 			// These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
-			return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+			return (await handler(uri, init, queryParams)) as Response; // TODO: should we have some kind of fallthrough system? we'll see.
 		}
 	}
 	throw new Error(

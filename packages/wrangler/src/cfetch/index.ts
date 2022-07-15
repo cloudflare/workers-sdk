@@ -1,7 +1,11 @@
 import { URLSearchParams } from "node:url";
 import { ParseError } from "../parse";
-import { fetchInternal } from "./internal";
-import type { RequestInit } from "undici";
+import {
+	fetchInternal,
+	fetchInternalResponse,
+	handleResponseAsJSON,
+} from "./internal";
+import type { RequestInit, Response } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
@@ -45,6 +49,31 @@ export async function fetchResult<ResponseType>(
 }
 
 /**
+ * Like fetchResult, but for cases where you want to handle the response body yourself.
+ */
+export async function fetchRawResult<ResponseType>(
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+): Promise<Response> {
+	const response = await fetchInternalResponse(
+		resource,
+		init,
+		queryParams,
+		abortSignal
+	);
+	if (!response.ok) {
+		const json = await handleResponseAsJSON<FetchResult<ResponseType>>(
+			resource,
+			init,
+			response
+		);
+		throwFetchError(resource, json);
+	}
+	return response;
+}
+/**
  * Make a fetch request for a list of values,
  * extracting the `result` from the JSON response,
  * and repeating the request if the results are paginated.
@@ -81,7 +110,7 @@ export async function fetchListResult<ResponseType>(
 	return results;
 }
 
-function throwFetchError(
+export function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>
 ): never {
