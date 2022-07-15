@@ -9,7 +9,7 @@ import {
 	setMockRawResponse,
 	setMockResponse,
 	unsetAllMocks,
-	unsetMockFetchKVGetValues,
+	unsetSpecialMockFns,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -48,7 +48,7 @@ describe("publish", () => {
 
 	afterEach(() => {
 		unsetAllMocks();
-		unsetMockFetchKVGetValues();
+		unsetSpecialMockFns();
 	});
 
 	describe("output additional script information", () => {
