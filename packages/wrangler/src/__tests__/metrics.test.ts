@@ -4,6 +4,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { logger } from "../logger";
 import { getMetricsDispatcher, getMetricsConfig } from "../metrics";
+import { CI } from "../metrics/is-ci";
 import {
 	CURRENT_METRICS_DATE,
 	readMetricsConfig,
@@ -200,10 +201,13 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
+		let isCISpy: jest.SpyInstance;
+
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
+			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {
@@ -223,6 +227,13 @@ describe("metrics", () => {
 				process.env.WRANGLER_SEND_METRICS = "true";
 				expect(await getMetricsConfig({})).toMatchObject({
 					enabled: true,
+				});
+			});
+
+			it("should return false if running in a CI environment", async () => {
+				isCISpy.mockReturnValue(true);
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: false,
 				});
 			});
 

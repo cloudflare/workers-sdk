@@ -9,6 +9,7 @@ import { getEnvironmentVariableFactory } from "../environment-variables";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
+import { CI } from "./is-ci";
 
 /**
  * The date that the metrics being gathered was last updated in a way that would require
@@ -105,8 +106,8 @@ export async function getMetricsConfig({
 	}
 
 	// We couldn't get the metrics permission from the project-level nor the user-level config.
-	// If we are not interactive then just bail out.
-	if (!isInteractive()) {
+	// If we are not interactive or in a CI build then just bail out.
+	if (!isInteractive() || CI.isCI()) {
 		return { enabled: false, deviceId, userId };
 	}
 

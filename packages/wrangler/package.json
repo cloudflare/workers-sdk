@@ -130,6 +130,7 @@
 		"ink-table": "^3.0.0",
 		"ink-testing-library": "^2.1.0",
 		"ink-text-input": "^4.0.3",
+		"is-ci": "^3.0.1",
 		"jest-fetch-mock": "^3.0.3",
 		"jest-websocket-mock": "^2.3.0",
 		"mime": "^3.0.0",
