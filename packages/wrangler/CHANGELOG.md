@@ -1,5 +1,18 @@
 # wrangler
 
+## 2.0.22
+
+### Patch Changes
+
+- [#1482](https://github.com/cloudflare/wrangler2/pull/1482) [`9eb28ec`](https://github.com/cloudflare/wrangler2/commit/9eb28eccccbf690b1e7a73d5671419d259abc5f8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not ask the user for metrics permission if running in a CI
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1480
+
+* [#1482](https://github.com/cloudflare/wrangler2/pull/1482) [`9eb28ec`](https://github.com/cloudflare/wrangler2/commit/9eb28eccccbf690b1e7a73d5671419d259abc5f8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support controlling metrics gathering via `WRANGLER_SEND_METRICS` environment variable
+
+  Setting the `WRANGLER_SEND_METRICS` environment variable will override any other metrics controls,
+  such as the `send_metrics` property in wrangler.toml and cached user preference.
+
 ## 2.0.21
 
 ### Patch Changes
