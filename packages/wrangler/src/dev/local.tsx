@@ -33,7 +33,7 @@ interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
-	inspect: boolean | undefined;
+	inspect: boolean;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
@@ -272,6 +272,7 @@ function useLocalWorker({
 			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
 				cwd: path.dirname(scriptPath),
 				execArgv: nodeOptions,
+				stdio: "pipe",
 			}));
 
 			child.on("message", (message) => {

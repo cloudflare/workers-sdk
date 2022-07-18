@@ -42,6 +42,7 @@ export function Remote(props: {
 	port: number;
 	ip: string;
 	localProtocol: "https" | "http";
+	inspect: boolean;
 	inspectorPort: number;
 	accountId: string | undefined;
 	bindings: CfWorkerInit["bindings"];
@@ -91,7 +92,10 @@ export function Remote(props: {
 	});
 
 	useInspector({
-		inspectorUrl: previewToken ? previewToken.inspectorUrl.href : undefined,
+		inspectorUrl:
+			props.inspect && previewToken
+				? previewToken.inspectorUrl.href
+				: undefined,
 		port: props.inspectorPort,
 		logToTerminal: true,
 	});

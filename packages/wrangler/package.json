@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.0.19",
+	"version": "2.0.22",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -61,6 +61,13 @@
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch"
 	},
 	"jest": {
+		"collectCoverage": true,
+		"coverageReporters": [
+			"json",
+			"html",
+			"text",
+			"cobertura"
+		],
 		"moduleNameMapper": {
 			"clipboardy": "<rootDir>/src/__tests__/helpers/clipboardy-mock.js",
 			"miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
@@ -130,6 +137,7 @@
 		"ink-table": "^3.0.0",
 		"ink-testing-library": "^2.1.0",
 		"ink-text-input": "^4.0.3",
+		"is-ci": "^3.0.1",
 		"jest-fetch-mock": "^3.0.3",
 		"jest-websocket-mock": "^2.3.0",
 		"mime": "^3.0.0",

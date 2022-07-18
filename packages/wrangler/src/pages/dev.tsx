@@ -172,7 +172,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
-			metrics.sendMetricsEvent("build pages functions");
+			await metrics.sendMetricsEvent("build pages functions");
 		} catch {}
 
 		watch([functionsDirectory], {
@@ -188,7 +188,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
-			metrics.sendMetricsEvent("build pages functions");
+			await metrics.sendMetricsEvent("build pages functions");
 		});
 	} else {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -250,7 +250,7 @@ export const Handler = async ({
 		},
 		true
 	);
-	metrics.sendMetricsEvent("run pages dev");
+	await metrics.sendMetricsEvent("run pages dev");
 
 	waitUntilExit().then(() => {
 		CLEANUP();

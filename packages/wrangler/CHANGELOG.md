@@ -1,5 +1,45 @@
 # wrangler
 
+## 2.0.22
+
+### Patch Changes
+
+- [#1482](https://github.com/cloudflare/wrangler2/pull/1482) [`9eb28ec`](https://github.com/cloudflare/wrangler2/commit/9eb28eccccbf690b1e7a73d5671419d259abc5f8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not ask the user for metrics permission if running in a CI
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1480
+
+* [#1482](https://github.com/cloudflare/wrangler2/pull/1482) [`9eb28ec`](https://github.com/cloudflare/wrangler2/commit/9eb28eccccbf690b1e7a73d5671419d259abc5f8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support controlling metrics gathering via `WRANGLER_SEND_METRICS` environment variable
+
+  Setting the `WRANGLER_SEND_METRICS` environment variable will override any other metrics controls,
+  such as the `send_metrics` property in wrangler.toml and cached user preference.
+
+## 2.0.21
+
+### Patch Changes
+
+- [#1474](https://github.com/cloudflare/wrangler2/pull/1474) [`f602df7`](https://github.com/cloudflare/wrangler2/commit/f602df74b07d1a57a6e575bd1a546c969c8057fa) Thanks [@threepointone](https://github.com/threepointone)! - fix: enable debugger in local mode
+
+  During a refactor, we missed enabling the inspector by default in local mode. We also broke the logic that detects the inspector url exposed by the local server. This patch passes the argument correctly, fixes the detection logic. Further, it also lets you disable the inspector altogether with `--inspect false`, if required (for both remote and local mode).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1436
+
+* [#1470](https://github.com/cloudflare/wrangler2/pull/1470) [`01f49f1`](https://github.com/cloudflare/wrangler2/commit/01f49f15797398797b96789606504a10f257d8e1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that metrics user interactions do not break other UI
+
+  The new metrics usage capture may interact with the user if they have not yet set their metrics permission.
+  Sending metrics was being done concurrently with other commands, so there was a chance that the metrics UI broke the other command's UI.
+  Now we ensure that metrics UI will happen synchronously.
+
+## 2.0.20
+
+### Patch Changes
+
+- [#1464](https://github.com/cloudflare/wrangler2/pull/1464) [`0059d84`](https://github.com/cloudflare/wrangler2/commit/0059d842d7efc3c0938a21284ee3a67950c9d252) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: ensure that the SPARROW_SOURCE_KEY is included in release builds
+
+  Previously, we were including the key in the "build" step of the release job.
+  But this is only there to check that the build doesn't fail.
+  The build is re-run inside the publish step, which is part of the "changeset" step.
+  Now, we include the key in the "changeset" step to ensure it is there in the build that is published.
+
 ## 2.0.19
 
 ### Patch Changes

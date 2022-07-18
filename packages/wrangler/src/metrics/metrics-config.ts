@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
+import { getEnvironmentVariableFactory } from "../environment-variables";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
+import { CI } from "./is-ci";
 
 /**
  * The date that the metrics being gathered was last updated in a way that would require
@@ -20,6 +22,10 @@ import { getAPIToken } from "../user";
  */
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 export const USER_ID_CACHE_PATH = "user-id.json";
+
+export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_SEND_METRICS",
+});
 
 export interface MetricsConfigOptions {
 	/**
@@ -66,9 +72,20 @@ export async function getMetricsConfig({
 	sendMetrics,
 	offline = false,
 }: MetricsConfigOptions): Promise<MetricsConfig> {
-	const config = await readMetricsConfig();
-	const deviceId = await getDeviceId(config);
+	const config = readMetricsConfig();
+	const deviceId = getDeviceId(config);
 	const userId = await getUserId(offline);
+
+	// If the WRANGLER_SEND_METRICS environment variable has been set use that
+	// and ignore everything else.
+	const sendMetricsEnv = getWranglerSendMetricsFromEnv();
+	if (sendMetricsEnv !== undefined) {
+		return {
+			enabled: sendMetricsEnv.toLowerCase() === "true",
+			deviceId,
+			userId,
+		};
+	}
 
 	// If the project is explicitly set the `send_metrics` options in `wrangler.toml`
 	// then use that and ignore any user preference.
@@ -89,8 +106,8 @@ export async function getMetricsConfig({
 	}
 
 	// We couldn't get the metrics permission from the project-level nor the user-level config.
-	// If we are not interactive then just bail out.
-	if (!isInteractive()) {
+	// If we are not interactive or in a CI build then just bail out.
+	if (!isInteractive() || CI.isCI()) {
 		return { enabled: false, deviceId, userId };
 	}
 
@@ -107,7 +124,7 @@ export async function getMetricsConfig({
 			"   - to disable sending metrics for a project: `send_metrics = false`\n" +
 			"   - to enable sending metrics for a project: `send_metrics = true`"
 	);
-	await writeMetricsConfig({
+	writeMetricsConfig({
 		permission: {
 			enabled,
 			date: CURRENT_METRICS_DATE,
@@ -120,9 +137,9 @@ export async function getMetricsConfig({
 /**
  * Stringify and write the given info to the metrics config file.
  */
-export async function writeMetricsConfig(config: MetricsConfigFile) {
-	await mkdir(path.dirname(getMetricsConfigPath()), { recursive: true });
-	await writeFile(
+export function writeMetricsConfig(config: MetricsConfigFile) {
+	mkdirSync(path.dirname(getMetricsConfigPath()), { recursive: true });
+	writeFileSync(
 		getMetricsConfigPath(),
 		JSON.stringify(
 			config,
@@ -135,11 +152,11 @@ export async function writeMetricsConfig(config: MetricsConfigFile) {
 /**
  * Read and parse the metrics config file.
  */
-export async function readMetricsConfig(): Promise<MetricsConfigFile> {
+export function readMetricsConfig(): MetricsConfigFile {
 	try {
-		return JSON.parse(
-			await readFile(getMetricsConfigPath(), "utf8"),
-			(key, value) => (key === "date" ? new Date(value) : value)
+		const config = readFileSync(getMetricsConfigPath(), "utf8");
+		return JSON.parse(config, (key, value) =>
+			key === "date" ? new Date(value) : value
 		);
 	} catch {
 		return {};
@@ -172,12 +189,12 @@ export interface MetricsConfigFile {
  *
  * Once created this ID is stored in the metrics config file.
  */
-async function getDeviceId(config: MetricsConfigFile) {
+function getDeviceId(config: MetricsConfigFile) {
 	// Get or create the deviceId.
 	const deviceId = config.deviceId ?? randomUUID();
 	if (config.deviceId === undefined) {
 		// We had to create a new deviceID so store it now.
-		await writeMetricsConfig({ ...config, deviceId });
+		writeMetricsConfig({ ...config, deviceId });
 	}
 	return deviceId;
 }

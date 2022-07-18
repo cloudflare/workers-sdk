@@ -57,7 +57,7 @@ export type DevProps = {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	inspect: boolean | undefined;
+	inspect: boolean;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	onReady: (() => void) | undefined;
@@ -107,17 +107,18 @@ export function DevImplementation(props: DevProps): JSX.Element {
 }
 
 function InteractiveDevSession(props: DevProps) {
-	const toggles = useHotkeys(
-		{
+	const toggles = useHotkeys({
+		initial: {
 			local: props.initialMode === "local",
 			tunnel: false,
 		},
-		props.port,
-		props.ip,
-		props.inspectorPort,
-		props.localProtocol,
-		props.forceLocal
-	);
+		port: props.port,
+		ip: props.ip,
+		inspectorPort: props.inspectorPort,
+		inspect: props.inspect,
+		localProtocol: props.localProtocol,
+		forceLocal: props.forceLocal,
+	});
 
 	useTunnel(toggles.tunnel);
 
@@ -127,14 +128,18 @@ function InteractiveDevSession(props: DevProps) {
 			<Box borderStyle="round" paddingLeft={1} paddingRight={1}>
 				<Text bold={true}>[b]</Text>
 				<Text> open a browser, </Text>
-				<Text bold={true}>[d]</Text>
-				<Text> open Devtools, </Text>
-				{!props.forceLocal && (
+				{props.inspect ? (
+					<>
+						<Text bold={true}>[d]</Text>
+						<Text> open Devtools, </Text>
+					</>
+				) : null}
+				{!props.forceLocal ? (
 					<>
 						<Text bold={true}>[l]</Text>
 						<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
 					</>
-				)}
+				) : null}
 				<Text bold={true}>[c]</Text>
 				<Text> clear console, </Text>
 				<Text bold={true}>[x]</Text>
@@ -210,6 +215,7 @@ function DevSession(props: DevSessionProps) {
 			inspectorPort={props.inspectorPort}
 			// TODO: @threepointone #1167
 			// liveReload={props.liveReload}
+			inspect={props.inspect}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
@@ -363,14 +369,24 @@ type useHotkeysInitialState = {
 	local: boolean;
 	tunnel: boolean;
 };
-function useHotkeys(
-	initial: useHotkeysInitialState,
-	port: number,
-	ip: string,
-	inspectorPort: number,
-	localProtocol: "http" | "https",
-	forceLocal: boolean | undefined
-) {
+function useHotkeys(props: {
+	initial: useHotkeysInitialState;
+	port: number;
+	ip: string;
+	inspectorPort: number;
+	inspect: boolean;
+	localProtocol: "http" | "https";
+	forceLocal: boolean | undefined;
+}) {
+	const {
+		initial,
+		port,
+		ip,
+		inspectorPort,
+		inspect,
+		localProtocol,
+		forceLocal,
+	} = props;
 	// UGH, we should put port in context instead
 	const [toggles, setToggles] = useState(initial);
 	const { exit } = useApp();
@@ -395,7 +411,9 @@ function useHotkeys(
 				}
 				// toggle inspector
 				case "d": {
-					await openInspector(inspectorPort);
+					if (inspect) {
+						await openInspector(inspectorPort);
+					}
 					break;
 				}
 				// toggle local

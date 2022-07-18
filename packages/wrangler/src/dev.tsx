@@ -296,7 +296,7 @@ export async function startDev(args: StartDevOptions) {
 			((args.script &&
 				findWranglerToml(path.dirname(args.script))) as ConfigPath);
 		let config = readConfig(configPath, args);
-		metrics.sendMetricsEvent(
+		await metrics.sendMetricsEvent(
 			"run dev",
 			{ local: args.local },
 			{ sendMetrics: config.send_metrics, offline: args.local }
@@ -556,7 +556,7 @@ export async function startDev(args: StartDevOptions) {
 					logLevel={args.logLevel}
 					logPrefix={args.logPrefix}
 					onReady={args.onReady}
-					inspect={args.inspect}
+					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
 					forceLocal={args.forceLocal}
 					cfFetch={args.cfFetch}
