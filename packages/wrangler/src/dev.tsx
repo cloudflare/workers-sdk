@@ -416,11 +416,9 @@ export async function startDev(args: StartDevOptions) {
 		async function getBindings(
 			configParam: Config
 		): Promise<CfWorkerInit["bindings"]> {
-			configParam.kv_namespaces ??= [];
-			configParam.durable_objects ??= { bindings: [] };
 			return {
 				kv_namespaces: [
-					...configParam.kv_namespaces.map(
+					...(configParam.kv_namespaces || []).map(
 						({ binding, preview_id, id: _id }) => {
 							// In `dev`, we make folks use a separate kv namespace called
 							// `preview_id` instead of `id` so that they don't
@@ -453,7 +451,7 @@ export async function startDev(args: StartDevOptions) {
 				data_blobs: configParam.data_blobs,
 				durable_objects: {
 					bindings: [
-						...configParam.durable_objects.bindings,
+						...(configParam.durable_objects || { bindings: [] }).bindings,
 						...(args.durableObjects || []),
 					],
 				},

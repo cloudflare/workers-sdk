@@ -15,6 +15,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	"selfsigned",
 	"@esbuild-plugins/node-globals-polyfill",
 	"@esbuild-plugins/node-modules-polyfill",
+	"chokidar",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");

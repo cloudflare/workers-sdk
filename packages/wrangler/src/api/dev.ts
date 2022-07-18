@@ -50,9 +50,9 @@ interface DevOptions {
 export async function unstable_dev(
 	script: string,
 	options: DevOptions,
-	disableWarning?: boolean
+	disableExperimentalWarning?: boolean
 ) {
-	if (!disableWarning) {
+	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
