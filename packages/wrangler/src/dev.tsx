@@ -277,7 +277,6 @@ type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
 		environment?: string | undefined;
 	}[];
 	forceLocal?: boolean;
-	cfFetch?: boolean;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
 
