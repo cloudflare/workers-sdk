@@ -19,6 +19,7 @@ import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -39,6 +40,7 @@ export type DevProps = {
 	localProtocol: "https" | "http";
 	localUpstream: string | undefined;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
@@ -57,8 +59,11 @@ export type DevProps = {
 	routes: Route[] | undefined;
 	inspect: boolean;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
+	forceLocal: boolean | undefined;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -111,6 +116,7 @@ function InteractiveDevSession(props: DevProps) {
 		inspectorPort: props.inspectorPort,
 		inspect: props.inspect,
 		localProtocol: props.localProtocol,
+		forceLocal: props.forceLocal,
 	});
 
 	useTunnel(toggles.tunnel);
@@ -127,8 +133,12 @@ function InteractiveDevSession(props: DevProps) {
 						<Text> open Devtools, </Text>
 					</>
 				) : null}
-				<Text bold={true}>[l]</Text>
-				<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+				{!props.forceLocal ? (
+					<>
+						<Text bold={true}>[l]</Text>
+						<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+					</>
+				) : null}
 				<Text bold={true}>[c]</Text>
 				<Text> clear console, </Text>
 				<Text bold={true}>[x]</Text>
@@ -178,12 +188,15 @@ function DevSession(props: DevSessionProps) {
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			enableLocalPersistence={props.enableLocalPersistence}
+			liveReload={props.liveReload}
 			crons={props.crons}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
+			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}
+			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 		/>
 	) : (
 		<Remote
@@ -198,6 +211,8 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			localProtocol={props.localProtocol}
 			inspectorPort={props.inspectorPort}
+			// TODO: @threepointone #1167
+			// liveReload={props.liveReload}
 			inspect={props.inspect}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
@@ -359,8 +374,17 @@ function useHotkeys(props: {
 	inspectorPort: number;
 	inspect: boolean;
 	localProtocol: "http" | "https";
+	forceLocal: boolean | undefined;
 }) {
-	const { initial, port, ip, inspectorPort, inspect, localProtocol } = props;
+	const {
+		initial,
+		port,
+		ip,
+		inspectorPort,
+		inspect,
+		localProtocol,
+		forceLocal,
+	} = props;
 	// UGH, we should put port in context instead
 	const [toggles, setToggles] = useState(initial);
 	const { exit } = useApp();
@@ -392,6 +416,7 @@ function useHotkeys(props: {
 				}
 				// toggle local
 				case "l":
+					if (forceLocal) return;
 					setToggles((previousToggles) => ({
 						...previousToggles,
 						local: !previousToggles.local,

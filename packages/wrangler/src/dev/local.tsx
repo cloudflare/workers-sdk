@@ -9,6 +9,7 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -28,12 +29,15 @@ interface LocalProps {
 	rules: Config["rules"];
 	inspectorPort: number;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 }
 
 export function Local(props: LocalProps) {
@@ -58,6 +62,7 @@ function useLocalWorker({
 	port,
 	rules,
 	enableLocalPersistence,
+	liveReload,
 	ip,
 	crons,
 	localProtocol,
@@ -65,6 +70,8 @@ function useLocalWorker({
 	inspect,
 	onReady,
 	logLevel,
+	logPrefix,
+	enablePagesAssetsServiceBinding,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
@@ -212,6 +219,7 @@ function useLocalWorker({
 							r2Persist: true,
 					  }),
 
+				liveReload,
 				sitePath: assetPaths?.assetDirectory
 					? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
 					: undefined,
@@ -230,6 +238,7 @@ function useLocalWorker({
 				crons,
 				upstream,
 				disableLogs: logLevel === "none",
+				logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -250,15 +259,19 @@ function useLocalWorker({
 			if (inspect) {
 				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
-			const child = (local.current = fork(
-				miniflareCLIPath,
-				[miniflareOptions],
-				{
-					cwd: path.dirname(scriptPath),
-					execArgv: nodeOptions,
-					stdio: "pipe",
-				}
-			));
+
+			const forkOptions = [miniflareOptions];
+
+			if (enablePagesAssetsServiceBinding) {
+				forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
+			}
+
+			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
+				cwd: path.dirname(scriptPath),
+				execArgv: nodeOptions,
+				stdio: "pipe",
+			}));
+
 			child.on("message", (message) => {
 				if (message === "ready") {
 					onReady?.();
@@ -340,6 +353,7 @@ function useLocalWorker({
 		compatibilityDate,
 		compatibilityFlags,
 		localPersistencePath,
+		liveReload,
 		assetPaths,
 		isWorkersSite,
 		rules,
@@ -351,7 +365,9 @@ function useLocalWorker({
 		localUpstream,
 		inspect,
 		logLevel,
+		logPrefix,
 		onReady,
+		enablePagesAssetsServiceBinding,
 	]);
 	return { inspectorUrl };
 }
