@@ -269,7 +269,7 @@ function createCLIParser(argv: string[]) {
 					if (process.stdout.isTTY) {
 						await printWranglerBanner();
 					} else {
-						logger.log(wranglerVersion)
+						logger.log(wranglerVersion);
 					}
 				} else {
 					wrangler.showHelp("log");
@@ -1925,7 +1925,7 @@ function createCLIParser(argv: string[]) {
 			if (process.stdout.isTTY) {
 				await printWranglerBanner();
 			} else {
-				logger.log(wranglerVersion)
+				logger.log(wranglerVersion);
 			}
 		}
 	);
