@@ -6108,6 +6108,82 @@ addEventListener('fetch', event => {});`
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
+
+	describe("--no-bundle --minify", () => {
+		it("should warn that no-bundle and minify can't be used together", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler(
+				"publish index.js --no-bundle --minify --dry-run --outdir dist"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+
+		it("should warn that no-bundle and minify can't be used together", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				minify: true,
+			});
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("publish index.js --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+	});
+
+	describe("--no-bundle --node-compat", () => {
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler(
+				"publish index.js --no-bundle --node-compat --dry-run --outdir dist"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				node_compat: true,
+			});
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("publish index.js --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

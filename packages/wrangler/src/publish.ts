@@ -276,6 +276,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	// Warn if user tries minify or node-compat with no-bundle
+	if (props.noBundle && minify) {
+		logger.warn(
+			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
+		);
+	}
+
+	if (props.noBundle && nodeCompat) {
+		logger.warn(
+			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
 	const scriptName = props.name;
 	assert(
 		scriptName,
