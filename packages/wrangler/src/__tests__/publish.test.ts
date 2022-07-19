@@ -6110,7 +6110,7 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--no-bundle --minify", () => {
-		it("should warn that no-bundle and minify are not supported together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async () => {
 			writeWranglerToml();
 			const scriptContent = `
 			const xyz = 123; // a statement that would otherwise be compiled out
@@ -6120,13 +6120,13 @@ addEventListener('fetch', event => {});`
 				"publish index.js --no-bundle --minify --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` are not supported together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
 			"
 		`);
 		});
 
-		it("should warn that no-bundle and minify are not supported together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async () => {
 			writeWranglerToml({
 				no_bundle: true,
 				minify: true,
@@ -6137,7 +6137,7 @@ addEventListener('fetch', event => {});`
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("publish index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` are not supported together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
 			"
 		`);
@@ -6145,7 +6145,7 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--no-bundle --node-compat", () => {
-		it("should warn that no-bundle and node-compat are not supported together", async () => {
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
 			writeWranglerToml();
 			const scriptContent = `
 			const xyz = 123; // a statement that would otherwise be compiled out
@@ -6158,13 +6158,13 @@ addEventListener('fetch', event => {});`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` are not supported together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
 
 			"
 		`);
 		});
 
-		it("should warn that no-bundle and node-compat are not supported together", async () => {
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
 			writeWranglerToml({
 				no_bundle: true,
 				node_compat: true,
@@ -6178,7 +6178,7 @@ addEventListener('fetch', event => {});`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` are not supported together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
 
 			"
 		`);
