@@ -4,3 +4,7 @@ comment:
   require_changes: false
   require_base: false
   require_head: false
+  status:
+    project:
+      default:
+        informational: true
