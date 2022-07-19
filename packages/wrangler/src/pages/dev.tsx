@@ -148,7 +148,6 @@ export const Handler = async ({
 	);
 
 	let scriptPath: string;
-	let cfFetch = undefined;
 
 	if (usingFunctions) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
@@ -202,7 +201,6 @@ export const Handler = async ({
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
-			cfFetch = false;
 		}
 	}
 
@@ -235,18 +233,15 @@ export const Handler = async ({
 				};
 			}),
 
-			miniflareCLIOptions: {
-				enableAssetsServiceBinding: {
-					proxyPort,
-					directory,
-				},
+			enablePagesAssetsServiceBinding: {
+				proxyPort,
+				directory,
 			},
 			forceLocal: true,
 			showInteractiveDevSession: undefined,
 			inspect: true,
 			logLevel: "error",
 			logPrefix: "pages",
-			cfFetch,
 		},
 		true
 	);

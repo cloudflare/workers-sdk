@@ -26,7 +26,7 @@ import {
 
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
-import type { MiniflareCLIOptions } from "./miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
 import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
@@ -278,7 +278,7 @@ type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
 	}[];
 	forceLocal?: boolean;
 	cfFetch?: boolean;
-	miniflareCLIOptions?: MiniflareCLIOptions;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
 
 export async function startDev(args: StartDevOptions) {
@@ -557,8 +557,7 @@ export async function startDev(args: StartDevOptions) {
 					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
 					forceLocal={args.forceLocal}
-					cfFetch={args.cfFetch}
-					miniflareCLIOptions={args.miniflareCLIOptions}
+					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 				/>
 			);
 		}

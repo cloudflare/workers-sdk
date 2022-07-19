@@ -1,7 +1,7 @@
 import { startDev } from "../dev";
 import { logger } from "../logger";
 
-import type { MiniflareCLIOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { RequestInit, Response } from "undici";
 
 interface DevOptions {
@@ -37,8 +37,7 @@ interface DevOptions {
 	logPrefix?: string;
 	inspect?: boolean;
 	forceLocal?: boolean;
-	cfFetch?: boolean;
-	miniflareCLIOptions?: MiniflareCLIOptions;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	_?: (string | number)[]; //yargs wants this
 	$0?: string; //yargs wants this
 }

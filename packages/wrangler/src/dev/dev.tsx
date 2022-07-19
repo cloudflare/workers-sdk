@@ -19,7 +19,7 @@ import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
-import type { MiniflareCLIOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -63,8 +63,7 @@ export type DevProps = {
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
-	cfFetch: boolean | undefined;
-	miniflareCLIOptions?: MiniflareCLIOptions;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -197,8 +196,7 @@ function DevSession(props: DevSessionProps) {
 			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}
-			cfFetch={props.cfFetch}
-			miniflareCLIOptions={props.miniflareCLIOptions}
+			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 		/>
 	) : (
 		<Remote

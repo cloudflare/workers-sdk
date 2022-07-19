@@ -6,11 +6,9 @@ import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
 import type { Options } from "./assets";
 
-export interface MiniflareCLIOptions {
-	enableAssetsServiceBinding?: {
-		proxyPort?: number;
-		directory?: string;
-	};
+export interface EnablePagesAssetsServiceBindingOptions {
+	proxyPort?: number;
+	directory?: string;
 }
 
 // miniflare defines this but importing it throws:
@@ -50,29 +48,26 @@ async function main() {
 
 	try {
 		if (args._[1]) {
-			const opts: MiniflareCLIOptions = JSON.parse(args._[1] as string);
+			const opts: EnablePagesAssetsServiceBindingOptions = JSON.parse(
+				args._[1] as string
+			);
 
-			if (opts.enableAssetsServiceBinding) {
-				if (
-					isNaN(opts.enableAssetsServiceBinding.proxyPort || NaN) &&
-					!opts.enableAssetsServiceBinding.directory
-				) {
-					throw new Error(
-						"MiniflareCLIOptions: built in service bindings set to true, but no port or directory provided"
-					);
-				}
-
-				const options: Options = {
-					log: config.log,
-					proxyPort: opts.enableAssetsServiceBinding.proxyPort,
-					directory: opts.enableAssetsServiceBinding.directory,
-				};
-
-				config.serviceBindings = {
-					...config.serviceBindings,
-					ASSETS: await generateASSETSBinding(options),
-				};
+			if (isNaN(opts.proxyPort || NaN) && !opts.directory) {
+				throw new Error(
+					"MiniflareCLIOptions: built in service bindings set to true, but no port or directory provided"
+				);
 			}
+
+			const options: Options = {
+				log: config.log,
+				proxyPort: opts.proxyPort,
+				directory: opts.directory,
+			};
+
+			config.serviceBindings = {
+				...config.serviceBindings,
+				ASSETS: await generateASSETSBinding(options),
+			};
 		}
 		mf = new Miniflare(config);
 		// Start Miniflare development server

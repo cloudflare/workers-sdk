@@ -9,7 +9,7 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
-import type { MiniflareCLIOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -37,8 +37,7 @@ interface LocalProps {
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
-	cfFetch: boolean | undefined;
-	miniflareCLIOptions?: MiniflareCLIOptions;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 }
 
 export function Local(props: LocalProps) {
@@ -72,8 +71,7 @@ function useLocalWorker({
 	onReady,
 	logLevel,
 	logPrefix,
-	cfFetch,
-	miniflareCLIOptions,
+	enablePagesAssetsServiceBinding,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
@@ -241,7 +239,6 @@ function useLocalWorker({
 				upstream,
 				disableLogs: logLevel === "none",
 				logOptions: logPrefix ? { prefix: logPrefix } : undefined,
-				cfFetch,
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -265,8 +262,8 @@ function useLocalWorker({
 
 			const forkOptions = [miniflareOptions];
 
-			if (miniflareCLIOptions) {
-				forkOptions.push(JSON.stringify(miniflareCLIOptions));
+			if (enablePagesAssetsServiceBinding) {
+				forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
 			}
 
 			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
@@ -370,8 +367,7 @@ function useLocalWorker({
 		logLevel,
 		logPrefix,
 		onReady,
-		cfFetch,
-		miniflareCLIOptions,
+		enablePagesAssetsServiceBinding,
 	]);
 	return { inspectorUrl };
 }
