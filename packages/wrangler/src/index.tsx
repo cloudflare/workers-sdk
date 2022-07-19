@@ -258,11 +258,22 @@ function createCLIParser(argv: string[]) {
 		["*"],
 		false,
 		() => {},
-		(args) => {
+		async (args) => {
 			if (args._.length > 0) {
 				throw new CommandLineArgsError(`Unknown command: ${args._}.`);
 			} else {
-				wrangler.showHelp("log");
+				// args.v will exist and be true in the case that no command is called, and the -v
+				// option is present. This is to allow for running asynchronous printWranglerBanner
+				// in the version command.
+				if (args.v) {
+					if (process.stdout.isTTY) {
+						await printWranglerBanner();
+					} else {
+						logger.log(wranglerVersion)
+					}
+				} else {
+					wrangler.showHelp("log");
+				}
 			}
 		}
 	);
@@ -1905,6 +1916,29 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// version
+	wrangler.command(
+		"version",
+		false,
+		() => {},
+		async () => {
+			if (process.stdout.isTTY) {
+				await printWranglerBanner();
+			} else {
+				logger.log(wranglerVersion)
+			}
+		}
+	);
+
+	wrangler.option("v", {
+		describe: "Show version number",
+		alias: "version",
+		type: "boolean",
+	});
+
+	// This set to false to allow overwrite of default behaviour
+	wrangler.version(false);
+
 	wrangler.option("config", {
 		alias: "c",
 		describe: "Path to .toml configuration file",
@@ -1914,7 +1948,7 @@ function createCLIParser(argv: string[]) {
 
 	wrangler.group(["config", "help", "version"], "Flags:");
 	wrangler.help().alias("h", "help");
-	wrangler.version(wranglerVersion).alias("v", "version");
+
 	wrangler.exitProcess(false);
 
 	return wrangler;
