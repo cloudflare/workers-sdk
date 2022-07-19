@@ -1,4 +1,4 @@
-import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConsoleMethods, replaceVersion } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -21,6 +21,6 @@ describe("version", () => {
 		setIsTTY(false);
 
 		await runWrangler("-v");
-		expect(std.out).toMatchInlineSnapshot(`"2.0.22"`);
+		expect(replaceVersion(std.out)).toMatchInlineSnapshot(`"x.x.x"`);
 	});
 });
