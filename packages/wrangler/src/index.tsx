@@ -1220,7 +1220,9 @@ function createCLIParser(argv: string[]) {
 
 						const accountId = await requireAuth(config);
 
+						logger.log(`Deleting KV namespace ${id}.`);
 						await deleteKVNamespace(accountId, id);
+						logger.log(`Deleted KV namespace ${id}.`);
 						await metrics.sendMetricsEvent("delete kv namespace", {
 							sendMetrics: config.send_metrics,
 						});

@@ -299,7 +299,10 @@ describe("wrangler", () => {
 					"kv:namespace delete --binding someBinding --env some-environment --preview false"
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Deleting KV namespace env-bound-id.
+					Deleted KV namespace env-bound-id."
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
 			});
