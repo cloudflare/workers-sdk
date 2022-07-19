@@ -1,3 +1,5 @@
+if_ci_failed: ignore # ignore, fail, pass
+informational: true
 comment:
   layout: "reach, diff, flags, files"
   behavior: default
