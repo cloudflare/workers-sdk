@@ -92,14 +92,36 @@ export async function bundleWorker(
 		rules,
 	});
 
+	// In dev, we want to patch `fetch()` with a special version that looks
+	// for bad usages and can warn the user about them; so we inject
+	// `checked-fetch.js` to do so. However, with yarn 3 style pnp,
+	// we need to extract that file to an accessible place before injecting
+	// it in, hence this code here.
+	const checkedFetchFileToInject = path.join(
+		destination,
+		"--temp-wrangler-files--",
+		"checked-fetch.js"
+	);
+
+	if (checkFetch) {
+		fs.mkdirSync(path.join(destination, "--temp-wrangler-files--"), {
+			recursive: true,
+		});
+		fs.writeFileSync(
+			checkedFetchFileToInject,
+			fs.readFileSync(path.resolve(__dirname, "../templates/checked-fetch.js"))
+		);
+	}
+	// TODO: we need to have similar logic like above for other files
+	// like the static asset facade, and other middleware that we
+	// plan on injecting/referencing.
+
 	const result = await esbuild.build({
 		...getEntryPoint(entry.file, serveAssetsFromWorker),
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		inject: checkFetch
-			? [path.resolve(__dirname, "../templates/checked-fetch.js")]
-			: [],
+		inject: checkFetch ? [checkedFetchFileToInject] : [],
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
