@@ -95,12 +95,3 @@ export function stripTrailingWhitespace(str: string): string {
 function replaceByte(stdout: string): string {
 	return stdout.replaceAll(/.[0-9][0-9] KiB/g, "xx KiB");
 }
-
-/**
- * Replacing version number with a placeholder of form x.x.x
- *
- * Use this in snapshot tests to be resilient to changes in version.
- */
-export function replaceVersion(stdout: string): string {
-	return stdout.replaceAll(/\d+\.\d+\.\d+/g, "x.x.x");
-}
