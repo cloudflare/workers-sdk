@@ -6,6 +6,8 @@ import {
 	unsetAllMocks,
 	unsetMockFetchKVGetValues,
 	setMockFetchKVGetValue,
+	setMockRawResponse,
+	createFetchResult,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
@@ -280,9 +282,9 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				await expect(runWrangler("kv:namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Not able to delete namespace.
-                A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
-              `);
+						                "Not able to delete namespace.
+						                A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
+					              `);
 				expect(std.err).toMatchInlineSnapshot(`
           "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
 
@@ -1184,12 +1186,12 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: false, stdout: true });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "More than one account available but unable to select one in non-interactive mode.
-                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-                    \\"one\\" - \\"1\\")
-                    \\"two\\" - \\"2\\")"
-                `);
+							                  "More than one account available but unable to select one in non-interactive mode.
+							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+							                    \\"one\\" - \\"1\\")
+							                    \\"two\\" - \\"2\\")"
+						                `);
 				});
 
 				it("should error if there are multiple accounts available but not interactive on stdout", async () => {
@@ -1200,12 +1202,28 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: true, stdout: false });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "More than one account available but unable to select one in non-interactive mode.
-                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-                    \\"one\\" - \\"1\\")
-                    \\"two\\" - \\"2\\")"
-                `);
+							                  "More than one account available but unable to select one in non-interactive mode.
+							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+							                    \\"one\\" - \\"1\\")
+							                    \\"two\\" - \\"2\\")"
+						                `);
+				});
+
+				it("should recommend using a configuration if unable to fetch memberships", async () => {
+					setMockRawResponse("/memberships", () => {
+						return createFetchResult(undefined, false, [
+							{
+								code: 9109,
+								message: "Uauthorized to access requested resource",
+							},
+						]);
+					});
+					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+						.rejects.toThrowErrorMatchingInlineSnapshot(`
+							"Failed to automatically retrieve account IDs for the logged in user.
+							You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID\\""
+						`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive at all", async () => {
@@ -1216,12 +1234,12 @@ describe("wrangler", () => {
 					setIsTTY(false);
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "More than one account available but unable to select one in non-interactive mode.
-                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-                    \\"one\\" - \\"1\\")
-                    \\"two\\" - \\"2\\")"
-                `);
+							                  "More than one account available but unable to select one in non-interactive mode.
+							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
+							                    \\"one\\" - \\"1\\")
+							                    \\"two\\" - \\"2\\")"
+						                `);
 				});
 			});
 		});
@@ -1393,9 +1411,9 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Unexpected JSON input from \\"keys.json\\".
-                Expected an array of key-value objects but got type \\"object\\"."
-              `);
+						                "Unexpected JSON input from \\"keys.json\\".
+						                Expected an array of key-value objects but got type \\"object\\"."
+					              `);
 				expect(std.out).toMatchInlineSnapshot(`
           "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
@@ -1433,30 +1451,30 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Unexpected JSON input from \\"keys.json\\".
-                Each item in the array should be an object that matches:
+						                "Unexpected JSON input from \\"keys.json\\".
+						                Each item in the array should be an object that matches:
 
-                interface KeyValue {
-                  key: string;
-                  value: string;
-                  expiration?: number;
-                  expiration_ttl?: number;
-                  metadata?: object;
-                  base64?: boolean;
-                }
+						                interface KeyValue {
+						                  key: string;
+						                  value: string;
+						                  expiration?: number;
+						                  expiration_ttl?: number;
+						                  metadata?: object;
+						                  base64?: boolean;
+						                }
 
-                The item at index 0 is 123
-                The item at index 1 is \\"a string\\"
-                The item at index 2 is {\\"key\\":\\"someKey\\"}
-                The item at index 3 is {\\"value\\":\\"someValue\\"}
-                The item at index 6 is {\\"key\\":123,\\"value\\":\\"somevalue\\"}
-                The item at index 7 is {\\"key\\":\\"somekey\\",\\"value\\":123}
-                The item at index 8 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration\\":\\"string\\"}
-                The item at index 9 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration_ttl\\":\\"string\\"}
-                The item at index 10 is {\\"key\\":123,\\"value\\":{\\"a\\":{\\"nested\\":\\"object\\"}}}
-                The item at index 11 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"metadata\\":123}
-                The item at index 12 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"base64\\":\\"string\\"}"
-              `);
+						                The item at index 0 is 123
+						                The item at index 1 is \\"a string\\"
+						                The item at index 2 is {\\"key\\":\\"someKey\\"}
+						                The item at index 3 is {\\"value\\":\\"someValue\\"}
+						                The item at index 6 is {\\"key\\":123,\\"value\\":\\"somevalue\\"}
+						                The item at index 7 is {\\"key\\":\\"somekey\\",\\"value\\":123}
+						                The item at index 8 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration\\":\\"string\\"}
+						                The item at index 9 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration_ttl\\":\\"string\\"}
+						                The item at index 10 is {\\"key\\":123,\\"value\\":{\\"a\\":{\\"nested\\":\\"object\\"}}}
+						                The item at index 11 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"metadata\\":123}
+						                The item at index 12 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"base64\\":\\"string\\"}"
+					              `);
 
 				expect(std.out).toMatchInlineSnapshot(`
           "
@@ -1595,10 +1613,10 @@ describe("wrangler", () => {
 						`kv:bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Unexpected JSON input from \\"keys.json\\".
-                Expected an array of strings but got:
-                12354"
-              `);
+						                "Unexpected JSON input from \\"keys.json\\".
+						                Expected an array of strings but got:
+						                12354"
+					              `);
 				expect(std.out).toMatchInlineSnapshot(`
           "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
@@ -1618,12 +1636,12 @@ describe("wrangler", () => {
 						`kv:bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Unexpected JSON input from \\"keys.json\\".
-                Expected an array of strings.
-                The item at index 1 is type: \\"number\\" - 12354
-                The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
-                The item at index 3 is type: \\"object\\" - null"
-              `);
+						                "Unexpected JSON input from \\"keys.json\\".
+						                Expected an array of strings.
+						                The item at index 1 is type: \\"number\\" - 12354
+						                The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
+						                The item at index 3 is type: \\"object\\" - null"
+					              `);
 				expect(std.out).toMatchInlineSnapshot(`
           "
           [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
