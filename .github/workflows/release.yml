@@ -51,6 +51,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          NODE_ENV: "production"
           # This is the "production" key for sparrow analytics.
           # Include this here because this step will rebuild Wrangler and needs to have this available
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"

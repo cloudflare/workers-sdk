@@ -122,6 +122,7 @@
 		"@types/node": "^16.11.11",
 		"@typescript-eslint/eslint-plugin": "^5.18.0",
 		"@typescript-eslint/parser": "^5.18.0",
+		"cross-env": "^7.0.3",
 		"esbuild-jest": "0.5.0",
 		"esbuild-register": "^3.3.2",
 		"eslint": "^8.13.0",

@@ -131,7 +131,9 @@ export async function bundleWorker(
 		conditions: ["worker", "browser"],
 		...(process.env.NODE_ENV && {
 			define: {
-				"process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/wrangler2/issues/1477)
+				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
