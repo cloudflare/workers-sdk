@@ -1,5 +1,5 @@
 {
-	"name": "prerelease-registry",
+	"name": "@cloudflare/prerelease-registry",
 	"version": "0.0.1",
 	"private": true,
 	"main": "_worker.js",
