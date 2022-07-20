@@ -238,8 +238,7 @@ export const Handler = async ({
 					class_name,
 				};
 			}),
-
-			d1Databases: d1s.map((d1) => d1.toString()),
+			d1: d1s.map((d1) => ({ binding: d1.toString() })),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
