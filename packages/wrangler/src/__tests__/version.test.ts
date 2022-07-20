@@ -1,4 +1,5 @@
-import { mockConsoleMethods, replaceVersion } from "./helpers/mock-console";
+import { version } from "./../../package.json";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -17,10 +18,18 @@ describe("version", () => {
 	// `);
 	// });
 
-	it("should output current version if !isTTY", async () => {
+	it("should output current version if !isTTY calling -v", async () => {
 		setIsTTY(false);
 
 		await runWrangler("-v");
-		expect(replaceVersion(std.out)).toMatchInlineSnapshot(`"x.x.x"`);
+		expect(std.out).toMatch(version);
+	});
+
+	// This run separately as command handling is different
+	it("should output current version if !isTTY calling --version", async () => {
+		setIsTTY(false);
+
+		await runWrangler("--version");
+		expect(std.out).toMatch(version);
 	});
 });
