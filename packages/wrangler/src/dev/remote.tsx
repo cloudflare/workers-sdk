@@ -69,7 +69,6 @@ export function Remote(props: {
 		bindings: props.bindings,
 		assetPaths: props.assetPaths,
 		isWorkersSite: props.isWorkersSite,
-		port: props.port,
 		compatibilityDate: props.compatibilityDate,
 		compatibilityFlags: props.compatibilityFlags,
 		usageModel: props.usageModel,
@@ -153,7 +152,6 @@ export function useWorker(props: {
 	bindings: CfWorkerInit["bindings"];
 	assetPaths: AssetPaths | undefined;
 	isWorkersSite: boolean;
-	port: number;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -175,7 +173,6 @@ export function useWorker(props: {
 		compatibilityDate,
 		compatibilityFlags,
 		usageModel,
-		port,
 		onReady,
 	} = props;
 	const [session, setSession] = useState<CfPreviewSession | undefined>();
@@ -366,7 +363,6 @@ export function useWorker(props: {
 		bundle,
 		format,
 		accountId,
-		port,
 		assetPaths,
 		props.isWorkersSite,
 		compatibilityDate,

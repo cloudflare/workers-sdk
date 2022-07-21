@@ -359,6 +359,7 @@ function normalizeAndValidateDev(
 	const {
 		ip = "localhost",
 		port,
+		inspector_port,
 		local_protocol = "http",
 		upstream_protocol = "https",
 		host,
@@ -368,6 +369,13 @@ function normalizeAndValidateDev(
 
 	validateOptionalProperty(diagnostics, "dev", "ip", ip, "string");
 	validateOptionalProperty(diagnostics, "dev", "port", port, "number");
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"inspector_port",
+		inspector_port,
+		"number"
+	);
 	validateOptionalProperty(
 		diagnostics,
 		"dev",
@@ -385,7 +393,7 @@ function normalizeAndValidateDev(
 		["http", "https"]
 	);
 	validateOptionalProperty(diagnostics, "dev", "host", host, "string");
-	return { ip, port, local_protocol, upstream_protocol, host };
+	return { ip, port, inspector_port, local_protocol, upstream_protocol, host };
 }
 
 /**
