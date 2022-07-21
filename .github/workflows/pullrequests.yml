@@ -87,6 +87,11 @@ jobs:
 
       - name: Run builds
         run: npm run build
+        env:
+          NODE_ENV: "production"
 
-      - name: Run tests
+      - name: Run tests & collect coverage
         run: npm run test
+
+      - name: Report Code Coverage
+        uses: codecov/codecov-action@v3

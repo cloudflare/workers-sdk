@@ -94,6 +94,14 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"send_metrics",
+		rawConfig.send_metrics,
+		"boolean"
+	);
+
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
 		(args as { "legacy-env": boolean | undefined })["legacy-env"] ??
@@ -173,6 +181,7 @@ export function normalizeAndValidateConfig(
 	const config: Config = {
 		configPath,
 		legacy_env: isLegacyEnv,
+		send_metrics: rawConfig.send_metrics,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
 		migrations: normalizeAndValidateMigrations(
@@ -832,6 +841,7 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
+	experimental(diagnostics, rawEnv, "worker_namespaces");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1015,6 +1025,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"services",
 			validateBindingArray(envName, validateServiceBinding),
+			[]
+		),
+		worker_namespaces: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"worker_namespaces",
+			validateBindingArray(envName, validateWorkerNamespaceBinding),
 			[]
 		),
 		unsafe: notInheritable(
@@ -1664,6 +1684,7 @@ const validateBindingsHaveUniqueNames = (
 
 	return !hasDuplicates;
 };
+
 const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -1692,6 +1713,38 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "environment", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	return isValid;
+};
+
+const validateWorkerNamespaceBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" binding should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Worker namespace bindings must have a binding, and a namespace.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

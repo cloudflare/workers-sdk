@@ -1,0 +1,14 @@
+// TSConfig for emitting types, which happens separately from on-the-fly typechecking.
+// See `scripts/emit-types.ts` and `package.json[scripts][emit-types]`
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"incremental": false,
+		"noEmit": false,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": "emitted-types"
+	},
+	"files": ["src/api/index.ts"],
+	"include": ["src/*.d.ts"]
+}

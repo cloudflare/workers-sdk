@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "categorizedBreakpointsSidebarPane.css.js",
+        "domBreakpointsSidebarPane.css.js",
+        "xhrBreakpointsSidebarPane.css.js"
+    ]
+}

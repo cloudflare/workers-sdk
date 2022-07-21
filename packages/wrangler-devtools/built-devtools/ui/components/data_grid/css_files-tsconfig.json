@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "dataGrid.css.js",
+        "dataGridController.css.js"
+    ]
+}

@@ -18,11 +18,13 @@
 		"pgrep",
 		"PKCE",
 		"Positionals",
+		"reinitialise",
 		"scandir",
 		"selfsigned",
 		"textfile",
 		"tsbuildinfo",
 		"undici",
+		"unrevoke",
 		"Untriaged",
 		"wasmvalue",
 		"weakmap",
@@ -40,5 +42,6 @@
 	"eslint.runtime": "node",
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
-	"editor.tabSize": 2
+	"editor.tabSize": 2,
+	"files.associations": { "api-extractor.json": "jsonc" }
 }

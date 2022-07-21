@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -9,11 +9,12 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
-
+import type { ChildProcess } from "node:child_process";
 interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -28,12 +29,15 @@ interface LocalProps {
 	rules: Config["rules"];
 	inspectorPort: number;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
-	inspect: boolean | undefined;
+	inspect: boolean;
 	onReady: (() => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 }
 
 export function Local(props: LocalProps) {
@@ -58,6 +62,7 @@ function useLocalWorker({
 	port,
 	rules,
 	enableLocalPersistence,
+	liveReload,
 	ip,
 	crons,
 	localProtocol,
@@ -65,9 +70,11 @@ function useLocalWorker({
 	inspect,
 	onReady,
 	logLevel,
+	logPrefix,
+	enablePagesAssetsServiceBinding,
 }: LocalProps) {
 	// TODO: pass vars via command line
-	const local = useRef<ReturnType<typeof spawn>>();
+	const local = useRef<ChildProcess>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 	// if we're using local persistence for data, we should use the cwd
@@ -187,6 +194,7 @@ function useLocalWorker({
 				compatibilityDate,
 				compatibilityFlags,
 				kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
+				r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
 				durableObjects: Object.fromEntries(
 					(bindings.durable_objects?.bindings ?? []).map<[string, string]>(
 						(value) => [value.name, value.class_name]
@@ -194,9 +202,10 @@ function useLocalWorker({
 				),
 				...(localPersistencePath
 					? {
-							kvPersist: path.join(localPersistencePath, "kv"),
-							durableObjectsPersist: path.join(localPersistencePath, "do"),
 							cachePersist: path.join(localPersistencePath, "cache"),
+							durableObjectsPersist: path.join(localPersistencePath, "do"),
+							kvPersist: path.join(localPersistencePath, "kv"),
+							r2Persist: path.join(localPersistencePath, "r2"),
 					  }
 					: {
 							// We mark these as true, so that they'll
@@ -204,11 +213,13 @@ function useLocalWorker({
 							// This means they'll persist across a dev session,
 							// even if we change source and reload,
 							// and be deleted when the dev session ends
-							durableObjectsPersist: true,
 							cachePersist: true,
+							durableObjectsPersist: true,
 							kvPersist: true,
+							r2Persist: true,
 					  }),
 
+				liveReload,
 				sitePath: assetPaths?.assetDirectory
 					? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
 					: undefined,
@@ -227,6 +238,7 @@ function useLocalWorker({
 				crons,
 				upstream,
 				disableLogs: logLevel === "none",
+				logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 			};
 
 			// The path to the Miniflare CLI assumes that this file is being run from
@@ -236,43 +248,50 @@ function useLocalWorker({
 				__dirname,
 				"../miniflare-dist/index.mjs"
 			);
-			const optionsArg = JSON.stringify(options, null);
+			const miniflareOptions = JSON.stringify(options, null);
 
 			logger.log("⎔ Starting a local server...");
-			const localServerOptions = [
+			const nodeOptions = [
 				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
 				"--no-warnings", // hide annoying Node warnings
-				miniflareCLIPath,
-				optionsArg,
 				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 			];
 			if (inspect) {
-				localServerOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
-			}
-			// spawn isn't technically synchronous here
-			local.current = spawn("node", localServerOptions, {
-				cwd: path.dirname(scriptPath),
-			});
-			//TODO: instead of being lucky with spawn's timing, have miniflare-cli notify wrangler that it's ready in packages/wrangler/src/miniflare-cli/index.ts, after the mf.startScheduler promise resolves
-			if (onReady) {
-				await new Promise((resolve) => setTimeout(resolve, 500));
-				onReady();
+				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
 			}
 
-			local.current.on("close", (code) => {
+			const forkOptions = [miniflareOptions];
+
+			if (enablePagesAssetsServiceBinding) {
+				forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
+			}
+
+			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
+				cwd: path.dirname(scriptPath),
+				execArgv: nodeOptions,
+				stdio: "pipe",
+			}));
+
+			child.on("message", (message) => {
+				if (message === "ready") {
+					onReady?.();
+				}
+			});
+
+			child.on("close", (code) => {
 				if (code) {
 					logger.log(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.stdout?.on("data", (data: Buffer) => {
+			child.stdout?.on("data", (data: Buffer) => {
 				process.stdout.write(data);
 			});
 
 			// parse the node inspector url (which may be received in chunks) from stderr
 			let stderrData = "";
 			let inspectorUrlFound = false;
-			local.current.stderr?.on("data", (data: Buffer) => {
+			child.stderr?.on("data", (data: Buffer) => {
 				if (!inspectorUrlFound) {
 					stderrData += data.toString();
 					const matches =
@@ -288,20 +307,20 @@ function useLocalWorker({
 				process.stderr.write(data);
 			});
 
-			local.current.on("exit", (code) => {
+			child.on("exit", (code) => {
 				if (code) {
 					logger.error(`Miniflare process exited with code ${code}`);
 				}
 			});
 
-			local.current.on("error", (error: Error) => {
+			child.on("error", (error: Error) => {
 				logger.error(`Miniflare process failed to spawn`);
 				logger.error(error);
 			});
 
 			removeSignalExitListener.current = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down local server.");
-				local.current?.kill();
+				child.kill();
 				local.current = undefined;
 			});
 		}
@@ -328,11 +347,13 @@ function useLocalWorker({
 		ip,
 		bindings.durable_objects?.bindings,
 		bindings.kv_namespaces,
+		bindings.r2_buckets,
 		bindings.vars,
 		bindings.services,
 		compatibilityDate,
 		compatibilityFlags,
 		localPersistencePath,
+		liveReload,
 		assetPaths,
 		isWorkersSite,
 		rules,
@@ -344,7 +365,9 @@ function useLocalWorker({
 		localUpstream,
 		inspect,
 		logLevel,
+		logPrefix,
 		onReady,
+		enablePagesAssetsServiceBinding,
 	]);
 	return { inspectorUrl };
 }

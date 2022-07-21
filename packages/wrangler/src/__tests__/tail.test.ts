@@ -27,6 +27,14 @@ describe("tail", () => {
 	 * deletion, and connection.
 	 */
 	describe("API interaction", () => {
+		it("should throw an error if name isn't provided", async () => {
+			await expect(
+				runWrangler("tail")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`"`
+			);
+		});
+
 		it("creates and then delete tails", async () => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.count).toStrictEqual(0);

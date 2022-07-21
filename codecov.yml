@@ -1,0 +1,8 @@
+if_ci_failed: ignore # ignore, fail, pass
+informational: true
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: false

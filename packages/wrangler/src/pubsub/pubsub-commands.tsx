@@ -3,6 +3,7 @@ import { readConfig } from "../config";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError } from "../index";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { parseHumanDuration } from "../parse";
 import { requireAuth } from "../user";
 import * as pubsub from ".";
@@ -50,6 +51,9 @@ export function pubSubCommands(
 							logger.log(`Creating Pub/SubNamespace ${args.name}...`);
 							await pubsub.createPubSubNamespace(accountId, namespace);
 							logger.log(`Success! Created Pub/Sub Namespace ${args.name}`);
+							await metrics.sendMetricsEvent("create pubsub namespace", {
+								sendMetrics: config.send_metrics,
+							});
 						}
 					)
 					.command(
@@ -63,6 +67,9 @@ export function pubSubCommands(
 							const accountId = await requireAuth(config);
 
 							logger.log(await pubsub.listPubSubNamespaces(accountId));
+							await metrics.sendMetricsEvent("list pubsub namespaces", {
+								sendMetrics: config.send_metrics,
+							});
 						}
 					)
 					.command(
@@ -89,6 +96,9 @@ export function pubSubCommands(
 								logger.log(`Deleting namespace ${args.name}...`);
 								await pubsub.deletePubSubNamespace(accountId, args.name);
 								logger.log(`Deleted namespace ${args.name}.`);
+								await metrics.sendMetricsEvent("delete pubsub namespace", {
+									sendMetrics: config.send_metrics,
+								});
 							}
 						}
 					)
@@ -111,6 +121,9 @@ export function pubSubCommands(
 							logger.log(
 								await pubsub.describePubSubNamespace(accountId, args.name)
 							);
+							await metrics.sendMetricsEvent("view pubsub namespace", {
+								sendMetrics: config.send_metrics,
+							});
 						}
 					)
 					.epilogue(pubsub.pubSubBetaWarning);
@@ -178,6 +191,9 @@ export function pubSubCommands(
 					logger.log(
 						await pubsub.createPubSubBroker(accountId, args.namespace, broker)
 					);
+					await metrics.sendMetricsEvent("create pubsub broker", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -247,6 +263,9 @@ export function pubSubCommands(
 						)
 					);
 					logger.log(`Successfully updated Pub/Sub Broker ${args.name}`);
+					await metrics.sendMetricsEvent("update pubsub broker", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -268,6 +287,9 @@ export function pubSubCommands(
 					const accountId = await requireAuth(config);
 
 					logger.log(await pubsub.listPubSubBrokers(accountId, args.namespace));
+					await metrics.sendMetricsEvent("list pubsub brokers", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -306,6 +328,9 @@ export function pubSubCommands(
 								args.name
 							);
 							logger.log(`Deleted Pub/Sub Broker ${args.name}.`);
+							await metrics.sendMetricsEvent("delete pubsub broker", {
+								sendMetrics: config.send_metrics,
+							});
 						}
 					}
 				)
@@ -338,6 +363,9 @@ export function pubSubCommands(
 								args.name
 							)
 						);
+						await metrics.sendMetricsEvent("view pubsub broker", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				);
 
@@ -413,6 +441,9 @@ export function pubSubCommands(
 							parsedExpiration
 						)
 					);
+					await metrics.sendMetricsEvent("issue pubsub broker credentials", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -458,6 +489,9 @@ export function pubSubCommands(
 					);
 
 					logger.log(`Revoked ${args.jti.length} credential(s).`);
+					await metrics.sendMetricsEvent("revoke pubsub broker credentials", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -502,6 +536,9 @@ export function pubSubCommands(
 					);
 
 					logger.log(`Unrevoked ${numTokens} credential(s)`);
+					await metrics.sendMetricsEvent("unrevoke pubsub broker credentials", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -535,6 +572,12 @@ export function pubSubCommands(
 							args.name
 						)
 					);
+					await metrics.sendMetricsEvent(
+						"list pubsub broker revoked credentials",
+						{
+							sendMetrics: config.send_metrics,
+						}
+					);
 				}
 			);
 
@@ -567,6 +610,9 @@ export function pubSubCommands(
 							args.name
 						)
 					);
+					await metrics.sendMetricsEvent("list pubsub broker public-keys", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 

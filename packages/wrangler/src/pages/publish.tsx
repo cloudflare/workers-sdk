@@ -12,6 +12,7 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
@@ -193,6 +194,7 @@ export const Handler = async ({
 				});
 
 				logger.log(`✨ Successfully created the '${projectName}' project.`);
+				await metrics.sendMetricsEvent("create pages project");
 				break;
 			}
 		}
@@ -332,4 +334,5 @@ export const Handler = async ({
 	logger.log(
 		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 	);
+	await metrics.sendMetricsEvent("deploy pages project");
 };

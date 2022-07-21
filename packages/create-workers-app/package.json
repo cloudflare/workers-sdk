@@ -1,11 +1,11 @@
 {
 	"name": "create-workers-app",
 	"version": "1.0.0",
+	"private": true,
 	"description": "",
-	"main": "index.js",
-	"scripts": {},
 	"keywords": [],
-	"author": "",
 	"license": "ISC",
-	"private": true
+	"author": "",
+	"main": "index.js",
+	"scripts": {}
 }

@@ -1,0 +1,71 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../../../../front_end/ui/legacy/components/utils",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "utils-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../../../../front_end/ui/legacy/components/utils/ImagePreview.ts",
+    "../../../../../../../../front_end/ui/legacy/components/utils/JSPresentationUtils.ts",
+    "../../../../../../../../front_end/ui/legacy/components/utils/Linkifier.ts",
+    "../../../../../../../../front_end/ui/legacy/components/utils/Reload.ts",
+    "../../../../../../../../front_end/ui/legacy/components/utils/TargetDetachedDialog.ts",
+    "../../../../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../core/common/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/host/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/i18n/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/platform/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../core/sdk/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../generated/protocol-tsconfig.json"
+    },
+    {
+      "path": "../../../../models/bindings/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../models/text_utils/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../../models/workspace/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../bundle-tsconfig.json"
+    }
+  ]
+}

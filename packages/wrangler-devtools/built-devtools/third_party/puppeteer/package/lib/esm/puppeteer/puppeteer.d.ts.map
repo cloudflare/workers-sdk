@@ -1,0 +1,1 @@
+{"version":3,"file":"puppeteer.d.ts","sourceRoot":"","sources":["../../../src/puppeteer.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;GAcG;AAIH,cAAc,+BAA+B,CAAC;AAC9C,cAAc,0BAA0B,CAAC;AACzC,cAAc,+BAA+B,CAAC;AAC9C,cAAc,oBAAoB,CAAC;AAEnC;;GAEG;AACH,QAAA,MAAM,SAAS,oCAAmC,CAAC;AAEnD,eAAO,MACL,OAAO,2FACP,oBAAoB,gGACpB,WAAW,6EACX,cAAc,4CACd,MAAM,kGACK,CAAC;AAEd,eAAe,SAAS,CAAC"}

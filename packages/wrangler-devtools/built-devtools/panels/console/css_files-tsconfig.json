@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "consoleContextSelector.css.js",
+        "consolePinPane.css.js",
+        "consolePrompt.css.js",
+        "consoleSidebar.css.js",
+        "consoleView.css.js"
+    ]
+}

@@ -1,7 +1,7 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import fetchMock from "jest-fetch-mock";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import {
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
@@ -18,7 +18,7 @@ import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 
 describe("User", () => {
-	runInTempDir({ homedir: "./home" });
+	runInTempDir();
 	const std = mockConsoleMethods();
 	const {
 		mockOAuthServerCallback,
@@ -86,7 +86,10 @@ describe("User", () => {
 			expect(fetchMock).toHaveBeenCalledTimes(1);
 
 			// Make sure that logout removed the config file containing the auth tokens.
-			const config = path.join(os.homedir(), USER_AUTH_CONFIG_FILE);
+			const config = path.join(
+				getGlobalWranglerConfigPath(),
+				USER_AUTH_CONFIG_FILE
+			);
 			expect(fs.existsSync(config)).toBeFalsy();
 		});
 	});
@@ -94,13 +97,10 @@ describe("User", () => {
 	// TODO: Improve OAuth mocking to handle `/token` endpoints from different calls
 	it("should handle errors for failed token refresh", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		mockGrantAuthorization({ respondWith: "success" });
-
 		mockExchangeRefreshTokenForAccessToken({
 			respondWith: "badResponse",
 		});
@@ -109,7 +109,7 @@ describe("User", () => {
 		await expect(
 			requireAuth({} as Config)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Did not login, quitting..."`
+			`"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."`
 		);
 	});
 

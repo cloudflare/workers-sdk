@@ -17,8 +17,8 @@ import { cleanMessage } from "./helpers/pipe";
 
 mockAccountId();
 mockApiToken();
-runInTempDir({ homedir: "./home" });
-mockConfigDir({ homedir: "./home" });
+runInTempDir();
+mockConfigDir();
 
 afterEach(() => {
 	unsetAllMocks();

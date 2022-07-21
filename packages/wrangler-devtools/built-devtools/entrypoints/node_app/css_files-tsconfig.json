@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "nodeConnectionsPanel.css.js"
+    ]
+}

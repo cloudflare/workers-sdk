@@ -29,7 +29,7 @@ import type { FormData, File } from "undici";
 describe("publish", () => {
 	mockAccountId();
 	mockApiToken();
-	runInTempDir({ homedir: "./home" });
+	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
@@ -49,6 +49,31 @@ describe("publish", () => {
 	afterEach(() => {
 		unsetAllMocks();
 		unsetMockFetchKVGetValues();
+	});
+
+	describe("output additional script information", () => {
+		mockApiToken();
+
+		it("should print worker information at log level", async () => {
+			setIsTTY(false);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockOAuthServerCallback();
+
+			await runWrangler("publish ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Worker ID:  abc12345
+			Worker ETag:  etag98765
+			Worker PipelineHash:  hash9999
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  test-name.test-sub-domain.workers.dev"
+		`);
+		});
 	});
 
 	describe("authentication", () => {
@@ -97,33 +122,23 @@ describe("publish", () => {
 				api_token: "some-api-token",
 			});
 
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
-			mockGrantAuthorization({ respondWith: "success" });
-
 			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
 
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
-
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Attempting to login via OAuth...
-			        Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
-			        Successfully logged in.
-			        Total Upload: 0xx KiB / gzip: 0xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
-		      `);
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  test-name.test-sub-domain.workers.dev"
+		`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
 
-			          This is no longer supported in the current version of Wrangler.
-			          If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			          environment variable.
+			  This is no longer supported in the current version of Wrangler.
+			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+			  environment variable.
 
-			        "
-		      `);
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5303,6 +5318,48 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
+		describe("[worker_namespaces]", () => {
+			it("should support bindings to a worker namespace", async () => {
+				writeWranglerToml({
+					worker_namespaces: [
+						{
+							binding: "foo",
+							namespace: "Foo",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "namespace",
+							name: "foo",
+							namespace: "Foo",
+						},
+					],
+				});
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			          "Your worker has access to the following bindings:
+			          - Worker Namespaces:
+			            - foo: Foo
+			          Total Upload: 0xx KiB / gzip: 0xx KiB
+			          Uploaded test-name (TIMINGS)
+			          Published test-name (TIMINGS)
+			            test-name.test-sub-domain.workers.dev"
+		        `);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - \\"worker_namespaces\\" fields are experimental and may change or break at any time.
+
+			"
+		`);
+			});
+		});
+
 		describe("[unsafe]", () => {
 			it("should warn if using unsafe bindings", async () => {
 				writeWranglerToml({
@@ -5962,6 +6019,7 @@ addEventListener('fetch', event => {});`
 			        }
 		      `);
 		});
+
 		it("should print the bundle size, with API errors", async () => {
 			setMockRawResponse(
 				"/accounts/:accountId/workers/scripts/:scriptName",
@@ -6050,6 +6108,82 @@ addEventListener('fetch', event => {});`
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
+
+	describe("--no-bundle --minify", () => {
+		it("should warn that no-bundle and minify can't be used together", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler(
+				"publish index.js --no-bundle --minify --dry-run --outdir dist"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+
+		it("should warn that no-bundle and minify can't be used together", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				minify: true,
+			});
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("publish index.js --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+	});
+
+	describe("--no-bundle --node-compat", () => {
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler(
+				"publish index.js --no-bundle --node-compat --dry-run --outdir dist"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+
+		it("should warn that no-bundle and node-compat can't be used together", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				node_compat: true,
+			});
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("publish index.js --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+
+			"
+		`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -6080,6 +6214,7 @@ function mockUploadWorkerRequest(
 		expectedMigrations?: CfWorkerInit["migrations"];
 		env?: string;
 		legacyEnv?: boolean;
+		sendScriptIds?: boolean;
 	} = {}
 ) {
 	const {
@@ -6094,6 +6229,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		sendScriptIds,
 	} = options;
 	setMockResponse(
 		env && !legacyEnv
@@ -6142,7 +6278,16 @@ function mockUploadWorkerRequest(
 				expect(await (formBody.get(name) as File).text()).toEqual(content);
 			}
 
-			return { available_on_subdomain };
+			return {
+				available_on_subdomain,
+				...(sendScriptIds
+					? {
+							id: "abc12345",
+							etag: "etag98765",
+							pipeline_hash: "hash9999",
+					  }
+					: {}),
+			};
 		}
 	);
 }

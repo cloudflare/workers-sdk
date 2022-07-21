@@ -43,5 +43,6 @@ jobs:
       - name: Publish `wrangler@wasm` to NPM
         run: npm publish --tag wasm
         env:
+          NODE_ENV: "production"
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         working-directory: packages/wrangler

@@ -209,7 +209,6 @@ import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
@@ -224,6 +223,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -270,7 +270,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_FILE = ".wrangler/config/default.toml";
+export const USER_AUTH_CONFIG_FILE = "config/default.toml";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -368,6 +368,11 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 				refreshToken: { value: refresh_token ?? "" },
 			};
 		} else if (api_token) {
+			logger.warn(
+				"It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
+					"This is no longer supported in the current version of Wrangler.\n" +
+					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
+			);
 			return { apiToken: api_token };
 		}
 	} catch {
@@ -396,12 +401,8 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if ("apiToken" in LocalState) {
-		logger.warn(
-			"It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
-				"This is no longer supported in the current version of Wrangler.\n" +
-				"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
-		);
+	if (LocalState.apiToken) {
+		return { apiToken: LocalState.apiToken };
 	}
 
 	const localAPIToken = getAuthFromEnv();
@@ -410,11 +411,7 @@ export function getAPIToken(): ApiCredentials | undefined {
 	const storedAccessToken = LocalState.accessToken?.value;
 	if (storedAccessToken) return { apiToken: storedAccessToken };
 
-	if (!process.stdout.isTTY) {
-		throw new Error(
-			"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
-		);
-	}
+	return undefined;
 }
 
 interface AccessContext {
@@ -846,11 +843,15 @@ async function generatePKCECodes(): Promise<PKCECodes> {
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	mkdirSync(path.join(os.homedir(), ".wrangler/config/"), {
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
+	);
+	mkdirSync(path.dirname(authConfigFilePath), {
 		recursive: true,
 	});
 	writeFileSync(
-		path.join(os.homedir(), USER_AUTH_CONFIG_FILE),
+		path.join(authConfigFilePath),
 		TOML.stringify(config as TOML.JsonMap),
 		{ encoding: "utf-8" }
 	);
@@ -859,9 +860,11 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const toml = parseTOML(
-		readFileSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE))
+	const authConfigFilePath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_FILE
 	);
+	const toml = parseTOML(readFileSync(authConfigFilePath));
 	return toml;
 }
 
@@ -1045,7 +1048,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(path.join(os.homedir(), USER_AUTH_CONFIG_FILE));
+	rmSync(path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_FILE));
 	logger.log(`Successfully logged out.`);
 }
 
@@ -1055,7 +1058,8 @@ export function listScopes(message = "💁 Available scopes:"): void {
 		Scope: scope,
 		Description: Scopes[scope],
 	}));
-	render(<Table data={data} />);
+	const { unmount } = render(<Table data={data} />);
+	unmount();
 	// TODO: maybe a good idea to show usage here
 }
 
@@ -1114,8 +1118,14 @@ export async function requireAuth(config: {
 }): Promise<string> {
 	const loggedIn = await loginOrRefreshIfRequired();
 	if (!loggedIn) {
-		// didn't login, let's just quit
-		throw new Error("Did not login, quitting...");
+		if (!isInteractive()) {
+			throw new Error(
+				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
+			);
+		} else {
+			// didn't login, let's just quit
+			throw new Error("Did not login, quitting...");
+		}
 	}
 	const accountId = config.account_id || (await getAccountId());
 	if (!accountId) {

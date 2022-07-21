@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "bezierEditor.css.js",
+        "bezierSwatch.css.js",
+        "colorSwatch.css.js",
+        "cssAngle.css.js",
+        "cssAngleEditor.css.js",
+        "cssAngleSwatch.css.js",
+        "cssLength.css.js",
+        "cssShadowEditor.css.js",
+        "cssShadowSwatch.css.js",
+        "cssVarSwatch.css.js",
+        "fontEditor.css.js",
+        "swatchPopover.css.js"
+    ]
+}

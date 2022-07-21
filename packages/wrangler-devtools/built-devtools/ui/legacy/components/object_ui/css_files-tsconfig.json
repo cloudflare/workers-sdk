@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "customPreviewComponent.css.js",
+        "objectPopover.css.js",
+        "objectPropertiesSection.css.js",
+        "objectValue.css.js"
+    ]
+}

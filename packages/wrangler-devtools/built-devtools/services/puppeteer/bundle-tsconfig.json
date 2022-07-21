@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/services/puppeteer"},"files":["../../../../../../front_end/services/puppeteer/puppeteer.ts"],"references":[{"path":"./puppeteer_connection-tsconfig.json"}]}

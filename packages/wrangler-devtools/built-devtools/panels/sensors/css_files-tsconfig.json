@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "locationsSettingsTab.css.js",
+        "sensors.css.js"
+    ]
+}

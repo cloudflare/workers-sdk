@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/panels/security"},"files":["../../../../../../front_end/panels/security/security.ts"],"references":[{"path":"./css_files-tsconfig.json"},{"path":"./security-tsconfig.json"}]}

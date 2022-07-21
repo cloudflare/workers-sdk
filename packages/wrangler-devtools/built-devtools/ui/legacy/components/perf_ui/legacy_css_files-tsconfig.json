@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "chartViewport.css.legacy.js",
+        "filmStripView.css.legacy.js",
+        "flameChart.css.legacy.js",
+        "overviewGrid.css.legacy.js",
+        "timelineGrid.css.legacy.js"
+    ]
+}

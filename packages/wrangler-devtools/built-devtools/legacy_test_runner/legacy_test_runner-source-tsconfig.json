@@ -1,0 +1,106 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../front_end/legacy_test_runner",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "legacy_test_runner-source-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../front_end/legacy_test_runner/legacy_test_runner.ts",
+    "../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../core/common/legacy-tsconfig.json"
+    },
+    {
+      "path": "../core/host/legacy-tsconfig.json"
+    },
+    {
+      "path": "../core/protocol_client/legacy-tsconfig.json"
+    },
+    {
+      "path": "../core/root/legacy-tsconfig.json"
+    },
+    {
+      "path": "../core/sdk/legacy-tsconfig.json"
+    },
+    {
+      "path": "../entrypoints/devtools_app/entrypoint-tsconfig.json"
+    },
+    {
+      "path": "../models/bindings/legacy-tsconfig.json"
+    },
+    {
+      "path": "../models/extensions/legacy-tsconfig.json"
+    },
+    {
+      "path": "../models/formatter/legacy-tsconfig.json"
+    },
+    {
+      "path": "../models/persistence/legacy-tsconfig.json"
+    },
+    {
+      "path": "../models/text_utils/legacy-tsconfig.json"
+    },
+    {
+      "path": "../models/workspace/legacy-tsconfig.json"
+    },
+    {
+      "path": "../panels/accessibility/legacy-tsconfig.json"
+    },
+    {
+      "path": "../panels/animation/legacy-tsconfig.json"
+    },
+    {
+      "path": "../panels/console_counters/bundle-tsconfig.json"
+    },
+    {
+      "path": "../panels/event_listeners/bundle-tsconfig.json"
+    },
+    {
+      "path": "../third_party/diff/legacy-tsconfig.json"
+    },
+    {
+      "path": "../ui/legacy/legacy-tsconfig.json"
+    },
+    {
+      "path": "../ui/legacy/components/color_picker/legacy-tsconfig.json"
+    },
+    {
+      "path": "../ui/legacy/components/data_grid/legacy-tsconfig.json"
+    },
+    {
+      "path": "../ui/legacy/components/inline_editor/legacy-tsconfig.json"
+    },
+    {
+      "path": "../ui/legacy/components/utils/legacy-tsconfig.json"
+    },
+    {
+      "path": "test_runner/bundle-tsconfig.json"
+    }
+  ]
+}

@@ -2,20 +2,43 @@
 	"name": "wranglerjs-compat-webpack-plugin",
 	"version": "0.0.5",
 	"description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
-	"author": "wrangler@cloudflare.com",
-	"license": "MIT OR Apache-2.0",
-	"type": "commonjs",
-	"main": "lib/index.js",
-	"types": "lib/index.d.ts",
+	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/wrangler2/issues"
 	},
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"type": "commonjs",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
 	"scripts": {
 		"build": "run-p build:*",
 		"build:d.ts": "tsc",
 		"build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js --format=cjs --sourcemap",
 		"test:plugin": "jest"
+	},
+	"jest": {
+		"moduleNameMapper": {
+			"clipboardy": "<rootDir>/../wrangler/src/__tests__/helpers/clipboardy-mock.js",
+			"miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
+		},
+		"restoreMocks": true,
+		"setupFilesAfterEnv": [
+			"<rootDir>/src/__tests__/jest.setup.ts"
+		],
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testTimeout": 180000,
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"
+		]
 	},
 	"dependencies": {
 		"rimraf": "^3.0.2"
@@ -35,30 +58,7 @@
 		"tar": "^6.1.11",
 		"tosource": "^2.0.0-alpha.3",
 		"typescript": "^4.6.3",
-		"undici": "^5.0.0",
+		"undici": "^5.5.1",
 		"webpack": "^4.46.0"
-	},
-	"jest": {
-		"restoreMocks": true,
-		"testTimeout": 180000,
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
-		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color)"
-		],
-		"moduleNameMapper": {
-			"clipboardy": "<rootDir>/../wrangler/src/__tests__/helpers/clipboardy-mock.js",
-			"miniflare/cli": "<rootDir>/../../node_modules/miniflare/dist/src/cli.js"
-		},
-		"transform": {
-			"^.+\\.c?(t|j)sx?$": [
-				"esbuild-jest",
-				{
-					"sourcemap": true
-				}
-			]
-		},
-		"setupFilesAfterEnv": [
-			"<rootDir>/src/__tests__/jest.setup.ts"
-		]
 	}
 }

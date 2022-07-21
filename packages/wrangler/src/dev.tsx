@@ -10,6 +10,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 
 import { getEntry } from "./entry";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
 import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
@@ -25,6 +26,8 @@ import {
 
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
+import type { CfWorkerInit } from "./worker";
 import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
@@ -61,8 +64,10 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	"live-reload"?: boolean;
 	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 }
 
@@ -223,6 +228,12 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Enable persistence for this session (only for local mode)",
 				type: "boolean",
 			})
+			.option("live-reload", {
+				// TODO: Add back in once we have remote `--live-reload`
+				hidden: true,
+				// describe: "Auto reload HTML pages when change is detected",
+				type: "boolean",
+			})
 			.option("inspect", {
 				describe: "Enable dev tools",
 				type: "boolean",
@@ -248,7 +259,28 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 	}
 }
 
-export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
+type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
+	// These options can be passed in directly when called with the `wrangler.dev()` API.
+	// They aren't exposed as CLI arguments.
+	vars?: {
+		[key: string]: unknown;
+	};
+	kv?: {
+		binding: string;
+		id: string;
+		preview_id?: string;
+	}[];
+	durableObjects?: {
+		name: string;
+		class_name: string;
+		script_name?: string | undefined;
+		environment?: string | undefined;
+	}[];
+	forceLocal?: boolean;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+};
+
+export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
@@ -263,6 +295,11 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			((args.script &&
 				findWranglerToml(path.dirname(args.script))) as ConfigPath);
 		let config = readConfig(configPath, args);
+		await metrics.sendMetricsEvent(
+			"run dev",
+			{ local: args.local },
+			{ sendMetrics: config.send_metrics, offline: args.local }
+		);
 
 		if (config.configPath) {
 			watcher = watch(config.configPath, {
@@ -344,6 +381,10 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		const routes: Route[] | undefined =
 			args.routes || (config.route && [config.route]) || config.routes;
 
+		if (args.forceLocal) {
+			args.local = true;
+		}
+
 		if (!args.local) {
 			if (host) {
 				zoneId = await getZoneIdFromHost(host);
@@ -363,7 +404,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 			}
 		}
 
-		const nodeCompat = args["node-compat"] ?? config.node_compat;
+		const nodeCompat = args.nodeCompat ?? config.node_compat;
 		if (nodeCompat) {
 			logger.warn(
 				"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
@@ -371,35 +412,48 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 		}
 
 		// eslint-disable-next-line no-inner-declarations
-		async function getBindings(configParam: Config) {
+		async function getBindings(
+			configParam: Config
+		): Promise<CfWorkerInit["bindings"]> {
 			return {
-				kv_namespaces: configParam.kv_namespaces?.map(
-					({ binding, preview_id, id: _id }) => {
-						// In `dev`, we make folks use a separate kv namespace called
-						// `preview_id` instead of `id` so that they don't
-						// break production data. So here we check that a `preview_id`
-						// has actually been configured.
-						// This whole block of code will be obsoleted in the future
-						// when we have copy-on-write for previews on edge workers.
-						if (!preview_id) {
-							// TODO: This error has to be a _lot_ better, ideally just asking
-							// to create a preview namespace for the user automatically
-							throw new Error(
-								`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
-							); // Ugh, I really don't like this message very much
+				kv_namespaces: [
+					...(configParam.kv_namespaces || []).map(
+						({ binding, preview_id, id: _id }) => {
+							// In `dev`, we make folks use a separate kv namespace called
+							// `preview_id` instead of `id` so that they don't
+							// break production data. So here we check that a `preview_id`
+							// has actually been configured.
+							// This whole block of code will be obsoleted in the future
+							// when we have copy-on-write for previews on edge workers.
+							if (!preview_id) {
+								// TODO: This error has to be a _lot_ better, ideally just asking
+								// to create a preview namespace for the user automatically
+								throw new Error(
+									`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+								); // Ugh, I really don't like this message very much
+							}
+							return {
+								binding,
+								id: preview_id,
+							};
 						}
-						return {
-							binding,
-							id: preview_id,
-						};
-					}
-				),
+					),
+					...(args.kv || []),
+				],
 				// Use a copy of combinedVars since we're modifying it later
-				vars: getVarsForDev(configParam),
+				vars: {
+					...getVarsForDev(configParam),
+					...args.vars,
+				},
 				wasm_modules: configParam.wasm_modules,
 				text_blobs: configParam.text_blobs,
 				data_blobs: configParam.data_blobs,
-				durable_objects: configParam.durable_objects,
+				durable_objects: {
+					bindings: [
+						...(configParam.durable_objects || { bindings: [] }).bindings,
+						...(args.durableObjects || []),
+					],
+				},
 				r2_buckets: configParam.r2_buckets?.map(
 					({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
 						// same idea as kv namespace preview id,
@@ -415,6 +469,7 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 						};
 					}
 				),
+				worker_namespaces: configParam.worker_namespaces,
 				services: configParam.services,
 				unsafe: configParam.unsafe?.bindings,
 			};
@@ -473,11 +528,12 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					jsxFragment={args["jsx-fragment"] || config.jsx_fragment}
 					tsconfig={args.tsconfig ?? config.tsconfig}
 					upstreamProtocol={upstreamProtocol}
-					localProtocol={args["local-protocol"] || config.dev.local_protocol}
+					localProtocol={args.localProtocol || config.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
 					enableLocalPersistence={
 						args["experimental-enable-local-persistence"] || false
 					}
+					liveReload={args.liveReload || false}
 					accountId={config.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
 					port={args.port || config.dev.port || (await getLocalPort())}
@@ -495,9 +551,12 @@ export async function startDev(args: ArgumentsCamelCase<DevArgs>) {
 					bindings={bindings}
 					crons={config.triggers.crons}
 					logLevel={args.logLevel}
+					logPrefix={args.logPrefix}
 					onReady={args.onReady}
-					inspect={args.inspect}
+					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
+					forceLocal={args.forceLocal}
+					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 				/>
 			);
 		}

@@ -42,6 +42,7 @@ export function Remote(props: {
 	port: number;
 	ip: string;
 	localProtocol: "https" | "http";
+	inspect: boolean;
 	inspectorPort: number;
 	accountId: string | undefined;
 	bindings: CfWorkerInit["bindings"];
@@ -53,7 +54,7 @@ export function Remote(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: () => void;
+	onReady?: (() => void) | undefined;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -91,7 +92,10 @@ export function Remote(props: {
 	});
 
 	useInspector({
-		inspectorUrl: previewToken ? previewToken.inspectorUrl.href : undefined,
+		inspectorUrl:
+			props.inspect && previewToken
+				? previewToken.inspectorUrl.href
+				: undefined,
 		port: props.inspectorPort,
 		logToTerminal: true,
 	});
@@ -158,7 +162,7 @@ export function useWorker(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: () => void;
+	onReady: (() => void) | undefined;
 }): CfPreviewToken | undefined {
 	const {
 		name,

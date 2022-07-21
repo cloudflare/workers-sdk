@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../../../front_end/ui/legacy/components/perf_ui"},"files":["../../../../../../../../front_end/ui/legacy/components/perf_ui/perf_ui.ts"],"references":[{"path":"./css_files-tsconfig.json"},{"path":"./legacy_css_files-tsconfig.json"},{"path":"./perf_ui-tsconfig.json"}]}

@@ -95,7 +95,7 @@ export const upload = async (
 	}
 
 	type FileContainer = {
-		content: string;
+		path: string;
 		contentType: string;
 		sizeInBytes: number;
 		hash: string;
@@ -111,6 +111,14 @@ export const upload = async (
 	];
 
 	const directory = resolve(args.directory);
+
+	// TODO(future): Use this to more efficiently load files in and speed up uploading
+	// Limit memory to 1 GB unless more is specified
+	// let maxMemory = 1_000_000_000;
+	// if (process.env.NODE_OPTIONS && (process.env.NODE_OPTIONS.includes('--max-old-space-size=') || process.env.NODE_OPTIONS.includes('--max_old_space_size='))) {
+	// 	const parsed = parser(process.env.NODE_OPTIONS);
+	// 	maxMemory = (parsed['max-old-space-size'] ? parsed['max-old-space-size'] : parsed['max_old_space_size']) * 1000 * 1000; // Turn MB into bytes
+	// }
 
 	const walk = async (
 		dir: string,
@@ -137,7 +145,6 @@ export const upload = async (
 				} else {
 					const name = relative(startingDir, filepath).split(sep).join("/");
 
-					// TODO: Move this to later so we don't hold as much in memory
 					const fileContent = await readFile(filepath);
 
 					const base64Content = fileContent.toString("base64");
@@ -152,8 +159,9 @@ export const upload = async (
 						);
 					}
 
+					// We don't want to hold the content in memory. We instead only want to read it when it's needed
 					fileMap.set(name, {
-						content: base64Content,
+						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
 						hash: blake3hash(base64Content + extension)
@@ -248,17 +256,21 @@ export const upload = async (
 		// Don't upload empty buckets (can happen for tiny projects)
 		if (bucket.files.length === 0) continue;
 
-		const payload: UploadPayloadFile[] = bucket.files.map((file) => ({
-			key: file.hash,
-			value: file.content,
-			metadata: {
-				contentType: file.contentType,
-			},
-			base64: true,
-		}));
-
 		let attempts = 0;
 		const doUpload = async (): Promise<void> => {
+			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
+			// This is so we don't run out of memory trying to upload the files.
+			const payload: UploadPayloadFile[] = await Promise.all(
+				bucket.files.map(async (file) => ({
+					key: file.hash,
+					value: (await readFile(file.path)).toString("base64"),
+					metadata: {
+						contentType: file.contentType,
+					},
+					base64: true,
+				}))
+			);
+
 			try {
 				return await fetchResult(`/pages/assets/upload`, {
 					method: "POST",
@@ -270,9 +282,9 @@ export const upload = async (
 				});
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					// Linear backoff, 0 second first time, then 1 second etc.
+					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, attempts++ * 1000)
+						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 					);
 
 					if ((e as { code: number }).code === 8000013) {

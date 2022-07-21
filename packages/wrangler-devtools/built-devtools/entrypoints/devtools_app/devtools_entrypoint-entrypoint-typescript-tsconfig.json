@@ -1,0 +1,109 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../../front_end/entrypoints/devtools_app",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "devtools_entrypoint-entrypoint-typescript-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../../front_end/entrypoints/devtools_app/devtools_app.ts",
+    "../../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../inspector_main/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/accessibility/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/animation/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/application/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/browser_debugger/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/css_overview/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/developer_resources/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/elements/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/emulation/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/issues/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/layer_viewer/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/layers/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/lighthouse/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/media/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/mobile_throttling/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/network/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/performance_monitor/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/security/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/sensors/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/timeline/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/web_audio/meta-tsconfig.json"
+    },
+    {
+      "path": "../../panels/webauthn/meta-tsconfig.json"
+    },
+    {
+      "path": "../main/bundle-tsconfig.json"
+    },
+    {
+      "path": "../shell/shell-tsconfig.json"
+    }
+  ]
+}

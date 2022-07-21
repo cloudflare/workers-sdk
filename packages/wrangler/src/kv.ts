@@ -1,4 +1,5 @@
 import { URLSearchParams } from "node:url";
+import { FormData } from "undici";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
 import { logger } from "./logger";
 import type { Config } from "./config";
@@ -186,6 +187,19 @@ export function unexpectedKVKeyValueProps(keyValue: KeyValue): string[] {
 	return props.filter((prop) => !KeyValueKeys.has(prop));
 }
 
+/**
+ * Turn object with fields into FormData
+ */
+function asFormData(fields: Record<string, unknown>): FormData {
+	const formData = new FormData();
+
+	for (const [name, value] of Object.entries(fields)) {
+		formData.append(name, value);
+	}
+
+	return formData;
+}
+
 export async function putKVKeyValue(
 	accountId: string,
 	namespaceId: string,
@@ -205,7 +219,15 @@ export async function putKVKeyValue(
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
 			keyValue.key
 		)}`,
-		{ method: "PUT", body: keyValue.value },
+		{
+			method: "PUT",
+			body: keyValue.metadata
+				? asFormData({
+						value: keyValue.value,
+						metadata: JSON.stringify(keyValue.metadata),
+				  })
+				: keyValue.value,
+		},
 		searchParams
 	);
 }

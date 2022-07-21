@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite": true
+  },
+  "files": [
+    "codemirror.next.js",
+    "chunk/codemirror.js",
+    "chunk/cpp.js",
+    "chunk/css.js",
+    "chunk/html.js",
+    "chunk/java.js",
+    "chunk/javascript.js",
+    "chunk/json.js",
+    "chunk/legacy.js",
+    "chunk/markdown.js",
+    "chunk/php.js",
+    "chunk/python.js",
+    "chunk/wast.js",
+    "chunk/xml.js"
+  ]
+}

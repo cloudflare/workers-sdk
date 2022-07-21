@@ -1,0 +1,10 @@
+{
+	"name": "legacy-site-app",
+	"version": "0.0.0",
+	"private": true,
+	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"main": "index.js"
+}

@@ -276,6 +276,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	// Warn if user tries minify or node-compat with no-bundle
+	if (props.noBundle && minify) {
+		logger.warn(
+			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
+		);
+	}
+
+	if (props.noBundle && nodeCompat) {
+		logger.warn(
+			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
 	const scriptName = props.name;
 	assert(
 		scriptName,
@@ -426,6 +439,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			durable_objects: config.durable_objects,
 			r2_buckets: config.r2_buckets,
 			services: config.services,
+			worker_namespaces: config.worker_namespaces,
 			unsafe: config.unsafe?.bindings,
 		};
 
@@ -468,21 +482,34 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
-			available_on_subdomain = (
-				await fetchResult<{ available_on_subdomain: boolean }>(
-					workerUrl,
-					{
-						method: "PUT",
-						body: createWorkerUploadForm(worker),
-					},
-					new URLSearchParams({
-						include_subdomain_availability: "true",
-						// pass excludeScript so the whole body of the
-						// script doesn't get included in the response
-						excludeScript: "true",
-					})
-				)
-			).available_on_subdomain;
+			const result = await fetchResult<{
+				available_on_subdomain: boolean;
+				id: string | null;
+				etag: string | null;
+				pipeline_hash: string | null;
+			}>(
+				workerUrl,
+				{
+					method: "PUT",
+					body: createWorkerUploadForm(worker),
+				},
+				new URLSearchParams({
+					include_subdomain_availability: "true",
+					// pass excludeScript so the whole body of the
+					// script doesn't get included in the response
+					excludeScript: "true",
+				})
+			);
+
+			available_on_subdomain = result.available_on_subdomain;
+
+			// Print some useful information returned after publishing
+			// Not all fields will be populated for every worker
+			// These fields are likely to be scraped by tools, so do not rename
+			if (result.id) logger.log("Worker ID: ", result.id);
+			if (result.etag) logger.log("Worker ETag: ", result.etag);
+			if (result.pipeline_hash)
+				logger.log("Worker PipelineHash: ", result.pipeline_hash);
 		}
 	} finally {
 		if (typeof destination !== "string") {

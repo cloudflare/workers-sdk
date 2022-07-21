@@ -1,0 +1,61 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "outDir": ".",
+    "rootDir": "../../../../../../../front_end/ui/components/panel_introduction_steps",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "tsBuildInfoFile": "panel_introduction_steps-tsconfig.json.tsbuildinfo",
+    "typeRoots": [],
+    "useUnknownInCatchVariables": false
+  },
+  "files": [
+    "../../../../../../../front_end/ui/components/panel_introduction_steps/PanelIntroductionSteps.ts",
+    "../../../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../../../front_end/global_typings/request_idle_callback.d.ts",
+    "../../../../../../../node_modules/@types/filesystem/index.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../core/host/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../core/i18n/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../../core/root/bundle-tsconfig.json"
+    },
+    {
+      "path": "../helpers/bundle-tsconfig.json"
+    },
+    {
+      "path": "../render_coordinator/bundle-tsconfig.json"
+    },
+    {
+      "path": "../../lit-html/bundle-tsconfig.json"
+    },
+    {
+      "path": "../buttons/bundle-tsconfig.json"
+    },
+    {
+      "path": "../input/bundle-tsconfig.json"
+    }
+  ]
+}

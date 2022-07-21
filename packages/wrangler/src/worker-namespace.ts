@@ -1,6 +1,7 @@
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { printWranglerBanner } from ".";
 import type { ConfigPath } from ".";
@@ -113,6 +114,9 @@ export function workerNamespaceCommands(
 			const config = readConfig(args.config as ConfigPath, args);
 			const accountId = await requireAuth(config);
 			await listWorkerNamespaces(accountId);
+			await metrics.sendMetricsEvent("list worker namespaces", {
+				sendMetrics: config.send_metrics,
+			});
 		})
 		.command(
 			"get <name>",
@@ -128,6 +132,9 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await getWorkerNamespaceInfo(accountId, args.name);
+				await metrics.sendMetricsEvent("view worker namespace", {
+					sendMetrics: config.send_metrics,
+				});
 			}
 		)
 		.command(
@@ -145,6 +152,9 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await createWorkerNamespace(accountId, args.name);
+				await metrics.sendMetricsEvent("create worker namespace", {
+					sendMetrics: config.send_metrics,
+				});
 			}
 		)
 		.command(
@@ -162,6 +172,9 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
+				await metrics.sendMetricsEvent("delete worker namespace", {
+					sendMetrics: config.send_metrics,
+				});
 			}
 		)
 		.command(
@@ -185,6 +198,9 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await renameWorkerNamespace(accountId, args.oldName, args.newName);
+				await metrics.sendMetricsEvent("rename worker namespace", {
+					sendMetrics: config.send_metrics,
+				});
 			}
 		);
 }

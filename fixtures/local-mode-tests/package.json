@@ -1,27 +1,20 @@
 {
 	"name": "local-mode-tests",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"private": true,
 	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "npx jest --forceExit"
+		"test": "cross-env NODE_ENV=local-testing npx jest --forceExit"
 	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^3.2.0"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
 	"jest": {
 		"restoreMocks": true,
-		"testTimeout": 30000,
 		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
-		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)",
-			"wrangler-dist/cli.js"
-		],
+		"testTimeout": 30000,
 		"transform": {
 			"^.+\\.c?(t|j)sx?$": [
 				"esbuild-jest",
@@ -29,6 +22,13 @@
 					"sourcemap": true
 				}
 			]
-		}
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)",
+			"wrangler-dist/cli.js"
+		]
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.2.0"
 	}
 }

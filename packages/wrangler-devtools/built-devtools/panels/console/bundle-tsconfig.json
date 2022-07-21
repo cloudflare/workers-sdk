@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"outDir":".","baseUrl":".","rootDir":"../../../../../../front_end/panels/console"},"files":["../../../../../../front_end/panels/console/console.ts"],"references":[{"path":"./console-tsconfig.json"},{"path":"./css_files-tsconfig.json"},{"path":"../../ui/legacy/components/object_ui/css_files-tsconfig.json"}]}

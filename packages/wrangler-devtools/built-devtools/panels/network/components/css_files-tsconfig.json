@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "RequestHeadersView.css.js",
+        "RequestTrustTokensView.css.js",
+        "WebBundleInfoView.css.js"
+    ]
+}

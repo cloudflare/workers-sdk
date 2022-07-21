@@ -19,6 +19,7 @@ import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -39,6 +40,7 @@ export type DevProps = {
 	localProtocol: "https" | "http";
 	localUpstream: string | undefined;
 	enableLocalPersistence: boolean;
+	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
@@ -55,10 +57,13 @@ export type DevProps = {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	inspect: boolean | undefined;
+	inspect: boolean;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix?: string;
 	onReady: (() => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
+	forceLocal: boolean | undefined;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -101,16 +106,18 @@ export function DevImplementation(props: DevProps): JSX.Element {
 }
 
 function InteractiveDevSession(props: DevProps) {
-	const toggles = useHotkeys(
-		{
+	const toggles = useHotkeys({
+		initial: {
 			local: props.initialMode === "local",
 			tunnel: false,
 		},
-		props.port,
-		props.ip,
-		props.inspectorPort,
-		props.localProtocol
-	);
+		port: props.port,
+		ip: props.ip,
+		inspectorPort: props.inspectorPort,
+		inspect: props.inspect,
+		localProtocol: props.localProtocol,
+		forceLocal: props.forceLocal,
+	});
 
 	useTunnel(toggles.tunnel);
 
@@ -120,10 +127,18 @@ function InteractiveDevSession(props: DevProps) {
 			<Box borderStyle="round" paddingLeft={1} paddingRight={1}>
 				<Text bold={true}>[b]</Text>
 				<Text> open a browser, </Text>
-				<Text bold={true}>[d]</Text>
-				<Text> open Devtools, </Text>
-				<Text bold={true}>[l]</Text>
-				<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+				{props.inspect ? (
+					<>
+						<Text bold={true}>[d]</Text>
+						<Text> open Devtools, </Text>
+					</>
+				) : null}
+				{!props.forceLocal ? (
+					<>
+						<Text bold={true}>[l]</Text>
+						<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
+					</>
+				) : null}
 				<Text bold={true}>[c]</Text>
 				<Text> clear console, </Text>
 				<Text bold={true}>[x]</Text>
@@ -173,12 +188,15 @@ function DevSession(props: DevSessionProps) {
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			enableLocalPersistence={props.enableLocalPersistence}
+			liveReload={props.liveReload}
 			crons={props.crons}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
+			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}
+			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 		/>
 	) : (
 		<Remote
@@ -193,6 +211,9 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			localProtocol={props.localProtocol}
 			inspectorPort={props.inspectorPort}
+			// TODO: @threepointone #1167
+			// liveReload={props.liveReload}
+			inspect={props.inspect}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
@@ -346,13 +367,24 @@ type useHotkeysInitialState = {
 	local: boolean;
 	tunnel: boolean;
 };
-function useHotkeys(
-	initial: useHotkeysInitialState,
-	port: number,
-	ip: string,
-	inspectorPort: number,
-	localProtocol: "http" | "https"
-) {
+function useHotkeys(props: {
+	initial: useHotkeysInitialState;
+	port: number;
+	ip: string;
+	inspectorPort: number;
+	inspect: boolean;
+	localProtocol: "http" | "https";
+	forceLocal: boolean | undefined;
+}) {
+	const {
+		initial,
+		port,
+		ip,
+		inspectorPort,
+		inspect,
+		localProtocol,
+		forceLocal,
+	} = props;
 	// UGH, we should put port in context instead
 	const [toggles, setToggles] = useState(initial);
 	const { exit } = useApp();
@@ -377,11 +409,14 @@ function useHotkeys(
 				}
 				// toggle inspector
 				case "d": {
-					await openInspector(inspectorPort);
+					if (inspect) {
+						await openInspector(inspectorPort);
+					}
 					break;
 				}
 				// toggle local
 				case "l":
+					if (forceLocal) return;
 					setToggles((previousToggles) => ({
 						...previousToggles,
 						local: !previousToggles.local,

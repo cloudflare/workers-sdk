@@ -33,6 +33,7 @@ import {
 	deleteKVKeyValue,
 } from "./kv";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
 import { pages } from "./pages";
 import {
 	formatMessage,
@@ -64,6 +65,7 @@ import { whoami } from "./whoami";
 
 import { workerNamespaceCommands } from "./worker-namespace";
 import type { Config } from "./config";
+import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
 import type { RawData } from "ws";
 import type { CommandModule } from "yargs";
@@ -256,11 +258,22 @@ function createCLIParser(argv: string[]) {
 		["*"],
 		false,
 		() => {},
-		(args) => {
+		async (args) => {
 			if (args._.length > 0) {
 				throw new CommandLineArgsError(`Unknown command: ${args._}.`);
 			} else {
-				wrangler.showHelp("log");
+				// args.v will exist and be true in the case that no command is called, and the -v
+				// option is present. This is to allow for running asynchronous printWranglerBanner
+				// in the version command.
+				if (args.v) {
+					if (process.stdout.isTTY) {
+						await printWranglerBanner();
+					} else {
+						logger.log(wranglerVersion);
+					}
+				} else {
+					wrangler.showHelp("log");
+				}
 			}
 		}
 	);
@@ -382,7 +395,7 @@ function createCLIParser(argv: string[]) {
 						hidden: true,
 					})
 					.option("no-bundle", {
-						describe: "Skip internal build steps and directly publish script",
+						describe: "Skip internal build steps and directly publish Worker",
 						type: "boolean",
 						default: false,
 					})
@@ -474,7 +487,7 @@ function createCLIParser(argv: string[]) {
 						requiresArg: true,
 					})
 					.option("minify", {
-						describe: "Minify the script",
+						describe: "Minify the Worker",
 						type: "boolean",
 					})
 					.option("node-compat", {
@@ -499,6 +512,9 @@ function createCLIParser(argv: string[]) {
 				(args.config as ConfigPath) ||
 				(args.script && findWranglerToml(path.dirname(args.script)));
 			const config = readConfig(configPath, args);
+			await metrics.sendMetricsEvent("deploy worker script", {
+				sendMetrics: config.send_metrics,
+			});
 			const entry = await getEntry(args, config, "publish");
 
 			if (args.public) {
@@ -639,11 +655,16 @@ function createCLIParser(argv: string[]) {
 				await printWranglerBanner();
 			}
 			const config = readConfig(args.config as ConfigPath, args);
+			await metrics.sendMetricsEvent("begin log stream", {
+				sendMetrics: config.send_metrics,
+			});
 
 			const scriptName = getLegacyScriptName(args, config);
 
 			if (!scriptName) {
-				throw new Error("Missing script name");
+				throw new Error(
+					"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
+				);
 			}
 
 			const accountId = await requireAuth(config);
@@ -682,6 +703,9 @@ function createCLIParser(argv: string[]) {
 			onExit(async () => {
 				tail.terminate();
 				await deleteTail();
+				await metrics.sendMetricsEvent("end log stream", {
+					sendMetrics: config.send_metrics,
+				});
 			});
 
 			const printLog: (data: RawData) => void =
@@ -698,6 +722,9 @@ function createCLIParser(argv: string[]) {
 						await setTimeout(100);
 						break;
 					case tail.CLOSED:
+						await metrics.sendMetricsEvent("end log stream", {
+							sendMetrics: config.send_metrics,
+						});
 						throw new Error(
 							`Connection to ${scriptDisplayName} closed unexpectedly.`
 						);
@@ -711,6 +738,9 @@ function createCLIParser(argv: string[]) {
 			tail.on("close", async () => {
 				tail.terminate();
 				await deleteTail();
+				await metrics.sendMetricsEvent("end log stream", {
+					sendMetrics: config.send_metrics,
+				});
 			});
 		}
 	);
@@ -820,7 +850,7 @@ function createCLIParser(argv: string[]) {
 	// secret
 	wrangler.command(
 		"secret",
-		"🤫 Generate a secret that can be referenced in the worker script",
+		"🤫 Generate a secret that can be referenced in a Worker",
 		(secretYargs) => {
 			return secretYargs
 				.command(subHelp)
@@ -831,15 +861,15 @@ function createCLIParser(argv: string[]) {
 				})
 				.command(
 					"put <key>",
-					"Create or update a secret variable for a script",
+					"Create or update a secret variable for a Worker",
 					(yargs) => {
 						return yargs
 							.positional("key", {
-								describe: "The variable name to be accessible in the script",
+								describe: "The variable name to be accessible in the Worker",
 								type: "string",
 							})
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -857,7 +887,9 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);
@@ -870,7 +902,7 @@ function createCLIParser(argv: string[]) {
 						);
 
 						logger.log(
-							`🌀 Creating the secret for script ${scriptName} ${
+							`🌀 Creating the secret for the Worker "${scriptName}" ${
 								args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
 							}`
 						);
@@ -916,6 +948,7 @@ function createCLIParser(argv: string[]) {
 											wasm_modules: {},
 											text_blobs: {},
 											data_blobs: {},
+											worker_namespaces: [],
 											unsafe: [],
 										},
 										modules: [],
@@ -938,6 +971,9 @@ function createCLIParser(argv: string[]) {
 
 						try {
 							await submitSecret();
+							await metrics.sendMetricsEvent("create encrypted variable", {
+								sendMetrics: config.send_metrics,
+							});
 						} catch (e) {
 							if (isMissingWorkerError(e)) {
 								// create a draft worker and try again
@@ -954,16 +990,16 @@ function createCLIParser(argv: string[]) {
 				)
 				.command(
 					"delete <key>",
-					"Delete a secret variable from a script",
+					"Delete a secret variable from a Worker",
 					async (yargs) => {
 						await printWranglerBanner();
 						return yargs
 							.positional("key", {
-								describe: "The variable name to be accessible in the script",
+								describe: "The variable name to be accessible in the Worker",
 								type: "string",
 							})
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -980,22 +1016,26 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);
 
 						if (
 							await confirm(
-								`Are you sure you want to permanently delete the variable ${
+								`Are you sure you want to permanently delete the secret ${
 									args.key
-								} on the script ${scriptName}${
+								} on the Worker ${scriptName}${
 									args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
 								}?`
 							)
 						) {
 							logger.log(
-								`🌀 Deleting the secret ${args.key} on script ${scriptName}${
+								`🌀 Deleting the secret ${
+									args.key
+								} on the Worker ${scriptName}${
 									args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
 								}`
 							);
@@ -1006,17 +1046,20 @@ function createCLIParser(argv: string[]) {
 									: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 							await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
+							await metrics.sendMetricsEvent("delete encrypted variable", {
+								sendMetrics: config.send_metrics,
+							});
 							logger.log(`✨ Success! Deleted secret ${args.key}`);
 						}
 					}
 				)
 				.command(
 					"list",
-					"List all secrets for a script",
+					"List all secrets for a Worker",
 					(yargs) => {
 						return yargs
 							.option("name", {
-								describe: "Name of the worker",
+								describe: "Name of the Worker",
 								type: "string",
 								requiresArg: true,
 							})
@@ -1033,7 +1076,9 @@ function createCLIParser(argv: string[]) {
 
 						const scriptName = getLegacyScriptName(args, config);
 						if (!scriptName) {
-							throw new Error("Missing script name");
+							throw new Error(
+								"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+							);
 						}
 
 						const accountId = await requireAuth(config);
@@ -1044,6 +1089,9 @@ function createCLIParser(argv: string[]) {
 								: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 						logger.log(JSON.stringify(await fetchResult(url), null, "  "));
+						await metrics.sendMetricsEvent("list encrypted variables", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				);
 		}
@@ -1105,6 +1153,9 @@ function createCLIParser(argv: string[]) {
 
 						logger.log(`🌀 Creating namespace with title "${title}"`);
 						const namespaceId = await createKVNamespace(accountId, title);
+						await metrics.sendMetricsEvent("create kv namespace", {
+							sendMetrics: config.send_metrics,
+						});
 
 						logger.log("✨ Success!");
 						const envString = args.env ? ` under [env.${args.env}]` : "";
@@ -1133,6 +1184,9 @@ function createCLIParser(argv: string[]) {
 						logger.log(
 							JSON.stringify(await listKVNamespaces(accountId), null, "  ")
 						);
+						await metrics.sendMetricsEvent("list kv namespaces", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				)
 				.command(
@@ -1177,7 +1231,12 @@ function createCLIParser(argv: string[]) {
 
 						const accountId = await requireAuth(config);
 
+						logger.log(`Deleting KV namespace ${id}.`);
 						await deleteKVNamespace(accountId, id);
+						logger.log(`Deleted KV namespace ${id}.`);
+						await metrics.sendMetricsEvent("delete kv namespace", {
+							sendMetrics: config.send_metrics,
+						});
 
 						// TODO: recommend they remove it from wrangler.toml
 
@@ -1252,6 +1311,15 @@ function createCLIParser(argv: string[]) {
 								describe:
 									"Time since the UNIX epoch after which the entry expires",
 							})
+							.option("metadata", {
+								type: "string",
+								describe: "Arbitrary JSON that is associated with a key",
+								coerce: (jsonStr: string): KeyValue["metadata"] => {
+									try {
+										return JSON.parse(jsonStr);
+									} catch (_) {}
+								},
+							})
 							.option("path", {
 								type: "string",
 								requiresArg: true,
@@ -1259,7 +1327,7 @@ function createCLIParser(argv: string[]) {
 							})
 							.check(demandOneOfOption("value", "path"));
 					},
-					async ({ key, ttl, expiration, ...args }) => {
+					async ({ key, ttl, expiration, metadata, ...args }) => {
 						await printWranglerBanner();
 						const config = readConfig(args.config as ConfigPath, args);
 						const namespaceId = getKVNamespaceId(args, config);
@@ -1269,13 +1337,17 @@ function createCLIParser(argv: string[]) {
 							: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 							  args.value!;
 
+						const metadataLog = metadata
+							? ` with metadata "${JSON.stringify(metadata)}"`
+							: "";
+
 						if (args.path) {
 							logger.log(
-								`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}.`
+								`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}${metadataLog}.`
 							);
 						} else {
 							logger.log(
-								`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}.`
+								`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}${metadataLog}.`
 							);
 						}
 
@@ -1286,6 +1358,10 @@ function createCLIParser(argv: string[]) {
 							value,
 							expiration,
 							expiration_ttl: ttl,
+							metadata: metadata as KeyValue["metadata"],
+						});
+						await metrics.sendMetricsEvent("write kv key-value", {
+							sendMetrics: config.send_metrics,
 						});
 					}
 				)
@@ -1336,6 +1412,9 @@ function createCLIParser(argv: string[]) {
 							prefix
 						);
 						logger.log(JSON.stringify(results, undefined, 2));
+						await metrics.sendMetricsEvent("list kv keys", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				)
 				.command(
@@ -1396,6 +1475,9 @@ function createCLIParser(argv: string[]) {
 						} else {
 							process.stdout.write(bufferKVValue);
 						}
+						await metrics.sendMetricsEvent("read kv value", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				)
 				.command(
@@ -1442,6 +1524,9 @@ function createCLIParser(argv: string[]) {
 						const accountId = await requireAuth(config);
 
 						await deleteKVKeyValue(accountId, namespaceId, key);
+						await metrics.sendMetricsEvent("delete kv key-value", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				);
 		}
@@ -1546,6 +1631,9 @@ function createCLIParser(argv: string[]) {
 
 						const accountId = await requireAuth(config);
 						await putKVBulkKeyValue(accountId, namespaceId, content);
+						await metrics.sendMetricsEvent("write kv key-values (bulk)", {
+							sendMetrics: config.send_metrics,
+						});
 
 						logger.log("Success!");
 					}
@@ -1636,6 +1724,9 @@ function createCLIParser(argv: string[]) {
 						const accountId = await requireAuth(config);
 
 						await deleteKVBulkKeyValue(accountId, namespaceId, content);
+						await metrics.sendMetricsEvent("delete kv key-values (bulk)", {
+							sendMetrics: config.send_metrics,
+						});
 
 						logger.log("Success!");
 					}
@@ -1675,6 +1766,9 @@ function createCLIParser(argv: string[]) {
 						logger.log(`Creating bucket ${args.name}.`);
 						await createR2Bucket(accountId, args.name);
 						logger.log(`Created bucket ${args.name}.`);
+						await metrics.sendMetricsEvent("create r2 bucket", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				);
 
@@ -1684,6 +1778,9 @@ function createCLIParser(argv: string[]) {
 					const accountId = await requireAuth(config);
 
 					logger.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
+					await metrics.sendMetricsEvent("list r2 buckets", {
+						sendMetrics: config.send_metrics,
+					});
 				});
 
 				r2BucketYargs.command(
@@ -1706,6 +1803,9 @@ function createCLIParser(argv: string[]) {
 						logger.log(`Deleting bucket ${args.name}.`);
 						await deleteR2Bucket(accountId, args.name);
 						logger.log(`Deleted bucket ${args.name}.`);
+						await metrics.sendMetricsEvent("delete r2 bucket", {
+							sendMetrics: config.send_metrics,
+						});
 					}
 				);
 				return r2BucketYargs;
@@ -1774,6 +1874,10 @@ function createCLIParser(argv: string[]) {
 				return;
 			}
 			await login();
+			const config = readConfig(args.config as ConfigPath, args);
+			await metrics.sendMetricsEvent("login user", {
+				sendMetrics: config.send_metrics,
+			});
 
 			// TODO: would be nice if it optionally saved login
 			// credentials inside node_modules/.cache or something
@@ -1790,6 +1894,10 @@ function createCLIParser(argv: string[]) {
 		async () => {
 			await printWranglerBanner();
 			await logout();
+			const config = readConfig(undefined, {});
+			await metrics.sendMetricsEvent("logout user", {
+				sendMetrics: config.send_metrics,
+			});
 		}
 	);
 
@@ -1801,8 +1909,35 @@ function createCLIParser(argv: string[]) {
 		async () => {
 			await printWranglerBanner();
 			await whoami();
+			const config = readConfig(undefined, {});
+			await metrics.sendMetricsEvent("view accounts", {
+				sendMetrics: config.send_metrics,
+			});
 		}
 	);
+
+	// version
+	wrangler.command(
+		"version",
+		false,
+		() => {},
+		async () => {
+			if (process.stdout.isTTY) {
+				await printWranglerBanner();
+			} else {
+				logger.log(wranglerVersion);
+			}
+		}
+	);
+
+	wrangler.option("v", {
+		describe: "Show version number",
+		alias: "version",
+		type: "boolean",
+	});
+
+	// This set to false to allow overwrite of default behaviour
+	wrangler.version(false);
 
 	wrangler.option("config", {
 		alias: "c",
@@ -1813,7 +1948,7 @@ function createCLIParser(argv: string[]) {
 
 	wrangler.group(["config", "help", "version"], "Flags:");
 	wrangler.help().alias("h", "help");
-	wrangler.version(wranglerVersion).alias("v", "version");
+
 	wrangler.exitProcess(false);
 
 	return wrangler;

@@ -92,14 +92,36 @@ export async function bundleWorker(
 		rules,
 	});
 
+	// In dev, we want to patch `fetch()` with a special version that looks
+	// for bad usages and can warn the user about them; so we inject
+	// `checked-fetch.js` to do so. However, with yarn 3 style pnp,
+	// we need to extract that file to an accessible place before injecting
+	// it in, hence this code here.
+	const checkedFetchFileToInject = path.join(
+		destination,
+		"--temp-wrangler-files--",
+		"checked-fetch.js"
+	);
+
+	if (checkFetch) {
+		fs.mkdirSync(path.join(destination, "--temp-wrangler-files--"), {
+			recursive: true,
+		});
+		fs.writeFileSync(
+			checkedFetchFileToInject,
+			fs.readFileSync(path.resolve(__dirname, "../templates/checked-fetch.js"))
+		);
+	}
+	// TODO: we need to have similar logic like above for other files
+	// like the static asset facade, and other middleware that we
+	// plan on injecting/referencing.
+
 	const result = await esbuild.build({
 		...getEntryPoint(entry.file, serveAssetsFromWorker),
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		inject: checkFetch
-			? [path.resolve(__dirname, "../templates/checked-fetch.js")]
-			: [],
+		inject: checkFetch ? [checkedFetchFileToInject] : [],
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
@@ -109,7 +131,9 @@ export async function bundleWorker(
 		conditions: ["worker", "browser"],
 		...(process.env.NODE_ENV && {
 			define: {
-				"process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
+				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/wrangler2/issues/1477)
+				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,

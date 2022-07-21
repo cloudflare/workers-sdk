@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "."
+    },
+    "files": [
+        "accessibilityNode.css.js",
+        "accessibilityProperties.css.js",
+        "axBreadcrumbs.css.js"
+    ]
+}

@@ -3,7 +3,7 @@ import wrangler from "wrangler";
 describe("worker", () => {
 	let worker: {
 		fetch: (init?: RequestInit) => Promise<Response | undefined>;
-		stop: () => void;
+		stop: () => Promise<void>;
 	};
 
 	beforeAll(async () => {
@@ -15,7 +15,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		worker.stop();
+		await worker.stop();
 	});
 
 	it("should invoke the worker and exit", async () => {
