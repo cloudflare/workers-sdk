@@ -13,6 +13,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	"@miniflare/core",
 	// todo - bundle miniflare too
 	"selfsigned",
+	"source-map",
 	"@esbuild-plugins/node-globals-polyfill",
 	"@esbuild-plugins/node-modules-polyfill",
 	"chokidar",

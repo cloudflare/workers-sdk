@@ -101,6 +101,7 @@
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
+		"source-map": "^0.7.4",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
