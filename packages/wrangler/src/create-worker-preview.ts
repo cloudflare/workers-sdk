@@ -247,7 +247,9 @@ export async function createWorkerPreview(
 			}
 		},
 		(err) => {
-			logger.warn("worker failed to prewarm: ", err);
+			if ((err as { code: string }).code !== "ABORT_ERR") {
+				logger.warn("worker failed to prewarm: ", err);
+			}
 		}
 	);
 

@@ -32,7 +32,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		inject: [path.join(__dirname, "../import_meta_url.js")],
 		define: {
 			"import.meta.url": "import_meta_url",
-			"process.env.NODE_ENV": '"production"',
+			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
 			...(process.env.SPARROW_SOURCE_KEY
 				? { SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY}"` }
 				: {}),
@@ -51,7 +51,7 @@ async function buildMiniflareCLI(flags: BuildFlags = {}) {
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		define: {
-			"process.env.NODE_ENV": '"production"',
+			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
 		},
 		watch: flags.watch ? watchLogger("./miniflare-dist/index.mjs") : false,
 	});

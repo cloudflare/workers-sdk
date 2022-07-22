@@ -5,12 +5,5 @@
 	"description": "",
 	"license": "ISC",
 	"author": "",
-	"main": "src/index.js",
-	"scripts": {
-		"test": "npx jest"
-	},
-	"jest": {
-		"testEnvironment": "wrangler",
-		"testRegex": ".*.test\\.[jt]sx?$"
-	}
+	"main": "src/index.js"
 }
