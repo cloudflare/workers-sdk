@@ -34,6 +34,7 @@ export function useEsbuild({
 	noBundle,
 	workerDefinitions,
 	services,
+	firstPartyWorkerDevFacade,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -49,6 +50,7 @@ export function useEsbuild({
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
+	firstPartyWorkerDevFacade: boolean | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -111,6 +113,7 @@ export function useEsbuild({
 						},
 						workerDefinitions,
 						services,
+						firstPartyWorkerDevFacade,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -166,6 +169,7 @@ export function useEsbuild({
 		assets,
 		services,
 		workerDefinitions,
+		firstPartyWorkerDevFacade,
 	]);
 	return bundle;
 }

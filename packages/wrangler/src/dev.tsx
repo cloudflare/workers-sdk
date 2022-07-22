@@ -507,6 +507,7 @@ export async function startDev(args: StartDevOptions) {
 					showInteractiveDevSession={args.showInteractiveDevSession}
 					forceLocal={args.forceLocal}
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
+					firstPartyWorker={config.first_party_worker}
 				/>
 			);
 		}

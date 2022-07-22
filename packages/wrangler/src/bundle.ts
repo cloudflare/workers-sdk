@@ -73,6 +73,7 @@ export async function bundleWorker(
 		checkFetch: boolean;
 		services: Config["services"];
 		workerDefinitions: WorkerRegistry | undefined;
+		firstPartyWorkerDevFacade: boolean | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -88,6 +89,7 @@ export async function bundleWorker(
 		assets,
 		workerDefinitions,
 		services,
+		firstPartyWorkerDevFacade,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -162,6 +164,11 @@ export async function bundleWorker(
 					services,
 					workerDefinitions
 				);
+			}),
+		// Simulate internal environment when using first party workers in dev
+		firstPartyWorkerDevFacade === true &&
+			((currentEntry: Entry) => {
+				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
 			}),
 	].filter(Boolean);
 
@@ -398,6 +405,50 @@ async function applyMultiWorkerDevFacade(
 		define: {
 			__WORKERS__: JSON.stringify(serviceMap),
 		},
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+/**
+ * A middleware that makes first party workers "work" in
+ * our dev environments. Is applied during wrangler dev
+ * when config.first_party_worker is true
+ */
+async function applyFirstPartyWorkerDevFacade(
+	entry: Entry,
+	tmpDirPath: string
+) {
+	if (entry.format !== "modules") {
+		throw new Error(
+			"First party workers must be in the modules format. See https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+		);
+	}
+
+	const targetPath = path.join(
+		tmpDirPath,
+		"first-party-worker-module-facade.entry.js"
+	);
+
+	await esbuild.build({
+		entryPoints: [
+			path.resolve(
+				__dirname,
+				"../templates/first-party-worker-module-facade.ts"
+			),
+		],
+		bundle: true,
+		format: "esm",
+		sourcemap: true,
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
 		outfile: targetPath,
 	});
 

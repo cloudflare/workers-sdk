@@ -55,9 +55,18 @@ describe("publish", () => {
 	describe("output additional script information", () => {
 		mockApiToken();
 
-		it("should print worker information at log level", async () => {
+		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);
-			writeWranglerToml();
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					first_party_worker: true,
+				}),
+
+				"utf-8"
+			);
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
