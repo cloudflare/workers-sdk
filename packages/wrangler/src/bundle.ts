@@ -126,6 +126,8 @@ export async function bundleWorker(
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
 		sourcemap: true,
+		// The root included, as the sources are relative paths to tmpDir
+		sourceRoot: entryDirectory,
 		minify,
 		metafile: true,
 		conditions: ["worker", "browser"],

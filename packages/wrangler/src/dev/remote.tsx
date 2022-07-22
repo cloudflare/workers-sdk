@@ -55,6 +55,7 @@ export function Remote(props: {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady?: (() => void) | undefined;
+	sourceMapPath: string | undefined;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -97,6 +98,7 @@ export function Remote(props: {
 				: undefined,
 		port: props.inspectorPort,
 		logToTerminal: true,
+		sourceMapPath: props.sourceMapPath,
 	});
 
 	const errorHandler = useErrorHandler();
