@@ -1916,6 +1916,9 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// This set to false to allow overwrite of default behaviour
+	wrangler.version(false);
+
 	// version
 	wrangler.command(
 		"version",
@@ -1935,9 +1938,6 @@ function createCLIParser(argv: string[]) {
 		alias: "version",
 		type: "boolean",
 	});
-
-	// This set to false to allow overwrite of default behaviour
-	wrangler.version(false);
 
 	wrangler.option("config", {
 		alias: "c",
