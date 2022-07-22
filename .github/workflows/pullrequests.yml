@@ -29,18 +29,7 @@ jobs:
             tsconfig.tsbuildinfo
           key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
-      - uses: actions/cache@v3
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Install NPM Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
       - name: Check for errors
@@ -64,25 +53,7 @@ jobs:
           node-version: 16.7
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
-      - name: Restore Wrangler 1 from Cache
-        uses: actions/cache@v3
-        id: wrangler-1-cache
-        with:
-          path: packages/wranglerjs-compat-webpack-plugin/src/__tests__/helpers/.wrangler-1-cache
-          key: ${{ matrix.os }}-wrangler-1-cache
-
-      - uses: actions/cache@v3
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Install NPM Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true' || runner.os == 'Windows'
         run: npm ci
 
       - name: Run builds
