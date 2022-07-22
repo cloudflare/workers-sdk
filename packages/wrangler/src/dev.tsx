@@ -22,6 +22,7 @@ import {
 	getDevCompatibilityDate,
 	getRules,
 	isLegacyEnv,
+	DEFAULT_INSPECTOR_PORT,
 } from "./index";
 
 import type { Config } from "./config";
@@ -476,7 +477,7 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
-		const getInspectorPort = memoizeGetPort(9229);
+		const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
 
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
@@ -538,7 +539,11 @@ export async function startDev(args: StartDevOptions) {
 					assetPaths={assetPaths}
 					port={args.port || config.dev.port || (await getLocalPort())}
 					ip={args.ip || config.dev.ip}
-					inspectorPort={args["inspector-port"] ?? (await getInspectorPort())}
+					inspectorPort={
+						args["inspector-port"] ||
+						config.dev.inspector_port ||
+						(await getInspectorPort())
+					}
 					isWorkersSite={Boolean(args.site || config.site)}
 					compatibilityDate={getDevCompatibilityDate(
 						config,

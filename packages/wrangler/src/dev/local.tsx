@@ -60,6 +60,7 @@ function useLocalWorker({
 	assetPaths,
 	isWorkersSite,
 	port,
+	inspectorPort,
 	rules,
 	enableLocalPersistence,
 	liveReload,
@@ -257,7 +258,7 @@ function useLocalWorker({
 				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 			];
 			if (inspect) {
-				nodeOptions.push("--inspect"); // start Miniflare listening for a debugger to attach
+				nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
 			}
 
 			const forkOptions = [miniflareOptions];
@@ -344,6 +345,7 @@ function useLocalWorker({
 		workerName,
 		format,
 		port,
+		inspectorPort,
 		ip,
 		bindings.durable_objects?.bindings,
 		bindings.kv_namespaces,

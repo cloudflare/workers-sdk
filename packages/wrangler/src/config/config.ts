@@ -181,6 +181,13 @@ export interface DevConfig {
 	port: number | undefined;
 
 	/**
+	 * Port for the local dev server's inspector to listen on
+	 *
+	 * @default `9229`
+	 */
+	inspector_port: number | undefined;
+
+	/**
 	 * Protocol that local wrangler dev server listens to requests on.
 	 *
 	 * @default `http`
