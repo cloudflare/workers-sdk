@@ -24,6 +24,7 @@ type PagesDevArgs = {
 	do?: (string | number)[];
 	"live-reload": boolean;
 	"local-protocol"?: "https" | "http";
+	"experimental-enable-local-persistence": boolean;
 	"node-compat": boolean;
 };
 
@@ -84,6 +85,11 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			},
+			"experimental-enable-local-persistence": {
+				type: "boolean",
+				default: false,
+				describe: "Enable persistence for this session (only for local mode)",
+			},
 			"node-compat": {
 				describe: "Enable node.js compatibility",
 				default: false,
@@ -110,6 +116,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
+	"experimental-enable-local-persistence": experimentalEnableLocalPersistence,
 	"node-compat": nodeCompat,
 	config: config,
 	_: [_pages, _dev, ...remaining],
@@ -238,6 +245,7 @@ export const Handler = async ({
 				directory,
 			},
 			forceLocal: true,
+			experimentalEnableLocalPersistence,
 			showInteractiveDevSession: undefined,
 			inspect: true,
 			logLevel: "error",

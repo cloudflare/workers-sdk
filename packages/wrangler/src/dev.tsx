@@ -532,7 +532,7 @@ export async function startDev(args: StartDevOptions) {
 					localProtocol={args.localProtocol || config.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
 					enableLocalPersistence={
-						args["experimental-enable-local-persistence"] || false
+						args.experimentalEnableLocalPersistence || false
 					}
 					liveReload={args.liveReload || false}
 					accountId={config.account_id || getAccountFromCache()?.id}
