@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import { builtinModules } from "node:module";
+import * as os from "node:os";
 import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
@@ -97,14 +98,15 @@ export async function bundleWorker(
 	// `checked-fetch.js` to do so. However, with yarn 3 style pnp,
 	// we need to extract that file to an accessible place before injecting
 	// it in, hence this code here.
+	const osTempDir = os.tmpdir();
 	const checkedFetchFileToInject = path.join(
-		destination,
+		osTempDir,
 		"--temp-wrangler-files--",
 		"checked-fetch.js"
 	);
 
-	if (checkFetch) {
-		fs.mkdirSync(path.join(destination, "--temp-wrangler-files--"), {
+	if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
+		fs.mkdirSync(path.join(osTempDir, "--temp-wrangler-files--"), {
 			recursive: true,
 		});
 		fs.writeFileSync(
