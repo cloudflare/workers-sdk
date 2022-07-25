@@ -62,7 +62,7 @@ jobs:
           NODE_ENV: "production"
 
       - name: Run tests & collect coverage
-        run: npm run test
+        run: npm run test:ci
 
       - name: Report Code Coverage
         uses: codecov/codecov-action@v3

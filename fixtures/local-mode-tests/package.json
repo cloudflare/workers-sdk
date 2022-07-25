@@ -9,7 +9,8 @@
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "cross-env NODE_ENV=local-testing npx jest --forceExit"
+		"test": "cross-env NODE_ENV=local-testing npx jest --forceExit",
+		"test:ci": "cross-env NODE_ENV=local-testing npx jest --forceExit"
 	},
 	"jest": {
 		"restoreMocks": true,
