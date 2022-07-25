@@ -71,7 +71,7 @@ describe("publish", () => {
 			Worker PipelineHash:  hash9999
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
-			  test-name.test-sub-domain.workers.dev"
+			  https://test-name.test-sub-domain.workers.dev"
 		`);
 		});
 	});
@@ -107,7 +107,7 @@ describe("publish", () => {
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -128,7 +128,7 @@ describe("publish", () => {
 			"Total Upload: 0xx KiB / gzip: 0xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
-			  test-name.test-sub-domain.workers.dev"
+			  https://test-name.test-sub-domain.workers.dev"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
@@ -168,7 +168,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -192,7 +192,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -294,7 +294,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name-some-env (TIMINGS)
 			        Published test-name-some-env (TIMINGS)
-			          test-name-some-env.test-sub-domain.workers.dev"
+			          https://test-name-some-env.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -313,7 +313,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -332,7 +332,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name-some-env (TIMINGS)
 			          Published test-name-some-env (TIMINGS)
-			            test-name-some-env.test-sub-domain.workers.dev"
+			            https://test-name-some-env.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -351,7 +351,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name-some-env (TIMINGS)
 			          Published test-name-some-env (TIMINGS)
-			            test-name-some-env.test-sub-domain.workers.dev"
+			            https://test-name-some-env.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -421,7 +421,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -447,7 +447,7 @@ describe("publish", () => {
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (some-env) (TIMINGS)
 			          Published test-name (some-env) (TIMINGS)
-			            some-env.test-name.test-sub-domain.workers.dev"
+			            https://some-env.test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -493,7 +493,7 @@ describe("publish", () => {
 		      Total Upload: 0xx KiB / gzip: 0xx KiB
 		      Uploaded test-name (TIMINGS)
 		      Published test-name (TIMINGS)
-		        test-name.test-sub-domain.workers.dev"
+		        https://test-name.test-sub-domain.workers.dev"
 	    `);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -527,7 +527,7 @@ describe("publish", () => {
 			  "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
-			  test-name.test-sub-domain.workers.dev",
+			  https://test-name.test-sub-domain.workers.dev",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - The \\"route\\" field in your configuration is an empty string and will be ignored.
@@ -920,7 +920,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -937,7 +937,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -954,7 +954,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -973,7 +973,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -990,7 +990,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1026,7 +1026,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1076,7 +1076,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1095,7 +1095,7 @@ describe("publish", () => {
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1126,7 +1126,7 @@ export default{
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1143,7 +1143,7 @@ export default{
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1237,7 +1237,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1319,7 +1319,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			            - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -1371,7 +1371,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
@@ -1458,7 +1458,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 52xx KiB / gzip: 13xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
@@ -1506,7 +1506,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1546,7 +1546,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 52xx KiB / gzip: 13xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			        ",
@@ -1728,7 +1728,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 52xx KiB / gzip: 13xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			        ",
@@ -1773,7 +1773,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 52xx KiB / gzip: 13xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			            - \\"assets\\" fields are experimental and may change or break at any time.
@@ -1829,7 +1829,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1886,7 +1886,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1937,7 +1937,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1986,7 +1986,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (some-env) (TIMINGS)
 			        Published test-name (some-env) (TIMINGS)
-			          some-env.test-name.test-sub-domain.workers.dev"
+			          https://some-env.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2036,7 +2036,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name-some-env (TIMINGS)
 			        Published test-name-some-env (TIMINGS)
-			          test-name-some-env.test-sub-domain.workers.dev"
+			          https://test-name-some-env.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2079,7 +2079,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2119,7 +2119,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2159,7 +2159,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2200,7 +2200,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2241,7 +2241,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2282,7 +2282,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2323,7 +2323,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2366,7 +2366,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2413,7 +2413,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2562,7 +2562,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 1xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -2661,7 +2661,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2715,7 +2715,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2756,7 +2756,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -2798,7 +2798,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 52xx KiB / gzip: 13xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			        ",
@@ -2820,7 +2820,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2840,7 +2840,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2859,7 +2859,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2972,7 +2972,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (dev) (TIMINGS)
 			        Published test-name (dev) (TIMINGS)
-			          dev.test-name.test-sub-domain.workers.dev"
+			          https://dev.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2999,7 +2999,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (dev) (TIMINGS)
 			        Published test-name (dev) (TIMINGS)
-			          dev.test-name.test-sub-domain.workers.dev"
+			          https://dev.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3027,7 +3027,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (dev) (TIMINGS)
 			        Published test-name (dev) (TIMINGS)
-			          dev.test-name.test-sub-domain.workers.dev"
+			          https://dev.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3058,7 +3058,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (dev) (TIMINGS)
 			        Published test-name (dev) (TIMINGS)
-			          dev.test-name.test-sub-domain.workers.dev"
+			          https://dev.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3091,7 +3091,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (dev) (TIMINGS)
 			        Published test-name (dev) (TIMINGS)
-			          dev.test-name.test-sub-domain.workers.dev"
+			          https://dev.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3128,7 +3128,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3146,7 +3146,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3277,7 +3277,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev
+			          https://test-name.test-sub-domain.workers.dev
 			          http://example.com/*"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3312,7 +3312,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name-production (TIMINGS)
 			        Published test-name-production (TIMINGS)
-			          test-name-production.test-sub-domain.workers.dev
+			          https://test-name-production.test-sub-domain.workers.dev
 			          http://production.example.com/*"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3347,7 +3347,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name-production (TIMINGS)
 			        Published test-name-production (TIMINGS)
-			          test-name-production.test-sub-domain.workers.dev
+			          https://test-name-production.test-sub-domain.workers.dev
 			          http://production.example.com/*"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3525,7 +3525,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3550,7 +3550,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3656,7 +3656,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3695,7 +3695,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (testEnv) (TIMINGS)
 			        Published test-name (testEnv) (TIMINGS)
-			          testEnv.test-name.test-sub-domain.workers.dev"
+			          https://testEnv.test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3722,7 +3722,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -3772,7 +3772,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3816,7 +3816,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3867,7 +3867,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -3911,7 +3911,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -3957,7 +3957,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4020,7 +4020,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (xyz) (TIMINGS)
 			          Published test-name (xyz) (TIMINGS)
-			            xyz.test-name.test-sub-domain.workers.dev"
+			            https://xyz.test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4079,7 +4079,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev",
+			            https://test-name.test-sub-domain.workers.dev",
 			            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			              - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4148,7 +4148,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (xyz) (TIMINGS)
 			          Published test-name (xyz) (TIMINGS)
-			            xyz.test-name.test-sub-domain.workers.dev",
+			            https://xyz.test-name.test-sub-domain.workers.dev",
 			            "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			              - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4338,7 +4338,7 @@ addEventListener('fetch', event => {});`
 			        Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -4718,7 +4718,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4788,7 +4788,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4821,7 +4821,7 @@ addEventListener('fetch', event => {});`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4858,7 +4858,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4932,7 +4932,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4969,7 +4969,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5043,7 +5043,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5083,7 +5083,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5111,7 +5111,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5157,7 +5157,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5197,7 +5197,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5242,7 +5242,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5305,7 +5305,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5347,7 +5347,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5393,7 +5393,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5436,7 +5436,7 @@ addEventListener('fetch', event => {});`
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5482,7 +5482,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5511,7 +5511,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5544,7 +5544,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5593,7 +5593,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5690,7 +5690,7 @@ addEventListener('fetch', event => {});`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
 			          Published test-name (TIMINGS)
-			            test-name.test-sub-domain.workers.dev"
+			            https://test-name.test-sub-domain.workers.dev"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5720,7 +5720,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5749,7 +5749,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5778,7 +5778,7 @@ addEventListener('fetch', event => {});`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev"
+			          https://test-name.test-sub-domain.workers.dev"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5819,7 +5819,7 @@ addEventListener('fetch', event => {});`
 			          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -5849,7 +5849,7 @@ addEventListener('fetch', event => {});`
 			          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -5872,7 +5872,7 @@ addEventListener('fetch', event => {});`
 			          "out": "Total Upload: 0xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
@@ -6014,7 +6014,7 @@ addEventListener('fetch', event => {});`
 			          "out": "Total Upload: 4xx KiB / gzip: 0xx KiB
 			        Uploaded test-name (TIMINGS)
 			        Published test-name (TIMINGS)
-			          test-name.test-sub-domain.workers.dev",
+			          https://test-name.test-sub-domain.workers.dev",
 			          "warn": "",
 			        }
 		      `);
