@@ -16,7 +16,7 @@ type BundleResult = {
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
-	sourceMapPath: string | undefined;
+	sourceMapPath?: string | undefined;
 };
 
 /**
