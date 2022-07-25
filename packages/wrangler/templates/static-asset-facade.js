@@ -8,6 +8,8 @@ import {
 import manifest from "__STATIC_CONTENT_MANIFEST";
 const ASSET_MANIFEST = JSON.parse(manifest);
 
+export * from "__ENTRY_POINT__";
+
 export default {
 	async fetch(request, env, ctx) {
 		let options = {
