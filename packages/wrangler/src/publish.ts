@@ -614,7 +614,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	if (deployments.length > 0) {
 		logger.log("Published", workerName, formatTime(deployMs));
 		for (const target of targets.flat()) {
-			logger.log(" ", target);
+			// Append protocol only on workers.dev domains
+			logger.log(
+				" ",
+				(target.endsWith("workers.dev") ? "https://" : "") + target
+			);
 		}
 	} else {
 		logger.log("No publish targets for", workerName, formatTime(deployMs));
