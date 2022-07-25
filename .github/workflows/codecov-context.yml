@@ -1,0 +1,32 @@
+name: CodeCov Main Context
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  codecov:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    name: CodeCov Main Branch Updater
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Use Node.js 16.7
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.7
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Run tests & collect coverage
+        run: npm run test:ci
+
+      - name: Report Code Coverage
+        uses: codecov/codecov-action@v3
