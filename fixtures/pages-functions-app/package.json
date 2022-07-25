@@ -6,7 +6,8 @@
 	"main": "dist/worker.js",
 	"scripts": {
 		"dev": "npx wrangler pages dev public  --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS  --port 8789",
-		"test": "npx jest --forceExit"
+		"test": "npx jest --forceExit",
+		"test:ci": "npx jest --forceExit"
 	},
 	"jest": {
 		"restoreMocks": true,

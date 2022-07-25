@@ -1,36 +1,37 @@
 {
-  "name": "node-app-pages",
-  "version": "0.0.0",
-  "private": true,
-  "main": "dist/worker.js",
-  "engines": {
-    "node": ">=14"
-  },
-  "scripts": {
-    "dev": "npx wrangler pages dev public --port 12345 --node-compat",
-    "test": "npx jest --forceExit"
-  },
-  "dependencies": {
-    "stripe": "^9.1.0"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^3.10.0",
-    "@types/node": "^17.0.33",
-    "undici": "^5.5.1"
-  },
-  "sideEffects": false,
-  "jest": {
-    "testRegex": ".*.(test|spec)\\.[jt]sx?$",
-    "transformIgnorePatterns": [
-      "node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
-    ],
-    "transform": {
-      "^.+\\.c?(t|j)sx?$": [
-        "esbuild-jest",
-        {
-          "sourcemap": true
-        }
-      ]
-    }
-  }
+	"name": "node-app-pages",
+	"version": "0.0.0",
+	"private": true,
+	"sideEffects": false,
+	"main": "dist/worker.js",
+	"scripts": {
+		"dev": "npx wrangler pages dev public --port 12345 --node-compat",
+		"test": "npx jest --forceExit",
+		"test:ci": "npx jest --forceExit"
+	},
+	"jest": {
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+		]
+	},
+	"dependencies": {
+		"stripe": "^9.1.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.10.0",
+		"@types/node": "^17.0.33",
+		"undici": "^5.5.1"
+	},
+	"engines": {
+		"node": ">=14"
+	}
 }
