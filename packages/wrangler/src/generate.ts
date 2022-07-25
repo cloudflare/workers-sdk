@@ -26,7 +26,7 @@ export function generateOptions(yargs: Argv) {
 		})
 		.option("type", {
 			alias: "t",
-			type: "boolean",
+			type: "string",
 			hidden: true,
 			deprecated: true,
 		})
