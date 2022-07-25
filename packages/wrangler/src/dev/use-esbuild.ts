@@ -15,6 +15,7 @@ export type EsbuildBundle = {
 	entry: Entry;
 	type: "esm" | "commonjs";
 	modules: CfModule[];
+	sourceMapPath: string | undefined;
 };
 
 export function useEsbuild({
@@ -76,12 +77,14 @@ export function useEsbuild({
 				bundleType,
 				modules,
 				stop,
+				sourceMapPath,
 			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
 				? {
 						modules: [],
 						resolvedEntryPointPath: entry.file,
 						bundleType: entry.format === "modules" ? "esm" : "commonjs",
 						stop: undefined,
+						sourceMapPath: undefined,
 				  }
 				: await bundleWorker(entry, destination, {
 						serveAssetsFromWorker,
@@ -119,6 +122,7 @@ export function useEsbuild({
 				path: resolvedEntryPointPath,
 				type: bundleType,
 				modules,
+				sourceMapPath,
 			});
 		}
 

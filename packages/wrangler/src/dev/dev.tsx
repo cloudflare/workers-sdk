@@ -223,7 +223,7 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={props.onReady}
-			sourceMapPath={`${directory}/index.js.map`}
+			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	);
 }

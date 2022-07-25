@@ -16,6 +16,7 @@ type BundleResult = {
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
+	sourceMapPath: string | undefined;
 };
 
 /**
@@ -179,6 +180,10 @@ export async function bundleWorker(
 	const entryPointExports = entryPointOutputs[0][1].exports;
 	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
+	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
+		_path.includes(".map")
+	)[0];
+
 	return {
 		modules: moduleCollector.modules,
 		resolvedEntryPointPath: path.resolve(
@@ -187,6 +192,7 @@ export async function bundleWorker(
 		),
 		bundleType,
 		stop: result.stop,
+		sourceMapPath,
 	};
 }
 
