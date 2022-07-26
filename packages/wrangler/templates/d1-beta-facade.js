@@ -80,7 +80,28 @@ var Database = class {
 			throw new Error("D1_ERROR", { cause: new Error(err.error) });
 		}
 		const answer = await response.json();
-		return Array.isArray(answer) ? answer : answer;
+
+		let results = [];
+		let metadata = {};
+		if (Array.isArray(answer.result) && answer.result.length >= 1) {
+			const result = answer.result[0];
+			if (Array.isArray(result)) {
+				results.push(...result);
+			} else {
+				metadata.success = answer.success;
+				metadata.changes = result.changes;
+				metadata.lastInsertRowId = result.lastInsertRowId;
+			}
+		} else if (!Array.isArray(answer)) {
+			results.push(answer);
+		}
+		return {
+			results,
+			duration: 0,
+			lastRowId: metadata.lastInsertRowId ?? null,
+			changes: metadata.changes ?? null,
+			success: metadata.success ?? true,
+		};
 	}
 };
 var PreparedStatement = class {
