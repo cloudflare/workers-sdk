@@ -854,7 +854,9 @@ async function spawnProxyProcess({
 	});
 
 	// Wait for proxy process to start...
-	while (!proxy.pid) {}
+	while (!proxy.pid) {
+		await sleep(0.1);
+	}
 
 	if (port === undefined) {
 		logger.log(
