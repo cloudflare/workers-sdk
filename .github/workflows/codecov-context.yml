@@ -27,5 +27,5 @@ jobs:
       - name: Run tests & collect coverage
         run: npm run test:ci -w wrangler
 
-#       - name: Report Code Coverage
-#         uses: codecov/codecov-action@v3
+      - name: Report Code Coverage
+        uses: codecov/codecov-action@v3
