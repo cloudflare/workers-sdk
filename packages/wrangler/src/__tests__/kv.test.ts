@@ -4,7 +4,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
 	setMockResponse,
 	unsetAllMocks,
-	unsetMockFetchKVGetValues,
+	unsetSpecialMockFns,
 	setMockFetchKVGetValue,
 	setMockRawResponse,
 	createFetchResult,
@@ -924,7 +924,7 @@ describe("wrangler", () => {
 
 		describe("get", () => {
 			afterEach(() => {
-				unsetMockFetchKVGetValues();
+				unsetSpecialMockFns();
 			});
 
 			it("should get a key in a given namespace specified by namespace-id", async () => {

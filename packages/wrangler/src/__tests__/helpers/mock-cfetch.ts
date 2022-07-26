@@ -1,8 +1,10 @@
+import { Readable } from "node:stream";
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
+import { Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
-import type { RequestInit } from "undici";
+import type { RequestInit, BodyInit, HeadersInit } from "undici";
 
 /**
  * The signature of the function that will handle a mock request.
@@ -180,6 +182,7 @@ export function unsetAllMocks() {
  */
 
 const kvGetMocks = new Map<string, string | Buffer>();
+const r2GetMocks = new Map<string, string | undefined>();
 
 /**
  * @mocked typeof fetchKVGetValue
@@ -206,6 +209,55 @@ export function setMockFetchKVGetValue(
 	kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
 }
 
-export function unsetMockFetchKVGetValues() {
+/**
+ * @mocked typeof fetchR2Objects
+ */
+export async function mockFetchR2Objects(
+	resource: string,
+	bodyInit: {
+		body: BodyInit | Readable;
+		headers: HeadersInit | undefined;
+		method: "PUT" | "GET";
+	}
+): Promise<Response> {
+	/**
+	 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
+	 * mimicking the fetch request taking in the stream and draining it.
+	 */
+	if (bodyInit.body instanceof Readable) {
+		bodyInit.body.destroy();
+		bodyInit.body.removeAllListeners();
+	}
+
+	if (r2GetMocks.has(resource)) {
+		const value = r2GetMocks.get(resource);
+
+		return new Response(value);
+	}
+	throw new Error(`no expected mock found for \`r2 object get\` - ${resource}`);
+}
+
+/**
+ * Mock setter for usage within test blocks, companion helper to `mockFetchR2Objects`
+ */
+export function setMockFetchR2Objects({
+	accountId,
+	bucketName,
+	objectName,
+	mockResponse,
+}: {
+	accountId: string;
+	bucketName: string;
+	objectName: string;
+	mockResponse?: string;
+}) {
+	r2GetMocks.set(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
+		mockResponse
+	);
+}
+
+export function unsetSpecialMockFns() {
 	kvGetMocks.clear();
+	r2GetMocks.clear();
 }
