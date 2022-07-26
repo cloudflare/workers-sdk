@@ -786,8 +786,6 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		};
 	}
 
-	console.log("SCOPE", scope);
-
 	if (scope) {
 		// Multiple scopes are passed and delimited by spaces,
 		// despite using the singular name "scope".
