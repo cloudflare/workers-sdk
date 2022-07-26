@@ -1,27 +1,38 @@
-// DO NOT IMPORT THIS DIRECTLY
+// @ts-expect-error
 import worker from "__ENTRY_POINT__";
 import {
 	getAssetFromKV,
 	NotFoundError,
 	MethodNotAllowedError,
+	// @ts-expect-error
 } from "__KV_ASSET_HANDLER__";
+// @ts-expect-error
 import manifest from "__STATIC_CONTENT_MANIFEST";
+import type * as kvAssetHandler from "@cloudflare/kv-asset-handler";
+
 const ASSET_MANIFEST = JSON.parse(manifest);
 
+// @ts-expect-error
 export * from "__ENTRY_POINT__";
 
 export default {
-	async fetch(request, env, ctx) {
+	async fetch(
+		request: Request,
+		env: { __STATIC_CONTENT: string },
+		ctx: ExecutionContext
+	) {
 		let options = {
 			ASSET_MANIFEST,
 			ASSET_NAMESPACE: env.__STATIC_CONTENT,
 		};
 
 		try {
-			const page = await getAssetFromKV(
+			const page = await (
+				getAssetFromKV as typeof kvAssetHandler.getAssetFromKV
+			)(
 				{
 					request,
-					waitUntil(promise) {
+					waitUntil(promise: Promise<unknown>) {
 						return ctx.waitUntil(promise);
 					},
 				},
@@ -41,11 +52,10 @@ export default {
 		} catch (e) {
 			if (e instanceof NotFoundError || e instanceof MethodNotAllowedError) {
 				// if a known error is thrown then serve from actual worker
-				return worker.fetch(request, env, ctx);
+				return await worker.fetch(request, env, ctx);
 			}
 			// otherwise it's a real error, so throw it
-			console.error(e);
-			return new Response(e.message, { status: 500 });
+			throw e;
 		}
 	},
 };
