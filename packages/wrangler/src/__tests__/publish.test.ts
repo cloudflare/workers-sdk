@@ -1438,7 +1438,9 @@ addEventListener('fetch', event => {});`
 				id: "__test-name-workers_sites_assets-id",
 			};
 			writeAssets(assets);
-			mockUploadWorkerRequest({ expectedMainModule: "stdin.js" });
+			mockUploadWorkerRequest({
+				expectedMainModule: "serve-static-assets.entry.js",
+			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
@@ -1526,7 +1528,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "stdin.js",
+				expectedMainModule: "serve-static-assets.entry.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1708,7 +1710,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "stdin.js",
+				expectedMainModule: "serve-static-assets.entry.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1753,7 +1755,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "stdin.js",
+				expectedMainModule: "serve-static-assets.entry.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -2777,7 +2779,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets, "my-assets");
 			mockUploadWorkerRequest({
-				expectedMainModule: "stdin.js",
+				expectedMainModule: "serve-static-assets.entry.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
