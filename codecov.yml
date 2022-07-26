@@ -1,13 +1,8 @@
-codecov:
-  if_ci_failed: ignore # ignore, fail, pass
-  informational: true
-
 coverage:
   status:
-    # Learn more at https://docs.codecov.io/docs/commit-status
     project:
       default:
-        threshold: 1% # allow this much decrease on project
+        informational: true
 
 comment:
   layout: "reach, diff, flags, files"
