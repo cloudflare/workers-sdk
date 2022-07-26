@@ -123,9 +123,9 @@ export default function createModuleCollector(props: {
 						{
 							filter: new RegExp(
 								"^(" +
-									[...props.wrangler1xlegacyModuleReferences.fileNames].join(
-										"|"
-									) +
+									[...props.wrangler1xlegacyModuleReferences.fileNames]
+										.join("|")
+										.replace("+", "\\+") +
 									")$"
 							),
 						},
