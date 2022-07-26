@@ -205,11 +205,12 @@ describe("WhoAmI component", () => {
 		);
 	});
 
-	it("should display the user's email and accounts", async () => {
+	it("should display the user's email, accounts and OAuth scopes", async () => {
 		const user: UserInfo = {
 			authType: "OAuth Token",
 			apiToken: "some-oauth-token",
 			email: "user@example.com",
+			tokenPermissions: ["scope1:read", "scope2:write", "scope3"],
 			accounts: [
 				{ name: "Account One", id: "account-1" },
 				{ name: "Account Two", id: "account-2" },
@@ -226,5 +227,63 @@ describe("WhoAmI component", () => {
 		expect(lastFrame()).toMatch(/Account One .+ account-1/);
 		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
 		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+		expect(lastFrame()).toContain(
+			"Token Permissions: If scopes are missing, you may need to logout and re-login."
+		);
+		expect(lastFrame()).toContain("- scope1 (read)");
+		expect(lastFrame()).toContain("- scope2 (write)");
+		expect(lastFrame()).toContain("- scope3");
+	});
+
+	// For the case where the cache hasn't updated to include the scopes array
+	it("should display the user's email and accounts, but no OAuth scopes if none provided", async () => {
+		const user: UserInfo = {
+			authType: "OAuth Token",
+			apiToken: "some-oauth-token",
+			email: "user@example.com",
+			tokenPermissions: undefined,
+			accounts: [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			],
+		};
+
+		const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
+
+		expect(lastFrame()).toContain(
+			"You are logged in with an OAuth Token, associated with the email 'user@example.com'!"
+		);
+		expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
+		expect(lastFrame()).toMatch(/Account One .+ account-1/);
+		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
+		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+	});
+
+	it("should display the user's email, accounts and link to view token permissions for non-OAuth tokens", async () => {
+		const user: UserInfo = {
+			authType: "API Token",
+			apiToken: "some-api-token",
+			email: "user@example.com",
+			tokenPermissions: undefined,
+			accounts: [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			],
+		};
+
+		const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
+
+		expect(lastFrame()).toContain(
+			"You are logged in with an API Token, associated with the email 'user@example.com'!"
+		);
+		expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
+		expect(lastFrame()).toMatch(/Account One .+ account-1/);
+		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
+		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+		expect(lastFrame()).toContain(
+			"To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
+		);
 	});
 });
