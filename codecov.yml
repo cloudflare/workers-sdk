@@ -1,5 +1,9 @@
-if_ci_failed: ignore # ignore, fail, pass
-informational: true
+coverage:
+  status:
+    project:
+      default:
+        informational: true # https://docs.codecov.com/docs/commit-status#informational
+
 comment:
   layout: "reach, diff, flags, files"
   behavior: default
