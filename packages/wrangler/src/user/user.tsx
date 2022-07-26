@@ -262,6 +262,7 @@ interface State extends AuthTokens {
 interface AuthTokens {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
+	scopes?: Scope[];
 	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
 	apiToken?: string;
 }
@@ -279,6 +280,7 @@ export interface UserAuthConfig {
 	oauth_token?: string;
 	refresh_token?: string;
 	expiration_time?: string;
+	scopes?: string[];
 	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
 	api_token?: string;
 }
@@ -355,7 +357,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 		if (getAuthFromEnv()) return;
 
 		// otherwise try loading from the user auth config file.
-		const { oauth_token, refresh_token, expiration_time, api_token } =
+		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
 			config || readAuthConfigFile();
 
 		if (oauth_token) {
@@ -366,6 +368,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 					expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
 				},
 				refreshToken: { value: refresh_token ?? "" },
+				scopes: scopes as Scope[],
 			};
 		} else if (api_token) {
 			logger.warn(
@@ -783,6 +786,8 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		};
 	}
 
+	console.log("SCOPE", scope);
+
 	if (scope) {
 		// Multiple scopes are passed and delimited by spaces,
 		// despite using the singular name "scope".
@@ -959,6 +964,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
 							oauth_token: exchange.token?.value ?? "",
 							expiration_time: exchange.token?.expiry,
 							refresh_token: exchange.refreshToken?.value,
+							scopes: exchange.scopes,
 						});
 						res.writeHead(307, {
 							Location:
@@ -1003,8 +1009,14 @@ async function refreshToken(): Promise<boolean> {
 				expiry: "",
 			},
 			refreshToken: { value: refresh_token } = {},
+			scopes,
 		} = await exchangeRefreshTokenForAccessToken();
-		writeAuthConfigFile({ oauth_token, expiration_time, refresh_token });
+		writeAuthConfigFile({
+			oauth_token,
+			expiration_time,
+			refresh_token,
+			scopes,
+		});
 		return true;
 	} catch (err) {
 		return false;
@@ -1168,4 +1180,12 @@ export function getAccountFromCache():
 	return getConfigCache<{ account: { id: string; name: string } }>(
 		"wrangler-account.json"
 	).account;
+}
+
+/**
+ * Get the scopes of the following token, will only return scopes
+ * if the token is an OAuth token.
+ */
+export function getScopes(): Scope[] | undefined {
+	return LocalState.scopes;
 }
