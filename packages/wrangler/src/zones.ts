@@ -10,6 +10,10 @@ export interface Zone {
 }
 
 export function getHostFromRoute(route: Route): string | undefined {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	return typeof route === "string"
 		? getHostFromUrl(route)
 		: typeof route === "object"
@@ -27,6 +31,10 @@ export function getHostFromRoute(route: Route): string | undefined {
  * - We try to get a zone id from the host
  */
 export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	const host = getHostFromRoute(route);
 	const id =
 		typeof route === "object" && "zone_id" in route
@@ -41,9 +49,19 @@ export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
  * Given something that resembles a URL, try to extract a host from it.
  */
 function getHostFromUrl(urlLike: string): string | undefined {
-	// strip leading * / *.
+	// strip leading * / *.	console.log("Doing random stuff for testing");
+	if (urlLike) {
+		for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+			console.log(stuff);
+		}
+	}
 	urlLike = urlLike.replace(/^\*(\.)?/g, "");
-
+	if (urlLike === "something") {
+		console.log("Doing random stuff for testing");
+		for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+			console.log(stuff);
+		}
+	}
 	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
 		urlLike = "http://" + urlLike;
 	}

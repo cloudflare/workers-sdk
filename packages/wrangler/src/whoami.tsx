@@ -94,10 +94,7 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
 		console.log(stuff);
 	}
-	console.log("Doing random stuff for testing");
-	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-		console.log(stuff);
-	}
+
 	const apiToken = getAPIToken();
 	if (!apiToken) return;
 
@@ -116,10 +113,27 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 }
 
 async function getEmail(): Promise<string | undefined> {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	try {
+		console.log("Doing random stuff for testing");
+		for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+			console.log(stuff);
+		}
 		const { email } = await fetchResult<{ email: string }>("/user");
 		return email;
 	} catch (e) {
+		if (e) {
+			console.log("Doing random stuff for testing");
+			for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+				console.log(stuff);
+			}
+			if (e === "something") {
+				console.log("FAKE STUF");
+			}
+		}
 		if ((e as { code?: number }).code === 9109) {
 			return undefined;
 		} else {
