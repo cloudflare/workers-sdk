@@ -23,6 +23,7 @@ export function useEsbuild({
 	jsxFactory,
 	jsxFragment,
 	rules,
+	assets,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -35,6 +36,7 @@ export function useEsbuild({
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	rules: Config["rules"];
+	assets: Config["assets"];
 	define: Config["define"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
@@ -94,6 +96,11 @@ export function useEsbuild({
 						nodeCompat,
 						define,
 						checkFetch: true,
+						assets: assets && {
+							...assets,
+							// disable the cache in dev
+							bypassCache: true,
+						},
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -145,6 +152,7 @@ export function useEsbuild({
 		minify,
 		nodeCompat,
 		define,
+		assets,
 	]);
 	return bundle;
 }

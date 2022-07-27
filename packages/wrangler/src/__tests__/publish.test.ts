@@ -1551,28 +1551,28 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets assets --latest --name test-name");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 	});
 
@@ -1639,23 +1639,23 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets assets");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should error when trying to use --assets with a service-worker Worker", async () => {
@@ -1738,6 +1738,7 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			writeWorkerSource();
@@ -1767,6 +1768,7 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -1821,28 +1823,29 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish --assets ./assets");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading subdir/file-1.txt...
-			        Uploading as subdir/file-1.2ca234f380.txt...
-			        Reading subdir/file-2.txt...
-			        Uploading as subdir/file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading subdir/file-1.txt...
+			Uploading as subdir/file-1.2ca234f380.txt...
+			Reading subdir/file-2.txt...
+			Uploading as subdir/file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			const assets = [
@@ -1866,25 +1869,25 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading subdir/file-1.txt...
-			        Uploading as subdir/file-1.2ca234f380.txt...
-			        Reading subdir/file-2.txt...
-			        Uploading as subdir/file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading subdir/file-1.txt...
+			Uploading as subdir/file-1.2ca234f380.txt...
+			Reading subdir/file-2.txt...
+			Uploading as subdir/file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"assets\\" fields are experimental and may change or break at any time.
+			    - \\"assets\\" fields are experimental and may change or break at any time.
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not contain backslash for assets with nested directories", async () => {
@@ -2891,23 +2894,23 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets .");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 	});
 

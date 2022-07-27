@@ -463,6 +463,56 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[assets]", () => {
+			it("normalizes a string input to an object", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						assets: "path/to/assets",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.assets).toMatchInlineSnapshot(`
+			Object {
+			  "browser_TTL": undefined,
+			  "bucket": "path/to/assets",
+			  "exclude": Array [],
+			  "include": Array [],
+			  "serve_single_page_app": false,
+			}
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"assets\\" fields are experimental and may change or break at any time."
+		`);
+			});
+
+			it("errors when input is not a string or object", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						assets: 123,
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.assets).toBeUndefined();
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"assets\\" fields are experimental and may change or break at any time."
+		`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Expected the \`assets\` field to be a string or an object, but got number."
+		`);
+			});
+
 			it("should error if `assets` config is missing `bucket`", () => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
@@ -478,7 +528,9 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(config.assets).toEqual(
+					expect.objectContaining(expectedConfig.assets)
+				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 
@@ -498,6 +550,8 @@ describe("normalizeAndValidateConfig()", () => {
 						bucket: "BUCKET",
 						include: [222, 333],
 						exclude: [444, 555],
+						browser_TTL: "not valid",
+						serve_single_page_app: "INVALID",
 					},
 				};
 
@@ -514,12 +568,14 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"assets\\" fields are experimental and may change or break at any time."
 		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"assets.include.[0]\\" to be of type string but got 222.
-			            - Expected \\"assets.include.[1]\\" to be of type string but got 333.
-			            - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
-			            - Expected \\"assets.exclude.[1]\\" to be of type string but got 555."
-		        `);
+			"Processing wrangler configuration:
+			  - Expected \\"assets.include.[0]\\" to be of type string but got 222.
+			  - Expected \\"assets.include.[1]\\" to be of type string but got 333.
+			  - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
+			  - Expected \\"assets.exclude.[1]\\" to be of type string but got 555.
+			  - Expected \\"assets.browser_TTL\\" to be of type number but got \\"not valid\\".
+			  - Expected \\"assets.serve_single_page_app\\" to be of type boolean but got \\"INVALID\\"."
+		`);
 			});
 		});
 

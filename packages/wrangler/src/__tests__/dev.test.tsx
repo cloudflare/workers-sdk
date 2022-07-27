@@ -1038,6 +1038,7 @@ describe("wrangler dev", () => {
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1051,6 +1052,7 @@ describe("wrangler dev", () => {
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -1102,6 +1104,7 @@ describe("wrangler dev", () => {
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			fs.writeFileSync("index.js", `export default {};`);

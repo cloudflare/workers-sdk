@@ -18,6 +18,12 @@ type BundleResult = {
 	stop: (() => void) | undefined;
 };
 
+type StaticAssetsConfig =
+	| (Config["assets"] & {
+			bypassCache: boolean | undefined;
+	  })
+	| undefined;
+
 /**
  * Searches for any uses of node's builtin modules, and throws an error if it
  * finds anything. This plugin is only used when nodeCompat is not enabled.
@@ -53,6 +59,7 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
+		assets: StaticAssetsConfig;
 		jsxFactory: string | undefined;
 		jsxFragment: string | undefined;
 		rules: Config["rules"];
@@ -74,6 +81,7 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
+		assets,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -127,7 +135,7 @@ export async function bundleWorker(
 	const middleware: (false | MiddlewareFn)[] = [
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
-				return applyStaticAssetFacade(currentEntry, tmpDir.path);
+				return applyStaticAssetFacade(currentEntry, tmpDir.path, assets);
 			}),
 		// We use an env var here because we don't actually
 		// want to expose this to the user. It's only used internally to
@@ -283,7 +291,8 @@ async function applyFormatDevErrorsFacade(
 
 async function applyStaticAssetFacade(
 	entry: Entry,
-	tmpDirPath: string
+	tmpDirPath: string,
+	assets: StaticAssetsConfig
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
 
@@ -301,6 +310,20 @@ async function applyStaticAssetFacade(
 				__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 			}),
 		],
+		define: {
+			__CACHE_CONTROL_OPTIONS__: JSON.stringify(
+				typeof assets === "object"
+					? {
+							browserTTL:
+								assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
+							bypassCache: assets.bypassCache,
+					  }
+					: {}
+			),
+			__SERVE_SINGLE_PAGE_APP__: JSON.stringify(
+				typeof assets === "object" ? assets.serve_single_page_app : false
+			),
+		},
 		outfile: targetPath,
 	});
 
