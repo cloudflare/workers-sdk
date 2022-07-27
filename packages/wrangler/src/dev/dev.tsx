@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import * as path from "node:path";
+import * as util from "node:util";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
@@ -9,6 +10,12 @@ import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
+import {
+	getRegisteredWorkers,
+	startWorkerRegistry,
+	stopWorkerRegistry,
+	unregisterWorker,
+} from "../dev-registry";
 import { runCustomBuild } from "../entry";
 import { openInspector } from "../inspect";
 import { logger } from "../logger";
@@ -18,10 +25,93 @@ import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
+
+/**
+ * This hooks establishes a connection with the dev registry,
+ * and periodically updates itself with details of workers currently
+ * running a dev session on this system.
+ */
+function useDevRegistry(
+	name: string | undefined,
+	services: Config["services"] | undefined,
+	mode: "local" | "remote"
+): WorkerRegistry {
+	const [workers, setWorkers] = useState<WorkerRegistry>({});
+
+	useEffect(() => {
+		// Let's try to start registry
+		// TODO: we should probably call this in a loop
+		// in case the registry dies elsewhere
+		startWorkerRegistry().catch((err) => {
+			logger.error("failed to start worker registry", err);
+		});
+
+		const serviceNames = (services || []).map(
+			(serviceBinding) => serviceBinding.service
+		);
+
+		const interval =
+			// TODO: enable this for remote mode as well
+			// https://github.com/cloudflare/wrangler2/issues/1182
+			mode === "local"
+				? setInterval(() => {
+						getRegisteredWorkers().then(
+							(workerDefinitions: WorkerRegistry | undefined) => {
+								// We only want the workers that we're bound to
+								// so let's filter out the others
+								const filteredWorkers = Object.fromEntries(
+									Object.entries(workerDefinitions || {}).filter(
+										([key, _value]) => serviceNames.includes(key)
+									)
+								);
+								setWorkers((prevWorkers) => {
+									if (!util.isDeepStrictEqual(filteredWorkers, prevWorkers)) {
+										return filteredWorkers;
+									}
+									return prevWorkers;
+								});
+							},
+							(err) => {
+								logger.warn("Failed to get worker definitions", err);
+							}
+						);
+				  }, 300)
+				: undefined;
+
+		return () => {
+			interval && clearInterval(interval);
+			Promise.allSettled([
+				name ? unregisterWorker(name) : Promise.resolve(),
+				stopWorkerRegistry(),
+			]).then(
+				([unregisterResult, stopRegistryResult]) => {
+					if (unregisterResult.status === "rejected") {
+						logger.error(
+							"Failed to unregister worker",
+							unregisterResult.reason
+						);
+					}
+					if (stopRegistryResult.status === "rejected") {
+						logger.error(
+							"Failed to stop worker registry",
+							stopRegistryResult.reason
+						);
+					}
+				},
+				(err) => {
+					logger.error("Failed to clear dev registry effect", err);
+				}
+			);
+		};
+	}, [name, services, mode]);
+
+	return workers;
+}
 
 export type DevProps = {
 	name: string | undefined;
@@ -46,6 +136,7 @@ export type DevProps = {
 	crons: Config["triggers"]["crons"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
+	assetsConfig: Config["assets"];
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -157,6 +248,12 @@ function DevSession(props: DevSessionProps) {
 
 	const directory = useTmpDir();
 
+	const workerDefinitions = useDevRegistry(
+		props.name,
+		props.bindings.services,
+		props.local ? "local" : "remote"
+	);
+
 	const bundle = useEsbuild({
 		entry: props.entry,
 		destination: directory,
@@ -171,6 +268,9 @@ function DevSession(props: DevSessionProps) {
 		nodeCompat: props.nodeCompat,
 		define: props.define,
 		noBundle: props.noBundle,
+		assets: props.assetsConfig,
+		workerDefinitions,
+		services: props.bindings.services,
 	});
 
 	return props.local ? (
@@ -182,7 +282,6 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
-			isWorkersSite={props.isWorkersSite}
 			port={props.port}
 			ip={props.ip}
 			rules={props.rules}

@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
+import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
@@ -23,7 +24,6 @@ interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	assetPaths: AssetPaths | undefined;
-	isWorkersSite: boolean;
 	port: number;
 	ip: string;
 	rules: Config["rules"];
@@ -58,7 +58,6 @@ function useLocalWorker({
 	compatibilityFlags,
 	bindings,
 	assetPaths,
-	isWorkersSite,
 	port,
 	inspectorPort,
 	rules,
@@ -88,6 +87,15 @@ function useLocalWorker({
 		  // so that it's persisted in the temp dir across a dev session
 		  // even when we change source and reload
 		  null;
+
+	useEffect(() => {
+		if (bindings.services && bindings.services.length > 0) {
+			logger.warn(
+				"⎔ Support for service bindings in local mode is experimental and may change."
+			);
+		}
+	}, [bindings.services]);
+
 	useEffect(() => {
 		const abortController = new AbortController();
 		async function startLocalWorker() {
@@ -99,12 +107,6 @@ function useLocalWorker({
 				timeout: 2000,
 				abortSignal: abortController.signal,
 			});
-
-			if (bindings.services && bindings.services.length > 0) {
-				throw new Error(
-					"⎔ Service bindings are not yet supported in local mode."
-				);
-			}
 
 			// In local mode, we want to copy all referenced modules into
 			// the output bundle directory before starting up
@@ -273,8 +275,17 @@ function useLocalWorker({
 				stdio: "pipe",
 			}));
 
-			child.on("message", (message) => {
+			child.on("message", async (message) => {
 				if (message === "ready") {
+					// Let's register our presence in the dev registry
+					if (workerName) {
+						await registerWorker(workerName, {
+							protocol: localProtocol,
+							mode: "local",
+							port,
+							host: ip,
+						});
+					}
 					onReady?.();
 				}
 			});
@@ -357,7 +368,6 @@ function useLocalWorker({
 		localPersistencePath,
 		liveReload,
 		assetPaths,
-		isWorkersSite,
 		rules,
 		bindings.wasm_modules,
 		bindings.text_blobs,

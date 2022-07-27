@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { bundleWorker } from "../bundle";
 import { logger } from "../logger";
 import type { Config } from "../config";
+import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { CfModule } from "../worker";
 import type { WatchMode } from "esbuild";
@@ -23,24 +24,30 @@ export function useEsbuild({
 	jsxFactory,
 	jsxFragment,
 	rules,
+	assets,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
 	nodeCompat,
 	define,
 	noBundle,
+	workerDefinitions,
+	services,
 }: {
 	entry: Entry;
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	rules: Config["rules"];
+	assets: Config["assets"];
 	define: Config["define"];
+	services: Config["services"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
+	workerDefinitions: WorkerRegistry;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -94,6 +101,13 @@ export function useEsbuild({
 						nodeCompat,
 						define,
 						checkFetch: true,
+						assets: assets && {
+							...assets,
+							// disable the cache in dev
+							bypassCache: true,
+						},
+						workerDefinitions,
+						services,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -145,6 +159,9 @@ export function useEsbuild({
 		minify,
 		nodeCompat,
 		define,
+		assets,
+		services,
+		workerDefinitions,
 	]);
 	return bundle;
 }

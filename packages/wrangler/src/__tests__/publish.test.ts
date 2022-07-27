@@ -23,6 +23,7 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
+import type { CustomDomainChangeset, CustomDomain } from "../publish";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
 
@@ -782,6 +783,7 @@ describe("publish", () => {
 				writeWorkerSource();
 				mockUpdateWorkerRequest({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
 						override_scope: true,
@@ -794,63 +796,145 @@ describe("publish", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should allow retrying if publish fails with a conflicting custom domain error", async () => {
+			it("should confirm override if custom domain publish would override an existing domain", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
 				mockUpdateWorkerRequest({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
-				mockPublishCustomDomainsRequestConflictWithoutOverride({
-					originConflicts: true,
+				mockCustomDomainsChangesetRequest({
+					originConflicts: [
+						{
+							id: "101",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name",
+							environment: "",
+						},
+					],
+				});
+				mockCustomDomainLookup({
+					id: "101",
+					zone_id: "",
+					zone_name: "",
+					hostname: "api.example.com",
+					service: "other-script",
+					environment: "",
+				});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: true,
+						override_existing_dns_record: false,
+					},
 					domains: [{ hostname: "api.example.com" }],
 				});
 				mockConfirm({
-					text: `Custom Domains already exist for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+					text: `Custom Domains already exist for these domains:
+\t• api.example.com (used as a domain for "other-script")
+Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("publish ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should allow retrying if publish fails with a conflicting DNS record error", async () => {
+			it("should confirm override if custom domain publish contains a conflicting DNS record", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
 				mockUpdateWorkerRequest({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
-				mockPublishCustomDomainsRequestConflictWithoutOverride({
-					dnsRecordConflicts: true,
+				mockCustomDomainsChangesetRequest({
+					dnsRecordConflicts: [
+						{
+							id: "",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name",
+							environment: "",
+						},
+					],
+				});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: true,
+					},
 					domains: [{ hostname: "api.example.com" }],
 				});
 				mockConfirm({
-					text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+					text: `You already have DNS records that conflict for these Custom Domains:
+\t• api.example.com
+Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("publish ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should allow retrying for conflicting custom domains and then again for conflicting dns", async () => {
+			it("should confirm for conflicting custom domains and then again for conflicting dns", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
 				mockUpdateWorkerRequest({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
-				mockPublishCustomDomainsRequestConflictWithoutOverride({
-					originConflicts: true,
-					dnsRecordConflicts: true,
+				mockCustomDomainsChangesetRequest({
+					originConflicts: [
+						{
+							id: "101",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name",
+							environment: "",
+						},
+					],
+					dnsRecordConflicts: [
+						{
+							id: "",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name",
+							environment: "",
+						},
+					],
+				});
+				mockCustomDomainLookup({
+					id: "101",
+					zone_id: "",
+					zone_name: "",
+					hostname: "api.example.com",
+					service: "other-script",
+					environment: "",
+				});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: true,
+						override_existing_dns_record: true,
+					},
 					domains: [{ hostname: "api.example.com" }],
 				});
 				mockConfirm(
 					{
-						text: `Custom Domains already exist for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+						text: `Custom Domains already exist for these domains:
+\t• api.example.com (used as a domain for "other-script")
+Update them to point to this script instead?`,
 						result: true,
 					},
 					{
-						text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+						text: `You already have DNS records that conflict for these Custom Domains:
+\t• api.example.com
+Update them to point to this script instead?`,
+
 						result: true,
 					}
 				);
@@ -882,19 +966,37 @@ describe("publish", () => {
 				);
 			});
 
-			it("should not retry publish on error if user does not confirm", async () => {
+			it("should not continue with publishing an override if user does not confirm", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
 				mockUpdateWorkerRequest({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
-				mockPublishCustomDomainsRequestConflictWithoutOverride({
-					dnsRecordConflicts: true,
-					domains: [{ hostname: "api.example.com" }],
+				mockCustomDomainsChangesetRequest({
+					originConflicts: [
+						{
+							id: "101",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name",
+							environment: "",
+						},
+					],
+				});
+				mockCustomDomainLookup({
+					id: "101",
+					zone_id: "",
+					zone_name: "",
+					hostname: "api.example.com",
+					service: "other-script",
+					environment: "",
 				});
 				mockConfirm({
-					text: `You already have conflicting DNS records for these domains: "api.example.com"\nUpdate them to point to this script instead?`,
+					text: `Custom Domains already exist for these domains:
+\t• api.example.com (used as a domain for "other-script")
+Update them to point to this script instead?`,
 					result: false,
 				});
 				await runWrangler("publish ./index");
@@ -1449,28 +1551,28 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets assets --latest --name test-name");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 	});
 
@@ -1537,23 +1639,23 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets assets");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should error when trying to use --assets with a service-worker Worker", async () => {
@@ -1636,6 +1738,7 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			writeWorkerSource();
@@ -1665,6 +1768,7 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -1719,28 +1823,29 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish --assets ./assets");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading subdir/file-1.txt...
-			        Uploading as subdir/file-1.2ca234f380.txt...
-			        Reading subdir/file-2.txt...
-			        Uploading as subdir/file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading subdir/file-1.txt...
+			Uploading as subdir/file-1.2ca234f380.txt...
+			Reading subdir/file-2.txt...
+			Uploading as subdir/file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
+				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			const assets = [
@@ -1764,25 +1869,25 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading subdir/file-1.txt...
-			        Uploading as subdir/file-1.2ca234f380.txt...
-			        Reading subdir/file-2.txt...
-			        Uploading as subdir/file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading subdir/file-1.txt...
+			Uploading as subdir/file-1.2ca234f380.txt...
+			Reading subdir/file-2.txt...
+			Uploading as subdir/file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"assets\\" fields are experimental and may change or break at any time.
+			    - \\"assets\\" fields are experimental and may change or break at any time.
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not contain backslash for assets with nested directories", async () => {
@@ -2789,23 +2894,23 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish --assets .");
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Reading file-1.txt...
-			        Uploading as file-1.2ca234f380.txt...
-			        Reading file-2.txt...
-			        Uploading as file-2.5938485188.txt...
-			        ↗️  Done syncing assets
-			        Total Upload: 52xx KiB / gzip: 13xx KiB
-			        Uploaded test-name (TIMINGS)
-			        Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: 52xx KiB / gzip: 14xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 	});
 
@@ -6420,6 +6525,76 @@ function mockPublishRoutesFallbackRequest(route: {
 	});
 }
 
+function mockCustomDomainLookup(origin: CustomDomain) {
+	setMockResponse(
+		`/accounts/:accountId/workers/domains/records/:domainTag`,
+		"GET",
+		([_url, accountId, domainTag]) => {
+			expect(accountId).toEqual("some-account-id");
+			expect(domainTag).toEqual(origin.id);
+
+			return origin;
+		}
+	);
+}
+
+function mockCustomDomainsChangesetRequest({
+	originConflicts = [],
+	dnsRecordConflicts = [],
+	env = undefined,
+	legacyEnv = false,
+}: {
+	originConflicts?: Array<CustomDomain>;
+	dnsRecordConflicts?: Array<CustomDomain>;
+	env?: string | undefined;
+	legacyEnv?: boolean | undefined;
+}) {
+	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+	setMockResponse(
+		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
+		"POST",
+		([_url, accountId, scriptName, envName], { body }) => {
+			expect(accountId).toEqual("some-account-id");
+			expect(scriptName).toEqual(
+				legacyEnv && env ? `test-name-${env}` : "test-name"
+			);
+			if (!legacyEnv) {
+				expect(envName).toEqual(env);
+			}
+
+			const domains: Array<
+				{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+			> = JSON.parse(body as string);
+
+			const changeset: CustomDomainChangeset = {
+				added: domains.map((domain) => {
+					return {
+						...domain,
+						id: "",
+						service: scriptName,
+						environment: envName,
+						zone_name: "",
+						zone_id: "",
+					};
+				}),
+				removed: [],
+				updated:
+					originConflicts?.map((domain) => {
+						return {
+							...domain,
+							modified: true,
+						};
+					}) ?? [],
+				conflicting: dnsRecordConflicts,
+			};
+
+			return changeset;
+		}
+	);
+}
+
 function mockPublishCustomDomainsRequest({
 	publishFlags,
 	domains = [],
@@ -6441,7 +6616,7 @@ function mockPublishCustomDomainsRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains`,
+		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
 		"PUT",
 		([_url, accountId, scriptName, envName], { body }) => {
 			expect(accountId).toEqual("some-account-id");
@@ -6458,60 +6633,6 @@ function mockPublishCustomDomainsRequest({
 			});
 
 			return null;
-		}
-	);
-}
-
-function mockPublishCustomDomainsRequestConflictWithoutOverride({
-	domains = [],
-	originConflicts = false,
-	dnsRecordConflicts = false,
-	env = undefined,
-	legacyEnv = false,
-}: {
-	originConflicts?: boolean;
-	dnsRecordConflicts?: boolean;
-	domains: Array<
-		{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
-	>;
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-}) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-
-	setMockRawResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains`,
-		"PUT",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-
-			const parsed = JSON.parse(body as string);
-			expect(parsed.origins).toEqual(domains);
-
-			if (originConflicts && !parsed.override_existing_origin) {
-				return createFetchResult(null, false, [
-					{
-						code: 100116,
-						message: `Cannot create Custom Domain "${domains[0].hostname}": Custom Domain already exists and points to a different script; retry and use option "override_existing_origin" to override`,
-					},
-				]);
-			}
-			if (dnsRecordConflicts && !parsed.override_existing_dns_record) {
-				return createFetchResult(null, false, [
-					{
-						code: 100117,
-						message: `Cannot create Custom Domain "${domains[0].hostname}": a DNS record already exists for this origin; retry and use option "override_existing_dns_record" to override`,
-					},
-				]);
-			}
-			return createFetchResult(null, true);
 		}
 	);
 }

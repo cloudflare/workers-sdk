@@ -598,25 +598,68 @@ function normalizeAndValidateAssets(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawConfig: RawConfig
-) {
-	if (
-		typeof rawConfig?.assets === "string" ||
-		rawConfig?.assets === undefined
-	) {
-		return rawConfig?.assets;
+): Config["assets"] {
+	// Even though the type doesn't say it,
+	// we allow for a string input in the config,
+	// so let's normalise it
+	if (typeof rawConfig?.assets === "string") {
+		return {
+			bucket: rawConfig.assets,
+			include: [],
+			exclude: [],
+			browser_TTL: undefined,
+			serve_single_page_app: false,
+		};
 	}
 
-	const { bucket, include = [], exclude = [], ...rest } = rawConfig.assets;
+	if (rawConfig?.assets === undefined) {
+		return undefined;
+	}
+
+	if (typeof rawConfig.assets !== "object") {
+		diagnostics.errors.push(
+			`Expected the \`assets\` field to be a string or an object, but got ${typeof rawConfig.assets}.`
+		);
+		return undefined;
+	}
+
+	const {
+		bucket,
+		include = [],
+		exclude = [],
+		browser_TTL,
+		serve_single_page_app,
+		...rest
+	} = rawConfig.assets;
 
 	validateAdditionalProperties(diagnostics, "assets", Object.keys(rest), []);
+
 	validateRequiredProperty(diagnostics, "assets", "bucket", bucket, "string");
 	validateTypedArray(diagnostics, "assets.include", include, "string");
 	validateTypedArray(diagnostics, "assets.exclude", exclude, "string");
+
+	validateOptionalProperty(
+		diagnostics,
+		"assets",
+		"browser_TTL",
+		browser_TTL,
+		"number"
+	);
+
+	validateOptionalProperty(
+		diagnostics,
+		"assets",
+		"serve_single_page_app",
+		serve_single_page_app,
+		"boolean"
+	);
 
 	return {
 		bucket,
 		include,
 		exclude,
+		browser_TTL,
+		serve_single_page_app,
 	};
 }
 

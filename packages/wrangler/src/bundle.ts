@@ -8,6 +8,7 @@ import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
 import type { Config } from "./config";
+import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
@@ -17,6 +18,12 @@ type BundleResult = {
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
 };
+
+type StaticAssetsConfig =
+	| (Config["assets"] & {
+			bypassCache: boolean | undefined;
+	  })
+	| undefined;
 
 /**
  * Searches for any uses of node's builtin modules, and throws an error if it
@@ -53,6 +60,7 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
+		assets: StaticAssetsConfig;
 		jsxFactory: string | undefined;
 		jsxFragment: string | undefined;
 		rules: Config["rules"];
@@ -62,6 +70,8 @@ export async function bundleWorker(
 		nodeCompat: boolean | undefined;
 		define: Config["define"];
 		checkFetch: boolean;
+		services: Config["services"];
+		workerDefinitions: WorkerRegistry | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -74,6 +84,9 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
+		assets,
+		workerDefinitions,
+		services,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -124,10 +137,10 @@ export async function bundleWorker(
 	// Look at implementations of these functions to learn more.
 
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
-	const middleware: (false | MiddlewareFn)[] = [
+	const middleware: (false | undefined | MiddlewareFn)[] = [
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
-				return applyStaticAssetFacade(currentEntry, tmpDir.path);
+				return applyStaticAssetFacade(currentEntry, tmpDir.path, assets);
 			}),
 		// We use an env var here because we don't actually
 		// want to expose this to the user. It's only used internally to
@@ -136,7 +149,17 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFormatDevErrorsFacade(currentEntry, tmpDir.path);
 			}),
-	].filter((x) => x !== false);
+		workerDefinitions &&
+			services &&
+			((currentEntry: Entry) => {
+				return applyMultiWorkerFacade(
+					currentEntry,
+					tmpDir.path,
+					services,
+					workerDefinitions
+				);
+			}),
+	].filter(Boolean);
 
 	let inputEntry = entry;
 
@@ -283,7 +306,8 @@ async function applyFormatDevErrorsFacade(
 
 async function applyStaticAssetFacade(
 	entry: Entry,
-	tmpDirPath: string
+	tmpDirPath: string,
+	assets: StaticAssetsConfig
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
 
@@ -301,6 +325,63 @@ async function applyStaticAssetFacade(
 				__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 			}),
 		],
+		define: {
+			__CACHE_CONTROL_OPTIONS__: JSON.stringify(
+				typeof assets === "object"
+					? {
+							browserTTL:
+								assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
+							bypassCache: assets.bypassCache,
+					  }
+					: {}
+			),
+			__SERVE_SINGLE_PAGE_APP__: JSON.stringify(
+				typeof assets === "object" ? assets.serve_single_page_app : false
+			),
+		},
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+async function applyMultiWorkerFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	services: Config["services"],
+	workerDefinitions: WorkerRegistry
+) {
+	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
+	const serviceMap = Object.fromEntries(
+		(services || []).map((serviceBinding) => [
+			serviceBinding.binding,
+			workerDefinitions[serviceBinding.service] || null,
+		])
+	);
+
+	await esbuild.build({
+		entryPoints: [
+			path.join(
+				__dirname,
+				entry.format === "modules"
+					? "../templates/service-bindings-module-facade.js"
+					: "../templates/service-bindings-sw-facade.js"
+			),
+		],
+		bundle: true,
+		sourcemap: true,
+		format: "esm",
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
+		define: {
+			__WORKERS__: JSON.stringify(serviceMap),
+		},
 		outfile: targetPath,
 	});
 
