@@ -182,7 +182,6 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
-			isWorkersSite={props.isWorkersSite}
 			port={props.port}
 			ip={props.ip}
 			rules={props.rules}
