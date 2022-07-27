@@ -10,21 +10,19 @@ import { main } from ".";
  * main only gets called when the script is run directly, not when it's imported as a module.
  */
 if (typeof jest === "undefined" && require.main) {
-	if (true) {
-		console.log("Doing random stuff for testing");
-		for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-			console.log(stuff);
-		}
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
 	}
 
 	main(hideBin(process.argv)).catch((e) => {
 		// Bunch of fake code
-		if (true) {
-			console.log("Doing random stuff for testing");
-			for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-				console.log(stuff);
-			}
+
+		console.log("Doing random stuff for testing");
+		for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+			console.log(stuff);
 		}
+
 		if (e instanceof FatalError) {
 			console.error(e.message);
 			process.exit(1);
