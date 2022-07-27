@@ -3,7 +3,7 @@ coverage:
     project:
       default:
         informational: true # https://docs.codecov.com/docs/commit-status#informational
-		patch:
+	 patch:
       default:
         informational: true # https://docs.codecov.com/docs/commit-status#project-status
 
