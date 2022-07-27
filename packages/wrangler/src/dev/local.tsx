@@ -23,7 +23,6 @@ interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	assetPaths: AssetPaths | undefined;
-	isWorkersSite: boolean;
 	port: number;
 	ip: string;
 	rules: Config["rules"];
@@ -58,7 +57,6 @@ function useLocalWorker({
 	compatibilityFlags,
 	bindings,
 	assetPaths,
-	isWorkersSite,
 	port,
 	inspectorPort,
 	rules,
@@ -357,7 +355,6 @@ function useLocalWorker({
 		localPersistencePath,
 		liveReload,
 		assetPaths,
-		isWorkersSite,
 		rules,
 		bindings.wasm_modules,
 		bindings.text_blobs,
