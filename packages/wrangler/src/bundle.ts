@@ -138,10 +138,12 @@ export async function bundleWorker(
 
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
+		// serve static assets
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
 				return applyStaticAssetFacade(currentEntry, tmpDir.path, assets);
 			}),
+		// format errors nicely
 		// We use an env var here because we don't actually
 		// want to expose this to the user. It's only used internally to
 		// experiment with middleware as a teaching exercise.
@@ -149,10 +151,11 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFormatDevErrorsFacade(currentEntry, tmpDir.path);
 			}),
+		// bind to other dev instances/service bindings
 		workerDefinitions &&
 			services &&
 			((currentEntry: Entry) => {
-				return applyMultiWorkerFacade(
+				return applyMultiWorkerDevFacade(
 					currentEntry,
 					tmpDir.path,
 					services,
@@ -348,7 +351,12 @@ async function applyStaticAssetFacade(
 	};
 }
 
-async function applyMultiWorkerFacade(
+/**
+ * A middleware that enables service bindings to be used in dev,
+ * binding to other love wrangler dev instances
+ */
+
+async function applyMultiWorkerDevFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	services: Config["services"],

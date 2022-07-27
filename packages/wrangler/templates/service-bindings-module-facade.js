@@ -1,6 +1,8 @@
 import worker from "__ENTRY_POINT__";
 const Workers = __WORKERS__;
 
+export * from "__ENTRY_POINT__";
+
 export default {
 	async fetch(req, env, ctx) {
 		const facadeEnv = { ...env };
