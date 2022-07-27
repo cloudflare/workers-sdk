@@ -542,7 +542,7 @@ function memoizeGetPort(defaultPort: number) {
 	};
 }
 
-export async function getBindings(
+async function getBindings(
 	configParam: Config,
 	args: AdditionalDevProps
 ): Promise<CfWorkerInit["bindings"]> {
