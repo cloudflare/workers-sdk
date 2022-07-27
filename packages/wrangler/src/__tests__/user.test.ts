@@ -56,6 +56,7 @@ describe("User", () => {
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: expect.any(String),
+				scopes: ["account:read"],
 			});
 		});
 	});
