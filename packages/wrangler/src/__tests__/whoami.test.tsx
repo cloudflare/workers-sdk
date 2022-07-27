@@ -185,14 +185,14 @@ describe("getUserInfo()", () => {
 		});
 		await getUserInfo();
 		expect(std.warn).toMatchInlineSnapshot(`
-		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
+      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
 
-		        This is no longer supported in the current version of Wrangler.
-		        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-		        environment variable.
+        This is no longer supported in the current version of Wrangler.
+        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+        environment variable.
 
-		      "
-	    `);
+      "
+    `);
 	});
 });
 
@@ -219,23 +219,20 @@ describe("WhoAmI component", () => {
 		};
 
 		const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
-		expect(lastFrame()).toMatchInlineSnapshot(`
-		"👋 You are logged in with an OAuth Token, associated with the email 'user@example.com'!
-		[1m┌[22m[1m───────────────[22m[1m┬[22m[1m────────────[22m[1m┐[22m
-		[1m│[22m[1m[34m Account Name  [22m[39m[1m│[22m[1m[34m Account ID [22m[39m[1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account One   [1m│[22m account-1  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Two   [1m│[22m account-2  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Three [1m│[22m account-3  [1m│[22m
-		[1m└[22m[1m───────────────[22m[1m┴[22m[1m────────────[22m[1m┘[22m
-		🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
-		Scope (Access)
-		- scope1 (read)
-		- scope2 (write)
-		- scope3"
-	`);
+
+		expect(lastFrame()).toContain(
+			"You are logged in with an OAuth Token, associated with the email 'user@example.com'!"
+		);
+		expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
+		expect(lastFrame()).toMatch(/Account One .+ account-1/);
+		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
+		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+		expect(lastFrame()).toContain(
+			"Token Permissions: If scopes are missing, you may need to logout and re-login."
+		);
+		expect(lastFrame()).toContain("- scope1 (read)");
+		expect(lastFrame()).toContain("- scope2 (write)");
+		expect(lastFrame()).toContain("- scope3");
 	});
 
 	// For the case where the cache hasn't updated to include the scopes array
@@ -254,18 +251,13 @@ describe("WhoAmI component", () => {
 
 		const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
 
-		expect(lastFrame()).toMatchInlineSnapshot(`
-		"👋 You are logged in with an OAuth Token, associated with the email 'user@example.com'!
-		[1m┌[22m[1m───────────────[22m[1m┬[22m[1m────────────[22m[1m┐[22m
-		[1m│[22m[1m[34m Account Name  [22m[39m[1m│[22m[1m[34m Account ID [22m[39m[1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account One   [1m│[22m account-1  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Two   [1m│[22m account-2  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Three [1m│[22m account-3  [1m│[22m
-		[1m└[22m[1m───────────────[22m[1m┴[22m[1m────────────[22m[1m┘[22m"
-	`);
+		expect(lastFrame()).toContain(
+			"You are logged in with an OAuth Token, associated with the email 'user@example.com'!"
+		);
+		expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
+		expect(lastFrame()).toMatch(/Account One .+ account-1/);
+		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
+		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
 	});
 
 	it("should display the user's email, accounts and link to view token permissions for non-OAuth tokens", async () => {
@@ -282,18 +274,16 @@ describe("WhoAmI component", () => {
 		};
 
 		const { lastFrame } = render(<WhoAmI user={user}></WhoAmI>);
-		expect(lastFrame()).toMatchInlineSnapshot(`
-		"👋 You are logged in with an API Token, associated with the email 'user@example.com'!
-		[1m┌[22m[1m───────────────[22m[1m┬[22m[1m────────────[22m[1m┐[22m
-		[1m│[22m[1m[34m Account Name  [22m[39m[1m│[22m[1m[34m Account ID [22m[39m[1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account One   [1m│[22m account-1  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Two   [1m│[22m account-2  [1m│[22m
-		[1m├[22m[1m───────────────[22m[1m┼[22m[1m────────────[22m[1m┤[22m
-		[1m│[22m Account Three [1m│[22m account-3  [1m│[22m
-		[1m└[22m[1m───────────────[22m[1m┴[22m[1m────────────[22m[1m┘[22m
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
-	`);
+
+		expect(lastFrame()).toContain(
+			"You are logged in with an API Token, associated with the email 'user@example.com'!"
+		);
+		expect(lastFrame()).toMatch(/Account Name .+ Account ID/);
+		expect(lastFrame()).toMatch(/Account One .+ account-1/);
+		expect(lastFrame()).toMatch(/Account Two .+ account-2/);
+		expect(lastFrame()).toMatch(/Account Three .+ account-3/);
+		expect(lastFrame()).toContain(
+			"To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
+		);
 	});
 });
