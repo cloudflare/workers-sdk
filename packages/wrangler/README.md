@@ -39,11 +39,25 @@ npm run deploy
 $ npm install wrangler --save-dev
 ```
 
+## Configuration:
+
+Wrangler is configured via a `wrangler.toml` file in the project root. When utilizing the `wrangler init` command, a `wrangler.toml` file will be created for you.
+
+example:
+
+```toml
+main = "./src/index.ts" # init w/ TypeScript
+name = "my-worker"
+compatibility_date = "YYY-MM-DD"
+```
+
+for more detailed information about configuration, see the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration)
+
 ## Commands
 
 ### `wrangler init [name]`
 
-Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration).
+Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/#init).
 
 ### `wrangler dev`
 
@@ -67,4 +81,8 @@ For more commands and options, refer to the [documentation](https://developers.c
 
 ## Documentation
 
-For the latest Wrangler documentation, [click here](https://6b05b6e1.cloudflare-docs-7ou.pages.dev/workers/wrangler/).
+For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
+
+```
+
+```
