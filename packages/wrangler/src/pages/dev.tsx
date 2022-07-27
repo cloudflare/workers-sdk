@@ -139,7 +139,7 @@ export const Handler = async ({
 
 	let proxyPort: number | undefined;
 
-	if (directory !== undefined && command.length) {
+	if (directory !== undefined && command.length > 0) {
 		throw new FatalError(
 			"Specify either a directory OR a proxy command, not both.",
 			1
