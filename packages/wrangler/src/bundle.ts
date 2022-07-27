@@ -8,6 +8,7 @@ import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
 import type { Config } from "./config";
+import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
@@ -69,6 +70,8 @@ export async function bundleWorker(
 		nodeCompat: boolean | undefined;
 		define: Config["define"];
 		checkFetch: boolean;
+		services: Config["services"];
+		workerDefinitions: WorkerRegistry | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -82,6 +85,8 @@ export async function bundleWorker(
 		nodeCompat,
 		checkFetch,
 		assets,
+		workerDefinitions,
+		services,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -132,7 +137,7 @@ export async function bundleWorker(
 	// Look at implementations of these functions to learn more.
 
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
-	const middleware: (false | MiddlewareFn)[] = [
+	const middleware: (false | undefined | MiddlewareFn)[] = [
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
 				return applyStaticAssetFacade(currentEntry, tmpDir.path, assets);
@@ -144,7 +149,17 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFormatDevErrorsFacade(currentEntry, tmpDir.path);
 			}),
-	].filter((x) => x !== false);
+		workerDefinitions &&
+			services &&
+			((currentEntry: Entry) => {
+				return applyMultiWorkerFacade(
+					currentEntry,
+					tmpDir.path,
+					services,
+					workerDefinitions
+				);
+			}),
+	].filter(Boolean);
 
 	let inputEntry = entry;
 
@@ -323,6 +338,49 @@ async function applyStaticAssetFacade(
 			__SERVE_SINGLE_PAGE_APP__: JSON.stringify(
 				typeof assets === "object" ? assets.serve_single_page_app : false
 			),
+		},
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+async function applyMultiWorkerFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	services: Config["services"],
+	workerDefinitions: WorkerRegistry
+) {
+	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
+	const serviceMap = Object.fromEntries(
+		(services || []).map((serviceBinding) => [
+			serviceBinding.binding,
+			workerDefinitions[serviceBinding.service] || null,
+		])
+	);
+
+	await esbuild.build({
+		entryPoints: [
+			path.join(
+				__dirname,
+				entry.format === "modules"
+					? "../templates/service-bindings-module-facade.js"
+					: "../templates/service-bindings-sw-facade.js"
+			),
+		],
+		bundle: true,
+		sourcemap: true,
+		format: "esm",
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
+		define: {
+			__WORKERS__: JSON.stringify(serviceMap),
 		},
 		outfile: targetPath,
 	});
