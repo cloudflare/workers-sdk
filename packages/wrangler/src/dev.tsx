@@ -421,10 +421,26 @@ export async function startDev(args: StartDevOptions) {
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
 			// now log all available bindings into the terminal
-			const bindings = await getAndPrintBindings(configParam, {
+			const bindings = await getBindings(configParam, {
 				kv: args.kv,
 				vars: args.vars,
 				durableObjects: args.durableObjects,
+			});
+
+			// mask anything that was overridden in .dev.vars
+			// so that we don't log potential secrets into the terminal
+			const maskedVars = { ...bindings.vars };
+			for (const key of Object.keys(maskedVars)) {
+				if (maskedVars[key] !== configParam.vars[key]) {
+					// This means it was overridden in .dev.vars
+					// so let's mask it
+					maskedVars[key] = "(hidden)";
+				}
+			}
+
+			printBindings({
+				...bindings,
+				vars: maskedVars,
 			});
 
 			const assetPaths =
@@ -526,7 +542,7 @@ function memoizeGetPort(defaultPort: number) {
 	};
 }
 
-export async function getAndPrintBindings(
+export async function getBindings(
 	configParam: Config,
 	args: AdditionalDevProps
 ): Promise<CfWorkerInit["bindings"]> {
@@ -588,22 +604,6 @@ export async function getAndPrintBindings(
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 	};
-
-	// mask anything that was overridden in .dev.vars
-	// so that we don't log potential secrets into the terminal
-	const maskedVars = { ...bindings.vars };
-	for (const key of Object.keys(maskedVars)) {
-		if (maskedVars[key] !== configParam.vars[key]) {
-			// This means it was overridden in .dev.vars
-			// so let's mask it
-			maskedVars[key] = "(hidden)";
-		}
-	}
-
-	printBindings({
-		...bindings,
-		vars: maskedVars,
-	});
 
 	return bindings;
 }

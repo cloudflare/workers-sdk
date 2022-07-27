@@ -14,9 +14,9 @@ import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { Local } from "./local";
-import { parseDevProps } from "./parse-dev-props";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
+import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../entry";
@@ -69,7 +69,7 @@ export type DevProps = {
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
-	parseDevProps(props);
+	validateDevProps(props);
 
 	// only load the UI if we're running in a supported environment
 	const { isRawModeSupported } = useStdin();

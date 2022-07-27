@@ -1,6 +1,6 @@
 import type { DevProps } from "./dev";
 
-export function parseDevProps(props: DevProps) {
+export function validateDevProps(props: DevProps) {
 	if (
 		!props.isWorkersSite &&
 		props.assetPaths &&
