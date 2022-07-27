@@ -125,7 +125,7 @@ export default function createModuleCollector(props: {
 								"^(" +
 									[...props.wrangler1xlegacyModuleReferences.fileNames]
 										.join("|")
-										.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+										.replace(/[*+?^${}()|[\]\\]/g, "\\$&") +
 									")$"
 							),
 						},
