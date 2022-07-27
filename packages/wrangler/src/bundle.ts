@@ -63,6 +63,7 @@ export async function bundleWorker(
 		nodeCompat: boolean | undefined;
 		define: Config["define"];
 		checkFetch: boolean;
+		local?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -76,6 +77,7 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
+		local = false,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -142,7 +144,7 @@ export async function bundleWorker(
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
 			((currentEntry: Entry) => {
-				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims);
+				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims, local);
 			}),
 	].filter((x) => x !== false);
 
@@ -328,12 +330,20 @@ async function applyStaticAssetFacade(
 async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
-	betaD1Shims: string[]
+	betaD1Shims: string[],
+
+	local: boolean
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 
 	await esbuild.build({
-		entryPoints: [path.resolve(__dirname, "../templates/d1-beta-facade.js")],
+		entryPoints: [
+			path.resolve(
+				__dirname,
+
+				"../templates/d1-beta-facade.js"
+			),
+		],
 		bundle: true,
 		format: "esm",
 		sourcemap: true,
@@ -344,6 +354,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
+			__LOCAL_MODE__: JSON.stringify(local),
 		},
 		outfile: targetPath,
 	});

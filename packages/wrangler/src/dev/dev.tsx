@@ -193,6 +193,7 @@ function DevSession(props: DevSessionProps) {
 		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
+		local: props.local
 	});
 
 	return props.local ? (
