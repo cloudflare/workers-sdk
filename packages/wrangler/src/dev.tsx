@@ -260,9 +260,7 @@ export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
 	}
 }
 
-type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
-	// These options can be passed in directly when called with the `wrangler.dev()` API.
-	// They aren't exposed as CLI arguments.
+export type AdditionalDevProps = {
 	vars?: {
 		[key: string]: unknown;
 	};
@@ -277,9 +275,14 @@ type StartDevOptions = ArgumentsCamelCase<DevArgs> & {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
-	forceLocal?: boolean;
-	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 };
+type StartDevOptions = ArgumentsCamelCase<DevArgs> &
+	// These options can be passed in directly when called with the `wrangler.dev()` API.
+	// They aren't exposed as CLI arguments.
+	AdditionalDevProps & {
+		forceLocal?: boolean;
+		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+	};
 
 export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
@@ -412,91 +415,16 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		// eslint-disable-next-line no-inner-declarations
-		async function getBindings(
-			configParam: Config
-		): Promise<CfWorkerInit["bindings"]> {
-			return {
-				kv_namespaces: [
-					...(configParam.kv_namespaces || []).map(
-						({ binding, preview_id, id: _id }) => {
-							// In `dev`, we make folks use a separate kv namespace called
-							// `preview_id` instead of `id` so that they don't
-							// break production data. So here we check that a `preview_id`
-							// has actually been configured.
-							// This whole block of code will be obsoleted in the future
-							// when we have copy-on-write for previews on edge workers.
-							if (!preview_id) {
-								// TODO: This error has to be a _lot_ better, ideally just asking
-								// to create a preview namespace for the user automatically
-								throw new Error(
-									`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
-								); // Ugh, I really don't like this message very much
-							}
-							return {
-								binding,
-								id: preview_id,
-							};
-						}
-					),
-					...(args.kv || []),
-				],
-				// Use a copy of combinedVars since we're modifying it later
-				vars: {
-					...getVarsForDev(configParam),
-					...args.vars,
-				},
-				wasm_modules: configParam.wasm_modules,
-				text_blobs: configParam.text_blobs,
-				data_blobs: configParam.data_blobs,
-				durable_objects: {
-					bindings: [
-						...(configParam.durable_objects || { bindings: [] }).bindings,
-						...(args.durableObjects || []),
-					],
-				},
-				r2_buckets: configParam.r2_buckets?.map(
-					({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
-						// same idea as kv namespace preview id,
-						// same copy-on-write TODO
-						if (!preview_bucket_name) {
-							throw new Error(
-								`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
-							);
-						}
-						return {
-							binding,
-							bucket_name: preview_bucket_name,
-						};
-					}
-				),
-				worker_namespaces: configParam.worker_namespaces,
-				services: configParam.services,
-				unsafe: configParam.unsafe?.bindings,
-			};
-		}
-
 		const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
 		const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
 
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
 			// now log all available bindings into the terminal
-			const bindings = await getBindings(configParam);
-			// mask anything that was overridden in .dev.vars
-			// so that we don't log potential secrets into the terminal
-			const maskedVars = { ...bindings.vars };
-			for (const key of Object.keys(maskedVars)) {
-				if (maskedVars[key] !== configParam.vars[key]) {
-					// This means it was overridden in .dev.vars
-					// so let's mask it
-					maskedVars[key] = "(hidden)";
-				}
-			}
-
-			printBindings({
-				...bindings,
-				vars: maskedVars,
+			const bindings = await getAndPrintBindings(configParam, {
+				kv: args.kv,
+				vars: args.vars,
+				durableObjects: args.durableObjects,
 			});
 
 			const assetPaths =
@@ -596,4 +524,86 @@ function memoizeGetPort(defaultPort: number) {
 	return async () => {
 		return portValue || (portValue = await getPort({ port: defaultPort }));
 	};
+}
+
+export async function getAndPrintBindings(
+	configParam: Config,
+	args: AdditionalDevProps
+): Promise<CfWorkerInit["bindings"]> {
+	const bindings = {
+		kv_namespaces: [
+			...(configParam.kv_namespaces || []).map(
+				({ binding, preview_id, id: _id }) => {
+					// In `dev`, we make folks use a separate kv namespace called
+					// `preview_id` instead of `id` so that they don't
+					// break production data. So here we check that a `preview_id`
+					// has actually been configured.
+					// This whole block of code will be obsoleted in the future
+					// when we have copy-on-write for previews on edge workers.
+					if (!preview_id) {
+						// TODO: This error has to be a _lot_ better, ideally just asking
+						// to create a preview namespace for the user automatically
+						throw new Error(
+							`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+						); // Ugh, I really don't like this message very much
+					}
+					return {
+						binding,
+						id: preview_id,
+					};
+				}
+			),
+			...(args.kv || []),
+		],
+		// Use a copy of combinedVars since we're modifying it later
+		vars: {
+			...getVarsForDev(configParam),
+			...args.vars,
+		},
+		wasm_modules: configParam.wasm_modules,
+		text_blobs: configParam.text_blobs,
+		data_blobs: configParam.data_blobs,
+		durable_objects: {
+			bindings: [
+				...(configParam.durable_objects || { bindings: [] }).bindings,
+				...(args.durableObjects || []),
+			],
+		},
+		r2_buckets: configParam.r2_buckets?.map(
+			({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+				// same idea as kv namespace preview id,
+				// same copy-on-write TODO
+				if (!preview_bucket_name) {
+					throw new Error(
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+					);
+				}
+				return {
+					binding,
+					bucket_name: preview_bucket_name,
+				};
+			}
+		),
+		worker_namespaces: configParam.worker_namespaces,
+		services: configParam.services,
+		unsafe: configParam.unsafe?.bindings,
+	};
+
+	// mask anything that was overridden in .dev.vars
+	// so that we don't log potential secrets into the terminal
+	const maskedVars = { ...bindings.vars };
+	for (const key of Object.keys(maskedVars)) {
+		if (maskedVars[key] !== configParam.vars[key]) {
+			// This means it was overridden in .dev.vars
+			// so let's mask it
+			maskedVars[key] = "(hidden)";
+		}
+	}
+
+	printBindings({
+		...bindings,
+		vars: maskedVars,
+	});
+
+	return bindings;
 }
