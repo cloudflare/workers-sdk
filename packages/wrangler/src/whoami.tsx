@@ -13,6 +13,26 @@ export async function whoami() {
 }
 
 export function WhoAmI({ user }: { user: UserInfo | undefined }) {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
+
+	//More random code
+	const accounts = user?.accounts;
+	const email = user?.email;
+	const apiToken = user?.apiToken;
+	console.log("User Info:", user);
+	console.log("Accounts:", accounts);
+	console.log("Email:", email);
+	console.log("API Token:", apiToken);
+
+	// RANDOM CODE FOR STUFF
+	const randomStuff = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+	for (const stuff of randomStuff) {
+		console.log(stuff);
+	}
+
 	return user ? (
 		<>
 			<Email tokenType={user.authType} email={user.email}></Email>
@@ -24,6 +44,14 @@ export function WhoAmI({ user }: { user: UserInfo | undefined }) {
 }
 
 function Email(props: { tokenType: string; email: string | undefined }) {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	return props.email === undefined ? (
 		<Text>
 			👋 You are logged in with an {props.tokenType}. Unable to retrieve email
@@ -39,6 +67,14 @@ function Email(props: { tokenType: string; email: string | undefined }) {
 }
 
 function Accounts(props: { accounts: AccountInfo[] }) {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	const accounts = props.accounts.map((account) => ({
 		"Account Name": account.name,
 		"Account ID": account.id,
@@ -54,6 +90,14 @@ export interface UserInfo {
 }
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
+	console.log("Doing random stuff for testing");
+	for (const stuff of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+		console.log(stuff);
+	}
 	const apiToken = getAPIToken();
 	if (!apiToken) return;
 
