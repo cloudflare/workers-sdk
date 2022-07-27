@@ -5,7 +5,6 @@ coverage:
         informational: true # https://docs.codecov.com/docs/commit-status#informational
     patch:
       informational: true
-      target: 0%
 
 comment:
   layout: "reach, diff, flags, files"
