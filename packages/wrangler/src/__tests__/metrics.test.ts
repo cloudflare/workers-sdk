@@ -65,6 +65,7 @@ describe("metrics", () => {
 						properties: {
 							category: "Workers",
 							wranglerVersion,
+							os: process.platform + ":" + process.arch,
 							a: 1,
 							b: 2,
 						},
@@ -139,6 +140,7 @@ describe("metrics", () => {
 						properties: {
 							category: "Workers",
 							wranglerVersion,
+							os: process.platform + ":" + process.arch,
 							a: 1,
 							b: 2,
 						},
