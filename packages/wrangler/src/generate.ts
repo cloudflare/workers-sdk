@@ -65,7 +65,7 @@ export async function generateHandler({
 		throw new CommandLineArgsError(message);
 	}
 
-	const creationDirectory = generatedWorkerDir(name);
+	const creationDirectory = generateWorkerDirectoryName(name);
 
 	if (site) {
 		const gitDirectory =
@@ -115,16 +115,17 @@ export async function generateHandler({
  *
  * will result in a new worker called `worker-2` being generated.
  *
- * @param name the name of the generated worker
+ * @param workerName the name of the generated worker
  * @returns an absolute path to the directory to generate the worker into
  */
-function generatedWorkerDir(name: string): string {
-	let workerDir = path.resolve(process.cwd(), name);
+function generateWorkerDirectoryName(workerName: string): string {
+	let workerDirectoryPath = path.resolve(process.cwd(), workerName);
 	let i = 1;
-	while (fs.existsSync(workerDir)) {
-		workerDir = path.resolve(process.cwd(), `${name}-${i}`);
+
+	while (fs.existsSync(workerDirectoryPath)) {
+		workerDirectoryPath = path.resolve(process.cwd(), `${workerName}-${i}`);
 		i++;
 	}
 
-	return workerDir;
+	return workerDirectoryPath;
 }
