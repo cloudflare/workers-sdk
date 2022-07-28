@@ -156,6 +156,7 @@ export type DevProps = {
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+	firstPartyWorker: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -246,6 +247,7 @@ function DevSession(props: DevSessionProps) {
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
+		firstPartyWorkerDevFacade: props.firstPartyWorker,
 	});
 
 	return props.local ? (

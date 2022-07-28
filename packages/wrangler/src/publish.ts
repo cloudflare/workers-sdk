@@ -393,6 +393,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// because we don't want to apply the dev-time
 						// facades on top of it
 						workerDefinitions: undefined,
+						firstPartyWorkerDevFacade: false,
 					}
 			  );
 
@@ -505,13 +506,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 			available_on_subdomain = result.available_on_subdomain;
 
-			// Print some useful information returned after publishing
-			// Not all fields will be populated for every worker
-			// These fields are likely to be scraped by tools, so do not rename
-			if (result.id) logger.log("Worker ID: ", result.id);
-			if (result.etag) logger.log("Worker ETag: ", result.etag);
-			if (result.pipeline_hash)
-				logger.log("Worker PipelineHash: ", result.pipeline_hash);
+			if (config.first_party_worker) {
+				// Print some useful information returned after publishing
+				// Not all fields will be populated for every worker
+				// These fields are likely to be scraped by tools, so do not rename
+				if (result.id) logger.log("Worker ID: ", result.id);
+				if (result.etag) logger.log("Worker ETag: ", result.etag);
+				if (result.pipeline_hash)
+					logger.log("Worker PipelineHash: ", result.pipeline_hash);
+			}
 		}
 	} finally {
 		if (typeof destination !== "string") {
