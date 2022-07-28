@@ -124,6 +124,7 @@
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^7.2.2",
+		"create-cloudflare": "^1.0.0",
 		"devtools-protocol": "^0.0.955664",
 		"dotenv": "^16.0.0",
 		"execa": "^6.1.0",

@@ -124,3 +124,5 @@ jest.mock("xdg-app-paths", () => {
 		}),
 	};
 });
+
+jest.mock("create-cloudflare");

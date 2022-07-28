@@ -219,24 +219,6 @@ describe("wrangler", () => {
 		});
 	});
 
-	describe("Deprecated commands", () => {
-		it("should print a deprecation message for 'generate'", async () => {
-			await runWrangler("generate").catch((err) => {
-				expect(err.message).toMatchInlineSnapshot(`
-			          "Deprecation:
-			          \`wrangler generate\` has been deprecated.
-			          Try running \`wrangler init\` to generate a basic Worker, or cloning the template repository instead:
-
-			          \`\`\`
-			          git clone https://github.com/cloudflare/worker-template
-			          \`\`\`
-
-			          Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."
-		        `);
-			});
-		});
-	});
-
 	it("should print a deprecation message for 'build' and then try to run `publish --dry-run --outdir`", async () => {
 		writeWranglerToml({
 			main: "index.js",
