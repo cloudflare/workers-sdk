@@ -512,6 +512,7 @@ export async function startDev(args: StartDevOptions) {
 					forceLocal={args.forceLocal}
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={config.first_party_worker}
+					sendMetrics={config.send_metrics}
 				/>
 			);
 		}
