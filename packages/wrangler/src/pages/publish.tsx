@@ -334,5 +334,5 @@ export const Handler = async ({
 	logger.log(
 		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 	);
-	await metrics.sendMetricsEvent("deploy pages project");
+	await metrics.sendMetricsEvent("create pages deployment");
 };
