@@ -3739,6 +3739,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should remove and warn about deprecated properties", () => {
 				const environment: RawEnvironment = {
 					zone_id: "ZONE_ID",
+					"kv-namespaces": "BAD_KV_NAMESPACE",
 					experimental_services: [
 						{
 							name: "mock-name",
@@ -3764,14 +3765,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+			"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - [1mDeprecation[0m: \\"zone_id\\":
-			                This is unnecessary since we can deduce this from routes directly.
-			              - [1mDeprecation[0m: \\"experimental_services\\":
-			                The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
-		        `);
+			  - \\"env.ENV1\\" environment configuration
+			    - [1mDeprecation[0m: \\"kv-namespaces\\":
+			      The \\"kv-namespaces\\" field is no longer supported, please rename to \\"kv_namespaces\\"
+			    - [1mDeprecation[0m: \\"zone_id\\":
+			      This is unnecessary since we can deduce this from routes directly.
+			    - [1mDeprecation[0m: \\"experimental_services\\":
+			      The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
+		`);
 			});
 		});
 
