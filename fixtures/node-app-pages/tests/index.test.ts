@@ -46,7 +46,7 @@ describe("Pages Dev", () => {
 		});
 	});
 
-	it("should work with `--node-compat` when running code requiring polyfills", async () => {
+	it.skip("should work with `--node-compat` when running code requiring polyfills", async () => {
 		const response = await waitUntilReady("http://localhost:12345/stripe");
 
 		await expect(response.text()).resolves.toContain(
