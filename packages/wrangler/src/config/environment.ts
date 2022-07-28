@@ -229,6 +229,24 @@ interface EnvironmentInheritable {
 	 * So we need to include it in this type so it is available.
 	 */
 	zone_id?: string;
+
+	/**
+	 * Specify a compiled capnp schema to use
+	 * Then add a binding per field in the top level message that you will send to logfwdr
+	 *
+	 * @default `{schema:undefined,bindings:[]}`
+	 * @inheritable
+	 */
+	logfwdr: {
+		/** capnp schema filename */
+		schema: string | undefined;
+		bindings: {
+			/** The binding name used to refer to logfwdr */
+			name: string;
+			/** The destination for this logged message */
+			destination: string;
+		}[];
+	};
 }
 
 /**

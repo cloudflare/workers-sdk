@@ -1088,6 +1088,17 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerNamespaceBinding),
 			[]
 		),
+		logfwdr: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"logfwdr",
+			validateBindingsProperty(envName, validateCflogfwdrBinding),
+			{
+				schema: undefined,
+				bindings: [],
+			}
+		),
 		unsafe: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1469,6 +1480,30 @@ const validateDurableObjectBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an object but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	if (!isRequiredProperty(value, "name", "string")) {
+		diagnostics.errors.push(`binding should have a string "name" field.`);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "destination", "string")) {
+		diagnostics.errors.push(
+			`binding should have a string "destination" field.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 /**
  * Check that the given field is a valid "unsafe" binding object.
  *
@@ -1499,6 +1534,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"durable_object_namespace",
 			"r2_bucket",
 			"service",
+			"logfwdr",
 		];
 
 		if (safeBindings.includes(value.type)) {

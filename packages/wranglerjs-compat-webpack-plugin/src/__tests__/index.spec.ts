@@ -95,7 +95,7 @@ describe("wrangler 1 parity", () => {
 
       Uploaded test-name (TIMINGS)
       Published test-name (TIMINGS)
-        test-name.test-sub-domain.workers.dev"
+        https://test-name.test-sub-domain.workers.dev"
     `);
 		expect(wrangler2.std.err).toMatchInlineSnapshot(`""`);
 		expect(wrangler2.std.warn).toMatchInlineSnapshot(`

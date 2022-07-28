@@ -960,6 +960,7 @@ function createCLIParser(argv: string[]) {
 											text_blobs: {},
 											data_blobs: {},
 											worker_namespaces: [],
+											logfwdr: { schema: undefined, bindings: [] },
 											unsafe: [],
 										},
 										modules: [],
