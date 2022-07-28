@@ -22,6 +22,7 @@ import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
+	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
 import { pagesBetaWarning } from "./utils";
@@ -190,19 +191,37 @@ export const upload = async (
 
 	const start = Date.now();
 
-	const missingHashes = await fetchResult<string[]>(
-		`/pages/assets/check-missing`,
-		{
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${jwt}`,
-			},
-			body: JSON.stringify({
-				hashes: files.map(({ hash }) => hash),
-			}),
+	let attempts = 0;
+	const getMissingHashes = async (): Promise<string[]> => {
+		try {
+			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${jwt}`,
+				},
+				body: JSON.stringify({
+					hashes: files.map(({ hash }) => hash),
+				}),
+			});
+		} catch (e) {
+			if (attempts < MAX_CHECK_MISSING_ATTEMPTS) {
+				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
+				await new Promise((resolvePromise) =>
+					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+				);
+
+				if ((e as { code: number }).code === 8000013) {
+					// Looks like the JWT expired, fetch another one
+					jwt = await fetchJwt();
+				}
+				return getMissingHashes();
+			} else {
+				throw e;
+			}
 		}
-	);
+	};
+	const missingHashes = await getMissingHashes();
 
 	const sortedFiles = files
 		.filter((file) => missingHashes.includes(file.hash))
@@ -256,7 +275,7 @@ export const upload = async (
 		// Don't upload empty buckets (can happen for tiny projects)
 		if (bucket.files.length === 0) continue;
 
-		let attempts = 0;
+		attempts = 0;
 		const doUpload = async (): Promise<void> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
