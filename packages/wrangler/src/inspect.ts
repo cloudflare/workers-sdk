@@ -1,3 +1,4 @@
+import { readFile } from "fs/promises";
 import assert from "node:assert";
 import { createServer } from "node:http";
 import os from "node:os";
@@ -5,6 +6,7 @@ import { URL } from "node:url";
 
 import open from "open";
 import { useEffect, useRef, useState } from "react";
+import { SourceMapConsumer } from "source-map";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
 import { logger } from "./logger";
@@ -52,6 +54,10 @@ interface InspectorProps {
 	 * logged to the terminal by nature of them actually running in node locally.)
 	 */
 	logToTerminal: boolean;
+	/**
+	 * Sourcemap path, so that stacktraces can be interpretted
+	 */
+	sourceMapPath?: string | undefined;
 }
 
 export default function useInspector(props: InspectorProps) {
@@ -252,15 +258,91 @@ export default function useInspector(props: InspectorProps) {
 		 * without having to open the devtools).
 		 */
 		if (props.logToTerminal) {
-			ws.addEventListener("message", (event: MessageEvent) => {
+			ws.addEventListener("message", async (event: MessageEvent) => {
 				if (typeof event.data === "string") {
 					const evt = JSON.parse(event.data);
 					if (evt.method === "Runtime.exceptionThrown") {
 						const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
-						logger.error(
-							params.exceptionDetails.text,
-							params.exceptionDetails.exception?.description ?? ""
-						);
+
+						// Parse stack trace with source map.
+						if (props.sourceMapPath) {
+							// Parse in the sourcemap
+							const mapContent = JSON.parse(
+								await readFile(props.sourceMapPath, "utf-8")
+							);
+
+							// Create the lines for the exception details log
+							const exceptionLines = [
+								params.exceptionDetails.exception?.description?.split("\n")[0],
+							];
+
+							await SourceMapConsumer.with(
+								mapContent,
+								null,
+								async (consumer) => {
+									// Pass each of the callframes into the consumer, and format the error
+									const stack = params.exceptionDetails.stackTrace?.callFrames;
+
+									stack?.forEach(({ lineNumber, columnNumber }, i) => {
+										try {
+											if (lineNumber) {
+												// The line and column numbers in the stackTrace are zero indexed,
+												// whereas the sourcemap consumer indexes from one.
+												const pos = consumer.originalPositionFor({
+													line: lineNumber + 1,
+													column: columnNumber + 1,
+												});
+
+												// Print out line which caused error:
+												if (i === 0 && pos.source && pos.line) {
+													const fileSource = consumer.sourceContentFor(
+														pos.source
+													);
+													const fileSourceLine =
+														fileSource?.split("\n")[pos.line - 1] || "";
+													exceptionLines.push(fileSourceLine.trim());
+
+													// If we have a column, we can mark the position underneath
+													if (pos.column) {
+														exceptionLines.push(
+															`${" ".repeat(
+																pos.column - fileSourceLine.search(/\S/)
+															)}^`
+														);
+													}
+												}
+
+												// Unfortunately due to the way esbuild generates sourcemaps,
+												// we can't get the name of the function
+												if (pos && pos.line != null) {
+													exceptionLines.push(
+														`    at ${pos.source?.replace(
+															`${mapContent.sourceRoot}/`,
+															""
+														)}:${pos.line}:${pos.column}`
+													);
+												}
+											}
+										} catch {
+											// Line failed to parse through the sourcemap consumer
+											// We should handle this better
+										}
+									});
+								}
+							);
+
+							// Log the parsed stacktrace
+							logger.error(
+								params.exceptionDetails.text,
+								exceptionLines.join("\n")
+							);
+						} else {
+							// We log the stacktrace to the terminal
+							logger.error(
+								params.exceptionDetails.text,
+								params.exceptionDetails.exception?.description ?? ""
+							);
+						}
 					}
 					if (evt.method === "Runtime.consoleAPICalled") {
 						logConsoleMessage(
@@ -333,6 +415,7 @@ export default function useInspector(props: InspectorProps) {
 	}, [
 		props.inspectorUrl,
 		props.logToTerminal,
+		props.sourceMapPath,
 		wsServer,
 		// We use a state value as a sigil to trigger a retry of the
 		// remote websocket connection. It's not used inside the effect,

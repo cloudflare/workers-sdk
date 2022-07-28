@@ -297,6 +297,7 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={props.onReady}
+			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	);
 }
