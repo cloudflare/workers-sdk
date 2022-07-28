@@ -876,6 +876,13 @@ function normalizeAndValidateEnvironment(
 	deprecated(
 		diagnostics,
 		rawEnv,
+		"kv-namespaces",
+		`The "kv-namespaces" field is no longer supported, please rename to "kv_namespaces"`,
+		true
+	);
+	deprecated(
+		diagnostics,
+		rawEnv,
 		"zone_id",
 		"This is unnecessary since we can deduce this from routes directly.",
 		false // We need to leave this in-place for the moment since `route` commands might use it.

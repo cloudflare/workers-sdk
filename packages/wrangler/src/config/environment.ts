@@ -383,6 +383,13 @@ interface EnvironmentDeprecated {
 	zone_id?: string;
 
 	/**
+	 * Legacy way of defining KVNamespaces that is no longer supported.
+	 *
+	 * @deprecated DO NOT USE. This was a legacy bug from wrangler 1, that we do not want to support.
+	 */
+	"kv-namespaces"?: string;
+
+	/**
 	 * A list of services that your worker should be bound to.
 	 *
 	 * @default `[]`
