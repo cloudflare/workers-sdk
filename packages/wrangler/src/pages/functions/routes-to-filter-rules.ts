@@ -8,16 +8,16 @@ export type WorkerRouter = {
 	exclude: string[];
 };
 
-export function convertRouteToFilterRule(route: UrlPath): string {
-	return route.replace(/:\w+\*?/, "*");
+export function convertRouteNamesToAsterisks(input: string[]): string[] {
+	return input.map((rule) => rule.replace(/:\w+\*?/g, "*"));
 }
 
 export function convertRouteListToFilterRules(routes: UrlPath[]): WorkerRouter {
-	const includeRules = routes.map((route) => convertRouteToFilterRule(route));
-	const uniqueRules = Array.from(new Set(includeRules));
+	const uniqueRoutes = Array.from(new Set(routes));
+
 	return {
 		version: WorkerRouterVersion,
-		include: uniqueRules,
+		include: convertRouteNamesToAsterisks(uniqueRoutes),
 		exclude: [],
 	};
 }

@@ -1,39 +1,31 @@
-import { toUrlPath } from "../../paths";
-import {
-	convertRouteListToFilterRules,
-	convertRouteToFilterRule,
-	WorkerRouterVersion,
-} from "./routes-to-filter-rules";
+import { convertRouteNamesToAsterisks } from "./routes-to-filter-rules";
 
-describe("routes-to-filter-rules", () => {
-	describe("convertRouteToFilterRule", () => {
-		const convert = (path: string) => convertRouteToFilterRule(toUrlPath(path));
-
-		describe("single input", () => {
-			it("should pass through a single route, no wildcards", () => {
-				expect(convert("/api/foo")).toEqual("/api/foo");
-			});
-			it("should escalate a single param route to a wildcard", () => {
-				expect(convert("/api/:foo")).toEqual("/api/*");
-			});
-			it("should pass through a single wildcard route", () => {
-				expect(convert("/api/:baz*")).toEqual("/api/*");
-			});
+describe("functions routing", () => {
+	describe("single input", () => {
+		it("should handle an empty input", () => {
+			expect(convertRouteNamesToAsterisks([])).toEqual([]);
 		});
-	});
-
-	describe("convertRouteListToFilterRules", () => {
-		const convert = (paths: string[]) =>
-			convertRouteListToFilterRules(paths.map((p) => toUrlPath(p)));
-
-		describe("multiple rules", () => {
-			it("Should deduplicate identical rules", () => {
-				expect(convert(["/api/:baz*", "/api/:foo"])).toEqual({
-					version: WorkerRouterVersion,
-					include: ["/api/*"],
-					exclude: [],
-				});
-			});
+		it("should pass through a single route, no wildcards", () => {
+			expect(convertRouteNamesToAsterisks(["/api/foo"])).toEqual(["/api/foo"]);
+		});
+		it("should escalate a single param route to a wildcard", () => {
+			expect(convertRouteNamesToAsterisks(["/api/:foo"])).toEqual(["/api/*"]);
+		});
+		it("should escalate multiple params to multiple wildcards", () => {
+			expect(
+				convertRouteNamesToAsterisks([
+					"/api/users/:userId/favorites/:favoriteId",
+				])
+			).toEqual(["/api/users/*/favorites/*"]);
+		});
+		it("should handle multiple routes", () => {
+			expect(convertRouteNamesToAsterisks(["/foo/", "/foo/:bar"])).toEqual([
+				"/foo/",
+				"/foo/*",
+			]);
+		});
+		it("should pass through a single wildcard route", () => {
+			expect(convertRouteNamesToAsterisks(["/api/:baz*"])).toEqual(["/api/*"]);
 		});
 	});
 });
