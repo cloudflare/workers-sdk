@@ -18,7 +18,6 @@ import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import { ParseError } from "../parse";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
@@ -276,7 +275,7 @@ export const upload = async (
 						setTimeout(resolvePromise, attempts++ * 1000)
 					);
 
-					if (isJwtExpiredError(e)) {
+					if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
 					}
@@ -335,7 +334,7 @@ export const upload = async (
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
-			if ((e as { code: number }).code === 8000013) {
+			if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 				// Looks like the JWT expired, fetch another one
 				jwt = await fetchJwt();
 			}
@@ -369,11 +368,14 @@ export const upload = async (
 	);
 };
 
-function isJwtExpiredError(error: unknown): boolean {
-	return (
-		error instanceof ParseError &&
-		error?.notes.some((m) => m.text === "Expired JWT")
+// Decode and check that the current JWT has not expired
+function isJwtExpired(token: string): boolean {
+	const decodedJwt = JSON.parse(
+		Buffer.from(token.split(".")[1], "base64").toString()
 	);
+	const dateNow = new Date().getTime() / 1000;
+
+	return decodedJwt.exp < dateNow;
 }
 
 function formatTime(duration: number) {
