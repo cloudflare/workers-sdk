@@ -283,51 +283,56 @@ export default function useInspector(props: InspectorProps) {
 									// Pass each of the callframes into the consumer, and format the error
 									const stack = params.exceptionDetails.stackTrace?.callFrames;
 
-									stack?.forEach(({ lineNumber, columnNumber }, i) => {
-										try {
-											if (lineNumber) {
-												// The line and column numbers in the stackTrace are zero indexed,
-												// whereas the sourcemap consumer indexes from one.
-												const pos = consumer.originalPositionFor({
-													line: lineNumber + 1,
-													column: columnNumber + 1,
-												});
+									stack?.forEach(
+										({ functionName, lineNumber, columnNumber }, i) => {
+											try {
+												if (lineNumber) {
+													// The line and column numbers in the stackTrace are zero indexed,
+													// whereas the sourcemap consumer indexes from one.
+													const pos = consumer.originalPositionFor({
+														line: lineNumber + 1,
+														column: columnNumber + 1,
+													});
 
-												// Print out line which caused error:
-												if (i === 0 && pos.source && pos.line) {
-													const fileSource = consumer.sourceContentFor(
-														pos.source
-													);
-													const fileSourceLine =
-														fileSource?.split("\n")[pos.line - 1] || "";
-													exceptionLines.push(fileSourceLine.trim());
+													// Print out line which caused error:
+													if (i === 0 && pos.source && pos.line) {
+														const fileSource = consumer.sourceContentFor(
+															pos.source
+														);
+														const fileSourceLine =
+															fileSource?.split("\n")[pos.line - 1] || "";
+														exceptionLines.push(fileSourceLine.trim());
 
-													// If we have a column, we can mark the position underneath
-													if (pos.column) {
+														// If we have a column, we can mark the position underneath
+														if (pos.column) {
+															exceptionLines.push(
+																`${" ".repeat(
+																	pos.column - fileSourceLine.search(/\S/)
+																)}^`
+															);
+														}
+													}
+
+													// From the way esbuild implements the "names" field:
+													// > To save space, the original name is only recorded when it's different from the final name.
+													// however, source-map consumer does not handle this
+													if (pos && pos.line != null) {
+														const convertedFnName =
+															pos.name || functionName || "";
 														exceptionLines.push(
-															`${" ".repeat(
-																pos.column - fileSourceLine.search(/\S/)
-															)}^`
+															`    at ${convertedFnName} (${pos.source?.replace(
+																`${mapContent.sourceRoot}/`,
+																""
+															)}:${pos.line}:${pos.column})`
 														);
 													}
 												}
-
-												// Unfortunately due to the way esbuild generates sourcemaps,
-												// we can't get the name of the function
-												if (pos && pos.line != null) {
-													exceptionLines.push(
-														`    at ${pos.source?.replace(
-															`${mapContent.sourceRoot}/`,
-															""
-														)}:${pos.line}:${pos.column}`
-													);
-												}
+											} catch {
+												// Line failed to parse through the sourcemap consumer
+												// We should handle this better
 											}
-										} catch {
-											// Line failed to parse through the sourcemap consumer
-											// We should handle this better
 										}
-									});
+									);
 								}
 							);
 
