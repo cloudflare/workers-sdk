@@ -37,6 +37,7 @@ export function useEsbuild({
 	services,
 	durableObjects,
 	firstPartyWorkerDevFacade,
+	local,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -55,6 +56,7 @@ export function useEsbuild({
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
+	local: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -119,6 +121,7 @@ export function useEsbuild({
 						workerDefinitions,
 						services,
 						firstPartyWorkerDevFacade,
+						local,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -176,6 +179,7 @@ export function useEsbuild({
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
 		betaD1Shims,
+		local,
 	]);
 	return bundle;
 }

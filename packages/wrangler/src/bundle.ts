@@ -75,6 +75,7 @@ export async function bundleWorker(
 		services: Config["services"];
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
+		local?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -88,6 +89,7 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
+		local = false,
 		assets,
 		workerDefinitions,
 		services,
@@ -178,7 +180,7 @@ export async function bundleWorker(
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
 			((currentEntry: Entry) => {
-				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims);
+				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims, local);
 			}),
 	].filter(Boolean);
 
@@ -479,7 +481,8 @@ async function applyFirstPartyWorkerDevFacade(
 async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
-	betaD1Shims: string[]
+	betaD1Shims: string[],
+	local: boolean
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 
@@ -495,6 +498,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
+			__LOCAL_MODE__: JSON.stringify(local),
 		},
 		outfile: targetPath,
 	});

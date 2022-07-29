@@ -224,3 +224,33 @@ We use the following guidelines to determine the kind of change for a PR:
 - Bugfixes and new features are considered to be 'patch' changes. If the new feature is experimental and its behaviour may functionally change, be sure to log warnings whenever they're used. (You'll note that this is where we deviate from semver, which otherwise suggests that behaviour/api changes should go into minor releases. We may revisit this in the future.)
 - New deprecation warnings for future breaking changes are considered as 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
+
+## Miniflare Development
+
+Wrangler builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Wrangler and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
+
+Assume you have the two directories checked out right beside each other:
+
+```
+❯ ll src
+drwxr-xr-x     - glen 30 Jun 14:12  src
+drwxr-xr-x     - glen 26 Jul 17:34 ├──  miniflare
+drwxr-xr-x     - glen 27 Jul 17:51 └──  wrangler2
+```
+
+> Note: use [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` to be as cool as me
+
+Inside `packages/wrangler/package.json`, replace:
+
+```
+"miniflare": "^2.x.x",
+```
+
+with
+
+```
+"miniflare": "file:../../../miniflare/packages/miniflare",
+"@miniflare/core": "file:../../../miniflare/packages/core",
+```
+
+Then run `npm install` in the root of this monorepo.
