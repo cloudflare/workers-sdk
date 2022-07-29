@@ -271,8 +271,6 @@ export default function useInspector(props: InspectorProps) {
 								await readFile(props.sourceMapPath, "utf-8")
 							);
 
-							console.log(props.sourceMapPath);
-
 							// Create the lines for the exception details log
 							const exceptionLines = [
 								params.exceptionDetails.exception?.description?.split("\n")[0],
