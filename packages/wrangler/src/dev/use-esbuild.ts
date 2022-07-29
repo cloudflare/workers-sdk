@@ -30,6 +30,7 @@ export function useEsbuild({
 	betaD1Shims,
 	define,
 	noBundle,
+	local,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -43,6 +44,7 @@ export function useEsbuild({
 	nodeCompat: boolean | undefined;
 	betaD1Shims?: string[];
 	noBundle: boolean;
+	local: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -97,6 +99,7 @@ export function useEsbuild({
 						betaD1Shims,
 						define,
 						checkFetch: true,
+						local,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -148,6 +151,7 @@ export function useEsbuild({
 		nodeCompat,
 		define,
 		betaD1Shims,
+		local,
 	]);
 	return bundle;
 }
