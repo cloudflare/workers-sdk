@@ -102,5 +102,5 @@ export async function ListHandler({
 		patchConsole: false,
 	});
 	unmount();
-	await metrics.sendMetricsEvent("list pages projects deployments");
+	await metrics.sendMetricsEvent("list pages deployments");
 }

@@ -26,6 +26,9 @@ describe("metrics", () => {
 	runInTempDir();
 
 	beforeEach(() => {
+		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
+		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
+		mockMetricsConfig.useOriginal = true;
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
 		// Create a node_modules directory to store config-cache files
@@ -65,6 +68,7 @@ describe("metrics", () => {
 						properties: {
 							category: "Workers",
 							wranglerVersion,
+							os: process.platform + ":" + process.arch,
 							a: 1,
 							b: 2,
 						},
@@ -139,6 +143,7 @@ describe("metrics", () => {
 						properties: {
 							category: "Workers",
 							wranglerVersion,
+							os: process.platform + ":" + process.arch,
 							a: 1,
 							b: 2,
 						},

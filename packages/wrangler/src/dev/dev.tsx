@@ -157,6 +157,7 @@ export type DevProps = {
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
+	sendMetrics: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -300,6 +301,7 @@ function DevSession(props: DevSessionProps) {
 			routes={props.routes}
 			onReady={props.onReady}
 			sourceMapPath={bundle?.sourceMapPath}
+			sendMetrics={props.sendMetrics}
 		/>
 	);
 }

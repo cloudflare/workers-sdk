@@ -523,10 +523,16 @@ function createCLIParser(argv: string[]) {
 				(args.config as ConfigPath) ||
 				(args.script && findWranglerToml(path.dirname(args.script)));
 			const config = readConfig(configPath, args);
-			await metrics.sendMetricsEvent("deploy worker script", {
-				sendMetrics: config.send_metrics,
-			});
 			const entry = await getEntry(args, config, "publish");
+			await metrics.sendMetricsEvent(
+				"deploy worker script",
+				{
+					usesTypeScript: /\.tsx?$/.test(entry.file),
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
 
 			if (args.public) {
 				throw new Error("The --public field has been renamed to --assets");

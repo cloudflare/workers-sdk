@@ -56,6 +56,7 @@ export function Remote(props: {
 	routes: Route[] | undefined;
 	onReady?: (() => void) | undefined;
 	sourceMapPath: string | undefined;
+	sendMetrics: boolean | undefined;
 }) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
@@ -79,6 +80,7 @@ export function Remote(props: {
 		host: props.host,
 		routes: props.routes,
 		onReady: props.onReady,
+		sendMetrics: props.sendMetrics,
 	});
 
 	usePreviewServer({
@@ -163,6 +165,7 @@ export function useWorker(props: {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady: (() => void) | undefined;
+	sendMetrics: boolean | undefined;
 }): CfPreviewToken | undefined {
 	const {
 		name,
@@ -204,6 +207,7 @@ export function useWorker(props: {
 				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
+				sendMetrics: props.sendMetrics,
 			};
 
 			setSession(
@@ -232,6 +236,7 @@ export function useWorker(props: {
 		props.legacyEnv,
 		props.routes,
 		props.zone,
+		props.sendMetrics,
 	]);
 
 	// This effect uses the session to upload the worker and create a preview
@@ -322,6 +327,7 @@ export function useWorker(props: {
 				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
+				sendMetrics: props.sendMetrics,
 			};
 
 			const workerPreviewToken = await createWorkerPreview(
@@ -401,6 +407,7 @@ export function useWorker(props: {
 		props.routes,
 		session,
 		onReady,
+		props.sendMetrics,
 	]);
 	return token;
 }

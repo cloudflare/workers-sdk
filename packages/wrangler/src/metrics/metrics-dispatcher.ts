@@ -67,6 +67,7 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: {
 				category: "Workers",
 				wranglerVersion,
+				os: process.platform + ":" + process.arch,
 				...event.properties,
 			},
 		});

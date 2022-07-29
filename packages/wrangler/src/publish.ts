@@ -11,6 +11,7 @@ import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { confirm } from "./dialogs";
 import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
+import { getMetricsUsageHeaders } from "./metrics";
 import { ParseError } from "./parse";
 import { syncAssets } from "./sites";
 import { getZoneForRoute } from "./zones";
@@ -496,6 +497,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				{
 					method: "PUT",
 					body: createWorkerUploadForm(worker),
+					headers: await getMetricsUsageHeaders(config.send_metrics),
 				},
 				new URLSearchParams({
 					include_subdomain_availability: "true",

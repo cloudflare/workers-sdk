@@ -126,3 +126,25 @@ jest.mock("xdg-app-paths", () => {
 });
 
 jest.mock("create-cloudflare");
+
+jest.mock("../metrics/metrics-config", () => {
+	const realModule = jest.requireActual("../metrics/metrics-config");
+	const fakeModule = {
+		...realModule,
+		// Although we mock out the getMetricsConfig() function in most tests,
+		// we need a way to reinstate it for the metrics specific tests.
+		// This is what `useOriginal` is for.
+		useOriginal: false,
+		getMetricsConfig: (...args: unknown[]) =>
+			fakeModule.useOriginal
+				? realModule.getMetricsConfig(...args)
+				: async () => {
+						return {
+							enabled: false,
+							deviceId: "mock-device",
+							userId: undefined,
+						};
+				  },
+	};
+	return fakeModule;
+});

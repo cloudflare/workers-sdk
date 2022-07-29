@@ -199,4 +199,5 @@ export interface CfWorkerContext {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
+	sendMetrics: boolean | undefined;
 }

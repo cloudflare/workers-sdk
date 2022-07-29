@@ -47,8 +47,8 @@ export type EventNames =
 	| "rename worker namespace"
 	| "create pages project"
 	| "list pages projects"
-	| "deploy pages project"
-	| "list pages projects deployments"
+	| "create pages deployment"
+	| "list pages deployments"
 	| "build pages functions"
 	| "run dev"
 	| "run pages dev";

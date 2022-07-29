@@ -299,11 +299,6 @@ export async function startDev(args: StartDevOptions) {
 			((args.script &&
 				findWranglerToml(path.dirname(args.script))) as ConfigPath);
 		let config = readConfig(configPath, args);
-		await metrics.sendMetricsEvent(
-			"run dev",
-			{ local: args.local },
-			{ sendMetrics: config.send_metrics, offline: args.local }
-		);
 
 		if (config.configPath) {
 			watcher = watch(config.configPath, {
@@ -323,6 +318,15 @@ export async function startDev(args: StartDevOptions) {
 			{ assets: args.assets, script: args.script },
 			config,
 			"dev"
+		);
+
+		await metrics.sendMetricsEvent(
+			"run dev",
+			{
+				local: args.local,
+				usesTypeScript: /\.tsx?$/.test(entry.file),
+			},
+			{ sendMetrics: config.send_metrics, offline: args.local }
 		);
 
 		if (config.services && config.services.length > 0) {
@@ -508,6 +512,7 @@ export async function startDev(args: StartDevOptions) {
 					forceLocal={args.forceLocal}
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={config.first_party_worker}
+					sendMetrics={config.send_metrics}
 				/>
 			);
 		}
