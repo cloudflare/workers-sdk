@@ -34,9 +34,9 @@ export default {
 					},
 				};
 			} else {
-				// This means it's a local mode binding
-				// but hasn't started up locally yet.
-				facadeEnv[name] = {
+				// This means there's no dev binding available.
+				// Let's use whatever's available, or put a shim with a message.
+				facadeEnv[name] = facadeEnv[name] || {
 					async fetch() {
 						return new Response(
 							`You should start up wrangler dev --local on the ${name} worker`,

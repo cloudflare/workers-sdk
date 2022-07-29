@@ -156,7 +156,9 @@ export async function bundleWorker(
 			}),
 		// bind to other dev instances/service bindings
 		workerDefinitions &&
+			Object.keys(workerDefinitions).length > 0 &&
 			services &&
+			services.length > 0 &&
 			((currentEntry: Entry) => {
 				return applyMultiWorkerDevFacade(
 					currentEntry,
