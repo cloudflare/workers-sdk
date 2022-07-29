@@ -331,19 +331,12 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-
 	local: boolean
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 
 	await esbuild.build({
-		entryPoints: [
-			path.resolve(
-				__dirname,
-
-				"../templates/d1-beta-facade.js"
-			),
-		],
+		entryPoints: [path.resolve(__dirname, "../templates/d1-beta-facade.js")],
 		bundle: true,
 		format: "esm",
 		sourcemap: true,
