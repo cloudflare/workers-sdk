@@ -279,6 +279,7 @@ function DevSession(props: DevSessionProps) {
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
+		local: props.local,
 	});
 
 	return props.local ? (
