@@ -129,7 +129,7 @@ describe("publish", () => {
 			        Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
-			          https://test-name.test-sub-domain.workers.dev"
+			  https://test-name.test-sub-domain.workers.dev"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);

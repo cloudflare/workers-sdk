@@ -136,25 +136,26 @@ var PreparedStatement = class {
 };
 
 // src/shim.ts
-var d1imports = __D1_IMPORTS__;
+var D1_IMPORTS = __D1_IMPORTS__;
+var LOCAL_MODE = __LOCAL_MODE__;
 var D1_BETA_PREFIX = `__D1_BETA__`;
 var envMap = /* @__PURE__ */ new Map();
 function getMaskedEnv(env) {
 	if (envMap.has(env)) return envMap.get(env);
-	const envMask = {};
-	d1imports.forEach((bindingName) => {
-		if (bindingName.startsWith(D1_BETA_PREFIX)) {
-			const sansPrefix = bindingName.slice(D1_BETA_PREFIX.length);
-			envMask[sansPrefix] = {
-				value: new Database(env[bindingName]),
-				enumerable: true,
-			};
-			envMask[bindingName] = { value: void 0, enumerable: false };
-		}
+	const newEnv = new Map(Object.entries(env));
+	D1_IMPORTS.filter((bindingName) =>
+		bindingName.startsWith(D1_BETA_PREFIX)
+	).forEach((bindingName) => {
+		newEnv.delete(bindingName);
+		const newName = bindingName.slice(D1_BETA_PREFIX.length);
+		const newBinding = !LOCAL_MODE
+			? new Database(env[bindingName])
+			: env[bindingName];
+		newEnv.set(newName, newBinding);
 	});
-	const combinedEnv = Object.create(env, envMask);
-	envMap.set(env, combinedEnv);
-	return combinedEnv;
+	const newEnvObj = Object.fromEntries(newEnv.entries());
+	envMap.set(env, newEnvObj);
+	return newEnvObj;
 }
 var shim_default = {
 	async fetch(request, env, ctx) {

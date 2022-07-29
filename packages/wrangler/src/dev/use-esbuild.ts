@@ -37,6 +37,7 @@ export function useEsbuild({
 	services,
 	durableObjects,
 	firstPartyWorkerDevFacade,
+	local,
 	targetConsumer,
 }: {
 	entry: Entry;
@@ -56,6 +57,7 @@ export function useEsbuild({
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
+	local: boolean;
 	targetConsumer: "dev" | "publish";
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
@@ -121,6 +123,7 @@ export function useEsbuild({
 						workerDefinitions,
 						services,
 						firstPartyWorkerDevFacade,
+						local,
 						targetConsumer,
 				  });
 
@@ -179,6 +182,7 @@ export function useEsbuild({
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
 		betaD1Shims,
+		local,
 		targetConsumer,
 	]);
 	return bundle;
