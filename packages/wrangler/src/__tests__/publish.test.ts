@@ -5761,6 +5761,37 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
+		it("should work with legacy module specifiers, with a deprecation warning (3)", async () => {
+			writeWranglerToml({
+				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`import TEXT from 'text+name.file'; export default {};`
+			);
+			fs.writeFileSync("./text+name.file", "SOME TEXT CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text+name.file":
+						"SOME TEXT CONTENT",
+				},
+			});
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			        "Total Upload: 0xx KiB / gzip: 0xx KiB
+			        Uploaded test-name (TIMINGS)
+			        Published test-name (TIMINGS)
+			          https://test-name.test-sub-domain.workers.dev"
+		      `);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text+name.file\\" with \\"./text+name.file\\";[0m
+
+			        "
+		      `);
+		});
+
 		it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
 			// see https://github.com/cloudflare/wrangler2/issues/655 for bug details
 
