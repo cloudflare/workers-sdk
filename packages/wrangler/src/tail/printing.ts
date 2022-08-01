@@ -1,11 +1,11 @@
 import { logger } from "../logger";
+import type { Outcome } from "./filters";
 import type {
 	AlarmEvent,
 	RequestEvent,
 	ScheduledEvent,
 	TailEventMessage,
 } from "./index";
-import type { Outcome } from "./filters";
 import type WebSocket from "ws";
 
 export function prettyPrintLogs(data: WebSocket.RawData): void {
