@@ -77,7 +77,9 @@ function isScheduledEvent(
 /**
  * Check to see if an event sent from a worker is an AlarmEvent.
  *
- * CAUTION: Because the only property on `AlarmEvent` is "scheduled"
+ * CAUTION: Because the only property on `AlarmEvent` is "scheduledTime", which it
+ * shares with `ScheduledEvent`, `isAlarmEvent` cannot differentiate between
+ * `ScheduledEvent`s and `AlarmEvent`s.
  *
  * @param event An event
  * @returns true if the event is an AlarmEvent
