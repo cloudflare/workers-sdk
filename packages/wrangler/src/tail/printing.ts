@@ -4,7 +4,7 @@ import type {
 	RequestEvent,
 	ScheduledEvent,
 	TailEventMessage,
-} from ".";
+} from "./index";
 import type { Outcome } from "./filters";
 import type WebSocket from "ws";
 
