@@ -1,5 +1,181 @@
 # wrangler
 
+## 2.0.24
+
+### Patch Changes
+
+- [#1577](https://github.com/cloudflare/wrangler2/pull/1577) [`359d0ba3`](https://github.com/cloudflare/wrangler2/commit/359d0ba379c7c94fa29c8e1728a2c0a7491749c6) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild to 0.14.51
+
+* [#1558](https://github.com/cloudflare/wrangler2/pull/1558) [`b43a7f98`](https://github.com/cloudflare/wrangler2/commit/b43a7f9836e8f2d969624c2c5a88adf374a1ebe3) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: extract devProps parsing into own function
+
+- [#1438](https://github.com/cloudflare/wrangler2/pull/1438) [`0a9fe918`](https://github.com/cloudflare/wrangler2/commit/0a9fe918216264a2f6fa3f69dd596f89de7d9f56) Thanks [@caass](https://github.com/caass)! - Initial implementation of `wrangler generate`
+
+  - `wrangler generate` and `wrangler generate <name>` delegate to `wrangler init`.
+  - `wrangler generate <name> <template>` delegates to `create-cloudflare`
+
+  Naming behavior is replicated from wrangler 1, and will auto-increment the
+  worker name based on pre-existing directories.
+
+* [#1534](https://github.com/cloudflare/wrangler2/pull/1534) [`d3ae16cf`](https://github.com/cloudflare/wrangler2/commit/d3ae16cfb8e13f0e6e5f710b3cb03e46ecb7bf7a) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: publish full url on `wrangler publish` for workers.dev workers
+
+  When the url is printed out on `wrangler publish`, the full url is printed out so that it can be accessed from the terminal easily by doing cmd+click. Implemented only for workers.dev workers.
+
+  Resolves https://github.com/cloudflare/wrangler2/issues/1530
+
+- [#1552](https://github.com/cloudflare/wrangler2/pull/1552) [`e9307365`](https://github.com/cloudflare/wrangler2/commit/e93073659af3bdbb24d8fad8997a134a3a5c19e0) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: invalid regular expression error (pages)
+
+* [#1576](https://github.com/cloudflare/wrangler2/pull/1576) [`f696ebb5`](https://github.com/cloudflare/wrangler2/commit/f696ebb5c76353a4a7065757b70a77df4dc2d36b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add platform/os to usage metrics events
+
+- [#1576](https://github.com/cloudflare/wrangler2/pull/1576) [`f696ebb5`](https://github.com/cloudflare/wrangler2/commit/f696ebb5c76353a4a7065757b70a77df4dc2d36b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: rename pages metrics events to align better with the dashboard
+
+* [#1550](https://github.com/cloudflare/wrangler2/pull/1550) [`aca9c3e7`](https://github.com/cloudflare/wrangler2/commit/aca9c3e74dd9f79c54d51499ee3cec983f0b40ee) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: describe current permissions in `wrangler whoami`
+
+  Often users experience issues due to tokens not having the correct permissions associated with them (often due to new scopes being created for new products). With this, we print out a list of permissions associated with OAuth tokens with the `wrangler whoami` command to help them debug for OAuth tokens. We cannot access the permissions on an API key, so we direct the user to the location in the dashboard to achieve this.
+  We also cache the scopes of OAuth tokens alongside the access and refresh tokens in the .wrangler/config file to achieve this.
+
+  Currently unable to implement https://github.com/cloudflare/wrangler2/issues/1371 - instead directs the user to the dashboard.
+  Resolves https://github.com/cloudflare/wrangler2/issues/1540
+
+- [#1575](https://github.com/cloudflare/wrangler2/pull/1575) [`5b1f68ee`](https://github.com/cloudflare/wrangler2/commit/5b1f68eece2f328c65f749711cfae5105e1e9651) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: legacy "kv-namespace" not supported
+  In previous Wrangler 1, there was a legacy configuration that was considered a "bug" and removed.
+  Before it was removed, tutorials, templates, blogs, etc... had utlized that configuration property
+  to handle this in Wrangler 2 we will throw a blocking error that tell the user to utilize "kv_namespaces"
+
+  resolves #1421
+
+* [#1404](https://github.com/cloudflare/wrangler2/pull/1404) [`17f5b576`](https://github.com/cloudflare/wrangler2/commit/17f5b576795a8ca4574a300475c9755829535113) Thanks [@threepointone](https://github.com/threepointone)! - feat: add cache control options to `config.assets`
+
+  This adds cache control options to `config.assets`. This is already supported by the backing library (`@cloudflare/kv-asset-handler`) so we simply pass on the options at its callsite.
+
+  Additionally, this adds a configuration field to serve an app in "single page app" mode, where a root index.html is served for all html/404 requests (also powered by the same library).
+
+- [#1578](https://github.com/cloudflare/wrangler2/pull/1578) [`cf552192`](https://github.com/cloudflare/wrangler2/commit/cf552192d58d67a3bacd8ffa2db9d214f960d96a) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: source-map function names
+
+  Following on from https://github.com/cloudflare/wrangler2/pull/1535, using new functionality from esbuild v0.14.50 of generation of `names` field in generated sourcemaps, we output the original function name in the stack trace.
+
+* [#1503](https://github.com/cloudflare/wrangler2/pull/1503) [`ebc1aa57`](https://github.com/cloudflare/wrangler2/commit/ebc1aa579a4e884cf2b1889a5245b5ad86716144) Thanks [@threepointone](https://github.com/threepointone)! - feat: zero config multiworker development (local mode)
+
+  Preamble: Typically, a Worker has been the _unit_ of a javascript project on our platform. Any logic that you need, you fit into one worker, ~ 1MB of javascript and bindings. If you wanted to deploy a larger application, you could define different workers on different routes. This is fine for microservice style architectures, but not all projects can be cleaved along the route boundaries; you lose out on sharing code and resources, and can still cross the size limit with heavy dependencies.
+
+  Service bindings provide a novel mechanism for composing multiple workers into a unified architecture. You could deploy shared code into a worker, and make requests to it from another worker. This lets you architect your code along functional boundaries, while also providing some relief to the 1MB size limit.
+
+  I propose a model for developing multiple bound workers in a single project.
+
+  Consider Worker A, at `workers/a.js`, with a `wrangler.toml` like so:
+
+  ```toml
+  name = 'A'
+
+  [[services]]
+  binding = 'Bee'
+  service = 'B'
+  ```
+
+  and content like so:
+
+  ```js
+  export default {
+  	fetch(req, env) {
+  		return env.Bee.fetch(req);
+  	}
+  };
+  ```
+
+  Consider Worker B, at `workers/b.js`, with a `wrangler.toml` like so:
+
+  ```toml
+  name = 'B'
+  ```
+
+  and content like so:
+
+  ```js
+  export default {
+  	fetch(req, env) {
+  		return new Response("Hello World");
+  	}
+  };
+  ```
+
+  So, a worker A, bound to B, that simply passes on the request to B.
+
+  ## Local mode:
+
+  Currently, when I run `wrangler dev --local` on A (or switch from remote to local mode during a dev session), and make requests to A, they'll fail because the bindings don't exist in local mode.
+
+  What I'd like, is to be able to run `wrangler dev --local` on B as well, and have my dev instance of A make requests to the dev instance of B. When I'm happy with my changes, I'd simply deploy both workers (again, ideally as a batched publish).
+
+  ## Proposal: A local dev registry for workers.
+
+  - Running `wrangler dev` on a machine should start up a local service registry (if there isn't one loaded already) as a server on a well known port.
+  - Further, it should then "register" itself with the registry with metadata about itself; whether it's running in remote/local mode, the port and ip its dev server is listening on, and any additional configuration (eg: in remote mode, a couple of extra headers have to be added to every request made to the dev session, so we'd add that data into the registry as well.)
+  - Every worker that has service bindings configured, should intercept requests to said binding, and instead make a request to the locally running instance of the service. It could rewrite these requests as it pleases.
+
+  (In future PRs, we'll introduce a system for doing the same with remote mode dev, as well as mixed mode. )
+
+  Related to https://github.com/cloudflare/wrangler2/issues/1182
+  Fixes https://github.com/cloudflare/wrangler2/issues/1040
+
+- [#1551](https://github.com/cloudflare/wrangler2/pull/1551) [`1b54b54f`](https://github.com/cloudflare/wrangler2/commit/1b54b54f360262f35f4d04545f98009c982070e2) Thanks [@threepointone](https://github.com/threepointone)! - internal: middleware for modifying worker behaviour
+
+  This adds an internal mechanism for applying multiple "middleware"/facades on to workers. This lets us add functionality during dev and/or publish, where we can modify requests or env, or other ideas. (See https://github.com/cloudflare/wrangler2/issues/1466 for actual usecases)
+
+  As part of this, I implemented a simple facade that formats errors in dev. To enable it you need to set an environment variable `FORMAT_WRANGLER_ERRORS=true`. This _isn't_ a new feature we're shipping with wrangler, it's simply to demonstrate how to write middleware. We'll probably remove it in the future.
+
+* [#1486](https://github.com/cloudflare/wrangler2/pull/1486) [`c4e6f156`](https://github.com/cloudflare/wrangler2/commit/c4e6f1565ac6ef38929c72d37ec27d158ec4f4ee) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: commands added for uploading and downloading objects from r2.
+
+- [#1539](https://github.com/cloudflare/wrangler2/pull/1539) [`95d0f863`](https://github.com/cloudflare/wrangler2/commit/95d0f8635e62e76d29718fac16bfa776b4b4ae02) Thanks [@threepointone](https://github.com/threepointone)! - fix: export durable objects correctly when using `--assets`
+
+  The facade for static assets doesn't export any exports from the entry point, meaning Durable Objects will fail. This fix adds all exports to the facade's exports.
+
+* [#1564](https://github.com/cloudflare/wrangler2/pull/1564) [`69713c5c`](https://github.com/cloudflare/wrangler2/commit/69713c5c4dba34016be0c634548e25eb45368829) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - chore: updated wrangler readme providing additional context on configuration, deep link to `init` and fixing old link to beta docs.
+
+- [#1581](https://github.com/cloudflare/wrangler2/pull/1581) [`3da184f1`](https://github.com/cloudflare/wrangler2/commit/3da184f1386f60658af5d29c68eda4ac0b28234e) Thanks [@threepointone](https://github.com/threepointone)! - fix: apply multiworker dev facade only when required
+
+  This fix makes sure the multiworker dev facade is applied to the input worker only where there are other wrangler dev instances running that are bound to the input worker. We also make sure we don't apply it when we already have a binding (like in remote mode).
+
+* [#1476](https://github.com/cloudflare/wrangler2/pull/1476) [`cf9f932a`](https://github.com/cloudflare/wrangler2/commit/cf9f932acc5f22dfceac462cff9d9c90a71622f0) Thanks [@alankemp](https://github.com/alankemp)! - Add logfwdr binding
+
+- [#1576](https://github.com/cloudflare/wrangler2/pull/1576) [`f696ebb5`](https://github.com/cloudflare/wrangler2/commit/f696ebb5c76353a4a7065757b70a77df4dc2d36b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add metricsEnabled header to CF API calls when developing or deploying a worker
+
+  This allows us to estimate from API requests what proportion of Wrangler
+  instances have enabled usage tracking, without breaking the agreement not
+  to send data for those who have not opted in.
+
+* [#1525](https://github.com/cloudflare/wrangler2/pull/1525) [`a692ace3`](https://github.com/cloudflare/wrangler2/commit/a692ace3545e3b8bec5410a689dec6aa6c388d5a) Thanks [@threepointone](https://github.com/threepointone)! - feat: `config.first_party_worker` + dev facade
+
+  This introduces configuration for marking a worker as a "first party" worker, to be used inside cloudflare to develop workers. It also adds a facade that's applied for first party workers in dev.
+
+- [#1545](https://github.com/cloudflare/wrangler2/pull/1545) [`b3424e43`](https://github.com/cloudflare/wrangler2/commit/b3424e43e53192f4d4268d9a0c1c6aab1f4ffe84) Thanks [@Martin-Eriksson](https://github.com/Martin-Eriksson)! - fix: Throw error if both `directory` and `command` is specified for `pages dev`
+
+  The previous behavior was to silently ignore the `command` argument.
+
+* [#1574](https://github.com/cloudflare/wrangler2/pull/1574) [`c61006ca`](https://github.com/cloudflare/wrangler2/commit/c61006caf8a53bd24d686a168288f6aa28e0f625) Thanks [@jahands](https://github.com/jahands)! - fix: Retry check-missing call to make wrangler pages publish more reliable
+
+  Before uploading files in wrangler pages publish, we make a network call to check what files need to be uploaded. This call could sometimes fail, causing the publish to fail. This change will retry that network call.
+
+- [#1565](https://github.com/cloudflare/wrangler2/pull/1565) [`2b5a2e9a`](https://github.com/cloudflare/wrangler2/commit/2b5a2e9ad2cc11e0cc20fea3e30089d70b93902c) Thanks [@threepointone](https://github.com/threepointone)! - fix: export durable object bindings when using service bindings in dev
+
+  A similar fix to https://github.com/cloudflare/wrangler2/pull/1539, this exports correctly when using service bindings in dev.
+
+* [#1510](https://github.com/cloudflare/wrangler2/pull/1510) [`4dadc414`](https://github.com/cloudflare/wrangler2/commit/4dadc414e131a7eb0e5c2ab2f0046a669491e7dc) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - refactor: touch up publishing to custom domains
+
+  Couple things cleaned up here:
+
+  Originally the usage of the /domains api (for publishing to custom domains) was a bit clumsy: we would attempt to optimistically publish, but the api would eagerly fail with specific error codes on why it occurred. This made for some weird control flow for retries with override flags, as well as fragile extraction of error messages.
+
+  Now we use the new /domains/changeset api to generate a changeset of actions required to get to a new state of custom domains, which informs us up front of which domains would need to be updated and overridden, and we can pass flags as needed. I do make an extra hop back to the api to lookup what the custom domains requiring updates are already attached to, but given how helpful I imagine that to be, I'm for it.
+
+  I also updated the api used for publishing the domains, from /domains to /domains/records. The latter was added to allow us to add flexibility for things like the /domains/changeset resource, and thus the former is being deprecated
+
+- [#1576](https://github.com/cloudflare/wrangler2/pull/1576) [`f696ebb5`](https://github.com/cloudflare/wrangler2/commit/f696ebb5c76353a4a7065757b70a77df4dc2d36b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: send whether a Worker is using TypeScript or not in usage events
+
+* [#1535](https://github.com/cloudflare/wrangler2/pull/1535) [`eee7333b`](https://github.com/cloudflare/wrangler2/commit/eee7333b47d009880b8def8cf4772b6d5fcf79e9) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: source maps support in `wrangler dev` remote mode
+
+  Previously stack traces from runtime errors in `wrangler dev` remote mode, would give unhelpful stack traces from the bundled build that was sent to the server. Here, we use source maps generated as part of bundling to provide better stack traces for errors, referencing the unbundled files.
+
+  Resolves https://github.com/cloudflare/wrangler2/issues/1509
+
 ## 2.0.23
 
 ### Patch Changes
