@@ -6,7 +6,12 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { TailEventMessage, RequestEvent, ScheduledEvent } from "../tail";
+import type {
+	TailEventMessage,
+	RequestEvent,
+	ScheduledEvent,
+	AlarmEvent,
+} from "../tail";
 import type WebSocket from "ws";
 
 describe("tail", () => {
@@ -251,6 +256,18 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
+		it("logs alarm messages in json format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format json");
+
+			const event = generateMockAlarmEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
 		it("logs request messages in pretty format", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
@@ -271,10 +288,10 @@ describe("tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-        "Successfully created tail, expires at [mock expiration date]
-        Connected to test-worker, waiting for logs...
-        GET https://example.org/ - Ok @ [mock event timestamp]"
-      `);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]"
+		      `);
 		});
 
 		it("logs scheduled messages in pretty format", async () => {
@@ -297,10 +314,36 @@ describe("tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-        "Successfully created tail, expires at [mock expiration date]
-        Connected to test-worker, waiting for logs...
-        \\"* * * * *\\" @ [mock timestamp string] - Ok"
-      `);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        \\"* * * * *\\" @ [mock timestamp string] - Ok"
+		      `);
+		});
+
+		it("logs alarm messages in pretty format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			const event = generateMockAlarmEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventScheduledTime).toLocaleString(),
+						"[mock scheduled time]"
+					)
+					.replace(
+						mockTailExpiration.toLocaleString(),
+						"[mock expiration date]"
+					)
+			).toMatchInlineSnapshot(`
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        Alarm @ [mock scheduled time] - Ok"
+		      `);
 		});
 
 		it("should not crash when the tail message has a void event", async () => {
@@ -314,18 +357,18 @@ describe("tail", () => {
 			expect(
 				std.out
 					.replace(
-						new Date(mockEventTimestamp).toLocaleString(),
-						"[mock timestamp string]"
-					)
-					.replace(
 						mockTailExpiration.toLocaleString(),
 						"[mock expiration date]"
 					)
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock timestamp string]"
+					)
 			).toMatchInlineSnapshot(`
-        "Successfully created tail, expires at [mock expiration date]
-        Connected to test-worker, waiting for logs...
-        [missing request] - Ok @ [mock timestamp string]"
-      `);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Unknown Event - Ok @ [mock timestamp string]"
+		`);
 		});
 
 		it("defaults to logging in pretty format when the output is a TTY", async () => {
@@ -349,10 +392,10 @@ describe("tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-        "Successfully created tail, expires at [mock expiration date]
-        Connected to test-worker, waiting for logs...
-        GET https://example.org/ - Ok @ [mock event timestamp]"
-      `);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]"
+		      `);
 		});
 
 		it("defaults to logging in json format when the output is not a TTY", async () => {
@@ -405,21 +448,21 @@ describe("tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-        "Successfully created tail, expires at [mock expiration date]
-        Connected to test-worker, waiting for logs...
-        GET https://example.org/ - Ok @ [mock event timestamp]
-          (log) some string
-          (log) { complex: 'object' }
-          (error) 1234"
-      `);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]
+			          (log) some string
+			          (log) { complex: 'object' }
+			          (error) 1234"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
+			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
 
 
-        [31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
+			        [31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
 
-        "
-      `);
+			        "
+		      `);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
@@ -437,8 +480,8 @@ describe("tail", () => {
  * @returns the same type we expect when deserializing in wrangler
  */
 function serialize(message: TailEventMessage): WebSocket.RawData {
-	if (isScheduled(message.event)) {
-		// `ScheduledEvent`s work just fine
+	if (!isRequest(message.event)) {
+		// `ScheduledEvent`s and `TailEvent`s work just fine
 		const stringified = JSON.stringify(message);
 		return Buffer.from(stringified, "utf-8");
 	} else {
@@ -470,12 +513,12 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
  * Small helper to disambiguate the event types possible in a `TailEventMessage`
  *
  * @param event A TailEvent
- * @returns whether event is a ScheduledEvent (true) or a RequestEvent
+ * @returns true if `event` is a RequestEvent
  */
-function isScheduled(
-	event: ScheduledEvent | RequestEvent | undefined | null
-): event is ScheduledEvent {
-	return Boolean(event && "cron" in event);
+function isRequest(
+	event: ScheduledEvent | RequestEvent | AlarmEvent | undefined | null
+): event is RequestEvent {
+	return Boolean(event && "request" in event);
 }
 
 /**
@@ -558,6 +601,11 @@ const mockTailExpiration = new Date(3005, 1);
  * Default value for event timestamps
  */
 const mockEventTimestamp = 1645454470467;
+
+/**
+ * Default value for event time ISO strings
+ */
+const mockEventScheduledTime = new Date(mockEventTimestamp).toISOString();
 
 /**
  * Mock out the API hit during Tail deletion
@@ -694,5 +742,11 @@ function generateMockScheduledEvent(
 	return {
 		cron: opts?.cron || "* * * * *",
 		scheduledTime: opts?.scheduledTime || mockEventTimestamp,
+	};
+}
+
+function generateMockAlarmEvent(opts?: Partial<AlarmEvent>): AlarmEvent {
+	return {
+		scheduledTime: opts?.scheduledTime || mockEventScheduledTime,
 	};
 }
