@@ -319,6 +319,9 @@ export const Handler = async ({
 
 	if (_routes) {
 		formData.append("_routes.json", new File([_routes], "_routes.json"));
+		logger.warn(
+			`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
+		);
 	}
 
 	if (builtFunctions) {
