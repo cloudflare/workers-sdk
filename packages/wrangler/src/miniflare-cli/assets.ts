@@ -335,6 +335,9 @@ async function generateAssetsFetch(
 
 	const generateResponse = (request: MiniflareRequest) => {
 		const url = new URL(request.url);
+		try {
+			url.pathname = decodeURIComponent(url.pathname);
+		} catch {}
 
 		const deconstructedResponse: {
 			status: number;
