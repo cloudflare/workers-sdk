@@ -204,6 +204,8 @@ export const Handler = async ({
 		throw new FatalError("Must specify a project name.", 1);
 	}
 
+	logger.log(`Uploading ${projectName}`)
+
 	// We infer git info by default is not passed in
 
 	let isGitDir = true;
@@ -249,6 +251,8 @@ export const Handler = async ({
 		}
 	}
 
+	logger.log('got git info')
+
 	let builtFunctions: string | undefined = undefined;
 	const functionsDirectory = join(cwd(), "functions");
 	if (existsSync(functionsDirectory)) {
@@ -265,6 +269,8 @@ export const Handler = async ({
 
 		builtFunctions = readFileSync(outfile, "utf-8");
 	}
+
+	logger.log('functions passed')
 
 	const manifest = await upload({ directory, accountId, projectName });
 

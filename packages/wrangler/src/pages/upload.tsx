@@ -113,6 +113,8 @@ export const upload = async (
 
 	const directory = resolve(args.directory);
 
+	logger.log(`dir: ${directory}`)
+
 	// TODO(future): Use this to more efficiently load files in and speed up uploading
 	// Limit memory to 1 GB unless more is specified
 	// let maxMemory = 1_000_000_000;
@@ -160,6 +162,8 @@ export const upload = async (
 						);
 					}
 
+					logger.log(`Added ${name} to fileMap`)
+
 					// We don't want to hold the content in memory. We instead only want to read it when it's needed
 					fileMap.set(name, {
 						path: filepath,
@@ -178,6 +182,8 @@ export const upload = async (
 
 	const fileMap = await walk(directory);
 
+	logger.log(`walked ${directory}`)
+
 	if (fileMap.size > 20000) {
 		throw new FatalError(
 			`Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
@@ -188,6 +194,8 @@ export const upload = async (
 	const files = [...fileMap.values()];
 
 	let jwt = await fetchJwt();
+
+	logger.log(`got JWT`)
 
 	const start = Date.now();
 
@@ -222,6 +230,8 @@ export const upload = async (
 		}
 	};
 	const missingHashes = await getMissingHashes();
+
+	logger.log(`got missing hashes`)
 
 	const sortedFiles = files
 		.filter((file) => missingHashes.includes(file.hash))
@@ -289,6 +299,8 @@ export const upload = async (
 					base64: true,
 				}))
 			);
+
+			logger.log(`Uploading bucket`, bucket);
 
 			try {
 				return await fetchResult(`/pages/assets/upload`, {
