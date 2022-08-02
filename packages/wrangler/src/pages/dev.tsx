@@ -22,6 +22,7 @@ type PagesDevArgs = {
 	binding?: (string | number)[];
 	kv?: (string | number)[];
 	do?: (string | number)[];
+	r2?: (string | number)[];
 	"live-reload": boolean;
 	"local-protocol"?: "https" | "http";
 	"experimental-enable-local-persistence": boolean;
@@ -68,13 +69,17 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 			},
 			kv: {
 				type: "array",
-				description: "KV namespace to bind",
+				description: "KV namespace to bind (--kv KV_BINDING)",
 				alias: "k",
 			},
 			do: {
 				type: "array",
-				description: "Durable Object to bind (NAME=CLASS)",
+				description: "Durable Object to bind (--do NAME=CLASS)",
 				alias: "o",
+			},
+			r2: {
+				type: "array",
+				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
 			"live-reload": {
 				type: "boolean",
@@ -114,6 +119,7 @@ export const Handler = async ({
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
+	r2: r2s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
 	"experimental-enable-local-persistence": experimentalEnableLocalPersistence,
@@ -244,6 +250,7 @@ export const Handler = async ({
 					class_name,
 				};
 			}),
+			r2: r2s.map(binding => { return { binding: binding.toString(), bucket_name: "" } }),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
