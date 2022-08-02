@@ -278,8 +278,9 @@ function useLocalWorker({
 				stdio: "pipe",
 			}));
 
-			child.on("message", async (message) => {
-				if (message === "ready") {
+			child.on("message", async (messageString) => {
+				const message = JSON.parse(messageString as string);
+				if (message.ready) {
 					// Let's register our presence in the dev registry
 					if (workerName) {
 						await registerWorker(workerName, {
@@ -287,6 +288,8 @@ function useLocalWorker({
 							mode: "local",
 							port,
 							host: ip,
+							durableObjects: message.durableObjectClassNames,
+							durableObjectsPort: message.durableObjectsPort,
 						});
 					}
 					onReady?.();

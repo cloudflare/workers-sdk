@@ -1,10 +1,17 @@
-import { Log, LogLevel, Miniflare } from "miniflare";
+import {
+	Log,
+	LogLevel,
+	Miniflare,
+	Response as MiniflareResponse,
+	Request as MiniflareRequest,
+} from "miniflare";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import generateASSETSBinding from "./assets";
 import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
 import type { Options } from "./assets";
+import type { AddressInfo } from "net";
 
 export interface EnablePagesAssetsServiceBindingOptions {
 	proxyPort?: number;
@@ -45,6 +52,8 @@ async function main() {
 	}
 
 	let mf: Miniflare | undefined;
+	let durableObjectsMf: Miniflare | undefined = undefined;
+	let durableObjectsMfPort: number | undefined = undefined;
 
 	try {
 		if (args._[1]) {
@@ -73,12 +82,83 @@ async function main() {
 		// Start Miniflare development server
 		await mf.startServer();
 		await mf.startScheduler();
-		process.send && process.send("ready");
+
+		const durableObjectClassNames = Object.values(
+			config.durableObjects as Record<string, string>
+		);
+
+		if (durableObjectClassNames.length > 0) {
+			durableObjectsMf = new Miniflare({
+				host: config.host,
+				script: `
+				export default {
+					fetch(request, env) {
+						return env.DO.fetch(request)
+					}
+				}`,
+				serviceBindings: {
+					DO: async (request: MiniflareRequest) => {
+						request = new MiniflareRequest(request);
+
+						const className = request.headers.get(
+							"x-miniflare-durable-object-class-name"
+						);
+						const idString = request.headers.get(
+							"x-miniflare-durable-object-id"
+						);
+						request.headers.delete("x-miniflare-durable-object-class-name");
+						request.headers.delete("x-miniflare-durable-object-id");
+						// TODO: Host/URL
+
+						if (!className || !idString) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Missing `x-miniflare-durable-object-class-name` or `x-miniflare-durable-object-id` headers.",
+								{ status: 400 }
+							);
+						}
+
+						const namespace = await mf?.getDurableObjectNamespace(className);
+						const id = namespace?.idFromString(idString);
+
+						if (!id) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Could not generate an ID. Possibly due to a mismatched DO class name and ID?",
+								{ status: 500 }
+							);
+						}
+
+						const stub = namespace?.get(id);
+
+						if (!stub) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Could not generate a stub. Possibly due to a mismatched DO class name and ID?",
+								{ status: 500 }
+							);
+						}
+
+						return stub.fetch(request);
+					},
+				},
+				modules: true,
+			});
+			const server = await durableObjectsMf.startServer();
+			durableObjectsMfPort = (server.address() as AddressInfo).port;
+		}
+
+		process.send &&
+			process.send(
+				JSON.stringify({
+					ready: true,
+					durableObjectClassNames,
+					durableObjectsPort: durableObjectsMfPort,
+				})
+			);
 	} catch (e) {
 		mf?.log.error(e as Error);
 		process.exitCode = 1;
 		// Unmount any mounted workers
 		await mf?.dispose();
+		await durableObjectsMf?.dispose();
 	}
 }
 
