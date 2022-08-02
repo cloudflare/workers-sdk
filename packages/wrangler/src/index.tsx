@@ -51,6 +51,7 @@ import {
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
 	deleteR2Bucket,
+	deleteR2Object,
 	getR2Object,
 	listR2Buckets,
 	putR2Object,
@@ -1731,6 +1732,7 @@ function createCLIParser(argv: string[]) {
 								);
 							}
 						}
+
 						if (errors.length > 0) {
 							throw new Error(
 								`Unexpected JSON input from "${filename}".\n` +
@@ -1768,13 +1770,12 @@ function createCLIParser(argv: string[]) {
 					.command(
 						"get <objectPath>",
 						"Fetch an object from an R2 bucket",
-						(yargs) => {
-							return yargs
-								.positional("objectPath", {
-									describe:
-										"The source object path in the form of {bucket}/{key}",
-									type: "string",
-								})
+						(Objectyargs) => {
+							return Objectyargs.positional("objectPath", {
+								describe:
+									"The source object path in the form of {bucket}/{key}",
+								type: "string",
+							})
 								.option("file", {
 									describe: "The destination file to create",
 									alias: "f",
@@ -1790,13 +1791,16 @@ function createCLIParser(argv: string[]) {
 									type: "boolean",
 								});
 						},
-						async (args) => {
-							const config = readConfig(args.config as ConfigPath, args);
+						async (objectGetYargs) => {
+							const config = readConfig(
+								objectGetYargs.config as ConfigPath,
+								objectGetYargs
+							);
 							const accountId = await requireAuth(config);
-							const { objectPath, pipe } = args;
+							const { objectPath, pipe } = objectGetYargs;
 							const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 
-							let file = args.file;
+							let file = objectGetYargs.file;
 							if (!file && !pipe) {
 								file = key;
 							}
@@ -1817,13 +1821,12 @@ function createCLIParser(argv: string[]) {
 					.command(
 						"put <objectPath>",
 						"Create an object in an R2 bucket",
-						(yargs) => {
-							return yargs
-								.positional("objectPath", {
-									describe:
-										"The destination object path in the form of {bucket}/{key}",
-									type: "string",
-								})
+						(Objectyargs) => {
+							return Objectyargs.positional("objectPath", {
+								describe:
+									"The destination object path in the form of {bucket}/{key}",
+								type: "string",
+							})
 								.option("file", {
 									describe: "The path of the file to upload",
 									alias: "f",
@@ -1880,12 +1883,15 @@ function createCLIParser(argv: string[]) {
 									type: "string",
 								});
 						},
-						async (args) => {
+						async (objectPutYargs) => {
 							await printWranglerBanner();
 
-							const config = readConfig(args.config as ConfigPath, args);
+							const config = readConfig(
+								objectPutYargs.config as ConfigPath,
+								objectPutYargs
+							);
 							const accountId = await requireAuth(config);
-							const { objectPath, file, pipe, ...options } = args;
+							const { objectPath, file, pipe, ...options } = objectPutYargs;
 							const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 							if (!file && !pipe) {
 								throw new CommandLineArgsError(
@@ -1922,8 +1928,32 @@ function createCLIParser(argv: string[]) {
 							});
 							logger.log("Upload complete.");
 						}
+					)
+					.command(
+						"delete <objectPath>",
+						"Delete an object in an R2 bucket",
+						(objectDeleteYargs) => {
+							return objectDeleteYargs.positional("objectPath", {
+								describe:
+									"The destination object path in the form of {bucket}/{key}",
+								type: "string",
+							});
+						},
+						async (args) => {
+							const { objectPath } = args;
+							await printWranglerBanner();
+
+							const config = readConfig(args.config as ConfigPath, args);
+							const accountId = await requireAuth(config);
+							const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+							logger.log(`Deleting object "${key}" from bucket "${bucket}".`);
+
+							await deleteR2Object(accountId, bucket, key);
+							logger.log("Delete complete.");
+						}
 					);
 			})
+
 			.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 				r2BucketYargs.command(
 					"create <name>",

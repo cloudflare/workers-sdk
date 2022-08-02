@@ -290,6 +290,24 @@ describe("wrangler", () => {
 			Upload complete."
 		`);
 			});
+
+			it("should delete R2 object from bucket", async () => {
+				setMockFetchR2Objects({
+					accountId: "some-account-id",
+					bucketName: "bucketName-object-test",
+					objectName: "wormhole-img.png",
+				});
+
+				await runWrangler(
+					`r2 object delete bucketName-object-test/wormhole-img.png`
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+			Delete complete."
+		`);
+			});
+
 			it("should not allow `--pipe` & `--file` to run together", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				setMockFetchR2Objects({
