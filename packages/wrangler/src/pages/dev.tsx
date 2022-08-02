@@ -250,7 +250,9 @@ export const Handler = async ({
 					class_name,
 				};
 			}),
-			r2: r2s.map(binding => { return { binding: binding.toString(), bucket_name: "" } }),
+			r2: r2s.map((binding) => {
+				return { binding: binding.toString(), bucket_name: "" };
+			}),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,

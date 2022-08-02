@@ -612,7 +612,7 @@ async function getBindings(
 						bucket_name: preview_bucket_name,
 					};
 				}
-			)),
+			) || []),
 			...(args.r2 || []),
 		],
 		worker_namespaces: configParam.worker_namespaces,
