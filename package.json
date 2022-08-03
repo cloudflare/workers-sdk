@@ -19,7 +19,7 @@
 		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
-		"prettify": "prettier packages/** --write --ignore-unknown",
+		"prettify": "prettier packages/** .changeset --write --ignore-unknown",
 		"test": "npm run test --workspaces --if-present",
 		"test:ci": "npm run test:ci --workspaces --if-present"
 	},
