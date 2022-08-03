@@ -16,6 +16,7 @@ type PagesDevArgs = {
 	directory?: string;
 	command?: string;
 	local: boolean;
+	ip: string;
 	port: number;
 	proxy?: number;
 	"script-path": string;
@@ -45,6 +46,11 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				type: "boolean",
 				default: true,
 				description: "Run on my machine",
+			},
+			ip: {
+				type: "string",
+				default: "0.0.0.0",
+				description: "The IP address to listen on",
 			},
 			port: {
 				type: "number",
@@ -108,6 +114,7 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 export const Handler = async ({
 	local,
 	directory,
+	ip,
 	port,
 	proxy: requestedProxyPort,
 	"script-path": singleWorkerScriptPath,
@@ -221,6 +228,7 @@ export const Handler = async ({
 	const { stop, waitUntilExit } = await unstable_dev(
 		scriptPath,
 		{
+			ip,
 			port,
 			watch: true,
 			localProtocol,

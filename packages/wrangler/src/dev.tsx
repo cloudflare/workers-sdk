@@ -127,9 +127,9 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				default: true,
 			})
 			.option("ip", {
-				describe: "IP address to listen on, defaults to `localhost`",
+				describe: "IP address to listen on",
 				type: "string",
-				requiresArg: true,
+				default: "0.0.0.0",
 			})
 			.option("port", {
 				describe: "Port to listen on",
