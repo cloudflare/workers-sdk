@@ -260,6 +260,7 @@ export const Handler = async ({
 				functionsDirectory,
 				onEnd: () => resolve(null),
 				buildOutputDirectory: dirname(outfile),
+				directory,
 			})
 		);
 
@@ -329,7 +330,6 @@ export const Handler = async ({
 
 	if (_routes) {
 		formData.append("_routes.json", new File([_routes], "_routes.json"));
-
 	}
 
 	if (builtFunctions) {
