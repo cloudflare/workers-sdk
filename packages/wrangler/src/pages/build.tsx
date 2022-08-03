@@ -172,9 +172,11 @@ export async function buildFunctions({
 
 	if (config.routes) {
 		if (!directory) {
-			logger.warn(
-				"Cannot write generated routes file _routes.generated.json. Output directory is undefined."
-			);
+			if (!isInPagesCI) {
+				logger.warn(
+					"Cannot write generated routes file _routes.generated.json. Output directory is undefined."
+				);
+			}
 		} else if (existsSync(join(directory, "_routes.json"))) {
 			logger.log(
 				"Found _routes.json file. Skipping automatic routes generation."

@@ -188,6 +188,7 @@ export const Handler = async ({
 				onEnd: () => scriptReadyResolve(),
 				buildOutputDirectory: directory,
 				nodeCompat,
+				directory,
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 		} catch {}
@@ -204,6 +205,7 @@ export const Handler = async ({
 				onEnd: () => scriptReadyResolve(),
 				buildOutputDirectory: directory,
 				nodeCompat,
+				directory,
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 		});
