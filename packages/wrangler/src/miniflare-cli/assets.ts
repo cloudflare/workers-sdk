@@ -335,6 +335,11 @@ async function generateAssetsFetch(
 
 	const generateResponse = (request: MiniflareRequest) => {
 		const url = new URL(request.url);
+		let assetName = url.pathname;
+		try {
+			//it's possible for someone to send a URL like http://fakehost/abc%2 which would fail to decode
+			assetName = decodeURIComponent(url.pathname);
+		} catch {}
 
 		const deconstructedResponse: {
 			status: number;
@@ -377,7 +382,7 @@ async function generateAssetsFetch(
 		}
 
 		const notFound = () => {
-			let cwd = url.pathname;
+			let cwd = assetName;
 			while (cwd) {
 				cwd = cwd.slice(0, cwd.lastIndexOf("/"));
 
@@ -407,38 +412,36 @@ async function generateAssetsFetch(
 
 		let asset;
 
-		if (url.pathname.endsWith("/")) {
-			if ((asset = getAsset(`${url.pathname}/index.html`))) {
+		if (assetName.endsWith("/")) {
+			if ((asset = getAsset(`${assetName}/index.html`))) {
 				deconstructedResponse.body = serveAsset(asset);
 				deconstructedResponse.headers.set(
 					"Content-Type",
 					getType(asset) || "application/octet-stream"
 				);
 				return deconstructedResponse;
-			} else if (
-				(asset = getAsset(`${url.pathname.replace(/\/$/, ".html")}`))
-			) {
+			} else if ((asset = getAsset(`${assetName.replace(/\/$/, ".html")}`))) {
 				deconstructedResponse.status = 301;
 				deconstructedResponse.headers.set(
 					"Location",
-					`${url.pathname.slice(0, -1)}${url.search}`
+					`${assetName.slice(0, -1)}${url.search}`
 				);
 				return deconstructedResponse;
 			}
 		}
 
-		if (url.pathname.endsWith("/index")) {
+		if (assetName.endsWith("/index")) {
 			deconstructedResponse.status = 301;
 			deconstructedResponse.headers.set(
 				"Location",
-				`${url.pathname.slice(0, -"index".length)}${url.search}`
+				`${assetName.slice(0, -"index".length)}${url.search}`
 			);
 			return deconstructedResponse;
 		}
 
-		if ((asset = getAsset(url.pathname))) {
-			if (url.pathname.endsWith(".html")) {
-				const extensionlessPath = url.pathname.slice(0, -".html".length);
+		if ((asset = getAsset(assetName))) {
+			if (assetName.endsWith(".html")) {
+				const extensionlessPath = assetName.slice(0, -".html".length);
 				if (getAsset(extensionlessPath) || extensionlessPath === "/") {
 					deconstructedResponse.body = serveAsset(asset);
 					deconstructedResponse.headers.set(
@@ -462,12 +465,12 @@ async function generateAssetsFetch(
 				);
 				return deconstructedResponse;
 			}
-		} else if (hasFileExtension(url.pathname)) {
+		} else if (hasFileExtension(assetName)) {
 			notFound();
 			return deconstructedResponse;
 		}
 
-		if ((asset = getAsset(`${url.pathname}.html`))) {
+		if ((asset = getAsset(`${assetName}.html`))) {
 			deconstructedResponse.body = serveAsset(asset);
 			deconstructedResponse.headers.set(
 				"Content-Type",
@@ -476,11 +479,11 @@ async function generateAssetsFetch(
 			return deconstructedResponse;
 		}
 
-		if ((asset = getAsset(`${url.pathname}/index.html`))) {
+		if ((asset = getAsset(`${assetName}/index.html`))) {
 			deconstructedResponse.status = 301;
 			deconstructedResponse.headers.set(
 				"Location",
-				`${url.pathname}/${url.search}`
+				`${assetName}/${url.search}`
 			);
 			return deconstructedResponse;
 		} else {

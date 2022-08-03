@@ -275,6 +275,11 @@ export type AdditionalDevProps = {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	r2?: {
+		binding: string;
+		bucket_name: string;
+		preview_bucket_name?: string;
+	}[];
 };
 type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
@@ -429,6 +434,7 @@ export async function startDev(args: StartDevOptions) {
 				kv: args.kv,
 				vars: args.vars,
 				durableObjects: args.durableObjects,
+				r2: args.r2,
 			});
 
 			// mask anything that was overridden in .dev.vars
@@ -591,21 +597,24 @@ async function getBindings(
 				...(args.durableObjects || []),
 			],
 		},
-		r2_buckets: configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
-				// same idea as kv namespace preview id,
-				// same copy-on-write TODO
-				if (!preview_bucket_name) {
-					throw new Error(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
-					);
+		r2_buckets: [
+			...(configParam.r2_buckets?.map(
+				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+					// same idea as kv namespace preview id,
+					// same copy-on-write TODO
+					if (!preview_bucket_name) {
+						throw new Error(
+							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+						);
+					}
+					return {
+						binding,
+						bucket_name: preview_bucket_name,
+					};
 				}
-				return {
-					binding,
-					bucket_name: preview_bucket_name,
-				};
-			}
-		),
+			) || []),
+			...(args.r2 || []),
+		],
 		worker_namespaces: configParam.worker_namespaces,
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,

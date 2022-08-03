@@ -217,7 +217,7 @@ export async function mockFetchR2Objects(
 	bodyInit: {
 		body: BodyInit | Readable;
 		headers: HeadersInit | undefined;
-		method: "PUT" | "GET";
+		method: "PUT" | "GET" | "DELETE";
 	}
 ): Promise<Response> {
 	/**
@@ -234,7 +234,7 @@ export async function mockFetchR2Objects(
 
 		return new Response(value);
 	}
-	throw new Error(`no expected mock found for \`r2 object get\` - ${resource}`);
+	throw new Error(`no mock found for \`r2 object\` - ${resource}`);
 }
 
 /**

@@ -116,3 +116,16 @@ export async function putR2Object(
 		}
 	);
 }
+/**
+ * Delete an Object
+ */
+export async function deleteR2Object(
+	accountId: string,
+	bucketName: string,
+	objectName: string
+): Promise<void> {
+	await fetchR2Objects(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
+		{ method: "DELETE" }
+	);
+}
