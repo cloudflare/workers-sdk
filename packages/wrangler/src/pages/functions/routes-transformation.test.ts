@@ -1,5 +1,10 @@
 import { toUrlPath } from "../../paths";
-import { convertRoutesToGlobPatterns } from "./routes-transformation";
+import { MAX_FUNCTIONS_ROUTES_RULES } from "../constants";
+import {
+	compareRoutes,
+	convertRoutesToGlobPatterns,
+	convertRoutesToRoutesJSONSpec,
+} from "./routes-transformation";
 
 // TODO: make a convenience function for creating a list
 // of `convertRoutesToGlobPatterns` inputs from a string array
@@ -140,6 +145,72 @@ describe("route-paths-to-glob-patterns", () => {
 					},
 				])
 			).toEqual(["/middleware"]);
+		});
+	});
+
+	describe("convertRoutesToRoutesJSONSpec()", () => {
+		it("should convert and consolidate routes into JSONSpec", () => {
+			expect(
+				convertRoutesToRoutesJSONSpec([
+					{ routePath: toUrlPath("/api/foo/bar") },
+					{ routePath: toUrlPath("/foo/bar") },
+					{ routePath: toUrlPath("/foo/:bar") },
+					{ routePath: toUrlPath("/api/foo/bar") },
+					{
+						routePath: toUrlPath("/middleware"),
+						middleware: "./some-middleware.ts",
+					},
+				])
+			).toEqual({
+				version: 1,
+				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
+				exclude: [],
+			});
+		});
+
+		it("should truncate all routes if over limit", () => {
+			const routes = [];
+			for (let i = 0; i < MAX_FUNCTIONS_ROUTES_RULES + 1; i++) {
+				routes.push({ routePath: toUrlPath(`/api/foo-${i}`) });
+			}
+			expect(convertRoutesToRoutesJSONSpec(routes)).toEqual({
+				version: 1,
+				include: ["/*"],
+				exclude: [],
+			});
+		});
+
+		it("should allow max routes", () => {
+			const routes = [];
+			for (let i = 0; i < MAX_FUNCTIONS_ROUTES_RULES; i++) {
+				routes.push({ routePath: toUrlPath(`/api/foo-${i}`) });
+			}
+			expect(convertRoutesToRoutesJSONSpec(routes).include.length).toEqual(
+				MAX_FUNCTIONS_ROUTES_RULES
+			);
+		});
+	});
+
+	describe("compareRoutes()", () => {
+		describe("compareRoutes()", () => {
+			test("routes / last", () => {
+				expect(compareRoutes("/", "/foo")).toBeGreaterThanOrEqual(1);
+				expect(compareRoutes("/", "/*")).toBeGreaterThanOrEqual(1);
+			});
+
+			test("routes with fewer segments come after those with more segments", () => {
+				expect(compareRoutes("/foo", "/foo/bar")).toBeGreaterThanOrEqual(1);
+				expect(compareRoutes("/foo", "/foo/bar/cat")).toBeGreaterThanOrEqual(1);
+			});
+
+			test("routes with wildcard segments come after those without", () => {
+				expect(compareRoutes("/*", "/foo")).toBe(1);
+				expect(compareRoutes("/foo/*", "/foo/bar")).toBe(1);
+			});
+
+			test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", () => {
+				expect(compareRoutes("/foo/*/bar", "/foo/bar/*")).toBe(1);
+			});
 		});
 	});
 });
