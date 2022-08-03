@@ -57,6 +57,12 @@ describe("Pages Functions", () => {
     expect(text).toContain("Hello, world!");
   });
 
+  it("parses URL encoded requests", async () => {
+    const response = await waitUntilReady("http://localhost:8789/[id].js")
+    const text = await response.text();
+    expect(text).toEqual('// test script');
+  })
+
   it("passes environment variables", async () => {
     const response = await waitUntilReady("http://localhost:8789/variables");
     const env = await response.json();
