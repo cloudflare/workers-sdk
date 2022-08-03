@@ -2,16 +2,16 @@ import { spawn } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
+import type { Response, RequestInit } from "undici";
 
-const waitUntilReady = async (url: string): Promise<Response> => {
+const waitUntilReady = async (url: string, requestInit?: RequestInit): Promise<Response> => {
   let response: Response | undefined = undefined;
 
   while (response === undefined) {
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
 
     try {
-      response = await fetch(url);
+      response = await fetch(url, requestInit);
     } catch {}
   }
 
@@ -68,6 +68,7 @@ describe("Pages Functions", () => {
     const env = await response.json();
     expect(env).toEqual({
       ASSETS: {},
+      BUCKET: {},
       NAME: "VALUE",
       OTHER_NAME: "THING=WITH=EQUALS",
       VAR_1: "var #1 value",
@@ -155,6 +156,19 @@ describe("Pages Functions", () => {
       );
       const text = await response.text();
       expect(text).toContain("<h1>bar</h1>");
+    });
+  });
+
+  describe("it supports R2", () => {
+    it("should allow creates", async () => {
+      const response = await waitUntilReady("http://localhost:8789/r2/create", { method: 'PUT' });
+      const object = await response.json() as { key: string, version: string };
+      expect(object.key).toEqual("test");
+
+      const getResponse = await waitUntilReady("http://localhost:8789/r2/get");
+      const getObject = await getResponse.json() as { key: string, version: string };
+      expect(getObject.key).toEqual("test");
+      expect(getObject.version).toEqual(object.version);
     });
   });
 });

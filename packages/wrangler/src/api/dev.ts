@@ -32,6 +32,11 @@ interface DevOptions {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	r2?: {
+		binding: string;
+		bucket_name: string;
+		preview_bucket_name?: string;
+	}[];
 	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;

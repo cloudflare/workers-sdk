@@ -5,7 +5,7 @@
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
-		"dev": "npx wrangler pages dev public  --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS  --port 8789",
+		"dev": "npx wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
 		"test": "npx jest --forceExit",
 		"test:ci": "npx jest --forceExit"
 	},
