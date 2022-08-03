@@ -260,6 +260,7 @@ export const Handler = async ({
 				functionsDirectory,
 				onEnd: () => resolve(null),
 				buildOutputDirectory: dirname(outfile),
+				directory,
 			})
 		);
 
@@ -303,7 +304,17 @@ export const Handler = async ({
 
 	try {
 		_routes = readFileSync(join(directory, "_routes.json"), "utf-8");
-	} catch {}
+		logger.warn(
+			`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
+		);
+	} catch {
+		try {
+			_routes = readFileSync(
+				join(directory, "_routes.generated.json"),
+				"utf-8"
+			);
+		} catch {}
+	}
 
 	try {
 		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
@@ -319,9 +330,6 @@ export const Handler = async ({
 
 	if (_routes) {
 		formData.append("_routes.json", new File([_routes], "_routes.json"));
-		logger.warn(
-			`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
-		);
 	}
 
 	if (builtFunctions) {

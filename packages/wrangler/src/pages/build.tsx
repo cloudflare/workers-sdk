@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { logger } from "../logger";
@@ -9,6 +9,7 @@ import { buildPlugin } from "./functions/buildPlugin";
 import { buildWorker } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
+import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
 import type { Config } from "./functions/routes";
 import type { ArgumentsCamelCase, Argv } from "yargs";
@@ -135,6 +136,7 @@ export async function buildFunctions({
 	onEnd,
 	plugin = false,
 	buildOutputDirectory,
+	directory,
 	nodeCompat,
 }: {
 	outfile: string;
@@ -146,8 +148,15 @@ export async function buildFunctions({
 	watch?: boolean;
 	onEnd?: () => void;
 	plugin?: boolean;
+	/**
+	 * Temporary functions output build directory
+	 */
 	buildOutputDirectory?: string;
 	nodeCompat?: boolean;
+	/**
+	 * Project output directory
+	 */
+	directory?: string;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -160,6 +169,24 @@ export async function buildFunctions({
 		baseDir: functionsDirectory,
 		baseURL,
 	});
+
+	if (config.routes) {
+		if (!directory) {
+			logger.warn(
+				"Cannot write generated routes file _routes.generated.json. Output directory is undefined."
+			);
+		} else if (existsSync(join(directory, "_routes.json"))) {
+			logger.log(
+				"Found _routes.json file. Skipping automatic routes generation."
+			);
+		} else {
+			const routesJSON = convertRoutesToRoutesJSONSpec(config.routes);
+			writeFileSync(
+				join(directory, "_routes.generated.json"),
+				JSON.stringify(routesJSON, null, 2)
+			);
+		}
+	}
 
 	if (outputConfigPath) {
 		writeFileSync(
