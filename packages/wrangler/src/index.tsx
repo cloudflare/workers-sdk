@@ -56,6 +56,7 @@ import {
 	listR2Buckets,
 	putR2Object,
 } from "./r2";
+import { repl } from "./repl";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	createTail,
@@ -2122,6 +2123,19 @@ function createCLIParser(argv: string[]) {
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
 			});
+		}
+	);
+
+	// repl
+	wrangler.command(
+		"repl",
+		"💬 Start an interactive REPL session",
+		() => {},
+		async () => {
+			await printWranglerBanner();
+			await repl();
+			const config = readConfig(undefined, {});
+			// TODO: set up metrics event for repl
 		}
 	);
 
