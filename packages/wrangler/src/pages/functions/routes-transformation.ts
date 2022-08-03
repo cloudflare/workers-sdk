@@ -52,8 +52,8 @@ export function convertRoutesToRoutesJSONSpec(
 	// The initial routes coming in are sorted most-specific to least-specific.
 	// The order doesn't have any affect on the output of this function, but
 	// it should speed up route consolidation with less-specific routes being first.
-	routes.reverse();
-	const convertedRoutes = convertRoutesToGlobPatterns(routes);
+	const reversedRoutes = [...routes].reverse();
+	const convertedRoutes = convertRoutesToGlobPatterns(reversedRoutes);
 	let consolidatedRoutes = consolidateRoutes(convertedRoutes);
 	if (consolidatedRoutes.length > MAX_FUNCTIONS_ROUTES_RULES) {
 		consolidatedRoutes = ["/*"];
