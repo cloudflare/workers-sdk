@@ -1,14 +1,11 @@
-import chalk from "chalk";
+import fs from "node:fs/promises";
 import { render, Static, Text } from "ink";
 import Table from "ink-table";
-import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import { getDatabaseByName } from "./list";
 import type { Database } from "./types";
-import type splitSqlQuery from "@databases/split-sql-query";
-import type { SQL } from "@databases/sql";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type ExecuteArgs = {
@@ -52,31 +49,36 @@ export async function Handler({
 	file,
 	command,
 }: ArgumentsCamelCase<ExecuteArgs>): Promise<void> {
+	if (!file && !command)
+		return console.error(`Error: must provide --command or --file.`);
 	if (file && command)
-		throw new Error(`Error: can't provide both --command and --file.`);
-
-	const [{ default: parser }, { default: splitter }] = await npxImport<
-		[{ default: SQL }, { default: typeof splitSqlQuery }]
-	>(
-		["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"],
-		(msg: string) => console.log(chalk.gray(msg))
-	);
+		return console.error(`Error: can't provide both --command and --file.`);
 
 	// Only multi-queries are working atm, so throw down a little extra one.
-	const sql = file
-		? parser.file(file)
-		: command
-		? parser.__dangerous__rawValue(command)
-		: null;
+	const sql = file ? await fs.readFile(file, "utf8") : command;
 
-	if (!sql) throw new Error(`Error: must provide --command or --file.`);
-	console.log({ sql });
-
-	if (file) {
-		console.log(splitter);
-		console.log(splitter(sql));
-	}
-	return;
+	// const [{ default: parser }, { default: splitter }] = await npxImport<
+	// 	[{ default: SQL }, { default: typeof splitSqlQuery }]
+	// >(
+	// 	["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"],
+	// 	(msg: string) => console.log(chalk.gray(msg))
+	// );
+	//
+	// // Only multi-queries are working atm, so throw down a little extra one.
+	// const sql = file
+	// 	? parser.file(file)
+	// 	: command
+	// 	? parser.__dangerous__rawValue(command)
+	// 	: null;
+	//
+	// if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	// console.log({ sql });
+	//
+	// if (file) {
+	// 	console.log(splitter);
+	// 	console.log(splitter(sql));
+	// }
+	// return;
 
 	const accountId = await requireAuth({});
 	const db: Database = await getDatabaseByName(accountId, name);

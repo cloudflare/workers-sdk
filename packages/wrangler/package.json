@@ -98,7 +98,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.47",
-		"miniflare": "2.6.0-d1.2",
+		"miniflare": "2.6.0-d1.3",
 		"nanoid": "^3.3.3",
 		"npx-import": "^0.0.1",
 		"path-to-regexp": "^6.2.0",
