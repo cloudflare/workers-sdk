@@ -100,12 +100,15 @@
 		"esbuild": "0.14.51",
 		"miniflare": "^2.8.1",
 		"nanoid": "^3.3.3",
+		"npx-import": "^0.0.1",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.7.4",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@databases/split-sql-query": "^1.0.3",
+		"@databases/sql": "^3.2.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
 		"@types/busboy": "^1.5.0",

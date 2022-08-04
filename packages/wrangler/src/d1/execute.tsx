@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { render, Text, Static } from "ink";
+import { render, Static, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
@@ -57,6 +57,29 @@ export async function Handler({
 	// Only multi-queries are working atm, so throw down a little extra one.
 	const sql = file ? await fs.readFile(file, "utf8") : command;
 
+	// const [{ default: parser }, { default: splitter }] = await npxImport<
+	// 	[{ default: SQL }, { default: typeof splitSqlQuery }]
+	// >(
+	// 	["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"],
+	// 	(msg: string) => console.log(chalk.gray(msg))
+	// );
+	//
+	// // Only multi-queries are working atm, so throw down a little extra one.
+	// const sql = file
+	// 	? parser.file(file)
+	// 	: command
+	// 	? parser.__dangerous__rawValue(command)
+	// 	: null;
+	//
+	// if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	// console.log({ sql });
+	//
+	// if (file) {
+	// 	console.log(splitter);
+	// 	console.log(splitter(sql));
+	// }
+	// return;
+
 	const accountId = await requireAuth({});
 	const db: Database = await getDatabaseByName(accountId, name);
 	const isInteractive = process.stdout.isTTY;
@@ -73,7 +96,6 @@ export async function Handler({
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				...(file ? { "Content-Encoding": "gzip" } : {}),
 			},
 			body: JSON.stringify({ sql }),
 		}
