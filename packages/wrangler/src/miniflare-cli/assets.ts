@@ -1,16 +1,11 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fetch as miniflareFetch } from "@miniflare/core";
+import { Headers as MiniflareHeaders } from "@miniflare/core";
+import { upgradingFetch as miniflareFetch } from "@miniflare/web-sockets";
 import { watch } from "chokidar";
 import { getType } from "mime";
-import { Response } from "miniflare";
-import type { Headers as MiniflareHeaders } from "@miniflare/core";
-import type { Log } from "miniflare";
-import type {
-	Request as MiniflareRequest,
-	RequestInfo,
-	RequestInit,
-} from "miniflare";
+import { Response, Request as MiniflareRequest } from "miniflare";
+import type { Log, RequestInfo, RequestInit } from "miniflare";
 
 export interface Options {
 	log: Log;
@@ -29,7 +24,18 @@ export default async function generateASSETSBinding(options: Options) {
 			try {
 				const url = new URL(request.url);
 				url.host = `localhost:${options.proxyPort}`;
-				return await miniflareFetch(url, request);
+				const headers = new MiniflareHeaders(request.headers);
+				if (url.protocol.startsWith("ws")) {
+					url.protocol = url.protocol.replace("ws", "http");
+					headers.set("Upgrade", "websocket");
+				}
+				const proxyRequest = new MiniflareRequest(url, {
+					method: request.method,
+					headers,
+					cf: request.cf,
+					body: request.body,
+				});
+				return await miniflareFetch(proxyRequest);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
