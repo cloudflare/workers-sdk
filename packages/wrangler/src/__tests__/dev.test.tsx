@@ -68,6 +68,28 @@ describe("wrangler dev", () => {
 		});
 	});
 
+	describe("usage-model", () => {
+		it("should read wrangler.toml's usage_model", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				usage_model: "unbound",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+		});
+
+		it("should read wrangler.toml's usage_model in local mode", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				usage_model: "unbound",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev --local");
+			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+		});
+	});
+
 	describe("entry-points", () => {
 		it("should error if there is no entry-point specified", async () => {
 			writeWranglerToml();
