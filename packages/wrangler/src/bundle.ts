@@ -192,8 +192,9 @@ export async function bundleWorker(
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
 		sourcemap: true,
-		// The root included, as the sources are relative paths to tmpDir
-		sourceRoot: entryDirectory,
+		// Include a reference to the output folder in the sourcemap.
+		// This is omitted by default, but we need it to properly resolve source paths in error output.
+		sourceRoot: destination,
 		minify,
 		metafile: true,
 		conditions: ["worker", "browser"],

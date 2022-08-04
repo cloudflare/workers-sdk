@@ -320,10 +320,7 @@ export default function useInspector(props: InspectorProps) {
 														const convertedFnName =
 															pos.name || functionName || "";
 														exceptionLines.push(
-															`    at ${convertedFnName} (${pos.source?.replace(
-																`${mapContent.sourceRoot}/`,
-																""
-															)}:${pos.line}:${pos.column})`
+															`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
 														);
 													}
 												}
