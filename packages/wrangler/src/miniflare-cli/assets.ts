@@ -25,9 +25,9 @@ export default async function generateASSETSBinding(options: Options) {
 				const url = new URL(request.url);
 				url.host = `localhost:${options.proxyPort}`;
 				const headers = new MiniflareHeaders(request.headers);
-				if (url.protocol.startsWith("ws")) {
-					url.protocol = url.protocol.replace("ws", "http");
-					headers.set("Upgrade", "websocket");
+				if (headers.get("Upgrade") === "websocket") {
+					headers.delete("Sec-Websocket-Accept");
+					headers.delete("Sec-Websocket-Key");
 				}
 				const proxyRequest = new MiniflareRequest(url, {
 					method: request.method,
