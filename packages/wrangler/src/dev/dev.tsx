@@ -258,6 +258,7 @@ function DevSession(props: DevSessionProps) {
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
+			usageModel={props.usageModel}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
 			port={props.port}

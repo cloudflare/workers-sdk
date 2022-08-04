@@ -22,6 +22,7 @@ interface LocalProps {
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
+	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
 	assetPaths: AssetPaths | undefined;
 	port: number;
@@ -56,6 +57,7 @@ function useLocalWorker({
 	format,
 	compatibilityDate,
 	compatibilityFlags,
+	usageModel,
 	bindings,
 	assetPaths,
 	port,
@@ -196,6 +198,7 @@ function useLocalWorker({
 					})),
 				compatibilityDate,
 				compatibilityFlags,
+				usageModel,
 				kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
 				r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
 				durableObjects: Object.fromEntries(
@@ -365,6 +368,7 @@ function useLocalWorker({
 		bindings.services,
 		compatibilityDate,
 		compatibilityFlags,
+		usageModel,
 		localPersistencePath,
 		liveReload,
 		assetPaths,
