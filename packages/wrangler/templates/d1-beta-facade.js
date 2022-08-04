@@ -2,13 +2,12 @@
 import worker from "__ENTRY_POINT__";
 
 // src/index.ts
-var Database = class {
-	binding;
+var D1Database = class {
 	constructor(binding) {
 		this.binding = binding;
 	}
 	prepare(query) {
-		return new PreparedStatement(this, query);
+		return new D1PreparedStatement(this, query);
 	}
 	async dump() {
 		const response = await this.binding.fetch("/dump", {
@@ -35,7 +34,8 @@ var Database = class {
 	}
 	async exec(query) {
 		const lines = query.trim().split("\n");
-		const exec = await this._send("/query", lines, []);
+		const _exec = await this._send("/query", lines, []);
+		const exec = Array.isArray(_exec) ? _exec : [_exec];
 		const error = exec
 			.map((r) => {
 				return r.error ? 1 : 0;
@@ -51,8 +51,8 @@ var Database = class {
 			return {
 				count: exec.length,
 				duration: exec.reduce((p, c) => {
-					return p.duration + c.duration;
-				}),
+					return p + c.duration;
+				}, 0),
 			};
 		}
 	}
@@ -82,23 +82,18 @@ var Database = class {
 		return Array.isArray(answer) ? answer : answer;
 	}
 };
-var PreparedStatement = class {
-	statement;
-	database;
-	params;
+var D1PreparedStatement = class {
 	constructor(database, statement, values) {
 		this.database = database;
 		this.statement = statement;
 		this.params = values || [];
 	}
 	bind(...values) {
-		return new PreparedStatement(this.database, this.statement, values);
+		return new D1PreparedStatement(this.database, this.statement, values);
 	}
 	async first(colName) {
-		const info = await this.database._send(
-			"/query",
-			this.statement,
-			this.params
+		const info = firstIfArray(
+			await this.database._send("/query", this.statement, this.params)
 		);
 		const results = info.results;
 		if (results.length < 1) {
@@ -117,13 +112,19 @@ var PreparedStatement = class {
 		}
 	}
 	async run() {
-		return this.database._send("/execute", this.statement, this.params);
+		return firstIfArray(
+			await this.database._send("/execute", this.statement, this.params)
+		);
 	}
 	async all() {
-		return await this.database._send("/query", this.statement, this.params);
+		return firstIfArray(
+			await this.database._send("/query", this.statement, this.params)
+		);
 	}
 	async raw() {
-		const s = await this.database._send("/query", this.statement, this.params);
+		const s = firstIfArray(
+			await this.database._send("/query", this.statement, this.params)
+		);
 		const raw = [];
 		for (var r in s.results) {
 			const entry = Object.keys(s.results[r]).map((k) => {
@@ -134,6 +135,9 @@ var PreparedStatement = class {
 		return raw;
 	}
 };
+function firstIfArray(results) {
+	return Array.isArray(results) ? results[0] : results;
+}
 
 // src/shim.ts
 var D1_IMPORTS = __D1_IMPORTS__;
@@ -149,7 +153,7 @@ function getMaskedEnv(env) {
 		newEnv.delete(bindingName);
 		const newName = bindingName.slice(D1_BETA_PREFIX.length);
 		const newBinding = !LOCAL_MODE
-			? new Database(env[bindingName])
+			? new D1Database(env[bindingName])
 			: env[bindingName];
 		newEnv.set(newName, newBinding);
 	});
