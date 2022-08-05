@@ -466,6 +466,14 @@ async function generateAssetsFetch(
 				return deconstructedResponse;
 			}
 		} else if (hasFileExtension(assetName)) {
+			if ((asset = getAsset(assetName + ".html"))) {
+				deconstructedResponse.body = serveAsset(asset);
+				deconstructedResponse.headers.set(
+					"Content-Type",
+					getType(asset) || "application/octet-stream"
+				);
+				return deconstructedResponse;
+			}
 			notFound();
 			return deconstructedResponse;
 		}
