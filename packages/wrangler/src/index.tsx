@@ -2134,8 +2134,11 @@ function createCLIParser(argv: string[]) {
 		async () => {
 			await printWranglerBanner();
 			await repl();
-			const config = readConfig(undefined, {});
 			// TODO: set up metrics event for repl
+			// const config = readConfig(undefined, {});
+			// await metrics.sendMetricsEvent("repl", {
+			// 	sendMetrics: config.send_metrics,
+			// });
 		}
 	);
 
