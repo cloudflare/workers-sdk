@@ -124,12 +124,18 @@ export async function CreateHandler({
 			isGitDir = false;
 		}
 
+		if (isGitDir) {
+			try {
+				productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
+					.toString()
+					.trim();
+			} catch (err) {}
+		}
+
 		productionBranch = await prompt(
 			"Enter the production branch name:",
 			"text",
-			isGitDir
-				? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
-				: "production"
+			productionBranch ?? "production"
 		);
 	}
 
