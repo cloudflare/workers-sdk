@@ -26,7 +26,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_flags: [],
 			configPath: undefined,
 			dev: {
-				ip: "localhost",
+				ip: "0.0.0.0",
 				local_protocol: "http",
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "https",

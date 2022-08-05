@@ -357,7 +357,7 @@ function normalizeAndValidateDev(
 	rawDev: RawDevConfig
 ): DevConfig {
 	const {
-		ip = "localhost",
+		ip = "0.0.0.0",
 		port,
 		inspector_port,
 		local_protocol = "http",

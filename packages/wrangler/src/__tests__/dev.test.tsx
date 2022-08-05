@@ -652,13 +652,13 @@ describe("wrangler dev", () => {
 	});
 
 	describe("ip", () => {
-		it("should default ip to localhost", async () => {
+		it("should default ip to 0.0.0.0", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -871,7 +871,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("localhost");
+			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:
@@ -1005,7 +1005,7 @@ describe("wrangler dev", () => {
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
-			      --ip                                         IP address to listen on, defaults to \`localhost\`  [string]
+			      --ip                                         IP address to listen on  [string] [default: \\"0.0.0.0\\"]
 			      --port                                       Port to listen on  [number]
 			      --inspector-port                             Port for devtools to connect to  [number]
 			      --routes, --route                            Routes to upload  [array]
