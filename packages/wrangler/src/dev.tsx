@@ -7,29 +7,30 @@ import { fetch } from "undici";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
+import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
 import { identifyD1BindingsAsBeta } from "./worker";
-import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
+import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
-	printWranglerBanner,
-	DEFAULT_LOCAL_PORT,
 	type ConfigPath,
-	getScriptName,
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
 	getDevCompatibilityDate,
 	getRules,
+	getScriptName,
 	isLegacyEnv,
-	DEFAULT_INSPECTOR_PORT,
+	printWranglerBanner,
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
 import type { RequestInit } from "undici";
-import type { Argv, ArgumentsCamelCase } from "yargs";
+import type { ArgumentsCamelCase, Argv } from "yargs";
 
 interface DevArgs {
 	config?: string;
@@ -446,14 +447,11 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const localPersistencePath = args.persistTo
-			? // If path specified, always treat it as relative to cwd()
-			  path.resolve(process.cwd(), args.persistTo)
-			: args.experimentalEnableLocalPersistence || args.persist
-			? // If just flagged on, treat it as relative to wrangler.toml,
-			  // if one can be found, otherwise cwd()
-			  path.resolve(configPath || process.cwd(), ".wrangler/state")
-			: null;
+		const localPersistencePath = getLocalPersistencePath(
+			args.persistTo,
+			Boolean(args.experimentalEnableLocalPersistence || args.persist),
+			configPath
+		);
 
 		const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
 		const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);

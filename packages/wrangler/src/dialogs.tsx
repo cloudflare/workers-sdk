@@ -133,3 +133,7 @@ export function select(
 		);
 	});
 }
+
+export function logDim(msg: string) {
+	console.log(chalk.gray(msg));
+}
