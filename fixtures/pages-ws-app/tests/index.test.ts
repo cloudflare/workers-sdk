@@ -2,7 +2,8 @@ import { spawn } from "child_process";
 import * as path from "path";
 import { upgradingFetch } from "@miniflare/web-sockets";
 import type { ChildProcess } from "child_process";
-import type { Response, RequestInit } from "undici";
+import type { Response } from "miniflare";
+import type { RequestInit } from "undici";
 
 const waitUntilReady = async (url: string, requestInit?: RequestInit): Promise<Response> => {
   let response: Response | undefined = undefined;
@@ -61,5 +62,6 @@ describe("Pages Functions", () => {
   it("understands websocket fetches", async () => {
     const response = await waitUntilReady("http://localhost:8790/ws", { headers: { "Upgrade": "websocket" } });
     expect(response.status).toBe(101);
+    expect(response.webSocket).toBeDefined();
   });
 });
