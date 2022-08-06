@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
+import { build as workerJsBuild } from "esbuild";
 import { unstable_dev } from "../api";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -10,6 +11,7 @@ import * as metrics from "../metrics";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
+import type { Plugin } from "esbuild";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type PagesDevArgs = {
@@ -228,6 +230,12 @@ export const Handler = async ({
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
+		} else {
+			workerJsBuild({
+				entryPoints: [scriptPath],
+				write: false,
+				plugins: [blockWorkerJsImports],
+			}).catch((err) => console.error('Failed to build _worker.js:', err));
 		}
 	}
 
@@ -431,3 +439,15 @@ async function spawnProxyProcess({
 
 	return port;
 }
+
+const blockWorkerJsImports: Plugin = {
+	name: "block-worker-js-imports",
+	setup(build) {
+		build.onResolve({ filter: /.*/g }, (_args) => {
+			logger.error(
+				`_worker.js is using an import. This will throw an error in production.\nYou should bundle your worker before deploying it, or instead remove your import.`
+			);
+			return null
+		});
+	},
+};
