@@ -279,24 +279,16 @@ export const Handler = async ({
 	);
 	await metrics.sendMetricsEvent("run pages dev");
 
+	CLEANUP_CALLBACKS.push(stop);
+
 	waitUntilExit().then(() => {
 		CLEANUP();
-		stop();
 		process.exit(0);
 	});
 
-	process.on("exit", () => {
-		CLEANUP();
-		stop();
-	});
-	process.on("SIGINT", () => {
-		CLEANUP();
-		stop();
-	});
-	process.on("SIGTERM", () => {
-		CLEANUP();
-		stop();
-	});
+	process.on("exit", CLEANUP);
+	process.on("SIGINT", CLEANUP);
+	process.on("SIGTERM", CLEANUP);
 };
 
 function isWindows() {
@@ -402,6 +394,8 @@ async function spawnProxyProcess({
 
 	proxy.on("close", (code) => {
 		logger.error(`Proxy exited with status ${code}.`);
+		CLEANUP();
+		process.exit(code ?? 0);
 	});
 
 	// Wait for proxy process to start...
