@@ -63,7 +63,7 @@ describe("Pages Functions", () => {
 	it("parses URL encoded requests", async () => {
 		const response = await waitUntilReady("http://localhost:8789/[id].js");
 		const text = await response.text();
-		expect(text).toEqual("// test script");
+		expect(text).toContain("// test script");
 	});
 
 	it("passes environment variables", async () => {
