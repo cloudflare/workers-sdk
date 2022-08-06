@@ -1,5 +1,5 @@
 {
-	"name": "ws-app",
+	"name": "pages-ws-app",
 	"version": "0.0.0",
 	"private": true,
 	"sideEffects": false,
