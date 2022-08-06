@@ -235,7 +235,7 @@ export const Handler = async ({
 				entryPoints: [scriptPath],
 				write: false,
 				plugins: [blockWorkerJsImports],
-			}).catch((err) => console.error('Failed to build _worker.js:', err));
+			}).catch((err) => console.error("Failed to build _worker.js:", err));
 		}
 	}
 
@@ -447,7 +447,7 @@ const blockWorkerJsImports: Plugin = {
 			logger.error(
 				`_worker.js is using an import. This will throw an error in production.\nYou should bundle your worker before deploying it, or instead remove your import.`
 			);
-			return null
+			return null;
 		});
 	},
 };
