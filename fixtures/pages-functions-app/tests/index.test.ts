@@ -157,6 +157,15 @@ describe("Pages Functions", () => {
       const text = await response.text();
       expect(text).toContain("<h1>bar</h1>");
     });
+
+    it("supports importing .html from a function", async () => {
+      const response = await waitUntilReady("http://localhost:8789/import-html");
+      expect(response.headers.get("x-custom")).toBe("header value");
+      const text = await response.text();
+      expect(text).toContain(
+        "<h1>Hello from an imported static asset!</h1>"
+      );
+    });
   });
 
   describe("it supports R2", () => {
