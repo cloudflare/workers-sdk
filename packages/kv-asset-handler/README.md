@@ -12,7 +12,7 @@ Most users and sites will not need these customizations, and just want to serve 
 
 For users who _do_ want to customize their assets, and want to build complex experiences on top of their static assets, `kv-asset-handler` (and the default [Workers Sites template](https://github.com/cloudflare/worker-sites-template), which is provided for use with Wrangler + Workers Sites) allows you to customize caching behavior, headers, and anything else about how your Workers function loads the static assets for your site stored in Workers KV.
 
-The Cloudflare Workers Discord server is an active place where Workers users get help, share feedback, and collaborate on making our platform better. The `#workers-sites` channel in particular is a great place to chat about `kv-asset-handler`, and building cool experiences for your users using these tools! If you have questions, want to share what you're working on, or give feedback, [join us in Discord and say hello](https://discord.gg/cloudflaredev)!
+The Cloudflare Workers Discord server is an active place where Workers users get help, share feedback, and collaborate on making our platform better. The `#workers` channel in particular is a great place to chat about `kv-asset-handler`, and building cool experiences for your users using these tools! If you have questions, want to share what you're working on, or give feedback, [join us in Discord and say hello](https://discord.gg/cloudflaredev)!
 
 - [Installation](#installation)
 - [Usage](#usage)
