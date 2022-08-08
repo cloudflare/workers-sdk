@@ -395,7 +395,7 @@ async function spawnProxyProcess({
 	proxy.on("close", (code) => {
 		logger.error(`Proxy exited with status ${code}.`);
 		CLEANUP();
-		process.exit(code ?? 0);
+		process.exitCode = code ?? 0;
 	});
 
 	// Wait for proxy process to start...
