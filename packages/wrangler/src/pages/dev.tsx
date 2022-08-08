@@ -231,11 +231,22 @@ export const Handler = async ({
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
 		} else {
-			workerJsBuild({
-				entryPoints: [scriptPath],
-				write: false,
-				plugins: [blockWorkerJsImports],
-			}).catch((err) => console.error("Failed to build _worker.js:", err));
+			const runBuild = async () => {
+				try {
+					workerJsBuild({
+						entryPoints: [scriptPath],
+						write: false,
+						plugins: [blockWorkerJsImports],
+					});
+				} catch {}
+			};
+			await runBuild();
+			watch([scriptPath], {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async () => {
+				await runBuild();
+			});
 		}
 	}
 
@@ -445,7 +456,7 @@ const blockWorkerJsImports: Plugin = {
 	setup(build) {
 		build.onResolve({ filter: /.*/g }, (_args) => {
 			logger.error(
-				`_worker.js is using an import. This will throw an error in production.\nYou should bundle your worker before deploying it, or instead remove your import.`
+				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`
 			);
 			return null;
 		});
