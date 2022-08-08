@@ -1,3 +1,8 @@
+import { fetch } from "@miniflare/core";
+import {
+	DurableObjectNamespace,
+	DurableObjectStub,
+} from "@miniflare/durable-objects";
 import {
 	Log,
 	LogLevel,
@@ -7,6 +12,7 @@ import {
 } from "miniflare";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import { FatalError } from "../errors";
 import generateASSETSBinding from "./assets";
 import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
@@ -51,6 +57,42 @@ async function main() {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
 	}
 
+	config.bindings = {
+		...config.bindings,
+		...Object.fromEntries(
+			Object.entries(
+				config.externalDurableObjects as Record<
+					string,
+					{ name: string; host: string; port: number }
+				>
+			).map(([binding, { name, host, port }]) => {
+				const factory = () => {
+					throw new FatalError(
+						"An external Durable Object instance's state has somehow been attempted to be accessed.",
+						1
+					);
+				};
+				const namespace = new DurableObjectNamespace(name as string, factory);
+				namespace.get = (id) => {
+					const stub = new DurableObjectStub(factory, id);
+					stub.fetch = (...reqArgs) => {
+						const url = `http://${host}${port ? `:${port}` : ""}`;
+						const request = new MiniflareRequest(
+							url,
+							new MiniflareRequest(...reqArgs)
+						);
+						request.headers.set("x-miniflare-durable-object-name", name);
+						request.headers.set("x-miniflare-durable-object-id", id.toString());
+
+						return fetch(request);
+					};
+					return stub;
+				};
+				return [binding, namespace];
+			})
+		),
+	};
+
 	let mf: Miniflare | undefined;
 	let durableObjectsMf: Miniflare | undefined = undefined;
 	let durableObjectsMfPort: number | undefined = undefined;
@@ -83,13 +125,14 @@ async function main() {
 		await mf.startServer();
 		await mf.startScheduler();
 
-		const durableObjectClassNames = Object.values(
+		const internalDurableObjectClassNames = Object.values(
 			config.durableObjects as Record<string, string>
 		);
 
-		if (durableObjectClassNames.length > 0) {
+		if (internalDurableObjectClassNames.length > 0) {
 			durableObjectsMf = new Miniflare({
 				host: config.host,
+				port: 0,
 				script: `
 				export default {
 					fetch(request, env) {
@@ -100,29 +143,26 @@ async function main() {
 					DO: async (request: MiniflareRequest) => {
 						request = new MiniflareRequest(request);
 
-						const className = request.headers.get(
-							"x-miniflare-durable-object-class-name"
-						);
+						const name = request.headers.get("x-miniflare-durable-object-name");
 						const idString = request.headers.get(
 							"x-miniflare-durable-object-id"
 						);
-						request.headers.delete("x-miniflare-durable-object-class-name");
+						request.headers.delete("x-miniflare-durable-object-name");
 						request.headers.delete("x-miniflare-durable-object-id");
-						// TODO: Host/URL
 
-						if (!className || !idString) {
+						if (!name || !idString) {
 							return new MiniflareResponse(
-								"[durable-object-proxy-err] Missing `x-miniflare-durable-object-class-name` or `x-miniflare-durable-object-id` headers.",
+								"[durable-object-proxy-err] Missing `x-miniflare-durable-object-name` or `x-miniflare-durable-object-id` headers.",
 								{ status: 400 }
 							);
 						}
 
-						const namespace = await mf?.getDurableObjectNamespace(className);
+						const namespace = await mf?.getDurableObjectNamespace(name);
 						const id = namespace?.idFromString(idString);
 
 						if (!id) {
 							return new MiniflareResponse(
-								"[durable-object-proxy-err] Could not generate an ID. Possibly due to a mismatched DO class name and ID?",
+								"[durable-object-proxy-err] Could not generate an ID. Possibly due to a mismatched DO name and ID?",
 								{ status: 500 }
 							);
 						}
@@ -131,7 +171,7 @@ async function main() {
 
 						if (!stub) {
 							return new MiniflareResponse(
-								"[durable-object-proxy-err] Could not generate a stub. Possibly due to a mismatched DO class name and ID?",
+								"[durable-object-proxy-err] Could not generate a stub. Possibly due to a mismatched DO name and ID?",
 								{ status: 500 }
 							);
 						}
@@ -149,7 +189,6 @@ async function main() {
 			process.send(
 				JSON.stringify({
 					ready: true,
-					durableObjectClassNames,
 					durableObjectsPort: durableObjectsMfPort,
 				})
 			);

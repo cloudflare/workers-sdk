@@ -22,7 +22,8 @@ type WorkerDefinition = {
 	host: string | undefined;
 	mode: "local" | "remote";
 	headers?: Record<string, string>;
-	durableObjects?: string[];
+	durableObjects: { name: string; className: string }[];
+	durableObjectsHost?: string;
 	durableObjectsPort?: number;
 };
 

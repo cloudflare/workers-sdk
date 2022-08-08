@@ -40,6 +40,7 @@ import type { CfWorkerInit } from "../worker";
 function useDevRegistry(
 	name: string | undefined,
 	services: Config["services"] | undefined,
+	durableObjects: Config["durable_objects"] | undefined,
 	mode: "local" | "remote"
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
@@ -55,6 +56,9 @@ function useDevRegistry(
 		const serviceNames = (services || []).map(
 			(serviceBinding) => serviceBinding.service
 		);
+		const durableObjectServices = (
+			durableObjects || { bindings: [] }
+		).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
 		const interval =
 			// TODO: enable this for remote mode as well
@@ -67,7 +71,9 @@ function useDevRegistry(
 								// so let's filter out the others
 								const filteredWorkers = Object.fromEntries(
 									Object.entries(workerDefinitions || {}).filter(
-										([key, _value]) => serviceNames.includes(key)
+										([key, _value]) =>
+											serviceNames.includes(key) ||
+											durableObjectServices.includes(key)
 									)
 								);
 								setWorkers((prevWorkers) => {
@@ -109,7 +115,7 @@ function useDevRegistry(
 				}
 			);
 		};
-	}, [name, services, mode]);
+	}, [name, services, durableObjects, mode]);
 
 	return workers;
 }
@@ -228,6 +234,7 @@ function DevSession(props: DevSessionProps) {
 	const workerDefinitions = useDevRegistry(
 		props.name,
 		props.bindings.services,
+		props.bindings.durable_objects,
 		props.local ? "local" : "remote"
 	);
 
@@ -248,6 +255,7 @@ function DevSession(props: DevSessionProps) {
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
+		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
 	});
 
@@ -260,6 +268,7 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
 			bindings={props.bindings}
+			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
 			port={props.port}
 			ip={props.ip}

@@ -11,6 +11,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	"blake3-wasm",
 	"miniflare",
 	"@miniflare/core",
+	"@miniflare/durable-objects",
 	// todo - bundle miniflare too
 	"selfsigned",
 	"source-map",
