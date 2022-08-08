@@ -233,7 +233,7 @@ export const Handler = async ({
 		} else {
 			const runBuild = async () => {
 				try {
-					workerJsBuild({
+					await workerJsBuild({
 						entryPoints: [scriptPath],
 						write: false,
 						plugins: [blockWorkerJsImports],
