@@ -11,7 +11,7 @@
 import content from "./content.md";
 
 export default {
-  async fetch(request: Request): Promise<Response> {
-    return new Response(`${request.url}: ${content}`);
-  },
+	async fetch(request: Request): Promise<Response> {
+		return new Response(`${request.url}: ${content}`);
+	},
 };

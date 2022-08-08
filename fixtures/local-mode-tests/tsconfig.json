@@ -1,15 +1,15 @@
 {
-  "compilerOptions": {
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "target": "esnext",
-    "strict": true,
-    "noEmit": true,
-    "types": ["@cloudflare/workers-types", "jest"],
-    "skipLibCheck": true
-  }
+	"compilerOptions": {
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"allowJs": true,
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"target": "esnext",
+		"strict": true,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types", "jest"],
+		"skipLibCheck": true
+	}
 }
