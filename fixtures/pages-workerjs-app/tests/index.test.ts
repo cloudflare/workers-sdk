@@ -41,7 +41,7 @@ describe("Pages _worker.js", () => {
 	});
 
 	afterEach(async () => {
-		patchConsole(() => { });
+		patchConsole(() => {});
 
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
