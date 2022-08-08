@@ -96,6 +96,8 @@ function prettifyOutcome(outcome: Outcome): string {
 			return "Canceled";
 		case "exceededCpu":
 			return "Exceeded CPU Limit";
+		case "exceededMemory":
+			return "Exceeded Memory Limit";
 		case "exception":
 			return "Exception Thrown";
 		case "unknown":

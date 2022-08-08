@@ -58,13 +58,14 @@ type OutcomeFilter = {
 
 /**
  * There are five possible outcomes we can get, three of which
- * (exception, exceededCpu, and unknown) are considered errors
+ * (exception, exceededCpu, exceededMemory, and unknown) are considered errors
  */
 export type Outcome =
 	| "ok"
 	| "canceled"
 	| "exception"
 	| "exceededCpu"
+	| "exceededMemory"
 	| "unknown";
 
 /**
@@ -210,6 +211,7 @@ function parseOutcome(
 			case "error":
 				outcomes.add("exception");
 				outcomes.add("exceededCpu");
+				outcomes.add("exceededMemory");
 				outcomes.add("unknown");
 				break;
 
