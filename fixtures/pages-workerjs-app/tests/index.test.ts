@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import * as path from "path";
 import patchConsole from "patch-console";
 import { fetch } from "undici";
-import { mockConsoleMethods } from "../../../packages/wrangler/src/__tests__/helpers/mock-console";
+// import { mockConsoleMethods } from "../../../packages/wrangler/src/__tests__/helpers/mock-console";
 import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
 
@@ -25,7 +25,7 @@ const isWindows = process.platform === "win32";
 describe("Pages _worker.js", () => {
 	let wranglerProcess: ChildProcess;
 
-	const std = mockConsoleMethods();
+	// const std = mockConsoleMethods();
 	beforeEach(() => {
 		wranglerProcess = spawn("npm", ["run", "dev"], {
 			shell: isWindows,
@@ -61,8 +61,9 @@ describe("Pages _worker.js", () => {
 		expect(text).toContain("test");
 	});
 
-	it("shows an error for the import in _worker.js", async () => {
-		const _ = await waitUntilReady("http://127.0.0.1:8792/");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
+	it.todo("shows an error for the import in _worker.js");
+	// it("shows an error for the import in _worker.js", async () => {
+	// 	const _ = await waitUntilReady("http://127.0.0.1:8792/");
+	// 	expect(std.err).toMatchInlineSnapshot(`""`);
+	// });
 });
