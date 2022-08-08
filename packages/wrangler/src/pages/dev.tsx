@@ -11,8 +11,13 @@ import * as metrics from "../metrics";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
+import type { AdditionalDevProps } from "../dev";
 import type { Plugin } from "esbuild";
 import type { ArgumentsCamelCase, Argv } from "yargs";
+
+const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
+);
 
 type PagesDevArgs = {
 	directory?: string;
@@ -272,13 +277,27 @@ export const Handler = async ({
 				binding: val.toString(),
 				id: "",
 			})),
-			durableObjects: durableObjects.map((durableObject) => {
-				const [name, class_name] = durableObject.toString().split("=");
-				return {
-					name,
-					class_name,
-				};
-			}),
+			durableObjects: durableObjects
+				.map((durableObject) => {
+					const { binding, className, scriptName } =
+						DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString())
+							?.groups || {};
+
+					if (!binding || !className) {
+						logger.warn(
+							"Could not parse Durable Object binding:",
+							durableObject.toString()
+						);
+						return;
+					}
+
+					return {
+						name: binding,
+						class_name: className,
+						script_name: scriptName,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["durableObjects"],
 			r2: r2s.map((binding) => {
 				return { binding: binding.toString(), bucket_name: "" };
 			}),
