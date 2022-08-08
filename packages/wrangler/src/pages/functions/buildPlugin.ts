@@ -29,6 +29,10 @@ export function buildPlugin({
 		bundle: true,
 		format: "esm",
 		target: "esnext",
+		loader: {
+			".html": "text",
+			".txt": "text",
+		},
 		outfile,
 		minify,
 		sourcemap,

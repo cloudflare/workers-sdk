@@ -1,6 +1,8 @@
-import { spawn, spawnSync } from "child_process";
+import { spawn } from "child_process";
 import * as path from "path";
+import patchConsole from "patch-console";
 import { fetch } from "undici";
+// import { mockConsoleMethods } from "../../../packages/wrangler/src/__tests__/helpers/mock-console";
 import type { ChildProcess } from "child_process";
 import type { Response } from "undici";
 
@@ -12,7 +14,7 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 
 		try {
 			response = await fetch(url);
-		} catch {}
+		} catch (err) {}
 	}
 
 	return response as Response;
@@ -20,15 +22,12 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 
 const isWindows = process.platform === "win32";
 
-describe("Remix", () => {
+describe("Pages _worker.js", () => {
 	let wranglerProcess: ChildProcess;
 
-	beforeAll(async () => {
-		spawnSync("npm", ["run", "build"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
-		});
-		wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
+	// const std = mockConsoleMethods();
+	beforeEach(() => {
+		wranglerProcess = spawn("npm", ["run", "dev"], {
 			shell: isWindows,
 			cwd: path.resolve(__dirname, "../"),
 			env: { BROWSER: "none", ...process.env },
@@ -41,7 +40,9 @@ describe("Remix", () => {
 		});
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
+		patchConsole(() => {});
+
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -54,9 +55,15 @@ describe("Remix", () => {
 		});
 	});
 
-	it("renders", async () => {
-		const response = await waitUntilReady("http://localhost:8788/");
+	it("renders static pages", async () => {
+		const response = await waitUntilReady("http://127.0.0.1:8792/");
 		const text = await response.text();
-		expect(text).toContain("Welcome to Remix");
+		expect(text).toContain("test");
 	});
+
+	it.todo("shows an error for the import in _worker.js");
+	// it("shows an error for the import in _worker.js", async () => {
+	// 	const _ = await waitUntilReady("http://127.0.0.1:8792/");
+	// 	expect(std.err).toMatchInlineSnapshot(`""`);
+	// });
 });

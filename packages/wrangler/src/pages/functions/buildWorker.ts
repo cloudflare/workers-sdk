@@ -34,6 +34,10 @@ export function buildWorker({
 		bundle: true,
 		format: "esm",
 		target: "esnext",
+		loader: {
+			".html": "text",
+			".txt": "text",
+		},
 		outfile,
 		minify,
 		sourcemap,

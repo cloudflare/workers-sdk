@@ -1,20 +1,20 @@
 class BodyHandler {
-  footerText: string;
+	footerText: string;
 
-  constructor({ footerText }) {
-    this.footerText = footerText;
-  }
+	constructor({ footerText }) {
+		this.footerText = footerText;
+	}
 
-  element(element) {
-    // Don't actually set HTML like this!
-    element.append(`<footer>${this.footerText}</footer>`, { html: true });
-  }
+	element(element) {
+		// Don't actually set HTML like this!
+		element.append(`<footer>${this.footerText}</footer>`, { html: true });
+	}
 }
 
 export const onRequest = async ({ next, pluginArgs }) => {
-  const response = await next();
+	const response = await next();
 
-  return new HTMLRewriter()
-    .on("body", new BodyHandler({ footerText: pluginArgs.footerText }))
-    .transform(response);
+	return new HTMLRewriter()
+		.on("body", new BodyHandler({ footerText: pluginArgs.footerText }))
+		.transform(response);
 };
