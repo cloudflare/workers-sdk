@@ -1,5 +1,6 @@
 // src/shim.ts
 import worker from "__ENTRY_POINT__";
+export * from "__ENTRY_POINT__";
 
 // src/index.ts
 var D1Database = class {
