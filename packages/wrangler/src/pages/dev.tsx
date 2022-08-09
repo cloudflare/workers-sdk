@@ -93,9 +93,22 @@ export function Options(yargs: Argv) {
 				choices: ["http", "https"] as const,
 			},
 			"experimental-enable-local-persistence": {
+				describe:
+					"Enable persistence for local mode (deprecated, use --persist)",
 				type: "boolean",
-				default: false,
-				describe: "Enable persistence for this session (only for local mode)",
+				deprecated: true,
+				hidden: true,
+			},
+			persist: {
+				describe:
+					"Enable persistence for local mode, using default path: .wrangler/state",
+				type: "boolean",
+			},
+			"persist-to": {
+				describe:
+					"Specify directory to use for local persistance (implies --persist)",
+				type: "string",
+				requiresArg: true,
 			},
 			"node-compat": {
 				describe: "Enable node.js compatibility",
@@ -126,7 +139,9 @@ export const Handler = async ({
 	r2: r2s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
-	"experimental-enable-local-persistence": experimentalEnableLocalPersistence,
+	experimentalEnableLocalPersistence,
+	persist,
+	persistTo,
 	"node-compat": nodeCompat,
 	config: config,
 	_: [_pages, _dev, ...remaining],
@@ -297,6 +312,8 @@ export const Handler = async ({
 			},
 			forceLocal: true,
 			experimentalEnableLocalPersistence,
+			persist,
+			persistTo,
 			showInteractiveDevSession: undefined,
 			inspect: true,
 			logLevel: "error",

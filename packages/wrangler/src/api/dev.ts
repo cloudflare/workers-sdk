@@ -17,6 +17,8 @@ interface DevOptions {
 	nodeCompat?: boolean;
 	compatibilityDate?: string;
 	experimentalEnableLocalPersistence?: boolean;
+	persist?: boolean;
+	persistTo?: string;
 	liveReload?: boolean;
 	watch?: boolean;
 	vars: {

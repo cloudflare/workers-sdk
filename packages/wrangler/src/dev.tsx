@@ -7,7 +7,6 @@ import { fetch } from "undici";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
-
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -24,7 +23,6 @@ import {
 	isLegacyEnv,
 	DEFAULT_INSPECTOR_PORT,
 } from "./index";
-
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
@@ -65,6 +63,8 @@ interface DevArgs {
 	minify?: boolean;
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	persist?: boolean;
+	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: () => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
@@ -226,8 +226,22 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
-				describe: "Enable persistence for this session (only for local mode)",
+				describe:
+					"Enable persistence for local mode (deprecated, use --persist)",
 				type: "boolean",
+				deprecated: true,
+				hidden: true,
+			})
+			.option("persist", {
+				describe:
+					"Enable persistence for local mode, using default path: .wrangler/state",
+				type: "boolean",
+			})
+			.option("persist-to", {
+				describe:
+					"Specify directory to use for local persistence (implies --persist)",
+				type: "string",
+				requiresArg: true,
 			})
 			.option("live-reload", {
 				// TODO: Add back in once we have remote `--live-reload`
@@ -424,6 +438,21 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		if (args.experimentalEnableLocalPersistence) {
+			logger.warn(
+				`--experimental-enable-local-persistence is deprecated.\nUse --persist instead (which will write to .wrangler/state) or\n--persist-to=./wrangler-local-state if you have existing data you'd like to keep using.`
+			);
+		}
+
+		const localPersistencePath = args.persistTo
+			? // If path specified, always treat it as relative to cwd()
+			  path.resolve(process.cwd(), args.persistTo)
+			: args.experimentalEnableLocalPersistence || args.persist
+			? // If just flagged on, treat it as relative to wrangler.toml,
+			  // if one can be found, otherwise cwd()
+			  path.resolve(configPath || process.cwd(), ".wrangler/state")
+			: null;
+
 		const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
 		const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
 
@@ -485,9 +514,7 @@ export async function startDev(args: StartDevOptions) {
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || config.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
-					enableLocalPersistence={
-						args.experimentalEnableLocalPersistence || false
-					}
+					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
 					accountId={config.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
