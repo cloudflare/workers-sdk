@@ -11,14 +11,16 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { pagesBetaWarning } from "./utils";
-import type { Deployment, PagesConfigCache } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type {
+	Deployment,
+	PagesConfigCache,
+	YargsOptionsToInterface,
+} from "./types";
+import type { Argv } from "yargs";
 
-type ListArgs = {
-	"project-name"?: string;
-};
+type ListArgs = YargsOptionsToInterface<typeof ListOptions>;
 
-export function ListOptions(yargs: Argv): Argv<ListArgs> {
+export function ListOptions(yargs: Argv) {
 	return yargs
 		.options({
 			"project-name": {
@@ -30,9 +32,7 @@ export function ListOptions(yargs: Argv): Argv<ListArgs> {
 		.epilogue(pagesBetaWarning);
 }
 
-export async function ListHandler({
-	projectName,
-}: ArgumentsCamelCase<ListArgs>) {
+export async function ListHandler({ projectName }: ListArgs) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
 

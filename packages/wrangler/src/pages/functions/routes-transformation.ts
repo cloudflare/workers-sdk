@@ -117,7 +117,7 @@ export function isRoutesJSONSpec(data: unknown): data is RoutesJSONSpec {
 			data &&
 			"version" in data &&
 			typeof (data as RoutesJSONSpec).version === "number" &&
-			(data as RoutesJSONSpec).version === 1 &&
+			(data as RoutesJSONSpec).version === ROUTES_SPEC_VERSION &&
 			Array.isArray((data as RoutesJSONSpec).include) &&
 			Array.isArray((data as RoutesJSONSpec).exclude)) ||
 		false

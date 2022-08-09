@@ -16,7 +16,6 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { consolidateRoutes } from "./functions/routes-consolidation";
 import {
 	isRoutesJSONSpec,
 	optimizeRoutesJSONSpec,
@@ -24,19 +23,17 @@ import {
 import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
-import type { Deployment, PagesConfigCache, Project } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type {
+	Deployment,
+	PagesConfigCache,
+	Project,
+	YargsOptionsToInterface,
+} from "./types";
+import type { Argv } from "yargs";
 
-type PublishArgs = {
-	directory: string;
-	"project-name"?: string;
-	branch?: string;
-	"commit-hash"?: string;
-	"commit-message"?: string;
-	"commit-dirty"?: boolean;
-};
+type PublishArgs = YargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<PublishArgs> {
+export function Options(yargs: Argv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -82,7 +79,7 @@ export const Handler = async ({
 	commitMessage,
 	commitDirty,
 	config: wranglerConfig,
-}: ArgumentsCamelCase<PublishArgs>) => {
+}: PublishArgs) => {
 	if (wranglerConfig) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}

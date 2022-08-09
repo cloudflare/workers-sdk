@@ -12,12 +12,10 @@ import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
 import type { Config } from "./functions/routes";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { YargsOptionsToInterface } from "./types";
+import type { Argv } from "yargs";
 
-type YargsArgsType<T extends Argv> = T extends Argv<infer P> ? P : never;
-type PagesBuildArgs = ArgumentsCamelCase<
-	YargsArgsType<ReturnType<typeof Options>>
->;
+type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;
 
 export function Options(yargs: Argv) {
 	return yargs
