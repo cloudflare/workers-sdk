@@ -1,5 +1,102 @@
 # wrangler
 
+## 2.0.25
+
+### Patch Changes
+
+- [#1615](https://github.com/cloudflare/wrangler2/pull/1615) [`9163da17`](https://github.com/cloudflare/wrangler2/commit/9163da17959532ab801c8dca772e29c135f80cf1) Thanks [@huw](https://github.com/huw)! - fix: Resolve source maps correctly in local dev mode
+
+  Resolves https://github.com/cloudflare/wrangler2/issues/1614
+
+* [#1617](https://github.com/cloudflare/wrangler2/pull/1617) [`32c9a4ae`](https://github.com/cloudflare/wrangler2/commit/32c9a4ae95eb2d6ffecb8f5765ed68b2e9278f4e) Thanks [@jahands](https://github.com/jahands)! - fix: Ignore \_routes.generated.json when uploading Pages assets
+
+- [#1609](https://github.com/cloudflare/wrangler2/pull/1609) [`fa8cb73f`](https://github.com/cloudflare/wrangler2/commit/fa8cb73f72e3f167289326ed6a2ce58d42bd9102) Thanks [@jahands](https://github.com/jahands)! - patch: Consolidate redundant routes when generating \_routes.generated.json
+
+  Example: `["/foo/:name", "/foo/bar"] => ["/foo/*"]`
+
+* [#1595](https://github.com/cloudflare/wrangler2/pull/1595) [`d4fbd0be`](https://github.com/cloudflare/wrangler2/commit/d4fbd0be5f5801c331a76709cb375a9386117361) Thanks [@caass](https://github.com/caass)! - Add support for Alarm Events in `wrangler tail`
+
+  `wrangler tail --format pretty` now supports receiving events from [Durable Object Alarms](https://developers.cloudflare.com/workers/learning/using-durable-objects/#alarms-in-durable-objects), and will display the time the alarm was triggered.
+
+  Additionally, any future unknown events will simply print "Unknown Event" instead of crashing the `wrangler` process.
+
+  Closes #1519
+
+- [#1642](https://github.com/cloudflare/wrangler2/pull/1642) [`a3e654f8`](https://github.com/cloudflare/wrangler2/commit/a3e654f8d98c5ac5bbb5d167ddaf6b8975c383c5) Thanks [@jrf0110](https://github.com/jrf0110)! - feat: Add output-routes-path to functions build
+
+  This controls the output path of the \_routes.json file. Also moves \_routes.json generation to tmp directory during functions build + publish
+
+* [#1606](https://github.com/cloudflare/wrangler2/pull/1606) [`24327289`](https://github.com/cloudflare/wrangler2/commit/243272890ece055b1b5a7fdb3eb97200ea686a98) Thanks [@Skye-31](https://github.com/Skye-31)! - chore: make prettier also fix changesets, as it causes checks to fail if they're not formatted
+
+- [#1611](https://github.com/cloudflare/wrangler2/pull/1611) [`3df0fe04`](https://github.com/cloudflare/wrangler2/commit/3df0fe043a69492db2a2ebe7098e0355409d3dc6) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Durable Object multi-worker bindings in local dev.
+
+  Building on [the recent work for multi-worker Service bindings in local dev](https://github.com/cloudflare/wrangler2/pull/1503), this now adds support for direct Durable Object namespace bindings.
+
+  A parent (calling) Worker will look for child Workers (where the Durable Object has been defined) by matching the `script_name` configuration option with the child's Service name. For example, if you have a Worker A which defines a Durable Object, `MyDurableObject`, and Worker B which references A's Durable Object:
+
+  ```toml
+  name = "A"
+
+  [durable_objects]
+  bindings = [
+  	{ name = "MY_DO", class_name = "MyDurableObject" }
+  ]
+  ```
+
+  ```toml
+  name = "B"
+
+  [durable_objects]
+  bindings = [
+  	{ name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "A" }
+  ]
+  ```
+
+  `MY_DO` will work as normal in Worker A. `REFERENCED_DO` in Worker B will point at A's Durable Object.
+
+  Note: this only works in local mode (`wrangler dev --local`) at present.
+
+* [#1621](https://github.com/cloudflare/wrangler2/pull/1621) [`2aa3fe88`](https://github.com/cloudflare/wrangler2/commit/2aa3fe884422671ba128ea01a37abf63d344e541) Thanks [@Skye-31](https://github.com/Skye-31)! - fix(#1487) [pages]: Command failed: git rev-parse --abrev-ref HEAD
+
+- [#1631](https://github.com/cloudflare/wrangler2/pull/1631) [`f1c97c8b`](https://github.com/cloudflare/wrangler2/commit/f1c97c8ba07d1b346bbd12e05503007b8e6ec912) Thanks [@Skye-31](https://github.com/Skye-31)! - chore: add fixtures to prettier
+
+* [#1602](https://github.com/cloudflare/wrangler2/pull/1602) [`ebd1d631`](https://github.com/cloudflare/wrangler2/commit/ebd1d631915fb2041886aad8ee398d5c9e0f612e) Thanks [@huw](https://github.com/huw)! - fix: Pass `usageModel` to Miniflare in local dev
+
+  This allows Miniflare to dynamically update the external subrequest limit for Unbound workers.
+
+- [#1629](https://github.com/cloudflare/wrangler2/pull/1629) [`06915ff7`](https://github.com/cloudflare/wrangler2/commit/06915ff780c7333a2f979b042b4c20eed1338b37) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: disallow imports in \_worker.js (https://github.com/cloudflare/wrangler2/issues/1214)
+
+* [#1518](https://github.com/cloudflare/wrangler2/pull/1518) [`85ab8a93`](https://github.com/cloudflare/wrangler2/commit/85ab8a9389de8d77b1d08b2cf14a5c7b5d493e07) Thanks [@jahands](https://github.com/jahands)! - feature: Reduce Pages Functions executions for Asset-only requests in `_routes.json`
+
+  Manually create a `_routes.json` file in your build output directory to specify routes. This is a set of inclusion/exclusion rules to indicate when to run a Pages project's Functions. Note: This is an experemental feature and is subject to change.
+
+- [#1634](https://github.com/cloudflare/wrangler2/pull/1634) [`f6ea7e7b`](https://github.com/cloudflare/wrangler2/commit/f6ea7e7b48b36e39b11380eb6a14461ebbabc80b) Thanks [@Skye-31](https://github.com/Skye-31)! - feat: [pages] add loaders for .html & .txt
+
+* [#1589](https://github.com/cloudflare/wrangler2/pull/1589) [`6aa96e49`](https://github.com/cloudflare/wrangler2/commit/6aa96e490489e5847bae53885b9e5ef3dcff55b7) Thanks [@Skye-31](https://github.com/Skye-31)! - fix routing for URI encoded static requests
+
+- [#1643](https://github.com/cloudflare/wrangler2/pull/1643) [`4b04a377`](https://github.com/cloudflare/wrangler2/commit/4b04a3772f170bd0e0b9c0de076acfd5e5fdc3d2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `--inspector-port` argument to `wrangler pages dev`
+
+* [#1641](https://github.com/cloudflare/wrangler2/pull/1641) [`5f5466ab`](https://github.com/cloudflare/wrangler2/commit/5f5466abda5929359a3e405a36c39547660cf039) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for using external Durable Objects from `wrangler pages dev`.
+
+  An external Durable Object can be referenced using `npx wrangler pages dev ./public --do MyDO=MyDurableObject@api` where the Durable Object is made available on `env.MyDO`, and is described in a Workers service (`name = "api"`) with the class name `MyDurableObject`.
+
+  You must have the `api` Workers service running in as another `wrangler dev` process elsewhere already in order to reference that object.
+
+- [#1605](https://github.com/cloudflare/wrangler2/pull/1605) [`9e632cdd`](https://github.com/cloudflare/wrangler2/commit/9e632cddeace54aa8fbc9695621002889c3daa03) Thanks [@kimyvgy](https://github.com/kimyvgy)! - refactor: add --ip argument for `wrangler pages dev` & defaults IP to `0.0.0.0`
+
+  Add new argument `--ip` for the command `wrangler pages dev`, defaults to `0.0.0.0`. The command `wrangler dev` is also defaulting to `0.0.0.0` instead of `localhost`.
+
+* [#1604](https://github.com/cloudflare/wrangler2/pull/1604) [`9732fafa`](https://github.com/cloudflare/wrangler2/commit/9732fafa066d3a18ba6096cfc814a2831f4a7d0e) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Added R2 support for wrangler pages dev. You can add an R2 binding with `--r2 <BINDING>`.
+
+- [#1608](https://github.com/cloudflare/wrangler2/pull/1608) [`9f02758f`](https://github.com/cloudflare/wrangler2/commit/9f02758fcd9c7816120a76f357a179a268f45a35) Thanks [@jrf0110](https://github.com/jrf0110)! - feat: Generate \_routes.generated.json for Functions routing
+
+  When using Pages Functions, a \_routes.generated.json file is created to inform Pages how to route requests to a project's Functions Worker.
+
+* [#1603](https://github.com/cloudflare/wrangler2/pull/1603) [`7ae059b3`](https://github.com/cloudflare/wrangler2/commit/7ae059b3dcdd9dce5f03110d8ff670022b8ccf02) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: R2 Object Deletequote
+  Improving the R2 objects management, added the functionality to delete objects in a bucket.
+
+  resolves #1584
+
 ## 2.0.24
 
 ### Patch Changes
