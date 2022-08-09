@@ -495,7 +495,7 @@ export async function startDev(args: StartDevOptions) {
 					port={args.port || config.dev.port || (await getLocalPort())}
 					ip={args.ip || config.dev.ip}
 					inspectorPort={
-						args["inspector-port"] ||
+						args.inspectorPort ||
 						config.dev.inspector_port ||
 						(await getInspectorPort())
 					}
