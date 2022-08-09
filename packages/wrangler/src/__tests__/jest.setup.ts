@@ -1,5 +1,6 @@
 import fetchMock from "jest-fetch-mock";
 import {
+	fetchDashboardScript,
 	fetchInternal,
 	fetchKVGetValue,
 	fetchR2Objects,
@@ -7,6 +8,7 @@ import {
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import {
+	mockFetchDashScript,
 	mockFetchInternal,
 	mockFetchKVGetValue,
 	mockFetchR2Objects,
@@ -49,6 +51,7 @@ jest.mock("../cfetch/internal");
 	"https://api.cloudflare.com/client/v4"
 );
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
+(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
 
 jest.mock("../dialogs");
 
