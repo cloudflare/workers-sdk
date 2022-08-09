@@ -16,22 +16,24 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import {
+	isRoutesJSONSpec,
+	optimizeRoutesJSONSpec,
+} from "./functions/routes-transformation";
 import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
-import type { Deployment, PagesConfigCache, Project } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type {
+	Deployment,
+	PagesConfigCache,
+	Project,
+	YargsOptionsToInterface,
+} from "./types";
+import type { Argv } from "yargs";
 
-type PublishArgs = {
-	directory: string;
-	"project-name"?: string;
-	branch?: string;
-	"commit-hash"?: string;
-	"commit-message"?: string;
-	"commit-dirty"?: boolean;
-};
+type PublishArgs = YargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<PublishArgs> {
+export function Options(yargs: Argv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -77,7 +79,7 @@ export const Handler = async ({
 	commitMessage,
 	commitDirty,
 	config: wranglerConfig,
-}: ArgumentsCamelCase<PublishArgs>) => {
+}: PublishArgs) => {
 	if (wranglerConfig) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
@@ -251,6 +253,7 @@ export const Handler = async ({
 
 	let builtFunctions: string | undefined = undefined;
 	const functionsDirectory = join(cwd(), "functions");
+	const routesOutputPath = join(tmpdir(), `_routes-${Math.random()}.json`);
 	if (existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 
@@ -260,7 +263,7 @@ export const Handler = async ({
 				functionsDirectory,
 				onEnd: () => resolve(null),
 				buildOutputDirectory: dirname(outfile),
-				directory,
+				routesOutputPath,
 			})
 		);
 
@@ -303,18 +306,8 @@ export const Handler = async ({
 	} catch {}
 
 	try {
-		_routes = readFileSync(join(directory, "_routes.json"), "utf-8");
-		logger.warn(
-			`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
-		);
-	} catch {
-		try {
-			_routes = readFileSync(
-				join(directory, "_routes.generated.json"),
-				"utf-8"
-			);
-		} catch {}
-	}
+		_routes = readFileSync(routesOutputPath, "utf-8");
+	} catch {}
 
 	try {
 		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
@@ -335,7 +328,37 @@ export const Handler = async ({
 	if (builtFunctions) {
 		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
 	} else if (_workerJS) {
+		// Advanced Mode
+		// https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
 		formData.append("_worker.js", new File([_workerJS], "_worker.js"));
+
+		try {
+			// In advanced mode, developers can specify a custom _routes.json
+			// file. In which case, we need to run it through optimization
+			// to potentially reduce the overall worker pipeline size
+			const routesPath = join(directory, "_routes.json");
+			const advancedModeRoutesString = readFileSync(routesPath, "utf-8");
+			const advancedModeRoutes = JSON.parse(advancedModeRoutesString);
+
+			if (!isRoutesJSONSpec(advancedModeRoutes)) {
+				throw new FatalError(
+					"Invalid _routes.json file found at:" + routesPath,
+					1
+				);
+			}
+
+			_routes = JSON.stringify(optimizeRoutesJSONSpec(advancedModeRoutes));
+
+			logger.warn(
+				`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
+			);
+		} catch (e) {
+			// Ignore file not existing errors for _routes.json but forward the potential
+			// FatalError from an invalid spec
+			if (e instanceof FatalError) {
+				throw e;
+			}
+		}
 	}
 	const deploymentResponse = await fetchResult<Deployment>(
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,

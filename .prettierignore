@@ -13,6 +13,5 @@ packages/jest-environment-wrangler/dist/
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
 fixtures/pages-plugin-example/index.js
-_routes.generated.json
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/

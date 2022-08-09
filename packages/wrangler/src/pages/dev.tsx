@@ -12,33 +12,17 @@ import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
+import type { YargsOptionsToInterface } from "./types";
 import type { Plugin } from "esbuild";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
-type PagesDevArgs = {
-	directory?: string;
-	command?: string;
-	local: boolean;
-	ip: string;
-	port: number;
-	"inspector-port"?: number;
-	proxy?: number;
-	"script-path": string;
-	binding?: (string | number)[];
-	kv?: (string | number)[];
-	do?: (string | number)[];
-	r2?: (string | number)[];
-	"live-reload": boolean;
-	"local-protocol"?: "https" | "http";
-	"experimental-enable-local-persistence": boolean;
-	"node-compat": boolean;
-};
+type PagesDevArgs = YargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<PagesDevArgs> {
+export function Options(yargs: Argv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -146,7 +130,7 @@ export const Handler = async ({
 	"node-compat": nodeCompat,
 	config: config,
 	_: [_pages, _dev, ...remaining],
-}: ArgumentsCamelCase<PagesDevArgs>) => {
+}: PagesDevArgs) => {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
@@ -208,7 +192,6 @@ export const Handler = async ({
 				onEnd: () => scriptReadyResolve(),
 				buildOutputDirectory: directory,
 				nodeCompat,
-				directory,
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 		} catch {}
@@ -225,7 +208,6 @@ export const Handler = async ({
 				onEnd: () => scriptReadyResolve(),
 				buildOutputDirectory: directory,
 				nodeCompat,
-				directory,
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 		});

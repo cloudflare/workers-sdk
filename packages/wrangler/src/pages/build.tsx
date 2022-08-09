@@ -1,4 +1,4 @@
-import { writeFileSync, existsSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { logger } from "../logger";
@@ -12,22 +12,12 @@ import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
 import type { Config } from "./functions/routes";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { YargsOptionsToInterface } from "./types";
+import type { Argv } from "yargs";
 
-type PagesBuildArgs = {
-	directory: string;
-	outfile: string;
-	"output-config-path"?: string;
-	minify: boolean;
-	sourcemap: boolean;
-	"fallback-service": string;
-	watch: boolean;
-	plugin: boolean;
-	"build-output-directory"?: string;
-	"node-compat": boolean;
-};
+type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<PagesBuildArgs> {
+export function Options(yargs: Argv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -43,6 +33,10 @@ export function Options(yargs: Argv): Argv<PagesBuildArgs> {
 			"output-config-path": {
 				type: "string",
 				description: "The location for the output config file",
+			},
+			"output-routes-path": {
+				type: "string",
+				description: "The location for the output _routes.json file",
 			},
 			minify: {
 				type: "boolean",
@@ -88,15 +82,16 @@ export function Options(yargs: Argv): Argv<PagesBuildArgs> {
 export const Handler = async ({
 	directory,
 	outfile,
-	"output-config-path": outputConfigPath,
+	outputConfigPath,
+	outputRoutesPath: routesOutputPath,
 	minify,
 	sourcemap,
 	fallbackService,
 	watch,
 	plugin,
-	"build-output-directory": buildOutputDirectory,
-	"node-compat": nodeCompat,
-}: ArgumentsCamelCase<PagesBuildArgs>) => {
+	buildOutputDirectory,
+	nodeCompat,
+}: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
 		logger.log(pagesBetaWarning);
@@ -121,6 +116,7 @@ export const Handler = async ({
 		plugin,
 		buildOutputDirectory,
 		nodeCompat,
+		routesOutputPath,
 	});
 	await metrics.sendMetricsEvent("build pages functions");
 };
@@ -136,27 +132,25 @@ export async function buildFunctions({
 	onEnd,
 	plugin = false,
 	buildOutputDirectory,
-	directory,
+	routesOutputPath,
 	nodeCompat,
-}: {
-	outfile: string;
-	outputConfigPath?: string;
+}: Partial<
+	Pick<
+		PagesBuildArgs,
+		| "outputConfigPath"
+		| "minify"
+		| "sourcemap"
+		| "fallbackService"
+		| "watch"
+		| "plugin"
+		| "buildOutputDirectory"
+		| "nodeCompat"
+	>
+> & {
 	functionsDirectory: string;
-	minify?: boolean;
-	sourcemap?: boolean;
-	fallbackService?: string;
-	watch?: boolean;
 	onEnd?: () => void;
-	plugin?: boolean;
-	/**
-	 * Temporary functions output build directory
-	 */
-	buildOutputDirectory?: string;
-	nodeCompat?: boolean;
-	/**
-	 * Project output directory
-	 */
-	directory?: string;
+	outfile: Required<PagesBuildArgs>["outfile"];
+	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -170,24 +164,9 @@ export async function buildFunctions({
 		baseURL,
 	});
 
-	if (config.routes) {
-		if (!directory) {
-			if (!isInPagesCI) {
-				logger.warn(
-					"Cannot write generated routes file _routes.generated.json. Output directory is undefined."
-				);
-			}
-		} else if (existsSync(join(directory, "_routes.json"))) {
-			logger.log(
-				"Found _routes.json file. Skipping automatic routes generation."
-			);
-		} else {
-			const routesJSON = convertRoutesToRoutesJSONSpec(config.routes);
-			writeFileSync(
-				join(directory, "_routes.generated.json"),
-				JSON.stringify(routesJSON, null, 2)
-			);
-		}
+	if (config.routes && routesOutputPath) {
+		const routesJSON = convertRoutesToRoutesJSONSpec(config.routes);
+		writeFileSync(routesOutputPath, JSON.stringify(routesJSON, null, 2));
 	}
 
 	if (outputConfigPath) {

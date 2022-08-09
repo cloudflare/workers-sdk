@@ -26,15 +26,12 @@ import {
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
 import { pagesBetaWarning } from "./utils";
-import type { UploadPayloadFile } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { UploadPayloadFile, YargsOptionsToInterface } from "./types";
+import type { Argv } from "yargs";
 
-type UploadArgs = {
-	directory: string;
-	"output-manifest-path"?: string;
-};
+type UploadArgs = YargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<UploadArgs> {
+export function Options(yargs: Argv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -53,7 +50,7 @@ export function Options(yargs: Argv): Argv<UploadArgs> {
 export const Handler = async ({
 	directory,
 	outputManifestPath,
-}: ArgumentsCamelCase<UploadArgs>) => {
+}: UploadArgs) => {
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
 	}
@@ -107,7 +104,6 @@ export const upload = async (
 		"_redirects",
 		"_headers",
 		"_routes.json",
-		"_routes.generated.json",
 		".DS_Store",
 		"node_modules",
 		".git",

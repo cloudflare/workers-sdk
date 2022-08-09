@@ -1,9 +1,10 @@
 import { toUrlPath } from "../../paths";
-import { MAX_FUNCTIONS_ROUTES_RULES } from "../constants";
+import { MAX_FUNCTIONS_ROUTES_RULES, ROUTES_SPEC_VERSION } from "../constants";
 import {
 	compareRoutes,
 	convertRoutesToGlobPatterns,
 	convertRoutesToRoutesJSONSpec,
+	optimizeRoutesJSONSpec,
 } from "./routes-transformation";
 
 // TODO: make a convenience function for creating a list
@@ -162,7 +163,7 @@ describe("route-paths-to-glob-patterns", () => {
 					},
 				])
 			).toEqual({
-				version: 1,
+				version: ROUTES_SPEC_VERSION,
 				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
 				exclude: [],
 			});
@@ -174,7 +175,7 @@ describe("route-paths-to-glob-patterns", () => {
 				routes.push({ routePath: toUrlPath(`/api/foo-${i}`) });
 			}
 			expect(convertRoutesToRoutesJSONSpec(routes)).toEqual({
-				version: 1,
+				version: ROUTES_SPEC_VERSION,
 				include: ["/*"],
 				exclude: [],
 			});
@@ -188,6 +189,60 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(convertRoutesToRoutesJSONSpec(routes).include.length).toEqual(
 				MAX_FUNCTIONS_ROUTES_RULES
 			);
+		});
+	});
+
+	describe("optimizeRoutesJSONSpec()", () => {
+		it("should convert and consolidate routes into JSONSpec", () => {
+			expect(
+				optimizeRoutesJSONSpec({
+					version: ROUTES_SPEC_VERSION,
+					exclude: [],
+					include: [
+						"/api/foo/bar",
+						"/foo/bar",
+						"/foo/*",
+						"/api/foo/bar",
+						"/middleware/*",
+					],
+				})
+			).toEqual({
+				version: ROUTES_SPEC_VERSION,
+				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
+				exclude: [],
+			});
+		});
+
+		it("should truncate all routes if over limit", () => {
+			const include: string[] = [];
+			for (let i = 0; i < MAX_FUNCTIONS_ROUTES_RULES + 1; i++) {
+				include.push(`/api/foo-${i}`);
+			}
+			expect(
+				optimizeRoutesJSONSpec({
+					version: ROUTES_SPEC_VERSION,
+					include,
+					exclude: [],
+				})
+			).toEqual({
+				version: ROUTES_SPEC_VERSION,
+				include: ["/*"],
+				exclude: [],
+			});
+		});
+
+		it("should allow max routes", () => {
+			const include: string[] = [];
+			for (let i = 0; i < MAX_FUNCTIONS_ROUTES_RULES; i++) {
+				include.push(`/api/foo-${i}`);
+			}
+			expect(
+				optimizeRoutesJSONSpec({
+					version: ROUTES_SPEC_VERSION,
+					include,
+					exclude: [],
+				}).include.length
+			).toEqual(MAX_FUNCTIONS_ROUTES_RULES);
 		});
 	});
 
