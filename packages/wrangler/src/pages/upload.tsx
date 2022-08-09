@@ -107,7 +107,6 @@ export const upload = async (
 		"_redirects",
 		"_headers",
 		"_routes.json",
-		"_routes.generated.json",
 		".DS_Store",
 		"node_modules",
 		".git",

@@ -1,12 +1,12 @@
 import { join as pathJoin } from "node:path";
 import { toUrlPath } from "../../paths";
-import { MAX_FUNCTIONS_ROUTES_RULES } from "../constants";
+import { MAX_FUNCTIONS_ROUTES_RULES, ROUTES_SPEC_VERSION } from "../constants";
 import { consolidateRoutes } from "./routes-consolidation";
 import type { RouteConfig } from "./routes";
 
-/** Interface for _routes.json and _routes.generated.json */
+/** Interface for _routes.json */
 interface RoutesJSONSpec {
-	version: 1;
+	version: typeof ROUTES_SPEC_VERSION;
 	include: string[];
 	exclude: string[];
 }
@@ -44,7 +44,7 @@ export function convertRoutesToGlobPatterns(
  * to determine if a request should run in the Functions user-worker.
  * Also consolidates redundant routes such as [/foo/bar, /foo/:bar] -> /foo/*
  *
- * @returns RotuesJSONSpec to be written to _routes.generated.json
+ * @returns RoutesJSONSpec to be written to _routes.json
  */
 export function convertRoutesToRoutesJSONSpec(
 	routes: RoutesJSONRouteInput
@@ -53,18 +53,31 @@ export function convertRoutesToRoutesJSONSpec(
 	// The order doesn't have any affect on the output of this function, but
 	// it should speed up route consolidation with less-specific routes being first.
 	const reversedRoutes = [...routes].reverse();
-	const convertedRoutes = convertRoutesToGlobPatterns(reversedRoutes);
-	let consolidatedRoutes = consolidateRoutes(convertedRoutes);
+	const include = convertRoutesToGlobPatterns(reversedRoutes);
+	return optimizeRoutesJSONSpec({
+		version: ROUTES_SPEC_VERSION,
+		include,
+		exclude: [],
+	});
+}
+
+/**
+ * Optimizes and returns a new Routes JSON Spec instance performing
+ * de-duping, consolidation, truncation, and sorting
+ */
+export function optimizeRoutesJSONSpec(spec: RoutesJSONSpec): RoutesJSONSpec {
+	const optimizedSpec = { ...spec };
+
+	let consolidatedRoutes = consolidateRoutes(optimizedSpec.include);
 	if (consolidatedRoutes.length > MAX_FUNCTIONS_ROUTES_RULES) {
 		consolidatedRoutes = ["/*"];
 	}
 	// Sort so that least-specific routes are first
 	consolidatedRoutes.sort((a, b) => compareRoutes(b, a));
-	return {
-		version: 1,
-		include: consolidatedRoutes,
-		exclude: [],
-	};
+
+	optimizedSpec.include = consolidatedRoutes;
+
+	return optimizedSpec;
 }
 
 /**
@@ -96,4 +109,17 @@ export function compareRoutes(routeA: string, routeB: string) {
 
 	// all else equal, just sort the paths lexicographically
 	return routeA.localeCompare(routeB);
+}
+
+export function isRoutesJSONSpec(data: unknown): data is RoutesJSONSpec {
+	return (
+		(typeof data === "object" &&
+			data &&
+			"version" in data &&
+			typeof (data as RoutesJSONSpec).version === "number" &&
+			(data as RoutesJSONSpec).version === 1 &&
+			Array.isArray((data as RoutesJSONSpec).include) &&
+			Array.isArray((data as RoutesJSONSpec).exclude)) ||
+		false
+	);
 }
