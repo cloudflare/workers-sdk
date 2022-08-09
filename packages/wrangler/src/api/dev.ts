@@ -8,6 +8,7 @@ interface DevOptions {
 	env?: string;
 	ip?: string;
 	port?: number;
+	inspectorPort?: number;
 	localProtocol?: "http" | "https";
 	assets?: string;
 	site?: string;

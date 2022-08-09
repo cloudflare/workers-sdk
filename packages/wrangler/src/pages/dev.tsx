@@ -20,6 +20,7 @@ type PagesDevArgs = {
 	local: boolean;
 	ip: string;
 	port: number;
+	"inspector-port"?: number;
 	proxy?: number;
 	"script-path": string;
 	binding?: (string | number)[];
@@ -59,6 +60,10 @@ export function Options(yargs: Argv): Argv<PagesDevArgs> {
 				type: "number",
 				default: 8788,
 				description: "The port to listen on (serve from)",
+			},
+			"inspector-port": {
+				type: "number",
+				describe: "Port for devtools to connect to",
 			},
 			proxy: {
 				type: "number",
@@ -123,6 +128,7 @@ export const Handler = async ({
 	directory,
 	ip,
 	port,
+	"inspector-port": inspectorPort,
 	proxy: requestedProxyPort,
 	"script-path": singleWorkerScriptPath,
 	binding: bindings = [],
@@ -257,6 +263,7 @@ export const Handler = async ({
 		{
 			ip,
 			port,
+			inspectorPort,
 			watch: true,
 			localProtocol,
 			liveReload,
