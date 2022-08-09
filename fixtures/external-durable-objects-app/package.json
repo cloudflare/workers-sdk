@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "A test for external durable objects",
 	"scripts": {
-		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\"",
+		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\" \"cd d && npx wrangler pages dev public --port 8403 --do PAGES_REFERENCED_DO=MyDurableObject@a\"",
 		"test": "npx jest --forceExit",
 		"test:ci": "npx jest --forceExit"
 	},

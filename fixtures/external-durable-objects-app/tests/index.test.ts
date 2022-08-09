@@ -60,9 +60,12 @@ describe("Pages Functions", () => {
 		const responseC = await waitUntilReady("http://localhost:8402/");
 		const dataC = (await responseC.json()) as { count: number; id: string };
 		expect(dataC.count).toEqual(3);
+		const responseD = await waitUntilReady("http://localhost:8403/");
+		const dataD = (await responseD.json()) as { count: number; id: string };
+		expect(dataD.count).toEqual(4);
 		const responseA2 = await waitUntilReady("http://localhost:8400/");
 		const dataA2 = (await responseA2.json()) as { count: number; id: string };
-		expect(dataA2.count).toEqual(4);
+		expect(dataA2.count).toEqual(5);
 		expect(dataA.id).toEqual(dataB.id);
 		expect(dataA.id).toEqual(dataC.id);
 		expect(dataA.id).toEqual(dataA2.id);
