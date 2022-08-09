@@ -1,0 +1,6 @@
+name = "b"
+
+[durable_objects]
+bindings = [
+	{ name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "a" }
+]

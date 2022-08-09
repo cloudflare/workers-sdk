@@ -10,6 +10,7 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
+import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
@@ -24,6 +25,7 @@ interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
+	workerDefinitions: WorkerRegistry;
 	assetPaths: AssetPaths | undefined;
 	port: number;
 	ip: string;
@@ -59,6 +61,7 @@ function useLocalWorker({
 	compatibilityFlags,
 	usageModel,
 	bindings,
+	workerDefinitions,
 	assetPaths,
 	port,
 	inspectorPort,
@@ -97,6 +100,18 @@ function useLocalWorker({
 			);
 		}
 	}, [bindings.services]);
+
+	useEffect(() => {
+		const externalDurableObjects = (
+			bindings.durable_objects?.bindings || []
+		).filter((binding) => binding.script_name);
+
+		if (externalDurableObjects.length > 0) {
+			logger.warn(
+				"⎔ Support for external Durable Objects in local mode is experimental and may change."
+			);
+		}
+	}, [bindings.durable_objects?.bindings]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
@@ -182,6 +197,15 @@ function useLocalWorker({
 					? `${localProtocol}://${localUpstream}`
 					: undefined;
 
+			const internalDurableObjects = (
+				bindings.durable_objects?.bindings || []
+			).filter((binding) => !binding.script_name);
+			const externalDurableObjects = (
+				bindings.durable_objects?.bindings || []
+			).filter((binding) => binding.script_name);
+
+			// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
+			// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 			const options: MiniflareOptions = {
 				name: workerName,
 				port,
@@ -202,9 +226,33 @@ function useLocalWorker({
 				kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
 				r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
 				durableObjects: Object.fromEntries(
-					(bindings.durable_objects?.bindings ?? []).map<[string, string]>(
-						(value) => [value.name, value.class_name]
-					)
+					internalDurableObjects.map((binding) => [
+						binding.name,
+						binding.class_name,
+					])
+				),
+				externalDurableObjects: Object.fromEntries(
+					externalDurableObjects
+						.map((binding) => {
+							const service = workerDefinitions[binding.script_name as string];
+							if (!service) return [binding.name, undefined];
+
+							const name = service.durableObjects.find(
+								(durableObject) =>
+									durableObject.className === binding.class_name
+							)?.name;
+							if (!name) return [binding.name, undefined];
+
+							return [
+								binding.name,
+								{
+									name,
+									host: service.durableObjectsHost,
+									port: service.durableObjectsPort,
+								},
+							];
+						})
+						.filter(([_, details]) => !!details)
 				),
 				...(localPersistencePath
 					? {
@@ -278,8 +326,9 @@ function useLocalWorker({
 				stdio: "pipe",
 			}));
 
-			child.on("message", async (message) => {
-				if (message === "ready") {
+			child.on("message", async (messageString) => {
+				const message = JSON.parse(messageString as string);
+				if (message.ready) {
 					// Let's register our presence in the dev registry
 					if (workerName) {
 						await registerWorker(workerName, {
@@ -287,6 +336,16 @@ function useLocalWorker({
 							mode: "local",
 							port,
 							host: ip,
+							durableObjects: internalDurableObjects.map((binding) => ({
+								name: binding.name,
+								className: binding.class_name,
+							})),
+							...(message.durableObjectsPort
+								? {
+										durableObjectsHost: ip,
+										durableObjectsPort: message.durableObjectsPort,
+								  }
+								: {}),
 						});
 					}
 					onReady?.();
@@ -366,6 +425,7 @@ function useLocalWorker({
 		bindings.r2_buckets,
 		bindings.vars,
 		bindings.services,
+		workerDefinitions,
 		compatibilityDate,
 		compatibilityFlags,
 		usageModel,

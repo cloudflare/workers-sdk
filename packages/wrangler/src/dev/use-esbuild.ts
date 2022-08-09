@@ -34,6 +34,7 @@ export function useEsbuild({
 	noBundle,
 	workerDefinitions,
 	services,
+	durableObjects,
 	firstPartyWorkerDevFacade,
 }: {
 	entry: Entry;
@@ -50,6 +51,7 @@ export function useEsbuild({
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
+	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
@@ -168,6 +170,7 @@ export function useEsbuild({
 		define,
 		assets,
 		services,
+		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
 	]);

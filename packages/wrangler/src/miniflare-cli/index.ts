@@ -1,10 +1,23 @@
-import { Log, LogLevel, Miniflare } from "miniflare";
+import { fetch } from "@miniflare/core";
+import {
+	DurableObjectNamespace,
+	DurableObjectStub,
+} from "@miniflare/durable-objects";
+import {
+	Log,
+	LogLevel,
+	Miniflare,
+	Response as MiniflareResponse,
+	Request as MiniflareRequest,
+} from "miniflare";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import { FatalError } from "../errors";
 import generateASSETSBinding from "./assets";
 import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
 import type { Options } from "./assets";
+import type { AddressInfo } from "net";
 
 export interface EnablePagesAssetsServiceBindingOptions {
 	proxyPort?: number;
@@ -44,7 +57,45 @@ async function main() {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
 	}
 
+	config.bindings = {
+		...config.bindings,
+		...Object.fromEntries(
+			Object.entries(
+				config.externalDurableObjects as Record<
+					string,
+					{ name: string; host: string; port: number }
+				>
+			).map(([binding, { name, host, port }]) => {
+				const factory = () => {
+					throw new FatalError(
+						"An external Durable Object instance's state has somehow been attempted to be accessed.",
+						1
+					);
+				};
+				const namespace = new DurableObjectNamespace(name as string, factory);
+				namespace.get = (id) => {
+					const stub = new DurableObjectStub(factory, id);
+					stub.fetch = (...reqArgs) => {
+						const url = `http://${host}${port ? `:${port}` : ""}`;
+						const request = new MiniflareRequest(
+							url,
+							new MiniflareRequest(...reqArgs)
+						);
+						request.headers.set("x-miniflare-durable-object-name", name);
+						request.headers.set("x-miniflare-durable-object-id", id.toString());
+
+						return fetch(request);
+					};
+					return stub;
+				};
+				return [binding, namespace];
+			})
+		),
+	};
+
 	let mf: Miniflare | undefined;
+	let durableObjectsMf: Miniflare | undefined = undefined;
+	let durableObjectsMfPort: number | undefined = undefined;
 
 	try {
 		if (args._[1]) {
@@ -73,12 +124,80 @@ async function main() {
 		// Start Miniflare development server
 		await mf.startServer();
 		await mf.startScheduler();
-		process.send && process.send("ready");
+
+		const internalDurableObjectClassNames = Object.values(
+			config.durableObjects as Record<string, string>
+		);
+
+		if (internalDurableObjectClassNames.length > 0) {
+			durableObjectsMf = new Miniflare({
+				host: config.host,
+				port: 0,
+				script: `
+				export default {
+					fetch(request, env) {
+						return env.DO.fetch(request)
+					}
+				}`,
+				serviceBindings: {
+					DO: async (request: MiniflareRequest) => {
+						request = new MiniflareRequest(request);
+
+						const name = request.headers.get("x-miniflare-durable-object-name");
+						const idString = request.headers.get(
+							"x-miniflare-durable-object-id"
+						);
+						request.headers.delete("x-miniflare-durable-object-name");
+						request.headers.delete("x-miniflare-durable-object-id");
+
+						if (!name || !idString) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Missing `x-miniflare-durable-object-name` or `x-miniflare-durable-object-id` headers.",
+								{ status: 400 }
+							);
+						}
+
+						const namespace = await mf?.getDurableObjectNamespace(name);
+						const id = namespace?.idFromString(idString);
+
+						if (!id) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Could not generate an ID. Possibly due to a mismatched DO name and ID?",
+								{ status: 500 }
+							);
+						}
+
+						const stub = namespace?.get(id);
+
+						if (!stub) {
+							return new MiniflareResponse(
+								"[durable-object-proxy-err] Could not generate a stub. Possibly due to a mismatched DO name and ID?",
+								{ status: 500 }
+							);
+						}
+
+						return stub.fetch(request);
+					},
+				},
+				modules: true,
+			});
+			const server = await durableObjectsMf.startServer();
+			durableObjectsMfPort = (server.address() as AddressInfo).port;
+		}
+
+		process.send &&
+			process.send(
+				JSON.stringify({
+					ready: true,
+					durableObjectsPort: durableObjectsMfPort,
+				})
+			);
 	} catch (e) {
 		mf?.log.error(e as Error);
 		process.exitCode = 1;
 		// Unmount any mounted workers
 		await mf?.dispose();
+		await durableObjectsMf?.dispose();
 	}
 }
 
