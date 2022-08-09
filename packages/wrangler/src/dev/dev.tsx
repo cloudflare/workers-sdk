@@ -136,7 +136,7 @@ export type DevProps = {
 	upstreamProtocol: "https" | "http";
 	localProtocol: "https" | "http";
 	localUpstream: string | undefined;
-	enableLocalPersistence: boolean;
+	localPersistencePath: string | null;
 	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
@@ -274,7 +274,7 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
-			enableLocalPersistence={props.enableLocalPersistence}
+			localPersistencePath={props.localPersistencePath}
 			liveReload={props.liveReload}
 			crons={props.crons}
 			localProtocol={props.localProtocol}
