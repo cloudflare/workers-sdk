@@ -360,7 +360,7 @@ interface EnvironmentNonInheritable {
 		/** The UUID of this D1 database (not required). */
 		database_id: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
-		preview_database_id: string;
+		preview_database_id?: string;
 	}[];
 
 	/**

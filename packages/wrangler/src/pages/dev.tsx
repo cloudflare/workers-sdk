@@ -372,7 +372,11 @@ export const Handler = async ({
 				return { binding: binding.toString(), bucket_name: "" };
 			}),
 
-			d1Databases: d1s.map((d1) => d1.toString()),
+			d1Databases: d1s.map((binding) => ({
+				binding: binding.toString(),
+				database_id: "fake-uuid",
+				database_name: `local-${binding}`,
+			})),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
