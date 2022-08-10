@@ -366,6 +366,14 @@ function getPort(pid: number) {
 
 	if (isWindows()) {
 		command = "\\windows\\system32\\netstat.exe -nao";
+		const path = process.env.PATH?.split(":");
+		if (path) {
+			// Aims to match `\\WINDOWS;C`, where C is the network drive letter.
+			const networkDrive = path.find((p) => /^\\WINDOWS;[A-Z]$/g.test(p));
+			if (networkDrive) {
+				command = networkDrive.charAt(networkDrive.length - 1) + ":" + command;
+			}
+		}
 		regExp = new RegExp(`TCP\\s+.*:(\\d+)\\s+.*:\\d+\\s+LISTENING\\s+${pid}`);
 	} else {
 		command = "lsof -nPi";
