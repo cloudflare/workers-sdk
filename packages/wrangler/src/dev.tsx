@@ -25,7 +25,7 @@ import {
 	isLegacyEnv,
 	DEFAULT_INSPECTOR_PORT,
 } from "./index";
-import type { Config } from "./config";
+import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
@@ -309,6 +309,7 @@ export type AdditionalDevProps = {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	d1Databases?: Environment["d1_databases"];
 };
 type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
@@ -740,6 +741,7 @@ async function getBindingsAndAssetPaths(
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
+				d1Databases: args.d1Databases,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -826,8 +828,10 @@ async function getBindings(
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
-
-		d1_databases: identifyD1BindingsAsBeta(configParam.d1_databases),
+		d1_databases: identifyD1BindingsAsBeta([
+			...configParam.d1_databases,
+			...(args.d1Databases || []),
+		]),
 	};
 
 	return bindings;
