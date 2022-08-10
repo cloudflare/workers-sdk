@@ -100,6 +100,20 @@ describe("pages", () => {
         [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
       `);
 		});
+
+		it("should display for pages:functions:optimize-routes", async () => {
+			await expect(
+				runWrangler(
+					'pages functions optimize-routes --routes-path="/build/_routes.json" --output-routes-path="/build/_optimized-routes.json"'
+				)
+			).rejects.toThrowError();
+
+			expect(std.out).toMatchInlineSnapshot(`
+        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+      `);
+		});
 	});
 
 	describe("project list", () => {
