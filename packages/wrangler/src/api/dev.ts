@@ -2,6 +2,7 @@ import { fetch } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
+import type { Environment } from "../config";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { RequestInit, Response } from "undici";
 
@@ -43,7 +44,7 @@ interface DevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	d1Databases?: string[];
+	d1Databases?: Environment["d1_databases"];
 	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
