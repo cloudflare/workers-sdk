@@ -118,7 +118,7 @@ describe("tail", () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error");
 			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ outcome: ["exception", "exceededCpu", "unknown"] },
+				{ outcome: ["exception", "exceededCpu", "exceededMemory", "unknown"] },
 			]);
 		});
 
@@ -126,7 +126,15 @@ describe("tail", () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error --status canceled");
 			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ outcome: ["exception", "exceededCpu", "unknown", "canceled"] },
+				{
+					outcome: [
+						"exception",
+						"exceededCpu",
+						"exceededMemory",
+						"unknown",
+						"canceled",
+					],
+				},
 			]);
 		});
 
@@ -213,7 +221,15 @@ describe("tail", () => {
 			const expectedWebsocketMessage = {
 				filters: [
 					{ sampling_rate },
-					{ outcome: ["ok", "exception", "exceededCpu", "unknown"] },
+					{
+						outcome: [
+							"ok",
+							"exception",
+							"exceededCpu",
+							"exceededMemory",
+							"unknown",
+						],
+					},
 					{ method },
 					{ header: { key: "X-HELLO", query: "world" } },
 					{ client_ip },
