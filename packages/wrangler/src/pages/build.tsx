@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { toUrlPath } from "../paths";
@@ -14,7 +15,6 @@ import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
 import type { Config } from "./functions/routes";
 import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
-import { FatalError } from "../errors";
 
 type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;
 
