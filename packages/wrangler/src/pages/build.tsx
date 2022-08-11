@@ -14,6 +14,7 @@ import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
 import type { Config } from "./functions/routes";
 import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
+import { FatalError } from "../errors";
 
 type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;
 
@@ -164,7 +165,14 @@ export async function buildFunctions({
 		baseURL,
 	});
 
-	if (config.routes && routesOutputPath) {
+	if (!config.routes || config.routes.length === 0) {
+		throw new FatalError(
+			`Failed to find any routes while compiling Functions in ${functionsDirectory}`,
+			1
+		);
+	}
+
+	if (routesOutputPath) {
 		const routesJSON = convertRoutesToRoutesJSONSpec(config.routes);
 		writeFileSync(routesOutputPath, JSON.stringify(routesJSON, null, 2));
 	}
