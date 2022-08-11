@@ -191,7 +191,7 @@ export const Handler = async ({
 				functionsDirectory,
 				sourcemap: true,
 				watch: true,
-				onEnd: onEnd,
+				onEnd,
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
