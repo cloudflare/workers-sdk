@@ -30,7 +30,7 @@ export default {
 						const url = new URL(reqFromArgs.url);
 						url.protocol = details.protocol;
 						url.host = details.host;
-						if (details.port) url.port = details.port;
+						if (details.port !== undefined) url.port = details.port;
 
 						const request = new Request(url.toString(), reqFromArgs);
 						return fetch(request);
