@@ -208,7 +208,7 @@ export const Handler = async ({
 						functionsDirectory,
 						sourcemap: true,
 						watch: true,
-						onEnd: () => scriptReadyResolve(),
+						onEnd,
 						buildOutputDirectory: directory,
 						nodeCompat,
 					});
