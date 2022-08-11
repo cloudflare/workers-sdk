@@ -186,7 +186,7 @@ export async function buildFunctions({
 
 	if (!config.routes || config.routes.length === 0) {
 		throw new FunctionsNoRoutesError(
-			`Failed to find any routes while compiling Functions in ${functionsDirectory}`
+			`Failed to find any routes while compiling Functions in: ${functionsDirectory}`
 		);
 	}
 

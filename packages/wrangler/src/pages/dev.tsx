@@ -215,7 +215,9 @@ export const Handler = async ({
 					await metrics.sendMetricsEvent("build pages functions");
 				} catch (e) {
 					if (e instanceof FunctionsNoRoutesError) {
-						logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+						logger.warn(
+							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+						);
 					} else {
 						throw e;
 					}
@@ -224,7 +226,9 @@ export const Handler = async ({
 		} catch (e) {
 			// If there are no Functions, then Pages will only serve assets.
 			if (e instanceof FunctionsNoRoutesError) {
-				logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+				logger.warn(
+					getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+				);
 				// Resolve anyway and run without Functions
 				onEnd();
 				// Turn off Functions

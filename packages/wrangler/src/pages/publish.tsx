@@ -268,7 +268,9 @@ export const Handler = async ({
 			builtFunctions = readFileSync(outfile, "utf-8");
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
-				logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+				logger.warn(
+					getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+				);
 			} else {
 				throw e;
 			}
