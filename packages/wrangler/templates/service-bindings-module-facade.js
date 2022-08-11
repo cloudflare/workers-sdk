@@ -16,20 +16,23 @@ export default {
 			if (details) {
 				facadeEnv[name] = {
 					async fetch(...reqArgs) {
+						const reqFromArgs = new Request(...reqArgs);
 						if (details.headers) {
-							const req = new Request(...reqArgs);
 							for (const [key, value] of Object.entries(details.headers)) {
 								// In remote mode, you need to add a couple of headers
 								// to make sure it's talking to the 'dev' preview session
 								// (much like wrangler dev already does via proxy.ts)
-								req.headers.set(key, value);
+								reqFromArgs.headers.set(key, value);
 							}
-							return env[name].fetch(req);
+							return env[name].fetch(reqFromArgs);
 						}
-						const url = `${details.protocol}://${details.host}${
-							details.port ? `:${details.port}` : ""
-						}`;
-						const request = new Request(url, ...reqArgs);
+
+						const url = new URL(reqFromArgs.url);
+						url.protocol = details.protocol;
+						url.host = details.host;
+						if (details.port) url.port = details.port;
+
+						const request = new Request(url.toString(), reqFromArgs);
 						return fetch(request);
 					},
 				};
