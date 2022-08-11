@@ -76,10 +76,13 @@ async function main() {
 				namespace.get = (id) => {
 					const stub = new DurableObjectStub(factory, id);
 					stub.fetch = (...reqArgs) => {
-						const url = `http://${host}${port ? `:${port}` : ""}`;
+						const requestFromArgs = new MiniflareRequest(...reqArgs);
+						const url = new URL(requestFromArgs.url);
+						url.host = host;
+						if (port !== undefined) url.port = port.toString();
 						const request = new MiniflareRequest(
-							url,
-							new MiniflareRequest(...reqArgs)
+							url.toString(),
+							requestFromArgs
 						);
 						request.headers.set("x-miniflare-durable-object-name", name);
 						request.headers.set("x-miniflare-durable-object-id", id.toString());
