@@ -306,10 +306,6 @@ export const Handler = async ({
 	} catch {}
 
 	try {
-		_routes = readFileSync(routesOutputPath, "utf-8");
-	} catch {}
-
-	try {
 		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
 	} catch {}
 
@@ -321,12 +317,14 @@ export const Handler = async ({
 		formData.append("_redirects", new File([_redirects], "_redirects"));
 	}
 
-	if (_routes) {
-		formData.append("_routes.json", new File([_routes], "_routes.json"));
-	}
-
 	if (builtFunctions) {
 		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
+		try {
+			_routes = readFileSync(routesOutputPath, "utf-8");
+			if (_routes) {
+				formData.append("_routes.json", new File([_routes], "_routes.json"));
+			}
+		} catch {}
 	} else if (_workerJS) {
 		// Advanced Mode
 		// https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
@@ -348,6 +346,7 @@ export const Handler = async ({
 			}
 
 			_routes = JSON.stringify(optimizeRoutesJSONSpec(advancedModeRoutes));
+			formData.append("_routes.json", new File([_routes], "_routes.json"));
 
 			logger.warn(
 				`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
