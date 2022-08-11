@@ -502,10 +502,10 @@ export async function startDev(args: StartDevOptions) {
 					isWorkersSite={Boolean(args.site || config.site)}
 					compatibilityDate={getDevCompatibilityDate(
 						config,
-						args["compatibility-date"]
+						args.compatibilityDate
 					)}
 					compatibilityFlags={
-						args["compatibility-flags"] || config.compatibility_flags
+						args.compatibilityFlags || config.compatibility_flags
 					}
 					usageModel={config.usage_model}
 					bindings={bindings}

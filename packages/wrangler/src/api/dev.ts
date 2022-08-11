@@ -16,6 +16,7 @@ interface DevOptions {
 	siteExclude?: string[];
 	nodeCompat?: boolean;
 	compatibilityDate?: string;
+	compatibilityFlags?: string[];
 	experimentalEnableLocalPersistence?: boolean;
 	liveReload?: boolean;
 	watch?: boolean;
