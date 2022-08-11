@@ -1,13 +1,26 @@
 {
 	"name": "service-bindings-app",
-	"version": "0.0.0",
 	"private": true,
 	"description": "A test for service bindings",
-	"keywords": [],
-	"license": "ISC",
-	"author": "",
-	"main": "index.js",
 	"scripts": {
-		"dev": "npx concurrently 'wrangler dev a/index.ts --local' 'sleep 1 && wrangler dev b/index.ts --local'"
+		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8300\" \"wrangler dev b/index.ts --local --port 8301\"",
+		"test": "npx jest --forceExit",
+		"test:ci": "npx jest --forceExit"
+	},
+	"jest": {
+		"restoreMocks": true,
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testTimeout": 30000,
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+		]
 	}
 }
