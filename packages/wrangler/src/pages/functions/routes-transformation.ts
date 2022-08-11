@@ -13,9 +13,6 @@ interface RoutesJSONSpec {
 
 type RoutesJSONRouteInput = Pick<RouteConfig, "routePath" | "middleware">[];
 
-/**
- * TODO can we do better naming?
- */
 export function convertRoutesToGlobPatterns(
 	routes: RoutesJSONRouteInput
 ): string[] {
