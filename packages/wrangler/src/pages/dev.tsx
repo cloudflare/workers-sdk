@@ -10,6 +10,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { YargsOptionsToInterface } from "./types";
@@ -143,7 +144,7 @@ export const Handler = async ({
 	}
 
 	const functionsDirectory = "./functions";
-	const usingFunctions = existsSync(functionsDirectory);
+	let usingFunctions = existsSync(functionsDirectory);
 
 	const command = remaining;
 
@@ -169,8 +170,9 @@ export const Handler = async ({
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
-	let scriptPath: string;
+	let scriptPath = "";
 
+	// Try to use Functions
 	if (usingFunctions) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		scriptPath = outfile;
@@ -182,36 +184,59 @@ export const Handler = async ({
 		}
 
 		logger.log(`Compiling worker to "${outfile}"...`);
-
+		const onEnd = () => scriptReadyResolve();
 		try {
 			await buildFunctions({
 				outfile,
 				functionsDirectory,
 				sourcemap: true,
 				watch: true,
-				onEnd: () => scriptReadyResolve(),
+				onEnd: onEnd,
 				buildOutputDirectory: directory,
 				nodeCompat,
 			});
 			await metrics.sendMetricsEvent("build pages functions");
-		} catch {}
 
-		watch([functionsDirectory], {
-			persistent: true,
-			ignoreInitial: true,
-		}).on("all", async () => {
-			await buildFunctions({
-				outfile,
-				functionsDirectory,
-				sourcemap: true,
-				watch: true,
-				onEnd: () => scriptReadyResolve(),
-				buildOutputDirectory: directory,
-				nodeCompat,
+			// If Functions found routes, continue using Functions
+			watch([functionsDirectory], {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async () => {
+				try {
+					await buildFunctions({
+						outfile,
+						functionsDirectory,
+						sourcemap: true,
+						watch: true,
+						onEnd: () => scriptReadyResolve(),
+						buildOutputDirectory: directory,
+						nodeCompat,
+					});
+					await metrics.sendMetricsEvent("build pages functions");
+				} catch (e) {
+					if (e instanceof FunctionsNoRoutesError) {
+						logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+					} else {
+						throw e;
+					}
+				}
 			});
-			await metrics.sendMetricsEvent("build pages functions");
-		});
-	} else {
+		} catch (e) {
+			// If there are no Functions, then Pages will only serve assets.
+			if (e instanceof FunctionsNoRoutesError) {
+				logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+				// Resolve anyway and run without Functions
+				onEnd();
+				// Turn off Functions
+				usingFunctions = false;
+			} else {
+				throw e;
+			}
+		}
+	}
+	// Depending on the result of building Functions, we may not actually be using
+	// Functions even if the directory exists.
+	if (!usingFunctions) {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
@@ -244,6 +269,15 @@ export const Handler = async ({
 	}
 
 	await scriptReadyPromise;
+
+	if (scriptPath === "") {
+		// Failed to get a script with or without Functions,
+		// something really bad must have happend.
+		throw new FatalError(
+			"Failed to start wrangler pages dev due to an unknown error",
+			1
+		);
+	}
 
 	const { stop, waitUntilExit } = await unstable_dev(
 		scriptPath,

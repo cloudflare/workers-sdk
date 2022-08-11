@@ -16,6 +16,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	isRoutesJSONSpec,
 	optimizeRoutesJSONSpec,
@@ -256,18 +257,22 @@ export const Handler = async ({
 	const routesOutputPath = join(tmpdir(), `_routes-${Math.random()}.json`);
 	if (existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
-
-		await new Promise((resolve) =>
-			buildFunctions({
+		try {
+			await buildFunctions({
 				outfile,
 				functionsDirectory,
-				onEnd: () => resolve(null),
+				onEnd: () => {},
 				buildOutputDirectory: dirname(outfile),
 				routesOutputPath,
-			})
-		);
-
-		builtFunctions = readFileSync(outfile, "utf-8");
+			});
+			builtFunctions = readFileSync(outfile, "utf-8");
+		} catch (e) {
+			if (e instanceof FunctionsNoRoutesError) {
+				logger.warn(getFunctionsNoRoutesWarning(functionsDirectory));
+			} else {
+				throw e;
+			}
+		}
 	}
 
 	const manifest = await upload({ directory, accountId, projectName });
