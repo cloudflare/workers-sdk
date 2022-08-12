@@ -87,8 +87,6 @@ describe("route-consolidation", () => {
 		});
 	});
 
-	// Try all tests for different rule limits to make sure we don't
-	// have weird off-by-some errors
 	describe(`shortenRoute()`, () => {
 		it("should allow max length path", () => {
 			const route = "/" + "a".repeat(maxRuleLength - 1);
