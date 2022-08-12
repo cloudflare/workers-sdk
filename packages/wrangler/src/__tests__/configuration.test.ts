@@ -1635,6 +1635,7 @@ describe("normalizeAndValidateConfig()", () => {
 								id: "KV_ID_2",
 								preview_id: 2222,
 							},
+							{ binding: "VALID", id: "" }
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -1654,7 +1655,8 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
 			            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
 			            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
+			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
 		});
@@ -1740,6 +1742,7 @@ describe("normalizeAndValidateConfig()", () => {
 								bucket_name: "R2_BUCKET_2",
 								preview_bucket_name: 2555,
 							},
+							{ binding: "R2_BINDING_1", bucket_name: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -1759,7 +1762,8 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 			            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 			            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
+			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
 		        `);
 			});
 		});
