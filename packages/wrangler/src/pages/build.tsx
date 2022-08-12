@@ -1,10 +1,16 @@
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { toUrlPath } from "../paths";
 import { isInPagesCI } from "./constants";
+import {
+	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
+	FunctionsNoRoutesError,
+	getFunctionsNoRoutesWarning,
+} from "./errors";
 import { buildPlugin } from "./functions/buildPlugin";
 import { buildWorker } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
@@ -104,23 +110,37 @@ export const Handler = async ({
 	}
 
 	buildOutputDirectory ??= dirname(outfile);
-
-	await buildFunctions({
-		outfile,
-		outputConfigPath,
-		functionsDirectory: directory,
-		minify,
-		sourcemap,
-		fallbackService,
-		watch,
-		plugin,
-		buildOutputDirectory,
-		nodeCompat,
-		routesOutputPath,
-	});
+	try {
+		await buildFunctions({
+			outfile,
+			outputConfigPath,
+			functionsDirectory: directory,
+			minify,
+			sourcemap,
+			fallbackService,
+			watch,
+			plugin,
+			buildOutputDirectory,
+			nodeCompat,
+			routesOutputPath,
+		});
+	} catch (e) {
+		if (e instanceof FunctionsNoRoutesError) {
+			throw new FatalError(
+				getFunctionsNoRoutesWarning(directory),
+				EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
+			);
+		} else {
+			throw e;
+		}
+	}
 	await metrics.sendMetricsEvent("build pages functions");
 };
 
+/**
+ * Builds a Functions worker based on the functions directory, with filepath and handler based routing.
+ * @throws FunctionsNoRoutesError when there are no routes found in the functions directory
+ */
 export async function buildFunctions({
 	outfile,
 	outputConfigPath,
@@ -164,7 +184,13 @@ export async function buildFunctions({
 		baseURL,
 	});
 
-	if (config.routes && routesOutputPath) {
+	if (!config.routes || config.routes.length === 0) {
+		throw new FunctionsNoRoutesError(
+			`Failed to find any routes while compiling Functions in: ${functionsDirectory}`
+		);
+	}
+
+	if (routesOutputPath) {
 		const routesJSON = convertRoutesToRoutesJSONSpec(config.routes);
 		writeFileSync(routesOutputPath, JSON.stringify(routesJSON, null, 2));
 	}
