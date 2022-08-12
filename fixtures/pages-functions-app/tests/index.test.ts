@@ -60,6 +60,13 @@ describe("Pages Functions", () => {
 		expect(text).toContain("Hello, world!");
 	});
 
+	it("renders pages with . characters", async () => {
+		const response = await waitUntilReady("http://localhost:8789/a.b");
+		expect(response.headers.get("x-custom")).toBe("header value");
+		const text = await response.text();
+		expect(text).toContain("Hello, a.b!");
+	});
+
 	it("parses URL encoded requests", async () => {
 		const response = await waitUntilReady("http://localhost:8789/[id].js");
 		const text = await response.text();
