@@ -233,9 +233,10 @@ describe("route-consolidation", () => {
 					const segment = "/" + "a".repeat(i);
 					// make sure the segment isn't too long since we are testing not resulting to /*
 					expect(segment.length).toBeLessThanOrEqual(maxRuleLength);
-
 					const route =
 						segment.repeat((maxRuleLength / segment.length) * 2) + suffix;
+					// Make sure we made the rule too long
+					expect(route.length).toBeGreaterThan(maxRuleLength);
 					const short = shortenRoute(route);
 
 					// Make sure it's not over the limit
