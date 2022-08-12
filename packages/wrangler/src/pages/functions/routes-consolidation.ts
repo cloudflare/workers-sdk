@@ -51,9 +51,9 @@ export function shortenRoute(
 	}
 
 	let route = routeToShorten;
-	// Shorten to the first slash within the limit
+	// May have to try multiple times for longer segments
 	for (let i = 0; i < routeToShorten.length; i++) {
-		// May have to try multiple times for longer segments
+		// Shorten to the first slash within the limit
 		for (let j = maxLength - 1 - i; j > 0; j--) {
 			if (route[j] === "/") {
 				route = route.slice(0, j) + "/*";
