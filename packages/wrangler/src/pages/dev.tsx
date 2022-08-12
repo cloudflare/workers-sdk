@@ -1,6 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import { build as workerJsBuild } from "esbuild";
@@ -365,7 +365,8 @@ function getPort(pid: number) {
 	let command: string, regExp: RegExp;
 
 	if (isWindows()) {
-		command = "\\windows\\system32\\netstat.exe -nao";
+		const drive = homedir().split(":\\")[0];
+		command = drive + ":\\windows\\system32\\netstat.exe -nao";
 		regExp = new RegExp(`TCP\\s+.*:(\\d+)\\s+.*:\\d+\\s+LISTENING\\s+${pid}`);
 	} else {
 		command = "lsof -nPi";
