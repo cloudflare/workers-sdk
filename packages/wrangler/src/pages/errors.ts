@@ -8,9 +8,8 @@ export class FunctionsNoRoutesError extends Error {
 }
 /**
  * Exit code for `pages functions build` when no routes are found.
- * This is a safe exit code to use: https://tldp.org/LDP/abs/html/exitcodes.html
  */
-export const EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR = 3;
+export const EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR = 156;
 
 /** Warning message for when buildFunctions throws FunctionsNoRoutesError */
 export function getFunctionsNoRoutesWarning(
