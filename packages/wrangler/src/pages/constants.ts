@@ -8,4 +8,5 @@ export const SECONDS_TO_WAIT_FOR_PROXY = 5;
 export const isInPagesCI = !!process.env.CF_PAGES;
 /** The max number of rules in _routes.json */
 export const MAX_FUNCTIONS_ROUTES_RULES = 100;
+export const MAX_FUNCTIONS_ROUTES_RULE_LENGTH = 100;
 export const ROUTES_SPEC_VERSION = 1;

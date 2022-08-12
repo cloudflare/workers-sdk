@@ -1,3 +1,5 @@
+import { MAX_FUNCTIONS_ROUTES_RULE_LENGTH } from "../constants";
+
 /**
  * consolidateRoutes consolidates redundant routes - eg. ["/api/*"", "/api/foo"] -> ["/api/*""]
  * @param routes If this is the same order as Functions routes (with most-specific first),
@@ -5,13 +7,18 @@
  * @returns Non-redundant list of routes
  */
 export function consolidateRoutes(routes: string[]): string[] {
+	// First we need to trim any rules that are too long and deduplicate the result
+	const routesShortened = Array.from(
+		new Set(routes.map((route) => shortenRoute(route)))
+	);
+
 	// create a map of the routes
 	const routesMap = new Map<string, boolean>();
-	for (const route of routes) {
+	for (const route of routesShortened) {
 		routesMap.set(route, true);
 	}
 	// Find routes that might render other routes redundant
-	for (const route of routes.filter((r) => r.endsWith("/*"))) {
+	for (const route of routesShortened.filter((r) => r.endsWith("/*"))) {
 		// Make sure the route still exists in the map
 		if (routesMap.has(route)) {
 			// Remove splat at the end, leaving the /
@@ -26,4 +33,41 @@ export function consolidateRoutes(routes: string[]): string[] {
 		}
 	}
 	return Array.from(routesMap.keys());
+}
+
+/**
+ * Shortens a route until it's within the rule length limit defined in
+ * constants.MAX_FUNCTIONS_ROUTES_RULE_LENGTH
+ * Eg. /aaa/bbb -> /aaa/*
+ * @param routeToShorten Route to shorten if needed
+ * @param maxLength Max length of route to try to shorten to
+ */
+export function shortenRoute(
+	routeToShorten: string,
+	maxLength: number = MAX_FUNCTIONS_ROUTES_RULE_LENGTH
+): string {
+	if (routeToShorten.length <= maxLength) {
+		return routeToShorten;
+	}
+
+	let route = routeToShorten;
+	// Shorten to the first slash within the limit
+	for (let i = 0; i < routeToShorten.length; i++) {
+		// May have to try multiple times for longer segments
+		for (let j = maxLength - 1 - i; j > 0; j--) {
+			if (route[j] === "/") {
+				route = route.slice(0, j) + "/*";
+				break;
+			}
+		}
+		if (route.length <= maxLength) {
+			break;
+		}
+	}
+
+	// If we failed to shorten it, fall back to include-all rather than breaking
+	if (route.length > maxLength) {
+		route = "/*";
+	}
+	return route;
 }
