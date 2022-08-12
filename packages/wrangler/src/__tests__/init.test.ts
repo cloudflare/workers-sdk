@@ -5,6 +5,8 @@ import { execa, execaSync } from "execa";
 import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { setMockFetchDashScript, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	mockConfirm,
@@ -62,16 +64,16 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created wrangler.toml
-        ✨ Initialized git repository
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        "✨ Created wrangler.toml
+			        ✨ Initialized git repository
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`"
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -93,16 +95,16 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created my-worker/wrangler.toml
-        ✨ Initialized git repository at my-worker
-        ✨ Created my-worker/package.json
-        ✨ Created my-worker/tsconfig.json
-        ✨ Created my-worker/src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        "✨ Created my-worker/wrangler.toml
+			        ✨ Initialized git repository at my-worker
+			        ✨ Created my-worker/package.json
+			        ✨ Created my-worker/tsconfig.json
+			        ✨ Created my-worker/src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`cd my-worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`"
-      `);
+			        To start developing your Worker, run \`cd my-worker && npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -121,21 +123,21 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Initialized git repository
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Initialized git repository
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should error if `--type javascript` is used", async () => {
@@ -204,13 +206,13 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should create a wrangler.toml and a directory for a named Worker ", async () => {
@@ -238,13 +240,13 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created my-worker/wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created my-worker/wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
@@ -276,15 +278,15 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "",
+			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
 
-        ",
-        }
-      `);
+			        ",
+			        }
+		      `);
 		});
 
 		it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
@@ -313,15 +315,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "",
+			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
 
-        ",
-        }
-      `);
+			        ",
+			        }
+		      `);
 		});
 
 		it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
@@ -401,15 +403,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "",
-          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "",
+			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
 
-        ",
-        }
-      `);
+			        ",
+			        }
+		      `);
 		});
 
 		it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
@@ -513,14 +515,14 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Initialized git repository",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Initialized git repository",
+			          "warn": "",
+			        }
+		      `);
 			expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
 				"main"
 			);
@@ -545,20 +547,20 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
@@ -570,20 +572,20 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-        ✨ Created path/to/worker/my-worker/package.json
-        ✨ Created path/to/worker/my-worker/tsconfig.json
-        ✨ Created path/to/worker/my-worker/src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			        ✨ Created path/to/worker/my-worker/package.json
+			        ✨ Created path/to/worker/my-worker/tsconfig.json
+			        ✨ Created path/to/worker/my-worker/src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		// I... don't know how to test this lol
@@ -604,14 +606,14 @@ describe("init", () => {
 			);
 			await runWrangler("init");
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Initialized git repository",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Initialized git repository",
+			          "warn": "",
+			        }
+		      `);
 
 			expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
 				"refs/heads/main"
@@ -658,14 +660,14 @@ describe("init", () => {
 			});
 			expect(mockPackageManager.install).toHaveBeenCalled();
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created package.json",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created package.json",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should create a package.json, with the specified name, if none is found and user confirms", async () => {
@@ -705,14 +707,14 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created my-worker/wrangler.toml
-        ✨ Created my-worker/package.json",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created my-worker/wrangler.toml
+			        ✨ Created my-worker/package.json",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing package.json in the same directory", async () => {
@@ -748,13 +750,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
@@ -798,14 +800,14 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-        ✨ Created path/to/worker/my-worker/package.json",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			        ✨ Created path/to/worker/my-worker/package.json",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should offer to install wrangler into an existing package.json", async () => {
@@ -848,14 +850,14 @@ describe("init", () => {
 				`wrangler@${wranglerVersion}`
 			);
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Installed wrangler into devDependencies",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Installed wrangler into devDependencies",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
@@ -902,14 +904,14 @@ describe("init", () => {
 			);
 			expect(mockPackageManager.cwd).toBe(process.cwd());
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Installed wrangler into devDependencies",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Installed wrangler into devDependencies",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing package.json in an ancestor directory", async () => {
@@ -951,13 +953,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 	});
 
@@ -1002,17 +1004,17 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created src/index.js
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created src/index.js
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should offer to create a worker in a typescript project", async () => {
@@ -1051,19 +1053,19 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should add scripts for a typescript project with .ts extension", async () => {
@@ -1109,15 +1111,15 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created wrangler.toml
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        "✨ Created wrangler.toml
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`"
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`"
+		      `);
 		});
 
 		it("should not overwrite package.json scripts for a typescript project", async () => {
@@ -1169,14 +1171,14 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created wrangler.toml
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        "✨ Created wrangler.toml
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`"
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+		      `);
 		});
 
 		it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
@@ -1211,15 +1213,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created tsconfig.json
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created tsconfig.json
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
@@ -1258,16 +1260,16 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created my-worker/wrangler.toml
-        ✨ Created my-worker/package.json
-        ✨ Created my-worker/tsconfig.json
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created my-worker/wrangler.toml
+			        ✨ Created my-worker/package.json
+			        ✨ Created my-worker/tsconfig.json
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
@@ -1311,16 +1313,16 @@ describe("init", () => {
 				"typescript"
 			);
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
@@ -1358,17 +1360,17 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created src/index.ts
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created src/index.ts
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
@@ -1416,20 +1418,20 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-        ✨ Created path/to/worker/my-worker/package.json
-        ✨ Created path/to/worker/my-worker/tsconfig.json
-        ✨ Created path/to/worker/my-worker/src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			        ✨ Created path/to/worker/my-worker/package.json
+			        ✨ Created path/to/worker/my-worker/tsconfig.json
+			        ✨ Created path/to/worker/my-worker/src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should offer to install type definitions in an existing typescript project", async () => {
@@ -1475,15 +1477,15 @@ describe("init", () => {
 				"@cloudflare/workers-types"
 			);
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Installed @cloudflare/workers-types into devDependencies
-        🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Installed @cloudflare/workers-types into devDependencies
+			        🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
@@ -1523,17 +1525,17 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Created src/index.ts
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Created src/index.ts
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 	});
 
@@ -1581,13 +1583,13 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created wrangler.toml
-        ✨ Created package.json
-        ✨ Created src/index.js
+			        "✨ Created wrangler.toml
+			        ✨ Created package.json
+			        ✨ Created src/index.js
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`"
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`"
+		      `);
 		});
 
 		it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
@@ -1639,12 +1641,12 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Created wrangler.toml
-        ✨ Created src/index.js
+			        "✨ Created wrangler.toml
+			        ✨ Created src/index.js
 
-        To start developing your Worker, run \`npx wrangler dev\`
-        To publish your Worker to the Internet, run \`npx wrangler publish\`"
-      `);
+			        To start developing your Worker, run \`npx wrangler dev\`
+			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+		      `);
 		});
 
 		it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
@@ -1679,13 +1681,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async () => {
@@ -1722,13 +1724,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created my-worker/wrangler.toml",
-          "warn": "",
-        }
-      `);
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created my-worker/wrangler.toml",
+			          "warn": "",
+			        }
+		      `);
 		});
 	});
 
@@ -1759,21 +1761,21 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created wrangler.toml
-        ✨ Initialized git repository
-        ✨ Created package.json
-        ✨ Created tsconfig.json
-        ✨ Created src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created wrangler.toml
+			        ✨ Initialized git repository
+			        ✨ Created package.json
+			        ✨ Created tsconfig.json
+			        ✨ Created src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
@@ -1788,21 +1790,21 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created path/to/worker/wrangler.toml
-        ✨ Initialized git repository at path/to/worker
-        ✨ Created path/to/worker/package.json
-        ✨ Created path/to/worker/tsconfig.json
-        ✨ Created path/to/worker/src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created path/to/worker/wrangler.toml
+			        ✨ Initialized git repository at path/to/worker
+			        ✨ Created path/to/worker/package.json
+			        ✨ Created path/to/worker/tsconfig.json
+			        ✨ Created path/to/worker/src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`cd path/to/worker && npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`cd path/to/worker && npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
@@ -1817,21 +1819,21 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-        Object {
-          "debug": "",
-          "err": "",
-          "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
-        ✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
-        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
-        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
-        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
-        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			        Object {
+			          "debug": "",
+			          "err": "",
+			          "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
+			        ✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
+			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
+			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
+			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
+			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-        To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
-        To publish your Worker to the Internet, run \`npm run deploy\`",
-          "warn": "",
-        }
-      `);
+			        To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
+			        To publish your Worker to the Internet, run \`npm run deploy\`",
+			          "warn": "",
+			        }
+		      `);
 		});
 
 		it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
@@ -1896,6 +1898,182 @@ describe("init", () => {
 						...MINIMAL_WRANGLER_TOML,
 						name: "worker",
 					}),
+				},
+			});
+		});
+	});
+
+	describe("from dashboard", () => {
+		mockApiToken();
+		mockAccountId({ accountId: "LCARS" });
+		afterEach(() => {
+			unsetAllMocks();
+		});
+		const mockDashboardScript = `
+		export default {
+			async fetch(request, env, ctx) {
+				return new Response("Hello World!");
+			},
+		};
+		`;
+
+		//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
+		it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "memory-crystal",
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler(
+				"init isolinear-optical-chip --from-dash memory-crystal"
+			);
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.js": false,
+					"isolinear-optical-chip/src/index.ts": {
+						contents: mockDashboardScript,
+					},
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": true,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...MINIMAL_WRANGLER_TOML,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
+		it("should download source script from dashboard w/ out positional <name>", async () => {
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.js": false,
+					"isolinear-optical-chip/src/index.ts": {
+						contents: mockDashboardScript,
+					},
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": true,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...MINIMAL_WRANGLER_TOML,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
+		it("should download source script from dashboard as plain JavaScript", async () => {
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.js": {
+						contents: mockDashboardScript,
+					},
+					"isolinear-optical-chip/src/index.ts": false,
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": false,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...MINIMAL_WRANGLER_TOML,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
+		it("should not continue if no worker name is provided", async () => {
+			await expect(
+				runWrangler("init  --from-dash")
+			).rejects.toMatchInlineSnapshot(
+				`[YError: Not enough arguments following: from-dash]`
+			);
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.js": false,
+					"isolinear-optical-chip/src/index.ts": false,
+					"isolinear-optical-chip/package.json": false,
+					"isolinear-optical-chip/tsconfig.json": false,
+					"isolinear-optical-chip/wrangler.toml": false,
 				},
 			});
 		});

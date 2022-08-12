@@ -183,6 +183,7 @@ export function unsetAllMocks() {
 
 const kvGetMocks = new Map<string, string | Buffer>();
 const r2GetMocks = new Map<string, string | undefined>();
+const dashScriptMocks = new Map<string, string | undefined>();
 
 /**
  * @mocked typeof fetchKVGetValue
@@ -260,4 +261,36 @@ export function setMockFetchR2Objects({
 export function unsetSpecialMockFns() {
 	kvGetMocks.clear();
 	r2GetMocks.clear();
+	dashScriptMocks.clear();
+}
+
+/**
+ * @mocked typeof fetchDashScript
+ * multipart/form-data is the response for modules and raw text for the Script endpoint.
+ */
+export async function mockFetchDashScript(resource: string): Promise<string> {
+	if (dashScriptMocks.has(resource)) {
+		const value = dashScriptMocks.get(resource) ?? "";
+
+		return value;
+	}
+	throw new Error(`no mock found for \`init from-dash\` - ${resource}`);
+}
+
+/**
+ * Mock setter for usage within test blocks, companion helper to `mockFetchDashScript`
+ */
+export function setMockFetchDashScript({
+	accountId,
+	fromDashScriptName,
+	mockResponse,
+}: {
+	accountId: string;
+	fromDashScriptName: string;
+	mockResponse?: string;
+}) {
+	dashScriptMocks.set(
+		`/accounts/${accountId}/workers/scripts/${fromDashScriptName}`,
+		mockResponse
+	);
 }

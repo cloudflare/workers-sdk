@@ -5,12 +5,16 @@ import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
 
+import { fetchDashboardScript } from "./cfetch/internal";
+import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
 import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
+import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
+import type { ConfigPath } from "./index";
 
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
@@ -36,6 +40,12 @@ export async function initOptions(yargs: Argv) {
 			describe: 'Answer "yes" to any prompts for new projects',
 			type: "boolean",
 			alias: "y",
+		})
+		.option("from-dash", {
+			describe: "Download script from the dashboard for local development",
+			type: "string",
+			requiresArg: true,
+			hidden: true,
 		});
 }
 
@@ -61,7 +71,11 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	const devDepsToInstall: string[] = [];
 	const instructions: string[] = [];
 	let shouldRunPackageManagerInstall = false;
-	const creationDirectory = path.resolve(process.cwd(), args.name ?? "");
+	const fromDashScriptName = args["from-dash"] as string;
+	const creationDirectory = path.resolve(
+		process.cwd(),
+		(args.name ? args.name : fromDashScriptName) ?? ""
+	);
 
 	if (args.site) {
 		const gitDirectory =
@@ -90,6 +104,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	// TODO: ask which directory to make the worker in (defaults to args.name)
 	// TODO: if args.name isn't provided, ask what to name the worker
+	// Note: `--from-dash` will be a fallback creationDir/Worker name if none is provided.
 
 	const wranglerTomlDestination = path.join(
 		creationDirectory,
@@ -98,12 +113,15 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	let justCreatedWranglerToml = false;
 
 	if (fs.existsSync(wranglerTomlDestination)) {
+		let shouldContinue = false;
 		logger.warn(
 			`${path.relative(process.cwd(), wranglerTomlDestination)} already exists!`
 		);
-		const shouldContinue = await confirm(
-			"Do you want to continue initializing this project?"
-		);
+		if (!fromDashScriptName) {
+			shouldContinue = await confirm(
+				"Do you want to continue initializing this project?"
+			);
+		}
 		if (!shouldContinue) {
 			return;
 		}
@@ -438,27 +456,23 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				process.cwd(),
 				path.join(creationDirectory, "./src/index.ts")
 			);
-
-			const newWorkerType = yesFlag
-				? "fetch"
-				: await getNewWorkerType(newWorkerFilename);
-
-			if (newWorkerType !== "none") {
-				const template = getNewWorkerTemplate("ts", newWorkerType);
-
+			if (fromDashScriptName) {
+				const config = readConfig(args.config as ConfigPath, args);
+				const accountId = await requireAuth(config);
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
-				await writeFile(
-					path.join(creationDirectory, "./src/index.ts"),
-					readFileSync(path.join(__dirname, `../templates/${template}`))
+
+				const dashScript = await fetchDashboardScript(
+					`/accounts/${accountId}/workers/scripts/${fromDashScriptName}`,
+					{
+						method: "GET",
+					}
 				);
 
-				logger.log(
-					`✨ Created ${path.relative(
-						process.cwd(),
-						path.join(creationDirectory, "./src/index.ts")
-					)}`
+				await writeFile(
+					path.join(creationDirectory, "./src/index.ts"),
+					dashScript
 				);
 
 				await writePackageJsonScriptsAndUpdateWranglerToml(
@@ -466,8 +480,39 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					justCreatedWranglerToml,
 					pathToPackageJson,
 					"src/index.ts",
-					getNewWorkerToml(newWorkerType)
+					{}
 				);
+			} else {
+				const newWorkerType = yesFlag
+					? "fetch"
+					: await getNewWorkerType(newWorkerFilename);
+
+				if (newWorkerType !== "none") {
+					const template = getNewWorkerTemplate("ts", newWorkerType);
+
+					await mkdir(path.join(creationDirectory, "./src"), {
+						recursive: true,
+					});
+					await writeFile(
+						path.join(creationDirectory, "./src/index.ts"),
+						readFileSync(path.join(__dirname, `../templates/${template}`))
+					);
+
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.ts")
+						)}`
+					);
+
+					await writePackageJsonScriptsAndUpdateWranglerToml(
+						shouldWritePackageJsonScripts,
+						justCreatedWranglerToml,
+						pathToPackageJson,
+						"src/index.ts",
+						getNewWorkerToml(newWorkerType)
+					);
+				}
 			}
 		}
 	} else {
@@ -477,35 +522,63 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				path.join(creationDirectory, "./src/index.js")
 			);
 
-			const newWorkerType = yesFlag
-				? "fetch"
-				: await getNewWorkerType(newWorkerFilename);
-
-			if (newWorkerType !== "none") {
-				const template = getNewWorkerTemplate("js", newWorkerType);
-
+			if (fromDashScriptName) {
+				const config = readConfig(args.config as ConfigPath, args);
+				const accountId = await requireAuth(config);
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
-				await writeFile(
-					path.join(creationDirectory, "./src/index.js"),
-					readFileSync(path.join(__dirname, `../templates/${template}`))
+
+				const dashScript = await fetchDashboardScript(
+					`/accounts/${accountId}/workers/scripts/${fromDashScriptName}`,
+					{
+						method: "GET",
+					}
 				);
 
-				logger.log(
-					`✨ Created ${path.relative(
-						process.cwd(),
-						path.join(creationDirectory, "./src/index.js")
-					)}`
+				await writeFile(
+					path.join(creationDirectory, "./src/index.js"),
+					dashScript
 				);
 
 				await writePackageJsonScriptsAndUpdateWranglerToml(
 					shouldWritePackageJsonScripts,
 					justCreatedWranglerToml,
 					pathToPackageJson,
-					"src/index.js",
-					getNewWorkerToml(newWorkerType)
+					"src/index.ts",
+					{}
 				);
+			} else {
+				const newWorkerType = yesFlag
+					? "fetch"
+					: await getNewWorkerType(newWorkerFilename);
+
+				if (newWorkerType !== "none") {
+					const template = getNewWorkerTemplate("js", newWorkerType);
+
+					await mkdir(path.join(creationDirectory, "./src"), {
+						recursive: true,
+					});
+					await writeFile(
+						path.join(creationDirectory, "./src/index.js"),
+						readFileSync(path.join(__dirname, `../templates/${template}`))
+					);
+
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.js")
+						)}`
+					);
+
+					await writePackageJsonScriptsAndUpdateWranglerToml(
+						shouldWritePackageJsonScripts,
+						justCreatedWranglerToml,
+						pathToPackageJson,
+						"src/index.js",
+						getNewWorkerToml(newWorkerType)
+					);
+				}
 			}
 		}
 	}

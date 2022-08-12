@@ -179,3 +179,42 @@ export async function fetchR2Objects(
 		);
 	}
 }
+
+/**
+ * This is a wrapper STOPGAP for getting the script which returns a raw text response.
+ */
+export async function fetchDashboardScript(
+	resource: string,
+	bodyInit: RequestInit = {}
+): Promise<string> {
+	await requireLoggedIn();
+	const auth = requireApiToken();
+	const headers = cloneHeaders(bodyInit.headers);
+	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addUserAgent(headers);
+
+	const response = await fetch(`${getCloudflareAPIBaseURL()}${resource}`, {
+		...bodyInit,
+		headers,
+	});
+
+	if (!response.ok || !response.body) {
+		throw new Error(
+			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
+		);
+	}
+
+	const usesModules = response.headers
+		.get("content-type")
+		?.startsWith("multipart");
+
+	if (usesModules) {
+		const file = await response.text();
+
+		// Follow up on issue in Undici about multipart/form-data support & replace the workaround: https://github.com/nodejs/undici/issues/974
+		// This should be using a builtin formData() parser pattern.
+		return file.split("\n").slice(4, -4).join("\n");
+	} else {
+		return response.text();
+	}
+}
