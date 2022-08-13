@@ -318,14 +318,17 @@ export const Handler = async ({
 
 	if (_headers) {
 		formData.append("_headers", new File([_headers], "_headers"));
+		logger.log(`✨ Uploading _headers`);
 	}
 
 	if (_redirects) {
 		formData.append("_redirects", new File([_redirects], "_redirects"));
+		logger.log(`✨ Uploading _redirects`);
 	}
 
 	if (builtFunctions) {
 		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
+		logger.log(`✨ Uploading functions`);
 		try {
 			_routes = readFileSync(routesOutputPath, "utf-8");
 			if (_routes) {
@@ -336,6 +339,7 @@ export const Handler = async ({
 		// Advanced Mode
 		// https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
 		formData.append("_worker.js", new File([_workerJS], "_worker.js"));
+		logger.log(`✨ Uploading _worker.js`);
 
 		try {
 			// In advanced mode, developers can specify a custom _routes.json
@@ -354,6 +358,7 @@ export const Handler = async ({
 
 			_routes = JSON.stringify(optimizeRoutesJSONSpec(advancedModeRoutes));
 			formData.append("_routes.json", new File([_routes], "_routes.json"));
+			logger.log(`✨ Uploading _routes.json`);
 
 			logger.warn(
 				`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
