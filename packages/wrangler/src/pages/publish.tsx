@@ -328,7 +328,7 @@ export const Handler = async ({
 
 	if (builtFunctions) {
 		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
-		logger.log(`✨ Uploading Pages Functions`);
+		logger.log(`✨ Uploading Functions`);
 		try {
 			_routes = readFileSync(routesOutputPath, "utf-8");
 			if (_routes) {
