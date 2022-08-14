@@ -20,7 +20,7 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 
 const isWindows = process.platform === "win32";
 
-describe("Pages Functions", () => {
+describe.skip("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 
 	beforeEach(() => {
