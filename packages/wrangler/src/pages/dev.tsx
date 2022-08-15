@@ -41,6 +41,27 @@ export function Options(yargs: Argv) {
 				default: true,
 				description: "Run on my machine",
 			},
+			"compatibility-date": {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+			},
+			"compatibility-flags": {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				array: true,
+			},
+
+			// TODO
+			// For now, all Pages projects are set to 2021-11-02. We're adding compat date soon, and we can then adopt `wrangler dev`'s `default: true`.
+			// However, it looks like it isn't actually connected up properly in `wrangler dev` at the moment, hence commenting this out for now.
+
+			// latest: {
+			// 	describe: "Use the latest version of the worker runtime",
+			// 	type: "boolean",
+			// 	default: false,
+			// },
+
 			ip: {
 				type: "string",
 				default: "0.0.0.0",
@@ -116,6 +137,8 @@ export function Options(yargs: Argv) {
 export const Handler = async ({
 	local,
 	directory,
+	"compatibility-date": compatibilityDate = "2021-11-02",
+	"compatibility-flags": compatibilityFlags,
 	ip,
 	port,
 	"inspector-port": inspectorPort,
@@ -292,8 +315,8 @@ export const Handler = async ({
 			watch: true,
 			localProtocol,
 			liveReload,
-
-			compatibilityDate: "2021-11-02",
+			compatibilityDate,
+			compatibilityFlags,
 			nodeCompat,
 			vars: Object.fromEntries(
 				bindings
