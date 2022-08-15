@@ -9,7 +9,7 @@ const LOGGER_LEVELS = {
 	debug: 3,
 } as const;
 
-type LoggerLevel = keyof typeof LOGGER_LEVELS;
+export type LoggerLevel = keyof typeof LOGGER_LEVELS;
 
 /** A map from LOGGER_LEVEL to the error `kind` needed by `formatMessagesSync()`. */
 const LOGGER_LEVEL_FORMAT_TYPE_MAP = {

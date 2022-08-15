@@ -66,7 +66,10 @@ export function findWranglerToml(
 /**
  * Print all the bindings a worker using a given config would have access to
  */
-export function printBindings(bindings: CfWorkerInit["bindings"]) {
+export function printBindings(
+	bindings: CfWorkerInit["bindings"],
+	options: { print?: boolean } | undefined = { print: true }
+) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -247,5 +250,9 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			.flat(2),
 	].join("\n");
 
-	logger.log(message);
+	if (options.print) {
+		logger.log(message);
+	} else {
+		return message;
+	}
 }

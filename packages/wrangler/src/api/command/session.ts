@@ -1,39 +1,16 @@
-import { TypedEventTarget } from "./typed-event";
-import type { TypedEventListener, TypedEvent } from "./typed-event";
-import type { EventListener } from "node:events";
+import { TypedEventTarget } from "../events";
+import type { TypedEvent } from "../events";
 
 /**
- * `CommandSession`s are strongly-typed `EventTarget`s, which can be used to
- * interact with long-running commands.
+ * `CommandSession`s are `EventTarget`s, which can be used to
+ * interact with long-running commands. They must be initialized with a call
+ * to `initialize` and disposed of with calls to `dispose`
  */
 export abstract class CommandSession<
-	EventMap extends Record<string, Record<string, unknown>> = Record<
-		string,
-		never
-	>
-> extends TypedEventTarget<EventMap> {
+	Events extends TypedEvent<string>
+> extends TypedEventTarget<Events> {
 	constructor() {
 		super();
-	}
-
-	public addEventListener<K extends keyof EventMap>(
-		type: K extends string ? K : never,
-		listener: TypedEventListener<K extends string ? K : never, EventMap[K]>
-	) {
-		return super.addEventListener(type, listener as EventListener);
-	}
-
-	public removeEventListener<K extends keyof EventMap>(
-		type: K extends string ? K : never,
-		listener: TypedEventListener<K extends string ? K : never, EventMap[K]>
-	) {
-		return super.removeEventListener(type, listener as EventListener);
-	}
-
-	public dispatchEvent<K extends keyof EventMap>(
-		event: TypedEvent<K extends string ? K : never, EventMap[K]>
-	) {
-		return super.dispatchEvent(event);
 	}
 
 	abstract initialize(): Promise<void>;
@@ -43,19 +20,14 @@ export abstract class CommandSession<
 /**
  * Create a new `CommandSession` for long-running processes
  */
-export function session<
-	EventMap extends Record<string, Record<string, unknown>> = Record<
-		string,
-		never
-	>
->({
+export function session<Events extends TypedEvent<string>>({
 	initialize,
 	dispose,
 }: Record<
 	"initialize" | "dispose",
-	(target: TypedEventTarget<EventMap>) => Promise<void>
->): CommandSession<EventMap> {
-	return new (class extends CommandSession<EventMap> {
+	(target: TypedEventTarget<Events>) => Promise<void>
+>): CommandSession<Events> {
+	return new (class extends CommandSession<Events> {
 		async initialize(): Promise<void> {
 			return await initialize(this);
 		}

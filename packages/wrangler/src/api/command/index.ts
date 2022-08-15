@@ -1,9 +1,11 @@
 import type { Config } from "../../config";
 import type { ArgumentsCamelCase, Argv } from "yargs";
+
 export { session } from "./session";
 
 type Command<Options, Output> = ((
-	options: ArgumentsCamelCase<Options> & { config: Config }
+	options: ArgumentsCamelCase<Options>,
+	config: Config
 ) => Output) & {
 	[Symbol.iterator](): IteratorResult<string, (args: Argv) => Argv<Options>>;
 };
@@ -18,11 +20,12 @@ export function command<Options = Record<string, never>, Output = void>(
 	name: string,
 	description: string,
 	args: (yargs: Argv) => Argv<Options>,
-	cmd: (options: ArgumentsCamelCase<Options> & { config: Config }) => Output
+	cmd: (options: ArgumentsCamelCase<Options>, config: Config) => Output
 ): Command<Options, Output> {
 	const output = cmd as Command<Options, Output>;
 
 	let n = 0;
+
 	output[Symbol.iterator] = () => {
 		switch (n) {
 			case 0:
@@ -39,3 +42,7 @@ export function command<Options = Record<string, never>, Output = void>(
 
 	return output;
 }
+
+export type Args<C> = C extends Command<infer O, unknown>
+	? ArgumentsCamelCase<O>
+	: never;
