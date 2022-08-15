@@ -146,6 +146,7 @@
 		"jest-fetch-mock": "^3.0.3",
 		"jest-websocket-mock": "^2.3.0",
 		"mime": "^3.0.0",
+		"msw": "^0.44.2",
 		"open": "^8.4.0",
 		"p-queue": "^7.2.0",
 		"pretty-bytes": "^6.0.0",

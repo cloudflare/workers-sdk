@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { Response } from "undici";
+import { fetch, Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
 import type { RequestInit, BodyInit, HeadersInit } from "undici";
@@ -43,12 +43,18 @@ export async function mockFetchInternal(
 		if (uri !== null && (!method || method === (init.method ?? "GET"))) {
 			// The `resource` regular expression will extract the labelled groups from the URL.
 			// These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
-			return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+			return await handler(uri, init, queryParams);
 		}
 	}
-	throw new Error(
-		`no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
-	);
+
+	// no mocks found for ${init.method ?? "any HTTP"} request to ${resource}
+	// let it fall through to mock-service-worker
+	// (do a real, unmocked fetch)
+	const url = new URL(resource, getCloudflareApiBaseUrl());
+	url.search = queryParams.toString();
+
+	const response = await fetch(url.toString(), init);
+	return await response.json();
 }
 
 /**

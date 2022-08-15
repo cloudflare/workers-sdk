@@ -14,6 +14,7 @@ import {
 	mockFetchR2Objects,
 } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
+import { msw } from "./helpers/msw";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
@@ -37,10 +38,20 @@ jest.mock("undici", () => {
 	};
 });
 
-fetchMock.doMock(() => {
-	// Any un-mocked fetches should throw
-	throw new Error("Unexpected fetch request");
+// requests not mocked with `jest-fetch-mock` fall through
+// to `mock-service-worker`
+fetchMock.dontMock();
+beforeAll(() => {
+	msw.listen({
+		onUnhandledRequest: (request) => {
+			throw new Error(
+				`No mock found for ${request.method} ${request.url.href}`
+			);
+		},
+	});
 });
+afterEach(() => msw.resetHandlers());
+afterAll(() => msw.close());
 
 jest.mock("../package-manager");
 
