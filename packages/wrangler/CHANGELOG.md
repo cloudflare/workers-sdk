@@ -1,5 +1,54 @@
 # wrangler
 
+## 2.0.26
+
+### Patch Changes
+
+- [#1655](https://github.com/cloudflare/wrangler2/pull/1655) [`fed80faa`](https://github.com/cloudflare/wrangler2/commit/fed80faa9d704d7d840d65a7dfc57805ff9356d7) Thanks [@jahands](https://github.com/jahands)! - fix: Pages Functions custom \_routes.json not being used
+
+  Also cleaned up when we were reading generated \_routes.json
+
+* [#1649](https://github.com/cloudflare/wrangler2/pull/1649) [`a366b12f`](https://github.com/cloudflare/wrangler2/commit/a366b12f6af1593a5d060ad83338397a6047d329) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: [windows] unable to find netstat
+
+- [#1626](https://github.com/cloudflare/wrangler2/pull/1626) [`f650a0b2`](https://github.com/cloudflare/wrangler2/commit/f650a0b2be8f725d5e71520f89fe848bb1379194) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: Added pathname to the constructed URL service bindings + wrangler dev ignores pathname when making a request.
+
+  resolves #1598
+
+* [#1648](https://github.com/cloudflare/wrangler2/pull/1648) [`af669a19`](https://github.com/cloudflare/wrangler2/commit/af669a1983a02adc1b997798869b2b4260c10891) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Implement new wrangler pages functions optimize-routes command
+
+- [#1622](https://github.com/cloudflare/wrangler2/pull/1622) [`02bdfde0`](https://github.com/cloudflare/wrangler2/commit/02bdfde0d683097d1d1c40d9e3b64011cc8859ef) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: Handle static files with multiple extensions, e.g. /a.b should resolve /a.b.html, if /a.b as a file does not exist
+
+* [#1666](https://github.com/cloudflare/wrangler2/pull/1666) [`662dfdf9`](https://github.com/cloudflare/wrangler2/commit/662dfdf9e02056245e0c0ac7464f1c7b83465899) Thanks [@jahands](https://github.com/jahands)! - fix: Consolidate routes that are over the limit to prevent failed deployments
+
+  Rather than failing a deployment because a route is too long (>100 characters), it will now be shortened to the next available level. Eg. `/foo/aaaaaaa...` -> `/foo/*`
+
+- [#1670](https://github.com/cloudflare/wrangler2/pull/1670) [`1b232aaf`](https://github.com/cloudflare/wrangler2/commit/1b232aafa7ba192f8cc309d5905d9afdaa4eae78) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: dev.tsx opens 127.0.0.1 instead of 0.0.0.0 (doesn't work on windows)
+
+* [#1671](https://github.com/cloudflare/wrangler2/pull/1671) [`808c0ab3`](https://github.com/cloudflare/wrangler2/commit/808c0ab39465c61c8cca532329a56fa4786331b0) Thanks [@Skye-31](https://github.com/Skye-31)! - feat: pages publish - log special files being uploaded
+
+- [#1656](https://github.com/cloudflare/wrangler2/pull/1656) [`37852672`](https://github.com/cloudflare/wrangler2/commit/37852672ba14cacfeb780b03f3ea35e82ca1aa1f) Thanks [@jahands](https://github.com/jahands)! - fix: Warn when Pages Functions have no routes
+
+  Building/publishing pages functions with no valid handlers would result in a Functions script containing no routes, often because the user is using the functions directory for something unrelated. This will no longer add an empty Functions script to the deployment, needlessly consuming Functions quota.
+
+* [#1665](https://github.com/cloudflare/wrangler2/pull/1665) [`c40fca42`](https://github.com/cloudflare/wrangler2/commit/c40fca421b6826d7f0ef0bf7a8840e4bce7cd062) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fix SW and Durable Object request URLs made over the service registry
+
+- [#1645](https://github.com/cloudflare/wrangler2/pull/1645) [`ac397480`](https://github.com/cloudflare/wrangler2/commit/ac39748069d2d20cb4dfd703b65f2329f60ae4ce) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: download & initialize a wrangler project from dashboard worker
+
+  Added `wrangler init --from-dash <worker-name>`, which allows initializing a wrangler project from a pre-existing worker in the dashboard.
+
+  Resolves #1624
+  Discussion: #1623
+
+  Notes: `multiplart/form-data` parsing is [not currently supported in Undici](https://github.com/nodejs/undici/issues/974), so a temporary workaround to slice off top and bottom boundaries is in place.
+
+* [#1639](https://github.com/cloudflare/wrangler2/pull/1639) [`d86382a5`](https://github.com/cloudflare/wrangler2/commit/d86382a50fd4a163659cdf745e462f3a9c7159a5) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - fix: support 'exceededMemory' error status in tail
+
+  While the exception for 'Worker exceeded memory limits' gets logged
+  correctly when tailing, the actual status wasn't being counted as an
+  error, and was falling through a switch case to 'unknown'
+
+  This ensures filtering and logging reflects that status correctly
+
 ## 2.0.25
 
 ### Patch Changes
