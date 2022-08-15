@@ -586,4 +586,12 @@ const isRecord = (
 /**
  * JavaScript `typeof` operator return values.
  */
-type TypeofType = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function";
+type TypeofType =
+	| "string"
+	| "number"
+	| "bigint"
+	| "boolean"
+	| "symbol"
+	| "undefined"
+	| "object"
+	| "function";

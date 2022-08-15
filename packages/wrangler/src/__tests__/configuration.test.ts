@@ -1635,7 +1635,7 @@ describe("normalizeAndValidateConfig()", () => {
 								id: "KV_ID_2",
 								preview_id: 2222,
 							},
-							{ binding: "VALID", id: "" }
+							{ binding: "VALID", id: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
