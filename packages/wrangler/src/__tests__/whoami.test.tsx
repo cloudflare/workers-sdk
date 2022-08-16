@@ -2,15 +2,10 @@ import { render } from "ink-testing-library";
 import React from "react";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
-import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-	unsetAllMocks,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { msw, rest } from "./jest.setup";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {
@@ -26,7 +21,6 @@ describe("getUserInfo()", () => {
 
 	afterEach(() => {
 		process.env = ENV_COPY;
-		unsetAllMocks();
 	});
 
 	it("should return undefined if there is no config file", async () => {
@@ -41,15 +35,38 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should return undefined for email if the user settings API request fails with 9109", async () => {
-		process.env = {
-			CLOUDFLARE_API_TOKEN: "123456789",
-		};
-		setMockRawResponse("/user", () =>
-			createFetchResult(undefined, false, [
-				{ code: 9109, message: "Uauthorized to access requested resource" },
-			])
+		process.env = { CLOUDFLARE_API_TOKEN: "123456789" };
+
+		msw.use(
+			rest.get("*/user", (_, res, ctx) => {
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: false,
+						errors: [
+							{
+								code: 9109,
+								message: "Uauthorized to access requested resource",
+							},
+						],
+						messages: [],
+						result: {},
+					})
+				);
+			}),
+			rest.get("*/accounts", (_, res, ctx) => {
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: [],
+					})
+				);
+			})
 		);
-		setMockResponse("/accounts", () => []);
+
 		const userInfo = await getUserInfo();
 		expect(userInfo?.email).toBeUndefined();
 	});
@@ -58,16 +75,6 @@ describe("getUserInfo()", () => {
 		process.env = {
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
-		setMockResponse("/user", () => {
-			return { email: "user@example.com" };
-		});
-		setMockResponse("/accounts", () => {
-			return [
-				{ name: "Account One", id: "account-1" },
-				{ name: "Account Two", id: "account-2" },
-				{ name: "Account Three", id: "account-3" },
-			];
-		});
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -87,13 +94,6 @@ describe("getUserInfo()", () => {
 			CLOUDFLARE_API_KEY: "123456789",
 			CLOUDFLARE_EMAIL: "user@example.com",
 		};
-		setMockResponse("/accounts", () => {
-			return [
-				{ name: "Account One", id: "account-1" },
-				{ name: "Account Two", id: "account-2" },
-				{ name: "Account Three", id: "account-3" },
-			];
-		});
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -114,13 +114,6 @@ describe("getUserInfo()", () => {
 			CLOUDFLARE_EMAIL: "user@example.com",
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
-		setMockResponse("/accounts", () => {
-			return [
-				{ name: "Account One", id: "account-1" },
-				{ name: "Account Two", id: "account-2" },
-				{ name: "Account Three", id: "account-3" },
-			];
-		});
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -146,17 +139,6 @@ describe("getUserInfo()", () => {
 	it("should return the user's email and accounts if authenticated via config token", async () => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 
-		setMockResponse("/user", () => {
-			return { email: "user@example.com" };
-		});
-		setMockResponse("/accounts", () => {
-			return [
-				{ name: "Account One", id: "account-1" },
-				{ name: "Account Two", id: "account-2" },
-				{ name: "Account Three", id: "account-3" },
-			];
-		});
-
 		const userInfo = await getUserInfo();
 
 		expect(userInfo).toEqual({
@@ -173,26 +155,17 @@ describe("getUserInfo()", () => {
 
 	it("should display a warning message if the config file contains a legacy api_token field", async () => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
-		setMockResponse("/user", () => {
-			return { email: "user@example.com" };
-		});
-		setMockResponse("/accounts", () => {
-			return [
-				{ name: "Account One", id: "account-1" },
-				{ name: "Account Two", id: "account-2" },
-				{ name: "Account Three", id: "account-3" },
-			];
-		});
+
 		await getUserInfo();
 		expect(std.warn).toMatchInlineSnapshot(`
-      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
+		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
 
-        This is no longer supported in the current version of Wrangler.
-        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-        environment variable.
+		        This is no longer supported in the current version of Wrangler.
+		        If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+		        environment variable.
 
-      "
-    `);
+		      "
+	    `);
 	});
 });
 
