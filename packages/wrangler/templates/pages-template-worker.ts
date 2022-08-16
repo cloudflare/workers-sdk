@@ -64,6 +64,7 @@ function* executeRequest(request: Request) {
 			continue;
 		}
 
+		// replaces with "\\$&", this prepends a backslash to the matched string, e.g. "[" becomes "\["
 		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
 			end: false,
 		});
