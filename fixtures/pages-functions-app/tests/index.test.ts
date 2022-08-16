@@ -73,6 +73,14 @@ describe("Pages Functions", () => {
 		expect(text).toContain("// test script");
 	});
 
+	it("parses URLs with regex chars", async () => {
+		const response = await waitUntilReady(
+			"http://localhost:8789/regex_chars/my-file"
+		);
+		const text = await response.text();
+		expect(text).toEqual("My file with regex chars");
+	});
+
 	it("passes environment variables", async () => {
 		const response = await waitUntilReady("http://localhost:8789/variables");
 		const env = await response.json();
