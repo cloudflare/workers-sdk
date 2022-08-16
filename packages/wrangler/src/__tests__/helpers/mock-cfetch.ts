@@ -1,10 +1,17 @@
 import { Readable } from "node:stream";
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { fetch, Response } from "undici";
+import { Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
+import type { fetchInternal } from "../../cfetch/internal";
 import type { RequestInit, BodyInit, HeadersInit } from "undici";
+
+const {
+	fetchInternal: realFetchInternal,
+}: { fetchInternal: typeof fetchInternal } = jest.requireActual(
+	"../../cfetch/internal"
+);
 
 /**
  * The signature of the function that will handle a mock request.
@@ -50,11 +57,7 @@ export async function mockFetchInternal(
 	// no mocks found for ${init.method ?? "any HTTP"} request to ${resource}
 	// let it fall through to mock-service-worker
 	// (do a real, unmocked fetch)
-	const url = new URL(resource, getCloudflareApiBaseUrl());
-	url.search = queryParams.toString();
-
-	const response = await fetch(url.toString(), init);
-	return await response.json();
+	return await realFetchInternal(resource, init, queryParams);
 }
 
 /**
