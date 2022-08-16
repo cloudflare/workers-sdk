@@ -1,5 +1,8 @@
 import { match } from "path-to-regexp";
 
+//note: this explicitly does not include the * character, as pages requires this
+const escapeRegex = /[.+?^${}()|[\]\\]/g;
+
 type HTTPMethod =
 	| "HEAD"
 	| "OPTIONS"
@@ -61,8 +64,12 @@ function* executeRequest(request: Request) {
 			continue;
 		}
 
-		const routeMatcher = match(route.routePath, { end: false });
-		const mountMatcher = match(route.mountPath, { end: false });
+		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
+		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
 		const matchResult = routeMatcher(requestPath);
 		const mountMatchResult = mountMatcher(requestPath);
 		if (matchResult && mountMatchResult) {
@@ -81,9 +88,12 @@ function* executeRequest(request: Request) {
 		if (route.method && route.method !== request.method) {
 			continue;
 		}
-
-		const routeMatcher = match(route.routePath, { end: true });
-		const mountMatcher = match(route.mountPath, { end: false });
+		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+			end: true,
+		});
+		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
 		const matchResult = routeMatcher(requestPath);
 		const mountMatchResult = mountMatcher(requestPath);
 		if (matchResult && mountMatchResult && route.modules.length) {
