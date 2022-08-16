@@ -57,12 +57,12 @@ jest.mock("../package-manager");
 
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
-(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
+(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue); // TODO: fall through to mock service worker
 (getCloudflareAPIBaseURL as jest.Mock).mockReturnValue(
 	"https://api.cloudflare.com/client/v4"
 );
-(fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
-(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
+(fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects); // TODO: fall through to mock service worker
+(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript); // TODO: fall through to mock service worker
 
 jest.mock("../dialogs");
 
