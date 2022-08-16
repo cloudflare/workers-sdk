@@ -1,7 +1,10 @@
 import { rest } from "msw";
 
+const endpoint = (path: string) =>
+	`https://api.cloudflare.com/client/v4${path}`;
+
 export const mswDefaultHandlers = [
-	rest.get("*/user", (_, res, cxt) => {
+	rest.get(endpoint("/user"), (_, res, cxt) => {
 		return res(
 			cxt.status(200),
 			cxt.json({
@@ -25,7 +28,7 @@ export const mswDefaultHandlers = [
 			})
 		);
 	}),
-	rest.get("*/accounts", (_, res, cxt) => {
+	rest.get(endpoint("/accounts"), (_, res, cxt) => {
 		return res(
 			cxt.status(200),
 			cxt.json({

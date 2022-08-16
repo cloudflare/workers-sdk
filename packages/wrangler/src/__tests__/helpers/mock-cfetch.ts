@@ -57,12 +57,6 @@ export async function mockFetchInternal(
 	// no mocks found for ${init.method ?? "any HTTP"} request to ${resource}
 	// let it fall through to mock-service-worker
 	// (do a real, unmocked fetch)
-	console.warn(
-		`No jest-fetch-mock response found for ${
-			init.method ?? "HTTP"
-		} request to ${resource}, falling back to mock-service-worker.`
-	);
-
 	return await realFetchInternal(resource, init, queryParams);
 }
 
