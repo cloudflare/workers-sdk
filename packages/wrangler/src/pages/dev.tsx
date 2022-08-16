@@ -87,6 +87,11 @@ export function Options(yargs: Argv) {
 				description:
 					"The location of the single Worker script if not using functions",
 			},
+			functions: {
+				type: "string",
+				default: "./functions",
+				description: "The location of the functions directory (if using)",
+			},
 			binding: {
 				type: "array",
 				description: "Bind variable/secret (KEY=VALUE)",
@@ -162,6 +167,7 @@ export const Handler = async ({
 	"inspector-port": inspectorPort,
 	proxy: requestedProxyPort,
 	"script-path": singleWorkerScriptPath,
+	functions: functionsDirectory,
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
@@ -187,7 +193,6 @@ export const Handler = async ({
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
 
-	const functionsDirectory = "./functions";
 	let usingFunctions = existsSync(functionsDirectory);
 
 	const command = remaining;

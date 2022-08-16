@@ -6,6 +6,7 @@ import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
+import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
 import { getEntry } from "./entry";
@@ -14,16 +15,16 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
 import { identifyD1BindingsAsBeta } from "./worker";
-import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
+import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
-	printWranglerBanner,
-	DEFAULT_LOCAL_PORT,
 	type ConfigPath,
-	getScriptName,
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
 	getDevCompatibilityDate,
 	getRules,
+	getScriptName,
 	isLegacyEnv,
-	DEFAULT_INSPECTOR_PORT,
+	printWranglerBanner,
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
@@ -694,14 +695,11 @@ async function validateDevServerSettings(
 		);
 	}
 
-	const localPersistencePath = args.persistTo
-		? // If path specified, always treat it as relative to cwd()
-		  path.resolve(process.cwd(), args.persistTo)
-		: args.persist
-		? // If just flagged on, treat it as relative to wrangler.toml,
-		  // if one can be found, otherwise cwd()
-		  path.resolve(config.configPath || process.cwd(), ".wrangler/state")
-		: null;
+	const localPersistencePath = getLocalPersistencePath(
+		args.persistTo,
+		Boolean(args.persist),
+		config.configPath
+	);
 
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
@@ -741,7 +739,7 @@ async function getBindingsAndAssetPaths(
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
-				d1Databases: args.d1Databases,
+		d1Databases: args.d1Databases,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
