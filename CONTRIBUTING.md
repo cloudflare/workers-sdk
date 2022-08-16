@@ -250,7 +250,9 @@ with
 
 ```
 "miniflare": "file:../../../miniflare/packages/miniflare",
+"@miniflare/d1": "file:../../../miniflare/packages/d1",
 "@miniflare/core": "file:../../../miniflare/packages/core",
+"@miniflare/durable-objects": "file:../../../miniflare/packages/durable-objects",
 ```
 
 Then run `npm install` in the root of this monorepo.

@@ -4,37 +4,39 @@ import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
+import { withConfig } from "../config";
 import { formatBytes, formatTimeAgo } from "../formatTimeAgo";
 import { requireAuth } from "../user";
-import { getDatabaseByName } from "./list";
+import { Name } from "./options";
+import { getDatabaseByNameOrBinding } from "./utils";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { Argv } from "yargs";
 
-type BackupListArgs = { name: string };
+type BackupListArgs = { config?: string; name: string };
 
 export function ListOptions(yargs: Argv): Argv<BackupListArgs> {
-	return yargs.positional("name", {
-		describe: "The name of the DB",
-		type: "string",
-		demandOption: true,
-	});
+	return Name(yargs);
 }
 
-export async function ListHandler({
-	name,
-}: ArgumentsCamelCase<BackupListArgs>): Promise<void> {
-	const accountId = await requireAuth({});
-	const db: Database = await getDatabaseByName(accountId, name);
+export const ListHandler = withConfig<BackupListArgs>(
+	async ({ config, name }): Promise<void> => {
+		const accountId = await requireAuth({});
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-	const backups: Backup[] = await listBackups(accountId, db.uuid);
-	render(
-		<Table
-			data={backups}
-			columns={["created_at", "id", "num_tables", "size"]}
-		></Table>
-	);
-}
+		const backups: Backup[] = await listBackups(accountId, db.uuid);
+		render(
+			<Table
+				data={backups}
+				columns={["created_at", "id", "num_tables", "size"]}
+			></Table>
+		);
+	}
+);
 
 export const listBackups = async (
 	accountId: string,
@@ -78,20 +80,24 @@ export function CreateOptions(yargs: Argv): Argv<BackupCreateArgs> {
 	return ListOptions(yargs);
 }
 
-export async function CreateHandler({
-	name,
-}: ArgumentsCamelCase<BackupCreateArgs>): Promise<void> {
-	const accountId = await requireAuth({});
-	const db: Database = await getDatabaseByName(accountId, name);
+export const CreateHandler = withConfig<BackupCreateArgs>(
+	async ({ config, name }): Promise<void> => {
+		const accountId = await requireAuth({});
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-	const backup: Backup = await createBackup(accountId, db.uuid);
-	render(
-		<Table
-			data={[backup]}
-			columns={["created_at", "id", "num_tables", "size", "state"]}
-		></Table>
-	);
-}
+		const backup: Backup = await createBackup(accountId, db.uuid);
+		render(
+			<Table
+				data={[backup]}
+				columns={["created_at", "id", "num_tables", "size", "state"]}
+			></Table>
+		);
+	}
+);
 
 export const createBackup = async (
 	accountId: string,
@@ -121,17 +127,20 @@ export function RestoreOptions(yargs: Argv): Argv<BackupRestoreArgs> {
 	});
 }
 
-export async function RestoreHandler({
-	name,
-	backupId,
-}: ArgumentsCamelCase<BackupRestoreArgs>): Promise<void> {
-	const accountId = await requireAuth({});
-	const db: Database = await getDatabaseByName(accountId, name);
+export const RestoreHandler = withConfig<BackupRestoreArgs>(
+	async ({ config, name, backupId }): Promise<void> => {
+		const accountId = await requireAuth({});
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-	console.log(`Restoring ${name} from backup ${backupId}....`);
-	await restoreBackup(accountId, db.uuid, backupId);
-	console.log(`Done!`);
-}
+		console.log(`Restoring ${name} from backup ${backupId}....`);
+		await restoreBackup(accountId, db.uuid, backupId);
+		console.log(`Done!`);
+	}
+);
 
 export const restoreBackup = async (
 	accountId: string,
@@ -167,23 +176,25 @@ export function DownloadOptions(yargs: Argv): Argv<BackupDownloadArgs> {
 		});
 }
 
-export async function DownloadHandler({
-	name,
-	backupId,
-	output,
-}: ArgumentsCamelCase<BackupDownloadArgs>): Promise<void> {
-	const accountId = await requireAuth({});
-	const db: Database = await getDatabaseByName(accountId, name);
-	const filename = output || `./${name}.${backupId.slice(0, 8)}.sqlite3`;
+export const DownloadHandler = withConfig<BackupDownloadArgs>(
+	async ({ name, backupId, output, config }): Promise<void> => {
+		const accountId = await requireAuth({});
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
+		const filename = output || `./${name}.${backupId.slice(0, 8)}.sqlite3`;
 
-	console.log(`Downloading backup ${backupId} of ${name} to: ${filename}`);
-	const response = await getBackupResponse(accountId, db.uuid, backupId);
-	console.log(`Got file. Saving...`);
-	// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
-	const buffer = await response.arrayBuffer();
-	await fs.writeFile(filename, new Buffer(buffer));
-	console.log(`Done! Wrote ${filename} (${formatBytes(buffer.byteLength)})`);
-}
+		console.log(`Downloading backup ${backupId} of ${name} to: ${filename}`);
+		const response = await getBackupResponse(accountId, db.uuid, backupId);
+		console.log(`Got file. Saving...`);
+		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
+		const buffer = await response.arrayBuffer();
+		await fs.writeFile(filename, new Buffer(buffer));
+		console.log(`Done! Wrote ${filename} (${formatBytes(buffer.byteLength)})`);
+	}
+);
 
 export const getBackupResponse = async (
 	accountId: string,

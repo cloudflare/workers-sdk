@@ -9,7 +9,7 @@ type CreateArgs = { name: string };
 
 export function Options(yargs: Argv): Argv<CreateArgs> {
 	return yargs.positional("name", {
-		describe: "The name of the DB",
+		describe: "The name of the new DB",
 		type: "string",
 		demandOption: true,
 	});

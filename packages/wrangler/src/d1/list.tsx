@@ -43,15 +43,3 @@ export const listDatabases = async (
 	}
 	return results;
 };
-
-export const getDatabaseByName = async (
-	accountId: string,
-	name: string
-): Promise<Database> => {
-	const allDBs = await listDatabases(accountId);
-	const matchingDB = allDBs.find((db) => db.name === name);
-	if (!matchingDB) {
-		throw new Error(`Couldn't find DB with name '${name}'`);
-	}
-	return matchingDB;
-};

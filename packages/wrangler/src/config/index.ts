@@ -5,6 +5,7 @@ import { D1_BETA_PREFIX } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
+import type { CamelCaseKey } from "yargs";
 
 export type {
 	Config,
@@ -264,4 +265,19 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	].join("\n");
 
 	logger.log(message);
+}
+
+type CamelCase<T> = {
+	[key in keyof T as key | CamelCaseKey<key>]: T[key];
+};
+
+export function withConfig<T extends { config?: string }>(
+	handler: (
+		t: Omit<CamelCase<T>, "config"> & { config: Config }
+	) => Promise<void>
+) {
+	return (t: CamelCase<T>) => {
+		const { config: configPath, ...rest } = t;
+		return handler({ ...rest, config: readConfig(configPath, rest) });
+	};
 }
