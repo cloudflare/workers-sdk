@@ -1,6 +1,8 @@
 import { rest } from "msw";
+import { handlers as oauthHandlers } from "./oauth";
 
 export const mswDefaultHandlers = [
+	...oauthHandlers,
 	rest.get("*/user", (_, res, cxt) => {
 		return res(
 			cxt.status(200),
