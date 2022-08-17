@@ -140,4 +140,25 @@ export const mswDefaultHandlers = [
 			);
 		}
 	),
+
+	rest.get("*/memberships", (_, response, context) => {
+		return response(
+			context.status(200),
+			context.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: [
+					{
+						id: "membership-id-1",
+						account: { id: "account-id-1", name: "My Personal Account" },
+					},
+					{
+						id: "membership-id-2",
+						account: { id: "account-id-2", name: "Enterprise Account" },
+					},
+				],
+			})
+		);
+	}),
 ];
