@@ -1,7 +1,9 @@
 import { rest } from "msw";
 import { handlers as oauthHandlers } from "./oauth";
+import { handlers as tailHandlers } from "./tail";
 
 export const mswDefaultHandlers = [
+	...tailHandlers,
 	...oauthHandlers,
 	rest.get("*/user", (_, res, cxt) => {
 		return res(

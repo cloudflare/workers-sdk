@@ -1,11 +1,12 @@
 import { render } from "ink-testing-library";
+import { rest } from "msw";
 import React from "react";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { msw, rest } from "./jest.setup";
 import type { UserInfo } from "../whoami";
 
 describe("getUserInfo()", () => {

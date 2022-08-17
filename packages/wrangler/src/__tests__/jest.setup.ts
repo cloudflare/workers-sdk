@@ -52,8 +52,6 @@ beforeAll(() => {
 });
 afterEach(() => msw.resetHandlers());
 afterAll(() => msw.close());
-export { rest } from "msw";
-export { msw };
 
 jest.mock("../package-manager");
 

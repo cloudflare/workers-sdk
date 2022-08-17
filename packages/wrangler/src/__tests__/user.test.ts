@@ -12,9 +12,9 @@ import {
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { msw } from "./jest.setup";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 
