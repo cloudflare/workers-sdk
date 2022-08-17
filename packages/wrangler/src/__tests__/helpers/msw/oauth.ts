@@ -1,6 +1,18 @@
 import { rest } from "msw";
 
 export const handlers = [
+	rest.get("/*", (_, res, cxt) => {
+		return res(
+			cxt.status(200),
+			cxt.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: {},
+			})
+		);
+	}),
+
 	// revoke access token
 	rest.post(
 		"https://dash.cloudflare.com/oauth2/revoke",
