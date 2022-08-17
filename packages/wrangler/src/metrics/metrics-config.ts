@@ -6,10 +6,10 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
 import { getEnvironmentVariableFactory } from "../environment-variables";
+import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
-import { CI } from "./is-ci";
 
 /**
  * The date that the metrics being gathered was last updated in a way that would require

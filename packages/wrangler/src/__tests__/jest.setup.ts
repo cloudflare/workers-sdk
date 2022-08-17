@@ -109,6 +109,10 @@ jest.mock("../user/generate-auth-url", () => {
 	};
 });
 
+jest.mock("../is-ci", () => {
+	return { CI: { isCI: jest.fn().mockImplementation(() => false) } };
+});
+
 jest.mock("../user/generate-random-state", () => {
 	return {
 		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),

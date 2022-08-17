@@ -2,9 +2,9 @@ import { mkdirSync } from "node:fs";
 import fetchMock from "jest-fetch-mock";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
+import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsDispatcher, getMetricsConfig } from "../metrics";
-import { CI } from "../metrics/is-ci";
 import {
 	CURRENT_METRICS_DATE,
 	readMetricsConfig,
