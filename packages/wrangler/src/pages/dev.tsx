@@ -457,6 +457,10 @@ async function spawnProxyProcess({
 	port?: number;
 	command: (string | number)[];
 }): Promise<undefined | number> {
+	if (port !== undefined) {
+		return port;
+	}
+	
 	if (command.length === 0) {
 		CLEANUP();
 		throw new FatalError(
