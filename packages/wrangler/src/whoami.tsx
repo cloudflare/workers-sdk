@@ -1,6 +1,6 @@
 import { Text, render } from "ink";
 import Table from "ink-table";
-import React from "react";
+import React, { Fragment } from "react";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
@@ -64,12 +64,12 @@ function Permissions(props: {
 					and re-login.
 				</Text>
 				<Text>Scope (Access)</Text>
-				{permissions.map(([type, name]) => (
-					<>
+				{permissions.map(([type, name], index) => (
+					<Fragment key={`${type}${index}`}>
 						<Text>
 							- {type} {name && `(${name})`}
 						</Text>
-					</>
+					</Fragment>
 				))}
 			</>
 		) : null
