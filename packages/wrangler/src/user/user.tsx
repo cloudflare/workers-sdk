@@ -224,6 +224,7 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -878,10 +879,11 @@ type LoginProps = {
 export async function loginOrRefreshIfRequired(): Promise<boolean> {
 	// TODO: if there already is a token, then try refreshing
 	// TODO: ask permission before opening browser
+	const { isCI } = CI;
 	if (!getAPIToken()) {
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
-		return isInteractive() && (await login());
+		return isInteractive() && !isCI() && (await login());
 	} else if (isAccessTokenExpired()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
@@ -891,7 +893,7 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 			return true;
 		} else {
 			// If the refresh token isn't valid, then we ask the user to login again
-			return isInteractive() && (await login());
+			return isInteractive() && !isCI() && (await login());
 		}
 	} else {
 		return true;
@@ -1088,7 +1090,7 @@ export async function getAccountId(): Promise<string | undefined> {
 		return accounts[0].id;
 	}
 
-	if (isInteractive()) {
+	if (isInteractive() && !CI.isCI()) {
 		const account = await new Promise<{ id: string; name: string }>(
 			(resolve, reject) => {
 				const { unmount } = render(
@@ -1128,7 +1130,7 @@ export async function requireAuth(config: {
 }): Promise<string> {
 	const loggedIn = await loginOrRefreshIfRequired();
 	if (!loggedIn) {
-		if (!isInteractive()) {
+		if (!isInteractive() || CI.isCI()) {
 			throw new Error(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
 			);
