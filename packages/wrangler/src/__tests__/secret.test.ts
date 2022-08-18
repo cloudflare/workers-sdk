@@ -166,7 +166,7 @@ describe("wrangler secret", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			describe.only("with accountId", () => {
+			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
 				it("should error if request for memberships fails", async () => {
@@ -274,40 +274,7 @@ describe("wrangler secret", () => {
 	});
 
 	describe("delete", () => {
-		function mockDeleteRequest(
-			input: {
-				scriptName: string;
-				secretName: string;
-			},
-			env?: string,
-			legacyEnv = false
-		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
-				"DELETE",
-				([_url, accountId, scriptName, envOrSecretName, secretName]) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						if (env) {
-							expect(envOrSecretName).toEqual(env);
-							expect(secretName).toEqual(input.secretName);
-						} else {
-							expect(envOrSecretName).toEqual(input.secretName);
-						}
-					} else {
-						expect(envOrSecretName).toEqual(input.secretName);
-					}
-					return null;
-				}
-			);
-		}
 		it("should delete a secret", async () => {
-			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
 				result: true,
@@ -321,11 +288,6 @@ describe("wrangler secret", () => {
 		});
 
 		it("should delete a secret: legacy envs", async () => {
-			mockDeleteRequest(
-				{ scriptName: "script-name", secretName: "the-key" },
-				"some-env",
-				true
-			);
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?",
 				result: true,
@@ -341,10 +303,6 @@ describe("wrangler secret", () => {
 		});
 
 		it("should delete a secret: service envs", async () => {
-			mockDeleteRequest(
-				{ scriptName: "script-name", secretName: "the-key" },
-				"some-env"
-			);
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?",
 				result: true,
@@ -383,37 +341,7 @@ describe("wrangler secret", () => {
 	});
 
 	describe("list", () => {
-		function mockListRequest(
-			input: { scriptName: string },
-			env?: string,
-			legacyEnv = false
-		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-				"GET",
-				([_url, accountId, scriptName, envName]) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						expect(envName).toEqual(env);
-					}
-
-					return [
-						{
-							name: "the-secret-name",
-							type: "secret_text",
-						},
-					];
-				}
-			);
-		}
-
 		it("should list secrets", async () => {
-			mockListRequest({ scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "[
@@ -427,7 +355,6 @@ describe("wrangler secret", () => {
 		});
 
 		it("should list secrets: legacy envs", async () => {
-			mockListRequest({ scriptName: "script-name" }, "some-env", true);
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env"
 			);
@@ -443,7 +370,6 @@ describe("wrangler secret", () => {
 		});
 
 		it("should list secrets: service envs", async () => {
-			mockListRequest({ scriptName: "script-name" }, "some-env");
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env false"
 			);
