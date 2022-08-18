@@ -64,10 +64,10 @@ function Permissions(props: {
 					and re-login.
 				</Text>
 				<Text>Scope (Access)</Text>
-				{permissions.map(([type, name], index) => (
-					<Fragment key={`${type}${index}`}>
+				{permissions.map(([scope, access], index) => (
+					<Fragment key={`${scope}${index}`}>
 						<Text>
-							- {type} {name && `(${name})`}
+							- {scope} {access && `(${access})`}
 						</Text>
 					</Fragment>
 				))}
