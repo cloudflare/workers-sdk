@@ -74,6 +74,7 @@ import {
 import { whoami } from "./whoami";
 
 import { workerNamespaceCommands } from "./worker-namespace";
+import { getRoutesForZone, getZoneForRoute } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
@@ -609,7 +610,7 @@ function createCLIParser(argv: string[]) {
 		(yargs) => {
 			return yargs
 				.positional("name", {
-					describe: "Name of the worker",
+					describe: "Name of the worker, or route at which it runs",
 					type: "string",
 				})
 				.option("format", {
@@ -677,7 +678,34 @@ function createCLIParser(argv: string[]) {
 				sendMetrics: config.send_metrics,
 			});
 
-			const scriptName = getLegacyScriptName(args, config);
+			let scriptName;
+
+			// Worker names can't contain "." (and most routes should), so use that as a discriminator
+			if (args.name?.includes(".")) {
+				const zone = await getZoneForRoute(args.name);
+				if (!zone) {
+					throw new Error(`Could not find zone for route ${args.name}`);
+				}
+				const routes = await getRoutesForZone(zone.id);
+
+				// Find an exact match for the route provided
+				for (const route of routes) {
+					if (route.pattern === args.name) {
+						scriptName = route.script;
+						if (args.format === "pretty") {
+							logger.log(
+								`Connecting to worker ${scriptName} at route ${args.name}`
+							);
+						}
+						break;
+					}
+				}
+				if (!scriptName) {
+					throw new Error(`No workers found on the route ${args.name}`);
+				}
+			} else {
+				scriptName = getLegacyScriptName(args, config);
+			}
 
 			if (!scriptName) {
 				throw new Error(

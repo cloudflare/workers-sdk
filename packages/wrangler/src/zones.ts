@@ -74,3 +74,16 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 
 	throw new Error(`Could not find zone for ${host}`);
 }
+
+interface WorkerRoute {
+	id: string;
+	pattern: string;
+	script: string;
+}
+
+export async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
+	const routes = await fetchListResult<WorkerRoute>(
+		`/zones/${zone}/workers/routes`
+	);
+	return routes;
+}
