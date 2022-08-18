@@ -142,7 +142,7 @@ describe("wrangler", () => {
 						"pubsub broker create my-broker --namespace=some-namespace"
 					);
 
-					expect(std.out).toMatchInlineSnapshot(`"{}"`);
+					expect(std.out).toMatchInlineSnapshot(`"null"`);
 				});
 
 				it("fail to create broker when no namespace is set", async () => {
@@ -216,12 +216,7 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					expect(std.out).toMatchInlineSnapshot(`
-				"[
-				  { id: '1234', name: 'my-broker' },
-				  { id: '4321', name: 'other-broker' }
-				]"
-			`);
+					expect(std.out).toMatchInlineSnapshot(`"[]"`);
 				});
 			});
 		});
