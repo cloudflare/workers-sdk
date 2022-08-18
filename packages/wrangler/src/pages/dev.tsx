@@ -460,7 +460,7 @@ async function spawnProxyProcess({
 	if (port !== undefined) {
 		return port;
 	}
-	
+
 	if (command.length === 0) {
 		CLEANUP();
 		throw new FatalError(
