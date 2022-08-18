@@ -41,7 +41,7 @@ const mocks: MockFetch<unknown>[] = [];
 export async function mockFetchInternal(
 	resource: string,
 	init: RequestInit = {},
-	queryParams: URLSearchParams = new URLSearchParams()
+	queryParams: URLSearchParams | undefined = undefined
 ) {
 	for (const { regexp, method, handler } of mocks) {
 		const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
@@ -50,7 +50,7 @@ export async function mockFetchInternal(
 		if (uri !== null && (!method || method === (init.method ?? "GET"))) {
 			// The `resource` regular expression will extract the labelled groups from the URL.
 			// These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
-			return await handler(uri, init, queryParams);
+			return await handler(uri, init, (queryParams = new URLSearchParams()));
 		}
 	}
 

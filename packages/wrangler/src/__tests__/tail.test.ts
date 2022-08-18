@@ -43,7 +43,7 @@ describe("tail", () => {
 			);
 		});
 
-		it("creates and then delete tails", async () => {
+		it.only("creates and then delete tails", async () => {
 			await runWrangler("tail test-worker");
 
 			expect(std).toMatchInlineSnapshot();
