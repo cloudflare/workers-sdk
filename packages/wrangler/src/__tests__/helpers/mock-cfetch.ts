@@ -1,15 +1,19 @@
 import { Readable } from "node:stream";
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
-import { Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
-import type { fetchInternal } from "../../cfetch/internal";
+import type { fetchInternal, fetchR2Objects } from "../../cfetch/internal";
 import type { RequestInit, BodyInit, HeadersInit } from "undici";
 
 const {
 	fetchInternal: realFetchInternal,
 }: { fetchInternal: typeof fetchInternal } = jest.requireActual(
+	"../../cfetch/internal"
+);
+const {
+	fetchR2Objects: realFetchR2Objects,
+}: { fetchR2Objects: typeof fetchR2Objects } = jest.requireActual(
 	"../../cfetch/internal"
 );
 
@@ -220,9 +224,7 @@ export function setMockFetchKVGetValue(
 	kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
 }
 
-/**
- * @mocked typeof fetchR2Objects
- */
+// Temporary fallthrough for mocks so other internals can remained mocked
 export async function mockFetchR2Objects(
 	resource: string,
 	bodyInit: {
@@ -230,47 +232,16 @@ export async function mockFetchR2Objects(
 		headers: HeadersInit | undefined;
 		method: "PUT" | "GET" | "DELETE";
 	}
-): Promise<Response> {
-	/**
-	 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
-	 * mimicking the fetch request taking in the stream and draining it.
-	 */
-	if (bodyInit.body instanceof Readable) {
-		bodyInit.body.destroy();
-		bodyInit.body.removeAllListeners();
-	}
+) {
+	// no mocks found for ${init.method ?? "any HTTP"} request to ${resource}
+	// let it fall through to mock-service-worker
+	// (do a real, unmocked fetch)
 
-	if (r2GetMocks.has(resource)) {
-		const value = r2GetMocks.get(resource);
-
-		return new Response(value);
-	}
-	throw new Error(`no mock found for \`r2 object\` - ${resource}`);
-}
-
-/**
- * Mock setter for usage within test blocks, companion helper to `mockFetchR2Objects`
- */
-export function setMockFetchR2Objects({
-	accountId,
-	bucketName,
-	objectName,
-	mockResponse,
-}: {
-	accountId: string;
-	bucketName: string;
-	objectName: string;
-	mockResponse?: string;
-}) {
-	r2GetMocks.set(
-		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
-		mockResponse
-	);
+	return await realFetchR2Objects(resource, bodyInit);
 }
 
 export function unsetSpecialMockFns() {
 	kvGetMocks.clear();
-	r2GetMocks.clear();
 	dashScriptMocks.clear();
 }
 
