@@ -1,5 +1,4 @@
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -15,10 +14,6 @@ describe("wrangler", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	describe("pubsub", () => {
 		describe("help menu", () => {
@@ -79,55 +74,28 @@ describe("wrangler", () => {
 			});
 
 			describe("create", () => {
-				function mockCreateRequest(expectedNamespaceName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces",
-						"POST",
-						([_url, accountId], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							const namespaceName = JSON.parse(body as string).name;
-							expect(namespaceName).toEqual(expectedNamespaceName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should create a namespace", async () => {
-					const requests = mockCreateRequest("my-namespace");
 					await runWrangler("pubsub namespace create my-namespace");
 					// TODO: check returned object
-					expect(requests.count).toEqual(1);
+
+					expect(std.out).toMatchInlineSnapshot(`
+				"Creating Pub/SubNamespace my-namespace...
+				Success! Created Pub/Sub Namespace my-namespace"
+			`);
 				});
 			});
 
 			describe("list", () => {
-				function mockListRequest(namespaces: PubSubNamespace[]) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces",
-						([_url, accountId], init) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(init).toEqual({});
-							return { namespaces };
-						}
-					);
-					return requests;
-				}
-
 				it("should list namespaces", async () => {
-					const expectedNamespaces: PubSubNamespace[] = [
-						{ name: "namespace-1", created_on: "01-01-2001" },
-						{ name: "namespace-2", created_on: "01-01-2001" },
-					];
-					const requests = mockListRequest(expectedNamespaces);
 					await runWrangler("pubsub namespace list");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  { name: 'namespace-1', created_on: '01-01-2001' },
+				  { name: 'namespace-2', created_on: '01-01-2001' }
+				]"
+			`);
 				});
 			});
 		});
@@ -169,30 +137,12 @@ describe("wrangler", () => {
 			});
 
 			describe("create", () => {
-				function mockCreateRequest(expectedBrokerName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-						"POST",
-						([_url, accountId, namespaceName], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							const brokerName = JSON.parse(body as string).name;
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should create a broker", async () => {
-					const requests = mockCreateRequest("my-broker");
 					await runWrangler(
 						"pubsub broker create my-broker --namespace=some-namespace"
 					);
 
-					// TODO: check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`"{}"`);
 				});
 
 				it("fail to create broker when no namespace is set", async () => {
@@ -205,161 +155,73 @@ describe("wrangler", () => {
 			});
 
 			describe("update", () => {
-				function mockUpdateRequest(
-					expectedBrokerName: string,
-					expectedExpiration: number,
-					expectedDescription: string,
-					expectedOnPublishConfig: PubSubBrokerOnPublish
-				) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-						"PATCH",
-						([_url, accountId, namespaceName, brokerName], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
-
-							const patchBody: PubSubBrokerUpdate = JSON.parse(body as string);
-							expect(patchBody.expiration).toEqual(expectedExpiration);
-							expect(patchBody.description).toEqual(expectedDescription);
-							expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
-
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should update a broker's properties", async () => {
-					const expectedOnPublish: PubSubBrokerOnPublish = {
-						url: "https://foo.bar.example.com",
-					};
-					const requests = mockUpdateRequest(
-						"my-broker",
-						86400,
-						"hello",
-						expectedOnPublish
-					);
 					await runWrangler(
 						"pubsub broker update my-broker --namespace=some-namespace --expiration=24h --description='hello' --on-publish-url='https://foo.bar.example.com'"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"{ url: 'https://foo.bar.msw.example.com' }
+				Successfully updated Pub/Sub Broker my-broker"
+			`);
 				});
 			});
 
 			describe("list", () => {
-				function mockListRequest(brokers: PubSubBroker[]) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-						([_url, accountId, namespaceName], init) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(init).toEqual({});
-							return { brokers };
-						}
-					);
-					return requests;
-				}
-
 				it("should list brokers", async () => {
-					const expectedBrokers: PubSubBroker[] = [
-						{ name: "broker-1", created_on: "01-01-2001" },
-						{ name: "broker-2", created_on: "01-01-2001" },
-					];
-					const requests = mockListRequest(expectedBrokers);
 					await runWrangler("pubsub broker list --namespace=some-namespace");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  { name: 'broker-1', created_on: '01-01-2001' },
+				  { name: 'broker-2', created_on: '01-01-2001' }
+				]"
+			`);
 				});
 			});
 
 			describe("describe", () => {
-				function mockGetRequest(broker: PubSubBroker) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-						([_url, accountId, namespaceName, brokerName]) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(broker.name);
-							return { result: broker };
-						}
-					);
-					return requests;
-				}
-
 				it("should describe a single broker", async () => {
-					const requests = mockGetRequest({ id: "1234", name: "my-broker" });
 					await runWrangler(
 						"pubsub broker describe my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(
+						`"{ id: '1234', name: 'my-broker' }"`
+					);
 				});
 			});
 
 			describe("issue", () => {
-				function mockIssueRequest(expectedBrokerName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
-						([_url, accountId, namespaceName, brokerName]) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should issue a token for the broker", async () => {
-					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
 						"pubsub broker issue my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"🔑 Issuing credential(s) for my-broker.some-namespace...
+				{}"
+			`);
 				});
 			});
 
 			describe("public-keys", () => {
-				function mockIssueRequest(expectedBrokerName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
-						([_url, accountId, namespaceName, brokerName]) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should return the public keys for a broker", async () => {
-					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
 						"pubsub broker public-keys my-broker --namespace=some-namespace"
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  { id: '1234', name: 'my-broker' },
+				  { id: '4321', name: 'other-broker' }
+				]"
+			`);
 				});
 			});
 		});
