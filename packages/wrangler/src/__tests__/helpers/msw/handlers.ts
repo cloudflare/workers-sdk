@@ -1,10 +1,12 @@
 import { rest } from "msw";
 import { handlers as oauthHandlers } from "./oauth";
+import { handlers as secretHandlers } from "./secrets";
 import { handlers as tailHandlers } from "./tail";
 
 export const mswDefaultHandlers = [
 	...tailHandlers,
 	...oauthHandlers,
+	...secretHandlers,
 	rest.get("*/user", (_, res, cxt) => {
 		return res(
 			cxt.status(200),
@@ -144,7 +146,6 @@ export const mswDefaultHandlers = [
 			);
 		}
 	),
-
 	rest.get("*/memberships", (_, response, context) => {
 		return response(
 			context.status(200),

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	mockConfirm,
@@ -9,11 +9,8 @@ import {
 	clearConfirmMocks,
 	clearPromptMocks,
 } from "./helpers/mock-dialogs";
-import {
-	mockGetMemberships,
-	mockGetMembershipsFail,
-} from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -25,40 +22,11 @@ describe("wrangler secret", () => {
 	mockApiToken();
 
 	afterEach(() => {
-		unsetAllMocks();
 		clearConfirmMocks();
 		clearPromptMocks();
 	});
 
 	describe("put", () => {
-		function mockPutRequest(
-			input: { name: string; text: string },
-			env?: string,
-			legacyEnv = false
-		) {
-			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-				"PUT",
-				([_url, accountId, scriptName, envName], { body }) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						expect(envName).toEqual(env);
-					}
-					const { name, text, type } = JSON.parse(body as string);
-					expect(type).toEqual("secret_text");
-					expect(name).toEqual(input.name);
-					expect(text).toEqual(input.text);
-
-					return { name, type };
-				}
-			);
-		}
-
 		describe("interactive", () => {
 			useMockStdin({ isTTY: true });
 
@@ -70,7 +38,6 @@ describe("wrangler secret", () => {
           `,
 				});
 
-				mockPutRequest({ name: `secret-name`, text: `hunter2` });
 				await runWrangler("secret put secret-name --name script-name");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
@@ -85,7 +52,6 @@ describe("wrangler secret", () => {
 					result: "the-secret",
 				});
 
-				mockPutRequest({ name: "the-key", text: "the-secret" });
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -102,11 +68,6 @@ describe("wrangler secret", () => {
 					result: "the-secret",
 				});
 
-				mockPutRequest(
-					{ name: "the-key", text: "the-secret" },
-					"some-env",
-					true
-				);
 				await runWrangler(
 					"secret put the-key --name script-name --env some-env --legacy-env"
 				);
@@ -125,11 +86,6 @@ describe("wrangler secret", () => {
 					result: "the-secret",
 				});
 
-				mockPutRequest(
-					{ name: "the-key", text: "the-secret" },
-					"some-env",
-					false
-				);
 				await runWrangler(
 					"secret put the-key --name script-name --env some-env --legacy-env false"
 				);
@@ -167,7 +123,6 @@ describe("wrangler secret", () => {
 			const mockStdIn = useMockStdin({ isTTY: false });
 
 			it("should trim stdin secret value, from piped input", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
 					`the`,
@@ -186,7 +141,6 @@ describe("wrangler secret", () => {
 			});
 
 			it("should create a secret, from piped input", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
 				await runWrangler("secret put the-key --name script-name");
@@ -200,7 +154,6 @@ describe("wrangler secret", () => {
 			});
 
 			it("should error if the piped input fails", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("secret put the-key --name script-name")
@@ -213,11 +166,24 @@ describe("wrangler secret", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			describe("with accountId", () => {
+			describe.only("with accountId", () => {
 				mockAccountId({ accountId: null });
 
 				it("should error if request for memberships fails", async () => {
-					mockGetMembershipsFail();
+					msw.use(
+						rest.get("*/memberships", (_, response, context) => {
+							return response(
+								context.status(200),
+								context.json({
+									success: false,
+									errors: [],
+									messages: [],
+									result: [],
+								})
+							);
+						})
+					);
+
 					await expect(
 						runWrangler("secret put the-key --name script-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -226,7 +192,20 @@ describe("wrangler secret", () => {
 				});
 
 				it("should error if a user has no account", async () => {
-					mockGetMemberships([]);
+					msw.use(
+						rest.get("*/memberships", (_, response, context) => {
+							return response(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [],
+								})
+							);
+						})
+					);
+
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
                   "Failed to automatically retrieve account IDs for the logged in user.
@@ -243,7 +222,6 @@ describe("wrangler secret", () => {
 						"utf-8"
 					);
 					mockStdIn.send("the-secret");
-					mockPutRequest({ name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating the secret for the Worker \\"script-name\\"
@@ -254,20 +232,32 @@ describe("wrangler secret", () => {
 				});
 
 				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
-					mockGetMemberships([
-						{
-							id: "1",
-							account: { id: "account-id-1", name: "account-name-1" },
-						},
-						{
-							id: "2",
-							account: { id: "account-id-2", name: "account-name-2" },
-						},
-						{
-							id: "3",
-							account: { id: "account-id-3", name: "account-name-3" },
-						},
-					]);
+					msw.use(
+						rest.get("*/memberships", (_, response, context) => {
+							return response(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											id: "1",
+											account: { id: "account-id-1", name: "account-name-1" },
+										},
+										{
+											id: "2",
+											account: { id: "account-id-2", name: "account-name-2" },
+										},
+										{
+											id: "3",
+											account: { id: "account-id-3", name: "account-name-3" },
+										},
+									],
+								})
+							);
+						})
+					);
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
