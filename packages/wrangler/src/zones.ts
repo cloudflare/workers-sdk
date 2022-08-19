@@ -95,6 +95,47 @@ export async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
 }
 
 /**
+ * Given two strings, return the levenshtein distance between them as a simple text match heuristic
+ */
+function distanceBetween(a: string, b: string, cache = new Map()): number {
+	if (cache.has(`${a}|${b}`)) {
+		return cache.get(`${a}|${b}`);
+	}
+	let result;
+	if (b == "") {
+		result = a.length;
+	} else if (a == "") {
+		result = b.length;
+	} else if (a[0] === b[0]) {
+		result = distanceBetween(a.slice(1), b.slice(1), cache);
+	} else {
+		result =
+			1 +
+			Math.min(
+				distanceBetween(a.slice(1), b, cache),
+				distanceBetween(a, b.slice(1), cache),
+				distanceBetween(a.slice(1), b.slice(1), cache)
+			);
+	}
+	cache.set(`${a}|${b}`, result);
+	return result;
+}
+
+/**
+ * Given a route which isn't valid, sort the valid routes by closeness (levenstein distance)
+ */
+export function findClosestRoute(
+	providedRoute: string,
+	assignedRoutes: WorkerRoute[]
+): WorkerRoute[] {
+	return assignedRoutes.sort((a, b) => {
+		const distanceA = distanceBetween(providedRoute, a.pattern);
+		const distanceB = distanceBetween(providedRoute, b.pattern);
+		return distanceA - distanceB;
+	});
+}
+
+/**
  * Given a route (must be assigned and within the correct zone), return the name of the worker assigned to it
  */
 export async function getWorkerForZone(worker: string) {
@@ -109,7 +150,17 @@ export async function getWorkerForZone(worker: string) {
 	const scriptName = routes.find((route) => route.pattern === worker)?.script;
 
 	if (!scriptName) {
-		throw new Error(`No workers found on the route ${worker}`);
+		const closestRoute = findClosestRoute(worker, routes)?.[0];
+
+		if (!closestRoute) {
+			throw new Error(
+				`The route '${worker}' has no workers assigned. You can assign a worker to it from wrangler.toml or the Cloudflare dashboard`
+			);
+		} else {
+			throw new Error(
+				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`
+			);
+		}
 	}
 
 	return scriptName;
