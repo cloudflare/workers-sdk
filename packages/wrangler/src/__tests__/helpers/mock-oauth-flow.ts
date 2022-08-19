@@ -22,57 +22,14 @@ export function mockGetMembershipsFail() {
 	});
 }
 
-// the response to send when wrangler wants an oauth grant
-let oauthGrantResponse: GrantResponseOptions | "timeout" = {};
-
-/**
- * Functions to help with mocking various parts of the OAuth Flow
- */
-export const mockOAuthFlow = () => {
-	const fetchHttp = mockHttpServer();
-
-	afterEach(() => {
-		fetchMock.resetMocks();
-	});
-
-	/**
-	 * Mock out the callback from a browser to our HttpServer.
-	 *
-	 * This function will override `openInBrowser()` so that instead of opening a browser window
-	 * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
-	 * we have created as part of the call to `mockOAuthFlow()`.
-	 */
-	const mockOAuthServerCallback = () => {
-		(
-			openInBrowser as jest.MockedFunction<typeof openInBrowser>
-		).mockImplementation(async (url: string) => {
-			// We don't support the grant response timing out.
-			if (oauthGrantResponse === "timeout") {
-				throw "unimplemented";
-			}
-
-			// Create a fake callback request that would be created by the OAuth server
-			const { searchParams } = new URL(url);
-			const queryParams = toQueryParams(oauthGrantResponse, searchParams);
-			const request = new Request(
-				`${searchParams.get("redirect_uri")}?${queryParams}`
-			);
-
-			// Trigger the mock HttpServer to handle this fake request to continue the OAuth flow.
-			fetchHttp(request).catch((e) => {
-				throw new Error(
-					"Failed to send OAuth Grant to wrangler, maybe the server was closed?",
-					e as Error
-				);
-			});
-		});
-	};
-
-	const mockGrantAuthorization = ({
-		respondWith,
-	}: {
-		respondWith: "timeout" | "success" | "failure" | GrantResponseOptions;
-	}) => {
+const fetchHttp = mockHttpServer();
+export const mockOAuthServerCallback = (
+	respondWith: "timeout" | "success" | "failure" | GrantResponseOptions
+) => {
+	(
+		openInBrowser as jest.MockedFunction<typeof openInBrowser>
+	).mockImplementation(async (url: string) => {
+		let oauthGrantResponse: GrantResponseOptions | "timeout";
 		if (respondWith === "failure") {
 			oauthGrantResponse = {
 				error: "access_denied",
@@ -86,7 +43,42 @@ export const mockOAuthFlow = () => {
 		} else {
 			oauthGrantResponse = respondWith;
 		}
-	};
+		// We don't support the grant response timing out.
+		if (oauthGrantResponse === "timeout") {
+			throw "unimplemented";
+		}
+
+		// Create a fake callback request that would be created by the OAuth server
+		const { searchParams } = new URL(url);
+		const queryParams = toQueryParams(oauthGrantResponse, searchParams);
+		const request = new Request(
+			`${searchParams.get("redirect_uri")}?${queryParams}`
+		);
+
+		// Trigger the mock HttpServer to handle this fake request to continue the OAuth flow.
+		await fetchHttp(request).catch((e) => {
+			throw new Error(
+				"Failed to send OAuth Grant to wrangler, maybe the server was closed?",
+				e as Error
+			);
+		});
+	});
+};
+/**
+ * Functions to help with mocking various parts of the OAuth Flow
+ */
+export const mockOAuthFlow = () => {
+	afterEach(() => {
+		fetchMock.resetMocks();
+	});
+
+	/**
+	 * Mock out the callback from a browser to our HttpServer.
+	 *
+	 * This function will override `openInBrowser()` so that instead of opening a browser window
+	 * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
+	 * we have created as part of the call to `mockOAuthFlow()`.
+	 */
 
 	const mockRevokeAuthorization = () => {
 		const outcome = {
@@ -170,7 +162,6 @@ export const mockOAuthFlow = () => {
 
 	return {
 		mockGrantAccessToken,
-		mockGrantAuthorization,
 		mockOAuthServerCallback,
 		mockRevokeAuthorization,
 		mockExchangeRefreshTokenForAccessToken,

@@ -172,7 +172,7 @@ describe("wrangler secret", () => {
 				it("should error if request for memberships fails", async () => {
 					msw.use(
 						rest.get("*/memberships", (_, response, context) => {
-							return response(
+							return response.once(
 								context.status(200),
 								context.json({
 									success: false,
@@ -194,7 +194,7 @@ describe("wrangler secret", () => {
 				it("should error if a user has no account", async () => {
 					msw.use(
 						rest.get("*/memberships", (_, response, context) => {
-							return response(
+							return response.once(
 								context.status(200),
 								context.json({
 									success: true,
@@ -234,7 +234,7 @@ describe("wrangler secret", () => {
 				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
 					msw.use(
 						rest.get("*/memberships", (_, response, context) => {
-							return response(
+							return response.once(
 								context.status(200),
 								context.json({
 									success: true,

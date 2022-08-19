@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import { handlers as oauthHandlers } from "./oauth";
+import { handlers as publishHandlers } from "./publish";
 import { handlers as pubsubHandlers } from "./pubsub";
 import { handlers as r2Handlers } from "./r2handlers";
 import { handlers as secretHandlers } from "./secrets";
@@ -11,6 +12,7 @@ export const mswDefaultHandlers = [
 	...secretHandlers,
 	...r2Handlers,
 	...pubsubHandlers,
+	...publishHandlers,
 	rest.get("*/user", (_, res, cxt) => {
 		return res(
 			cxt.status(200),

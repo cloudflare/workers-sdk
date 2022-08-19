@@ -1,6 +1,17 @@
 import { rest } from "msw";
 
 export const handlers = [
+	rest.all("*/oauth/callback", (_, response, context) => {
+		return response(
+			context.status(200),
+			context.json({
+				success: true,
+				errors: [],
+				messages: [],
+				code: "test-oauth-code",
+			})
+		);
+	}),
 	// revoke access token
 	rest.post(
 		"https://dash.cloudflare.com/oauth2/revoke",

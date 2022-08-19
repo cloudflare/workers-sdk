@@ -12,6 +12,7 @@ import {
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockOAuthServerCallback } from "./helpers/mock-oauth-flow";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -30,9 +31,8 @@ describe("User", () => {
 	});
 
 	describe("login", () => {
-		it.skip("should login a user when `wrangler login` is run", async () => {
-			// mockOAuthServerCallback();
-
+		it("should login a user when `wrangler login` is run", async () => {
+			mockOAuthServerCallback("success");
 			await runWrangler("login");
 
 			expect(std.out).toMatchInlineSnapshot(`

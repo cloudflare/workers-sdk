@@ -2,12 +2,6 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type {
-	PubSubNamespace,
-	PubSubBroker,
-	PubSubBrokerUpdate,
-	PubSubBrokerOnPublish,
-} from "../pubsub";
 
 describe("wrangler", () => {
 	mockAccountId();

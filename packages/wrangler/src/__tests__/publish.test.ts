@@ -2,30 +2,20 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as esbuild from "esbuild";
+import { rest } from "msw";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-	unsetAllMocks,
-	unsetSpecialMockFns,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockKeyListRequest } from "./helpers/mock-kv";
-import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import { mockOAuthServerCallback } from "./helpers/mock-oauth-flow";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import type { Config } from "../config";
-import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv";
-import type { CustomDomainChangeset, CustomDomain } from "../publish";
-import type { CfWorkerInit } from "../worker";
-import type { FormData, File } from "undici";
+import type { CustomDomain } from "../publish";
 
 describe("publish", () => {
 	mockAccountId();
@@ -33,11 +23,6 @@ describe("publish", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
-	const {
-		mockOAuthServerCallback,
-		mockGrantAccessToken,
-		mockGrantAuthorization,
-	} = mockOAuthFlow();
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
@@ -45,11 +30,6 @@ describe("publish", () => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
-	});
-
-	afterEach(() => {
-		unsetAllMocks();
-		unsetSpecialMockFns();
 	});
 
 	describe("output additional script information", () => {
@@ -68,9 +48,6 @@ describe("publish", () => {
 				"utf-8"
 			);
 			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
-			mockOAuthServerCallback();
 
 			await runWrangler("publish ./index");
 
@@ -94,21 +71,12 @@ describe("publish", () => {
 			// and will timeout and fail
 			global.setTimeout.mockRestore();
 		});
-
 		it("drops a user into the login flow if they're unauthenticated", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			mockOAuthServerCallback();
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
-			mockGrantAuthorization({ respondWith: "success" });
+			mockOAuthServerCallback("success");
 
 			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
-
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Attempting to login via OAuth...
@@ -126,8 +94,6 @@ describe("publish", () => {
 		it("warns a user when they're authenticated with an API token in wrangler config file", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
 			writeAuthConfigFile({
 				api_token: "some-api-token",
 			});
@@ -168,9 +134,6 @@ describe("publish", () => {
 					account_id: "some-account-id",
 				});
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
 
 				await runWrangler("publish index.js");
 
@@ -191,10 +154,19 @@ describe("publish", () => {
 				setIsTTY(false);
 				writeWranglerToml();
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
-				mockGetMemberships([]);
+				msw.use(
+					rest.get("*/memberships", (_, response, context) => {
+						return response.once(
+							context.status(200),
+							context.json({
+								success: false,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					})
+				);
 
 				await runWrangler("publish index.js");
 
@@ -217,13 +189,25 @@ describe("publish", () => {
 					account_id: undefined,
 				});
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
-				mockGetMemberships([
-					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-				]);
+				msw.use(
+					rest.get("*/memberships", (_, response, context) => {
+						return response.once(
+							context.status(200),
+							context.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [
+									{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+									{
+										id: "R2-D2",
+										account: { id: "nx01", name: "enterprise-nx" },
+									},
+								],
+							})
+						);
+					})
+				);
 
 				await expect(runWrangler("publish index.js")).rejects
 					.toMatchInlineSnapshot(`
@@ -245,13 +229,26 @@ describe("publish", () => {
 					CLOUDFLARE_ACCOUNT_ID: "badwolf",
 				};
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
-				mockGetMemberships([
-					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-				]);
+
+				msw.use(
+					rest.get("*/memberships", (_, response, context) => {
+						return response.once(
+							context.status(200),
+							context.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [
+									{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+									{
+										id: "R2-D2",
+										account: { id: "nx01", name: "enterprise-nx" },
+									},
+								],
+							})
+						);
+					})
+				);
 
 				await expect(runWrangler("publish index.js")).rejects.toThrowError();
 
@@ -271,10 +268,19 @@ describe("publish", () => {
 					CLOUDFLARE_ACCOUNT_ID: undefined,
 				};
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
-				mockGetMemberships([]);
+				msw.use(
+					rest.get("*/memberships", (_, response, context) => {
+						return response.once(
+							context.status(200),
+							context.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					})
+				);
 
 				await expect(runWrangler("publish index.js")).rejects.toThrowError();
 
@@ -294,11 +300,6 @@ describe("publish", () => {
 		it("should use legacy environments by default", async () => {
 			writeWranglerToml({ env: { "some-env": {} } });
 			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				env: "some-env",
-				legacyEnv: true,
-			});
 			await runWrangler("publish index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -314,10 +315,7 @@ describe("publish", () => {
 			it("uses the script name when no environment is specified", async () => {
 				writeWranglerToml();
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					legacyEnv: true,
-				});
+
 				await runWrangler("publish index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -332,11 +330,7 @@ describe("publish", () => {
 			it("appends the environment name when provided, and there is associated config", async () => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					legacyEnv: true,
-				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -351,11 +345,7 @@ describe("publish", () => {
 			it("appends the environment name when provided (with a warning), if there are no configured environments", async () => {
 				writeWranglerToml({});
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					legacyEnv: true,
-				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -384,7 +374,7 @@ describe("publish", () => {
 			it("should throw an error when an environment name when provided, which doesn't match those in the config", async () => {
 				writeWranglerToml({ env: { "other-env": {} } });
 				writeWorkerSource();
-				mockSubDomainRequest();
+
 				await expect(
 					runWrangler("publish index.js --env some-env --legacy-env true")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -404,7 +394,7 @@ describe("publish", () => {
 			it("should throw an error w/ helpful message when using --env --name", async () => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
-				mockSubDomainRequest();
+
 				await runWrangler(
 					"publish index.js --name voyager --env some-env --legacy-env true"
 				).catch((err) =>
@@ -422,10 +412,7 @@ describe("publish", () => {
 			it("uses the script name when no environment is specified", async () => {
 				writeWranglerToml();
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					legacyEnv: false,
-				});
+
 				await runWrangler("publish index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -447,11 +434,7 @@ describe("publish", () => {
 			it("publishes as an environment when provided", async () => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					legacyEnv: false,
-				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Total Upload: 0xx KiB / gzip: 0xx KiB
@@ -484,17 +467,7 @@ describe("publish", () => {
 			"utf-8"
 		);
 		writeWorkerSource({ basePath: "./some-path/worker" });
-		mockUploadWorkerRequest({
-			expectedBindings: [
-				{
-					json: 123,
-					name: "xyz",
-					type: "json",
-				},
-			],
-			expectedCompatibilityDate: "2022-01-12",
-		});
-		mockSubDomainRequest();
+
 		await runWrangler("publish ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 		      "Your worker has access to the following bindings:
@@ -514,9 +487,7 @@ describe("publish", () => {
 				routes: ["example.com/some-route/*"],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ expectedType: "esm" });
-			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
+
 			await runWrangler("publish ./index");
 		});
 
@@ -525,10 +496,7 @@ describe("publish", () => {
 				route: "",
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ expectedType: "esm" });
-			mockSubDomainRequest();
-			mockPublishRoutesRequest({ routes: [] });
+
 			await runWrangler("publish ./index");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -562,20 +530,7 @@ describe("publish", () => {
 				],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ expectedType: "esm" });
-			mockPublishRoutesRequest({
-				routes: [
-					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
-					{
-						pattern: "*another-boring-website.com",
-						zone_name: "some-zone.com",
-					},
-					{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
-					"more-examples.com/*",
-				],
-			});
+
 			await runWrangler("publish ./index");
 			expect(std).toMatchInlineSnapshot(`
 			        Object {
@@ -611,32 +566,8 @@ describe("publish", () => {
 					},
 				},
 			});
-			mockSubDomainRequest();
 			writeWorkerSource();
-			mockUpdateWorkerRequest({
-				enabled: false,
-				env: "staging",
-				legacyEnv: false,
-			});
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				env: "staging",
-				legacyEnv: false,
-			});
-			mockPublishRoutesRequest({
-				routes: [
-					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "54sdf7fsda" },
-					{
-						pattern: "*another-boring-website.com",
-						zone_name: "some-zone.com",
-					},
-					{ pattern: "example.com/some-route/*", zone_id: "JGHFHG654gjcj" },
-					"more-examples.com/*",
-				],
-				env: "staging",
-				legacyEnv: false,
-			});
+
 			await runWrangler("publish ./index --legacy-env false --env staging");
 			expect(std).toMatchInlineSnapshot(`
 			        Object {
@@ -670,18 +601,14 @@ describe("publish", () => {
 				},
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false, legacyEnv: true, env: "dev" });
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				legacyEnv: true,
-				env: "dev",
-			});
-			mockPublishRoutesRequest({
-				routes: ["dev-example.com/some-route/*"],
-				legacyEnv: true,
-				env: "dev",
-			});
+
 			await runWrangler("publish ./index --env dev --legacy-env true");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name-dev (TIMINGS)
+			Published test-name-dev (TIMINGS)
+			  dev-example.com/some-route/*"
+		`);
 		});
 
 		it("services: should publish to service environment specific routes", async () => {
@@ -694,39 +621,70 @@ describe("publish", () => {
 				},
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				env: "dev",
-			});
-			mockPublishRoutesRequest({
-				routes: ["dev-example.com/some-route/*"],
-				env: "dev",
-			});
+
 			await runWrangler("publish ./index --env dev --legacy-env false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name (dev) (TIMINGS)
+			Published test-name (dev) (TIMINGS)
+			  dev-example.com/some-route/*"
+		`);
 		});
 
-		it("should fallback to the Wrangler 1 zone-based API if the bulk-routes API fails", async () => {
+		it.only("should fallback to the Wrangler 1 zone-based API if the bulk-routes API fails", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ expectedType: "esm" });
-			// Simulate the bulk-routes API failing with a not authorized error.
-			mockUnauthorizedPublishRoutesRequest();
-			// Simulate that the worker has already been deployed to another route in this zone.
-			mockCollectKnownRoutesRequest([
-				{
-					pattern: "foo.example.com/other-route",
-					script: "test-name",
-				},
-			]);
-			mockGetZoneFromHostRequest("example.com", "some-zone-id");
-			mockPublishRoutesFallbackRequest({
-				pattern: "example.com/some-route/*",
-				script: "test-name",
-			});
+
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/routes",
+					(_, response, context) =>
+						response.once(
+							context.status(200),
+							context.json({
+								success: false,
+								errors: [{ message: "Authentication error", code: 10000 }],
+								messages: [],
+								result: null,
+							})
+						)
+				),
+				// Simulate the bulk-routes API failing with a not authorized error.
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+					(_, response, context) =>
+						response.once(
+							context.status(200),
+							context.json({
+								success: false,
+								errors: [{ message: "Authentication error", code: 10000 }],
+								messages: [],
+								result: null,
+							})
+						)
+				),
+				// Simulate that the worker has already been deployed to another route in this zone.
+				rest.get("*/zones/:zoneId/workers/routes", (_, response, context) =>
+					response.once(
+						context.status(200),
+						context.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									pattern: "foo.example.com/other-route",
+									script: "test-name",
+								},
+							],
+						})
+					)
+				)
+			);
+
 			await runWrangler("publish ./index");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -764,14 +722,17 @@ describe("publish", () => {
 			mockUpdateWorkerRequest({ env: "staging", enabled: false });
 			mockUploadWorkerRequest({ env: "staging", expectedType: "esm" });
 			// Simulate the bulk-routes API failing with a not authorized error.
+			// MSW handle
+			// 		setMockRawResponse(
+			// 	`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+			// 	"PUT",
+			// 	() =>
+			// 		createFetchResult(null, false, [
+			// 			{ message: "Authentication error", code: 10000 },
+			// 		])
+			// );
 			mockUnauthorizedPublishRoutesRequest({ env: "staging" });
-			// Simulate that the worker has already been deployed to another route in this zone.
-			mockCollectKnownRoutesRequest([
-				{
-					pattern: "foo.example.com/other-route",
-					script: "test-name",
-				},
-			]);
+
 			mockGetZoneFromHostRequest("example.com", "some-zone-id");
 			mockPublishRoutesFallbackRequest({
 				pattern: "example.com/some-route/*",
@@ -3003,6 +2964,12 @@ addEventListener('fetch', event => {});`
 				workers_dev: false,
 			});
 			writeWorkerSource();
+			// MSW handle
+			// 	setMockRawResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
+			// 	return createFetchResult(null, false, [
+			// 		{ code: 10007, message: "haven't registered workers.dev" },
+			// 	]);
+			// });
 			mockSubDomainRequest("test-sub-domain", false);
 			mockUploadWorkerRequest({ available_on_subdomain: false });
 
@@ -6427,221 +6394,10 @@ function writeAssets(
 	}
 }
 
-/** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest(
-	options: {
-		available_on_subdomain?: boolean;
-		expectedEntry?: string;
-		expectedMainModule?: string;
-		expectedType?: "esm" | "sw";
-		expectedBindings?: unknown;
-		expectedModules?: Record<string, string>;
-		expectedCompatibilityDate?: string;
-		expectedCompatibilityFlags?: string[];
-		expectedMigrations?: CfWorkerInit["migrations"];
-		env?: string;
-		legacyEnv?: boolean;
-		sendScriptIds?: boolean;
-	} = {}
-) {
-	const {
-		available_on_subdomain = true,
-		expectedEntry,
-		expectedMainModule = "index.js",
-		expectedType = "esm",
-		expectedBindings,
-		expectedModules = {},
-		expectedCompatibilityDate,
-		expectedCompatibilityFlags,
-		env = undefined,
-		legacyEnv = false,
-		expectedMigrations,
-		sendScriptIds,
-	} = options;
-	setMockResponse(
-		env && !legacyEnv
-			? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
-			: "/accounts/:accountId/workers/scripts/:scriptName",
-		"PUT",
-		async ([_url, accountId, scriptName, envName], { body }, queryParams) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-			expect(queryParams.get("include_subdomain_availability")).toEqual("true");
-			expect(queryParams.get("excludeScript")).toEqual("true");
-			const formBody = body as FormData;
-			if (expectedEntry !== undefined) {
-				expect(await (formBody.get("index.js") as File).text()).toMatch(
-					expectedEntry
-				);
-			}
-			const metadata = JSON.parse(
-				formBody.get("metadata") as string
-			) as WorkerMetadata;
-			if (expectedType === "esm") {
-				expect(metadata.main_module).toEqual(expectedMainModule);
-			} else {
-				expect(metadata.body_part).toEqual("index.js");
-			}
-			if ("expectedBindings" in options) {
-				expect(metadata.bindings).toEqual(expectedBindings);
-			}
-			if ("expectedCompatibilityDate" in options) {
-				expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-			}
-			if ("expectedCompatibilityFlags" in options) {
-				expect(metadata.compatibility_flags).toEqual(
-					expectedCompatibilityFlags
-				);
-			}
-			if ("expectedMigrations" in options) {
-				expect(metadata.migrations).toEqual(expectedMigrations);
-			}
-			for (const [name, content] of Object.entries(expectedModules)) {
-				expect(await (formBody.get(name) as File).text()).toEqual(content);
-			}
-
-			return {
-				available_on_subdomain,
-				...(sendScriptIds
-					? {
-							id: "abc12345",
-							etag: "etag98765",
-							pipeline_hash: "hash9999",
-					  }
-					: {}),
-			};
-		}
-	);
-}
-
-/** Create a mock handler for the request to get the account's subdomain. */
-function mockSubDomainRequest(
-	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
-) {
-	if (registeredWorkersDev) {
-		setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return { subdomain };
-		});
-	} else {
-		setMockRawResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return createFetchResult(null, false, [
-				{ code: 10007, message: "haven't registered workers.dev" },
-			]);
-		});
-	}
-}
-
-/** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
-function mockUpdateWorkerRequest({
-	env,
-	enabled,
-	legacyEnv = false,
-}: {
-	enabled: boolean;
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-}) {
-	const requests = { count: 0 };
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
-		"POST",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-			expect(JSON.parse(body as string)).toEqual({ enabled });
-			return null;
-		}
-	);
-	return requests;
-}
-
-function mockPublishRoutesRequest({
-	routes = [],
-	env = undefined,
-	legacyEnv = false,
-}: {
-	routes: Config["routes"];
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-}) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-		"PUT",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-
-			expect(JSON.parse(body as string)).toEqual(
-				routes.map((route) =>
-					typeof route !== "object" ? { pattern: route } : route
-				)
-			);
-			return null;
-		}
-	);
-}
-
-function mockUnauthorizedPublishRoutesRequest({
-	env = undefined,
-	legacyEnv = false,
-}: {
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-} = {}) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-
-	setMockRawResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-		"PUT",
-		() =>
-			createFetchResult(null, false, [
-				{ message: "Authentication error", code: 10000 },
-			])
-	);
-}
-
-function mockCollectKnownRoutesRequest(
-	routes: { pattern: string; script: string }[]
-) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
-}
-
 function mockGetZoneFromHostRequest(host: string, zone: string) {
 	setMockResponse("/zones", (_uri, _init, queryParams) => {
 		expect(queryParams.get("name")).toEqual(host);
 		return [{ id: zone }];
-	});
-}
-
-function mockPublishRoutesFallbackRequest(route: {
-	pattern: string;
-	script: string;
-}) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "POST", (_url, { body }) => {
-		expect(JSON.parse(body as string)).toEqual(route);
-		return route.pattern;
 	});
 }
 
@@ -6654,63 +6410,6 @@ function mockCustomDomainLookup(origin: CustomDomain) {
 			expect(domainTag).toEqual(origin.id);
 
 			return origin;
-		}
-	);
-}
-
-function mockCustomDomainsChangesetRequest({
-	originConflicts = [],
-	dnsRecordConflicts = [],
-	env = undefined,
-	legacyEnv = false,
-}: {
-	originConflicts?: Array<CustomDomain>;
-	dnsRecordConflicts?: Array<CustomDomain>;
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-}) {
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
-		"POST",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-
-			const domains: Array<
-				{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
-			> = JSON.parse(body as string);
-
-			const changeset: CustomDomainChangeset = {
-				added: domains.map((domain) => {
-					return {
-						...domain,
-						id: "",
-						service: scriptName,
-						environment: envName,
-						zone_name: "",
-						zone_id: "",
-					};
-				}),
-				removed: [],
-				updated:
-					originConflicts?.map((domain) => {
-						return {
-							...domain,
-							modified: true,
-						};
-					}) ?? [],
-				conflicting: dnsRecordConflicts,
-			};
-
-			return changeset;
 		}
 	);
 }
