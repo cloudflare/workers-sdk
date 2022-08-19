@@ -744,15 +744,13 @@ function createCLIParser(argv: string[]) {
 				clientIp: args.ip,
 			};
 
-			const filters = translateCLICommandToFilterMessage(
-				cliFilters,
-				args.debug
-			);
+			const filters = translateCLICommandToFilterMessage(cliFilters);
 
 			const { tail, expiration, deleteTail } = await createTail(
 				accountId,
 				scriptName,
 				filters,
+				args.debug,
 				!isLegacyEnv(config) ? args.env : undefined
 			);
 

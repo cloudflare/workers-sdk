@@ -69,13 +69,15 @@ function makeDeleteTailUrl(
  *
  * @param accountId the account ID associated with the worker to tail
  * @param workerName the name of the worker to tail
- * @param message a `TailFilterMessage` to send up to the tail worker
+ * @param filters A list of `TailAPIFilters` given to the tail
+ * @param debug Flag to run tail in debug mode
  * @returns a websocket connection, an expiration, and a function to call to delete the tail
  */
 export async function createTail(
 	accountId: string,
 	workerName: string,
-	message: TailFilterMessage,
+	filters: TailFilterMessage,
+	debug: boolean,
 	env: string | undefined
 ): Promise<{
 	tail: WebSocket;
@@ -90,6 +92,7 @@ export async function createTail(
 		expires_at: expiration,
 	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
 		method: "POST",
+		body: JSON.stringify(filters),
 	});
 
 	// delete the tail (not yet!)
@@ -109,7 +112,7 @@ export async function createTail(
 	// send filters when we open up
 	tail.on("open", function () {
 		tail.send(
-			JSON.stringify(message),
+			JSON.stringify({ debug: debug, filters: [] }),
 			{ binary: false, compress: false, mask: false, fin: true },
 			(err) => {
 				if (err) {
