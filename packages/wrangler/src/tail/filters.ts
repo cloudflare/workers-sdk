@@ -122,7 +122,6 @@ type QueryFilter = {
  */
 export type TailFilterMessage = {
 	filters: TailAPIFilter[];
-	debug: boolean;
 };
 
 /**
@@ -130,12 +129,10 @@ export type TailFilterMessage = {
  * into a message that we can send to the tail worker.
  *
  * @param cliFilters An object containing all the filters passed in from the CLI
- * @param debug Whether or not we should be in debug mode
  * @returns A filter message ready to be sent to the tail worker
  */
 export function translateCLICommandToFilterMessage(
-	cliFilters: TailCLIFilters,
-	debug: boolean
+	cliFilters: TailCLIFilters
 ): TailFilterMessage {
 	const apiFilters: TailAPIFilter[] = [];
 
@@ -165,7 +162,6 @@ export function translateCLICommandToFilterMessage(
 
 	return {
 		filters: apiFilters,
-		debug,
 	};
 }
 
