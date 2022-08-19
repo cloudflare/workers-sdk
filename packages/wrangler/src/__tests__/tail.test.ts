@@ -6,6 +6,10 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import {
+	mockCollectKnownRoutesRequest,
+	mockGetZoneFromHostRequest,
+} from "./publish.test";
 import type {
 	TailEventMessage,
 	RequestEvent,
@@ -13,10 +17,6 @@ import type {
 	AlarmEvent,
 } from "../tail";
 import type WebSocket from "ws";
-import {
-	mockCollectKnownRoutesRequest,
-	mockGetZoneFromHostRequest,
-} from "./publish.test";
 
 describe("tail", () => {
 	runInTempDir();
