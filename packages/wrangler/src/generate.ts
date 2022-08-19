@@ -88,7 +88,7 @@ export async function generateHandler({
 		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
 	);
 
-	await createCloudflare(creationDirectory, template, {
+	await createCloudflare(path.basename(creationDirectory), template, {
 		init: true, // initialize a git repository
 		debug: logger.loggerLevel === "debug",
 		force: false, // do not overwrite an existing directory

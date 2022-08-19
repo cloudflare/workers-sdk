@@ -1,6 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
-import process from "node:process";
 import { setup } from "create-cloudflare";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, clearConfirmMocks } from "./helpers/mock-dialogs";
@@ -73,7 +71,7 @@ describe("generate", () => {
 		).resolves.toBeUndefined();
 
 		expect(createCloudflareMock).lastCalledWith(
-			path.resolve(process.cwd(), "my-worker-1"),
+			"my-worker-1",
 			"some-template",
 			{ debug: false, force: false, init: true }
 		);
@@ -85,7 +83,7 @@ describe("generate", () => {
 		).resolves.toBeUndefined();
 
 		expect(createCloudflareMock).lastCalledWith(
-			path.resolve(process.cwd(), "my-worker-2"),
+			"my-worker-2",
 			"some-template",
 			{ debug: false, force: false, init: true }
 		);
