@@ -122,7 +122,7 @@ function distanceBetween(a: string, b: string, cache = new Map()): number {
 }
 
 /**
- * Given a route which isn't valid, sort the valid routes by closeness (levenstein distance)
+ * Given an invalid route, sort the valid routes by closeness to the invalid route (levenstein distance)
  */
 export function findClosestRoute(
 	providedRoute: string,
