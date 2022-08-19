@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { fetch, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
+import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
@@ -44,6 +45,13 @@ export async function fetchInternal<ResponseType>(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	const method = init.method ?? "GET";
+
+	logger.debug(
+		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
+	);
+	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
+	logger.debug("INIT:", JSON.stringify(init, null, 2));
+	logger.debug("-- END CF API REQUEST");
 	const response = await fetch(
 		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
 		{
@@ -54,6 +62,15 @@ export async function fetchInternal<ResponseType>(
 		}
 	);
 	const jsonText = await response.text();
+	logger.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+	logger.debug("HEADERS:", JSON.stringify(response.headers, null, 2));
+	logger.debug("RESPONSE:", jsonText);
+	logger.debug("-- END CF API RESPONSE");
+
 	try {
 		return parseJSON<ResponseType>(jsonText);
 	} catch (err) {
