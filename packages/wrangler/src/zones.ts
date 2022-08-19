@@ -75,15 +75,42 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 	throw new Error(`Could not find zone for ${host}`);
 }
 
+/**
+ * An object holding information about an assigned worker route, returned from the API
+ */
 interface WorkerRoute {
 	id: string;
 	pattern: string;
 	script: string;
 }
 
+/**
+ * Given a zone within the user's account, return a list of all assigned worker routes
+ */
 export async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
 	const routes = await fetchListResult<WorkerRoute>(
 		`/zones/${zone}/workers/routes`
 	);
 	return routes;
+}
+
+/**
+ * Given a route (must be assigned and within the correct zone), return the name of the worker assigned to it
+ */
+export async function getWorkerForZone(worker: string) {
+	const zone = await getZoneForRoute(worker);
+	if (!zone) {
+		throw new Error(
+			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
+		);
+	}
+	const routes = await getRoutesForZone(zone.id);
+
+	const scriptName = routes.find((route) => route.pattern === worker)?.script;
+
+	if (!scriptName) {
+		throw new Error(`No workers found on the route ${worker}`);
+	}
+
+	return scriptName;
 }

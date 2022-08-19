@@ -74,7 +74,7 @@ import {
 import { whoami } from "./whoami";
 
 import { workerNamespaceCommands } from "./worker-namespace";
-import { getRoutesForZone, getZoneForRoute } from "./zones";
+import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
@@ -605,12 +605,12 @@ function createCLIParser(argv: string[]) {
 
 	// tail
 	wrangler.command(
-		"tail [name]",
+		"tail [worker]",
 		"🦚 Starts a log tailing session for a published Worker.",
 		(yargs) => {
 			return yargs
-				.positional("name", {
-					describe: "Name of the worker, or route at which it runs",
+				.positional("worker", {
+					describe: "Name or route of the worker to tail",
 					type: "string",
 				})
 				.option("format", {
@@ -681,30 +681,18 @@ function createCLIParser(argv: string[]) {
 			let scriptName;
 
 			// Worker names can't contain "." (and most routes should), so use that as a discriminator
-			if (args.name?.includes(".")) {
-				const zone = await getZoneForRoute(args.name);
-				if (!zone) {
-					throw new Error(`Could not find zone for route ${args.name}`);
-				}
-				const routes = await getRoutesForZone(zone.id);
-
-				// Find an exact match for the route provided
-				for (const route of routes) {
-					if (route.pattern === args.name) {
-						scriptName = route.script;
-						if (args.format === "pretty") {
-							logger.log(
-								`Connecting to worker ${scriptName} at route ${args.name}`
-							);
-						}
-						break;
-					}
-				}
-				if (!scriptName) {
-					throw new Error(`No workers found on the route ${args.name}`);
+			if (args.worker?.includes(".")) {
+				scriptName = await getWorkerForZone(args.worker);
+				if (args.format === "pretty") {
+					logger.log(
+						`Connecting to worker ${scriptName} at route ${args.worker}`
+					);
 				}
 			} else {
-				scriptName = getLegacyScriptName(args, config);
+				scriptName = getLegacyScriptName(
+					{ name: args.worker, ...args },
+					config
+				);
 			}
 
 			if (!scriptName) {
