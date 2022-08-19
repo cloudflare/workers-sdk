@@ -177,6 +177,7 @@ export function usePreviewServer({
 		const cleanupListeners: (() => void)[] = [];
 
 		// create a ClientHttp2Session
+		logger.debug("PREVIEW URL:", `https://${previewToken.host}`);
 		const remote = connect(`https://${previewToken.host}`);
 		cleanupListeners.push(() => remote.destroy());
 
@@ -221,6 +222,15 @@ export function usePreviewServer({
 				}
 			}
 			const request = message.pipe(remote.request(headers));
+			logger.debug(
+				"WORKER REQUEST",
+				new Date().toLocaleTimeString(),
+				method,
+				url
+			);
+			logger.debug("HEADERS", JSON.stringify(headers, null, 2));
+			logger.debug("PREVIEW TOKEN", previewToken);
+
 			request.on("response", (responseHeaders) => {
 				const status = responseHeaders[":status"] ?? 500;
 
