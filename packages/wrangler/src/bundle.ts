@@ -172,6 +172,11 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
 			}),
+		// Middleware to trigger scheduled events on fetch to /___scheduled
+		process.env.FETCH_TRIGGER_CRON === "true" &&
+			((currentEntry: Entry) => {
+				return applyFetchTriggerCronFacade(currentEntry, tmpDir.path);
+			}),
 	].filter(Boolean);
 
 	let inputEntry = entry;
@@ -198,6 +203,15 @@ export async function bundleWorker(
 		minify,
 		metafile: true,
 		conditions: ["worker", "browser"],
+		// We need to intercept the event listeners for middleware.
+		// We should probably generalise this
+		...(process.env.FETCH_TRIGGER_CRON && entry.format === "service-worker"
+			? {
+					inject: [
+						path.join(__dirname, "../templates/addEventListener-facade.js"),
+					],
+			  }
+			: {}),
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
@@ -206,6 +220,9 @@ export async function bundleWorker(
 				...(nodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
+				...(process.env.FETCH_TRIGGER_CRON && entry.format === "service-worker"
+					? { addEventListener: "swAddEventListener" }
+					: {}),
 			},
 		}),
 		loader: {
@@ -303,6 +320,43 @@ async function applyFormatDevErrorsFacade(
 	const targetPath = path.join(tmpDirPath, "format-dev-errors.entry.js");
 	await esbuild.build({
 		entryPoints: [path.resolve(__dirname, "../templates/format-dev-errors.ts")],
+		bundle: true,
+		sourcemap: true,
+		format: "esm",
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+/** A middleware that allows for scheduled events to be triggered from
+ * a fetch event for the purposes of testing the scheduled event.
+ */
+
+async function applyFetchTriggerCronFacade(
+	entry: Entry,
+	tmpDirPath: string
+): Promise<Entry> {
+	const targetPath = path.join(tmpDirPath, "fetch-trigger-cron.entry.js");
+
+	// We need to wrap a different facade for module and service workers
+	let templateFile;
+	if (entry.format === "modules") {
+		templateFile = "../templates/fetch-trigger-cron/module-facade.ts";
+	} else {
+		templateFile = "../templates/fetch-trigger-cron/sw-facade.ts";
+	}
+
+	await esbuild.build({
+		entryPoints: [path.resolve(__dirname, templateFile)],
 		bundle: true,
 		sourcemap: true,
 		format: "esm",
