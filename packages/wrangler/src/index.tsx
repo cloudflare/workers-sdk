@@ -74,6 +74,7 @@ import {
 import { whoami } from "./whoami";
 
 import { workerNamespaceCommands } from "./worker-namespace";
+import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
@@ -604,12 +605,12 @@ function createCLIParser(argv: string[]) {
 
 	// tail
 	wrangler.command(
-		"tail [name]",
+		"tail [worker]",
 		"🦚 Starts a log tailing session for a published Worker.",
 		(yargs) => {
 			return yargs
-				.positional("name", {
-					describe: "Name of the worker",
+				.positional("worker", {
+					describe: "Name or route of the worker to tail",
 					type: "string",
 				})
 				.option("format", {
@@ -677,7 +678,22 @@ function createCLIParser(argv: string[]) {
 				sendMetrics: config.send_metrics,
 			});
 
-			const scriptName = getLegacyScriptName(args, config);
+			let scriptName;
+
+			// Worker names can't contain "." (and most routes should), so use that as a discriminator
+			if (args.worker?.includes(".")) {
+				scriptName = await getWorkerForZone(args.worker);
+				if (args.format === "pretty") {
+					logger.log(
+						`Connecting to worker ${scriptName} at route ${args.worker}`
+					);
+				}
+			} else {
+				scriptName = getLegacyScriptName(
+					{ name: args.worker, ...args },
+					config
+				);
+			}
 
 			if (!scriptName) {
 				throw new Error(

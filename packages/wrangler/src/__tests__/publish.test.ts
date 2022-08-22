@@ -6622,16 +6622,16 @@ function mockUnauthorizedPublishRoutesRequest({
 	);
 }
 
-function mockCollectKnownRoutesRequest(
+export function mockCollectKnownRoutesRequest(
 	routes: { pattern: string; script: string }[]
 ) {
 	setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
 }
 
-function mockGetZoneFromHostRequest(host: string, zone: string) {
+export function mockGetZoneFromHostRequest(host: string, zone?: string) {
 	setMockResponse("/zones", (_uri, _init, queryParams) => {
 		expect(queryParams.get("name")).toEqual(host);
-		return [{ id: zone }];
+		return zone ? [{ id: zone }] : [];
 	});
 }
 
