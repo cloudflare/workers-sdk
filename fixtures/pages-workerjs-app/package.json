@@ -25,9 +25,9 @@
 		]
 	},
 	"devDependencies": {
-		"undici": "^5.5.1"
+		"undici": "^5.9.1"
 	},
 	"engines": {
-		"node": ">=14"
+		"node": ">=16.13"
 	}
 }
