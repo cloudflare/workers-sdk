@@ -233,6 +233,7 @@ export async function createWorkerPreview(
 		session,
 		abortSignal
 	);
+	/*
 	// fire and forget the prewarm call
 	fetch(token.prewarmUrl.href, {
 		method: "POST",
@@ -252,6 +253,7 @@ export async function createWorkerPreview(
 			}
 		}
 	);
+	*/
 
 	return token;
 }
