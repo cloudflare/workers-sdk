@@ -1,8 +1,4 @@
 ---
-"node-app-pages": patch
-"pages-functions-app": patch
-"pages-workerjs-app": patch
-"remix-pages-app": patch
 "wrangler": patch
 "wranglerjs-compat-webpack-plugin": patch
 ---
