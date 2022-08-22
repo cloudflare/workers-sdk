@@ -1,5 +1,33 @@
 # wrangler
 
+## 2.0.27
+
+### Patch Changes
+
+- [#1686](https://github.com/cloudflare/wrangler2/pull/1686) [`a0a3ffde`](https://github.com/cloudflare/wrangler2/commit/a0a3ffde4a2388cfa2c6d2fa13b4c0ee94a172ba) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: pages dev correctly escapes regex characters in function paths (fixes #1685)
+
+* [#1667](https://github.com/cloudflare/wrangler2/pull/1667) [`ba6451df`](https://github.com/cloudflare/wrangler2/commit/ba6451dfe888580aa7d8d33c2c770a5d3d57667d) Thanks [@arjunyel](https://github.com/arjunyel)! - fix: check for nonempty kv id and r2 bucket_name
+
+- [#1628](https://github.com/cloudflare/wrangler2/pull/1628) [`61e3f00b`](https://github.com/cloudflare/wrangler2/commit/61e3f00bcb017b7ea96bb0c12459c56539fb891a) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: pages dev process exit when proxied process exits
+
+  Currently, if the process pages dev is proxying exists or crashes, pages dev does not clean it up, and attempts to continue proxying requests to it, resulting in it throwing 502 errors. This fixes that behaviour to make wrangler exit with the code the child_process exits with.
+
+* [#1690](https://github.com/cloudflare/wrangler2/pull/1690) [`670fa778`](https://github.com/cloudflare/wrangler2/commit/670fa778db263a3cf81b2b1d572dcb0df96a0463) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: check if we're in CI before trying to open the browser
+
+- [#1675](https://github.com/cloudflare/wrangler2/pull/1675) [`ee30101d`](https://github.com/cloudflare/wrangler2/commit/ee30101db59b195dba734fcbd479ec1aeae1feab) Thanks [@Skye-31](https://github.com/Skye-31)! - chore: use rimraf & cross-env to support windows development
+
+* [#1710](https://github.com/cloudflare/wrangler2/pull/1710) [`9943e647`](https://github.com/cloudflare/wrangler2/commit/9943e647c56c686d0e499c28b3c54b4fbe47dccb) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: pass create-cloudflare the correct path
+
+  wrangler generate was passing create-cloudflare an absolute path, rather than a folder name, resulting in "doubled-up" paths
+
+- [#1712](https://github.com/cloudflare/wrangler2/pull/1712) [`c18c60ee`](https://github.com/cloudflare/wrangler2/commit/c18c60eeacca27656f0e21f1bdcfc0e1298343c3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add debug logging to CF API requests and remote dev worker requests
+
+* [#1663](https://github.com/cloudflare/wrangler2/pull/1663) [`a9f9094c`](https://github.com/cloudflare/wrangler2/commit/a9f9094c92e547c1db7cd45fb5bc46f933f75e39) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Adds `--compatibility-date` and `--compatibility-flags` to `wrangler pages dev`
+
+  Soon to follow in production.
+
+- [#1653](https://github.com/cloudflare/wrangler2/pull/1653) [`46b73b52`](https://github.com/cloudflare/wrangler2/commit/46b73b5227ddbcc0ce53feb1c13845044474c86c) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixed R2 create bucket API endpoint. The `wrangler r2 bucket create` command should work again
+
 ## 2.0.26
 
 ### Patch Changes
