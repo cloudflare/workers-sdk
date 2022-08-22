@@ -33,10 +33,10 @@ export async function createR2Bucket(
 	accountId: string,
 	bucketName: string
 ): Promise<void> {
-	return await fetchResult<void>(
-		`/accounts/${accountId}/r2/buckets/${bucketName}`,
-		{ method: "PUT" }
-	);
+	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
+		method: "POST",
+		body: JSON.stringify({ name: bucketName }),
+	});
 }
 
 /**
