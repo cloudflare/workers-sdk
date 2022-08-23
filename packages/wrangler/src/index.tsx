@@ -15,6 +15,7 @@ import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { devHandler, devOptions } from "./dev";
 import { confirm, prompt } from "./dialogs";
+import { workerNamespaceCommands } from "./dispatch-namespace";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
@@ -73,7 +74,6 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import { workerNamespaceCommands } from "./worker-namespace";
 import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
@@ -982,7 +982,7 @@ function createCLIParser(argv: string[]) {
 											wasm_modules: {},
 											text_blobs: {},
 											data_blobs: {},
-											worker_namespaces: [],
+											dispatch_namespaces: [],
 											logfwdr: { schema: undefined, bindings: [] },
 											unsafe: [],
 										},
@@ -2038,8 +2038,8 @@ function createCLIParser(argv: string[]) {
 	});
 
 	wrangler.command(
-		"worker-namespace",
-		"📦 Interact with a worker namespace",
+		"dispatch-namespace",
+		"📦 Interact with a dispatch namespace",
 		(workerNamespaceYargs) => {
 			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
 		}

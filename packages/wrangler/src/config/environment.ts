@@ -210,7 +210,7 @@ interface EnvironmentInheritable {
 	 * @default `[]`
 	 * @nonInheritable
 	 */
-	worker_namespaces: {
+	dispatch_namespaces: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */

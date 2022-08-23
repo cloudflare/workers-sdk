@@ -123,7 +123,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.worker_namespaces?.forEach(({ binding, namespace }) => {
+	bindings.dispatch_namespaces?.forEach(({ binding, namespace }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "namespace",

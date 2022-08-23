@@ -899,7 +899,7 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
-	experimental(diagnostics, rawEnv, "worker_namespaces");
+	experimental(diagnostics, rawEnv, "dispatch_namespaces");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1085,13 +1085,13 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateServiceBinding),
 			[]
 		),
-		worker_namespaces: notInheritable(
+		dispatch_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"worker_namespaces",
+			"dispatch_namespaces",
 			validateBindingArray(envName, validateWorkerNamespaceBinding),
 			[]
 		),

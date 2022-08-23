@@ -614,7 +614,7 @@ async function getBindings(
 			) || []),
 			...(args.r2 || []),
 		],
-		worker_namespaces: configParam.worker_namespaces,
+		dispatch_namespaces: configParam.dispatch_namespaces,
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
