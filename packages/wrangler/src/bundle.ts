@@ -380,7 +380,7 @@ async function applyMultiWorkerDevFacade(
 	services: Config["services"],
 	workerDefinitions: WorkerRegistry
 ) {
-	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
+	const targetPath = path.join(tmpDirPath, "multiworker-dev-facade.entry.js");
 	const serviceMap = Object.fromEntries(
 		(services || []).map((serviceBinding) => [
 			serviceBinding.binding,
