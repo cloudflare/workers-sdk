@@ -3,13 +3,11 @@ import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import {
-	mockCollectKnownRoutesRequest,
-	mockGetZoneFromHostRequest,
-} from "./publish.test";
 import type {
 	TailEventMessage,
 	RequestEvent,
