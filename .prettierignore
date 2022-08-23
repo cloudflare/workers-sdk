@@ -13,6 +13,4 @@ fixtures/pages-plugin-example/index.js
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
 fixtures/worker-app/dist/
-fixtures/remix-pages-app/build
-fixtures/remix-pages-app/public/
-fixtures/pages-functions-app/public/
+fixtures/pages-functions-app/public/cdn-cgi/

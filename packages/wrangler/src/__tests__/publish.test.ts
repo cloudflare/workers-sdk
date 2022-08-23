@@ -13,7 +13,9 @@ import {
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -6620,19 +6622,6 @@ function mockUnauthorizedPublishRoutesRequest({
 				{ message: "Authentication error", code: 10000 },
 			])
 	);
-}
-
-export function mockCollectKnownRoutesRequest(
-	routes: { pattern: string; script: string }[]
-) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
-}
-
-export function mockGetZoneFromHostRequest(host: string, zone?: string) {
-	setMockResponse("/zones", (_uri, _init, queryParams) => {
-		expect(queryParams.get("name")).toEqual(host);
-		return zone ? [{ id: zone }] : [];
-	});
 }
 
 function mockPublishRoutesFallbackRequest(route: {
