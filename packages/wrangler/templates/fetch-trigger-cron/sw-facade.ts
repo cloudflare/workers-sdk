@@ -8,20 +8,21 @@ function handleFetchEvent(event: FetchEvent) {
 	event.respondWith(
 		(async () => {
 			return new Promise((resolve, reject) => {
-				const evt = {
-					...event,
-					respondWith(response: Response) {
-						resolve(response);
-					},
-				};
-				if (event.request.url.endsWith("/___scheduled")) {
+				// Parse the url to get the path
+				const url = new URL(event.request.url);
+				const path = url.pathname;
+				if (path.endsWith("/___scheduled")) {
 					// If triggered at specific URL, we want to convert fetch events to scheduled events.
 
 					// Because we trigger using a fetch event,
 					// we need to manually trigger the scheduled event,
-					const scheduledEvent = {} as ScheduledEvent;
+
+					// We check to see if we have a cron param in the url
+					const cron = url.searchParams.get("cron");
 					const schEvt = {
-						...scheduledEvent,
+						...event,
+						...(cron ? { cron } : {}),
+						type: "scheduled",
 						waitUntil() {
 							// and return a response as it was triggered from a fetch event
 							resolve(new Response("Successfully ran scheduled event"));
@@ -41,6 +42,14 @@ function handleFetchEvent(event: FetchEvent) {
 				} else {
 					// Not triggered at the specific URL,
 					// so we just pass the fecth event through to the worker
+
+					const evt = {
+						...event,
+						respondWith(response: Response) {
+							resolve(response);
+						},
+					};
+
 					if (globalThis.__inner_sw_fetch_listeners__.length > 0) {
 						for (const listener of globalThis.__inner_sw_fetch_listeners__) {
 							listener(evt);
