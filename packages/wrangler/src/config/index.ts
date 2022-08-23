@@ -91,7 +91,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		unsafe,
 		vars,
 		wasm_modules,
-		worker_namespaces,
+		dispatch_namespaces,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -219,10 +219,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (worker_namespaces !== undefined && worker_namespaces.length > 0) {
+	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
-			type: "Worker Namespaces",
-			entries: worker_namespaces.map(({ binding, namespace }) => {
+			type: "dispatch namespaces",
+			entries: dispatch_namespaces.map(({ binding, namespace }) => {
 				return {
 					key: binding,
 					value: namespace,

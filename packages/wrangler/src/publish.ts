@@ -443,7 +443,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			durable_objects: config.durable_objects,
 			r2_buckets: config.r2_buckets,
 			services: config.services,
-			worker_namespaces: config.worker_namespaces,
+			dispatch_namespaces: config.dispatch_namespaces,
 			logfwdr: config.logfwdr,
 			unsafe: config.unsafe?.bindings,
 		};
