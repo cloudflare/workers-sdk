@@ -383,7 +383,9 @@ export function useWorker(props: {
 				} else if (err.code === 10049) {
 					logger.log("Preview token expired, fetching a new one");
 					// code 10049 happens when the preview token expires
-					// since we want a new preview token when this happens
+					// since we want a new preview token when this happens,
+					// lets increment the counter, and trigger a rerun of
+					// the useEffect above
 					setRestartCounter((prevCount) => prevCount + 1);
 				} else {
 					logger.error("Error on remote worker:", err);
