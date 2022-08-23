@@ -370,7 +370,16 @@ export const Handler = async ({
 				throw e;
 			}
 		}
+	} else {
+		const routesPath = join(directory, "_routes.json");
+
+		if (existsSync(routesPath)) {
+			logger.warn(
+				`⚠️ Ignoring ${routesPath} because project is not in Advanced Mode. Only Advanced Mode projects can specify a custom _routes.json file.`
+			);
+		}
 	}
+
 	const deploymentResponse = await fetchResult<Deployment>(
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 		{
