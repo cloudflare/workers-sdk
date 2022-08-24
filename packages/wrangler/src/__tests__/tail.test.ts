@@ -8,12 +8,14 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+
 import type {
 	TailEventMessage,
 	RequestEvent,
 	ScheduledEvent,
 	AlarmEvent,
 } from "../tail";
+import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 describe("tail", () => {
@@ -44,12 +46,12 @@ describe("tail", () => {
 
 		it("creates and then delete tails", async () => {
 			const api = mockWebsocketAPIs();
-			expect(api.requests.creation.count).toStrictEqual(0);
+			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler("tail test-worker");
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
-			expect(api.requests.creation.count).toStrictEqual(1);
+			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			api.ws.close();
@@ -90,12 +92,12 @@ describe("tail", () => {
 
 		it("creates and then delete tails: legacy envs", async () => {
 			const api = mockWebsocketAPIs("some-env", true);
-			expect(api.requests.creation.count).toStrictEqual(0);
+			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler("tail test-worker --env some-env --legacy-env true");
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
-			expect(api.requests.creation.count).toStrictEqual(1);
+			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			api.ws.close();
@@ -104,12 +106,12 @@ describe("tail", () => {
 
 		it("creates and then delete tails: service envs", async () => {
 			const api = mockWebsocketAPIs("some-env");
-			expect(api.requests.creation.count).toStrictEqual(0);
+			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler("tail test-worker --env some-env --legacy-env false");
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
-			expect(api.requests.creation.count).toStrictEqual(1);
+			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			api.ws.close();
@@ -143,65 +145,57 @@ describe("tail", () => {
 			await expect(tooLow).rejects.toThrow();
 
 			await runWrangler("tail test-worker --sampling-rate 0.25");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ sampling_rate: 0.25 },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"sampling_rate":0.25}]}`
+			);
 		});
 
 		it("sends single status filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ outcome: ["exception", "exceededCpu", "exceededMemory", "unknown"] },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown"]}]}`
+			);
 		});
 
 		it("sends multiple status filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error --status canceled");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{
-					outcome: [
-						"exception",
-						"exceededCpu",
-						"exceededMemory",
-						"unknown",
-						"canceled",
-					],
-				},
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown","canceled"]}]}`
+			);
 		});
 
 		it("sends single HTTP method filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ method: ["POST"] },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"method":["POST"]}]}`
+			);
 		});
 
 		it("sends multiple HTTP method filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST --method GET");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ method: ["POST", "GET"] },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"method":["POST","GET"]}]}`
+			);
 		});
 
 		it("sends header filters without a query", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ header: { key: "X-CUSTOM-HEADER" } },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER"}}]}`
+			);
 		});
 
 		it("sends header filters with a query", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ header: { key: "X-CUSTOM-HEADER", query: "some-value" } },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER","query":"some-value"}}]}`
+			);
 		});
 
 		it("sends single IP filters", async () => {
@@ -209,9 +203,9 @@ describe("tail", () => {
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(`tail test-worker --ip ${fakeIp}`);
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ client_ip: [fakeIp] },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"client_ip":["${fakeIp}"]}]}`
+			);
 		});
 
 		it("sends multiple IP filters", async () => {
@@ -219,9 +213,9 @@ describe("tail", () => {
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ client_ip: [fakeIp, "self"] },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"client_ip":["${fakeIp}","self"]}]}`
+			);
 		});
 
 		it("sends search filters", async () => {
@@ -229,9 +223,9 @@ describe("tail", () => {
 			const search = "filterMe";
 
 			await runWrangler(`tail test-worker --search ${search}`);
-			await expect(api.nextMessageJson()).resolves.toHaveProperty("filters", [
-				{ query: search },
-			]);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"query":"${search}"}]}`
+			);
 		});
 
 		it("sends everything but the kitchen sink", async () => {
@@ -252,30 +246,10 @@ describe("tail", () => {
 				`--search ${query} ` +
 				`--debug`;
 
-			const expectedWebsocketMessage = {
-				filters: [
-					{ sampling_rate },
-					{
-						outcome: [
-							"ok",
-							"exception",
-							"exceededCpu",
-							"exceededMemory",
-							"unknown",
-						],
-					},
-					{ method },
-					{ header: { key: "X-HELLO", query: "world" } },
-					{ client_ip },
-					{ query },
-				],
-				debug: true,
-			};
+			const expectedWebsocketMessage = `{"filters":[{"sampling_rate":0.69},{"outcome":["ok","exception","exceededCpu","exceededMemory","unknown"]},{"method":["GET","POST","PUT"]},{"header":{"key":"X-HELLO","query":"world"}},{"client_ip":["192.0.2.1","self"]},{"query":"onlyTheseMessagesPlease"}]}`;
 
 			await runWrangler(`tail test-worker ${cliFilters}`);
-			await expect(api.nextMessageJson()).resolves.toEqual(
-				expectedWebsocketMessage
-			);
+			expect(api.requests.creation[0].body).toEqual(expectedWebsocketMessage);
 		});
 	});
 
@@ -589,7 +563,7 @@ function deserializeToJson(message: WebSocket.RawData): string {
  */
 type MockAPI = {
 	requests: {
-		creation: RequestCounter;
+		creation: RequestInit[];
 		deletion: RequestCounter;
 	};
 	ws: MockWebSocket;
@@ -615,15 +589,15 @@ function mockCreateTailRequest(
 	websocketURL: string,
 	env?: string,
 	legacyEnv = false
-): RequestCounter {
-	const requests = { count: 0 };
+): RequestInit[] {
+	const requests: RequestInit[] = [];
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	setMockResponse(
 		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails`,
 		"POST",
-		([_url, accountId, scriptName, envName]) => {
-			requests.count++;
+		([_url, accountId, scriptName, envName], req) => {
+			requests.push(req);
 			expect(accountId).toEqual("some-account-id");
 			expect(scriptName).toEqual(
 				legacyEnv && env ? `test-worker-${env}` : "test-worker"
@@ -710,7 +684,7 @@ function mockWebsocketAPIs(env?: string, legacyEnv = false): MockAPI {
 	const api: MockAPI = {
 		requests: {
 			deletion: { count: 0 },
-			creation: { count: 0 },
+			creation: [],
 		},
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		ws: null!, // will be set in the `beforeEach()` below.
