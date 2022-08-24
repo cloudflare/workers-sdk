@@ -470,6 +470,19 @@ function createCLIParser(argv: string[]) {
 						requiresArg: true,
 						array: true,
 					})
+					.option("var", {
+						describe:
+							"A key-value pair to be injected into the script as a variable",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("define", {
+						describe: "A key-value pair to be substituted in the script",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
 					.option("triggers", {
 						describe: "cron schedules to attach",
 						alias: ["schedule", "schedules"],
@@ -563,6 +576,20 @@ function createCLIParser(argv: string[]) {
 				);
 			}
 
+			const cliVars =
+				args.var?.reduce<Record<string, string>>((collectVars, v) => {
+					const [key, ...value] = v.split(":");
+					collectVars[key] = value.join("");
+					return collectVars;
+				}, {}) || {};
+
+			const cliDefines =
+				args.define?.reduce<Record<string, string>>((collectDefines, d) => {
+					const [key, ...value] = d.split(":");
+					collectDefines[key] = value.join("");
+					return collectDefines;
+				}, {}) || {};
+
 			const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 			const assetPaths =
@@ -586,6 +613,8 @@ function createCLIParser(argv: string[]) {
 					? new Date().toISOString().substring(0, 10)
 					: args["compatibility-date"],
 				compatibilityFlags: args["compatibility-flags"],
+				vars: cliVars,
+				defines: cliDefines,
 				triggers: args.triggers,
 				jsxFactory: args["jsx-factory"],
 				jsxFragment: args["jsx-fragment"],

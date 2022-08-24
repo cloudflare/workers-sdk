@@ -1017,6 +1017,8 @@ describe("wrangler dev", () => {
 			      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
 			      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
 			      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+			      --var                                        A key-value pair to be injected into the script as a variable  [array]
+			      --define                                     A key-value pair to be substituted in the script  [array]
 			      --jsx-factory                                The function that is called for each JSX element  [string]
 			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]

@@ -36,6 +36,8 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	assetPaths: AssetPaths | undefined;
+	vars: Record<string, string> | undefined;
+	defines: Record<string, string> | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
@@ -382,7 +384,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
 						nodeCompat,
-						define: config.define,
+						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets && {
 							...config.assets,
@@ -430,7 +432,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					? { binding: "__STATIC_CONTENT", id: assets.namespace }
 					: []
 			),
-			vars: config.vars,
+			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			text_blobs: {
 				...config.text_blobs,
@@ -483,7 +485,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			kv_namespaces: config.kv_namespaces,
 			text_blobs: config.text_blobs,
 		};
-		printBindings(withoutStaticAssets);
+
+		// mask anything that was overridden in cli args
+		// so that we don't log potential secrets into the terminal
+		const maskedVars = { ...withoutStaticAssets.vars };
+		for (const key of Object.keys(maskedVars)) {
+			if (maskedVars[key] !== config.vars[key]) {
+				// This means it was overridden in cli args
+				// so let's mask it
+				maskedVars[key] = "(hidden)";
+			}
+		}
+
+		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
