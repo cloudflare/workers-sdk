@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { fetch, Headers } from "undici";
+import Busboy from "busboy";
+import { fetch, File, FormData, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { logger } from "../logger";
@@ -226,12 +227,68 @@ export async function fetchDashboardScript(
 		?.startsWith("multipart");
 
 	if (usesModules) {
-		const file = await response.text();
+		// Response from edge contains generic "name = worker.js" for dashboard created scripts
+		const file = (await formData(response)).entries().next().value;
+
+		if (file instanceof File) {
+			return await file.text();
+		}
+
+		return file ?? "";
 
 		// Follow up on issue in Undici about multipart/form-data support & replace the workaround: https://github.com/nodejs/undici/issues/974
 		// This should be using a builtin formData() parser pattern.
-		return file.split("\n").slice(4, -4).join("\n");
 	} else {
 		return response.text();
 	}
+}
+
+async function formData({ headers, body }: Response): Promise<FormData> {
+	// undici doesn't include a multipart/form-data parser yet, so we parse
+	// form data with busboy instead
+	const contentType = headers.get("Content-Type") ?? "";
+	if (!/multipart\/form-data/.test(contentType))
+		throw Error("Need Content-Type for multipart/form-data");
+
+	const responseFormData = new FormData();
+
+	let busboy: Busboy.Busboy;
+
+	const parsedHeaders = Object.fromEntries(
+		Array.from(headers).map(([header, value]) => [header.toLowerCase(), value])
+	);
+	try {
+		busboy = Busboy({ headers: parsedHeaders });
+	} catch (err) {
+		// Error due to headers:
+		throw Object.assign(new TypeError(), { cause: err });
+	}
+
+	busboy.on("field", (name, value) => {
+		responseFormData.append(name, value);
+	});
+	busboy.on("file", (name, value, info) => {
+		const { filename, encoding, mimeType } = info;
+		const base64 = encoding.toLowerCase() === "base64";
+		const chunks: Buffer[] = [];
+		value.on("data", (chunk) => {
+			if (base64) chunk = Buffer.from(chunk.toString(), "base64");
+			chunks.push(chunk);
+		});
+		value.on("end", () => {
+			const file = new File(chunks, filename, { type: mimeType });
+			responseFormData.append(name, file);
+		});
+	});
+
+	const busboyResolve = new Promise((resolve, reject) => {
+		busboy.on("finish", resolve);
+		busboy.on("error", (err) => reject(err));
+	});
+
+	if (body !== null) for await (const chunk of body) busboy.write(chunk);
+	busboy.end();
+	await busboyResolve;
+
+	return responseFormData;
 }

@@ -107,6 +107,7 @@
 	"devDependencies": {
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
+		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/express": "^4.17.13",
 		"@types/glob-to-regexp": "0.4.1",
@@ -120,6 +121,7 @@
 		"@types/yargs": "^17.0.10",
 		"@webcontainer/env": "^1.0.1",
 		"body-parser": "^1.20.0",
+		"busboy": "^1.6.0",
 		"clipboardy": "^3.0.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
