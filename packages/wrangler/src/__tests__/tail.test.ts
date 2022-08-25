@@ -59,7 +59,7 @@ describe("tail", () => {
 		});
 		it("should connect to the worker assigned to a given route", async () => {
 			const api = mockWebsocketAPIs();
-			expect(api.requests.creation.count).toStrictEqual(0);
+			expect(api.requests.creation.length).toStrictEqual(0);
 
 			mockGetZoneFromHostRequest("example.com", "test-zone");
 			mockCollectKnownRoutesRequest([
@@ -71,7 +71,7 @@ describe("tail", () => {
 			await runWrangler("tail example.com/*");
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
-			expect(api.requests.creation.count).toStrictEqual(1);
+			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			api.ws.close();
