@@ -228,7 +228,11 @@ export async function fetchDashboardScript(
 
 	if (usesModules) {
 		// Response from edge contains generic "name = worker.js" for dashboard created scripts
-		const file = (await formData(response)).entries().next().value;
+		const form = await formData(response);
+		const entries = Array.from(form.entries());
+		if (entries.length > 1)
+			throw new RangeError("Expected only one entry in multipart response");
+		const [_, file] = entries[0];
 
 		if (file instanceof File) {
 			return await file.text();
