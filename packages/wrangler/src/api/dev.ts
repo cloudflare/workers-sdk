@@ -1,4 +1,4 @@
-import { startDev } from "../dev";
+import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
@@ -56,6 +56,7 @@ interface DevOptions {
 export async function unstable_dev(
 	script: string,
 	options: DevOptions,
+	testMode = true,
 	disableExperimentalWarning?: boolean
 ) {
 	if (!disableExperimentalWarning) {
@@ -63,31 +64,69 @@ export async function unstable_dev(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
 	}
-
-	return new Promise<{
-		stop: () => void;
-		fetch: (init?: RequestInit) => Promise<Response | undefined>;
-		waitUntilExit: () => Promise<void>;
-	}>((resolve) => {
-		//lmao
-		return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
-			const devServer = startDev({
-				script: script,
-				inspect: false,
-				logLevel: "none",
-				showInteractiveDevSession: false,
-				_: [],
-				$0: "",
-				...options,
-				local: true,
-				onReady: () => ready(devServer),
-			});
-		}).then((devServer) => {
-			resolve({
-				stop: devServer.stop,
-				fetch: devServer.fetch,
-				waitUntilExit: devServer.devReactElement.waitUntilExit,
+	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
+	if (testMode) {
+		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
+		return new Promise<{
+			stop: () => Promise<void>;
+			fetch: (init?: RequestInit) => Promise<Response | undefined>;
+			waitUntilExit: () => Promise<void>;
+		}>((resolve) => {
+			//lmao
+			return new Promise<Awaited<ReturnType<typeof startApiDev>>>((ready) => {
+				// once the devServer is ready for requests, we resolve the inner promise
+				// (where we've named the resolve function "ready")
+				const devServer = startApiDev({
+					script: script,
+					inspect: false,
+					logLevel: "none",
+					showInteractiveDevSession: false,
+					_: [],
+					$0: "",
+					...options,
+					local: true,
+					onReady: () => ready(devServer),
+				});
+			}).then((devServer) => {
+				// now that the inner promise has resolved, we can resolve the outer promise
+				// with an object that lets you fetch and stop the dev server
+				resolve({
+					stop: devServer.stop,
+					fetch: devServer.fetch,
+					//no-op, does nothing in tests
+					waitUntilExit: async () => {
+						return;
+					},
+				});
 			});
 		});
-	});
+	} else {
+		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
+		return new Promise<{
+			stop: () => void;
+			fetch: (init?: RequestInit) => Promise<Response | undefined>;
+			waitUntilExit: () => Promise<void>;
+		}>((resolve) => {
+			//lmao
+			return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
+				const devServer = startDev({
+					script: script,
+					inspect: false,
+					logLevel: "none",
+					showInteractiveDevSession: false,
+					_: [],
+					$0: "",
+					...options,
+					local: true,
+					onReady: () => ready(devServer),
+				});
+			}).then((devServer) => {
+				resolve({
+					stop: devServer.stop,
+					fetch: devServer.fetch,
+					waitUntilExit: devServer.devReactElement.waitUntilExit,
+				});
+			});
+		});
+	}
 }

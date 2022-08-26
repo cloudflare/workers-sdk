@@ -18,7 +18,7 @@ import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
-interface LocalProps {
+export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
@@ -26,7 +26,7 @@ interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
-	workerDefinitions: WorkerRegistry;
+	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	port: number;
 	ip: string;
@@ -235,7 +235,9 @@ function useLocalWorker({
 				externalDurableObjects: Object.fromEntries(
 					externalDurableObjects
 						.map((binding) => {
-							const service = workerDefinitions[binding.script_name as string];
+							const service =
+								workerDefinitions &&
+								workerDefinitions[binding.script_name as string];
 							if (!service) return [binding.name, undefined];
 
 							const name = service.durableObjects.find(
