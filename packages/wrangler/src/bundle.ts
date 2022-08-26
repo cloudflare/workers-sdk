@@ -173,6 +173,16 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
 			}),
+
+		// Middleware loader: to add middleware, we add the path to the middleware
+		// Currently for demonstration purposes we have two example middlewares applied
+		true &&
+			((currentEntry: Entry) => {
+				return applyMiddlewareLoaderFacade(currentEntry, tmpDir.path, [
+					"../templates/middleware/middleware-pretty-error.ts",
+					"../templates/middleware/middleware-scheduled.ts",
+				]);
+			}),
 	].filter(Boolean);
 
 	let inputEntry = entry;
@@ -321,6 +331,200 @@ async function applyFormatDevErrorsFacade(
 		...entry,
 		file: targetPath,
 	};
+}
+
+/**
+ * A facade that acts as a "middleware loader".
+ * Instead of needing to apply a facade for each individual middleware, this allows
+ * middleware to be written in a more traditional manner and then be applied all
+ * at once, requiring just two esbuild steps, rather than 1 per middleware.
+ */
+async function applyMiddlewareLoaderFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	middleware: string[] // a list of paths to middleware files
+): Promise<Entry> {
+	// Firstly we need to insert the middleware array into the project,
+	// and then we load the middleware - this insertion and loading is
+	// different for each format.
+
+	// STEP 1: Insert the middleware
+	const targetPathInsertion = path.join(
+		tmpDirPath,
+		"middleware-insertion.entry.js"
+	);
+
+	// We need to import each of the middlewares, so we need to generate a
+	// random, unique identifier that we can use for the import.
+	// Middlewares are required to be default exports so we can import to any name.
+	const genID = new IdentifierGenerator();
+	const middlewareIdentifiers = middleware.map(
+		() => `__MIDDLEWARE_${genID.next()}__`
+	);
+
+	const dynamicFacadePath = path.join(
+		tmpDirPath,
+		"middleware-insertion-facade.js"
+	);
+
+	if (entry.format === "modules") {
+		// We use a facade to expose the required middleware alongside any user defined
+		// middleware on the worker object
+
+		const imports = middlewareIdentifiers
+			.map((m) => `import ${m} from "${m}";`)
+			.join("\n");
+
+		// write a file with all of the imports required
+		fs.writeFileSync(
+			dynamicFacadePath,
+			`import worker from "__ENTRY_POINT__";
+			${imports}
+			const facade = {
+				...worker,
+				middleware: [
+					${middlewareIdentifiers.join(",\n")},
+					...(worker.middleware ? worker.middleware : []),
+				]
+			}
+			export default facade;`
+		);
+
+		await esbuild.build({
+			entryPoints: [path.resolve(__dirname, dynamicFacadePath)],
+			bundle: true,
+			sourcemap: true,
+			format: "esm",
+			plugins: [
+				esbuildAliasExternalPlugin({
+					__ENTRY_POINT__: entry.file,
+					...middleware.reduce(
+						(obj, val, index) => ({
+							...obj,
+							[`__MIDDLEWARE_${middlewareIdentifiers[index]}__`]: path.resolve(
+								__dirname,
+								val
+							),
+						}),
+						{}
+					),
+				}),
+			],
+			outfile: targetPathInsertion,
+		});
+	} else {
+		// We handle service workers slightly differently as we have to overwrite
+		// the event listeners and reimplement them
+
+		await esbuild.build({
+			entryPoints: [entry.file],
+			bundle: true,
+			sourcemap: true,
+			format: "esm",
+			outfile: targetPathInsertion,
+		});
+
+		const imports = middlewareIdentifiers
+			.map(
+				(m, i) =>
+					`import ${m} from "${path.resolve(__dirname, middleware[i])}";`
+			)
+			.join("\n");
+
+		// We add the new modules with imports and then register using the
+		// addMiddleware function (which gets rewritten in the next build step)
+
+		// We choose to run middleware inserted in wrangler before user inserted
+		// middleware in the stack
+		// To do this, we either need to execute the addMiddleware function first
+		// before any user middleware, or use a separate handling function.
+		// We choose to do the latter as to prepend, we would have to load the entire
+		// script into memory as a prepend function doesn't exist or work in the same
+		// way that an append function does.
+
+		fs.copyFileSync(targetPathInsertion, dynamicFacadePath);
+		fs.appendFileSync(
+			dynamicFacadePath,
+			`
+			${imports}
+			addMiddlewareInternal([${middlewareIdentifiers.join(",")}])
+		`
+		);
+	}
+
+	// STEP 2: Load the middleware
+	const targetPathLoader = path.join(tmpDirPath, "middleware-loader.entry.js");
+
+	const loaderPath =
+		entry.format === "modules"
+			? path.resolve(__dirname, "../templates/middleware/loader-modules.ts")
+			: dynamicFacadePath;
+
+	await esbuild.build({
+		entryPoints: [loaderPath],
+		bundle: true,
+		sourcemap: true,
+		format: "esm",
+		...(entry.format === "service-worker"
+			? {
+					inject: [
+						path.resolve(__dirname, "../templates/middleware/loader-sw.ts"),
+					],
+					define: {
+						addEventListener: "__facade_addEventListener__",
+						removeEventListener: "__facade_removeEventListener__",
+						dispatchEvent: "__facade_dispatchEvent__",
+						addMiddleware: "__facade_register__",
+						addMiddlewareInternal: "__facade_registerInternal__",
+					},
+			  }
+			: {
+					plugins: [
+						esbuildAliasExternalPlugin({
+							__ENTRY_POINT__: targetPathInsertion,
+							"./common": path.resolve(
+								__dirname,
+								"../templates/middleware/common.ts"
+							),
+						}),
+					],
+			  }),
+		outfile: targetPathLoader,
+	});
+
+	return {
+		...entry,
+		file: targetPathLoader,
+	};
+}
+
+/**
+ * A simple way of generating unique alphabetical ids
+ */
+class IdentifierGenerator {
+	_chars: string;
+	_nextId: number[];
+	constructor(chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		this._chars = chars;
+		this._nextId = [0];
+	}
+	next() {
+		const r = [];
+		for (const char of this._nextId) r.unshift(this._chars[char]);
+		this._increment();
+		return r.join("");
+	}
+	_increment() {
+		for (let i = 0; i < this._nextId.length; i++) {
+			const val = ++this._nextId[i];
+			if (val >= this._chars.length) this._nextId[i] = 0;
+			else return;
+		}
+		this._nextId.push(0);
+	}
+	*[Symbol.iterator]() {
+		while (true) yield this.next();
+	}
 }
 
 /**
