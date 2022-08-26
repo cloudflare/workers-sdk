@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "CommonJS",
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types"],
+		"moduleResolution": "node",
+		"jsx": "react-jsxdev"
+	}
+}

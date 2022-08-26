@@ -1,0 +1,16 @@
+name = "pdk-editor"
+compatibility_date = "2022-08-31"
+assets = "public"
+main = "src/worker.ts"
+
+[[kv_namespaces]]
+binding = "Docs"
+id = "6dbb9795d4e940bf8df38d05ea7be385"
+preview_id = "6dbb9795d4e940bf8df38d05ea7be385"
+
+[[dispatch_namespaces]]
+binding = 'dispatcher'
+namespace = 'alpha'
+
+[build]
+command = "npx esbuild src/app.tsx --outdir=public/dist --bundle"

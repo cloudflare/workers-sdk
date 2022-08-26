@@ -1,0 +1,37 @@
+{
+	"name": "@cloudflare/pdk",
+	"version": "1.0.0",
+	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "jest"
+	},
+	"jest": {
+		"setupFilesAfterEnv": [
+			"<rootDir>/src/__tests__/jest.setup.ts"
+		],
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testTimeout": 30000,
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
+		]
+	},
+	"dependencies": {
+		"undici": "^5.9.1",
+		"web-file-polyfill": "^1.0.4"
+	},
+	"devDependencies": {
+		"jest-fetch-mock": "^3.0.3"
+	}
+}

@@ -48,7 +48,7 @@ type WorkerMetadataBinding =
 			destination: string;
 	  };
 
-export interface WorkerMetadata {
+export type WorkerMetadata = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
 	/** The name of the entry point module. Only exists when the worker is in the service-worker format */
@@ -60,7 +60,8 @@ export interface WorkerMetadata {
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings: WorkerMetadataBinding["type"][];
-}
+	tags?: string[]; // Only used when uploading to a dispatch namespace
+};
 
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
@@ -258,6 +259,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
 		keep_bindings: ["plain_text", "json"],
+		...(tags && { tags }),
+		tags: [],
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));
