@@ -21,15 +21,7 @@ const __facade_middleware__: Middleware[] = [];
 
 export function __facade_register__(...args: (Middleware | Middleware[])[]) {
 	// This function allows for registering of one or many middleware
-	for (const arg of arguments) {
-		if (Array.isArray(arg)) {
-			for (const middleware of arg) {
-				__facade_middleware__.push(middleware);
-			}
-		} else {
-			__facade_middleware__.push(arg);
-		}
-	}
+	__facade_middleware__.push(...args.flat());
 }
 
 export function __facade_registerInternal__(
@@ -38,15 +30,7 @@ export function __facade_registerInternal__(
 	// This function allows for registering of one or many middleware
 	// For internal middleware we want to push to the start of the stack
 	// We reverse the ordering of the arrays such that they get inserted in the right order
-	for (const arg of Array.from(arguments).reverse()) {
-		if (Array.isArray(arg)) {
-			for (const middleware of arg.reverse()) {
-				__facade_middleware__.unshift(middleware);
-			}
-		} else {
-			__facade_middleware__.unshift(arg);
-		}
-	}
+	__facade_middleware__.unshift(...args.flat());
 }
 
 function __facade_invokeChain__(
