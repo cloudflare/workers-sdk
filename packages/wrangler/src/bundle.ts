@@ -357,9 +357,8 @@ async function applyMiddlewareLoaderFacade(
 	// We need to import each of the middlewares, so we need to generate a
 	// random, unique identifier that we can use for the import.
 	// Middlewares are required to be default exports so we can import to any name.
-	const genID = new IdentifierGenerator();
 	const middlewareIdentifiers = middleware.map(
-		() => `__MIDDLEWARE_${genID.next()}__`
+		(_, index) => `__MIDDLEWARE_${index}__`
 	);
 
 	const dynamicFacadePath = path.join(
@@ -496,35 +495,6 @@ async function applyMiddlewareLoaderFacade(
 		...entry,
 		file: targetPathLoader,
 	};
-}
-
-/**
- * A simple way of generating unique alphabetical ids
- */
-class IdentifierGenerator {
-	_chars: string;
-	_nextId: number[];
-	constructor(chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		this._chars = chars;
-		this._nextId = [0];
-	}
-	next() {
-		const r = [];
-		for (const char of this._nextId) r.unshift(this._chars[char]);
-		this._increment();
-		return r.join("");
-	}
-	_increment() {
-		for (let i = 0; i < this._nextId.length; i++) {
-			const val = ++this._nextId[i];
-			if (val >= this._chars.length) this._nextId[i] = 0;
-			else return;
-		}
-		this._nextId.push(0);
-	}
-	*[Symbol.iterator]() {
-		while (true) yield this.next();
-	}
 }
 
 /**
