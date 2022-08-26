@@ -470,6 +470,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_flags:
 				props.compatibilityFlags ?? config.compatibility_flags,
 			usage_model: config.usage_model,
+			keep_bindings: true,
 		};
 
 		void printBundleSize(

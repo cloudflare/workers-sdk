@@ -315,6 +315,7 @@ export function useWorker(props: {
 				compatibility_date: compatibilityDate,
 				compatibility_flags: compatibilityFlags,
 				usage_model: usageModel,
+				keep_bindings: true,
 			};
 
 			const workerAccount: CfAccount = {

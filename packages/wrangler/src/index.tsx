@@ -991,6 +991,7 @@ function createCLIParser(argv: string[]) {
 										compatibility_date: undefined,
 										compatibility_flags: undefined,
 										usage_model: undefined,
+										keep_bindings: false, // this doesn't matter since it's a new script anyway
 									}),
 								}
 							);
