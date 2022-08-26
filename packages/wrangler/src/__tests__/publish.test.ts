@@ -6489,6 +6489,9 @@ function mockUploadWorkerRequest(
 			} else {
 				expect(metadata.body_part).toEqual("index.js");
 			}
+
+			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+
 			if ("expectedBindings" in options) {
 				expect(metadata.bindings).toEqual(expectedBindings);
 			}

@@ -23,6 +23,31 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
+type WorkerMetadataBinding =
+	// If you add any new binding types here, also add it to safeBindings
+	// under validateUnsafeBinding in config/validation.ts
+	| { type: "plain_text"; name: string; text: string }
+	| { type: "json"; name: string; json: unknown }
+	| { type: "wasm_module"; name: string; part: string }
+	| { type: "text_blob"; name: string; part: string }
+	| { type: "data_blob"; name: string; part: string }
+	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| {
+			type: "durable_object_namespace";
+			name: string;
+			class_name: string;
+			script_name?: string;
+			environment?: string;
+	  }
+	| { type: "r2_bucket"; name: string; bucket_name: string }
+	| { type: "service"; name: string; service: string; environment?: string }
+	| { type: "namespace"; name: string; namespace: string }
+	| {
+			type: "logfwdr";
+			name: string;
+			destination: string;
+	  };
+
 export interface WorkerMetadata {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
@@ -33,31 +58,8 @@ export interface WorkerMetadata {
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
-	// If you add any new binding types here, also add it to safeBindings
-	// under validateUnsafeBinding in config/validation.ts
-	bindings: (
-		| { type: "plain_text"; name: string; text: string }
-		| { type: "json"; name: string; json: unknown }
-		| { type: "wasm_module"; name: string; part: string }
-		| { type: "text_blob"; name: string; part: string }
-		| { type: "data_blob"; name: string; part: string }
-		| { type: "kv_namespace"; name: string; namespace_id: string }
-		| {
-				type: "durable_object_namespace";
-				name: string;
-				class_name: string;
-				script_name?: string;
-				environment?: string;
-		  }
-		| { type: "r2_bucket"; name: string; bucket_name: string }
-		| { type: "service"; name: string; service: string; environment?: string }
-		| { type: "namespace"; name: string; namespace: string }
-		| {
-				type: "logfwdr";
-				name: string;
-				destination: string;
-		  }
-	)[];
+	bindings: WorkerMetadataBinding[];
+	keep_bindings: WorkerMetadataBinding["type"][];
 }
 
 /**
@@ -255,6 +257,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
+		keep_bindings: ["plain_text", "json"],
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));

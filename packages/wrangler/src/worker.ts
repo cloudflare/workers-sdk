@@ -191,6 +191,7 @@ export interface CfWorkerInit {
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
+	keep_bindings: boolean | undefined;
 }
 
 export interface CfWorkerContext {
