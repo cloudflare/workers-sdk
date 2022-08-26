@@ -40,6 +40,7 @@ describe("wrangler", () => {
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
+			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers
@@ -79,6 +80,7 @@ describe("wrangler", () => {
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
+			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers

@@ -48,6 +48,7 @@ import {
 import { previewHandler, previewOptions } from "./preview";
 import publish from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
+import { queues } from "./queues/cli/commands";
 import {
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
@@ -1805,6 +1806,14 @@ function createCLIParser(argv: string[]) {
 		"⚡️ Configure Cloudflare Pages",
 		async (pagesYargs) => {
 			await pages(pagesYargs.command(subHelp));
+		}
+	);
+
+	wrangler.command(
+		"queues",
+		"🆀 Configure Workers Queues",
+		async (queuesYargs) => {
+			await queues(queuesYargs.command(subHelp));
 		}
 	);
 
