@@ -63,6 +63,8 @@ interface DevArgs {
 	tsconfig?: string;
 	local?: boolean;
 	minify?: boolean;
+	var?: string[];
+	define?: string[];
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
 	"live-reload"?: boolean;
@@ -194,6 +196,19 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 			.option("upstream-protocol", {
 				describe: "Protocol to forward requests to host on, defaults to https.",
 				choices: ["http", "https"] as const,
+			})
+			.option("var", {
+				describe:
+					"A key-value pair to be injected into the script as a variable",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
+			.option("define", {
+				describe: "A key-value pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
 			})
 			.option("jsx-factory", {
 				describe: "The function that is called for each JSX element",
@@ -426,22 +441,36 @@ export async function startDev(args: StartDevOptions) {
 		const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
 		const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
 
+		const cliVars =
+			args.var?.reduce<Record<string, string>>((collectVars, v) => {
+				const [key, ...value] = v.split(":");
+				collectVars[key] = value.join("");
+				return collectVars;
+			}, {}) || {};
+
+		const cliDefines =
+			args.define?.reduce<Record<string, string>>((collectDefines, d) => {
+				const [key, ...value] = d.split(":");
+				collectDefines[key] = value.join("");
+				return collectDefines;
+			}, {}) || {};
+
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
 			// now log all available bindings into the terminal
 			const bindings = await getBindings(configParam, {
 				kv: args.kv,
-				vars: args.vars,
+				vars: { ...args.vars, ...cliVars },
 				durableObjects: args.durableObjects,
 				r2: args.r2,
 			});
 
-			// mask anything that was overridden in .dev.vars
+			// mask anything that was overridden in .dev.vars or cli args
 			// so that we don't log potential secrets into the terminal
 			const maskedVars = { ...bindings.vars };
 			for (const key of Object.keys(maskedVars)) {
 				if (maskedVars[key] !== configParam.vars[key]) {
-					// This means it was overridden in .dev.vars
+					// This means it was overridden in .dev.vars or cli args
 					// so let's mask it
 					maskedVars[key] = "(hidden)";
 				}
@@ -476,7 +505,7 @@ export async function startDev(args: StartDevOptions) {
 					minify={args.minify ?? config.minify}
 					nodeCompat={nodeCompat}
 					build={config.build || {}}
-					define={config.define}
+					define={{ ...config.define, ...cliDefines }}
 					initialMode={args.local ? "local" : "remote"}
 					jsxFactory={args["jsx-factory"] || config.jsx_factory}
 					jsxFragment={args["jsx-fragment"] || config.jsx_fragment}

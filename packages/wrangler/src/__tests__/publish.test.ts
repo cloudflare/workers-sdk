@@ -3617,6 +3617,32 @@ addEventListener('fetch', event => {});`
 			        "
 		      `);
 		});
+
+		it("can be overridden with cli args", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+				console.log(abc);
+			`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("publish --dry-run --outdir dist --define abc:789");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatchInlineSnapshot(`
+			        "(() => {
+			          // index.js
+			          console.log(789);
+			        })();
+			        //# sourceMappingURL=index.js.map
+			        "
+		      `);
+		});
 	});
 
 	describe("custom builds", () => {
@@ -5233,6 +5259,29 @@ addEventListener('fetch', event => {});`
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should read vars passed as cli arguments", async () => {
+				writeWranglerToml();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				await runWrangler("publish index.js --var TEXT:sometext --var COUNT:1");
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Your worker has access to the following bindings:
+			- Vars:
+			  - TEXT: \\"(hidden)\\"
+			  - COUNT: \\"(hidden)\\"
+			Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "",
+			}
+		`);
 			});
 		});
 
