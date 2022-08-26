@@ -1,11 +1,5 @@
-import {
-	Awaitable,
-	Dispatcher,
-	Middleware,
-	__facade_invoke__,
-	__facade_register__,
-	__facade_registerInternal__,
-} from "./common";
+import { Awaitable, Dispatcher, Middleware, __facade_invoke__ } from "./common";
+export { __facade_register__, __facade_registerInternal__ } from "./common";
 
 const __FACADE_EVENT_TARGET__ = new EventTarget();
 
@@ -141,14 +135,6 @@ class __Facade_ScheduledEvent__ extends __Facade_ExtendableEvent__ {
 		this.#noRetry();
 	}
 }
-
-export const __facade_registerMiddlewares__ = function (
-	middlewares: Middleware[]
-) {
-	for (const middleware of middlewares) {
-		__facade_register__(middleware);
-	}
-};
 
 globalThis.addEventListener("fetch", (event) => {
 	const ctx: ExecutionContext = {
