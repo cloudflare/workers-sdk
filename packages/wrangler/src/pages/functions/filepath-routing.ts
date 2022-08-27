@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 import { toUrlPath } from "../../paths";
+import { loader } from "./esbuild";
 import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
 
@@ -24,12 +26,37 @@ export async function generateConfigFromFileTree({
 
 	await forEachFile(baseDir, async (filepath) => {
 		const ext = path.extname(filepath);
+		const outfile = path.join(
+			tmpdir(),
+			`${Math.random().toString(36).slice(2, 8)}.mjs`
+		);
 		if (/^\.(mjs|js|ts|tsx|jsx)$/.test(ext)) {
 			const { metafile } = await build({
 				metafile: true,
-				write: false,
-				bundle: false,
+				outfile,
+				format: "esm",
+				target: "es6",
+				loader,
+				bundle: true,
 				entryPoints: [path.resolve(filepath)],
+				plugins: [
+					{
+						name: "Assets",
+						setup(pluginBuild) {
+							pluginBuild.onResolve({ filter: /^assets:/ }, () => {
+								return { path: filepath, namespace: "assets" };
+							});
+
+							pluginBuild.onLoad({ filter: /.*/, namespace: "assets" }, () => {
+								return {
+									contents: `export const onRequest = () => {
+											return new Response("Static asset")
+										}`,
+								};
+							});
+						},
+					},
+				],
 			});
 			const exportNames: string[] = [];
 			if (metafile) {
@@ -37,13 +64,22 @@ export async function generateConfigFromFileTree({
 					exportNames.push(...metafile.outputs[output].exports);
 				}
 			}
+			console.log(filepath, exportNames);
 			for (const exportName of exportNames) {
 				const [match, method = ""] = (exportName.match(
-					/^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?$/
+					/^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?|default?$/
 				) ?? []) as (string | undefined)[];
 
 				if (match) {
 					const basename = path.basename(filepath).slice(0, -ext.length);
+
+					if (match === "default") {
+						try {
+							if (!("fetch" in (await import(outfile)).default)) {
+								continue;
+							}
+						} catch {}
+					}
 
 					const isIndexFile = basename === "index";
 					// TODO: deprecate _middleware_ in favor of _middleware

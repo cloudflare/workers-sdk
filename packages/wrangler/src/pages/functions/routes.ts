@@ -106,7 +106,9 @@ export function parseConfig(config: Config, baseDir: string) {
 				importMap.set(modulePath, { filepath: resolvedPath, name, identifier });
 			}
 
-			return identifier;
+			return name === "default"
+				? `(context) => ${identifier}.fetch(context.request, context.env, { waitUntil: context.waitUntil.bind(context) })`
+				: identifier;
 		});
 	}
 

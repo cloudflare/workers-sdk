@@ -111,6 +111,23 @@ describe("Pages Functions", () => {
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 	});
 
+	it("can handle 'export *'", async () => {
+		const response = await waitUntilReady("http://localhost:8789/export-all");
+		const text = await response.text();
+		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
+	});
+
+	it("can handle 'export default { fetch() }'", async () => {
+		let response = await waitUntilReady("http://localhost:8789/fetch-export", {
+			method: "POST",
+		});
+		let text = await response.text();
+		expect(text).toContain("hello from a fetch handler!");
+		response = await waitUntilReady("http://localhost:8789/fetch-export");
+		text = await response.text();
+		expect(text).toContain("hello from an onRequestGet!");
+	});
+
 	it("can use parameters", async () => {
 		const response = await waitUntilReady(
 			"http://localhost:8789/blog/hello-world"
