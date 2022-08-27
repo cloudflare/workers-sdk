@@ -4,6 +4,7 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
 import { nanoid } from "nanoid";
+import { loader } from "./esbuild";
 
 type Options = {
 	routesModule: string;
@@ -34,10 +35,7 @@ export function buildWorker({
 		bundle: true,
 		format: "esm",
 		target: "esnext",
-		loader: {
-			".html": "text",
-			".txt": "text",
-		},
+		loader,
 		outfile,
 		minify,
 		sourcemap,

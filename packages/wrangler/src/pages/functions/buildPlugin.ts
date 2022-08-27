@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
+import { loader } from "./esbuild";
 
 type Options = {
 	routesModule: string;
@@ -29,10 +30,7 @@ export function buildPlugin({
 		bundle: true,
 		format: "esm",
 		target: "esnext",
-		loader: {
-			".html": "text",
-			".txt": "text",
-		},
+		loader,
 		outfile,
 		minify,
 		sourcemap,
