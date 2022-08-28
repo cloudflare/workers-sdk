@@ -457,11 +457,11 @@ async function spawnProxyProcess({
 	port?: number;
 	command: (string | number)[];
 }): Promise<undefined | number> {
-	if (port !== undefined) {
-		return port;
-	}
-
 	if (command.length === 0) {
+		if (port !== undefined) {
+			return port;
+		}
+
 		CLEANUP();
 		throw new FatalError(
 			"Must specify a directory of static assets to serve or a command to run.",
