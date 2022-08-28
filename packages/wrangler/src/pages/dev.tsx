@@ -464,7 +464,7 @@ async function spawnProxyProcess({
 
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve or a command to run.",
+			"Must specify a directory of static assets to serve or a command to run or a proxy prot.",
 			1
 		);
 	}
