@@ -76,11 +76,14 @@ export async function PostConsumer(
 	);
 }
 
-export interface PostConsumerBody {
-	script_name: string;
-	environment_name: string;
+export interface PutConsumerBody {
 	settings: ConsumerSettings;
 	dead_letter_queue?: string;
+}
+
+export interface PostConsumerBody extends PutConsumerBody {
+	script_name: string;
+	environment_name: string;
 }
 
 export interface ConsumerSettings {
@@ -110,5 +113,23 @@ export async function DeleteConsumer(
 	}
 	return fetchResult(resource, {
 		method: "DELETE",
+	});
+}
+
+export async function PutConsumer(
+	config: Config,
+	queueName: string,
+	scriptName: string,
+	envName: string | undefined,
+	body: PutConsumerBody
+): Promise<ConsumerResponse> {
+	const accountId = await requireAuth(config);
+	let resource = `/accounts/${accountId}/workers/queues/${queueName}/consumers/${scriptName}`;
+	if (envName !== undefined) {
+		resource += `/environments/${envName}`;
+	}
+	return fetchResult(resource, {
+		method: "PUT",
+		body: JSON.stringify(body),
 	});
 }

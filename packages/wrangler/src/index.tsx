@@ -1007,6 +1007,7 @@ function createCLIParser(argv: string[]) {
 											kv_namespaces: [],
 											vars: {},
 											durable_objects: { bindings: [] },
+											queues: [],
 											r2_buckets: [],
 											services: [],
 											wasm_modules: {},

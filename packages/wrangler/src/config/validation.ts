@@ -1065,6 +1065,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateKVBinding),
 			[]
 		),
+		queues: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"queues",
+			validateQueues(envName),
+			{ producers: [], consumers: [] }
+		),
 		r2_buckets: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1652,6 +1662,47 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"queue" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	if (
+		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"binding",
+			"queue",
+		])
+	) {
+		return false;
+	}
+
+	// Queue bindings must have a binding and queue.
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		!isRequiredProperty(value, "queue", "string") ||
+		(value as { queue: string }).queue.length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	return isValid;
+};
+
 const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -1858,5 +1909,119 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+	return isValid;
+};
+
+function validateQueues(envName: string): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || Array.isArray(value) || value === null) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		if (
+			!validateAdditionalProperties(
+				diagnostics,
+				fieldPath,
+				Object.keys(value),
+				["consumers", "producers"]
+			)
+		) {
+			isValid = false;
+		}
+
+		if (hasProperty(value, "consumers")) {
+			const consumers = value.consumers;
+			if (!Array.isArray(consumers)) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.consumers" should be an array but got ${JSON.stringify(
+						consumers
+					)}.`
+				);
+				isValid = false;
+			}
+
+			for (let i = 0; i < consumers.length; i++) {
+				const consumer = consumers[i];
+				const consumerPath = `${fieldPath}.consumers[${i}]`;
+				if (!validateConsumer(diagnostics, consumerPath, consumer, config)) {
+					isValid = false;
+				}
+			}
+		}
+
+		if (hasProperty(value, "producers")) {
+			if (
+				!validateBindingArray(envName, validateQueueBinding)(
+					diagnostics,
+					`${field}.producers`,
+					value.producers,
+					config
+				)
+			) {
+				isValid = false;
+			}
+		}
+		return isValid;
+	};
+}
+
+const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be a objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	if (
+		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"queue",
+			"batch_size",
+			"batch_timeout",
+			"message_retries",
+			"dead_letter_queue",
+		])
+	) {
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "queue", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should have a string "queue" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+	}
+
+	const options: {
+		key: string;
+		type: "number" | "string";
+	}[] = [
+		{ key: "batch_size", type: "number" },
+		{ key: "batch_timeout", type: "number" },
+		{ key: "message_retries", type: "number" },
+		{ key: "dead_letter_queue", type: "string" },
+	];
+	for (const optionalOpt of options) {
+		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {
+			diagnostics.errors.push(
+				`"${field}" should, optionally, have a ${optionalOpt.type} "${
+					optionalOpt.key
+				}" field but got ${JSON.stringify(value)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	return isValid;
 };

@@ -111,6 +111,11 @@ interface CfDurableObject {
 	environment?: string;
 }
 
+interface CfQueue {
+	binding: string;
+	queue_name: string;
+}
+
 interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
@@ -181,6 +186,7 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		services: CfService[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
