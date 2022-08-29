@@ -100,7 +100,7 @@ const proxy =
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
 	logger.log(
-		`Proxy environment variables detected. Using ${proxy} for all fetch requests.`
+		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
 
