@@ -1,5 +1,17 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.6
+
+### Patch Changes
+
+- [#1691](https://github.com/cloudflare/wrangler2/pull/1691) [`5b2c3ee2`](https://github.com/cloudflare/wrangler2/commit/5b2c3ee2c5d65b25c966ca07751f544f282525b9) Thanks [@cameron-robey](https://github.com/cameron-robey)! - chore: bump undici and increase minimum node version to 16.13
+
+  - We bump undici to version to 5.9.1 to patch some security vulnerabilities in previous versions
+  - This requires bumping the minimum node version to >= 16.8 so we update the minimum to the LTS 16.13
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1679
+  Fixes https://github.com/cloudflare/wrangler2/issues/1684
+
 ## 0.0.5
 
 ### Patch Changes

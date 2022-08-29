@@ -1,5 +1,63 @@
 # wrangler
 
+## 2.0.28
+
+### Patch Changes
+
+- [#1725](https://github.com/cloudflare/wrangler2/pull/1725) [`eb75413e`](https://github.com/cloudflare/wrangler2/commit/eb75413ec35f6d4f6306601f4d5c9d058f794a18) Thanks [@threepointone](https://github.com/threepointone)! - rename: `worker_namespaces` / `dispatch_namespaces`
+
+  The Worker-for-Platforms team would like to rename this field to more closely match what it's called internally. This fix does a search+replace on this term. This feature already had an experimental warning, and no one's using it at the moment, so we're not going to add a warning/backward compat for existing customers.
+
+* [#1736](https://github.com/cloudflare/wrangler2/pull/1736) [`800f8553`](https://github.com/cloudflare/wrangler2/commit/800f8553b25bb0641fd5e9b38eb5d9ca02abe24c) Thanks [@threepointone](https://github.com/threepointone)! - fix: do not delete previously defined plain_text/json bindings on publish
+
+  Currently, when we publish a worker, we delete an pre-existing bindings if they're not otherwise defined in `wrangler.toml`, and overwrite existing ones. But folks may be deploying with wrangler, and changing environment variables on the fly (like marketing messages, etc). It's annoying when deploying via wrangler blows away those values.
+
+  This patch fixes one of those issues. It will not delete any older bindings that are not in wrangler.toml. It still _does_ overwrite existing vars, but at least this gives a way for developers to have some vars that are not blown away on every publish.
+
+- [#1726](https://github.com/cloudflare/wrangler2/pull/1726) [`0b83504c`](https://github.com/cloudflare/wrangler2/commit/0b83504c12b35301acaeb5302c0d16021c958f8e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Multiworker and static asset dev bug preventing both from being used
+
+  There was previously a collision on the generated filenames which resulted in the generated scripts looping and crashing in Miniflare with error code 7. By renaming one of the generated files, this is avoided.
+
+* [#1718](https://github.com/cloudflare/wrangler2/pull/1718) [`02f1fe9b`](https://github.com/cloudflare/wrangler2/commit/02f1fe9b07bb08b7395e7de1d78cc929221b464f) Thanks [@threepointone](https://github.com/threepointone)! - fix: use `config.dev.ip` when provided
+
+  Because we'd used a default for 0.0.0.0 for the `--ip` flag, `wrangler dev` was overriding the value specified in `wrangler.toml` under `dev.ip`. This fix removes the default value (since it's being set when normalising config anyway).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1714
+
+- [#1727](https://github.com/cloudflare/wrangler2/pull/1727) [`3f9e8f63`](https://github.com/cloudflare/wrangler2/commit/3f9e8f634e6544bf3aef8748f56041a077758ab2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: refresh token when we detect that the preview session has expired (error code 10049)
+
+  When running `wrangler dev`, from time to time the preview session token would expire, and the dev server would need to be manually restarted. This fixes this, by refreshing the token when it expires.
+
+  Closes #1446
+
+* [#1730](https://github.com/cloudflare/wrangler2/pull/1730) [`27ad80ee`](https://github.com/cloudflare/wrangler2/commit/27ad80eed7f25393a0e5c1d8a62c3b0e743a639d) Thanks [@threepointone](https://github.com/threepointone)! - feat: `--var name:value` and `--define name:value`
+
+  This enables passing values for `[vars]` and `[define]` via the cli. We have a number of usecases where the values to be injected during dev/publish aren't available statically (eg: a version string, some identifier for 3p libraries, etc) and reading those values only from `wrangler.toml` isn't good ergonomically. So we can now read those values when passed through the CLI.
+
+  Example: add a var during dev: `wrangler dev --var xyz:123` will inject the var `xyz` with string `"123"`
+
+  (note, only strings allowed for `--var`)
+
+  substitute a global value: `wrangler dev --define XYZ:123` will replace every global identifier `XYZ` with the value `123`.
+
+  The same flags also work with `wrangler publish`.
+
+  Also, you can use actual environment vars in these commands. e.g.: `wrangler dev --var xyz:$XYZ` will set `xyz` to whatever `XYZ` has been set to in the terminal environment.
+
+- [#1700](https://github.com/cloudflare/wrangler2/pull/1700) [`d7c23e49`](https://github.com/cloudflare/wrangler2/commit/d7c23e49706cb8fdb6eb71ece9fb4eca14c62df8) Thanks [@penalosa](https://github.com/penalosa)! - Closes [#1505](https://github.com/cloudflare/wrangler2/issues/1505) by extending `wrangler tail` to allow for passing worker routes as well as worker script names.
+
+  For example, if you have a worker `example-worker` assigned to the route `example.com/*`, you can retrieve it's logs by running either `wrangler tail example.com/*` or `wrangler tail example-worker`—previously only `wrangler tail example-worker` was supported.
+
+* [#1720](https://github.com/cloudflare/wrangler2/pull/1720) [`f638de64`](https://github.com/cloudflare/wrangler2/commit/f638de6426619a899367ba41674179b8ca67c6ab) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.7.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.7.1) incorporating changes from [`2.7.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.7.0)
+
+- [#1691](https://github.com/cloudflare/wrangler2/pull/1691) [`5b2c3ee2`](https://github.com/cloudflare/wrangler2/commit/5b2c3ee2c5d65b25c966ca07751f544f282525b9) Thanks [@cameron-robey](https://github.com/cameron-robey)! - chore: bump undici and increase minimum node version to 16.13
+
+  - We bump undici to version to 5.9.1 to patch some security vulnerabilities in previous versions
+  - This requires bumping the minimum node version to >= 16.8 so we update the minimum to the LTS 16.13
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1679
+  Fixes https://github.com/cloudflare/wrangler2/issues/1684
+
 ## 2.0.27
 
 ### Patch Changes
