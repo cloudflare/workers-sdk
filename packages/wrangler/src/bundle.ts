@@ -178,26 +178,29 @@ export async function bundleWorker(
 
 		// Middleware loader: to add middleware, we add the path to the middleware
 		// Currently for demonstration purposes we have two example middlewares applied
-		// We only want to run for wrangler dev, not publish
+		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
 		(currentEntry: Entry) => {
 			return applyMiddlewareLoaderFacade(
 				currentEntry,
 				tmpDir.path,
-				[
-					{
-						path: "../templates/middleware/middleware-pretty-error.ts",
-						publish: true,
-					},
-					{
-						path: "../templates/middleware/middleware-scheduled.ts",
-						dev: false,
-					},
-				].filter(
+				(
+					[
+						// {
+						// 	path: "../templates/middleware/middleware-pretty-error.ts",
+						// 	publish: true,
+						// 	dev: false.
+						// },
+						// {
+						// 	path: "../templates/middleware/middleware-scheduled.ts",
+						// },
+					] as MiddlewareLoader[]
+				).filter(
 					// We dynamically filter the middleware depending on where we are bundling for
 					(m) =>
 						(targetConsumer === "dev" && m.dev !== false) ||
 						(m.publish && targetConsumer === "publish")
-				)
+				),
+				moduleCollector.plugin
 			);
 		},
 	].filter(Boolean);
@@ -242,7 +245,8 @@ export async function bundleWorker(
 			".cjs": "jsx",
 		},
 		plugins: [
-			moduleCollector.plugin,
+			// We run the moduleCollector plugin for service workers as part of the module loading facade
+			...(entry.format === "modules" ? [moduleCollector.plugin] : []),
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
@@ -367,7 +371,8 @@ interface MiddlewareLoader {
 async function applyMiddlewareLoaderFacade(
 	entry: Entry,
 	tmpDirPath: string,
-	middleware: MiddlewareLoader[] // a list of paths to middleware files
+	middleware: MiddlewareLoader[], // a list of paths to middleware files
+	moduleCollectorPlugin: esbuild.Plugin
 ): Promise<Entry> {
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
@@ -407,10 +412,11 @@ async function applyMiddlewareLoaderFacade(
 			const facade = {
 				...worker,
 				middleware: [
-					${middlewareIdentifiers.join(",\n")},
+					${middlewareIdentifiers.join(",")}${middlewareIdentifiers.length > 0 ? "," : ""}
 					...(worker.middleware ? worker.middleware : []),
 				]
 			}
+			export * from "__ENTRY_POINT__";
 			export default facade;`
 		);
 
@@ -443,6 +449,7 @@ async function applyMiddlewareLoaderFacade(
 			sourcemap: true,
 			format: "esm",
 			outfile: targetPathInsertion,
+			plugins: [moduleCollectorPlugin],
 		});
 
 		const imports = middlewareIdentifiers
@@ -474,7 +481,9 @@ async function applyMiddlewareLoaderFacade(
 	}
 
 	// STEP 2: Load the middleware
-	const targetPathLoader = path.join(tmpDirPath, "middleware-loader.entry.js");
+	// We want to get the filename of the orginal entry point
+	let targetPathLoader = path.join(tmpDirPath, path.basename(entry.file));
+	if (path.extname(entry.file) === "") targetPathLoader += ".js";
 
 	const loaderPath =
 		entry.format === "modules"

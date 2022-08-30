@@ -478,10 +478,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			keep_bindings: true,
 		};
 
-		void printBundleSize(
-			{ name: path.basename(resolvedEntryPointPath), content: content },
-			modules
-		);
+		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
+		if (process.env.JEST_WORKER_ID !== undefined) {
+			await printBundleSize(
+				{ name: path.basename(resolvedEntryPointPath), content: content },
+				modules
+			);
+		} else {
+			void printBundleSize(
+				{ name: path.basename(resolvedEntryPointPath), content: content },
+				modules
+			);
+		}
 
 		const withoutStaticAssets = {
 			...bindings,
