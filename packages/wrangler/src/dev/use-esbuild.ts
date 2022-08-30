@@ -176,6 +176,7 @@ export function useEsbuild({
 		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
+		targetConsumer,
 	]);
 	return bundle;
 }
