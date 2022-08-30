@@ -1,13 +1,13 @@
-name: D1
+name: Queues Experimental builds
 on:
   push:
     branches:
-      - d1
+      - queues
 
 jobs:
-  release:
+  build:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Release
+    name: Build and release `wrangler@queues` to NPM
     runs-on: ubuntu-latest
 
     steps:
@@ -34,8 +34,8 @@ jobs:
       - name: Modify package.json version
         run: node .github/version-script.js
 
-      - name: Publish to NPM
-        run: npm publish --tag d1
+      - name: Publish `wrangler@queues` to NPM
+        run: npm publish --tag queues
         env:
           NODE_ENV: "production"
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
