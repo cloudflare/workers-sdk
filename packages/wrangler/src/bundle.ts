@@ -75,6 +75,7 @@ export async function bundleWorker(
 		services: Config["services"] | undefined;
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
+		targetConsumer: "dev" | "publish";
 	}
 ): Promise<BundleResult> {
 	const {
@@ -91,6 +92,7 @@ export async function bundleWorker(
 		workerDefinitions,
 		services,
 		firstPartyWorkerDevFacade,
+		targetConsumer,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -176,13 +178,28 @@ export async function bundleWorker(
 
 		// Middleware loader: to add middleware, we add the path to the middleware
 		// Currently for demonstration purposes we have two example middlewares applied
-		true &&
-			((currentEntry: Entry) => {
-				return applyMiddlewareLoaderFacade(currentEntry, tmpDir.path, [
-					"../templates/middleware/middleware-pretty-error.ts",
-					"../templates/middleware/middleware-scheduled.ts",
-				]);
-			}),
+		// We only want to run for wrangler dev, not publish
+		(currentEntry: Entry) => {
+			return applyMiddlewareLoaderFacade(
+				currentEntry,
+				tmpDir.path,
+				[
+					{
+						path: "../templates/middleware/middleware-pretty-error.ts",
+						publish: true,
+					},
+					{
+						path: "../templates/middleware/middleware-scheduled.ts",
+						dev: false,
+					},
+				].filter(
+					// We dynamically filter the middleware depending on where we are bundling for
+					(m) =>
+						(targetConsumer === "dev" && m.dev !== false) ||
+						(m.publish && targetConsumer === "publish")
+				)
+			);
+		},
 	].filter(Boolean);
 
 	let inputEntry = entry;
@@ -339,10 +356,18 @@ async function applyFormatDevErrorsFacade(
  * middleware to be written in a more traditional manner and then be applied all
  * at once, requiring just two esbuild steps, rather than 1 per middleware.
  */
+
+interface MiddlewareLoader {
+	path: string;
+	// By default all middleware will run on dev, but will not be run when published
+	publish?: boolean;
+	dev?: boolean;
+}
+
 async function applyMiddlewareLoaderFacade(
 	entry: Entry,
 	tmpDirPath: string,
-	middleware: string[] // a list of paths to middleware files
+	middleware: MiddlewareLoader[] // a list of paths to middleware files
 ): Promise<Entry> {
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
@@ -400,7 +425,7 @@ async function applyMiddlewareLoaderFacade(
 					...middleware.reduce(
 						(obj, val, index) => ({
 							...obj,
-							[middlewareIdentifiers[index]]: path.resolve(__dirname, val),
+							[middlewareIdentifiers[index]]: path.resolve(__dirname, val.path),
 						}),
 						{}
 					),
@@ -423,7 +448,7 @@ async function applyMiddlewareLoaderFacade(
 		const imports = middlewareIdentifiers
 			.map(
 				(m, i) =>
-					`import ${m} from "${path.resolve(__dirname, middleware[i])}";`
+					`import ${m} from "${path.resolve(__dirname, middleware[i].path)}";`
 			)
 			.join("\n");
 

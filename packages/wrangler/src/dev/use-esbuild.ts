@@ -36,6 +36,7 @@ export function useEsbuild({
 	services,
 	durableObjects,
 	firstPartyWorkerDevFacade,
+	targetConsumer,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -53,6 +54,7 @@ export function useEsbuild({
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
+	targetConsumer: "dev" | "publish";
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -116,6 +118,7 @@ export function useEsbuild({
 						workerDefinitions,
 						services,
 						firstPartyWorkerDevFacade,
+						targetConsumer,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
