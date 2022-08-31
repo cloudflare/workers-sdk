@@ -1,5 +1,4 @@
 import { type BuilderCallback } from "yargs";
-import { consumers } from "./consumer";
 
 import * as Create from "./create";
 import * as Delete from "./delete";
@@ -20,13 +19,5 @@ export const queues: BuilderCallback<unknown, unknown> = (yargs) => {
 		"Delete a Queue",
 		Delete.Options,
 		Delete.Handler
-	);
-
-	yargs.command(
-		"consumer",
-		"Configure Queue Consumers",
-		async (consumersYargs) => {
-			await consumers(consumersYargs);
-		}
 	);
 };

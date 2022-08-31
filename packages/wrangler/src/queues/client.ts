@@ -61,29 +61,9 @@ export async function GetQueue(
 	);
 }
 
-export async function PostConsumer(
-	config: Config,
-	queueName: string,
-	body: PostConsumerBody
-): Promise<ConsumerResponse> {
-	const accountId = await requireAuth(config);
-	return fetchResult(
-		`/accounts/${accountId}/workers/queues/${queueName}/consumers`,
-		{
-			method: "POST",
-			body: JSON.stringify(body),
-		}
-	);
-}
-
 export interface PutConsumerBody {
 	settings: ConsumerSettings;
 	dead_letter_queue?: string;
-}
-
-export interface PostConsumerBody extends PutConsumerBody {
-	script_name: string;
-	environment_name: string;
 }
 
 export interface ConsumerSettings {
@@ -92,7 +72,7 @@ export interface ConsumerSettings {
 	max_wait_time_ms?: number;
 }
 
-export interface ConsumerResponse extends PostConsumerBody {
+export interface ConsumerResponse extends PutConsumerBody {
 	queue_name: string;
 	script_name: string;
 	environment_name: string;
