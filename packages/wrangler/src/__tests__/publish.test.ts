@@ -3675,30 +3675,6 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should run a custom build before publishing 2", async () => {
-			writeWranglerToml({
-				build: {
-					command: `node -e "console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
-				},
-			});
-
-			mockUploadWorkerRequest({
-				expectedEntry: "return new Response(123)",
-			});
-			mockSubDomainRequest();
-
-			await runWrangler("publish index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev"
-		`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-
 		if (process.platform !== "win32") {
 			it("should run a custom build of multiple steps combined by && before publishing", async () => {
 				writeWranglerToml({
