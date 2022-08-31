@@ -3634,14 +3634,10 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler("publish --dry-run --outdir dist --define abc:789");
-			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatchInlineSnapshot(`
-			        "(() => {
-			          // index.js
-			          console.log(789);
-			        })();
-			        //# sourceMappingURL=index.js.map
-			        "
-		      `);
+
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
+				`console.log(789);`
+			);
 		});
 	});
 
@@ -5271,11 +5267,11 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "out": "Your worker has access to the following bindings:
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
 			- Vars:
 			  - TEXT: \\"(hidden)\\"
 			  - COUNT: \\"(hidden)\\"
-			Total Upload: 0xx KiB / gzip: 0xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev",
