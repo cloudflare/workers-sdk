@@ -447,6 +447,9 @@ async function applyMiddlewareLoaderFacade(
 			entryPoints: [entry.file],
 			bundle: true,
 			sourcemap: true,
+			define: {
+				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
+			},
 			format: "esm",
 			outfile: targetPathInsertion,
 			plugins: [moduleCollectorPlugin],
