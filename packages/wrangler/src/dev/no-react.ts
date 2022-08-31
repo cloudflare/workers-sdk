@@ -427,9 +427,14 @@ export async function setupLocalServer({
 		// The path to the Miniflare CLI assumes that this file is being run from
 		// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
 		// If either of those paths change this line needs updating.
+
+		const shouldOverrideCLIPath =
+			bindings?.vars?.override_mf && typeof jest !== "undefined";
 		const miniflareCLIPath = path.resolve(
 			__dirname,
-			"../miniflare-dist/index.mjs"
+			shouldOverrideCLIPath
+				? "../../miniflare-dist/index.mjs"
+				: "../miniflare-dist/index.mjs"
 		);
 		const miniflareOptions = JSON.stringify(options, null);
 

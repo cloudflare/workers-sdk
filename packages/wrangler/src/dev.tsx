@@ -464,6 +464,7 @@ export async function startApiDev(args: StartDevOptions) {
 		routes,
 		getLocalPort,
 		getInspectorPort,
+		cliDefines,
 	} = await commonDev(args, config);
 
 	await metrics.sendMetricsEvent(
@@ -492,7 +493,7 @@ export async function startApiDev(args: StartDevOptions) {
 			minify: args.minify ?? configParam.minify,
 			nodeCompat: nodeCompat,
 			build: configParam.build || {},
-			define: configParam.define,
+			define: { ...config.define, ...cliDefines },
 			initialMode: args.local ? "local" : "remote",
 			jsxFactory: args["jsx-factory"] || configParam.jsx_factory,
 			jsxFragment: args["jsx-fragment"] || configParam.jsx_fragment,

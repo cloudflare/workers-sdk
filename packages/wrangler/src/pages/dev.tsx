@@ -307,7 +307,7 @@ export const Handler = async ({
 		);
 	}
 
-	const worker = await unstable_dev(
+	const { stop, waitUntilExit } = await unstable_dev(
 		scriptPath,
 		{
 			ip,
@@ -369,9 +369,9 @@ export const Handler = async ({
 	);
 	await metrics.sendMetricsEvent("run pages dev");
 
-	CLEANUP_CALLBACKS.push(worker.stop);
+	CLEANUP_CALLBACKS.push(stop);
 
-	worker.waitUntilExit().then(() => {
+	waitUntilExit().then(() => {
 		CLEANUP();
 		process.exit(0);
 	});

@@ -5,6 +5,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { RequestInit, Response } from "undici";
 
 interface DevOptions {
+	config?: string;
 	env?: string;
 	ip?: string;
 	port?: number;
@@ -20,7 +21,7 @@ interface DevOptions {
 	experimentalEnableLocalPersistence?: boolean;
 	liveReload?: boolean;
 	watch?: boolean;
-	vars: {
+	vars?: {
 		[key: string]: unknown;
 	};
 	kv?: {
@@ -55,7 +56,7 @@ interface DevOptions {
  */
 export async function unstable_dev(
 	script: string,
-	options: DevOptions,
+	options?: DevOptions,
 	testMode = true,
 	disableExperimentalWarning?: boolean
 ) {
@@ -103,7 +104,7 @@ export async function unstable_dev(
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 		return new Promise<{
-			stop: () => void;
+			stop: () => Promise<void>;
 			fetch: (init?: RequestInit) => Promise<Response | undefined>;
 			waitUntilExit: () => Promise<void>;
 		}>((resolve) => {
