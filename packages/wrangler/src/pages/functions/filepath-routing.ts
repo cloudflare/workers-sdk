@@ -6,6 +6,7 @@ import { toUrlPath } from "../../paths";
 import { loader } from "./esbuild";
 import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
+import { logger } from "../../logger";
 
 export async function generateConfigFromFileTree({
 	baseDir,
@@ -64,7 +65,6 @@ export async function generateConfigFromFileTree({
 					exportNames.push(...metafile.outputs[output].exports);
 				}
 			}
-			console.log(filepath, exportNames);
 			for (const exportName of exportNames) {
 				const [match, method = ""] = (exportName.match(
 					/^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?|default?$/
@@ -136,6 +136,18 @@ export async function generateConfigFromFileTree({
 					routeEntry.method === rest.method
 			);
 			if (existingRouteEntry !== undefined) {
+				if (rest.module && existingRouteEntry.module) {
+					logger.warn(
+						`Caution: duplicate Functions handler detected. You specify two different handlers with the same route (${
+							existingRouteEntry.routePath
+						}) ${
+							existingRouteEntry.method
+								? `and method (${existingRouteEntry.method})`
+								: ""
+						}. This may lead to unexpected results. Remove one of these handlers to prevent this warning.`
+					);
+				}
+
 				Object.assign(existingRouteEntry, rest);
 			} else {
 				acc.push({ routePath, ...rest });
