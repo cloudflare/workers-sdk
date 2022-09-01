@@ -141,7 +141,6 @@ function constructHeaders({
 
 function constructWebAnalytics({
 	webAnalyticsToken,
-	logger,
 }: {
 	webAnalyticsToken?: string;
 	logger: Logger;

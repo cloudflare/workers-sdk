@@ -1,3 +1,4 @@
+packages/pages-shared/dist/
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/

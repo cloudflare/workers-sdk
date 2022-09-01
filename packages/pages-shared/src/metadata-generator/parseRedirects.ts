@@ -50,15 +50,16 @@ export function parseRedirects(input: string): ParsedRedirects {
 
 		const [str_from, str_to, str_status = "302"] = tokens as RedirectLine;
 
-		const [from, fromErr] = validateUrl(str_from, true, false, false);
-		if (!from) {
+		const fromResult = validateUrl(str_from, true, false, false);
+		if (fromResult[0] === undefined) {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: fromErr!,
+				message: fromResult[1],
 			});
 			continue;
 		}
+		const from = fromResult[0];
 
 		if (
 			canCreateStaticRule &&
@@ -87,15 +88,16 @@ export function parseRedirects(input: string): ParsedRedirects {
 			}
 		}
 
-		const [to, toErr] = validateUrl(str_to, false, true, true);
-		if (!to) {
+		const toResult = validateUrl(str_to, false, true, true);
+		if (toResult[0] === undefined) {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: toErr!,
+				message: toResult[1],
 			});
 			continue;
 		}
+		const to = toResult[0];
 
 		const status = Number(str_status);
 		if (isNaN(status) || !PERMITTED_STATUS_CODES.has(status)) {

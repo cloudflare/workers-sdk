@@ -10,7 +10,7 @@ export const extractPathname = (
 	}`;
 };
 
-const URL_REGEX = /^https:\/\/+(?<host>[^\/]+)\/?(?<path>.*)/;
+const URL_REGEX = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/;
 const PATH_REGEX = /^\//;
 
 export const validateUrl = (
