@@ -3,10 +3,24 @@ export { __facade_register__, __facade_registerInternal__ } from "./common";
 
 const __FACADE_EVENT_TARGET__ = new EventTarget();
 
+declare global {
+	var __facade_addEventListener__: (
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: EventTargetAddEventListenerOptions | boolean
+	) => void;
+	var __facade_removeEventListener__: (
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: EventTargetEventListenerOptions | boolean
+	) => void;
+	var __facade_dispatchEvent__: (event: Event) => void;
+}
+
 function __facade_isSpecialEvent__(type: string) {
 	return type === "fetch" || type === "scheduled";
 }
-(globalThis as any).__facade_addEventListener__ = function (
+globalThis.__facade_addEventListener__ = function (
 	type: string,
 	listener: EventListenerOrEventListenerObject,
 	options?: EventTargetAddEventListenerOptions | boolean
@@ -17,7 +31,7 @@ function __facade_isSpecialEvent__(type: string) {
 		globalThis.addEventListener(type as any, listener, options);
 	}
 };
-(globalThis as any).__facade_removeEventListener__ = function (
+globalThis.__facade_removeEventListener__ = function (
 	type: string,
 	listener: EventListenerOrEventListenerObject,
 	options?: EventTargetEventListenerOptions | boolean
@@ -28,7 +42,7 @@ function __facade_isSpecialEvent__(type: string) {
 		globalThis.removeEventListener(type as any, listener, options);
 	}
 };
-(globalThis as any).__facade_dispatchEvent__ = function (event: Event) {
+globalThis.__facade_dispatchEvent__ = function (event: Event) {
 	if (__facade_isSpecialEvent__(event.type)) {
 		__FACADE_EVENT_TARGET__.dispatchEvent(event);
 	} else {
