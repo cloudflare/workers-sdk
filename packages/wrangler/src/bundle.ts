@@ -142,6 +142,19 @@ export async function bundleWorker(
 	// a new entry point, that we call "middleware" or "facades".
 	// Look at implementations of these functions to learn more.
 
+	// We also have middleware that uses a more "traditional" middleware stack,
+	// which is all loaded as one in a stack.
+	const middlewareToLoad: MiddlewareLoader[] = [
+		// {
+		// 	path: "../templates/middleware/middleware-pretty-error.ts",
+		// 	publish: true,
+		// 	dev: false,
+		// },
+		// {
+		// 	path: "../templates/middleware/middleware-scheduled.ts",
+		// },
+	];
+
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
 		// serve static assets
@@ -177,32 +190,24 @@ export async function bundleWorker(
 			}),
 
 		// Middleware loader: to add middleware, we add the path to the middleware
-		// Currently for demonstration purposes we have two example middlewares applied
+		// Currently for demonstration purposes we have two example middlewares
 		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
-		(currentEntry: Entry) => {
-			return applyMiddlewareLoaderFacade(
-				currentEntry,
-				tmpDir.path,
-				(
-					[
-						// {
-						// 	path: "../templates/middleware/middleware-pretty-error.ts",
-						// 	publish: true,
-						// 	dev: false.
-						// },
-						// {
-						// 	path: "../templates/middleware/middleware-scheduled.ts",
-						// },
-					] as MiddlewareLoader[]
-				).filter(
-					// We dynamically filter the middleware depending on where we are bundling for
-					(m) =>
-						(targetConsumer === "dev" && m.dev !== false) ||
-						(m.publish && targetConsumer === "publish")
-				),
-				moduleCollector.plugin
-			);
-		},
+		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
+		// are found, we will not load any middleware.
+		middlewareToLoad.length > 0 &&
+			((currentEntry: Entry) => {
+				return applyMiddlewareLoaderFacade(
+					currentEntry,
+					tmpDir.path,
+					middlewareToLoad.filter(
+						// We dynamically filter the middleware depending on where we are bundling for
+						(m) =>
+							(targetConsumer === "dev" && m.dev !== false) ||
+							(m.publish && targetConsumer === "publish")
+					),
+					moduleCollector.plugin
+				);
+			}),
 	].filter(Boolean);
 
 	let inputEntry = entry;
@@ -245,8 +250,11 @@ export async function bundleWorker(
 			".cjs": "jsx",
 		},
 		plugins: [
-			// We run the moduleCollector plugin for service workers as part of the module loading facade
-			...(entry.format === "modules" ? [moduleCollector.plugin] : []),
+			// We run the moduleCollector plugin for service workers as part of the middleware loader
+			// so we only run here for modules or with no middleware to load
+			...(entry.format === "modules" || middlewareToLoad.length === 0
+				? [moduleCollector.plugin]
+				: []),
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
