@@ -398,13 +398,11 @@ describe("pages", () => {
 
 			await runWrangler("pages publish . --project-name=foo");
 
-			// TODO: Unmounting somehow loses this output
+			expect(std.out).toMatchInlineSnapshot(`
+			  "✨ Success! Uploaded 1 files (TIMINGS)
 
-			// expect(std.out).toMatchInlineSnapshot(`
-			//   "✨ Success! Uploaded 1 files (TIMINGS)
-
-			//   ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			// `);
+			  ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 		});
 
 		it("should retry uploads", async () => {
