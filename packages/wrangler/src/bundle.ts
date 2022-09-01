@@ -193,8 +193,13 @@ export async function bundleWorker(
 		// Currently for demonstration purposes we have two example middlewares
 		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
 		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
-		// are found, we will not load any middleware.
-		middlewareToLoad.length > 0 &&
+		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
+		// the target consumer (dev / publish).
+		middlewareToLoad.filter(
+			(m) =>
+				(m.publish && targetConsumer === "publish") ||
+				(m.dev !== false && targetConsumer === "dev")
+		).length > 0 &&
 			((currentEntry: Entry) => {
 				return applyMiddlewareLoaderFacade(
 					currentEntry,
