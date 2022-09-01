@@ -15,6 +15,19 @@ import {
 } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 
+/**
+ * The relative path between the bundled code and the Wrangler package.
+ * This is used as a reliable way to compute paths relative to the Wrangler package
+ * in the source files, rather than relying upon `__dirname` which can change depending
+ * on whether the source files have been bundled and the location of the outdir.
+ *
+ * This is exposed in the source via the `getBasePath()` function, which should be used
+ * in place of `__dirname` and similar Node.js constants.
+ */
+(
+	global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
+).__RELATIVE_PACKAGE_PATH__ = "..";
+
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
 	return {

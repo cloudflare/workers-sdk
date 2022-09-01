@@ -8,6 +8,7 @@ import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
+import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
@@ -299,8 +300,8 @@ function useLocalWorker({
 			// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
 			// If either of those paths change this line needs updating.
 			const miniflareCLIPath = path.resolve(
-				__dirname,
-				"../miniflare-dist/index.mjs"
+				getBasePath(),
+				"miniflare-dist/index.mjs"
 			);
 			const miniflareOptions = JSON.stringify(options, null);
 

@@ -4,6 +4,7 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
 import { nanoid } from "nanoid";
+import { getBasePath } from "../../paths";
 
 type Options = {
 	routesModule: string;
@@ -29,7 +30,7 @@ export function buildWorker({
 	nodeCompat,
 }: Options) {
 	return build({
-		entryPoints: [resolve(__dirname, "../templates/pages-template-worker.ts")],
+		entryPoints: [resolve(getBasePath(), "templates/pages-template-worker.ts")],
 		inject: [routesModule],
 		bundle: true,
 		format: "esm",

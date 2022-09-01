@@ -4,6 +4,7 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
 import { logger } from "./logger";
+import { getBasePath } from "./paths";
 import type { Config } from "./config";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
@@ -40,7 +41,7 @@ export async function getEntry(
 				: // site.entry-point could be a directory
 				  path.resolve(config.site?.["entry-point"], "index.js");
 		} else if (args.assets || config.assets) {
-			file = path.resolve(__dirname, "../templates/no-op-worker.js");
+			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {
 			throw new Error(
 				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`

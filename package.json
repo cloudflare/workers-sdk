@@ -102,6 +102,23 @@
 						}
 					]
 				}
+			},
+			{
+				"files": "packages/wrangler/src/**/*.ts",
+				"excludedFiles": "*.test.ts",
+				"rules": {
+					"no-restricted-globals": [
+						"error",
+						{
+							"name": "__dirname",
+							"message": "Use `getBasePath()` instead."
+						},
+						{
+							"name": "__filename",
+							"message": "Use `getBasePath()` instead."
+						}
+					]
+				}
 			}
 		],
 		"ignorePatterns": [
