@@ -10,6 +10,7 @@ import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
 import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
+import { setupBindings } from "./local";
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
@@ -257,70 +258,25 @@ export async function startLocalServer({
 
 		const scriptPath = realpathSync(bundle.path);
 
-		// the wasm_modules/text_blobs/data_blobs bindings are
-		// relative to process.cwd(), but the actual worker bundle
-		// is in the temp output directory; so we rewrite the paths to be absolute,
-		// letting miniflare resolve them correctly
-
-		// wasm
-		const wasmBindings: Record<string, string> = {};
-		for (const [name, filePath] of Object.entries(
-			bindings.wasm_modules || {}
-		)) {
-			wasmBindings[name] = path.join(process.cwd(), filePath);
-		}
-
-		// text
-		const textBlobBindings: Record<string, string> = {};
-		for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {
-			textBlobBindings[name] = path.join(process.cwd(), filePath);
-		}
-
-		// data
-		const dataBlobBindings: Record<string, string> = {};
-		for (const [name, filePath] of Object.entries(bindings.data_blobs || {})) {
-			dataBlobBindings[name] = path.join(process.cwd(), filePath);
-		}
-
-		if (format === "service-worker") {
-			for (const { type, name } of bundle.modules) {
-				if (type === "compiled-wasm") {
-					// In service-worker format, .wasm modules are referenced by global identifiers,
-					// so we convert it here.
-					// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-					// characters with an underscore.
-					const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-					wasmBindings[identifier] = name;
-				} else if (type === "text") {
-					// In service-worker format, text modules are referenced by global identifiers,
-					// so we convert it here.
-					// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-					// characters with an underscore.
-					const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-					textBlobBindings[identifier] = name;
-				} else if (type === "buffer") {
-					// In service-worker format, data blobs are referenced by global identifiers,
-					// so we convert it here.
-					// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-					// characters with an underscore.
-					const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-					dataBlobBindings[identifier] = name;
-				}
-			}
-		}
-
 		const upstream =
 			typeof localUpstream === "string"
 				? `${localProtocol}://${localUpstream}`
 				: undefined;
 
-		const internalDurableObjects = (
-			bindings.durable_objects?.bindings || []
-		).filter((binding) => !binding.script_name);
-		const externalDurableObjects = (
-			bindings.durable_objects?.bindings || []
-		).filter((binding) => binding.script_name);
-
+		const {
+			externalDurableObjects,
+			internalDurableObjects,
+			wasmBindings,
+			textBlobBindings,
+			dataBlobBindings,
+		} = setupBindings({
+			wasm_modules: bindings.wasm_modules,
+			text_blobs: bindings.text_blobs,
+			data_blobs: bindings.data_blobs,
+			durable_objects: bindings.durable_objects,
+			format,
+			bundle,
+		});
 		// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
 		// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 		const options: MiniflareOptions = {
