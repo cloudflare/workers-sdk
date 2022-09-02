@@ -8,9 +8,13 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
-		worker = await unstable_dev("src/sw.ts", {
-			config: "src/wrangler.sw.toml",
-		});
+		worker = await unstable_dev(
+			"src/sw.ts",
+			{
+				config: "src/wrangler.sw.toml",
+			},
+			{ disableExperimentalWarning: true }
+		);
 	});
 
 	afterAll(async () => {

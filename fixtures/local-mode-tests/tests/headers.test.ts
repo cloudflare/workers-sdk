@@ -7,7 +7,11 @@ describe("worker", () => {
 	};
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/headers.ts");
+		worker = await unstable_dev(
+			"src/headers.ts",
+			{},
+			{ disableExperimentalWarning: true }
+		);
 	});
 
 	afterAll(async () => {

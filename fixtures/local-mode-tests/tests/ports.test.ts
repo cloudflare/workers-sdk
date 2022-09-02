@@ -11,14 +11,46 @@ describe("worker", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 
 		workers = await Promise.all([
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
-			unstable_dev("src/basicModule.ts") as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
+			unstable_dev(
+				"src/basicModule.ts",
+				{},
+				{ disableExperimentalWarning: true }
+			) as Worker,
 		]);
 	});
 
