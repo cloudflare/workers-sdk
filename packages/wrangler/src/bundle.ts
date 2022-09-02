@@ -434,7 +434,7 @@ async function applyMiddlewareLoaderFacade(
 		);
 
 		await esbuild.build({
-			entryPoints: [path.resolve(__dirname, dynamicFacadePath)],
+			entryPoints: [path.resolve(getBasePath(), dynamicFacadePath)],
 			bundle: true,
 			sourcemap: true,
 			format: "esm",
@@ -444,7 +444,7 @@ async function applyMiddlewareLoaderFacade(
 					...Object.fromEntries(
 						middleware.map((val, index) => [
 							middlewareIdentifiers[index],
-							path.resolve(__dirname, val.path),
+							path.resolve(getBasePath(), val.path),
 						])
 					),
 				}),
@@ -470,7 +470,10 @@ async function applyMiddlewareLoaderFacade(
 		const imports = middlewareIdentifiers
 			.map(
 				(m, i) =>
-					`import ${m} from "${path.resolve(__dirname, middleware[i].path)}";`
+					`import ${m} from "${path.resolve(
+						getBasePath(),
+						middleware[i].path
+					)}";`
 			)
 			.join("\n");
 
@@ -502,7 +505,7 @@ async function applyMiddlewareLoaderFacade(
 
 	const loaderPath =
 		entry.format === "modules"
-			? path.resolve(__dirname, "../templates/middleware/loader-modules.ts")
+			? path.resolve(getBasePath(), "../templates/middleware/loader-modules.ts")
 			: dynamicFacadePath;
 
 	await esbuild.build({
@@ -513,7 +516,7 @@ async function applyMiddlewareLoaderFacade(
 		...(entry.format === "service-worker"
 			? {
 					inject: [
-						path.resolve(__dirname, "../templates/middleware/loader-sw.ts"),
+						path.resolve(getBasePath(), "../templates/middleware/loader-sw.ts"),
 					],
 					define: {
 						addEventListener: "__facade_addEventListener__",
@@ -527,7 +530,7 @@ async function applyMiddlewareLoaderFacade(
 						esbuildAliasExternalPlugin({
 							__ENTRY_POINT__: targetPathInsertion,
 							"./common": path.resolve(
-								__dirname,
+								getBasePath(),
 								"../templates/middleware/common.ts"
 							),
 						}),
