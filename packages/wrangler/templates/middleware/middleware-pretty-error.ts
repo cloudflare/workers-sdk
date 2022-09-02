@@ -1,4 +1,3 @@
-// import { __facade_register__ } from "./common";
 import type { Middleware } from "./common";
 
 // A middleware has to be a function of type Middleware
