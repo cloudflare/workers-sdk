@@ -490,7 +490,7 @@ async function applyMiddlewareLoaderFacade(
 			dynamicFacadePath,
 			`
 			${imports}
-			addMiddlewareInternal([${middlewareIdentifiers.join(",")}])
+			addMiddleware([${middlewareIdentifiers.join(",")}],true)
 		`
 		);
 	}
@@ -520,7 +520,6 @@ async function applyMiddlewareLoaderFacade(
 						removeEventListener: "__facade_removeEventListener__",
 						dispatchEvent: "__facade_dispatchEvent__",
 						addMiddleware: "__facade_register__",
-						addMiddlewareInternal: "__facade_registerInternal__",
 					},
 			  }
 			: {
