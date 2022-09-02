@@ -167,7 +167,7 @@ function useLocalWorker({
 				bundle,
 			});
 
-			const { miniflareOptions, miniflareCLIPath } = setupMiniflareOptions({
+			const { forkOptions, miniflareCLIPath } = setupMiniflareOptions({
 				workerName,
 				port,
 				scriptPath,
@@ -200,15 +200,11 @@ function useLocalWorker({
 			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 			logger.log("⎔ Starting a local server...");
 
-			const child = (local.current = fork(
-				miniflareCLIPath,
-				[miniflareOptions],
-				{
-					cwd: path.dirname(scriptPath),
-					execArgv: nodeOptions,
-					stdio: "pipe",
-				}
-			));
+			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
+				cwd: path.dirname(scriptPath),
+				execArgv: nodeOptions,
+				stdio: "pipe",
+			}));
 
 			child.on("message", async (messageString) => {
 				const message = JSON.parse(messageString as string);
@@ -573,8 +569,11 @@ export function setupMiniflareOptions({
 		"miniflare-dist/index.mjs"
 	);
 	const miniflareOptions = JSON.stringify(options, null);
-
-	return { miniflareCLIPath, miniflareOptions };
+	const forkOptions = [miniflareOptions];
+	if (enablePagesAssetsServiceBinding) {
+		forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
+	}
+	return { miniflareCLIPath, forkOptions };
 }
 
 export function setupNodeOptions({

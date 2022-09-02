@@ -280,7 +280,7 @@ export async function startLocalServer({
 			bundle,
 		});
 
-		const { miniflareOptions, miniflareCLIPath } = setupMiniflareOptions({
+		const { forkOptions, miniflareCLIPath } = setupMiniflareOptions({
 			workerName,
 			port,
 			scriptPath,
@@ -313,7 +313,7 @@ export async function startLocalServer({
 		const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 		logger.log("⎔ Starting a local server...");
 
-		const child = (local = fork(miniflareCLIPath, [miniflareOptions], {
+		const child = (local = fork(miniflareCLIPath, forkOptions, {
 			cwd: path.dirname(scriptPath),
 			execArgv: nodeOptions,
 			stdio: "pipe",
