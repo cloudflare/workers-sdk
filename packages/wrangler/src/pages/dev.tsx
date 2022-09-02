@@ -8,6 +8,7 @@ import { unstable_dev } from "../api";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
@@ -274,7 +275,7 @@ export const Handler = async ({
 
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
-			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
+			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 		} else {
 			const runBuild = async () => {
 				try {

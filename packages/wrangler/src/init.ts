@@ -12,10 +12,10 @@ import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
+import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { ConfigPath } from "./index";
-
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 export async function initOptions(yargs: Argv) {
@@ -162,7 +162,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			await initializeGit(creationDirectory);
 			await writeFile(
 				path.join(creationDirectory, ".gitignore"),
-				readFileSync(path.join(__dirname, "../templates/gitignore"))
+				readFileSync(path.join(getBasePath(), "templates/gitignore"))
 			);
 			logger.log(
 				args.name && args.name !== "."
@@ -254,7 +254,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			isTypescriptProject = true;
 			await writeFile(
 				path.join(creationDirectory, "./tsconfig.json"),
-				readFileSync(path.join(__dirname, "../templates/tsconfig.json"))
+				readFileSync(path.join(getBasePath(), "templates/tsconfig.json"))
 			);
 			devDepsToInstall.push("@cloudflare/workers-types");
 			devDepsToInstall.push("typescript");
@@ -495,7 +495,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					});
 					await writeFile(
 						path.join(creationDirectory, "./src/index.ts"),
-						readFileSync(path.join(__dirname, `../templates/${template}`))
+						readFileSync(path.join(getBasePath(), `templates/${template}`))
 					);
 
 					logger.log(
@@ -561,7 +561,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					});
 					await writeFile(
 						path.join(creationDirectory, "./src/index.js"),
-						readFileSync(path.join(__dirname, `../templates/${template}`))
+						readFileSync(path.join(getBasePath(), `templates/${template}`))
 					);
 
 					logger.log(
