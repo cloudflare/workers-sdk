@@ -20,29 +20,21 @@ declare global {
 function __facade_isSpecialEvent__(type: string) {
 	return type === "fetch" || type === "scheduled";
 }
-globalThis.__facade_addEventListener__ = function (
-	type: string,
-	listener: EventListenerOrEventListenerObject,
-	options?: EventTargetAddEventListenerOptions | boolean
-) {
+globalThis.__facade_addEventListener__ = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
 		__FACADE_EVENT_TARGET__.addEventListener(type, listener, options);
 	} else {
 		globalThis.addEventListener(type as any, listener, options);
 	}
 };
-globalThis.__facade_removeEventListener__ = function (
-	type: string,
-	listener: EventListenerOrEventListenerObject,
-	options?: EventTargetEventListenerOptions | boolean
-) {
+globalThis.__facade_removeEventListener__ = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
 		__FACADE_EVENT_TARGET__.removeEventListener(type, listener, options);
 	} else {
 		globalThis.removeEventListener(type as any, listener, options);
 	}
 };
-globalThis.__facade_dispatchEvent__ = function (event: Event) {
+globalThis.__facade_dispatchEvent__ = function (event) {
 	if (__facade_isSpecialEvent__(event.type)) {
 		__FACADE_EVENT_TARGET__.dispatchEvent(event);
 	} else {
