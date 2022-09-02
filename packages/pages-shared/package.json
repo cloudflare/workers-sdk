@@ -1,8 +1,9 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"files": [
 		"tsconfig.json",
+		"src/**/*",
 		"dist/**/*"
 	],
 	"scripts": {
@@ -36,7 +37,9 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.16.0",
+		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
-		"glob": "^8.0.3"
+		"glob": "^8.0.3",
+		"service-worker-mock": "^2.0.5"
 	}
 }

@@ -1,5 +1,9 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+	generateRulesMatcher,
+	replacer,
+} from "@cloudflare/pages-shared/src/asset-server/rulesEngine";
 import { fetch as miniflareFetch } from "@miniflare/core";
 import { watch } from "chokidar";
 import { getType } from "mime";
@@ -51,71 +55,6 @@ export default async function generateASSETSBinding(options: Options) {
 				);
 			}
 		}
-	};
-}
-
-function escapeRegex(str: string) {
-	return str.replace(/[-/\\^$*+?.()|[]{}]/g, "\\$&");
-}
-
-type Replacements = Record<string, string>;
-
-function replacer(str: string, replacements: Replacements) {
-	for (const [replacement, value] of Object.entries(replacements)) {
-		str = str.replace(`:${replacement}`, value);
-	}
-	return str;
-}
-
-function generateRulesMatcher<T>(
-	rules?: Record<string, T>,
-	replacerFn: (match: T, replacements: Replacements) => T = (match) => match
-) {
-	// TODO: How can you test cross-host rules?
-	if (!rules) return () => [];
-
-	const compiledRules = Object.entries(rules)
-		.map(([rule, match]) => {
-			const crossHost = rule.startsWith("https://");
-
-			rule = rule.split("*").map(escapeRegex).join("(?<splat>.*)");
-
-			const host_matches = rule.matchAll(
-				/(?<=^https:\\\/\\\/[^/]*?):([^\\]+)(?=\\)/g
-			);
-			for (const hostMatch of host_matches) {
-				rule = rule.split(hostMatch[0]).join(`(?<${hostMatch[1]}>[^/.]+)`);
-			}
-
-			const path_matches = rule.matchAll(/:(\w+)/g);
-			for (const pathMatch of path_matches) {
-				rule = rule.split(pathMatch[0]).join(`(?<${pathMatch[1]}>[^/]+)`);
-			}
-
-			rule = "^" + rule + "$";
-
-			try {
-				const regExp = new RegExp(rule);
-				return [{ crossHost, regExp }, match];
-			} catch {}
-		})
-		.filter((value) => value !== undefined) as [
-		{ crossHost: boolean; regExp: RegExp },
-		T
-	][];
-
-	return ({ request }: { request: MiniflareRequest }) => {
-		const { pathname, host } = new URL(request.url);
-
-		return compiledRules
-			.map(([{ crossHost, regExp }, match]) => {
-				const test = crossHost ? `https://${host}${pathname}` : pathname;
-				const result = regExp.exec(test);
-				if (result) {
-					return replacerFn(match, result.groups || {});
-				}
-			})
-			.filter((value) => value !== undefined) as T[];
 	};
 }
 

@@ -19,7 +19,7 @@ export function createMetadataObject({
 	headers,
 	webAnalyticsToken,
 	deploymentId,
-	logger = () => {},
+	logger = (_message: string) => {},
 }: {
 	redirects?: ParsedRedirects;
 	headers?: ParsedHeaders;
