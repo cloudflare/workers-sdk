@@ -5,12 +5,15 @@ import * as path from "node:path";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
+import { registerWorker } from "../dev-registry";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import { DEFAULT_MODULE_RULES } from "../module-collection";
-import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
-import { setupBindings } from "./local";
+import {
+	setupBindings,
+	setupMiniflareOptions,
+	setupNodeOptions,
+} from "./local";
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
@@ -19,7 +22,6 @@ import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 
-import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
 
 export async function startDevServer(
@@ -277,134 +279,68 @@ export async function startLocalServer({
 			format,
 			bundle,
 		});
-		// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
-		// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
-		const options: MiniflareOptions = {
-			name: workerName,
+
+		const { miniflareOptions, miniflareCLIPath } = setupMiniflareOptions({
+			workerName,
 			port,
 			scriptPath,
-			https: localProtocol === "https",
-			host: ip,
-			modules: format === "modules",
-			modulesRules: (rules || [])
-				.concat(DEFAULT_MODULE_RULES)
-				.map(({ type, globs: include, fallthrough }) => ({
-					type,
-					include,
-					fallthrough,
-				})),
+			localProtocol,
+			ip,
+			format,
+			rules,
 			compatibilityDate,
 			compatibilityFlags,
 			usageModel,
-			kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
-			r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
-			durableObjects: Object.fromEntries(
-				internalDurableObjects.map((binding) => [
-					binding.name,
-					binding.class_name,
-				])
-			),
-			externalDurableObjects: Object.fromEntries(
-				externalDurableObjects
-					.map((binding) => {
-						const service =
-							workerDefinitions &&
-							workerDefinitions[binding.script_name as string];
-						if (!service) return [binding.name, undefined];
-
-						const name = service.durableObjects.find(
-							(durableObject) => durableObject.className === binding.class_name
-						)?.name;
-						if (!name) return [binding.name, undefined];
-
-						return [
-							binding.name,
-							{
-								name,
-								host: service.durableObjectsHost,
-								port: service.durableObjectsPort,
-							},
-						];
-					})
-					.filter(([_, details]) => !!details)
-			),
-			...(localPersistencePath
-				? {
-						cachePersist: path.join(localPersistencePath, "cache"),
-						durableObjectsPersist: path.join(localPersistencePath, "do"),
-						kvPersist: path.join(localPersistencePath, "kv"),
-						r2Persist: path.join(localPersistencePath, "r2"),
-				  }
-				: {
-						// We mark these as true, so that they'll
-						// persist in the temp directory.
-						// This means they'll persist across a dev session,
-						// even if we change source and reload,
-						// and be deleted when the dev session ends
-						cachePersist: true,
-						durableObjectsPersist: true,
-						kvPersist: true,
-						r2Persist: true,
-				  }),
-
+			kv_namespaces: bindings?.kv_namespaces,
+			r2_buckets: bindings?.r2_buckets,
+			internalDurableObjects,
+			externalDurableObjects,
+			localPersistencePath,
 			liveReload,
-			sitePath: assetPaths?.assetDirectory
-				? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
-				: undefined,
-			siteInclude: assetPaths?.includePatterns.length
-				? assetPaths?.includePatterns
-				: undefined,
-			siteExclude: assetPaths?.excludePatterns.length
-				? assetPaths.excludePatterns
-				: undefined,
-			bindings: bindings.vars,
+			assetPaths,
+			vars: bindings?.vars,
 			wasmBindings,
 			textBlobBindings,
 			dataBlobBindings,
-			sourceMap: true,
-			logUnhandledRejections: true,
 			crons,
 			upstream,
-			disableLogs: logLevel === "none",
-			logOptions: logPrefix ? { prefix: logPrefix } : undefined,
-		};
+			logLevel,
+			logPrefix,
+			workerDefinitions,
+			enablePagesAssetsServiceBinding,
+		});
 
-		// The path to the Miniflare CLI assumes that this file is being run from
-		// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
-		// If either of those paths change this line needs updating.
-
-		const miniflareCLIPath = path.resolve(
-			getBasePath(),
-			"miniflare-dist/index.mjs"
-		);
-		const miniflareOptions = JSON.stringify(options, null);
-
+		const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 		logger.log("⎔ Starting a local server...");
-		const nodeOptions = [
-			"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-			"--no-warnings", // hide annoying Node warnings
-			// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-		];
-		if (inspect) {
-			nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
-		}
 
-		const forkOptions = [miniflareOptions];
-
-		if (enablePagesAssetsServiceBinding) {
-			forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
-		}
-
-		const child = (local = fork(miniflareCLIPath, forkOptions, {
+		const child = (local = fork(miniflareCLIPath, [miniflareOptions], {
 			cwd: path.dirname(scriptPath),
 			execArgv: nodeOptions,
 			stdio: "pipe",
 		}));
 
-		child.on("message", (messageString) => {
+		child.on("message", async (messageString) => {
 			const message = JSON.parse(messageString as string);
 			if (message.ready) {
-				logger.log("firing onReady");
+				// Let's register our presence in the dev registry
+				if (workerName) {
+					await registerWorker(workerName, {
+						protocol: localProtocol,
+						mode: "local",
+						port,
+						host: ip,
+						durableObjects: internalDurableObjects.map((binding) => ({
+							name: binding.name,
+							className: binding.class_name,
+						})),
+						...(message.durableObjectsPort
+							? {
+									durableObjectsHost: ip,
+									durableObjectsPort: message.durableObjectsPort,
+							  }
+							: {}),
+					});
+				}
 				onReady?.();
 			}
 		});

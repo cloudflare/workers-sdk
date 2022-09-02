@@ -65,14 +65,14 @@ export interface CfModule {
 /**
  * A map of variable names to values.
  */
-interface CfVars {
+export interface CfVars {
 	[key: string]: unknown;
 }
 
 /**
  * A KV namespace.
  */
-interface CfKvNamespace {
+export interface CfKvNamespace {
 	binding: string;
 	id: string;
 }
@@ -111,7 +111,7 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
-interface CfR2Bucket {
+export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
 }
