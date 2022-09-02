@@ -20,82 +20,85 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
 
-export async function implementation(
+export async function startDevServer(
 	props: DevProps & {
 		local: boolean;
 	}
 ) {
-	validateDevProps(props);
-	// implement a react-free version of useCustomBuild
-	setupAndRunCustomBuild(props.entry, props.build);
+	try {
+		validateDevProps(props);
 
-	//implement a react-free version of useTmpDir
-	const directory = setupTempDir();
-	if (!directory) {
-		throw new Error("Failed to create temporary directory.");
+		if (props.build.command) {
+			const relativeFile =
+				path.relative(props.entry.directory, props.entry.file) || ".";
+			await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
+				(err) => {
+					logger.error("Custom build failed:", err);
+				}
+			);
+		}
+
+		//implement a react-free version of useTmpDir
+		const directory = setupTempDir();
+		if (!directory) {
+			throw new Error("Failed to create temporary directory.");
+		}
+
+		//implement a react-free version of useEsbuild
+		const bundle = await runEsbuild({
+			entry: props.entry,
+			destination: directory.name,
+			jsxFactory: props.jsxFactory,
+			rules: props.rules,
+			jsxFragment: props.jsxFragment,
+			serveAssetsFromWorker: Boolean(
+				props.assetPaths && !props.isWorkersSite && props.local
+			),
+			tsconfig: props.tsconfig,
+			minify: props.minify,
+			nodeCompat: props.nodeCompat,
+			define: props.define,
+			noBundle: props.noBundle,
+			assets: props.assetsConfig,
+			services: props.bindings.services,
+		});
+
+		//run local now
+		const { stop, inspectorUrl } = await startLocalServer({
+			name: props.name,
+			bundle: bundle,
+			format: props.entry.format,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			port: props.port,
+			ip: props.ip,
+			rules: props.rules,
+			inspectorPort: props.inspectorPort,
+			enableLocalPersistence: props.enableLocalPersistence,
+			liveReload: props.liveReload,
+			crons: props.crons,
+			localProtocol: props.localProtocol,
+			localUpstream: props.localUpstream,
+			logLevel: props.logLevel,
+			logPrefix: props.logPrefix,
+			inspect: props.inspect,
+			onReady: props.onReady,
+			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+			usageModel: undefined,
+			workerDefinitions: undefined,
+		});
+
+		return {
+			stop: async () => {
+				stop();
+			},
+			inspectorUrl,
+		};
+	} catch (err) {
+		logger.error(err);
 	}
-
-	//implement a react-free version of useEsbuild
-	const bundle = await runEsbuild({
-		entry: props.entry,
-		destination: directory.name,
-		jsxFactory: props.jsxFactory,
-		rules: props.rules,
-		jsxFragment: props.jsxFragment,
-		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
-		),
-		tsconfig: props.tsconfig,
-		minify: props.minify,
-		nodeCompat: props.nodeCompat,
-		define: props.define,
-		noBundle: props.noBundle,
-		assets: props.assetsConfig,
-		services: props.bindings.services,
-	});
-
-	//run local now
-	const { stop, inspectorUrl } = await setupLocalServer({
-		name: props.name,
-		bundle: bundle,
-		format: props.entry.format,
-		compatibilityDate: props.compatibilityDate,
-		compatibilityFlags: props.compatibilityFlags,
-		bindings: props.bindings,
-		assetPaths: props.assetPaths,
-		port: props.port,
-		ip: props.ip,
-		rules: props.rules,
-		inspectorPort: props.inspectorPort,
-		enableLocalPersistence: props.enableLocalPersistence,
-		liveReload: props.liveReload,
-		crons: props.crons,
-		localProtocol: props.localProtocol,
-		localUpstream: props.localUpstream,
-		logLevel: props.logLevel,
-		logPrefix: props.logPrefix,
-		inspect: props.inspect,
-		onReady: props.onReady,
-		enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-		usageModel: undefined,
-		workerDefinitions: undefined,
-	});
-
-	return {
-		stop: async () => {
-			stop();
-		},
-		inspectorUrl,
-	};
-}
-
-function setupAndRunCustomBuild(expectedEntry: Entry, build: Config["build"]) {
-	if (!build.command) return;
-	const relativeFile =
-		path.relative(expectedEntry.directory, expectedEntry.file) || ".";
-	runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
-		logger.error("Custom build failed:", err);
-	});
 }
 
 function setupTempDir(): DirectorySyncResult | undefined {
@@ -137,67 +140,52 @@ async function runEsbuild({
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
 }): Promise<EsbuildBundle | undefined> {
-	let bundle: EsbuildBundle | undefined;
-	function setBundle(b: EsbuildBundle) {
-		bundle = b;
-	}
+	if (!destination) return;
 
-	async function build() {
-		if (!destination) return;
+	const {
+		resolvedEntryPointPath,
+		bundleType,
+		modules,
+		sourceMapPath,
+	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
+		? {
+				modules: [],
+				resolvedEntryPointPath: entry.file,
+				bundleType: entry.format === "modules" ? "esm" : "commonjs",
+				stop: undefined,
+				sourceMapPath: undefined,
+		  }
+		: await bundleWorker(entry, destination, {
+				serveAssetsFromWorker,
+				jsxFactory,
+				jsxFragment,
+				rules,
+				tsconfig,
+				minify,
+				nodeCompat,
+				define,
+				checkFetch: true,
+				assets: assets && {
+					...assets,
+					// disable the cache in dev
+					bypassCache: true,
+				},
+				services: undefined,
+				workerDefinitions: undefined,
+				firstPartyWorkerDevFacade: undefined,
+		  });
 
-		const {
-			resolvedEntryPointPath,
-			bundleType,
-			modules,
-			sourceMapPath,
-		}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-			? {
-					modules: [],
-					resolvedEntryPointPath: entry.file,
-					bundleType: entry.format === "modules" ? "esm" : "commonjs",
-					stop: undefined,
-					sourceMapPath: undefined,
-			  }
-			: await bundleWorker(entry, destination, {
-					serveAssetsFromWorker,
-					jsxFactory,
-					jsxFragment,
-					rules,
-					tsconfig,
-					minify,
-					nodeCompat,
-					define,
-					checkFetch: true,
-					assets: assets && {
-						...assets,
-						// disable the cache in dev
-						bypassCache: true,
-					},
-					services: undefined,
-					workerDefinitions: undefined,
-					firstPartyWorkerDevFacade: undefined,
-			  });
-
-		setBundle({
-			id: 0,
-			entry,
-			path: resolvedEntryPointPath,
-			type: bundleType,
-			modules,
-			sourceMapPath,
-		});
-	}
-
-	await build().catch((err) => {
-		// If esbuild fails on first run, we want to quit the process
-		// since we can't recover from here
-		// related: https://github.com/evanw/esbuild/issues/1037
-		throw new Error(err);
-	});
-	return bundle;
+	return {
+		id: 0,
+		entry,
+		path: resolvedEntryPointPath,
+		type: bundleType,
+		modules,
+		sourceMapPath,
+	};
 }
 
-export async function setupLocalServer({
+export async function startLocalServer({
 	name: workerName,
 	bundle,
 	format,

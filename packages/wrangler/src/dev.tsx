@@ -8,7 +8,7 @@ import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 
-import { implementation } from "./dev/no-react";
+import { startDevServer } from "./dev/start-server";
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -344,7 +344,7 @@ export async function startDev(args: StartDevOptions) {
 			getLocalPort,
 			getInspectorPort,
 			cliDefines,
-		} = await commonDev(args, config);
+		} = await validateDevServerSettings(args, config);
 
 		await metrics.sendMetricsEvent(
 			"run dev",
@@ -465,7 +465,7 @@ export async function startApiDev(args: StartDevOptions) {
 		getLocalPort,
 		getInspectorPort,
 		cliDefines,
-	} = await commonDev(args, config);
+	} = await validateDevServerSettings(args, config);
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
@@ -474,13 +474,13 @@ export async function startApiDev(args: StartDevOptions) {
 	);
 
 	// eslint-disable-next-line no-inner-declarations
-	async function runReactlessImplementation(configParam: Config) {
+	async function getDevServer(configParam: Config) {
 		const { assetPaths, bindings } = await getBindingsAndAssetPaths(
 			args,
 			configParam
 		);
 
-		return await implementation({
+		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
 			noBundle: !(args.bundle ?? !configParam.no_bundle),
 			entry: entry,
@@ -535,11 +535,14 @@ export async function startApiDev(args: StartDevOptions) {
 		});
 	}
 
-	const { stop } = await runReactlessImplementation(config);
+	const devServer = await getDevServer(config);
+	if (!devServer) {
+		throw logger.error("Failed to start dev server.");
+	}
 
 	return {
 		stop: async () => {
-			await stop();
+			await devServer.stop();
 		},
 		fetch: async (init?: RequestInit) => {
 			const port = args.port || config.dev.port || (await getLocalPort());
@@ -607,7 +610,10 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 	return { host, routes, zoneId };
 }
 
-async function commonDev(args: StartDevOptions, config: Config) {
+async function validateDevServerSettings(
+	args: StartDevOptions,
+	config: Config
+) {
 	const entry = await getEntry(
 		{ assets: args.assets, script: args.script },
 		config,

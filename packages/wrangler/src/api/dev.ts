@@ -49,6 +49,12 @@ interface DevOptions {
 	_?: (string | number)[]; //yargs wants this
 	$0?: string; //yargs wants this
 }
+
+interface DevApiOptions {
+	testMode?: boolean;
+	disableExperimentalWarning?: boolean;
+}
+
 /**
  *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
  *  @param {string} script
@@ -57,9 +63,10 @@ interface DevOptions {
 export async function unstable_dev(
 	script: string,
 	options?: DevOptions,
-	testMode = true,
-	disableExperimentalWarning?: boolean
+	apiOptions?: DevApiOptions
 ) {
+	const { testMode = true, disableExperimentalWarning = false } =
+		apiOptions || {};
 	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
