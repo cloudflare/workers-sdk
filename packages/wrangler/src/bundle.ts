@@ -441,12 +441,11 @@ async function applyMiddlewareLoaderFacade(
 			plugins: [
 				esbuildAliasExternalPlugin({
 					__ENTRY_POINT__: entry.file,
-					...middleware.reduce(
-						(obj, val, index) => ({
-							...obj,
-							[middlewareIdentifiers[index]]: path.resolve(__dirname, val.path),
-						}),
-						{}
+					...Object.fromEntries(
+						middleware.map((val, index) => [
+							middlewareIdentifiers[index],
+							path.resolve(__dirname, val.path),
+						])
 					),
 				}),
 			],
