@@ -5,8 +5,7 @@ jest.unmock("undici");
 describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
-			"src/__tests__/helpers/hello-world-worker.js",
-			{ vars: { override_mf: true } }
+			"src/__tests__/helpers/hello-world-worker.js"
 		);
 		const resp = await worker.fetch();
 		if (resp) {

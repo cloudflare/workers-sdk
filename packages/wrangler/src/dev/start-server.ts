@@ -8,6 +8,7 @@ import { bundleWorker } from "../bundle";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
+import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
 import { validateDevProps } from "./validate-dev-props";
 
@@ -416,13 +417,9 @@ export async function startLocalServer({
 		// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
 		// If either of those paths change this line needs updating.
 
-		const shouldOverrideCLIPath =
-			bindings?.vars?.override_mf && typeof jest !== "undefined";
 		const miniflareCLIPath = path.resolve(
-			__dirname,
-			shouldOverrideCLIPath
-				? "../../miniflare-dist/index.mjs"
-				: "../miniflare-dist/index.mjs"
+			getBasePath(),
+			"miniflare-dist/index.mjs"
 		);
 		const miniflareOptions = JSON.stringify(options, null);
 
