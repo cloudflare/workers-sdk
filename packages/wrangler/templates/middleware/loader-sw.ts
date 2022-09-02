@@ -148,6 +148,35 @@ globalThis.addEventListener("fetch", (event) => {
 		passThroughOnException: event.passThroughOnException.bind(event),
 	};
 
+	const __facade_sw_dispatch__: Dispatcher = function (type, init) {
+		if (type === "scheduled") {
+			const facadeEvent = new __Facade_ScheduledEvent__("scheduled", {
+				scheduledTime: Date.now(),
+				cron: init.cron ?? "",
+				noRetry() {},
+			});
+			__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+		}
+	};
+
+	const __facade_sw_fetch__: Middleware = function (request, _env, ctx) {
+		const facadeEvent = new __Facade_FetchEvent__("fetch", {
+			request,
+			passThroughOnException: ctx.passThroughOnException,
+		});
+
+		event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
+
+		__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+		facadeEvent[__facade_dispatched__] = true;
+
+		const response = facadeEvent[__facade_response__];
+		if (response === undefined) {
+			throw new Error("No response!"); // TODO: proper error message
+		}
+		return response;
+	};
+
 	event.respondWith(
 		__facade_invoke__(
 			event.request,
@@ -158,29 +187,6 @@ globalThis.addEventListener("fetch", (event) => {
 		)
 	);
 });
-const __facade_sw_dispatch__: Dispatcher = function (type, init) {
-	if (type === "scheduled") {
-		const facadeEvent = new __Facade_ScheduledEvent__("scheduled", {
-			scheduledTime: Date.now(),
-			cron: init.cron ?? "",
-			noRetry() {},
-		});
-		__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
-	}
-};
-const __facade_sw_fetch__: Middleware = function (request, _env, ctx) {
-	const facadeEvent = new __Facade_FetchEvent__("fetch", {
-		request,
-		passThroughOnException: ctx.passThroughOnException,
-	});
-	__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
-	facadeEvent[__facade_dispatched__] = true;
-	const response = facadeEvent[__facade_response__];
-	if (response === undefined) {
-		throw new Error("No response!"); // TODO: proper error message
-	}
-	return response;
-};
 
 globalThis.addEventListener("scheduled", (event) => {
 	const facadeEvent = new __Facade_ScheduledEvent__("scheduled", {
@@ -188,5 +194,8 @@ globalThis.addEventListener("scheduled", (event) => {
 		cron: event.cron,
 		noRetry: event.noRetry.bind(event),
 	});
+
+	event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
+
 	__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
 });
