@@ -18,6 +18,12 @@ export const mswR2handlers = [
 			})
 		)
 	),
+	rest.post("*/accounts/:accountId/r2/buckets", (_, response, context) =>
+		response(
+			context.status(200),
+			context.json({ success: true, errors: [], messages: [], result: {} })
+		)
+	),
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
 		(_, response, context) =>

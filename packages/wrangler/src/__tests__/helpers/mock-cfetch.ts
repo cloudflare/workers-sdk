@@ -239,16 +239,16 @@ export async function mockFetchR2Objects(
 		method: "PUT" | "GET" | "DELETE";
 	}
 ): Promise<Response> {
-	/**
-	 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
-	 * mimicking the fetch request taking in the stream and draining it.
-	 */
-	if (bodyInit.body instanceof Readable) {
-		bodyInit.body.destroy();
-		bodyInit.body.removeAllListeners();
-	}
-
 	if (r2GetMocks.has(resource)) {
+		/**
+		 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
+		 * mimicking the fetch request taking in the stream and draining it.
+		 */
+		if (bodyInit.body instanceof Readable) {
+			bodyInit.body.destroy();
+			bodyInit.body.removeAllListeners();
+		}
+
 		const value = r2GetMocks.get(resource);
 
 		return new Response(value);
