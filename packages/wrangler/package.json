@@ -98,6 +98,7 @@
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.51",
 		"miniflare": "^2.8.1",
+		"msw": "^0.46.1",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
