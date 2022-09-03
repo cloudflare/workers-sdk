@@ -291,7 +291,9 @@ describe("wrangler", () => {
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("bucketName-object-test");
 							expect(objectName).toEqual("wormhole-img.png");
-							expect(request.headers.all()).toMatchInlineSnapshot(`
+							const headersObject = request.headers.all();
+							delete headersObject["user-agent"];
+							expect(headersObject).toMatchInlineSnapshot(`
 					Object {
 					  "accept": "*/*",
 					  "accept-encoding": "gzip,deflate",
@@ -305,7 +307,6 @@ describe("wrangler", () => {
 					  "content-type": "content-type-mock",
 					  "expires": "expire-time-mock",
 					  "host": "api.cloudflare.com",
-					  "user-agent": "wrangler/2.0.28",
 					}
 				`);
 							response.once(

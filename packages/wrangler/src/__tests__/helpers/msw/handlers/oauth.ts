@@ -15,9 +15,7 @@ export const mswOauthHandlers = [
 	// revoke access token
 	rest.post(
 		"https://dash.cloudflare.com/oauth2/revoke",
-		(_, response, context) => {
-			response(context.status(200), context.text(""));
-		}
+		(_, response, context) => response(context.status(200), context.text(""))
 	),
 
 	// exchange (auth code | refresh token) for access token

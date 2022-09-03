@@ -62,10 +62,9 @@ export async function mockFetchInternal(
 			return await handler(uri, init, queryParams ?? new URLSearchParams()); // TODO: should we have some kind of fallthrough system? we'll see.
 		}
 	}
-	// no mocks found for ${init.method ?? "any HTTP"} request to ${resource}
+
 	// let it fall through to mock-service-worker
 	// (do a real, unmocked fetch)
-
 	return await realFetchInternal(resource, init, queryParams);
 }
 

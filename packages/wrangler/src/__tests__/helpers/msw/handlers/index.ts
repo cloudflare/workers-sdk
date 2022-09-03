@@ -1,4 +1,5 @@
 // barrel import for msw handlers
+import { mswNamespacesHandlers } from "./namespaces";
 import { mswOauthHandlers } from "./oauth";
 import { mswR2handlers } from "./r2";
 import { mswUserHandlers } from "./user";
@@ -8,4 +9,5 @@ export const mswDefaultHandlers = [
 	...mswOauthHandlers,
 	...mswR2handlers,
 	...mswUserHandlers,
+	...mswNamespacesHandlers,
 ];
