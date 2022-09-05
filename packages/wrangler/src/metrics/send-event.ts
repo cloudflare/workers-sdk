@@ -51,6 +51,7 @@ export type EventNames =
 	| "list pages deployments"
 	| "build pages functions"
 	| "run dev"
+	| "run dev (api)"
 	| "run pages dev";
 
 /**

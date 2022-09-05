@@ -8,6 +8,7 @@ import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 
+import { startDevServer } from "./dev/start-server";
 import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -343,7 +344,7 @@ export async function startDev(args: StartDevOptions) {
 			getLocalPort,
 			getInspectorPort,
 			cliDefines,
-		} = await commonDev(args, config);
+		} = await validateDevServerSettings(args, config);
 
 		await metrics.sendMetricsEvent(
 			"run dev",
@@ -430,7 +431,6 @@ export async function startDev(args: StartDevOptions) {
 				await watcher?.close();
 			},
 			fetch: async (init?: RequestInit) => {
-				//TODO: we are not guaranteed to be assigned this port, we should fix this ASAP
 				const port = args.port || config.dev.port || (await getLocalPort());
 				const address = args.ip || config.dev.ip || "localhost";
 
@@ -442,6 +442,116 @@ export async function startDev(args: StartDevOptions) {
 	}
 }
 
+export async function startApiDev(args: StartDevOptions) {
+	if (args.logLevel) {
+		// we don't define a "none" logLevel, so "error" will do for now.
+		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+	}
+	await printWranglerBanner();
+
+	const configPath =
+		(args.config as ConfigPath) ||
+		((args.script &&
+			findWranglerToml(path.dirname(args.script))) as ConfigPath);
+	const config = readConfig(configPath, args);
+
+	const {
+		entry,
+		nodeCompat,
+		upstreamProtocol,
+		zoneId,
+		host,
+		routes,
+		getLocalPort,
+		getInspectorPort,
+		cliDefines,
+	} = await validateDevServerSettings(args, config);
+
+	await metrics.sendMetricsEvent(
+		"run dev (api)",
+		{ local: args.local },
+		{ sendMetrics: config.send_metrics, offline: args.local }
+	);
+
+	// eslint-disable-next-line no-inner-declarations
+	async function getDevServer(configParam: Config) {
+		const { assetPaths, bindings } = await getBindingsAndAssetPaths(
+			args,
+			configParam
+		);
+
+		return await startDevServer({
+			name: getScriptName({ name: args.name, env: args.env }, configParam),
+			noBundle: !(args.bundle ?? !configParam.no_bundle),
+			entry: entry,
+			env: args.env,
+			zone: zoneId,
+			host: host,
+			routes: routes,
+			rules: getRules(configParam),
+			legacyEnv: isLegacyEnv(configParam),
+			minify: args.minify ?? configParam.minify,
+			nodeCompat: nodeCompat,
+			build: configParam.build || {},
+			define: { ...config.define, ...cliDefines },
+			initialMode: args.local ? "local" : "remote",
+			jsxFactory: args["jsx-factory"] || configParam.jsx_factory,
+			jsxFragment: args["jsx-fragment"] || configParam.jsx_fragment,
+			tsconfig: args.tsconfig ?? configParam.tsconfig,
+			upstreamProtocol: upstreamProtocol,
+			localProtocol: args.localProtocol || configParam.dev.local_protocol,
+			localUpstream: args["local-upstream"] || host,
+			enableLocalPersistence: args.experimentalEnableLocalPersistence || false,
+			liveReload: args.liveReload || false,
+			accountId: configParam.account_id || getAccountFromCache()?.id,
+			assetPaths: assetPaths,
+			assetsConfig: configParam.assets,
+			port: args.port || configParam.dev.port || (await getLocalPort()),
+			ip: args.ip || configParam.dev.ip,
+			inspectorPort:
+				args["inspector-port"] ||
+				configParam.dev.inspector_port ||
+				(await getInspectorPort()),
+			isWorkersSite: Boolean(args.site || configParam.site),
+			compatibilityDate: getDevCompatibilityDate(
+				config,
+				args["compatibility-date"]
+			),
+			compatibilityFlags:
+				args["compatibility-flags"] || configParam.compatibility_flags,
+			usageModel: configParam.usage_model,
+			bindings: bindings,
+			crons: configParam.triggers.crons,
+			logLevel: args.logLevel,
+			logPrefix: args.logPrefix,
+			onReady: args.onReady,
+			inspect: args.inspect ?? true,
+			showInteractiveDevSession: args.showInteractiveDevSession,
+			forceLocal: args.forceLocal,
+			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
+			local: true,
+			firstPartyWorker: undefined,
+			sendMetrics: undefined,
+		});
+	}
+
+	const devServer = await getDevServer(config);
+	if (!devServer) {
+		throw logger.error("Failed to start dev server.");
+	}
+
+	return {
+		stop: async () => {
+			await devServer.stop();
+		},
+		fetch: async (init?: RequestInit) => {
+			const port = args.port || config.dev.port || (await getLocalPort());
+			const address = args.ip || config.dev.ip || "localhost";
+
+			return await fetch(`http://${address}:${port}/`, init);
+		},
+	};
+}
 /**
  * Avoiding calling `getPort()` multiple times by memoizing the first result.
  */
@@ -500,7 +610,10 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 	return { host, routes, zoneId };
 }
 
-async function commonDev(args: StartDevOptions, config: Config) {
+async function validateDevServerSettings(
+	args: StartDevOptions,
+	config: Config
+) {
 	const entry = await getEntry(
 		{ assets: args.assets, script: args.script },
 		config,

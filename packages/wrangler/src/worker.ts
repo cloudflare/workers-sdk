@@ -65,14 +65,14 @@ export interface CfModule {
 /**
  * A map of variable names to values.
  */
-interface CfVars {
+export interface CfVars {
 	[key: string]: unknown;
 }
 
 /**
  * A KV namespace.
  */
-interface CfKvNamespace {
+export interface CfKvNamespace {
 	binding: string;
 	id: string;
 }
@@ -81,7 +81,7 @@ interface CfKvNamespace {
  * A binding to a wasm module (in service-worker format)
  */
 
-interface CfWasmModuleBindings {
+export interface CfWasmModuleBindings {
 	[key: string]: string;
 }
 
@@ -89,7 +89,7 @@ interface CfWasmModuleBindings {
  * A binding to a text blob (in service-worker format)
  */
 
-interface CfTextBlobBindings {
+export interface CfTextBlobBindings {
 	[key: string]: string;
 }
 
@@ -97,21 +97,21 @@ interface CfTextBlobBindings {
  * A binding to a data blob (in service-worker format)
  */
 
-interface CfDataBlobBindings {
+export interface CfDataBlobBindings {
 	[key: string]: string;
 }
 
 /**
  * A Durable Object.
  */
-interface CfDurableObject {
+export interface CfDurableObject {
 	name: string;
 	class_name: string;
 	script_name?: string;
 	environment?: string;
 }
 
-interface CfR2Bucket {
+export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
 }

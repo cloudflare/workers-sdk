@@ -364,7 +364,7 @@ export const Handler = async ({
 			logLevel: "error",
 			logPrefix: "pages",
 		},
-		true
+		{ testMode: false, disableExperimentalWarning: true }
 	);
 	await metrics.sendMetricsEvent("run pages dev");
 
