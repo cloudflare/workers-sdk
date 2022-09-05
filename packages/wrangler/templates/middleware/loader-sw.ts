@@ -155,7 +155,9 @@ globalThis.addEventListener("fetch", (event) => {
 				cron: init.cron ?? "",
 				noRetry() {},
 			});
+
 			__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+			event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 		}
 	};
 
@@ -165,10 +167,9 @@ globalThis.addEventListener("fetch", (event) => {
 			passThroughOnException: ctx.passThroughOnException,
 		});
 
-		event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
-
 		__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
 		facadeEvent[__facade_dispatched__] = true;
+		event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 
 		const response = facadeEvent[__facade_response__];
 		if (response === undefined) {
@@ -195,7 +196,6 @@ globalThis.addEventListener("scheduled", (event) => {
 		noRetry: event.noRetry.bind(event),
 	});
 
-	event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
-
 	__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+	event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 });
