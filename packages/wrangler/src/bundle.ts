@@ -146,7 +146,7 @@ export async function bundleWorker(
 	// which is all loaded as one in a stack.
 	const middlewareToLoad: MiddlewareLoader[] = [
 		// {
-		// 	path: "../templates/middleware/middleware-pretty-error.ts",
+		// 	path: "templates/middleware/middleware-pretty-error.ts",
 		// 	publish: true,
 		// 	dev: false,
 		// },
@@ -505,7 +505,7 @@ async function applyMiddlewareLoaderFacade(
 
 	const loaderPath =
 		entry.format === "modules"
-			? path.resolve(getBasePath(), "../templates/middleware/loader-modules.ts")
+			? path.resolve(getBasePath(), "templates/middleware/loader-modules.ts")
 			: dynamicFacadePath;
 
 	await esbuild.build({
@@ -516,7 +516,7 @@ async function applyMiddlewareLoaderFacade(
 		...(entry.format === "service-worker"
 			? {
 					inject: [
-						path.resolve(getBasePath(), "../templates/middleware/loader-sw.ts"),
+						path.resolve(getBasePath(), "templates/middleware/loader-sw.ts"),
 					],
 					define: {
 						addEventListener: "__facade_addEventListener__",
@@ -531,7 +531,7 @@ async function applyMiddlewareLoaderFacade(
 							__ENTRY_POINT__: targetPathInsertion,
 							"./common": path.resolve(
 								getBasePath(),
-								"../templates/middleware/common.ts"
+								"templates/middleware/common.ts"
 							),
 						}),
 					],
