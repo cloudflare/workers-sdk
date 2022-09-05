@@ -19,14 +19,16 @@ export type Middleware = (
 
 const __facade_middleware__: Middleware[] = [];
 
-export function __facade_register__(
-	// If insertFront is true, we insert the middleware first (we do this with internal middleware)
-	middleware: Middleware | Middleware[],
-	insertFront = false
+// The register functions allow for the insertion of one or many middleware,
+// We register internal middleware first in the stack, but have no way of controlling
+// the order that addMiddleware is run in service workers so need an internal function.
+export function __facade_register__(...args: (Middleware | Middleware[])[]) {
+	__facade_middleware__.push(...args.flat());
+}
+export function __facade_registerInternal__(
+	...args: (Middleware | Middleware[])[]
 ) {
-	// This function allows for registering of one or many middleware
-	if (insertFront) __facade_middleware__.unshift(...[middleware].flat());
-	else __facade_middleware__.push(...[middleware].flat());
+	__facade_middleware__.unshift(...args.flat());
 }
 
 function __facade_invokeChain__(
