@@ -59,6 +59,7 @@ interface DevApiOptions {
  *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
  *  @param {string} script
  *  @param {DevOptions} options
+ *  @param {DevApiOptions} apiOptions
  */
 export async function unstable_dev(
 	script: string,
