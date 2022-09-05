@@ -25,6 +25,11 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
+      - name: Build wrangler
+        run: npm run build
+        env:
+          NODE_ENV: "production"
+
       - name: Run tests & collect coverage
         run: npm run test:ci -w wrangler
 
