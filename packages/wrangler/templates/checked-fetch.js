@@ -1,7 +1,7 @@
 const urls = new Set();
 
-export function checkedFetch(fetchRequest, init) {
-	const { request, url } = getRequestDetails(fetchRequest, init);
+export function checkedFetch(request, init) {
+	const url = new URL(new Request(request, init).url);
 	if (url.port && url.port !== "443" && url.protocol === "https:") {
 		if (!urls.has(url.toString())) {
 			urls.add(url.toString());
@@ -12,24 +12,4 @@ export function checkedFetch(fetchRequest, init) {
 		}
 	}
 	return globalThis.fetch(request, init);
-}
-
-function getRequestDetails(fetchRequest, init) {
-	let request;
-	let url;
-
-	if (fetchRequest instanceof URL) {
-		url = fetchRequest;
-		request = new Request(url, init);
-	} else {
-		request = fetchRequest;
-		url = new URL(
-			(typeof request === "string" ? new Request(request, init) : request).url
-		);
-	}
-
-	return {
-		request,
-		url,
-	};
 }
