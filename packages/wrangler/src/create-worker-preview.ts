@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { logger } from "./logger";
-import { parseJSON } from './parse';
+import { parseJSON } from "./parse";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 
 /**
@@ -127,9 +127,7 @@ export async function createPreviewSession(
 		abortSignal
 	);
 
-	logger.debug(
-		`-- START EXCHANGE API REQUEST: GET ${exchange_url}`
-	);
+	logger.debug(`-- START EXCHANGE API REQUEST: GET ${exchange_url}`);
 	logger.debug("-- END EXCHANGE API REQUEST");
 	const exchangeResponse = await fetch(exchange_url, { signal: abortSignal });
 	const bodyText = await exchangeResponse.text();
@@ -142,7 +140,11 @@ export async function createPreviewSession(
 	logger.debug("RESPONSE:", bodyText);
 	logger.debug("-- END EXCHANGE API RESPONSE");
 
-	const { inspector_websocket, prewarm, token } = parseJSON<{ inspector_websocket: string; token: string; prewarm: string }>(bodyText);
+	const { inspector_websocket, prewarm, token } = parseJSON<{
+		inspector_websocket: string;
+		token: string;
+		prewarm: string;
+	}>(bodyText);
 
 	const { host } = new URL(inspector_websocket);
 	const query = `cf_workers_preview_token=${token}`;
