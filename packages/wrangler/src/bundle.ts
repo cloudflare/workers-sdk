@@ -309,7 +309,7 @@ export async function bundleWorker(
 /**
  * A simple plugin to alias modules and mark them as external
  */
-function esbuildAliasExternalPlugin(
+export function esbuildAliasExternalPlugin(
 	aliases: Record<string, string>
 ): esbuild.Plugin {
 	return {

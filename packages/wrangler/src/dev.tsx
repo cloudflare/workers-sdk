@@ -294,6 +294,7 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 	}[];
 };
+
 type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.

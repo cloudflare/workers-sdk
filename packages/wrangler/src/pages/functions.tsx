@@ -2,11 +2,9 @@ import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import { isInPagesCI, ROUTES_SPEC_VERSION } from "./constants";
-import {
-	isRoutesJSONSpec,
-	optimizeRoutesJSONSpec,
-} from "./functions/routes-transformation";
+import { isInPagesCI } from "./constants";
+import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
+import { validateRoutes } from "./functions/routes-validation";
 import { pagesBetaWarning } from "./utils";
 import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
@@ -68,18 +66,10 @@ export async function OptimizeRoutesHandler({
 
 	const routes = JSON.parse(routesFileContents);
 
-	if (!isRoutesJSONSpec(routes)) {
-		throw new FatalError(
-			`
-      Invalid _routes.json file found at: ${routesPath}. Please make sure the JSON object has the following format:
-      {
-        version: ${ROUTES_SPEC_VERSION};
-        include: string[];
-        exclude: string[];
-      }
-      `,
-			1
-		);
+	try {
+		validateRoutes(routes, routesPath);
+	} catch (err) {
+		throw err;
 	}
 
 	const optimizedRoutes = optimizeRoutesJSONSpec(routes);

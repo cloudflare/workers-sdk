@@ -9,7 +9,7 @@ import { consolidateRoutes } from "./routes-consolidation";
 import type { RouteConfig } from "./routes";
 
 /** Interface for _routes.json */
-interface RoutesJSONSpec {
+export interface RoutesJSONSpec {
 	version: typeof ROUTES_SPEC_VERSION;
 	description?: string;
 	include: string[];
@@ -112,17 +112,4 @@ export function compareRoutes(routeA: string, routeB: string) {
 
 	// all else equal, just sort the paths lexicographically
 	return routeA.localeCompare(routeB);
-}
-
-export function isRoutesJSONSpec(data: unknown): data is RoutesJSONSpec {
-	return (
-		(typeof data === "object" &&
-			data &&
-			"version" in data &&
-			typeof (data as RoutesJSONSpec).version === "number" &&
-			(data as RoutesJSONSpec).version === ROUTES_SPEC_VERSION &&
-			Array.isArray((data as RoutesJSONSpec).include) &&
-			Array.isArray((data as RoutesJSONSpec).exclude)) ||
-		false
-	);
 }

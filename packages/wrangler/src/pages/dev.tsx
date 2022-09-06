@@ -1,10 +1,11 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
-import { build as workerJsBuild } from "esbuild";
+import { build, build as workerJsBuild } from "esbuild";
 import { unstable_dev } from "../api";
+import { esbuildAliasExternalPlugin } from "../bundle";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -12,6 +13,7 @@ import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { YargsOptionsToInterface } from "./types";
@@ -262,6 +264,7 @@ export const Handler = async ({
 			}
 		}
 	}
+
 	// Depending on the result of building Functions, we may not actually be using
 	// Functions even if the directory exists.
 	if (!usingFunctions) {
@@ -307,8 +310,44 @@ export const Handler = async ({
 		);
 	}
 
+	let entrypoint = scriptPath;
+
+	if (directory) {
+		const routesJSONPath = join(directory, "_routes.json");
+
+		if (existsSync(routesJSONPath)) {
+			const routesJSONContents = readFileSync(routesJSONPath, "utf-8");
+
+			try {
+				validateRoutes(JSON.parse(routesJSONContents), directory);
+			} catch (err) {
+				throw err;
+			}
+
+			entrypoint = join(tmpdir(), `${Math.random().toString(36).slice(2)}.js`);
+
+			await build({
+				entryPoints: [
+					resolve(getBasePath(), "templates/pages-dev-pipeline.ts"),
+				],
+				bundle: true,
+				sourcemap: true,
+				format: "esm",
+				plugins: [
+					esbuildAliasExternalPlugin({
+						__ENTRY_POINT__: scriptPath,
+					}),
+				],
+				outfile: entrypoint,
+				define: {
+					__ROUTES__: routesJSONContents,
+				},
+			});
+		}
+	}
+
 	const { stop, waitUntilExit } = await unstable_dev(
-		scriptPath,
+		entrypoint,
 		{
 			ip,
 			port,
