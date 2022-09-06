@@ -8,7 +8,7 @@ import { printBundleSize } from "./bundle-reporter";
 import { fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { confirm } from "./dialogs";
+import { confirm, fromDashMessagePrompt } from "./dialogs";
 import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { getMetricsUsageHeaders } from "./metrics";
@@ -218,7 +218,24 @@ Update them to point to this script instead?`;
 
 export default async function publish(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId } = props;
+	const { config, accountId, name } = props;
+	if (accountId && name) {
+		const serviceMetaData = await fetchResult(
+			`/accounts/${accountId}/workers/services/${name}`
+		);
+		const { default_environment } = serviceMetaData as {
+			default_environment: {
+				script: { last_deployed_from: "dash" | "wrangler" | "api" };
+			};
+		};
+
+		if (
+			(await fromDashMessagePrompt(
+				default_environment.script.last_deployed_from
+			)) === false
+		)
+			return;
+	}
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
 		const compatibilityDateStr = `${new Date().getFullYear()}-${(

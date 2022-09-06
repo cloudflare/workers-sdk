@@ -133,3 +133,15 @@ export function select(
 		);
 	});
 }
+
+export async function fromDashMessagePrompt(
+	deploySource: string
+): Promise<boolean | void> {
+	if (deploySource === "dash") {
+		logger.warn(
+			`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.
+		Edits that have been made via the dashboard will be overridden by your local code and config.`
+		);
+		return await confirm("Would you like to continue?");
+	}
+}
