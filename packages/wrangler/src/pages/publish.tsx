@@ -427,7 +427,7 @@ function validateRoutesFile(_routes: string, routesPath: string) {
         include: string[];
         exclude: string[];
       }
-			and that at least one include rule is provided.
+and that at least one include rule is provided.
       `,
 			1
 		);

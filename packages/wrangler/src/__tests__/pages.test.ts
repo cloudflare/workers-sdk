@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import { ROUTES_SPEC_VERSION } from "../pages/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
 	createFetchResult,
@@ -57,23 +58,23 @@ describe("pages", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-      "wrangler pages
+		      "wrangler pages
 
-      ⚡️ Configure Cloudflare Pages
+		      ⚡️ Configure Cloudflare Pages
 
-      Commands:
-        wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
-        wrangler pages project                         ⚡️ Interact with your Pages projects
-        wrangler pages deployment                      🚀 Interact with the deployments of a project
-        wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
+		      Commands:
+		        wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
+		        wrangler pages project                         ⚡️ Interact with your Pages projects
+		        wrangler pages deployment                      🚀 Interact with the deployments of a project
+		        wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
-      Flags:
-        -c, --config   Path to .toml configuration file  [string]
-        -h, --help     Show help  [boolean]
-        -v, --version  Show version number  [boolean]
+		      Flags:
+		        -c, --config   Path to .toml configuration file  [string]
+		        -h, --help     Show help  [boolean]
+		        -v, --version  Show version number  [boolean]
 
-      🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
-    `);
+		      🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+	    `);
 	});
 
 	describe("beta message for subcommands", () => {
@@ -85,20 +86,20 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-      `);
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		      `);
 		});
 
 		it("should display for pages:functions:build", async () => {
 			await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-      `);
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		      `);
 		});
 
 		it("should display for pages:functions:optimize-routes", async () => {
@@ -109,10 +110,10 @@ describe("pages", () => {
 			).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			        "🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-      `);
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		      `);
 		});
 	});
 
@@ -234,9 +235,9 @@ describe("pages", () => {
 				"pages project create a-new-project --production-branch=main"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
-        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
-      `);
+			        "✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
+			        To deploy a folder of assets, run 'wrangler pages publish [directory]'."
+		      `);
 		});
 	});
 
@@ -312,26 +313,26 @@ describe("pages", () => {
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "wrangler pages publish [directory]
+			        "wrangler pages publish [directory]
 
-        🆙 Publish a directory of static assets as a Pages deployment
+			        🆙 Publish a directory of static assets as a Pages deployment
 
-        Positionals:
-          directory  The directory of static files to upload  [string]
+			        Positionals:
+			          directory  The directory of static files to upload  [string]
 
-        Flags:
-          -h, --help     Show help  [boolean]
-          -v, --version  Show version number  [boolean]
+			        Flags:
+			          -h, --help     Show help  [boolean]
+			          -v, --version  Show version number  [boolean]
 
-        Options:
-              --project-name    The name of the project you want to deploy to  [string]
-              --branch          The name of the branch you want to deploy to  [string]
-              --commit-hash     The SHA to attach to this deployment  [string]
-              --commit-message  The commit message to attach to this deployment  [string]
-              --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
+			        Options:
+			              --project-name    The name of the project you want to deploy to  [string]
+			              --branch          The name of the branch you want to deploy to  [string]
+			              --commit-hash     The SHA to attach to this deployment  [string]
+			              --commit-message  The commit message to attach to this deployment  [string]
+			              --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 
-        🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
-      `);
+			        🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+		      `);
 		});
 
 		it("should upload a directory of files", async () => {
@@ -384,10 +385,10 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-                          }
-                      `);
+				                          Object {
+				                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -453,10 +454,10 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-                          }
-                      `);
+				                          Object {
+				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -490,10 +491,10 @@ describe("pages", () => {
 			}
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 1 files (TIMINGS)
+			        "✨ Success! Uploaded 1 files (TIMINGS)
 
-        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-      `);
+			        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		      `);
 		});
 
 		it("should refetch a JWT if it expires while uploading", async () => {
@@ -547,10 +548,10 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-                          }
-                      `);
+				                          Object {
+				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -587,10 +588,10 @@ describe("pages", () => {
 			}
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 1 files (TIMINGS)
+			        "✨ Success! Uploaded 1 files (TIMINGS)
 
-        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-      `);
+			        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		      `);
 		});
 
 		it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -638,13 +639,13 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-                          }
-                      `);
+				                          Object {
+				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+				                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -697,10 +698,10 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 4 files (TIMINGS)
+			        "✨ Success! Uploaded 4 files (TIMINGS)
 
-        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-      `);
+			        ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		      `);
 		});
 
 		it("should resolve child directories correctly", async () => {
@@ -752,13 +753,13 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-                          }
-                      `);
+				                          Object {
+				                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -811,10 +812,10 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-          "✨ Success! Uploaded 4 files (TIMINGS)
+			          "✨ Success! Uploaded 4 files (TIMINGS)
 
-          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-        `);
+			          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		        `);
 		});
 
 		it("should resolve the current directory correctly", async () => {
@@ -866,13 +867,13 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 						expect(manifest).toMatchInlineSnapshot(`
-                          Object {
-                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-                          }
-                      `);
+				                          Object {
+				                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
+				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+				                          }
+			                      `);
 					});
 
 					return {
@@ -926,10 +927,10 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-          "✨ Success! Uploaded 4 files (TIMINGS)
+			          "✨ Success! Uploaded 4 files (TIMINGS)
 
-          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-        `);
+			          ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		        `);
 		});
 
 		it("should not error when directory names contain periods and houses a extensionless file", async () => {
@@ -1000,6 +1001,733 @@ describe("pages", () => {
 				`"Pages does not support wrangler.toml"`
 			);
 		});
+
+		it("should upload a Functions project", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+			export async function onRequest() {
+				return new Response("Hello, world!");
+			}
+			`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				`/pages/assets/upsert-hashes`,
+				"POST",
+				async (_, init) => {
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+
+					return Promise.resolve(true);
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(async () => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+
+						// for Functions projects, we auto-generate a `_worker.js` and `_routes.json`
+						// file, based on the contents of `/functions`
+						const generatedWorkerJS = body.get("_worker.js") as Blob;
+						const generatedRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"_worker.js",
+							"_routes.json",
+						]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                          }
+			                      `);
+
+						// the contents of the generated `_worker.js` file is pretty massive, so I don't
+						// think snapshot testing makes much sense here. Plus, calling
+						// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
+						// snapshot value, doesn't generate anything in this case (probably because the
+						// file contents is too big). So for now, let's test that _worker.js was indeed
+						// generated and that the file size is greater than zero
+						expect(generatedWorkerJS).not.toBeNull();
+						expect(generatedWorkerJS.size).toBeGreaterThan(0);
+
+						expect(generatedRoutesJSON).toMatchInlineSnapshot(`
+				"{
+				  \\"version\\": 1,
+				  \\"description\\": \\"Generated by wrangler@2.0.28\\",
+				  \\"include\\": [
+				    \\"/hello\\"
+				  ],
+				  \\"exclude\\": []
+				}"
+			`);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish public --project-name=foo");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Compiled Worker successfully.
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Functions
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should upload an Advanced Mode project", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+				};
+			`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(async () => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual(["manifest", "_worker.js"]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                          }
+			                      `);
+
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+				"
+								export default {
+									async fetch(request, env) {
+										const url = new URL(request.url);
+										return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+								};
+							"
+			`);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish public --project-name=foo");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading _worker.js
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should upload _routes.json for Functions projects, if provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+			export async function onRequest() {
+				return new Response("Hello, world!");
+			}
+			`
+			);
+
+			writeFileSync(
+				"functions/goodbye.ts",
+				`
+			export async function onRequest() {
+				return new Response("Bye bye!");
+			}
+						`
+			);
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+			{
+				"version": ${ROUTES_SPEC_VERSION},
+				"description": "Custom _routes.json file",
+				"include": ["/hello"],
+				"exclude": []
+			}
+						`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				`/pages/assets/upsert-hashes`,
+				"POST",
+				async (_, init) => {
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+
+					return Promise.resolve(true);
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(async () => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const generatedWorkerJS = body.get("_worker.js") as Blob;
+						const customRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"_worker.js",
+							"_routes.json",
+						]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                          }
+			                      `);
+
+						// file content of generated `_worker.js` is too massive to snapshot test
+						expect(generatedWorkerJS).not.toBeNull();
+						expect(generatedWorkerJS.size).toBeGreaterThan(0);
+
+						expect(customRoutesJSON).toMatchInlineSnapshot(`
+				"
+							{
+								\\"version\\": 1,
+								\\"description\\": \\"Custom _routes.json file\\",
+								\\"include\\": [\\"/hello\\"],
+								\\"exclude\\": []
+							}
+										"
+			`);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish public --project-name=foo");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Compiled Worker successfully.
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Functions
+			✨ Uploading _routes.json
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m_routes.json is an experimental feature and is subject to change. Please use with care.[0m
+
+			"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should not deploy Functions projects that provide an invalid custom _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"description": "Custom _routes.json file",
+					"include": [],
+					"exclude": []
+				}
+				`
+			);
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				export async function onRequest() {
+					return new Response("Hello, world!");
+				}
+				`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			await expect(runWrangler("pages publish public --project-name=foo"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+			"Invalid _routes.json file found at: public/_routes.json. Please make sure the JSON object has the following format:
+			      {
+			        version: ${ROUTES_SPEC_VERSION};
+			        include: string[];
+			        exclude: string[];
+			      }
+			and that at least one include rule is provided.
+			      "
+		`);
+		});
+
+		it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"version": ${ROUTES_SPEC_VERSION},
+					"description": "Custom _routes.json file",
+					"include": ["/api/*"],
+					"exclude": []
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+				};
+			`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				`/pages/assets/upsert-hashes`,
+				"POST",
+				async (_, init) => {
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+
+					return Promise.resolve(true);
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(async () => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
+						const customRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"_worker.js",
+							"_routes.json",
+						]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+				"
+								export default {
+									async fetch(request, env) {
+										const url = new URL(request.url);
+										return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+								};
+							"
+			`);
+
+						expect(customRoutesJSON).toMatchInlineSnapshot(`
+				"
+								{
+									\\"version\\": 1,
+									\\"description\\": \\"Custom _routes.json file\\",
+									\\"include\\": [\\"/api/*\\"],
+									\\"exclude\\": []
+								}
+								"
+			`);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish public --project-name=foo");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading _worker.js
+			✨ Uploading _routes.json
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m_routes.json is an experimental feature and is subject to change. Please use with care.[0m
+
+			"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not deploy Advanced Mode projects that provide an invalid _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"description": "Custom _routes.json file",
+					"include": [],
+					"exclude": []
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+				};
+			`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			await expect(runWrangler("pages publish public --project-name=foo"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+			"Invalid _routes.json file found at: public/_routes.json. Please make sure the JSON object has the following format:
+			      {
+			        version: ${ROUTES_SPEC_VERSION};
+			        include: string[];
+			        exclude: string[];
+			      }
+			and that at least one include rule is provided.
+			      "
+		`);
+		});
 	});
 
 	describe("project upload", () => {
@@ -1061,10 +1789,10 @@ describe("pages", () => {
 			await runWrangler("pages project upload .");
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 1 files (TIMINGS)
+			        "✨ Success! Uploaded 1 files (TIMINGS)
 
-        ✨ Upload complete!"
-      `);
+			        ✨ Upload complete!"
+		      `);
 		});
 
 		it("should retry uploads", async () => {
@@ -1129,10 +1857,10 @@ describe("pages", () => {
 			}
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 1 files (TIMINGS)
+			        "✨ Success! Uploaded 1 files (TIMINGS)
 
-        ✨ Upload complete!"
-      `);
+			        ✨ Upload complete!"
+		      `);
 		});
 
 		it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -1215,10 +1943,10 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-        "✨ Success! Uploaded 4 files (TIMINGS)
+			        "✨ Success! Uploaded 4 files (TIMINGS)
 
-        ✨ Upload complete!"
-      `);
+			        ✨ Upload complete!"
+		      `);
 		});
 
 		it("should not error when directory names contain periods and houses a extensionless file", async () => {
