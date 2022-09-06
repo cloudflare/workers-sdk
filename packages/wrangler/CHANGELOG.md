@@ -1,5 +1,42 @@
 # wrangler
 
+## 2.0.29
+
+### Patch Changes
+
+- [#1731](https://github.com/cloudflare/wrangler2/pull/1731) [`16f051d3`](https://github.com/cloudflare/wrangler2/commit/16f051d36e8c205374e5ac38b141def45095e3ef) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add custom \_routes.json support for Pages Functions projects
+
+* [#1762](https://github.com/cloudflare/wrangler2/pull/1762) [`23f89216`](https://github.com/cloudflare/wrangler2/commit/23f8921628baf32f0cace1ebf893964a26afe91a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use getBasePath() when trying to specify paths to files relative to the
+  base of the Wrangler package directory rather than trying to compute the
+  path from Node.js constants like **dirname and **filename. This is
+  because the act of bundling the source code can move the file that contains
+  these constants around potentially breaking the relative path to the desired files.
+
+  Fixes #1755
+
+- [#1763](https://github.com/cloudflare/wrangler2/pull/1763) [`75f3ae82`](https://github.com/cloudflare/wrangler2/commit/75f3ae829b0b4f8ae2cf2093bda93e8096838240) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add `description` field to \_routes.json
+
+  When generating routes for Functions projects, let's add a description
+  so we know what wrangler version generated this config
+
+* [#1538](https://github.com/cloudflare/wrangler2/pull/1538) [`2c9caf74`](https://github.com/cloudflare/wrangler2/commit/2c9caf74bdf3f60db7c244b2202f358abe5ced1f) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: refactor wrangler.dev API to not need React/Ink
+
+  Prior to this change, `wrangler.unstable_dev()` would only support running one instance of wrangler at a time, as Ink only lets you render one instance of React. This resulted in test failures in CI.
+
+  This change creates pure JS/TS versions of these React hooks:
+
+  - useEsbuild
+  - useLocalWorker
+  - useCustomBuild
+  - useTmpDir
+
+  As a side-effect of removing React, tests should run faster in CI.
+
+  Closes #1432
+  Closes #1419
+
+- [#1775](https://github.com/cloudflare/wrangler2/pull/1775) [`8163b8cf`](https://github.com/cloudflare/wrangler2/commit/8163b8cfde8020d76bd64090276347b01b4a8f8d) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add unit tests for `wrangler pages publish`
+
 ## 2.0.28
 
 ### Patch Changes
