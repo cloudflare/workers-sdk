@@ -1,0 +1,1 @@
+/** bundled Functions worker or copy of _worker.js */

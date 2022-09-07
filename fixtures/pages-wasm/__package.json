@@ -1,0 +1,7 @@
+{
+  "name": "pages-wasm",
+  "version": "1.0.0",
+  "dependencies": {
+    "pineapple-wasm-lib": "1.0.0"
+  }
+}

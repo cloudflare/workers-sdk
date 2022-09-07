@@ -1,0 +1,7 @@
+{
+  "name": "pages-wasm",
+  "version": "1.0.0",
+  "dependencies": {
+    "wat2wasm": "3.0.0"
+  }
+}
