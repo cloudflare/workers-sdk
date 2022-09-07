@@ -383,7 +383,7 @@ export const validateRequiredProperty = (
 	container: string,
 	key: string,
 	value: unknown,
-	type: string,
+	type: TypeofType,
 	choices?: unknown[]
 ): boolean => {
 	if (container) {
@@ -417,7 +417,7 @@ export const validateOptionalProperty = (
 	container: string,
 	key: string,
 	value: unknown,
-	type: string,
+	type: TypeofType,
 	choices?: unknown[]
 ): boolean => {
 	if (value !== undefined) {
@@ -440,7 +440,7 @@ export const validateTypedArray = (
 	diagnostics: Diagnostics,
 	container: string,
 	value: unknown,
-	type: string
+	type: TypeofType
 ): boolean => {
 	let isValid = true;
 	if (!Array.isArray(value)) {
@@ -472,7 +472,7 @@ export const validateOptionalTypedArray = (
 	diagnostics: Diagnostics,
 	container: string,
 	value: unknown,
-	type: string
+	type: TypeofType
 ) => {
 	if (value !== undefined) {
 		return validateTypedArray(diagnostics, container, value, type);
@@ -486,7 +486,7 @@ export const validateOptionalTypedArray = (
 export const isRequiredProperty = <T extends object>(
 	obj: object,
 	prop: keyof T,
-	type: string,
+	type: TypeofType,
 	choices?: unknown[]
 ): obj is T =>
 	hasProperty<T>(obj, prop) &&
@@ -499,7 +499,7 @@ export const isRequiredProperty = <T extends object>(
 export const isOptionalProperty = <T extends object>(
 	obj: object,
 	prop: keyof T,
-	type: string
+	type: TypeofType
 ): obj is T => !hasProperty<T>(obj, prop) || typeof obj[prop] === type;
 
 /**
@@ -582,3 +582,16 @@ const isRecord = (
 	value: unknown
 ): value is Record<string | number | symbol, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * JavaScript `typeof` operator return values.
+ */
+type TypeofType =
+	| "string"
+	| "number"
+	| "bigint"
+	| "boolean"
+	| "symbol"
+	| "undefined"
+	| "object"
+	| "function";

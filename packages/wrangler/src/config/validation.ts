@@ -899,7 +899,7 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
-	experimental(diagnostics, rawEnv, "worker_namespaces");
+	experimental(diagnostics, rawEnv, "dispatch_namespaces");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1085,13 +1085,13 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateServiceBinding),
 			[]
 		),
-		worker_namespaces: notInheritable(
+		dispatch_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"worker_namespaces",
+			"dispatch_namespaces",
 			validateBindingArray(envName, validateWorkerNamespaceBinding),
 			[]
 		),
@@ -1630,7 +1630,10 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "id", "string")) {
+	if (
+		!isRequiredProperty(value, "id", "string") ||
+		(value as { id: string }).id.length === 0
+	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
 				value
@@ -1668,7 +1671,10 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "bucket_name", "string")) {
+	if (
+		!isRequiredProperty(value, "bucket_name", "string") ||
+		(value as { bucket_name: string }).bucket_name.length === 0
+	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
 				value

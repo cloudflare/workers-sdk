@@ -4,7 +4,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
-describe("worker-namespace", () => {
+describe("dispatch-namespace", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	mockAccountId();
@@ -14,8 +14,8 @@ describe("worker-namespace", () => {
 		unsetAllMocks();
 	});
 
-	it("should should display a list of available subcommands, for worker-namespace with no subcommand", async () => {
-		await runWrangler("worker-namespace");
+	it("should should display a list of available subcommands, for dispatch-namespace with no subcommand", async () => {
+		await runWrangler("dispatch-namespace");
 
 		// wait a tick for the help menu to be printed
 		await new Promise((resolve) => setImmediate(resolve));
@@ -24,16 +24,16 @@ describe("worker-namespace", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
-		  "out": "wrangler worker-namespace
+		  "out": "wrangler dispatch-namespace
 
-		📦 Interact with a worker namespace
+		📦 Interact with a dispatch namespace
 
 		Commands:
-		  wrangler worker-namespace list                          List all Worker namespaces
-		  wrangler worker-namespace get <name>                    Get information about a Worker namespace
-		  wrangler worker-namespace create <name>                 Create a Worker namespace
-		  wrangler worker-namespace delete <name>                 Delete a Worker namespace
-		  wrangler worker-namespace rename <old-name> <new-name>  Rename a Worker namespace
+		  wrangler dispatch-namespace list                          List all dispatch namespaces
+		  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
+		  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
+		  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
+		  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
 
 		Flags:
 		  -c, --config   Path to .toml configuration file  [string]
@@ -73,19 +73,19 @@ describe("worker-namespace", () => {
 
 		it("should display help for create", async () => {
 			await expect(
-				runWrangler("worker-namespace create")
+				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler worker-namespace create <name>
+			wrangler dispatch-namespace create <name>
 
-			Create a Worker namespace
+			Create a dispatch namespace
 
 			Positionals:
-			  name  Name of the Worker namespace  [string] [required]
+			  name  Name of the dispatch namespace  [string] [required]
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -97,11 +97,11 @@ describe("worker-namespace", () => {
 		it("should attempt to create the given namespace", async () => {
 			const namespaceName = "my-namespace";
 			const requests = mockCreateRequest(namespaceName);
-			await runWrangler(`worker-namespace create ${namespaceName}`);
+			await runWrangler(`dispatch-namespace create ${namespaceName}`);
 			expect(requests.count).toEqual(1);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Created Worker namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""`
+				`"Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""`
 			);
 		});
 	});
@@ -125,19 +125,19 @@ describe("worker-namespace", () => {
 
 		it("should display help for delete", async () => {
 			await expect(
-				runWrangler("worker-namespace create")
+				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler worker-namespace create <name>
+			wrangler dispatch-namespace create <name>
 
-			Create a Worker namespace
+			Create a dispatch namespace
 
 			Positionals:
-			  name  Name of the Worker namespace  [string] [required]
+			  name  Name of the dispatch namespace  [string] [required]
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -149,11 +149,11 @@ describe("worker-namespace", () => {
 		it("should try to delete the given namespace", async () => {
 			const namespaceName = "my-namespace";
 			const requests = mockDeleteRequest(namespaceName);
-			await runWrangler(`worker-namespace delete ${namespaceName}`);
+			await runWrangler(`dispatch-namespace delete ${namespaceName}`);
 			expect(requests.count).toBe(1);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Deleted Worker namespace \\"my-namespace\\""`
+				`"Deleted dispatch namespace \\"my-namespace\\""`
 			);
 		});
 	});
@@ -183,19 +183,19 @@ describe("worker-namespace", () => {
 
 		it("should display help for get", async () => {
 			await expect(
-				runWrangler("worker-namespace get")
+				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        wrangler worker-namespace get <name>
+			        wrangler dispatch-namespace get <name>
 
-			        Get information about a Worker namespace
+			        Get information about a dispatch namespace
 
 			        Positionals:
-			          name  Name of the Worker namespace  [string] [required]
+			          name  Name of the dispatch namespace  [string] [required]
 
 			        Flags:
 			          -c, --config   Path to .toml configuration file  [string]
@@ -207,7 +207,7 @@ describe("worker-namespace", () => {
 		it("should attempt to get info for the given namespace", async () => {
 			const namespaceName = "my-namespace";
 			const requests = mockInfoRequest(namespaceName);
-			await runWrangler(`worker-namespace get ${namespaceName}`);
+			await runWrangler(`dispatch-namespace get ${namespaceName}`);
 			expect(requests.count).toBe(1);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -248,7 +248,7 @@ describe("worker-namespace", () => {
 
 		it("should list all namespaces", async () => {
 			const requests = mockListRequest();
-			await runWrangler("worker-namespace list");
+			await runWrangler("dispatch-namespace list");
 			expect(requests.count).toBe(1);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[
@@ -291,20 +291,20 @@ describe("worker-namespace", () => {
 
 		it("should display help for rename", async () => {
 			await expect(
-				runWrangler("worker-namespace rename")
+				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Not enough non-option arguments: got 0, need at least 2"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler worker-namespace rename <old-name> <new-name>
+			wrangler dispatch-namespace rename <old-name> <new-name>
 
-			Rename a Worker namespace
+			Rename a dispatch namespace
 
 			Positionals:
-			  old-name  Name of the Worker namespace  [string] [required]
-			  new-name  New name of the Worker namespace  [string] [required]
+			  old-name  Name of the dispatch namespace  [string] [required]
+			  new-name  New name of the dispatch namespace  [string] [required]
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -317,10 +317,12 @@ describe("worker-namespace", () => {
 			const namespaceName = "my-namespace";
 			const newName = "new-namespace";
 			const requests = mockRenameRequest(namespaceName);
-			await runWrangler(`worker-namespace rename ${namespaceName} ${newName}`);
+			await runWrangler(
+				`dispatch-namespace rename ${namespaceName} ${newName}`
+			);
 			expect(requests.count).toBe(1);
 			expect(std.out).toMatchInlineSnapshot(
-				`"Renamed Worker namespace \\"my-namespace\\" to \\"new-namespace\\""`
+				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
 		});
 	});

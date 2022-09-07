@@ -59,41 +59,45 @@ async function main() {
 
 	config.bindings = {
 		...config.bindings,
-		...Object.fromEntries(
-			Object.entries(
-				config.externalDurableObjects as Record<
-					string,
-					{ name: string; host: string; port: number }
-				>
-			).map(([binding, { name, host, port }]) => {
-				const factory = () => {
-					throw new FatalError(
-						"An external Durable Object instance's state has somehow been attempted to be accessed.",
-						1
-					);
-				};
-				const namespace = new DurableObjectNamespace(name as string, factory);
-				namespace.get = (id) => {
-					const stub = new DurableObjectStub(factory, id);
-					stub.fetch = (...reqArgs) => {
-						const requestFromArgs = new MiniflareRequest(...reqArgs);
-						const url = new URL(requestFromArgs.url);
-						url.host = host;
-						if (port !== undefined) url.port = port.toString();
-						const request = new MiniflareRequest(
-							url.toString(),
-							requestFromArgs
+		...(config.externalDurableObjects &&
+			Object.fromEntries(
+				Object.entries(
+					config.externalDurableObjects as Record<
+						string,
+						{ name: string; host: string; port: number }
+					>
+				).map(([binding, { name, host, port }]) => {
+					const factory = () => {
+						throw new FatalError(
+							"An external Durable Object instance's state has somehow been attempted to be accessed.",
+							1
 						);
-						request.headers.set("x-miniflare-durable-object-name", name);
-						request.headers.set("x-miniflare-durable-object-id", id.toString());
-
-						return fetch(request);
 					};
-					return stub;
-				};
-				return [binding, namespace];
-			})
-		),
+					const namespace = new DurableObjectNamespace(name as string, factory);
+					namespace.get = (id) => {
+						const stub = new DurableObjectStub(factory, id);
+						stub.fetch = (...reqArgs) => {
+							const requestFromArgs = new MiniflareRequest(...reqArgs);
+							const url = new URL(requestFromArgs.url);
+							url.host = host;
+							if (port !== undefined) url.port = port.toString();
+							const request = new MiniflareRequest(
+								url.toString(),
+								requestFromArgs
+							);
+							request.headers.set("x-miniflare-durable-object-name", name);
+							request.headers.set(
+								"x-miniflare-durable-object-id",
+								id.toString()
+							);
+
+							return fetch(request);
+						};
+						return stub;
+					};
+					return [binding, namespace];
+				})
+			)),
 	};
 
 	let mf: Miniflare | undefined;
@@ -125,7 +129,8 @@ async function main() {
 		}
 		mf = new Miniflare(config);
 		// Start Miniflare development server
-		await mf.startServer();
+		const mfServer = await mf.startServer();
+		const mfPort = (mfServer.address() as AddressInfo).port;
 		await mf.startScheduler();
 
 		const internalDurableObjectClassNames = Object.values(
@@ -191,6 +196,7 @@ async function main() {
 		process.send &&
 			process.send(
 				JSON.stringify({
+					mfPort: mfPort,
 					ready: true,
 					durableObjectsPort: durableObjectsMfPort,
 				})

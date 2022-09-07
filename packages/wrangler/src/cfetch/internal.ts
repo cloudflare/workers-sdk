@@ -1,7 +1,9 @@
 import assert from "node:assert";
-import { fetch, Headers } from "undici";
+import Busboy from "busboy";
+import { fetch, File, FormData, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
+import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
@@ -44,6 +46,13 @@ export async function fetchInternal<ResponseType>(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	const method = init.method ?? "GET";
+
+	logger.debug(
+		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
+	);
+	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
+	logger.debug("INIT:", JSON.stringify(init, null, 2));
+	logger.debug("-- END CF API REQUEST");
 	const response = await fetch(
 		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
 		{
@@ -54,6 +63,15 @@ export async function fetchInternal<ResponseType>(
 		}
 	);
 	const jsonText = await response.text();
+	logger.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+	logger.debug("HEADERS:", JSON.stringify(response.headers, null, 2));
+	logger.debug("RESPONSE:", jsonText);
+	logger.debug("-- END CF API RESPONSE");
+
 	try {
 		return parseJSON<ResponseType>(jsonText);
 	} catch (err) {
@@ -209,12 +227,72 @@ export async function fetchDashboardScript(
 		?.startsWith("multipart");
 
 	if (usesModules) {
-		const file = await response.text();
+		// Response from edge contains generic "name = worker.js" for dashboard created scripts
+		const form = await formData(response);
+		const entries = Array.from(form.entries());
+		if (entries.length > 1)
+			throw new RangeError("Expected only one entry in multipart response");
+		const [_, file] = entries[0];
+
+		if (file instanceof File) {
+			return await file.text();
+		}
+
+		return file ?? "";
 
 		// Follow up on issue in Undici about multipart/form-data support & replace the workaround: https://github.com/nodejs/undici/issues/974
 		// This should be using a builtin formData() parser pattern.
-		return file.split("\n").slice(4, -4).join("\n");
 	} else {
 		return response.text();
 	}
+}
+
+async function formData({ headers, body }: Response): Promise<FormData> {
+	// undici doesn't include a multipart/form-data parser yet, so we parse
+	// form data with busboy instead
+	const contentType = headers.get("Content-Type") ?? "";
+	if (!/multipart\/form-data/.test(contentType))
+		throw Error("Need Content-Type for multipart/form-data");
+
+	const responseFormData = new FormData();
+
+	let busboy: Busboy.Busboy;
+
+	const parsedHeaders = Object.fromEntries(
+		Array.from(headers).map(([header, value]) => [header.toLowerCase(), value])
+	);
+	try {
+		busboy = Busboy({ headers: parsedHeaders });
+	} catch (err) {
+		// Error due to headers:
+		throw Object.assign(new TypeError(), { cause: err });
+	}
+
+	busboy.on("field", (name, value) => {
+		responseFormData.append(name, value);
+	});
+	busboy.on("file", (name, value, info) => {
+		const { filename, encoding, mimeType } = info;
+		const base64 = encoding.toLowerCase() === "base64";
+		const chunks: Buffer[] = [];
+		value.on("data", (chunk) => {
+			if (base64) chunk = Buffer.from(chunk.toString(), "base64");
+			chunks.push(chunk);
+		});
+		value.on("end", () => {
+			const file = new File(chunks, filename, { type: mimeType });
+			responseFormData.append(name, file);
+		});
+	});
+
+	const busboyResolve = new Promise((resolve, reject) => {
+		busboy.on("finish", resolve);
+		busboy.on("error", (err) => reject(err));
+	});
+
+	if (body !== null) for await (const chunk of body) busboy.write(chunk);
+	busboy.end();
+	await busboyResolve;
+
+	return responseFormData;
 }

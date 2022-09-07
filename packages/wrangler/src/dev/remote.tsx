@@ -54,7 +54,7 @@ export function Remote(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: (() => void) | undefined;
+	onReady?: ((ip: string, port: number) => void) | undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
 }) {
@@ -81,6 +81,7 @@ export function Remote(props: {
 		routes: props.routes,
 		onReady: props.onReady,
 		sendMetrics: props.sendMetrics,
+		port: props.port,
 	});
 
 	usePreviewServer({
@@ -164,8 +165,9 @@ export function useWorker(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady: (() => void) | undefined;
+	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
+	port: number;
 }): CfPreviewToken | undefined {
 	const {
 		name,
@@ -182,7 +184,7 @@ export function useWorker(props: {
 	} = props;
 	const [session, setSession] = useState<CfPreviewSession | undefined>();
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
-
+	const [restartCounter, setRestartCounter] = useState<number>(0);
 	// This is the most reliable way to detect whether
 	// something's "happened" in our system; We make a ref and
 	// mark it once we log our initial message. Refs are vars!
@@ -237,6 +239,7 @@ export function useWorker(props: {
 		props.routes,
 		props.zone,
 		props.sendMetrics,
+		restartCounter,
 	]);
 
 	// This effect uses the session to upload the worker and create a preview
@@ -314,6 +317,7 @@ export function useWorker(props: {
 				compatibility_date: compatibilityDate,
 				compatibility_flags: compatibilityFlags,
 				usage_model: usageModel,
+				keep_bindings: true,
 			};
 
 			const workerAccount: CfAccount = {
@@ -361,7 +365,7 @@ export function useWorker(props: {
 			}
 			*/
 
-			onReady?.();
+			onReady?.(props.host || "localhost", props.port);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -379,6 +383,13 @@ export function useWorker(props: {
 					logger.error(
 						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
 					);
+				} else if (err.code === 10049) {
+					logger.log("Preview token expired, fetching a new one");
+					// code 10049 happens when the preview token expires
+					// since we want a new preview token when this happens,
+					// lets increment the counter, and trigger a rerun of
+					// the useEffect above
+					setRestartCounter((prevCount) => prevCount + 1);
 				} else {
 					logger.error("Error on remote worker:", err);
 				}
@@ -408,6 +419,7 @@ export function useWorker(props: {
 		session,
 		onReady,
 		props.sendMetrics,
+		props.port,
 	]);
 	return token;
 }

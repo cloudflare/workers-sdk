@@ -21,16 +21,32 @@ function watchLogger(outputPath: string): WatchMode {
 }
 
 async function buildMain(flags: BuildFlags = {}) {
+	const outdir = path.resolve("./wrangler-dist");
+	const wranglerPackageDir = path.resolve(".");
+	/**
+	 * The relative path between the bundled code and the Wrangler package.
+	 * This is used as a reliable way to compute paths relative to the Wrangler package
+	 * in the source files, rather than relying upon `__dirname` which can change depending
+	 * on whether the source files have been bundled and the location of the outdir.
+	 *
+	 * This is exposed in the source via the `getBasePath()` function, which should be used
+	 * in place of `__dirname` and similar Node.js constants.
+	 */
+	const __RELATIVE_PACKAGE_PATH__ = `"${path.relative(
+		outdir,
+		wranglerPackageDir
+	)}"`;
 	await build({
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
-		outdir: "./wrangler-dist",
+		outdir,
 		platform: "node",
 		format: "cjs",
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],
 		define: {
+			__RELATIVE_PACKAGE_PATH__,
 			"import.meta.url": "import_meta_url",
 			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
 			...(process.env.SPARROW_SOURCE_KEY

@@ -7,6 +7,7 @@ import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
+import { getBasePath } from "./paths";
 import type { Config } from "./config";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
@@ -71,7 +72,7 @@ export async function bundleWorker(
 		nodeCompat: boolean | undefined;
 		define: Config["define"];
 		checkFetch: boolean;
-		services: Config["services"];
+		services: Config["services"] | undefined;
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
 	}
@@ -129,7 +130,7 @@ export async function bundleWorker(
 		});
 		fs.writeFileSync(
 			checkedFetchFileToInject,
-			fs.readFileSync(path.resolve(__dirname, "../templates/checked-fetch.js"))
+			fs.readFileSync(path.resolve(getBasePath(), "templates/checked-fetch.js"))
 		);
 	}
 
@@ -302,7 +303,9 @@ async function applyFormatDevErrorsFacade(
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "format-dev-errors.entry.js");
 	await esbuild.build({
-		entryPoints: [path.resolve(__dirname, "../templates/format-dev-errors.ts")],
+		entryPoints: [
+			path.resolve(getBasePath(), "templates/format-dev-errors.ts"),
+		],
 		bundle: true,
 		sourcemap: true,
 		format: "esm",
@@ -334,7 +337,7 @@ async function applyStaticAssetFacade(
 
 	await esbuild.build({
 		entryPoints: [
-			path.resolve(__dirname, "../templates/serve-static-assets.ts"),
+			path.resolve(getBasePath(), "templates/serve-static-assets.ts"),
 		],
 		bundle: true,
 		format: "esm",
@@ -342,7 +345,7 @@ async function applyStaticAssetFacade(
 		plugins: [
 			esbuildAliasExternalPlugin({
 				__ENTRY_POINT__: entry.file,
-				__KV_ASSET_HANDLER__: path.join(__dirname, "../kv-asset-handler.js"),
+				__KV_ASSET_HANDLER__: path.join(getBasePath(), "kv-asset-handler.js"),
 				__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 			}),
 		],
@@ -380,7 +383,7 @@ async function applyMultiWorkerDevFacade(
 	services: Config["services"],
 	workerDefinitions: WorkerRegistry
 ) {
-	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
+	const targetPath = path.join(tmpDirPath, "multiworker-dev-facade.entry.js");
 	const serviceMap = Object.fromEntries(
 		(services || []).map((serviceBinding) => [
 			serviceBinding.binding,
@@ -391,10 +394,10 @@ async function applyMultiWorkerDevFacade(
 	await esbuild.build({
 		entryPoints: [
 			path.join(
-				__dirname,
+				getBasePath(),
 				entry.format === "modules"
-					? "../templates/service-bindings-module-facade.js"
-					: "../templates/service-bindings-sw-facade.js"
+					? "templates/service-bindings-module-facade.js"
+					: "templates/service-bindings-sw-facade.js"
 			),
 		],
 		bundle: true,
@@ -440,8 +443,8 @@ async function applyFirstPartyWorkerDevFacade(
 	await esbuild.build({
 		entryPoints: [
 			path.resolve(
-				__dirname,
-				"../templates/first-party-worker-module-facade.ts"
+				getBasePath(),
+				"templates/first-party-worker-module-facade.ts"
 			),
 		],
 		bundle: true,

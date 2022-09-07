@@ -15,10 +15,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.7
+      - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
-          node-version: 16.7
+          node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
       - name: Install NPM Dependencies

@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.0.26",
+	"version": "2.0.29",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -97,7 +97,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.51",
-		"miniflare": "^2.6.0",
+		"miniflare": "^2.7.1",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
@@ -107,6 +107,7 @@
 	"devDependencies": {
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
+		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/express": "^4.17.13",
 		"@types/glob-to-regexp": "0.4.1",
@@ -120,6 +121,7 @@
 		"@types/yargs": "^17.0.10",
 		"@webcontainer/env": "^1.0.1",
 		"body-parser": "^1.20.0",
+		"busboy": "^1.6.0",
 		"clipboardy": "^3.0.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
@@ -158,7 +160,7 @@
 		"timeago.js": "^4.0.2",
 		"tmp-promise": "^3.0.3",
 		"ts-dedent": "^2.2.0",
-		"undici": "^5.5.1",
+		"undici": "^5.9.1",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
@@ -168,6 +170,6 @@
 		"fsevents": "~2.3.2"
 	},
 	"engines": {
-		"node": ">=16.7.0"
+		"node": ">=16.13.0"
 	}
 }

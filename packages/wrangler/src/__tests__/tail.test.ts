@@ -3,7 +3,9 @@ import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -52,6 +54,38 @@ describe("tail", () => {
 
 			api.ws.close();
 			expect(api.requests.deletion.count).toStrictEqual(1);
+		});
+		it("should connect to the worker assigned to a given route", async () => {
+			const api = mockWebsocketAPIs();
+			expect(api.requests.creation.count).toStrictEqual(0);
+
+			mockGetZoneFromHostRequest("example.com", "test-zone");
+			mockCollectKnownRoutesRequest([
+				{
+					pattern: "example.com/*",
+					script: "test-worker",
+				},
+			]);
+			await runWrangler("tail example.com/*");
+
+			await expect(api.ws.connected).resolves.toBeTruthy();
+			expect(api.requests.creation.count).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(0);
+
+			api.ws.close();
+			expect(api.requests.deletion.count).toStrictEqual(1);
+		});
+
+		it("should error if a given route is not assigned to the user's zone", async () => {
+			mockGetZoneFromHostRequest("example.com", "test-zone");
+			mockCollectKnownRoutesRequest([]);
+
+			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
+		});
+		it("should error if a given route is not within the user's zone", async () => {
+			mockGetZoneFromHostRequest("example.com");
+
+			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
 
 		it("creates and then delete tails: legacy envs", async () => {

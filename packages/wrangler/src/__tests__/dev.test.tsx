@@ -668,12 +668,12 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "0.0.0.0",
+					ip: "1.2.3.4",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("1.2.3.4");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -683,12 +683,12 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.1.1.1",
+					ip: "1.2.3.4",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --ip=0.0.0.0");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+			await runWrangler("dev --ip=5.6.7.8");
+			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("5.6.7.8");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1005,7 +1005,7 @@ describe("wrangler dev", () => {
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
-			      --ip                                         IP address to listen on  [string] [default: \\"0.0.0.0\\"]
+			      --ip                                         IP address to listen on  [string]
 			      --port                                       Port to listen on  [number]
 			      --inspector-port                             Port for devtools to connect to  [number]
 			      --routes, --route                            Routes to upload  [array]
@@ -1017,6 +1017,8 @@ describe("wrangler dev", () => {
 			      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
 			      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
 			      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+			      --var                                        A key-value pair to be injected into the script as a variable  [array]
+			      --define                                     A key-value pair to be substituted in the script  [array]
 			      --jsx-factory                                The function that is called for each JSX element  [string]
 			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]

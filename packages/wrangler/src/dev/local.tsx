@@ -8,16 +8,27 @@ import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { DEFAULT_MODULE_RULES } from "../module-collection";
+import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit, CfScriptFormat } from "../worker";
+import type {
+	CfWorkerInit,
+	CfScriptFormat,
+	CfWasmModuleBindings,
+	CfTextBlobBindings,
+	CfDataBlobBindings,
+	CfDurableObject,
+	CfKvNamespace,
+	CfR2Bucket,
+	CfVars,
+} from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
-interface LocalProps {
+export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
@@ -25,7 +36,7 @@ interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
-	workerDefinitions: WorkerRegistry;
+	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	port: number;
 	ip: string;
@@ -37,7 +48,7 @@ interface LocalProps {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
-	onReady: (() => void) | undefined;
+	onReady: ((ip: string, port: number) => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -136,189 +147,58 @@ function useLocalWorker({
 
 			const scriptPath = realpathSync(bundle.path);
 
-			// the wasm_modules/text_blobs/data_blobs bindings are
-			// relative to process.cwd(), but the actual worker bundle
-			// is in the temp output directory; so we rewrite the paths to be absolute,
-			// letting miniflare resolve them correctly
-
-			// wasm
-			const wasmBindings: Record<string, string> = {};
-			for (const [name, filePath] of Object.entries(
-				bindings.wasm_modules || {}
-			)) {
-				wasmBindings[name] = path.join(process.cwd(), filePath);
-			}
-
-			// text
-			const textBlobBindings: Record<string, string> = {};
-			for (const [name, filePath] of Object.entries(
-				bindings.text_blobs || {}
-			)) {
-				textBlobBindings[name] = path.join(process.cwd(), filePath);
-			}
-
-			// data
-			const dataBlobBindings: Record<string, string> = {};
-			for (const [name, filePath] of Object.entries(
-				bindings.data_blobs || {}
-			)) {
-				dataBlobBindings[name] = path.join(process.cwd(), filePath);
-			}
-
-			if (format === "service-worker") {
-				for (const { type, name } of bundle.modules) {
-					if (type === "compiled-wasm") {
-						// In service-worker format, .wasm modules are referenced by global identifiers,
-						// so we convert it here.
-						// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-						// characters with an underscore.
-						const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-						wasmBindings[identifier] = name;
-					} else if (type === "text") {
-						// In service-worker format, text modules are referenced by global identifiers,
-						// so we convert it here.
-						// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-						// characters with an underscore.
-						const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-						textBlobBindings[identifier] = name;
-					} else if (type === "buffer") {
-						// In service-worker format, data blobs are referenced by global identifiers,
-						// so we convert it here.
-						// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
-						// characters with an underscore.
-						const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-						dataBlobBindings[identifier] = name;
-					}
-				}
-			}
-
 			const upstream =
 				typeof localUpstream === "string"
 					? `${localProtocol}://${localUpstream}`
 					: undefined;
 
-			const internalDurableObjects = (
-				bindings.durable_objects?.bindings || []
-			).filter((binding) => !binding.script_name);
-			const externalDurableObjects = (
-				bindings.durable_objects?.bindings || []
-			).filter((binding) => binding.script_name);
-
-			// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
-			// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
-			const options: MiniflareOptions = {
-				name: workerName,
-				port,
-				scriptPath,
-				https: localProtocol === "https",
-				host: ip,
-				modules: format === "modules",
-				modulesRules: (rules || [])
-					.concat(DEFAULT_MODULE_RULES)
-					.map(({ type, globs: include, fallthrough }) => ({
-						type,
-						include,
-						fallthrough,
-					})),
-				compatibilityDate,
-				compatibilityFlags,
-				usageModel,
-				kvNamespaces: bindings.kv_namespaces?.map((kv) => kv.binding),
-				r2Buckets: bindings.r2_buckets?.map((r2) => r2.binding),
-				durableObjects: Object.fromEntries(
-					internalDurableObjects.map((binding) => [
-						binding.name,
-						binding.class_name,
-					])
-				),
-				externalDurableObjects: Object.fromEntries(
-					externalDurableObjects
-						.map((binding) => {
-							const service = workerDefinitions[binding.script_name as string];
-							if (!service) return [binding.name, undefined];
-
-							const name = service.durableObjects.find(
-								(durableObject) =>
-									durableObject.className === binding.class_name
-							)?.name;
-							if (!name) return [binding.name, undefined];
-
-							return [
-								binding.name,
-								{
-									name,
-									host: service.durableObjectsHost,
-									port: service.durableObjectsPort,
-								},
-							];
-						})
-						.filter(([_, details]) => !!details)
-				),
-				...(localPersistencePath
-					? {
-							cachePersist: path.join(localPersistencePath, "cache"),
-							durableObjectsPersist: path.join(localPersistencePath, "do"),
-							kvPersist: path.join(localPersistencePath, "kv"),
-							r2Persist: path.join(localPersistencePath, "r2"),
-					  }
-					: {
-							// We mark these as true, so that they'll
-							// persist in the temp directory.
-							// This means they'll persist across a dev session,
-							// even if we change source and reload,
-							// and be deleted when the dev session ends
-							cachePersist: true,
-							durableObjectsPersist: true,
-							kvPersist: true,
-							r2Persist: true,
-					  }),
-
-				liveReload,
-				sitePath: assetPaths?.assetDirectory
-					? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
-					: undefined,
-				siteInclude: assetPaths?.includePatterns.length
-					? assetPaths?.includePatterns
-					: undefined,
-				siteExclude: assetPaths?.excludePatterns.length
-					? assetPaths.excludePatterns
-					: undefined,
-				bindings: bindings.vars,
+			const {
+				externalDurableObjects,
+				internalDurableObjects,
 				wasmBindings,
 				textBlobBindings,
 				dataBlobBindings,
-				sourceMap: true,
-				logUnhandledRejections: true,
+			} = setupBindings({
+				wasm_modules: bindings.wasm_modules,
+				text_blobs: bindings.text_blobs,
+				data_blobs: bindings.data_blobs,
+				durable_objects: bindings.durable_objects,
+				format,
+				bundle,
+			});
+
+			const { forkOptions, miniflareCLIPath } = setupMiniflareOptions({
+				workerName,
+				port,
+				scriptPath,
+				localProtocol,
+				ip,
+				format,
+				rules,
+				compatibilityDate,
+				compatibilityFlags,
+				usageModel,
+				kv_namespaces: bindings?.kv_namespaces,
+				r2_buckets: bindings?.r2_buckets,
+				internalDurableObjects,
+				externalDurableObjects,
+				localPersistencePath,
+				liveReload,
+				assetPaths,
+				vars: bindings?.vars,
+				wasmBindings,
+				textBlobBindings,
+				dataBlobBindings,
 				crons,
 				upstream,
-				disableLogs: logLevel === "none",
-				logOptions: logPrefix ? { prefix: logPrefix } : undefined,
-			};
+				logLevel,
+				logPrefix,
+				workerDefinitions,
+				enablePagesAssetsServiceBinding,
+			});
 
-			// The path to the Miniflare CLI assumes that this file is being run from
-			// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
-			// If either of those paths change this line needs updating.
-			const miniflareCLIPath = path.resolve(
-				__dirname,
-				"../miniflare-dist/index.mjs"
-			);
-			const miniflareOptions = JSON.stringify(options, null);
-
+			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 			logger.log("⎔ Starting a local server...");
-			const nodeOptions = [
-				"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
-				"--no-warnings", // hide annoying Node warnings
-				// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
-			];
-			if (inspect) {
-				nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
-			}
-
-			const forkOptions = [miniflareOptions];
-
-			if (enablePagesAssetsServiceBinding) {
-				forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
-			}
 
 			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
 				cwd: path.dirname(scriptPath),
@@ -348,7 +228,7 @@ function useLocalWorker({
 								: {}),
 						});
 					}
-					onReady?.();
+					onReady?.(ip, message.mfPort);
 				}
 			});
 
@@ -420,7 +300,7 @@ function useLocalWorker({
 		port,
 		inspectorPort,
 		ip,
-		bindings.durable_objects?.bindings,
+		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
 		bindings.vars,
@@ -446,4 +326,272 @@ function useLocalWorker({
 		enablePagesAssetsServiceBinding,
 	]);
 	return { inspectorUrl };
+}
+
+interface SetupBindingsProps {
+	wasm_modules: CfWasmModuleBindings | undefined;
+	text_blobs: CfTextBlobBindings | undefined;
+	data_blobs: CfDataBlobBindings | undefined;
+	durable_objects: { bindings: CfDurableObject[] } | undefined;
+	bundle: EsbuildBundle;
+	format: CfScriptFormat;
+}
+
+export function setupBindings({
+	wasm_modules,
+	text_blobs,
+	data_blobs,
+	durable_objects,
+	format,
+	bundle,
+}: SetupBindingsProps) {
+	// the wasm_modules/text_blobs/data_blobs bindings are
+	// relative to process.cwd(), but the actual worker bundle
+	// is in the temp output directory; so we rewrite the paths to be absolute,
+	// letting miniflare resolve them correctly
+
+	// wasm
+	const wasmBindings: Record<string, string> = {};
+	for (const [name, filePath] of Object.entries(wasm_modules || {})) {
+		wasmBindings[name] = path.join(process.cwd(), filePath);
+	}
+
+	// text
+	const textBlobBindings: Record<string, string> = {};
+	for (const [name, filePath] of Object.entries(text_blobs || {})) {
+		textBlobBindings[name] = path.join(process.cwd(), filePath);
+	}
+
+	// data
+	const dataBlobBindings: Record<string, string> = {};
+	for (const [name, filePath] of Object.entries(data_blobs || {})) {
+		dataBlobBindings[name] = path.join(process.cwd(), filePath);
+	}
+
+	if (format === "service-worker") {
+		for (const { type, name } of bundle.modules) {
+			if (type === "compiled-wasm") {
+				// In service-worker format, .wasm modules are referenced by global identifiers,
+				// so we convert it here.
+				// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+				// characters with an underscore.
+				const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+				wasmBindings[identifier] = name;
+			} else if (type === "text") {
+				// In service-worker format, text modules are referenced by global identifiers,
+				// so we convert it here.
+				// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+				// characters with an underscore.
+				const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+				textBlobBindings[identifier] = name;
+			} else if (type === "buffer") {
+				// In service-worker format, data blobs are referenced by global identifiers,
+				// so we convert it here.
+				// This identifier has to be a valid JS identifier, so we replace all non alphanumeric
+				// characters with an underscore.
+				const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+				dataBlobBindings[identifier] = name;
+			}
+		}
+	}
+
+	const internalDurableObjects = (durable_objects?.bindings || []).filter(
+		(binding) => !binding.script_name
+	);
+	const externalDurableObjects = (durable_objects?.bindings || []).filter(
+		(binding) => binding.script_name
+	);
+	return {
+		internalDurableObjects,
+		externalDurableObjects,
+		wasmBindings,
+		textBlobBindings,
+		dataBlobBindings,
+	};
+}
+
+interface SetupMiniflareOptionsProps {
+	workerName: string | undefined;
+	port: number;
+	scriptPath: string;
+	localProtocol: "http" | "https";
+	ip: string;
+	format: CfScriptFormat;
+	rules: Config["rules"];
+	compatibilityDate: string;
+	compatibilityFlags: string[] | undefined;
+	usageModel: "bundled" | "unbound" | undefined;
+	kv_namespaces: CfKvNamespace[] | undefined;
+	r2_buckets: CfR2Bucket[] | undefined;
+	internalDurableObjects: CfDurableObject[];
+	externalDurableObjects: CfDurableObject[];
+	localPersistencePath: string | null;
+	liveReload: boolean;
+	assetPaths: AssetPaths | undefined;
+	vars: CfVars | undefined;
+	wasmBindings: Record<string, string>;
+	textBlobBindings: Record<string, string>;
+	dataBlobBindings: Record<string, string>;
+	crons: Config["triggers"]["crons"];
+	upstream: string | undefined;
+	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
+	logPrefix: string | undefined;
+	workerDefinitions: WorkerRegistry | undefined;
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+}
+
+export function setupMiniflareOptions({
+	workerName,
+	port,
+	scriptPath,
+	localProtocol,
+	ip,
+	format,
+	rules,
+	compatibilityDate,
+	compatibilityFlags,
+	usageModel,
+	kv_namespaces,
+	r2_buckets,
+	internalDurableObjects,
+	externalDurableObjects,
+	localPersistencePath,
+	liveReload,
+	assetPaths,
+	vars,
+	wasmBindings,
+	textBlobBindings,
+	dataBlobBindings,
+	crons,
+	upstream,
+	logLevel,
+	logPrefix,
+	workerDefinitions,
+	enablePagesAssetsServiceBinding,
+}: SetupMiniflareOptionsProps): MiniflareOptions {
+	// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
+	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
+	const options = {
+		name: workerName,
+		port,
+		scriptPath,
+		https: localProtocol === "https",
+		host: ip,
+		modules: format === "modules",
+		modulesRules: (rules || [])
+			.concat(DEFAULT_MODULE_RULES)
+			.map(({ type, globs: include, fallthrough }) => ({
+				type,
+				include,
+				fallthrough,
+			})),
+		compatibilityDate,
+		compatibilityFlags,
+		usageModel,
+		kvNamespaces: kv_namespaces?.map((kv) => kv.binding),
+		r2Buckets: r2_buckets?.map((r2) => r2.binding),
+		durableObjects: Object.fromEntries(
+			internalDurableObjects.map((binding) => [
+				binding.name,
+				binding.class_name,
+			])
+		),
+		externalDurableObjects: Object.fromEntries(
+			externalDurableObjects
+				.map((binding) => {
+					const service =
+						workerDefinitions &&
+						workerDefinitions[binding.script_name as string];
+					if (!service) return [binding.name, undefined];
+
+					const name = service.durableObjects.find(
+						(durableObject) => durableObject.className === binding.class_name
+					)?.name;
+					if (!name) return [binding.name, undefined];
+
+					return [
+						binding.name,
+						{
+							name,
+							host: service.durableObjectsHost,
+							port: service.durableObjectsPort,
+						},
+					];
+				})
+				.filter(([_, details]) => !!details)
+		),
+		...(localPersistencePath
+			? {
+					cachePersist: path.join(localPersistencePath, "cache"),
+					durableObjectsPersist: path.join(localPersistencePath, "do"),
+					kvPersist: path.join(localPersistencePath, "kv"),
+					r2Persist: path.join(localPersistencePath, "r2"),
+			  }
+			: {
+					// We mark these as true, so that they'll
+					// persist in the temp directory.
+					// This means they'll persist across a dev session,
+					// even if we change source and reload,
+					// and be deleted when the dev session ends
+					cachePersist: true,
+					durableObjectsPersist: true,
+					kvPersist: true,
+					r2Persist: true,
+			  }),
+
+		liveReload,
+		sitePath: assetPaths?.assetDirectory
+			? path.join(assetPaths.baseDirectory, assetPaths.assetDirectory)
+			: undefined,
+		siteInclude: assetPaths?.includePatterns.length
+			? assetPaths?.includePatterns
+			: undefined,
+		siteExclude: assetPaths?.excludePatterns.length
+			? assetPaths.excludePatterns
+			: undefined,
+		bindings: vars,
+		wasmBindings,
+		textBlobBindings,
+		dataBlobBindings,
+		sourceMap: true,
+		logUnhandledRejections: true,
+		crons,
+		upstream,
+		disableLogs: logLevel === "none",
+		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
+		enablePagesAssetsServiceBinding,
+	};
+	// The path to the Miniflare CLI assumes that this file is being run from
+	// `wrangler-dist` and that the CLI is found in `miniflare-dist`.
+	// If either of those paths change this line needs updating.
+	const miniflareCLIPath = path.resolve(
+		getBasePath(),
+		"miniflare-dist/index.mjs"
+	);
+	const miniflareOptions = JSON.stringify(options, null);
+	const forkOptions = [miniflareOptions];
+	if (enablePagesAssetsServiceBinding) {
+		forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
+	}
+	return { miniflareCLIPath, forkOptions };
+}
+
+export function setupNodeOptions({
+	inspect,
+	ip,
+	inspectorPort,
+}: {
+	inspect: boolean;
+	ip: string;
+	inspectorPort: number;
+}) {
+	const nodeOptions = [
+		"--experimental-vm-modules", // ensures that Miniflare can run ESM Workers
+		"--no-warnings", // hide annoying Node warnings
+		// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
+	];
+	if (inspect) {
+		nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
+	}
+	return nodeOptions;
 }

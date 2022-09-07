@@ -1,5 +1,9 @@
 import { toUrlPath } from "../../paths";
-import { MAX_FUNCTIONS_ROUTES_RULES, ROUTES_SPEC_VERSION } from "../constants";
+import {
+	MAX_FUNCTIONS_ROUTES_RULES,
+	ROUTES_SPEC_VERSION,
+	ROUTES_SPEC_DESCRIPTION,
+} from "../constants";
 import {
 	compareRoutes,
 	convertRoutesToGlobPatterns,
@@ -164,6 +168,7 @@ describe("route-paths-to-glob-patterns", () => {
 				])
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
+				description: ROUTES_SPEC_DESCRIPTION,
 				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
 				exclude: [],
 			});
@@ -176,6 +181,7 @@ describe("route-paths-to-glob-patterns", () => {
 			}
 			expect(convertRoutesToRoutesJSONSpec(routes)).toEqual({
 				version: ROUTES_SPEC_VERSION,
+				description: ROUTES_SPEC_DESCRIPTION,
 				include: ["/*"],
 				exclude: [],
 			});
@@ -197,6 +203,7 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
+					description: ROUTES_SPEC_DESCRIPTION,
 					exclude: [],
 					include: [
 						"/api/foo/bar",
@@ -208,6 +215,7 @@ describe("route-paths-to-glob-patterns", () => {
 				})
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
+				description: ROUTES_SPEC_DESCRIPTION,
 				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
 				exclude: [],
 			});
@@ -221,11 +229,13 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
+					description: ROUTES_SPEC_DESCRIPTION,
 					include,
 					exclude: [],
 				})
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
+				description: ROUTES_SPEC_DESCRIPTION,
 				include: ["/*"],
 				exclude: [],
 			});
@@ -239,6 +249,7 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
+					description: ROUTES_SPEC_DESCRIPTION,
 					include,
 					exclude: [],
 				}).include.length

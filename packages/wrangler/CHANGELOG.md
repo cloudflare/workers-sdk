@@ -1,5 +1,128 @@
 # wrangler
 
+## 2.0.29
+
+### Patch Changes
+
+- [#1731](https://github.com/cloudflare/wrangler2/pull/1731) [`16f051d3`](https://github.com/cloudflare/wrangler2/commit/16f051d36e8c205374e5ac38b141def45095e3ef) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add custom \_routes.json support for Pages Functions projects
+
+* [#1762](https://github.com/cloudflare/wrangler2/pull/1762) [`23f89216`](https://github.com/cloudflare/wrangler2/commit/23f8921628baf32f0cace1ebf893964a26afe91a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use getBasePath() when trying to specify paths to files relative to the
+  base of the Wrangler package directory rather than trying to compute the
+  path from Node.js constants like **dirname and **filename. This is
+  because the act of bundling the source code can move the file that contains
+  these constants around potentially breaking the relative path to the desired files.
+
+  Fixes #1755
+
+- [#1763](https://github.com/cloudflare/wrangler2/pull/1763) [`75f3ae82`](https://github.com/cloudflare/wrangler2/commit/75f3ae829b0b4f8ae2cf2093bda93e8096838240) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add `description` field to \_routes.json
+
+  When generating routes for Functions projects, let's add a description
+  so we know what wrangler version generated this config
+
+* [#1538](https://github.com/cloudflare/wrangler2/pull/1538) [`2c9caf74`](https://github.com/cloudflare/wrangler2/commit/2c9caf74bdf3f60db7c244b2202f358abe5ced1f) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: refactor wrangler.dev API to not need React/Ink
+
+  Prior to this change, `wrangler.unstable_dev()` would only support running one instance of wrangler at a time, as Ink only lets you render one instance of React. This resulted in test failures in CI.
+
+  This change creates pure JS/TS versions of these React hooks:
+
+  - useEsbuild
+  - useLocalWorker
+  - useCustomBuild
+  - useTmpDir
+
+  As a side-effect of removing React, tests should run faster in CI.
+
+  Closes #1432
+  Closes #1419
+
+- [#1775](https://github.com/cloudflare/wrangler2/pull/1775) [`8163b8cf`](https://github.com/cloudflare/wrangler2/commit/8163b8cfde8020d76bd64090276347b01b4a8f8d) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add unit tests for `wrangler pages publish`
+
+## 2.0.28
+
+### Patch Changes
+
+- [#1725](https://github.com/cloudflare/wrangler2/pull/1725) [`eb75413e`](https://github.com/cloudflare/wrangler2/commit/eb75413ec35f6d4f6306601f4d5c9d058f794a18) Thanks [@threepointone](https://github.com/threepointone)! - rename: `worker_namespaces` / `dispatch_namespaces`
+
+  The Worker-for-Platforms team would like to rename this field to more closely match what it's called internally. This fix does a search+replace on this term. This feature already had an experimental warning, and no one's using it at the moment, so we're not going to add a warning/backward compat for existing customers.
+
+* [#1736](https://github.com/cloudflare/wrangler2/pull/1736) [`800f8553`](https://github.com/cloudflare/wrangler2/commit/800f8553b25bb0641fd5e9b38eb5d9ca02abe24c) Thanks [@threepointone](https://github.com/threepointone)! - fix: do not delete previously defined plain_text/json bindings on publish
+
+  Currently, when we publish a worker, we delete an pre-existing bindings if they're not otherwise defined in `wrangler.toml`, and overwrite existing ones. But folks may be deploying with wrangler, and changing environment variables on the fly (like marketing messages, etc). It's annoying when deploying via wrangler blows away those values.
+
+  This patch fixes one of those issues. It will not delete any older bindings that are not in wrangler.toml. It still _does_ overwrite existing vars, but at least this gives a way for developers to have some vars that are not blown away on every publish.
+
+- [#1726](https://github.com/cloudflare/wrangler2/pull/1726) [`0b83504c`](https://github.com/cloudflare/wrangler2/commit/0b83504c12b35301acaeb5302c0d16021c958f8e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Multiworker and static asset dev bug preventing both from being used
+
+  There was previously a collision on the generated filenames which resulted in the generated scripts looping and crashing in Miniflare with error code 7. By renaming one of the generated files, this is avoided.
+
+* [#1718](https://github.com/cloudflare/wrangler2/pull/1718) [`02f1fe9b`](https://github.com/cloudflare/wrangler2/commit/02f1fe9b07bb08b7395e7de1d78cc929221b464f) Thanks [@threepointone](https://github.com/threepointone)! - fix: use `config.dev.ip` when provided
+
+  Because we'd used a default for 0.0.0.0 for the `--ip` flag, `wrangler dev` was overriding the value specified in `wrangler.toml` under `dev.ip`. This fix removes the default value (since it's being set when normalising config anyway).
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1714
+
+- [#1727](https://github.com/cloudflare/wrangler2/pull/1727) [`3f9e8f63`](https://github.com/cloudflare/wrangler2/commit/3f9e8f634e6544bf3aef8748f56041a077758ab2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: refresh token when we detect that the preview session has expired (error code 10049)
+
+  When running `wrangler dev`, from time to time the preview session token would expire, and the dev server would need to be manually restarted. This fixes this, by refreshing the token when it expires.
+
+  Closes #1446
+
+* [#1730](https://github.com/cloudflare/wrangler2/pull/1730) [`27ad80ee`](https://github.com/cloudflare/wrangler2/commit/27ad80eed7f25393a0e5c1d8a62c3b0e743a639d) Thanks [@threepointone](https://github.com/threepointone)! - feat: `--var name:value` and `--define name:value`
+
+  This enables passing values for `[vars]` and `[define]` via the cli. We have a number of usecases where the values to be injected during dev/publish aren't available statically (eg: a version string, some identifier for 3p libraries, etc) and reading those values only from `wrangler.toml` isn't good ergonomically. So we can now read those values when passed through the CLI.
+
+  Example: add a var during dev: `wrangler dev --var xyz:123` will inject the var `xyz` with string `"123"`
+
+  (note, only strings allowed for `--var`)
+
+  substitute a global value: `wrangler dev --define XYZ:123` will replace every global identifier `XYZ` with the value `123`.
+
+  The same flags also work with `wrangler publish`.
+
+  Also, you can use actual environment vars in these commands. e.g.: `wrangler dev --var xyz:$XYZ` will set `xyz` to whatever `XYZ` has been set to in the terminal environment.
+
+- [#1700](https://github.com/cloudflare/wrangler2/pull/1700) [`d7c23e49`](https://github.com/cloudflare/wrangler2/commit/d7c23e49706cb8fdb6eb71ece9fb4eca14c62df8) Thanks [@penalosa](https://github.com/penalosa)! - Closes [#1505](https://github.com/cloudflare/wrangler2/issues/1505) by extending `wrangler tail` to allow for passing worker routes as well as worker script names.
+
+  For example, if you have a worker `example-worker` assigned to the route `example.com/*`, you can retrieve it's logs by running either `wrangler tail example.com/*` or `wrangler tail example-worker`—previously only `wrangler tail example-worker` was supported.
+
+* [#1720](https://github.com/cloudflare/wrangler2/pull/1720) [`f638de64`](https://github.com/cloudflare/wrangler2/commit/f638de6426619a899367ba41674179b8ca67c6ab) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.7.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.7.1) incorporating changes from [`2.7.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.7.0)
+
+- [#1691](https://github.com/cloudflare/wrangler2/pull/1691) [`5b2c3ee2`](https://github.com/cloudflare/wrangler2/commit/5b2c3ee2c5d65b25c966ca07751f544f282525b9) Thanks [@cameron-robey](https://github.com/cameron-robey)! - chore: bump undici and increase minimum node version to 16.13
+
+  - We bump undici to version to 5.9.1 to patch some security vulnerabilities in previous versions
+  - This requires bumping the minimum node version to >= 16.8 so we update the minimum to the LTS 16.13
+
+  Fixes https://github.com/cloudflare/wrangler2/issues/1679
+  Fixes https://github.com/cloudflare/wrangler2/issues/1684
+
+## 2.0.27
+
+### Patch Changes
+
+- [#1686](https://github.com/cloudflare/wrangler2/pull/1686) [`a0a3ffde`](https://github.com/cloudflare/wrangler2/commit/a0a3ffde4a2388cfa2c6d2fa13b4c0ee94a172ba) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: pages dev correctly escapes regex characters in function paths (fixes #1685)
+
+* [#1667](https://github.com/cloudflare/wrangler2/pull/1667) [`ba6451df`](https://github.com/cloudflare/wrangler2/commit/ba6451dfe888580aa7d8d33c2c770a5d3d57667d) Thanks [@arjunyel](https://github.com/arjunyel)! - fix: check for nonempty kv id and r2 bucket_name
+
+- [#1628](https://github.com/cloudflare/wrangler2/pull/1628) [`61e3f00b`](https://github.com/cloudflare/wrangler2/commit/61e3f00bcb017b7ea96bb0c12459c56539fb891a) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: pages dev process exit when proxied process exits
+
+  Currently, if the process pages dev is proxying exists or crashes, pages dev does not clean it up, and attempts to continue proxying requests to it, resulting in it throwing 502 errors. This fixes that behaviour to make wrangler exit with the code the child_process exits with.
+
+* [#1690](https://github.com/cloudflare/wrangler2/pull/1690) [`670fa778`](https://github.com/cloudflare/wrangler2/commit/670fa778db263a3cf81b2b1d572dcb0df96a0463) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: check if we're in CI before trying to open the browser
+
+- [#1675](https://github.com/cloudflare/wrangler2/pull/1675) [`ee30101d`](https://github.com/cloudflare/wrangler2/commit/ee30101db59b195dba734fcbd479ec1aeae1feab) Thanks [@Skye-31](https://github.com/Skye-31)! - chore: use rimraf & cross-env to support windows development
+
+* [#1710](https://github.com/cloudflare/wrangler2/pull/1710) [`9943e647`](https://github.com/cloudflare/wrangler2/commit/9943e647c56c686d0e499c28b3c54b4fbe47dccb) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: pass create-cloudflare the correct path
+
+  wrangler generate was passing create-cloudflare an absolute path, rather than a folder name, resulting in "doubled-up" paths
+
+- [#1712](https://github.com/cloudflare/wrangler2/pull/1712) [`c18c60ee`](https://github.com/cloudflare/wrangler2/commit/c18c60eeacca27656f0e21f1bdcfc0e1298343c3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add debug logging to CF API requests and remote dev worker requests
+
+* [#1663](https://github.com/cloudflare/wrangler2/pull/1663) [`a9f9094c`](https://github.com/cloudflare/wrangler2/commit/a9f9094c92e547c1db7cd45fb5bc46f933f75e39) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Adds `--compatibility-date` and `--compatibility-flags` to `wrangler pages dev`
+
+  Soon to follow in production.
+
+- [#1653](https://github.com/cloudflare/wrangler2/pull/1653) [`46b73b52`](https://github.com/cloudflare/wrangler2/commit/46b73b5227ddbcc0ce53feb1c13845044474c86c) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixed R2 create bucket API endpoint. The `wrangler r2 bucket create` command should work again
+
 ## 2.0.26
 
 ### Patch Changes

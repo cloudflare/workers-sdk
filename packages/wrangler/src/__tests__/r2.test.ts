@@ -82,10 +82,11 @@ describe("wrangler", () => {
 				function mockCreateRequest(expectedBucketName: string) {
 					const requests = { count: 0 };
 					setMockResponse(
-						"/accounts/:accountId/r2/buckets/:bucketName",
-						"PUT",
-						([_url, accountId, bucketName]) => {
+						"/accounts/:accountId/r2/buckets",
+						"POST",
+						([_url, accountId], { body }) => {
 							expect(accountId).toEqual("some-account-id");
+							const bucketName = JSON.parse(body as string).name;
 							expect(bucketName).toEqual(expectedBucketName);
 							requests.count += 1;
 						}

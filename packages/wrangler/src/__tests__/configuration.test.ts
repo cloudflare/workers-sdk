@@ -61,7 +61,7 @@ describe("normalizeAndValidateConfig()", () => {
 			unsafe: {
 				bindings: [],
 			},
-			worker_namespaces: [],
+			dispatch_namespaces: [],
 			usage_model: undefined,
 			vars: {},
 			define: {},
@@ -1635,6 +1635,7 @@ describe("normalizeAndValidateConfig()", () => {
 								id: "KV_ID_2",
 								preview_id: 2222,
 							},
+							{ binding: "VALID", id: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -1654,7 +1655,8 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
 			            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
 			            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
+			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
 		});
@@ -1740,6 +1742,7 @@ describe("normalizeAndValidateConfig()", () => {
 								bucket_name: "R2_BUCKET_2",
 								preview_bucket_name: 2555,
 							},
+							{ binding: "R2_BINDING_1", bucket_name: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -1759,7 +1762,8 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 			            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 			            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
+			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
 		        `);
 			});
 		});
@@ -1909,11 +1913,11 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[worker_namespaces]", () => {
-			it("should log an experimental warning when worker_namespaces is used", () => {
+		describe("[dispatch_namespaces]", () => {
+			it("should log an experimental warning when dispatch_namespaces is used", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
-						worker_namespaces: [
+						dispatch_namespaces: [
 							{
 								binding: "BINDING_1",
 								namespace: "NAMESPACE_1",
@@ -1924,44 +1928,44 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 				expect(config).toEqual(
-					expect.not.objectContaining({ worker_namespaces: expect.anything })
+					expect.not.objectContaining({ dispatch_namespaces: expect.anything })
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			  - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+			  - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
 		`);
 			});
 
-			it("should error if worker_namespaces is not an array", () => {
+			it("should error if dispatch_namespaces is not an array", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
-						worker_namespaces: "just a string",
+						dispatch_namespaces: "just a string",
 					} as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(config).toEqual(
-					expect.not.objectContaining({ worker_namespaces: expect.anything })
+					expect.not.objectContaining({ dispatch_namespaces: expect.anything })
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
-			            - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+			            - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
 		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			  - The field \\"worker_namespaces\\" should be an array but got \\"just a string\\"."
+			  - The field \\"dispatch_namespaces\\" should be an array but got \\"just a string\\"."
 		`);
 			});
 
-			it("should error on non valid worker_namespaces", () => {
+			it("should error on non valid dispatch_namespaces", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
-						worker_namespaces: [
+						dispatch_namespaces: [
 							"a string",
 							123,
 							{
@@ -1969,17 +1973,17 @@ describe("normalizeAndValidateConfig()", () => {
 								namespace: 456,
 							},
 							{
-								binding: "WORKER_NAMESPACE_BINDING_1",
+								binding: "DISPATCH_NAMESPACE_BINDING_1",
 								namespace: 456,
 							},
 							// this one is valid
 							{
-								binding: "WORKER_NAMESPACE_BINDING_1",
-								namespace: "WORKER_NAMESPACE_BINDING_NAMESPACE_1",
+								binding: "DISPATCH_NAMESPACE_BINDING_1",
+								namespace: "DISPATCH_NAMESPACE_BINDING_NAMESPACE_1",
 							},
 							{
 								binding: 123,
-								namespace: "WORKER_NAMESPACE_BINDING_SERVICE_1",
+								namespace: "DISPATCH_NAMESPACE_BINDING_SERVICE_1",
 							},
 							{
 								binding: 123,
@@ -1992,25 +1996,25 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(config).toEqual(
 					expect.not.objectContaining({
-						worker_namespaces: expect.anything,
+						dispatch_namespaces: expect.anything,
 					})
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			  - \\"worker_namespaces\\" fields are experimental and may change or break at any time."
+			  - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			  - \\"worker_namespaces[0]\\" binding should be objects, but got \\"a string\\"
-			  - \\"worker_namespaces[1]\\" binding should be objects, but got 123
-			  - \\"worker_namespaces[2]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
-			  - \\"worker_namespaces[2]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
-			  - \\"worker_namespaces[3]\\" should have a string \\"namespace\\" field but got {\\"binding\\":\\"WORKER_NAMESPACE_BINDING_1\\",\\"namespace\\":456}.
-			  - \\"worker_namespaces[5]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":\\"WORKER_NAMESPACE_BINDING_SERVICE_1\\"}.
-			  - \\"worker_namespaces[6]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			  - \\"worker_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
+			  - \\"dispatch_namespaces[0]\\" binding should be objects, but got \\"a string\\"
+			  - \\"dispatch_namespaces[1]\\" binding should be objects, but got 123
+			  - \\"dispatch_namespaces[2]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
+			  - \\"dispatch_namespaces[2]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
+			  - \\"dispatch_namespaces[3]\\" should have a string \\"namespace\\" field but got {\\"binding\\":\\"DISPATCH_NAMESPACE_BINDING_1\\",\\"namespace\\":456}.
+			  - \\"dispatch_namespaces[5]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":\\"DISPATCH_NAMESPACE_BINDING_SERVICE_1\\"}.
+			  - \\"dispatch_namespaces[6]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			  - \\"dispatch_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
 		`);
 			});
 		});

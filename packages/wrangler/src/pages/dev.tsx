@@ -8,6 +8,7 @@ import { unstable_dev } from "../api";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
 import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
@@ -274,7 +275,7 @@ export const Handler = async ({
 
 		if (!existsSync(scriptPath)) {
 			logger.log("No functions. Shimming...");
-			scriptPath = resolve(__dirname, "../templates/pages-shim.ts");
+			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 		} else {
 			const runBuild = async () => {
 				try {
@@ -363,28 +364,20 @@ export const Handler = async ({
 			logLevel: "error",
 			logPrefix: "pages",
 		},
-		true
+		{ testMode: false, disableExperimentalWarning: true }
 	);
 	await metrics.sendMetricsEvent("run pages dev");
 
+	CLEANUP_CALLBACKS.push(stop);
+
 	waitUntilExit().then(() => {
 		CLEANUP();
-		stop();
 		process.exit(0);
 	});
 
-	process.on("exit", () => {
-		CLEANUP();
-		stop();
-	});
-	process.on("SIGINT", () => {
-		CLEANUP();
-		stop();
-	});
-	process.on("SIGTERM", () => {
-		CLEANUP();
-		stop();
-	});
+	process.on("exit", CLEANUP);
+	process.on("SIGINT", CLEANUP);
+	process.on("SIGTERM", CLEANUP);
 };
 
 function isWindows() {
@@ -495,6 +488,8 @@ async function spawnProxyProcess({
 
 	proxy.on("close", (code) => {
 		logger.error(`Proxy exited with status ${code}.`);
+		CLEANUP();
+		process.exitCode = code ?? 0;
 	});
 
 	// Wait for proxy process to start...

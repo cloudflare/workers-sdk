@@ -1,0 +1,42 @@
+name: Queues Experimental builds
+on:
+  push:
+    branches:
+      - queues
+
+jobs:
+  build:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build and release `wrangler@queues` to NPM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.13
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.13
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check for errors
+        run: npm run check
+
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
+      - name: Publish `wrangler@queues` to NPM
+        run: npm publish --tag queues
+        env:
+          NODE_ENV: "production"
+          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/wrangler

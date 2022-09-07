@@ -1,12 +1,17 @@
 import { join as pathJoin } from "node:path";
 import { toUrlPath } from "../../paths";
-import { MAX_FUNCTIONS_ROUTES_RULES, ROUTES_SPEC_VERSION } from "../constants";
+import {
+	MAX_FUNCTIONS_ROUTES_RULES,
+	ROUTES_SPEC_DESCRIPTION,
+	ROUTES_SPEC_VERSION,
+} from "../constants";
 import { consolidateRoutes } from "./routes-consolidation";
 import type { RouteConfig } from "./routes";
 
 /** Interface for _routes.json */
 interface RoutesJSONSpec {
 	version: typeof ROUTES_SPEC_VERSION;
+	description?: string;
 	include: string[];
 	exclude: string[];
 }
@@ -53,6 +58,7 @@ export function convertRoutesToRoutesJSONSpec(
 	const include = convertRoutesToGlobPatterns(reversedRoutes);
 	return optimizeRoutesJSONSpec({
 		version: ROUTES_SPEC_VERSION,
+		description: ROUTES_SPEC_DESCRIPTION,
 		include,
 		exclude: [],
 	});

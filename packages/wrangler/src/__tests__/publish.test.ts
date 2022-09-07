@@ -13,7 +13,9 @@ import {
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -3615,6 +3617,32 @@ addEventListener('fetch', event => {});`
 			        "
 		      `);
 		});
+
+		it("can be overridden with cli args", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+				console.log(abc);
+			`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("publish --dry-run --outdir dist --define abc:789");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatchInlineSnapshot(`
+			        "(() => {
+			          // index.js
+			          console.log(789);
+			        })();
+			        //# sourceMappingURL=index.js.map
+			        "
+		      `);
+		});
 	});
 
 	describe("custom builds", () => {
@@ -5232,6 +5260,29 @@ addEventListener('fetch', event => {});`
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("should read vars passed as cli arguments", async () => {
+				writeWranglerToml();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				await runWrangler("publish index.js --var TEXT:sometext --var COUNT:1");
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Your worker has access to the following bindings:
+			- Vars:
+			  - TEXT: \\"(hidden)\\"
+			  - COUNT: \\"(hidden)\\"
+			Total Upload: 0xx KiB / gzip: 0xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev",
+			  "warn": "",
+			}
+		`);
+			});
 		});
 
 		describe("[r2_buckets]", () => {
@@ -5514,10 +5565,10 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		describe("[worker_namespaces]", () => {
-			it("should support bindings to a worker namespace", async () => {
+		describe("[dispatch_namespaces]", () => {
+			it("should support bindings to a dispatch namespace", async () => {
 				writeWranglerToml({
-					worker_namespaces: [
+					dispatch_namespaces: [
 						{
 							binding: "foo",
 							namespace: "Foo",
@@ -5538,7 +5589,7 @@ addEventListener('fetch', event => {});`
 				await runWrangler("publish index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "Your worker has access to the following bindings:
-			          - Worker Namespaces:
+			          - dispatch namespaces:
 			            - foo: Foo
 			          Total Upload: 0xx KiB / gzip: 0xx KiB
 			          Uploaded test-name (TIMINGS)
@@ -5549,7 +5600,7 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			    - \\"worker_namespaces\\" fields are experimental and may change or break at any time.
+			    - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time.
 
 			"
 		`);
@@ -6487,6 +6538,9 @@ function mockUploadWorkerRequest(
 			} else {
 				expect(metadata.body_part).toEqual("index.js");
 			}
+
+			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+
 			if ("expectedBindings" in options) {
 				expect(metadata.bindings).toEqual(expectedBindings);
 			}
@@ -6620,19 +6674,6 @@ function mockUnauthorizedPublishRoutesRequest({
 				{ message: "Authentication error", code: 10000 },
 			])
 	);
-}
-
-function mockCollectKnownRoutesRequest(
-	routes: { pattern: string; script: string }[]
-) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
-}
-
-function mockGetZoneFromHostRequest(host: string, zone: string) {
-	setMockResponse("/zones", (_uri, _init, queryParams) => {
-		expect(queryParams.get("name")).toEqual(host);
-		return [{ id: zone }];
-	});
 }
 
 function mockPublishRoutesFallbackRequest(route: {

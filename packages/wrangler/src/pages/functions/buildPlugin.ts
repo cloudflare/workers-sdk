@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
+import { getBasePath } from "../../paths";
 
 type Options = {
 	routesModule: string;
@@ -24,7 +25,7 @@ export function buildPlugin({
 	onEnd = () => {},
 }: Options) {
 	return build({
-		entryPoints: [resolve(__dirname, "../templates/pages-template-plugin.ts")],
+		entryPoints: [resolve(getBasePath(), "templates/pages-template-plugin.ts")],
 		inject: [routesModule],
 		bundle: true,
 		format: "esm",

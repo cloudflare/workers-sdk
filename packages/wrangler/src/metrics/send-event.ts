@@ -40,17 +40,18 @@ export type EventNames =
 	| "unrevoke pubsub broker credentials"
 	| "list pubsub broker revoked credentials"
 	| "list pubsub broker public-keys"
-	| "list worker namespaces"
-	| "view worker namespace"
-	| "create worker namespace"
-	| "delete worker namespace"
-	| "rename worker namespace"
+	| "list dispatch namespaces"
+	| "view dispatch namespace"
+	| "create dispatch namespace"
+	| "delete dispatch namespace"
+	| "rename dispatch namespace"
 	| "create pages project"
 	| "list pages projects"
 	| "create pages deployment"
 	| "list pages deployments"
 	| "build pages functions"
 	| "run dev"
+	| "run dev (api)"
 	| "run pages dev";
 
 /**

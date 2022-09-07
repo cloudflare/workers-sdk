@@ -15,6 +15,7 @@ import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { devHandler, devOptions } from "./dev";
 import { confirm, prompt } from "./dialogs";
+import { workerNamespaceCommands } from "./dispatch-namespace";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
@@ -73,7 +74,7 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import { workerNamespaceCommands } from "./worker-namespace";
+import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
@@ -98,6 +99,9 @@ const proxy =
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
+	logger.log(
+		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
+	);
 }
 
 export function getRules(config: Config): Config["rules"] {
@@ -469,6 +473,19 @@ function createCLIParser(argv: string[]) {
 						requiresArg: true,
 						array: true,
 					})
+					.option("var", {
+						describe:
+							"A key-value pair to be injected into the script as a variable",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
+					.option("define", {
+						describe: "A key-value pair to be substituted in the script",
+						type: "string",
+						requiresArg: true,
+						array: true,
+					})
 					.option("triggers", {
 						describe: "cron schedules to attach",
 						alias: ["schedule", "schedules"],
@@ -562,6 +579,20 @@ function createCLIParser(argv: string[]) {
 				);
 			}
 
+			const cliVars =
+				args.var?.reduce<Record<string, string>>((collectVars, v) => {
+					const [key, ...value] = v.split(":");
+					collectVars[key] = value.join("");
+					return collectVars;
+				}, {}) || {};
+
+			const cliDefines =
+				args.define?.reduce<Record<string, string>>((collectDefines, d) => {
+					const [key, ...value] = d.split(":");
+					collectDefines[key] = value.join("");
+					return collectDefines;
+				}, {}) || {};
+
 			const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 			const assetPaths =
@@ -585,6 +616,8 @@ function createCLIParser(argv: string[]) {
 					? new Date().toISOString().substring(0, 10)
 					: args["compatibility-date"],
 				compatibilityFlags: args["compatibility-flags"],
+				vars: cliVars,
+				defines: cliDefines,
 				triggers: args.triggers,
 				jsxFactory: args["jsx-factory"],
 				jsxFragment: args["jsx-fragment"],
@@ -604,12 +637,12 @@ function createCLIParser(argv: string[]) {
 
 	// tail
 	wrangler.command(
-		"tail [name]",
+		"tail [worker]",
 		"🦚 Starts a log tailing session for a published Worker.",
 		(yargs) => {
 			return yargs
-				.positional("name", {
-					describe: "Name of the worker",
+				.positional("worker", {
+					describe: "Name or route of the worker to tail",
 					type: "string",
 				})
 				.option("format", {
@@ -677,7 +710,22 @@ function createCLIParser(argv: string[]) {
 				sendMetrics: config.send_metrics,
 			});
 
-			const scriptName = getLegacyScriptName(args, config);
+			let scriptName;
+
+			// Worker names can't contain "." (and most routes should), so use that as a discriminator
+			if (args.worker?.includes(".")) {
+				scriptName = await getWorkerForZone(args.worker);
+				if (args.format === "pretty") {
+					logger.log(
+						`Connecting to worker ${scriptName} at route ${args.worker}`
+					);
+				}
+			} else {
+				scriptName = getLegacyScriptName(
+					{ name: args.worker, ...args },
+					config
+				);
+			}
 
 			if (!scriptName) {
 				throw new Error(
@@ -966,7 +1014,7 @@ function createCLIParser(argv: string[]) {
 											wasm_modules: {},
 											text_blobs: {},
 											data_blobs: {},
-											worker_namespaces: [],
+											dispatch_namespaces: [],
 											logfwdr: { schema: undefined, bindings: [] },
 											unsafe: [],
 										},
@@ -975,6 +1023,7 @@ function createCLIParser(argv: string[]) {
 										compatibility_date: undefined,
 										compatibility_flags: undefined,
 										usage_model: undefined,
+										keep_bindings: false, // this doesn't matter since it's a new script anyway
 									}),
 								}
 							);
@@ -2022,8 +2071,8 @@ function createCLIParser(argv: string[]) {
 	});
 
 	wrangler.command(
-		"worker-namespace",
-		"📦 Interact with a worker namespace",
+		"dispatch-namespace",
+		"📦 Interact with a dispatch namespace",
 		(workerNamespaceYargs) => {
 			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
 		}
