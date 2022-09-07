@@ -3233,6 +3233,29 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
+		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
+			jest.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
+			jest.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
+			jest.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+
+			writeWorkerSource();
+			let err: undefined | Error;
+			try {
+				await runWrangler("publish ./index.js");
+			} catch (e) {
+				err = e as Error;
+			}
+
+			expect(err?.message).toMatchInlineSnapshot(`
+			"A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+			    \`\`\`
+			    compatibility_date = \\"2020-12-01\\"
+			    \`\`\`
+			    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
+			See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+		`);
+		});
+
 		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
