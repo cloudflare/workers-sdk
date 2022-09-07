@@ -1,9 +1,17 @@
+import { readFileSync } from "fs";
 import fs from "fs/promises";
 import { Request, Response } from "undici";
 import { z } from "zod";
 import { Awaitable, JsonSchema } from "../../helpers";
-import { Service, Worker, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { BINDING_SERVICE_LOOPBACK, Plugin } from "../shared";
+import {
+	ModuleDefinitionSchema,
+	ModuleLocator,
+	ModuleRuleSchema,
+	STRING_SCRIPT_PATH,
+	convertModuleDefinition,
+} from "./modules";
 
 // (request: Request) => Awaitable<Response>
 export const ServiceFetch = z
@@ -15,7 +23,17 @@ export const CoreOptionsSchema = z.object({
 	name: z.string().optional(),
 	script: z.string().optional(),
 	scriptPath: z.string().optional(),
-	modules: z.boolean().optional(),
+	modules: z
+		.union([
+			// Automatically collect modules by parsing `script`/`scriptPath`...
+			z.boolean(),
+			// ...or manually define modules
+			// (used by Wrangler which has its own module collection code)
+			z.array(ModuleDefinitionSchema),
+		])
+		.optional(),
+	modulesRules: z.array(ModuleRuleSchema).optional(),
+
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.string().array().optional(),
 
@@ -144,20 +162,7 @@ export const CORE_PLUGIN: Plugin<
 		];
 
 		// Define regular user worker if script is set
-		let workerScript: Partial<Worker> | undefined;
-		if (options.script !== undefined) {
-			workerScript = options.modules
-				? { modules: [{ name: "<script>", esModule: options.script }] }
-				: { serviceWorkerScript: options.script };
-		} else if (options.scriptPath !== undefined) {
-			if (options.modules) {
-				// TODO: collect modules
-			} else {
-				const script = await fs.readFile(options.scriptPath, "utf8");
-				workerScript = { serviceWorkerScript: script };
-			}
-		}
-
+		const workerScript = getWorkerScript(options);
 		if (workerScript !== undefined) {
 			const name = `${SERVICE_USER_PREFIX}:${options.name ?? ""}`;
 			services.push({
@@ -202,3 +207,37 @@ export const CORE_PLUGIN: Plugin<
 		return services;
 	},
 };
+
+function getWorkerScript(
+	options: z.infer<typeof CoreOptionsSchema>
+): { serviceWorkerScript: string } | { modules: Worker_Module[] } | undefined {
+	if (Array.isArray(options.modules)) {
+		// If `modules` is a manually defined modules array, use that
+		return { modules: options.modules.map(convertModuleDefinition) };
+	}
+
+	// Otherwise get code, preferring string `script` over `scriptPath`
+	let code;
+	if (options.script !== undefined) {
+		code = options.script;
+	} else if (options.scriptPath !== undefined) {
+		code = readFileSync(options.scriptPath, "utf8");
+	} else {
+		// If neither `script`, `scriptPath` nor `modules` is defined, this worker
+		// doesn't have any code
+		return;
+	}
+
+	if (options.modules) {
+		// If `modules` is `true`, automatically collect modules...
+		const locator = new ModuleLocator(options.modulesRules);
+		// If `script` and `scriptPath` are set, resolve modules in `script`
+		// against `scriptPath`.
+		locator.visitEntrypoint(code, options.scriptPath ?? STRING_SCRIPT_PATH);
+		return { modules: locator.modules };
+	} else {
+		// ...otherwise, `modules` will either be `false` or `undefined`, so treat
+		// `code` as a service worker
+		return { serviceWorkerScript: code };
+	}
+}

@@ -44,6 +44,15 @@ export class MiniflareError<
 	}
 }
 
+export type MiniflareCoreErrorCode =
+	| "ERR_RUNTIME_UNSUPPORTED" // System doesn't support Cloudflare Workers runtime
+	| "ERR_DISPOSED" // Attempted to use Miniflare instance after calling dispose()
+	| "ERR_MODULE_PARSE" // SyntaxError when attempting to parse/locate modules
+	| "ERR_MODULE_STRING_SCRIPT" // Attempt to resolve module within string script
+	| "ERR_MODULE_DYNAMIC_SPEC" // Attempted to import/require a module without a literal spec
+	| "ERR_MODULE_RULE"; // No matching module rule for file
+export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
+
 export class HttpError extends MiniflareError<number> {
 	constructor(code: number, message?: string, cause?: Error) {
 		super(code, message, cause);
