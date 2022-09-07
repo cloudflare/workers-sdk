@@ -99,6 +99,9 @@ const proxy =
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
+	logger.log(
+		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
+	);
 }
 
 export function getRules(config: Config): Config["rules"] {
