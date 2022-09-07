@@ -2042,19 +2042,17 @@ describe("init", () => {
 				id: "some-route-id",
 				pattern: "delta.quadrant",
 			},
-			{
-				id: "some-route-id",
-				pattern: "alpha.quadrant",
-			},
 		];
 		const mockConfigExpected = {
 			main: "src/index.ts",
 			compatibility_date: "1987-9-27",
 			name: "isolinear-optical-chip",
-			migrations: {
-				new_classes: ["Durability"],
-				tag: "some-migration-tag",
-			},
+			migrations: [
+				{
+					new_classes: ["Durability"],
+					tag: "some-migration-tag",
+				},
+			],
 			durable_objects: {
 				bindings: [
 					{
@@ -2077,22 +2075,13 @@ describe("init", () => {
 					binding: "test-bucket",
 				},
 			],
-			namespaces: [
+			dispatch_namespaces: [
 				{
 					binding: "name-namespace-mock",
 					namespace: "namespace-mock",
 				},
 			],
-			routes: [
-				{
-					id: "some-route-id",
-					pattern: "delta.quadrant",
-				},
-				{
-					id: "some-route-id",
-					pattern: "alpha.quadrant",
-				},
-			],
+			route: "delta.quadrant",
 			services: [
 				{
 					environment: "production",
@@ -2101,7 +2090,7 @@ describe("init", () => {
 				},
 			],
 			triggers: {
-				cron: ["0 0 0 * * *"],
+				crons: ["0 0 0 * * *"],
 			},
 			usage_model: "bundled",
 			vars: {

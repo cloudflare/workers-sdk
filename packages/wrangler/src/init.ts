@@ -16,7 +16,9 @@ import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
+import type { RawConfig } from "./config";
 
+import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
 import type { Argv, ArgumentsCamelCase } from "yargs";
@@ -63,37 +65,38 @@ export type ServiceMetadataRes = {
 	id: string;
 	default_environment: {
 		environment: string;
-		created_on: Date;
-		modified_on: Date;
+		created_on: string;
+		modified_on: string;
 		script: {
 			id: string;
 			tag: string;
 			etag: string;
 			handlers: string[];
-			modified_on: Date;
-			created_on: Date;
+			modified_on: string;
+			created_on: string;
 			migration_tag: string;
 			usage_model: "bundled" | "unbound";
-			compatibility_date: Date;
+			compatibility_date: string;
 			last_deployed_from?: "wrangler" | "dash" | "api";
 		};
 	};
-	created_on: Date;
-	modified_on: Date;
+	created_on: string;
+	modified_on: string;
 	usage_model: "bundled" | "unbound";
 	environments: [
 		{
 			environment: string;
-			created_on: Date;
-			modified_on: Date;
+			created_on: string;
+			modified_on: string;
 		}
 	];
 };
 
-export type RoutesRes = {
+export type RawSimpleRoute = { pattern: string };
+export type RawRoutes = (RawSimpleRoute | Exclude<Route, SimpleRoute>) & {
 	id: string;
-	pattern: string;
-}[];
+};
+export type RoutesRes = RawRoutes[];
 
 export type CronTriggersRes = {
 	schedules: [
@@ -532,10 +535,10 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					pathToPackageJson,
 					"src/index.ts",
 
-					await getWorkerConfig(accountId, fromDashScriptName, {
+					(await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
 						environments: serviceMetaData.environments,
-					})
+					})) as TOML.JsonMap
 				);
 			} else {
 				const newWorkerType = yesFlag
@@ -606,10 +609,10 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					pathToPackageJson,
 					"src/index.ts",
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
-					await getWorkerConfig(accountId, fromDashScriptName, {
+					(await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
 						environments: serviceMetaData.environments,
-					})
+					})) as TOML.JsonMap
 				);
 			} else {
 				const newWorkerType = yesFlag
@@ -694,7 +697,7 @@ async function getWorkerConfig(
 		defaultEnvironment: string;
 		environments: ServiceMetadataRes["environments"];
 	}
-) {
+): Promise<RawConfig> {
 	const [bindings, routes, serviceEnvMetadata, cronTriggers] =
 		await Promise.all([
 			fetchResult<WorkerMetadata["bindings"]>(
@@ -725,8 +728,8 @@ async function getWorkerConfig(
 			switch (binding.type) {
 				case "plain_text":
 					{
-						configObj["vars"] = {
-							...(configObj?.vars ?? {}),
+						configObj.vars = {
+							...(configObj.vars ?? {}),
 							name: binding.name,
 							text: binding.text,
 						};
@@ -734,8 +737,8 @@ async function getWorkerConfig(
 					break;
 				case "json":
 					{
-						configObj["vars"] = {
-							...(configObj?.vars ?? {}),
+						configObj.vars = {
+							...(configObj.vars ?? {}),
 							name: binding.name,
 							json: binding.json,
 						};
@@ -743,17 +746,17 @@ async function getWorkerConfig(
 					break;
 				case "kv_namespace":
 					{
-						configObj["kv_namespaces"] = [
-							...(configObj?.kv_namespaces ?? []),
+						configObj.kv_namespaces = [
+							...(configObj.kv_namespaces ?? []),
 							{ id: binding.namespace_id, binding: binding.name },
 						];
 					}
 					break;
 				case "durable_object_namespace":
 					{
-						configObj["durable_objects"] = {
+						configObj.durable_objects = {
 							bindings: [
-								...(configObj?.durable_objects?.bindings ?? []),
+								...(configObj.durable_objects?.bindings ?? []),
 								{
 									name: binding.name,
 									class_name: binding.class_name,
@@ -766,16 +769,16 @@ async function getWorkerConfig(
 					break;
 				case "r2_bucket":
 					{
-						configObj["r2_buckets"] = [
-							...(configObj?.r2_buckets ?? []),
+						configObj.r2_buckets = [
+							...(configObj.r2_buckets ?? []),
 							{ binding: binding.name, bucket_name: binding.bucket_name },
 						];
 					}
 					break;
 				case "service":
 					{
-						configObj["services"] = [
-							...(configObj?.services ?? []),
+						configObj.services = [
+							...(configObj.services ?? []),
 							{
 								binding: binding.name,
 								service: binding.service,
@@ -786,19 +789,19 @@ async function getWorkerConfig(
 					break;
 				case "namespace":
 					{
-						configObj["namespaces"] = [
-							...(configObj?.namespaces ?? []),
+						configObj.dispatch_namespaces = [
+							...(configObj.dispatch_namespaces ?? []),
 							{ binding: binding.name, namespace: binding.namespace },
 						];
 					}
 					break;
 				case "logfwdr":
 					{
-						configObj["logfwdr"] = {
+						configObj.logfwdr = {
 							// TODO: Messaging about adding schema file path
 							schema: "",
 							bindings: [
-								...(configObj?.logfwdr?.bindings ?? []),
+								...(configObj.logfwdr?.bindings ?? []),
 								{ name: binding.name, destination: binding.destination },
 							],
 						};
@@ -806,24 +809,24 @@ async function getWorkerConfig(
 					break;
 				case "wasm_module":
 					{
-						configObj["wasm_modules"] = {
-							...(configObj?.wasm_modules ?? {}),
+						configObj.wasm_modules = {
+							...(configObj.wasm_modules ?? {}),
 							[binding.name]: binding.part,
 						};
 					}
 					break;
 				case "text_blob":
 					{
-						configObj["text_blobs"] = {
-							...(configObj?.text_blobs ?? {}),
+						configObj.text_blobs = {
+							...(configObj.text_blobs ?? {}),
 							[binding.name]: binding.part,
 						};
 					}
 					break;
 				case "data_blob":
 					{
-						configObj["data_blobs"] = {
-							...(configObj?.data_blobs ?? {}),
+						configObj.data_blobs = {
+							...(configObj.data_blobs ?? {}),
 							[binding.name]: binding.part,
 						};
 					}
@@ -832,15 +835,15 @@ async function getWorkerConfig(
 					// If we don't know what the type is, its an unsafe binding
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					if (!(binding as any)?.type) break;
-					configObj["unsafe"] = {
-						bindings: [...(configObj?.unsafe?.bindings ?? []), binding],
+					configObj.unsafe = {
+						bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 					};
 				}
 			}
 
 			return configObj;
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		}, {} as Record<string, any>);
+		}, {} as RawConfig);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -848,24 +851,39 @@ async function getWorkerConfig(
 			(durableObject) => (durableObject as { class_name: string }).class_name
 		);
 
+	const routeOrRoutes = routes.map((rawRoute) => {
+		const { id: _id, ...route } = rawRoute;
+		if (Object.keys(route).length === 1) {
+			return route.pattern;
+		} else {
+			return route as Route;
+		}
+	});
+	const routeOrRoutesToConfig =
+		routeOrRoutes.length > 1
+			? { routes: routeOrRoutes }
+			: { route: routeOrRoutes[0] };
+
 	return {
 		compatibility_date: serviceEnvMetadata.script.compatibility_date,
-		routes,
+		...routeOrRoutesToConfig,
 		usage_model: serviceEnvMetadata.script.usage_model,
-		migrations: {
-			tag: serviceEnvMetadata.script.migration_tag,
-			new_classes: durableObjectClassNames,
-		},
+		migrations: [
+			{
+				tag: serviceEnvMetadata.script.migration_tag,
+				new_classes: durableObjectClassNames,
+			},
+		],
 		triggers: {
-			cron: cronTriggers.schedules.map((scheduled) => scheduled.cron),
+			crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 		},
 		env: environments
 			.filter((env) => env.environment !== "production")
-			// `env` can have multiple Enviroments, with different configs.
+			// `env` can have multiple Environments, with different configs.
 			.reduce((envObj, { environment }) => {
 				return { ...envObj, [environment]: {} };
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			}, {} as Record<string, any>),
+			}, {} as RawConfig["env"]),
 		...mappedBindings,
 	};
 }
