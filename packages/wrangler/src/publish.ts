@@ -222,7 +222,9 @@ export default async function publish(props: Props): Promise<void> {
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
 		const compatibilityDateStr = `${new Date().getFullYear()}-${(
-			new Date().getMonth() + ""
+			new Date().getMonth() +
+			1 +
+			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
 		throw new Error(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
