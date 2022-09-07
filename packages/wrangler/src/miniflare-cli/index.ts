@@ -129,7 +129,8 @@ async function main() {
 		}
 		mf = new Miniflare(config);
 		// Start Miniflare development server
-		await mf.startServer();
+		const mfServer = await mf.startServer();
+		const mfPort = (mfServer.address() as AddressInfo).port;
 		await mf.startScheduler();
 
 		const internalDurableObjectClassNames = Object.values(
@@ -195,6 +196,7 @@ async function main() {
 		process.send &&
 			process.send(
 				JSON.stringify({
+					mfPort: mfPort,
 					ready: true,
 					durableObjectsPort: durableObjectsMfPort,
 				})

@@ -3,7 +3,6 @@ import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
-import { fetch } from "undici";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -30,7 +29,6 @@ import type { Config } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
-import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -69,7 +67,7 @@ interface DevArgs {
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
 	"live-reload"?: boolean;
-	onReady?: () => void;
+	onReady?: (ip: string, port: number) => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
@@ -430,12 +428,6 @@ export async function startDev(args: StartDevOptions) {
 				devReactElement.unmount();
 				await watcher?.close();
 			},
-			fetch: async (init?: RequestInit) => {
-				const port = args.port || config.dev.port || (await getLocalPort());
-				const address = args.ip || config.dev.ip || "localhost";
-
-				return await fetch(`http://${address}:${port}/`, init);
-			},
 		};
 	} finally {
 		await watcher?.close();
@@ -506,7 +498,11 @@ export async function startApiDev(args: StartDevOptions) {
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
-			port: args.port || configParam.dev.port || (await getLocalPort()),
+			//port can be 0, which means to use a random port
+			port:
+				args.port === 0
+					? args.port
+					: args.port || configParam.dev.port || (await getLocalPort()),
 			ip: args.ip || configParam.dev.ip,
 			inspectorPort:
 				args["inspector-port"] ||
@@ -543,12 +539,6 @@ export async function startApiDev(args: StartDevOptions) {
 	return {
 		stop: async () => {
 			await devServer.stop();
-		},
-		fetch: async (init?: RequestInit) => {
-			const port = args.port || config.dev.port || (await getLocalPort());
-			const address = args.ip || config.dev.ip || "localhost";
-
-			return await fetch(`http://${address}:${port}/`, init);
 		},
 	};
 }
