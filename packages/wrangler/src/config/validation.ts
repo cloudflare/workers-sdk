@@ -1986,9 +1986,9 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	if (
 		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"queue",
-			"batch_size",
-			"batch_timeout",
-			"message_retries",
+			"max_batch_size",
+			"max_batch_timeout",
+			"max_retries",
 			"dead_letter_queue",
 		])
 	) {
@@ -2007,9 +2007,9 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		key: string;
 		type: "number" | "string";
 	}[] = [
-		{ key: "batch_size", type: "number" },
-		{ key: "batch_timeout", type: "number" },
-		{ key: "message_retries", type: "number" },
+		{ key: "max_batch_size", type: "number" },
+		{ key: "max_batch_timeout", type: "number" },
+		{ key: "max_retries", type: "number" },
 		{ key: "dead_letter_queue", type: "string" },
 	];
 	for (const optionalOpt of options) {

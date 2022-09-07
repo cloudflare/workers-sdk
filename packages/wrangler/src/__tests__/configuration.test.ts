@@ -1733,9 +1733,9 @@ describe("normalizeAndValidateConfig()", () => {
 								{ queue: "myQueue", invalidField: "madeupValue" },
 								{
 									queue: "myQueue",
-									batch_size: "3",
-									batch_timeout: null,
-									message_retries: "hello",
+									max_batch_size: "3",
+									max_batch_timeout: null,
+									max_retries: "hello",
 									dead_letter_queue: 5,
 								},
 							],
@@ -1761,10 +1761,10 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - \\"queues.consumers[0]\\" should have a string \\"queue\\" field but got {}.
 					  - \\"queues.consumers[1]\\" should have a string \\"queue\\" field but got {\\"queue\\":22}.
-					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"batch_size\\":\\"3\\",\\"batch_timeout\\":null,\\"message_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
-					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"batch_size\\":\\"3\\",\\"batch_timeout\\":null,\\"message_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
-					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"message_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"batch_size\\":\\"3\\",\\"batch_timeout\\":null,\\"message_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
-					  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"batch_size\\":\\"3\\",\\"batch_timeout\\":null,\\"message_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}."
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}."
 				`);
 			});
 		});

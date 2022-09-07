@@ -855,10 +855,10 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 		const body: PutConsumerBody = {
 			dead_letter_queue: consumer.dead_letter_queue,
 			settings: {
-				batch_size: consumer.batch_size,
-				max_retries: consumer.message_retries,
-				max_wait_time_ms: consumer.batch_timeout
-					? 1000 * consumer.batch_timeout
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms: consumer.max_batch_timeout
+					? 1000 * consumer.max_batch_timeout
 					: undefined,
 			},
 		};

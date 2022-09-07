@@ -350,13 +350,13 @@ interface EnvironmentNonInheritable {
 			queue: string;
 
 			/** The maximum number of messages per batch */
-			batch_size?: number;
+			max_batch_size?: number;
 
 			/** The maximum number of seconds to wait to fill a batch with messages. */
-			batch_timeout?: number;
+			max_batch_timeout?: number;
 
 			/** The maximum number of retries for each message. */
-			message_retries?: number;
+			max_retries?: number;
 
 			/** The queue to send messages that failed to be consumed. */
 			dead_letter_queue?: string;
