@@ -237,11 +237,14 @@ export async function startLocalServer({
 		if (!bundle || !format) return;
 
 		// port for the worker
-		await waitForPortToBeAvailable(port, {
-			retryPeriod: 200,
-			timeout: 2000,
-			abortSignal: abortController.signal,
-		});
+
+		if (port !== 0) {
+			await waitForPortToBeAvailable(port, {
+				retryPeriod: 200,
+				timeout: 2000,
+				abortSignal: abortController.signal,
+			});
+		}
 
 		if (bindings.services && bindings.services.length > 0) {
 			throw new Error(
@@ -327,7 +330,7 @@ export async function startLocalServer({
 					await registerWorker(workerName, {
 						protocol: localProtocol,
 						mode: "local",
-						port,
+						port: message.mfPort,
 						host: ip,
 						durableObjects: internalDurableObjects.map((binding) => ({
 							name: binding.name,
@@ -341,7 +344,7 @@ export async function startLocalServer({
 							: {}),
 					});
 				}
-				onReady?.();
+				onReady?.(ip, message.mfPort);
 			}
 		});
 

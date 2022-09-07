@@ -54,7 +54,7 @@ export function Remote(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: (() => void) | undefined;
+	onReady?: ((ip: string, port: number) => void) | undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
 }) {
@@ -81,6 +81,7 @@ export function Remote(props: {
 		routes: props.routes,
 		onReady: props.onReady,
 		sendMetrics: props.sendMetrics,
+		port: props.port,
 	});
 
 	usePreviewServer({
@@ -164,8 +165,9 @@ export function useWorker(props: {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady: (() => void) | undefined;
+	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
+	port: number;
 }): CfPreviewToken | undefined {
 	const {
 		name,
@@ -363,7 +365,7 @@ export function useWorker(props: {
 			}
 			*/
 
-			onReady?.();
+			onReady?.(props.host || "localhost", props.port);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -417,6 +419,7 @@ export function useWorker(props: {
 		session,
 		onReady,
 		props.sendMetrics,
+		props.port,
 	]);
 	return token;
 }

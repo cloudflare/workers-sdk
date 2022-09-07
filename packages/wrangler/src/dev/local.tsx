@@ -48,7 +48,7 @@ export interface LocalProps {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
-	onReady: (() => void) | undefined;
+	onReady: ((ip: string, port: number) => void) | undefined;
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -228,7 +228,7 @@ function useLocalWorker({
 								: {}),
 						});
 					}
-					onReady?.();
+					onReady?.(ip, message.mfPort);
 				}
 			});
 

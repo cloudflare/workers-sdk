@@ -1,3 +1,4 @@
+import { fetch } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
@@ -79,6 +80,8 @@ export async function unstable_dev(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
 	}
+	let readyPort: number;
+	let readyAddress: string;
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
 	if (testMode) {
 		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
@@ -94,16 +97,24 @@ export async function unstable_dev(
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
+					port: options?.port ?? 0,
 					...options,
 					local: true,
-					onReady: () => ready(devServer),
+					onReady: (address, port) => {
+						readyPort = port;
+						readyAddress = address;
+						ready(devServer);
+					},
 				});
 			}).then((devServer) => {
 				// now that the inner promise has resolved, we can resolve the outer promise
 				// with an object that lets you fetch and stop the dev server
 				resolve({
 					stop: devServer.stop,
-					fetch: devServer.fetch,
+					fetch: async (init?: RequestInit) => {
+						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
+						return await fetch(urlToFetch, init);
+					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
 						return;
@@ -113,6 +124,7 @@ export async function unstable_dev(
 		});
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
+
 		return new Promise<UnstableDev>((resolve) => {
 			//lmao
 			return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
@@ -125,12 +137,19 @@ export async function unstable_dev(
 					$0: "",
 					...options,
 					local: true,
-					onReady: () => ready(devServer),
+					onReady: (address, port) => {
+						readyPort = port;
+						readyAddress = address;
+						ready(devServer);
+					},
 				});
 			}).then((devServer) => {
 				resolve({
 					stop: devServer.stop,
-					fetch: devServer.fetch,
+					fetch: async (init?: RequestInit) => {
+						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
+						return await fetch(urlToFetch, init);
+					},
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});

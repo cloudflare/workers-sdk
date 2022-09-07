@@ -13,42 +13,42 @@ describe("worker", () => {
 		workers = await Promise.all([
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31001 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31002 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31003 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31004 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31005 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31006 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31007 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
 				"src/basicModule.ts",
-				{ port: 31008 },
+				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 		]);
