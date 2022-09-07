@@ -195,11 +195,12 @@ export async function bundleWorker(
 		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
 		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
 		// the target consumer (dev / publish).
-		middlewareToLoad.filter(
+		(middlewareToLoad.filter(
 			(m) =>
 				(m.publish && targetConsumer === "publish") ||
 				(m.dev !== false && targetConsumer === "dev")
-		).length > 0 &&
+		).length > 0 ||
+			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
 			((currentEntry: Entry) => {
 				return applyMiddlewareLoaderFacade(
 					currentEntry,
