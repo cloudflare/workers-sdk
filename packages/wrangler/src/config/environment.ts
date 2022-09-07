@@ -326,6 +326,44 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Queues that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	queues: {
+		/** Producer bindings */
+		producers: {
+			/** The binding name used to refer to the Queue in the worker. */
+			binding: string;
+
+			/** The name of this Queue. */
+			queue: string;
+		}[];
+
+		/** Consumer configuration */
+		consumers: {
+			/** The name of the queue from which this script should consume. */
+			queue: string;
+
+			/** The maximum number of messages per batch */
+			max_batch_size?: number;
+
+			/** The maximum number of seconds to wait to fill a batch with messages. */
+			max_batch_timeout?: number;
+
+			/** The maximum number of retries for each message. */
+			max_retries?: number;
+
+			/** The queue to send messages that failed to be consumed. */
+			dead_letter_queue?: string;
+		}[];
+	};
+
+	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

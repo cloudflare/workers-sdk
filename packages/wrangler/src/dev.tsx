@@ -771,6 +771,7 @@ async function getBindings(
 				...(args.durableObjects || []),
 			],
 		},
+		queues: [], // TODO
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
 				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {

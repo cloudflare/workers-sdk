@@ -5,7 +5,7 @@ import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
 import { bundleWorker } from "./bundle";
 import { printBundleSize } from "./bundle-reporter";
-import { fetchListResult, fetchResult } from "./cfetch";
+import { type FetchError, fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { confirm } from "./dialogs";
@@ -13,6 +13,7 @@ import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { getMetricsUsageHeaders } from "./metrics";
 import { ParseError } from "./parse";
+import { GetQueue, PutConsumer, type PutConsumerBody } from "./queues/client";
 import { syncAssets } from "./sites";
 import { getZoneForRoute } from "./zones";
 import type { Config } from "./config";
@@ -445,6 +446,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			queues: config.queues.producers.map((x) => {
+				return { binding: x.binding, queue_name: x.queue };
+			}),
 			r2_buckets: config.r2_buckets,
 			services: config.services,
 			dispatch_namespaces: config.dispatch_namespaces,
@@ -500,6 +504,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
+
+		await ensureQueuesExist(config);
 
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
@@ -633,6 +639,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				},
 			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
 		);
+	}
+
+	if (config.queues.consumers.length > 0) {
+		deployments.push(...updateQueueConsumers(config));
 	}
 
 	const targets = await Promise.all(deployments);
@@ -821,4 +831,48 @@ async function publishRoutesFallback(
 
 function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+}
+
+async function ensureQueuesExist(config: Config) {
+	const queueNames = config.queues.producers
+		.map((x) => x.queue)
+		.concat(config.queues.consumers.map((x) => x.queue));
+	for (const queue of queueNames) {
+		try {
+			await GetQueue(config, queue);
+		} catch (err) {
+			const x = err as FetchError;
+			if (x.code === 100123) {
+				// queue_not_found
+				throw new Error(
+					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
+				);
+			}
+		}
+	}
+}
+
+function updateQueueConsumers(config: Config): Promise<string[]>[] {
+	return config.queues.consumers.map((consumer) => {
+		const body: PutConsumerBody = {
+			dead_letter_queue: consumer.dead_letter_queue,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms: consumer.max_batch_timeout
+					? 1000 * consumer.max_batch_timeout
+					: undefined,
+			},
+		};
+
+		if (config.name === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new Error("Script name is required to update queue consumers");
+		}
+		const scriptName = config.name;
+		const envName = undefined; // TODO: script environment for wrangler publish?
+		return PutConsumer(config, consumer.queue, scriptName, envName, body).then(
+			() => [`Consumer for ${consumer.queue}`]
+		);
+	});
 }
