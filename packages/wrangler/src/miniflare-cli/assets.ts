@@ -1,14 +1,18 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	generateRulesMatcher,
-	replacer,
-} from "@cloudflare/pages-shared/src/asset-server/rulesEngine";
+import { createMetadataObject } from "@cloudflare/pages-shared/src/metadata-generator/createMetadataObject";
+import { parseHeaders } from "@cloudflare/pages-shared/src/metadata-generator/parseHeaders";
+import { parseRedirects } from "@cloudflare/pages-shared/src/metadata-generator/parseRedirects";
 import { fetch as miniflareFetch } from "@miniflare/core";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { Response } from "miniflare";
-import type { Headers as MiniflareHeaders } from "@miniflare/core";
+import { hashFile } from "../pages/hash";
+import type { Metadata } from "@cloudflare/pages-shared/src/asset-server/metadata";
+import type {
+	ParsedRedirects,
+	ParsedHeaders,
+} from "@cloudflare/pages-shared/src/metadata-generator/types";
 import type { Log } from "miniflare";
 import type {
 	Request as MiniflareRequest,
@@ -58,168 +62,6 @@ export default async function generateASSETSBinding(options: Options) {
 	};
 }
 
-function generateHeadersMatcher(headersFile: string) {
-	if (existsSync(headersFile)) {
-		const contents = readFileSync(headersFile).toString();
-
-		// TODO: Log errors
-		const lines = contents
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => !line.startsWith("#") && line !== "");
-
-		const rules: Record<string, Record<string, string>> = {};
-		let rule: { path: string; headers: Record<string, string> } | undefined =
-			undefined;
-
-		for (const line of lines) {
-			if (/^([^\s]+:\/\/|^\/)/.test(line)) {
-				if (rule && Object.keys(rule.headers).length > 0) {
-					rules[rule.path] = rule.headers;
-				}
-
-				const path = validateURL(line);
-				if (path) {
-					rule = {
-						path,
-						headers: {},
-					};
-					continue;
-				}
-			}
-
-			if (!line.includes(":")) continue;
-
-			const [rawName, ...rawValue] = line.split(":");
-			const name = rawName.trim().toLowerCase();
-			const value = rawValue.join(":").trim();
-
-			if (name === "") continue;
-			if (!rule) continue;
-
-			const existingValues = rule.headers[name];
-			rule.headers[name] = existingValues
-				? `${existingValues}, ${value}`
-				: value;
-		}
-
-		if (rule && Object.keys(rule.headers).length > 0) {
-			rules[rule.path] = rule.headers;
-		}
-
-		const rulesMatcher = generateRulesMatcher(rules, (match, replacements) =>
-			Object.fromEntries(
-				Object.entries(match).map(([name, value]) => [
-					name,
-					replacer(value, replacements),
-				])
-			)
-		);
-
-		return (request: MiniflareRequest) => {
-			const matches = rulesMatcher({
-				request,
-			});
-			if (matches) return matches;
-		};
-	} else {
-		return () => undefined;
-	}
-}
-
-function generateRedirectsMatcher(redirectsFile: string) {
-	if (existsSync(redirectsFile)) {
-		const contents = readFileSync(redirectsFile).toString();
-
-		// TODO: Log errors
-		const lines = contents
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => !line.startsWith("#") && line !== "");
-
-		const rules = Object.fromEntries(
-			lines
-				.map((line) => line.split(" "))
-				.filter((tokens) => tokens.length === 2 || tokens.length === 3)
-				.map((tokens) => {
-					const from = validateURL(tokens[0], true, false, false);
-					const to = validateURL(tokens[1], false, true, true);
-					let status: number | undefined = parseInt(tokens[2]) || 302;
-					status = [301, 302, 303, 307, 308].includes(status)
-						? status
-						: undefined;
-
-					return from && to && status ? [from, { to, status }] : undefined;
-				})
-				.filter((rule) => rule !== undefined) as [
-				string,
-				{ to: string; status?: number }
-			][]
-		);
-
-		const rulesMatcher = generateRulesMatcher(
-			rules,
-			({ status, to }, replacements) => ({
-				status,
-				to: replacer(to, replacements),
-			})
-		);
-
-		return (request: MiniflareRequest) => {
-			const match = rulesMatcher({
-				request,
-			})[0];
-			if (match) return match;
-		};
-	} else {
-		return () => undefined;
-	}
-}
-
-function extractPathname(
-	path = "/",
-	includeSearch: boolean,
-	includeHash: boolean
-) {
-	if (!path.startsWith("/")) path = `/${path}`;
-	const url = new URL(`//${path}`, "relative://");
-	return `${url.pathname}${includeSearch ? url.search : ""}${
-		includeHash ? url.hash : ""
-	}`;
-}
-
-function validateURL(
-	token: string,
-	onlyRelative = false,
-	includeSearch = false,
-	includeHash = false
-) {
-	const host = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/.exec(token);
-	if (host && host.groups && host.groups.host) {
-		if (onlyRelative) return;
-
-		return `https://${host.groups.host}${extractPathname(
-			host.groups.path,
-			includeSearch,
-			includeHash
-		)}`;
-	} else {
-		if (!token.startsWith("/") && onlyRelative) token = `/${token}`;
-
-		const path = /^\//.exec(token);
-		if (path) {
-			try {
-				return extractPathname(token, includeSearch, includeHash);
-			} catch {}
-		}
-	}
-	return "";
-}
-
-function hasFileExtension(pathname: string) {
-	return /\/.+\.[a-z0-9]+$/i.test(pathname);
-}
-
 async function generateAssetsFetch(
 	directory: string,
 	log: Log
@@ -227,262 +69,125 @@ async function generateAssetsFetch(
 	// Defer importing miniflare until we really need it
 	const { Headers, Request } = await import("@miniflare/core");
 
+	// pages-shared expects a Workers runtime environment. This provides the necessary 'polyfills'.
+	(globalThis as unknown as { Headers: typeof Headers }).Headers = Headers;
+	(globalThis as unknown as { Request: typeof Request }).Request = Request;
+	(globalThis as unknown as { Response: typeof Response }).Response = Response;
+
+	const { generateHandler, parseQualityWeightedList } = await import(
+		"@cloudflare/pages-shared/src/asset-server/handler"
+	);
+
 	const headersFile = join(directory, "_headers");
 	const redirectsFile = join(directory, "_redirects");
 	const workerFile = join(directory, "_worker.js");
 
 	const ignoredFiles = [headersFile, redirectsFile, workerFile];
 
-	const assetExists = (path: string) => {
-		path = join(directory, path);
-		return (
-			existsSync(path) &&
-			lstatSync(path).isFile() &&
-			!ignoredFiles.includes(path)
-		);
-	};
+	let redirects: ParsedRedirects | undefined;
+	if (existsSync(redirectsFile)) {
+		const contents = readFileSync(redirectsFile, "utf-8");
+		redirects = parseRedirects(contents);
+	}
 
-	const getAsset = (path: string) => {
-		if (assetExists(path)) {
-			return join(directory, path);
-		}
-	};
+	let headers: ParsedHeaders | undefined;
+	if (existsSync(headersFile)) {
+		const contents = readFileSync(headersFile, "utf-8");
+		headers = parseHeaders(contents);
+	}
 
-	let redirectsMatcher = generateRedirectsMatcher(redirectsFile);
-	let headersMatcher = generateHeadersMatcher(headersFile);
-
-	watch([headersFile, redirectsFile], {
-		persistent: true,
-	}).on("change", (path) => {
-		switch (path) {
-			case headersFile: {
-				log.log("_headers modified. Re-evaluating...");
-				headersMatcher = generateHeadersMatcher(headersFile);
-				break;
-			}
-			case redirectsFile: {
-				log.log("_redirects modified. Re-evaluating...");
-				redirectsMatcher = generateRedirectsMatcher(redirectsFile);
-				break;
-			}
-		}
+	let metadata = createMetadataObject({
+		redirects,
+		headers,
+		logger: log.warn,
 	});
 
-	const serveAsset = (file: string) => {
-		return readFileSync(file);
-	};
-
-	const generateResponse = (request: MiniflareRequest) => {
-		const url = new URL(request.url);
-		let assetName = url.pathname;
-		try {
-			//it's possible for someone to send a URL like http://fakehost/abc%2 which would fail to decode
-			assetName = decodeURIComponent(url.pathname);
-		} catch {}
-
-		const deconstructedResponse: {
-			status: number;
-			headers: MiniflareHeaders;
-			body?: Buffer;
-		} = {
-			status: 200,
-			headers: new Headers(),
-			body: undefined,
-		};
-
-		const match = redirectsMatcher(request);
-		if (match) {
-			const { status, to } = match;
-
-			let location = to;
-			let search;
-
-			if (to.startsWith("/")) {
-				search = new URL(location, "http://fakehost").search;
-			} else {
-				search = new URL(location).search;
-			}
-
-			location = `${location}${search ? "" : url.search}`;
-
-			if (status && [301, 302, 303, 307, 308].includes(status)) {
-				deconstructedResponse.status = status;
-			} else {
-				deconstructedResponse.status = 302;
-			}
-
-			deconstructedResponse.headers.set("Location", location);
-			return deconstructedResponse;
-		}
-
-		if (!request.method?.match(/^(get|head)$/i)) {
-			deconstructedResponse.status = 405;
-			return deconstructedResponse;
-		}
-
-		const notFound = () => {
-			let cwd = assetName;
-			while (cwd) {
-				cwd = cwd.slice(0, cwd.lastIndexOf("/"));
-
-				if ((asset = getAsset(`${cwd}/404.html`))) {
-					deconstructedResponse.status = 404;
-					deconstructedResponse.body = serveAsset(asset);
-					deconstructedResponse.headers.set(
-						"Content-Type",
-						getType(asset) || "application/octet-stream"
-					);
-					return deconstructedResponse;
+	watch([headersFile, redirectsFile], { persistent: true }).on(
+		"change",
+		(path) => {
+			switch (path) {
+				case headersFile: {
+					log.log("_headers modified. Re-evaluating...");
+					const contents = readFileSync(headersFile).toString();
+					headers = parseHeaders(contents);
+					break;
+				}
+				case redirectsFile: {
+					log.log("_redirects modified. Re-evaluating...");
+					const contents = readFileSync(redirectsFile).toString();
+					redirects = parseRedirects(contents);
+					break;
 				}
 			}
 
-			if ((asset = getAsset(`/index.html`))) {
-				deconstructedResponse.body = serveAsset(asset);
-				deconstructedResponse.headers.set(
-					"Content-Type",
-					getType(asset) || "application/octet-stream"
-				);
-				return deconstructedResponse;
-			}
-
-			deconstructedResponse.status = 404;
-			return deconstructedResponse;
-		};
-
-		let asset;
-
-		if (assetName.endsWith("/")) {
-			if ((asset = getAsset(`${assetName}/index.html`))) {
-				deconstructedResponse.body = serveAsset(asset);
-				deconstructedResponse.headers.set(
-					"Content-Type",
-					getType(asset) || "application/octet-stream"
-				);
-				return deconstructedResponse;
-			} else if ((asset = getAsset(`${assetName.replace(/\/$/, ".html")}`))) {
-				deconstructedResponse.status = 301;
-				deconstructedResponse.headers.set(
-					"Location",
-					`${assetName.slice(0, -1)}${url.search}`
-				);
-				return deconstructedResponse;
-			}
-		}
-
-		if (assetName.endsWith("/index")) {
-			deconstructedResponse.status = 301;
-			deconstructedResponse.headers.set(
-				"Location",
-				`${assetName.slice(0, -"index".length)}${url.search}`
-			);
-			return deconstructedResponse;
-		}
-
-		if ((asset = getAsset(assetName))) {
-			if (assetName.endsWith(".html")) {
-				const extensionlessPath = assetName.slice(0, -".html".length);
-				if (getAsset(extensionlessPath) || extensionlessPath === "/") {
-					deconstructedResponse.body = serveAsset(asset);
-					deconstructedResponse.headers.set(
-						"Content-Type",
-						getType(asset) || "application/octet-stream"
-					);
-					return deconstructedResponse;
-				} else {
-					deconstructedResponse.status = 301;
-					deconstructedResponse.headers.set(
-						"Location",
-						`${extensionlessPath}${url.search}`
-					);
-					return deconstructedResponse;
-				}
-			} else {
-				deconstructedResponse.body = serveAsset(asset);
-				deconstructedResponse.headers.set(
-					"Content-Type",
-					getType(asset) || "application/octet-stream"
-				);
-				return deconstructedResponse;
-			}
-		} else if (hasFileExtension(assetName)) {
-			if ((asset = getAsset(assetName + ".html"))) {
-				deconstructedResponse.body = serveAsset(asset);
-				deconstructedResponse.headers.set(
-					"Content-Type",
-					getType(asset) || "application/octet-stream"
-				);
-				return deconstructedResponse;
-			}
-			notFound();
-			return deconstructedResponse;
-		}
-
-		if ((asset = getAsset(`${assetName}.html`))) {
-			deconstructedResponse.body = serveAsset(asset);
-			deconstructedResponse.headers.set(
-				"Content-Type",
-				getType(asset) || "application/octet-stream"
-			);
-			return deconstructedResponse;
-		}
-
-		if ((asset = getAsset(`${assetName}/index.html`))) {
-			deconstructedResponse.status = 301;
-			deconstructedResponse.headers.set(
-				"Location",
-				`${assetName}/${url.search}`
-			);
-			return deconstructedResponse;
-		} else {
-			notFound();
-			return deconstructedResponse;
-		}
-	};
-
-	const attachHeaders = (
-		request: MiniflareRequest,
-		deconstructedResponse: {
-			status: number;
-			headers: MiniflareHeaders;
-			body?: Buffer;
-		}
-	) => {
-		const headers = deconstructedResponse.headers;
-		const newHeaders = new Headers({});
-		const matches = headersMatcher(request) || [];
-
-		matches.forEach((match) => {
-			Object.entries(match).forEach(([name, value]) => {
-				newHeaders.append(name, `${value}`);
+			metadata = createMetadataObject({
+				redirects,
+				headers,
+				logger: log.warn,
 			});
-		});
+		}
+	);
 
-		const combinedHeaders = {
-			...Object.fromEntries(headers.entries()),
-			...Object.fromEntries(newHeaders.entries()),
-		};
+	const generateResponse = async (request: MiniflareRequest) => {
+		const assetKeyEntryMap = new Map<string, string>();
 
-		deconstructedResponse.headers = new Headers({});
-		Object.entries(combinedHeaders).forEach(([name, value]) => {
-			if (value) deconstructedResponse.headers.set(name, value);
+		return await generateHandler<string>({
+			request,
+			metadata: metadata as Metadata,
+			xServerEnvHeader: "dev",
+			logError: console.error,
+			findAssetEntryForPath: async (path) => {
+				const filepath = join(directory, path);
+
+				if (
+					existsSync(filepath) &&
+					lstatSync(filepath).isFile() &&
+					!ignoredFiles.includes(filepath)
+				) {
+					const hash = hashFile(filepath);
+					assetKeyEntryMap.set(hash, filepath);
+					return hash;
+				}
+
+				return null;
+			},
+			getAssetKey: (assetEntry) => {
+				return assetEntry;
+			},
+			negotiateContent: (contentRequest) => {
+				const acceptEncoding = parseQualityWeightedList(
+					contentRequest.cf.clientAcceptEncoding
+				);
+
+				if (
+					acceptEncoding["identity"] === 0 ||
+					(acceptEncoding["*"] === 0 &&
+						acceptEncoding["identity"] === undefined)
+				) {
+					throw new Error("No acceptable encodings available");
+				}
+
+				return { encoding: null };
+			},
+			fetchAsset: async (assetKey) => {
+				const filepath = assetKeyEntryMap.get(assetKey);
+				if (!filepath) {
+					throw new Error(
+						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/wrangler2/issues/new/choose) with reproduction steps."
+					);
+				}
+				console.log(filepath);
+				const body = readFileSync(filepath);
+
+				const contentType = getType(filepath) || "application/octet-stream";
+				return { body, contentType };
+			},
 		});
 	};
 
 	return async (input: RequestInfo, init?: RequestInit) => {
 		const request = new Request(input, init);
-		const deconstructedResponse = generateResponse(request);
-		attachHeaders(request, deconstructedResponse);
-
-		const headers = new Headers();
-
-		[...deconstructedResponse.headers.entries()].forEach(([name, value]) => {
-			if (value) headers.set(name, value);
-		});
-
-		return new Response(deconstructedResponse.body, {
-			headers,
-			status: deconstructedResponse.status,
-		});
+		return await generateResponse(request);
 	};
 }
 
