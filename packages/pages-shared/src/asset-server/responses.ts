@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
 
 function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
