@@ -1,16 +1,15 @@
 import assert from "assert";
 import http from "http";
 import path from "path";
-import util from "util";
 import getPort from "get-port";
-import { bold, dim, green, grey } from "kleur/colors";
+import { bold, green, grey } from "kleur/colors";
 import stoppable from "stoppable";
 import { HeadersInit, Request, Response } from "undici";
 import { z } from "zod";
 import {
 	DeferredPromise,
 	HttpError,
-	MiniflareError,
+	MiniflareCoreError,
 	OptionalZodTypeOf,
 	UnionToIntersection,
 	ValueOf,
@@ -257,9 +256,6 @@ export class Miniflare {
 			body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
 		});
 
-		console.log(request.method, req.url);
-		console.log(await request.clone().text());
-
 		let response: Response | undefined;
 		const customService = request.headers.get(HEADER_CUSTOM_SERVICE);
 		if (customService !== null) {
@@ -359,15 +355,7 @@ export class Miniflare {
 			}
 		}
 
-		const config: Config = { services, sockets };
-		// const inspectedConfig = util.inspect(config, {
-		//   depth: null,
-		//   colors: true,
-		//   maxStringLength: 50,
-		// });
-		// console.log(grey("Assembled config:"), dim(inspectedConfig));
-
-		return config;
+		return { services, sockets };
 	}
 
 	get ready() {
@@ -376,7 +364,10 @@ export class Miniflare {
 
 	#checkDisposed() {
 		if (this.#disposeController.signal.aborted) {
-			throw new MiniflareError("ERR_DISPOSED", "Cannot use disposed instance");
+			throw new MiniflareCoreError(
+				"ERR_DISPOSED",
+				"Cannot use disposed instance"
+			);
 		}
 	}
 
