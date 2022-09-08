@@ -112,7 +112,7 @@ export async function createTail(
 	// send filters when we open up
 	tail.on("open", function () {
 		tail.send(
-			JSON.stringify({ debug: debug, filters: [] }),
+			JSON.stringify({ debug: debug }),
 			{ binary: false, compress: false, mask: false, fin: true },
 			(err) => {
 				if (err) {
