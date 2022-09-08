@@ -111,7 +111,7 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
-interface CfQueue {
+export interface CfQueue {
 	binding: string;
 	queue_name: string;
 }

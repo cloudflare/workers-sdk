@@ -141,6 +141,7 @@ export type DevProps = {
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
+	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
 	assetsConfig: Config["assets"];
@@ -277,6 +278,7 @@ function DevSession(props: DevSessionProps) {
 			enableLocalPersistence={props.enableLocalPersistence}
 			liveReload={props.liveReload}
 			crons={props.crons}
+			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
