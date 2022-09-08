@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
+import "../environment-polyfills/types";
 
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
 

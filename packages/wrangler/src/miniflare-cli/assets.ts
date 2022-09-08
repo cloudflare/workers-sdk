@@ -4,21 +4,24 @@ import { createMetadataObject } from "@cloudflare/pages-shared/src/metadata-gene
 import { parseHeaders } from "@cloudflare/pages-shared/src/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/src/metadata-generator/parseRedirects";
 import { fetch as miniflareFetch } from "@miniflare/core";
+import {
+	Response as MiniflareResponse,
+	Request as MiniflareRequest,
+} from "@miniflare/core";
 import { watch } from "chokidar";
 import { getType } from "mime";
-import { Response } from "miniflare";
 import { hashFile } from "../pages/hash";
 import type { Metadata } from "@cloudflare/pages-shared/src/asset-server/metadata";
+import type {
+	fetch,
+	Request,
+} from "@cloudflare/pages-shared/src/environment-polyfills/types";
 import type {
 	ParsedRedirects,
 	ParsedHeaders,
 } from "@cloudflare/pages-shared/src/metadata-generator/types";
+import type { RequestInfo, RequestInit, FetcherFetch } from "@miniflare/core";
 import type { Log } from "miniflare";
-import type {
-	Request as MiniflareRequest,
-	RequestInfo,
-	RequestInit,
-} from "miniflare";
 
 export interface Options {
 	log: Log;
@@ -32,47 +35,45 @@ export default async function generateASSETSBinding(options: Options) {
 			? await generateAssetsFetch(options.directory, options.log)
 			: invalidAssetsFetch;
 
-	return async function (request: MiniflareRequest) {
+	return async function (miniflareRequest: MiniflareRequest) {
 		if (options.proxyPort) {
 			try {
-				const url = new URL(request.url);
+				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
-				return await miniflareFetch(url, request);
+				return await miniflareFetch(url, miniflareRequest);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
 				// TODO: Pretty error page
-				return new Response(`[wrangler] Could not proxy request: ${thrown}`, {
-					status: 502,
-				});
+				return new MiniflareResponse(
+					`[wrangler] Could not proxy request: ${thrown}`,
+					{
+						status: 502,
+					}
+				);
 			}
 		} else {
 			try {
-				return await assetsFetch(request);
+				return await assetsFetch(miniflareRequest);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not serve static asset: ${thrown}`));
 
 				// TODO: Pretty error page
-				return new Response(
+				return new MiniflareResponse(
 					`[wrangler] Could not serve static asset: ${thrown}`,
 					{ status: 502 }
 				);
 			}
 		}
-	};
+	} as FetcherFetch;
 }
 
 async function generateAssetsFetch(
 	directory: string,
 	log: Log
-): Promise<typeof miniflareFetch> {
+): Promise<typeof fetch> {
 	// Defer importing miniflare until we really need it
-	const { Headers, Request } = await import("@miniflare/core");
-
-	// pages-shared expects a Workers runtime environment. This provides the necessary 'polyfills'.
-	(globalThis as unknown as { Headers: typeof Headers }).Headers = Headers;
-	(globalThis as unknown as { Request: typeof Request }).Request = Request;
-	(globalThis as unknown as { Response: typeof Response }).Response = Response;
+	await import("@cloudflare/pages-shared/src/environment-polyfills/miniflare");
 
 	const { generateHandler, parseQualityWeightedList } = await import(
 		"@cloudflare/pages-shared/src/asset-server/handler"
@@ -128,7 +129,7 @@ async function generateAssetsFetch(
 		}
 	);
 
-	const generateResponse = async (request: MiniflareRequest) => {
+	const generateResponse = async (request: Request) => {
 		const assetKeyEntryMap = new Map<string, string>();
 
 		return await generateHandler<string>({
@@ -155,9 +156,19 @@ async function generateAssetsFetch(
 				return assetEntry;
 			},
 			negotiateContent: (contentRequest) => {
-				const acceptEncoding = parseQualityWeightedList(
+				let rawAcceptEncoding: string | undefined;
+				if (
+					contentRequest.cf &&
+					"clientAcceptEncoding" in contentRequest.cf &&
 					contentRequest.cf.clientAcceptEncoding
-				);
+				) {
+					rawAcceptEncoding = contentRequest.cf.clientAcceptEncoding as string;
+				} else {
+					rawAcceptEncoding =
+						contentRequest.headers.get("Accept-Encoding") || undefined;
+				}
+
+				const acceptEncoding = parseQualityWeightedList(rawAcceptEncoding);
 
 				if (
 					acceptEncoding["identity"] === 0 ||
@@ -176,8 +187,7 @@ async function generateAssetsFetch(
 						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/wrangler2/issues/new/choose) with reproduction steps."
 					);
 				}
-				console.log(filepath);
-				const body = readFileSync(filepath);
+				const body = readFileSync(filepath) as unknown as ReadableStream;
 
 				const contentType = getType(filepath) || "application/octet-stream";
 				return { body, contentType };
@@ -186,12 +196,12 @@ async function generateAssetsFetch(
 	};
 
 	return async (input: RequestInfo, init?: RequestInit) => {
-		const request = new Request(input, init);
-		return await generateResponse(request);
+		const request = new MiniflareRequest(input, init);
+		return await generateResponse(request as unknown as Request);
 	};
 }
 
-const invalidAssetsFetch: typeof miniflareFetch = () => {
+const invalidAssetsFetch: typeof fetch = () => {
 	throw new Error(
 		"Trying to fetch assets directly when there is no `directory` option specified."
 	);

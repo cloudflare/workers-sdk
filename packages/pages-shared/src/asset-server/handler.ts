@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
+import "../environment-polyfills/types";
 
 import {
 	FoundResponse,
@@ -91,7 +90,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 		assetEntry: AssetEntry
 	) => void;
 	caches: CacheStorage;
-	waitUntil: ExecutionContext["waitUntil"];
+	waitUntil: (promise: Promise<unknown>) => void;
 	HTMLRewriter: typeof HTMLRewriter;
 };
 
@@ -125,14 +124,14 @@ export async function generateHandler<
 	negotiateContent,
 	fetchAsset,
 	generateNotFoundResponse = async (
-		_notFoundRequest,
-		findNotFoundAssetEntryForPath,
-		serveNotFoundAsset
+		notFoundRequest,
+		notFoundFindAssetEntryForPath,
+		notFoundServeAsset
 	) => {
 		let assetEntry: AssetEntry | null;
 		// No custom 404 page, so try serving as a single-page app
-		if ((assetEntry = await findNotFoundAssetEntryForPath("/index.html"))) {
-			return serveNotFoundAsset(assetEntry, { preserve: false });
+		if ((assetEntry = await notFoundFindAssetEntryForPath("/index.html"))) {
+			return notFoundServeAsset(assetEntry, { preserve: false });
 		}
 
 		return new NotFoundResponse();
@@ -441,7 +440,7 @@ export async function generateHandler<
 
 		try {
 			const asset = await fetchAsset(assetKey);
-			const headers: HeadersInit = {
+			const headers: Record<string, string> = {
 				etag,
 				"content-type": asset.contentType,
 			};
