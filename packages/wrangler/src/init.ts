@@ -509,6 +509,10 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				path.join(creationDirectory, "./src/index.ts")
 			);
 			if (fromDashScriptName) {
+				logger.warn(
+					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
+					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
+				);
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await mkdir(path.join(creationDirectory, "./src"), {
@@ -581,6 +585,10 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			);
 
 			if (fromDashScriptName) {
+				logger.warn(
+					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
+					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
+				);
 				const config = readConfig(args.config as ConfigPath, args);
 				const accountId = await requireAuth(config);
 				await mkdir(path.join(creationDirectory, "./src"), {

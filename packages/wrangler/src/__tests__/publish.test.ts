@@ -47,6 +47,12 @@ describe("publish", () => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
+		setMockResponse(
+			"/accounts/:accountId/workers/services/:scriptName",
+			() => ({
+				default_environment: { script: { last_deployed_from: "dash" } },
+			})
+		);
 	});
 
 	afterEach(() => {
@@ -4201,6 +4207,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should use a script's current migration tag when publishing migrations", async () => {
+				unsetAllMocks();
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
