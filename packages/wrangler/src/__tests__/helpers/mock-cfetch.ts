@@ -270,9 +270,7 @@ export function unsetSpecialMockFns() {
  */
 export async function mockFetchDashScript(resource: string): Promise<string> {
 	if (dashScriptMocks.has(resource)) {
-		const value = dashScriptMocks.get(resource) ?? "";
-
-		return value;
+		return dashScriptMocks.get(resource) ?? "";
 	}
 	throw new Error(`no mock found for \`init from-dash\` - ${resource}`);
 }
@@ -283,14 +281,16 @@ export async function mockFetchDashScript(resource: string): Promise<string> {
 export function setMockFetchDashScript({
 	accountId,
 	fromDashScriptName,
+	environment,
 	mockResponse,
 }: {
 	accountId: string;
 	fromDashScriptName: string;
+	environment: string;
 	mockResponse?: string;
 }) {
 	dashScriptMocks.set(
-		`/accounts/${accountId}/workers/scripts/${fromDashScriptName}`,
+		`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${environment}/content`,
 		mockResponse
 	);
 }
