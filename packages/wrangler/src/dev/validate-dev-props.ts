@@ -28,10 +28,4 @@ export function validateDevProps(props: DevProps) {
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
-
-	if (props.bindings.queues?.length || props.queueConsumers.length) {
-		throw new Error(
-			"Wrangler dev remote mode does not support queues yet. Instead, try local mode by running: `wrangler dev -l`"
-		);
-	}
 }
