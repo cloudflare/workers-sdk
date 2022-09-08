@@ -305,6 +305,8 @@ function useLocalWorker({
 		port,
 		inspectorPort,
 		ip,
+		queueConsumers,
+		bindings.queues,
 		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
