@@ -61,17 +61,25 @@ export async function startDevServer(
 			logger.error("failed to start worker registry", err);
 		});
 		const interval = props.local
-			? setInterval(async () => {
-					const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+			? setInterval(() => {
+					getBoundRegisteredWorkers({
 						services: props.bindings.services,
 						durableObjects: props.bindings.durable_objects,
-					});
-					if (
-						boundRegisteredWorkers &&
-						!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
-					) {
-						workerDefinitions = boundRegisteredWorkers;
-					}
+					}).then(
+						(boundRegisteredWorkers) => {
+							if (
+								!util.isDeepStrictEqual(
+									boundRegisteredWorkers,
+									workerDefinitions
+								)
+							) {
+								workerDefinitions = boundRegisteredWorkers || {};
+							}
+						},
+						(err) => {
+							logger.warn("Failed to get worker definitions", err);
+						}
+					);
 			  }, 300)
 			: undefined;
 

@@ -57,21 +57,25 @@ function useDevRegistry(
 			// TODO: enable this for remote mode as well
 			// https://github.com/cloudflare/wrangler2/issues/1182
 			mode === "local"
-				? setInterval(async () => {
-						const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+				? setInterval(() => {
+						getBoundRegisteredWorkers({
 							services,
 							durableObjects,
-						});
-						if (boundRegisteredWorkers) {
-							setWorkers((prevWorkers) => {
-								if (
-									!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
-								) {
-									return boundRegisteredWorkers;
-								}
-								return prevWorkers;
-							});
-						}
+						}).then(
+							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
+								setWorkers((prevWorkers) => {
+									if (
+										!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
+									) {
+										return boundRegisteredWorkers || {};
+									}
+									return prevWorkers;
+								});
+							},
+							(err) => {
+								logger.warn("Failed to get worker definitions", err);
+							}
+						);
 				  }, 300)
 				: undefined;
 
@@ -116,25 +120,21 @@ export async function getBoundRegisteredWorkers({
 	services: Config["services"] | undefined;
 	durableObjects: Config["durable_objects"] | undefined;
 }) {
-	try {
-		const serviceNames = (services || []).map(
-			(serviceBinding) => serviceBinding.service
-		);
-		const durableObjectServices = (
-			durableObjects || { bindings: [] }
-		).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
+	const serviceNames = (services || []).map(
+		(serviceBinding) => serviceBinding.service
+	);
+	const durableObjectServices = (
+		durableObjects || { bindings: [] }
+	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
-		const workerDefinitions = await getRegisteredWorkers();
-		const filteredWorkers = Object.fromEntries(
-			Object.entries(workerDefinitions || {}).filter(
-				([key, _value]) =>
-					serviceNames.includes(key) || durableObjectServices.includes(key)
-			)
-		);
-		return filteredWorkers;
-	} catch (err) {
-		logger.warn("Failed to get worker definitions", err);
-	}
+	const workerDefinitions = await getRegisteredWorkers();
+	const filteredWorkers = Object.fromEntries(
+		Object.entries(workerDefinitions || {}).filter(
+			([key, _value]) =>
+				serviceNames.includes(key) || durableObjectServices.includes(key)
+		)
+	);
+	return filteredWorkers;
 }
 
 export type DevProps = {
