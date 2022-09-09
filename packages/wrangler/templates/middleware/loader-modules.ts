@@ -19,9 +19,23 @@ import worker from "__ENTRY_POINT__";
 export * from "__ENTRY_POINT__";
 
 class __Facade_ScheduledController__ implements ScheduledController {
-	constructor(readonly scheduledTime: number, readonly cron: string) {}
+	#noRetry: ScheduledController["noRetry"];
 
-	noRetry() {}
+	constructor(
+		readonly scheduledTime: number,
+		readonly cron: string,
+		noRetry: ScheduledController["noRetry"]
+	) {
+		this.#noRetry = noRetry;
+	}
+
+	noRetry() {
+		if (!(this instanceof __Facade_ScheduledController__)) {
+			throw new TypeError("Illegal invocation");
+		}
+		// Need to call native method immediately in case uncaught error thrown
+		this.#noRetry();
+	}
 }
 
 const __facade_modules_fetch__: Middleware = function (request, env, ctx) {
@@ -41,7 +55,8 @@ const facade: ExportedHandler<unknown> = {
 				if (type === "scheduled" && worker.scheduled !== undefined) {
 					const controller = new __Facade_ScheduledController__(
 						Date.now(),
-						init.cron ?? ""
+						init.cron ?? "",
+						() => {}
 					);
 					return worker.scheduled(controller, env, ctx);
 				}
