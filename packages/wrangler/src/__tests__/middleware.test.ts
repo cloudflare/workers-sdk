@@ -765,31 +765,4 @@ describe("unchanged functionality when wrapping with middlware (service workers)
 		expect(text).toMatchInlineSnapshot(`"Hello world0"`);
 		await worker.stop();
 	});
-
-	// it("should not allow multiple event listeners for scheduled", async () => {
-	// 	const scriptContent = `
-	//   addEventListener("scheduled", (event) => {
-	//     console.log(1);
-	//   });
-
-	//   addEventListener("scheduled", (event) => {
-	//     console.log(2);
-	//   });
-	//   `;
-	// 	fs.writeFileSync("index.js", scriptContent);
-
-	// 	await expect(
-	// 		unstable_dev("index.js", {}, { disableExperimentalWarning: true })
-	// 	).rejects.toThrowErrorMatchingInlineSnapshot(
-	// 		`"Multiple event listeners for scheduled are not allowed"`
-	// 	);
-	// });
-
-	// Add tests for:
-	// - addEventListener
-	// - removeEventListener
-	// wait until
-	// noRetry
-	// pass through on exception
-	//
 });
