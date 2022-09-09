@@ -1,6 +1,13 @@
 import { Awaitable, Dispatcher, Middleware, __facade_invoke__ } from "./common";
 export { __facade_register__, __facade_registerInternal__ } from "./common";
 
+// Miniflare's `EventTarget` follows the spec and doesn't allow exceptions to
+// be caught by `dispatchEvent`. Instead it has a custom`ThrowingEventTarget`
+// class that rethrows errors from event listeners in `dispatchEvent`.
+// We'd like errors to be propagated to the top-level `addEventListener`, so
+// we'd like to use `ThrowingEventTarget`. Unfortunately, `ThrowingEventTarget`
+// isn't exposed on the global scope, but `WorkerGlobalScope` (which extends
+// `ThrowingEventTarget`) is. Therefore, we get at it in this nasty way.
 let __FACADE_EVENT_TARGET__: EventTarget;
 if ((globalThis as any).MINIFLARE) {
 	__FACADE_EVENT_TARGET__ = new (Object.getPrototypeOf(WorkerGlobalScope))();
