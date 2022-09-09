@@ -548,8 +548,8 @@ export async function startApiDev(args: StartDevOptions) {
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
 			local: true,
-			firstPartyWorker: undefined,
-			sendMetrics: undefined,
+			firstPartyWorker: configParam.first_party_worker,
+			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
 		});
 	}
