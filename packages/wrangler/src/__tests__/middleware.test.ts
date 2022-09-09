@@ -215,37 +215,37 @@ describe("service workers change behaviour with middleware with wrangler dev", (
 		await worker.stop();
 	});
 
-	it("should trigger an error in a scheduled work from middleware", async () => {
-		const scriptContent = `
-    const middleware = async (request, env, _ctx, middlewareCtx) => {
-      try {
-        await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-      } catch (e) {
-        return new Response(e.message);
-      }
-    }
+	// 	it("should trigger an error in a scheduled work from middleware", async () => {
+	// 		const scriptContent = `
+	//     const middleware = async (request, env, _ctx, middlewareCtx) => {
+	//       try {
+	//         await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+	//       } catch (e) {
+	//         return new Response(e.message);
+	//       }
+	//     }
 
-    addMiddleware(middleware);
+	//     addMiddleware(middleware);
 
-    addEventListener("scheduled", (event) => {
-      throw new Error("Error in scheduled worker");
-    });
-    `;
+	//     addEventListener("scheduled", (event) => {
+	//       throw new Error("Error in scheduled worker");
+	//     });
+	//     `;
 
-		fs.writeFileSync("index.js", scriptContent);
+	// 		fs.writeFileSync("index.js", scriptContent);
 
-		const worker = await unstable_dev(
-			"index.js",
-			{},
-			{ disableExperimentalWarning: true }
-		);
+	// 		const worker = await unstable_dev(
+	// 			"index.js",
+	// 			{},
+	// 			{ disableExperimentalWarning: true }
+	// 		);
 
-		const resp = await worker.fetch();
-		let text;
-		if (resp) text = await resp.text();
-		expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
-		await worker.stop();
-	});
+	// 		const resp = await worker.fetch();
+	// 		let text;
+	// 		if (resp) text = await resp.text();
+	// 		expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
+	// 		await worker.stop();
+	// 	});
 });
 
 describe("unchanged functionality when wrapping with middleware (modules)", () => {
@@ -400,6 +400,42 @@ describe("unchanged functionality when wrapping with middleware (modules)", () =
 		expect(status).toEqual(500);
 		expect(text).toMatchInlineSnapshot(`"Hello world"`);
 		expect(testHeader).toEqual("test");
+		await worker.stop();
+	});
+
+	it("waitUntil should not block responses", async () => {
+		const scriptContent = `
+    const middleware = async (request, env, _ctx, middlewareCtx) => {
+      return middlewareCtx.next(request, env);
+    }
+
+    export default {
+      middleware: [middleware],
+      async fetch(request, env, ctx) {
+        let count = 0;
+        ctx.waitUntil(new Promise(resolve => {
+          setTimeout(() => {
+            count += 1;
+            console.log("waitUntil", count);
+            resolve()
+          }, 1000);
+        }));
+        return new Response("Hello world" + String(count));
+      }
+    }
+    `;
+		fs.writeFileSync("index.js", scriptContent);
+
+		const worker = await unstable_dev(
+			"index.js",
+			{},
+			{ disableExperimentalWarning: true }
+		);
+
+		const resp = await worker.fetch();
+		let text;
+		if (resp) text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"Hello world0"`);
 		await worker.stop();
 	});
 });
@@ -672,4 +708,88 @@ describe("unchanged functionality when wrapping with middlware (service workers)
 		expect(testHeader).toEqual("test");
 		await worker.stop();
 	});
+
+	it("should allow multiple addEventListeners for fetch", async () => {
+		const scriptContent = `
+    let count = 0;
+
+    addEventListener("fetch", (event) => {
+      count += 1;
+    });
+
+    addEventListener("fetch", (event) => {
+      event.respondWith(new Response("Hello world" + String(count)));
+    });
+    `;
+		fs.writeFileSync("index.js", scriptContent);
+
+		const worker = await unstable_dev(
+			"index.js",
+			{},
+			{ disableExperimentalWarning: true }
+		);
+
+		const resp = await worker.fetch();
+		let text;
+		if (resp) text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"Hello world1"`);
+		await worker.stop();
+	});
+
+	it("waitUntil should not block responses", async () => {
+		const scriptContent = `
+    addEventListener("fetch", (event) => {
+
+      let count = 0;
+      event.waitUntil(new Promise((resolve) => {
+        setTimeout(() => {
+          count +=1;
+          console.log('waitUntil', count);
+          resolve();
+        }, 1000);
+      }));
+      event.respondWith(new Response("Hello world" + String(count)));
+    });
+    `;
+		fs.writeFileSync("index.js", scriptContent);
+
+		const worker = await unstable_dev(
+			"index.js",
+			{},
+			{ disableExperimentalWarning: true }
+		);
+
+		const resp = await worker.fetch();
+		let text;
+		if (resp) text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"Hello world0"`);
+		await worker.stop();
+	});
+
+	// it("should not allow multiple event listeners for scheduled", async () => {
+	// 	const scriptContent = `
+	//   addEventListener("scheduled", (event) => {
+	//     console.log(1);
+	//   });
+
+	//   addEventListener("scheduled", (event) => {
+	//     console.log(2);
+	//   });
+	//   `;
+	// 	fs.writeFileSync("index.js", scriptContent);
+
+	// 	await expect(
+	// 		unstable_dev("index.js", {}, { disableExperimentalWarning: true })
+	// 	).rejects.toThrowErrorMatchingInlineSnapshot(
+	// 		`"Multiple event listeners for scheduled are not allowed"`
+	// 	);
+	// });
+
+	// Add tests for:
+	// - addEventListener
+	// - removeEventListener
+	// wait until
+	// noRetry
+	// pass through on exception
+	//
 });
