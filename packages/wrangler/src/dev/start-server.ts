@@ -7,6 +7,7 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
 import {
+	getBoundRegisteredWorkers,
 	registerWorker,
 	startWorkerRegistry,
 	stopWorkerRegistry,
@@ -14,7 +15,6 @@ import {
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
-import { getBoundRegisteredWorkers } from "./dev";
 import {
 	setupBindings,
 	setupMiniflareOptions,

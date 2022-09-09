@@ -11,7 +11,7 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import {
-	getRegisteredWorkers,
+	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
@@ -107,34 +107,6 @@ function useDevRegistry(
 	}, [name, services, durableObjects, mode]);
 
 	return workers;
-}
-
-/**
- * a function that takes your serviceNames and durableObjectNames and returns a
- * list of the running workers that we're bound to
- */
-export async function getBoundRegisteredWorkers({
-	services,
-	durableObjects,
-}: {
-	services: Config["services"] | undefined;
-	durableObjects: Config["durable_objects"] | undefined;
-}) {
-	const serviceNames = (services || []).map(
-		(serviceBinding) => serviceBinding.service
-	);
-	const durableObjectServices = (
-		durableObjects || { bindings: [] }
-	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
-	const workerDefinitions = await getRegisteredWorkers();
-	const filteredWorkers = Object.fromEntries(
-		Object.entries(workerDefinitions || {}).filter(
-			([key, _value]) =>
-				serviceNames.includes(key) || durableObjectServices.includes(key)
-		)
-	);
-	return filteredWorkers;
 }
 
 export type DevProps = {
