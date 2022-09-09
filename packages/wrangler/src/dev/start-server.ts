@@ -2,11 +2,11 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import * as util from "node:util";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
 import {
-	getRegisteredWorkers,
 	registerWorker,
 	startWorkerRegistry,
 	stopWorkerRegistry,
@@ -14,6 +14,7 @@ import {
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
+import { getBoundRegisteredWorkers } from "./dev";
 import {
 	setupBindings,
 	setupMiniflareOptions,
@@ -36,6 +37,7 @@ export async function startDevServer(
 	}
 ) {
 	try {
+		let workerDefinitions: WorkerRegistry = {};
 		validateDevProps(props);
 
 		if (props.build.command) {
@@ -58,21 +60,20 @@ export async function startDevServer(
 		startWorkerRegistry().catch((err) => {
 			logger.error("failed to start worker registry", err);
 		});
-		const registeredWorkers = await getRegisteredWorkers();
-		const serviceNames = (props.bindings.services || []).map(
-			(serviceBinding) => serviceBinding.service
-		);
-		const durableObjectServices = (
-			props.bindings.durable_objects || { bindings: [] }
-		).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
-		//get some workers
-		const workerDefinitions = Object.fromEntries(
-			Object.entries(registeredWorkers || {}).filter(
-				([key, _value]) =>
-					serviceNames.includes(key) || durableObjectServices.includes(key)
-			)
-		);
+		const interval = props.local
+			? setInterval(async () => {
+					const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+						services: props.bindings.services,
+						durableObjects: props.bindings.durable_objects,
+					});
+					if (
+						boundRegisteredWorkers &&
+						!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
+					) {
+						workerDefinitions = boundRegisteredWorkers;
+					}
+			  }, 300)
+			: undefined;
 
 		//implement a react-free version of useEsbuild
 		const bundle = await runEsbuild({
@@ -126,6 +127,7 @@ export async function startDevServer(
 		return {
 			stop: async () => {
 				stop();
+				interval && clearInterval(interval);
 				await stopWorkerRegistry();
 			},
 			inspectorUrl,
