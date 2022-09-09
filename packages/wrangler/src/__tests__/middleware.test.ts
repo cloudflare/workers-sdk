@@ -215,37 +215,37 @@ describe("service workers change behaviour with middleware with wrangler dev", (
 		await worker.stop();
 	});
 
-	// 	it("should trigger an error in a scheduled work from middleware", async () => {
-	// 		const scriptContent = `
-	//     const middleware = async (request, env, _ctx, middlewareCtx) => {
-	//       try {
-	//         await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-	//       } catch (e) {
-	//         return new Response(e.message);
-	//       }
-	//     }
+	it("should trigger an error in a scheduled work from middleware", async () => {
+		const scriptContent = `
+	    const middleware = async (request, env, _ctx, middlewareCtx) => {
+	      try {
+	        await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+	      } catch (e) {
+	        return new Response(e.message);
+	      }
+	    }
 
-	//     addMiddleware(middleware);
+	    addMiddleware(middleware);
 
-	//     addEventListener("scheduled", (event) => {
-	//       throw new Error("Error in scheduled worker");
-	//     });
-	//     `;
+	    addEventListener("scheduled", (event) => {
+	      throw new Error("Error in scheduled worker");
+	    });
+	    `;
 
-	// 		fs.writeFileSync("index.js", scriptContent);
+		fs.writeFileSync("index.js", scriptContent);
 
-	// 		const worker = await unstable_dev(
-	// 			"index.js",
-	// 			{},
-	// 			{ disableExperimentalWarning: true }
-	// 		);
+		const worker = await unstable_dev(
+			"index.js",
+			{},
+			{ disableExperimentalWarning: true }
+		);
 
-	// 		const resp = await worker.fetch();
-	// 		let text;
-	// 		if (resp) text = await resp.text();
-	// 		expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
-	// 		await worker.stop();
-	// 	});
+		const resp = await worker.fetch();
+		let text;
+		if (resp) text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
+		await worker.stop();
+	});
 });
 
 describe("unchanged functionality when wrapping with middleware (modules)", () => {

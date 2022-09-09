@@ -1,7 +1,12 @@
 import { Awaitable, Dispatcher, Middleware, __facade_invoke__ } from "./common";
 export { __facade_register__, __facade_registerInternal__ } from "./common";
 
-const __FACADE_EVENT_TARGET__ = new EventTarget();
+let __FACADE_EVENT_TARGET__: EventTarget;
+if ((globalThis as any).MINIFLARE) {
+	__FACADE_EVENT_TARGET__ = new (Object.getPrototypeOf(WorkerGlobalScope))();
+} else {
+	__FACADE_EVENT_TARGET__ = new EventTarget();
+}
 
 declare global {
 	var __facade_addEventListener__: (
