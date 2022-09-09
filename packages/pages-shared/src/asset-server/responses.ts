@@ -1,5 +1,3 @@
-import "../environment-polyfills/types";
-
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
 
 function mergeHeaders(base: HeadersInit, extra: HeadersInit) {

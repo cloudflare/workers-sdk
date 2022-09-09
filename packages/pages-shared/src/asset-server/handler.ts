@@ -1,5 +1,3 @@
-import "../environment-polyfills/types";
-
 import {
 	FoundResponse,
 	InternalServerErrorResponse,
@@ -87,22 +85,21 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	attachAdditionalHeaders?: (
 		response: Response,
 		content: ContentNegotiation,
-		assetEntry: AssetEntry
+		assetEntry: AssetEntry,
+		asset: Asset
 	) => void;
 	caches: CacheStorage;
 	waitUntil: (promise: Promise<unknown>) => void;
-	HTMLRewriter: typeof HTMLRewriter;
 };
 
 export type HandlerContext<AssetEntry, ContentNegotiation, Asset> =
 	| FullHandlerContext<AssetEntry, ContentNegotiation, Asset>
 	| (Omit<
 			FullHandlerContext<AssetEntry, ContentNegotiation, Asset>,
-			"caches" | "waitUntil" | "HTMLRewriter"
+			"caches" | "waitUntil"
 	  > & {
 			caches?: undefined;
 			waitUntil?: undefined;
-			HTMLRewriter?: undefined;
 	  });
 
 export async function generateHandler<
@@ -110,8 +107,8 @@ export async function generateHandler<
 	ContentNegotiation extends { encoding: string | null } = {
 		encoding: string | null;
 	},
-	Asset extends { body: ReadableStream; contentType: string } = {
-		body: ReadableStream;
+	Asset extends { body: ReadableStream | null; contentType: string } = {
+		body: ReadableStream | null;
 		contentType: string;
 	}
 >({
@@ -139,7 +136,6 @@ export async function generateHandler<
 	attachAdditionalHeaders = () => {},
 	caches,
 	waitUntil,
-	HTMLRewriter: Rewriter,
 }: HandlerContext<AssetEntry, ContentNegotiation, Asset>) {
 	const url = new URL(request.url);
 	const { protocol, host, search } = url;
@@ -358,7 +354,7 @@ export async function generateHandler<
 						try {
 							const links: { href: string; rel: string; as?: string }[] = [];
 
-							const transformedResponse = new Rewriter()
+							const transformedResponse = new HTMLRewriter()
 								.on("link[rel=preconnect],link[rel=preload]", {
 									element(element) {
 										const href = element.getAttribute("href") || undefined;
@@ -468,7 +464,7 @@ export async function generateHandler<
 				response.headers.append("cache-control", CACHE_CONTROL_BROWSER);
 			}
 
-			attachAdditionalHeaders(response, content, servingAssetEntry);
+			attachAdditionalHeaders(response, content, servingAssetEntry, asset);
 
 			if (isPreview(new URL(request.url))) {
 				response.headers.set("x-robots-tag", "noindex");
@@ -488,7 +484,7 @@ export async function generateHandler<
 				);
 				preservedResponse.headers.set("x-robots-tag", "noindex");
 
-				if (waitUntil) {
+				if (waitUntil && caches) {
 					waitUntil(
 						caches
 							.open(ASSET_PRESERVATION_CACHE)
