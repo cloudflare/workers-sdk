@@ -511,7 +511,7 @@ export async function startApiDev(args: StartDevOptions) {
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol || configParam.dev.local_protocol,
 			localUpstream: args["local-upstream"] || host,
-			localPersistencePath: localPersistencePath,
+			localPersistencePath,
 			liveReload: args.liveReload || false,
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,

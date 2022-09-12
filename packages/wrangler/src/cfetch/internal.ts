@@ -37,17 +37,13 @@ export async function performApiFetch(
 	addUserAgent(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
-	const method = init.method ?? "GET";
-
 	logger.debug(
 		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
 	);
 	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
 	logger.debug("INIT:", JSON.stringify(init, null, 2));
 	logger.debug("-- END CF API REQUEST");
-	return await fetch(
-		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-		{
+	return await fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
 		method,
 		...init,
 		headers,

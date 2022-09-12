@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {getBasePath,  readableRelative } from "../paths";
+import { getBasePath, readableRelative } from "../paths";
 
 describe("paths", () => {
 	describe("getBasePath()", () => {
@@ -15,7 +15,6 @@ describe("paths", () => {
 		});
 	});
 });
-
 
 describe("readableRelative", () => {
 	const base = process.cwd();
