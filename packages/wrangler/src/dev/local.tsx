@@ -295,6 +295,7 @@ function useLocalWorker({
 		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
+		bindings.d1_databases,
 		bindings.vars,
 		bindings.services,
 		workerDefinitions,
