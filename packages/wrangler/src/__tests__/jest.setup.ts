@@ -14,6 +14,7 @@ import {
 	mockFetchR2Objects,
 } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
+import { msw } from "./helpers/msw";
 
 /**
  * The relative path between the bundled code and the Wrangler package.
@@ -56,6 +57,21 @@ fetchMock.doMock(() => {
 });
 
 jest.mock("../package-manager");
+
+// requests not mocked with `jest-fetch-mock` fall through
+// to `mock-service-worker`
+fetchMock.dontMock();
+beforeAll(() => {
+	msw.listen({
+		onUnhandledRequest: (request) => {
+			throw new Error(
+				`No mock found for ${request.method} ${request.url.href}`
+			);
+		},
+	});
+});
+afterEach(() => msw.resetHandlers());
+afterAll(() => msw.close());
 
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);

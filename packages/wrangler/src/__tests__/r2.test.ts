@@ -1,11 +1,8 @@
 import * as fs from "node:fs";
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import {
-	setMockFetchR2Objects,
-	setMockResponse,
-	unsetAllMocks,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { R2BucketInfo } from "../r2";
@@ -15,10 +12,6 @@ describe("wrangler", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	describe("r2", () => {
 		describe("bucket", () => {
@@ -50,26 +43,41 @@ describe("wrangler", () => {
 			});
 
 			describe("list", () => {
-				function mockListRequest(buckets: R2BucketInfo[]) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/r2/buckets",
-						([_url, accountId], init) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(init).toEqual({});
-							return { buckets };
-						}
-					);
-					return requests;
-				}
-
-				it("should list buckets", async () => {
+				it("should list buckets & check request inputs", async () => {
 					const expectedBuckets: R2BucketInfo[] = [
-						{ name: "bucket-1", creation_date: "01-01-2001" },
-						{ name: "bucket-2", creation_date: "01-01-2001" },
+						{ name: "bucket-1-local-once", creation_date: "01-01-2001" },
+						{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
 					];
-					mockListRequest(expectedBuckets);
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/r2/buckets",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return response.once(
+									context.status(200),
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											buckets: [
+												{
+													name: "bucket-1-local-once",
+													creation_date: "01-01-2001",
+												},
+												{
+													name: "bucket-2-local-once",
+													creation_date: "01-01-2001",
+												},
+											],
+										},
+									})
+								);
+							}
+						)
+					);
 					await runWrangler("r2 bucket list");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
@@ -79,21 +87,6 @@ describe("wrangler", () => {
 			});
 
 			describe("create", () => {
-				function mockCreateRequest(expectedBucketName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/r2/buckets",
-						"POST",
-						([_url, accountId], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							const bucketName = JSON.parse(body as string).name;
-							expect(bucketName).toEqual(expectedBucketName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should error if no bucket name is given", async () => {
 					await expect(
 						runWrangler("r2 bucket create")
@@ -148,32 +141,35 @@ describe("wrangler", () => {
 			          `);
 				});
 
-				it("should create a bucket", async () => {
-					const requests = mockCreateRequest("testBucket");
+				it("should create a bucket & check request inputs", async () => {
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/r2/buckets",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({ name: "testBucket" });
+								response.once(
+									context.status(200),
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									})
+								);
+							}
+						)
+					);
 					await runWrangler("r2 bucket create testBucket");
 					expect(std.out).toMatchInlineSnapshot(`
 				            "Creating bucket testBucket.
 				            Created bucket testBucket."
 			          `);
-					expect(requests.count).toEqual(1);
 				});
 			});
 
 			describe("delete", () => {
-				function mockDeleteRequest(expectedBucketName: string) {
-					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/r2/buckets/:bucketName",
-						"DELETE",
-						([_url, accountId, bucketName]) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(bucketName).toEqual(expectedBucketName);
-							requests.count += 1;
-						}
-					);
-					return requests;
-				}
-
 				it("should error if no bucket name is given", async () => {
 					await expect(
 						runWrangler("r2 bucket delete")
@@ -228,23 +224,42 @@ describe("wrangler", () => {
 			          `);
 				});
 
-				it("should delete a bucket specified by name", async () => {
-					const requests = mockDeleteRequest("some-bucket");
+				it("should delete a bucket specified by name & check requests inputs", async () => {
+					msw.use(
+						rest.delete(
+							"*/accounts/:accountId/r2/buckets/:bucketName",
+							async (request, response, context) => {
+								const { accountId, bucketName } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual("some-bucket");
+								expect(await request.text()).toEqual("");
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+
+								return response.once(
+									context.status(200),
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: null,
+									})
+								);
+							}
+						)
+					);
 					await runWrangler(`r2 bucket delete some-bucket`);
-					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Deleting bucket some-bucket.
+				Deleted bucket some-bucket."
+			`);
 				});
 			});
 		});
 
 		describe("r2 object", () => {
 			it("should download R2 object from bucket", async () => {
-				setMockFetchR2Objects({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
-					mockResponse: "R2-objects-test-data",
-				});
-
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
@@ -256,11 +271,6 @@ describe("wrangler", () => {
 			});
 
 			it("should upload R2 object from bucket", async () => {
-				setMockFetchR2Objects({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
-				});
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
@@ -272,15 +282,52 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should pass all fetch option flags into requestInit", async () => {
+			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
+				msw.use(
+					rest.put(
+						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
+						(request, response, context) => {
+							const { accountId, bucketName, objectName } = request.params;
+							expect(accountId).toEqual("some-account-id");
+							expect(bucketName).toEqual("bucketName-object-test");
+							expect(objectName).toEqual("wormhole-img.png");
+							const headersObject = request.headers.all();
+							delete headersObject["user-agent"];
+							expect(headersObject).toMatchInlineSnapshot(`
+					Object {
+					  "accept": "*/*",
+					  "accept-encoding": "gzip,deflate",
+					  "authorization": "Bearer some-api-token",
+					  "cache-control": "cache-control-mock",
+					  "connection": "close",
+					  "content-disposition": "content-disposition-mock",
+					  "content-encoding": "content-encoding-mock",
+					  "content-language": "content-lang-mock",
+					  "content-length": "10",
+					  "content-type": "content-type-mock",
+					  "expires": "expire-time-mock",
+					  "host": "api.cloudflare.com",
+					}
+				`);
+							response.once(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										accountId: "some-account-id",
+										bucketName: "bucketName-object-test",
+										objectName: "wormhole-img.png",
+									},
+								})
+							);
+						}
+					)
+				);
 				fs.writeFileSync("wormhole-img.png", "passageway");
-				setMockFetchR2Objects({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
-				});
 				const flags =
-					"--ct content-type --cd content-disposition --ce content-encoding --cl content-lang --cc cache-control --e expire-time";
+					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
 
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
@@ -293,12 +340,6 @@ describe("wrangler", () => {
 			});
 
 			it("should delete R2 object from bucket", async () => {
-				setMockFetchR2Objects({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
-				});
-
 				await runWrangler(
 					`r2 object delete bucketName-object-test/wormhole-img.png`
 				);
@@ -311,12 +352,6 @@ describe("wrangler", () => {
 
 			it("should not allow `--pipe` & `--file` to run together", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
-				setMockFetchR2Objects({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
-				});
-
 				await expect(
 					runWrangler(
 						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
