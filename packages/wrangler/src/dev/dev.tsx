@@ -141,6 +141,7 @@ export type DevProps = {
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
+	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
 	assetsConfig: Config["assets"];
@@ -259,6 +260,16 @@ function DevSession(props: DevSessionProps) {
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
 	});
 
+	// TODO(queues) support remote wrangler dev before merging into main
+	if (
+		!props.local &&
+		(props.bindings.queues?.length || props.queueConsumers.length)
+	) {
+		throw new Error(
+			"Wrangler dev remote mode does not support queues yet. Instead, try local mode by running: `wrangler dev -l`"
+		);
+	}
+
 	return props.local ? (
 		<Local
 			name={props.name}
@@ -277,6 +288,7 @@ function DevSession(props: DevSessionProps) {
 			enableLocalPersistence={props.enableLocalPersistence}
 			liveReload={props.liveReload}
 			crons={props.crons}
+			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logLevel={props.logLevel}
