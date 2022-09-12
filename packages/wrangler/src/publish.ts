@@ -220,21 +220,26 @@ export default async function publish(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	if (accountId && name) {
-		const serviceMetaData = await fetchResult(
-			`/accounts/${accountId}/workers/services/${name}`
-		);
-		const { default_environment } = serviceMetaData as {
-			default_environment: {
-				script: { last_deployed_from: "dash" | "wrangler" | "api" };
+		try {
+			const serviceMetaData = await fetchResult(
+				`/accounts/${accountId}/workers/services/${name}`
+			);
+			const { default_environment } = serviceMetaData as {
+				default_environment: {
+					script: { last_deployed_from: "dash" | "wrangler" | "api" };
+				};
 			};
-		};
 
-		if (
-			(await fromDashMessagePrompt(
-				default_environment.script.last_deployed_from
-			)) === false
-		)
-			return;
+			if (
+				(await fromDashMessagePrompt(
+					default_environment.script.last_deployed_from
+				)) === false
+			)
+				return;
+		} catch (e) {
+			if ((e as { code?: number }).code === 10090) return;
+			logger.error(e);
+		}
 	}
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
