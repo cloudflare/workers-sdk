@@ -76,8 +76,6 @@ async function main() {
 					const namespace = new DurableObjectNamespace(name as string, factory);
 					namespace.get = (id) => {
 						const stub = new DurableObjectStub(factory, id);
-						// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-						// @ts-ignore
 						stub.fetch = (...reqArgs) => {
 							const requestFromArgs = new MiniflareRequest(...reqArgs);
 							const url = new URL(requestFromArgs.url);
