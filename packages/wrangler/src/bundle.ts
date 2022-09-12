@@ -76,6 +76,7 @@ export async function bundleWorker(
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
 		targetConsumer: "dev" | "publish";
+		testScheduled: boolean | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -93,6 +94,7 @@ export async function bundleWorker(
 		services,
 		firstPartyWorkerDevFacade,
 		targetConsumer,
+		testScheduled,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -144,16 +146,13 @@ export async function bundleWorker(
 
 	// We also have middleware that uses a more "traditional" middleware stack,
 	// which is all loaded as one in a stack.
-	const middlewareToLoad: MiddlewareLoader[] = [
-		// {
-		// 	path: "templates/middleware/middleware-pretty-error.ts",
-		// 	publish: true,
-		// 	dev: false,
-		// },
-		// {
-		// 	path: "../templates/middleware/middleware-scheduled.ts",
-		// },
-	];
+	const middlewareToLoad: MiddlewareLoader[] = [];
+
+	if (testScheduled) {
+		middlewareToLoad.push({
+			path: "templates/middleware/middleware-scheduled.ts",
+		});
+	}
 
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [

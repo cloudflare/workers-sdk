@@ -50,6 +50,7 @@ interface DevOptions {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	_?: (string | number)[]; //yargs wants this
 	$0?: string; //yargs wants this
+	testScheduled?: boolean;
 }
 
 interface DevApiOptions {
@@ -109,6 +110,7 @@ export async function unstable_dev(
 						readyAddress = address;
 						ready(devServer);
 					},
+					testScheduled: options?.testScheduled ?? false,
 				});
 			}).then((devServer) => {
 				// now that the inner promise has resolved, we can resolve the outer promise
