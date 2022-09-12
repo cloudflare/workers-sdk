@@ -227,16 +227,16 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-		        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-		        for more information.
-		        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
+		  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+		  for more information.
+		  Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-		      --dry-run: exiting now.
-		      Total Upload: 0xx KiB / gzip: 0xx KiB"
-	    `);
+		Total Upload: xx KiB / gzip: xx KiB
+		--dry-run: exiting now."
+	`);
 	});
 });
 

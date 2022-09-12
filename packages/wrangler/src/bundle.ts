@@ -75,6 +75,7 @@ export async function bundleWorker(
 		services: Config["services"] | undefined;
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
+		targetConsumer: "dev" | "publish";
 	}
 ): Promise<BundleResult> {
 	const {
@@ -91,6 +92,7 @@ export async function bundleWorker(
 		workerDefinitions,
 		services,
 		firstPartyWorkerDevFacade,
+		targetConsumer,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -140,6 +142,19 @@ export async function bundleWorker(
 	// a new entry point, that we call "middleware" or "facades".
 	// Look at implementations of these functions to learn more.
 
+	// We also have middleware that uses a more "traditional" middleware stack,
+	// which is all loaded as one in a stack.
+	const middlewareToLoad: MiddlewareLoader[] = [
+		// {
+		// 	path: "templates/middleware/middleware-pretty-error.ts",
+		// 	publish: true,
+		// 	dev: false,
+		// },
+		// {
+		// 	path: "../templates/middleware/middleware-scheduled.ts",
+		// },
+	];
+
 	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
 		// serve static assets
@@ -172,6 +187,32 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade === true &&
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
+			}),
+
+		// Middleware loader: to add middleware, we add the path to the middleware
+		// Currently for demonstration purposes we have two example middlewares
+		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
+		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
+		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
+		// the target consumer (dev / publish).
+		(middlewareToLoad.filter(
+			(m) =>
+				(m.publish && targetConsumer === "publish") ||
+				(m.dev !== false && targetConsumer === "dev")
+		).length > 0 ||
+			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
+			((currentEntry: Entry) => {
+				return applyMiddlewareLoaderFacade(
+					currentEntry,
+					tmpDir.path,
+					middlewareToLoad.filter(
+						// We dynamically filter the middleware depending on where we are bundling for
+						(m) =>
+							(targetConsumer === "dev" && m.dev !== false) ||
+							(m.publish && targetConsumer === "publish")
+					),
+					moduleCollector.plugin
+				);
 			}),
 	].filter(Boolean);
 
@@ -215,7 +256,11 @@ export async function bundleWorker(
 			".cjs": "jsx",
 		},
 		plugins: [
-			moduleCollector.plugin,
+			// We run the moduleCollector plugin for service workers as part of the middleware loader
+			// so we only run here for modules or with no middleware to load
+			...(entry.format === "modules" || middlewareToLoad.length === 0
+				? [moduleCollector.plugin]
+				: []),
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
@@ -320,6 +365,185 @@ async function applyFormatDevErrorsFacade(
 	return {
 		...entry,
 		file: targetPath,
+	};
+}
+
+/**
+ * A facade that acts as a "middleware loader".
+ * Instead of needing to apply a facade for each individual middleware, this allows
+ * middleware to be written in a more traditional manner and then be applied all
+ * at once, requiring just two esbuild steps, rather than 1 per middleware.
+ */
+
+interface MiddlewareLoader {
+	path: string;
+	// By default all middleware will run on dev, but will not be run when published
+	publish?: boolean;
+	dev?: boolean;
+}
+
+async function applyMiddlewareLoaderFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	middleware: MiddlewareLoader[], // a list of paths to middleware files
+	moduleCollectorPlugin: esbuild.Plugin
+): Promise<Entry> {
+	// Firstly we need to insert the middleware array into the project,
+	// and then we load the middleware - this insertion and loading is
+	// different for each format.
+
+	// STEP 1: Insert the middleware
+	const targetPathInsertion = path.join(
+		tmpDirPath,
+		"middleware-insertion.entry.js"
+	);
+
+	// We need to import each of the middlewares, so we need to generate a
+	// random, unique identifier that we can use for the import.
+	// Middlewares are required to be default exports so we can import to any name.
+	const middlewareIdentifiers = middleware.map(
+		(_, index) => `__MIDDLEWARE_${index}__`
+	);
+
+	const dynamicFacadePath = path.join(
+		tmpDirPath,
+		"middleware-insertion-facade.js"
+	);
+
+	if (entry.format === "modules") {
+		// We use a facade to expose the required middleware alongside any user defined
+		// middleware on the worker object
+
+		const imports = middlewareIdentifiers
+			.map((m) => `import ${m} from "${m}";`)
+			.join("\n");
+
+		// write a file with all of the imports required
+		fs.writeFileSync(
+			dynamicFacadePath,
+			`import worker from "__ENTRY_POINT__";
+			${imports}
+			const facade = {
+				...worker,
+				middleware: [
+					${middlewareIdentifiers.join(",")}${middlewareIdentifiers.length > 0 ? "," : ""}
+					...(worker.middleware ? worker.middleware : []),
+				]
+			}
+			export * from "__ENTRY_POINT__";
+			export default facade;`
+		);
+
+		await esbuild.build({
+			entryPoints: [path.resolve(getBasePath(), dynamicFacadePath)],
+			bundle: true,
+			sourcemap: true,
+			format: "esm",
+			plugins: [
+				esbuildAliasExternalPlugin({
+					__ENTRY_POINT__: entry.file,
+					...Object.fromEntries(
+						middleware.map((val, index) => [
+							middlewareIdentifiers[index],
+							path.resolve(getBasePath(), val.path),
+						])
+					),
+				}),
+			],
+			outfile: targetPathInsertion,
+		});
+	} else {
+		// We handle service workers slightly differently as we have to overwrite
+		// the event listeners and reimplement them
+
+		await esbuild.build({
+			entryPoints: [entry.file],
+			bundle: true,
+			sourcemap: true,
+			define: {
+				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
+			},
+			format: "esm",
+			outfile: targetPathInsertion,
+			plugins: [moduleCollectorPlugin],
+		});
+
+		const imports = middlewareIdentifiers
+			.map(
+				(m, i) =>
+					`import ${m} from "${path.resolve(
+						getBasePath(),
+						middleware[i].path
+					)}";`
+			)
+			.join("\n");
+
+		// We add the new modules with imports and then register using the
+		// addMiddleware function (which gets rewritten in the next build step)
+
+		// We choose to run middleware inserted in wrangler before user inserted
+		// middleware in the stack
+		// To do this, we either need to execute the addMiddleware function first
+		// before any user middleware, or use a separate handling function.
+		// We choose to do the latter as to prepend, we would have to load the entire
+		// script into memory as a prepend function doesn't exist or work in the same
+		// way that an append function does.
+
+		fs.copyFileSync(targetPathInsertion, dynamicFacadePath);
+		fs.appendFileSync(
+			dynamicFacadePath,
+			`
+			${imports}
+			addMiddlewareInternal([${middlewareIdentifiers.join(",")}])
+		`
+		);
+	}
+
+	// STEP 2: Load the middleware
+	// We want to get the filename of the orginal entry point
+	let targetPathLoader = path.join(tmpDirPath, path.basename(entry.file));
+	if (path.extname(entry.file) === "") targetPathLoader += ".js";
+
+	const loaderPath =
+		entry.format === "modules"
+			? path.resolve(getBasePath(), "templates/middleware/loader-modules.ts")
+			: dynamicFacadePath;
+
+	await esbuild.build({
+		entryPoints: [loaderPath],
+		bundle: true,
+		sourcemap: true,
+		format: "esm",
+		...(entry.format === "service-worker"
+			? {
+					inject: [
+						path.resolve(getBasePath(), "templates/middleware/loader-sw.ts"),
+					],
+					define: {
+						addEventListener: "__facade_addEventListener__",
+						removeEventListener: "__facade_removeEventListener__",
+						dispatchEvent: "__facade_dispatchEvent__",
+						addMiddleware: "__facade_register__",
+						addMiddlewareInternal: "__facade_registerInternal__",
+					},
+			  }
+			: {
+					plugins: [
+						esbuildAliasExternalPlugin({
+							__ENTRY_POINT__: targetPathInsertion,
+							"./common": path.resolve(
+								getBasePath(),
+								"templates/middleware/common.ts"
+							),
+						}),
+					],
+			  }),
+		outfile: targetPathLoader,
+	});
+
+	return {
+		...entry,
+		file: targetPathLoader,
 	};
 }
 

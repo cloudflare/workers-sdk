@@ -416,6 +416,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// facades on top of it
 						workerDefinitions: undefined,
 						firstPartyWorkerDevFacade: false,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and publish?
+						targetConsumer: "publish",
 					}
 			  );
 
@@ -494,10 +497,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			keep_bindings: true,
 		};
 
-		void printBundleSize(
+		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
+		// We do not care about the timing outside of testing
+		const bundleSizePromise = printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
+		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
+		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,

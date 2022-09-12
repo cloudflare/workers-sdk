@@ -177,6 +177,7 @@ async function runEsbuild({
 				services: undefined,
 				workerDefinitions: undefined,
 				firstPartyWorkerDevFacade: undefined,
+				targetConsumer: "dev", // We are starting a dev server
 		  });
 
 	return {
