@@ -510,14 +510,14 @@ export function setupMiniflareOptions({
 				})
 				.filter(([_, details]) => !!details)
 		),
-				d1Databases: bindings.d1_databases?.map((db) => db.binding),
+		d1Databases: bindings.d1_databases?.map((db) => db.binding),
 		...(localPersistencePath
 			? {
 					cachePersist: path.join(localPersistencePath, "cache"),
 					durableObjectsPersist: path.join(localPersistencePath, "do"),
 					kvPersist: path.join(localPersistencePath, "kv"),
 					r2Persist: path.join(localPersistencePath, "r2"),
-							d1Persist: path.join(localPersistencePath, "d1"),
+					d1Persist: path.join(localPersistencePath, "d1"),
 			  }
 			: {
 					// We mark these as true, so that they'll

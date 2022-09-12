@@ -45,9 +45,7 @@ export async function performApiFetch(
 	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
 	logger.debug("INIT:", JSON.stringify(init, null, 2));
 	logger.debug("-- END CF API REQUEST");
-	return await fetch(
-		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-		{
+	return await fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
 		method,
 		...init,
 		headers,

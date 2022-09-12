@@ -30,7 +30,6 @@ import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
-import type { RequestInit } from "undici";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -693,11 +692,11 @@ async function validateDevServerSettings(
 		);
 	}
 
-		const localPersistencePath = getLocalPersistencePath(
-			args.persistTo,
-			Boolean(args.experimentalEnableLocalPersistence || args.persist),
-			config.configPath
-		);
+	const localPersistencePath = getLocalPersistencePath(
+		args.persistTo,
+		Boolean(args.experimentalEnableLocalPersistence || args.persist),
+		config.configPath
+	);
 
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
@@ -716,7 +715,7 @@ async function validateDevServerSettings(
 		host,
 		routes,
 		cliDefines,
-		localPersistencePath
+		localPersistencePath,
 	};
 }
 
@@ -737,7 +736,7 @@ async function getBindingsAndAssetPaths(
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
-				d1Databases: args.d1Databases,
+		d1Databases: args.d1Databases,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);

@@ -40,7 +40,7 @@ type WorkerMetadataBinding =
 			environment?: string;
 	  }
 	| { type: "r2_bucket"; name: string; bucket_name: string }
-		| { type: "d1"; name: string; id: string }
+	| { type: "d1"; name: string; id: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "namespace"; name: string; namespace: string }
 	| {
