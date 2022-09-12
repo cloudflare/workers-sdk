@@ -1,14 +1,5 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import {
-	basename,
-	dirname,
-	extname,
-	join,
-	relative,
-	resolve,
-	sep,
-} from "node:path";
-import { hash as blake3hash } from "blake3-wasm";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import { getType } from "mime";
@@ -25,6 +16,7 @@ import {
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
+import { hashFile } from "./hash";
 import { pagesBetaWarning } from "./utils";
 import type { UploadPayloadFile, YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
@@ -144,11 +136,6 @@ export const upload = async (
 				} else {
 					const name = relative(startingDir, filepath).split(sep).join("/");
 
-					const fileContent = await readFile(filepath);
-
-					const base64Content = fileContent.toString("base64");
-					const extension = extname(basename(name)).substring(1);
-
 					if (filestat.size > 25 * 1024 * 1024) {
 						throw new FatalError(
 							`Error: Pages only supports files up to ${prettyBytes(
@@ -163,9 +150,7 @@ export const upload = async (
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: blake3hash(base64Content + extension)
-							.toString("hex")
-							.slice(0, 32),
+						hash: hashFile(filepath),
 					});
 				}
 			})
