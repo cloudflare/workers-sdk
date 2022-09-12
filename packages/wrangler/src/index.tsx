@@ -301,12 +301,10 @@ function createCLIParser(argv: string[]) {
 	// I wish we could enforce this pattern, but this comment will have to do for now.
 	// (It's also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.)
 
-	// [DEPRECATED] generate
+	// generate
 	wrangler.command(
-		// we definitely want to move away from us cloning github templates
-		// we can do something better here, let's see
 		"generate [name] [template]",
-		false,
+		"🏗️ Generate a new workers project from an existing template",
 		generateOptions,
 		generateHandler
 	);
