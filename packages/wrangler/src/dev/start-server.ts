@@ -80,7 +80,7 @@ export async function startDevServer(
 			ip: props.ip,
 			rules: props.rules,
 			inspectorPort: props.inspectorPort,
-			enableLocalPersistence: props.enableLocalPersistence,
+			localPersistencePath: props.localPersistencePath,
 			liveReload: props.liveReload,
 			crons: props.crons,
 			localProtocol: props.localProtocol,
@@ -203,7 +203,7 @@ export async function startLocalServer({
 	port,
 	inspectorPort,
 	rules,
-	enableLocalPersistence,
+	localPersistencePath,
 	liveReload,
 	ip,
 	crons,
@@ -221,17 +221,6 @@ export async function startLocalServer({
 	const setInspectorUrl = (url: string) => {
 		inspectorUrl = url;
 	};
-
-	// if we're using local persistence for data, we should use the cwd
-	// as an explicit path, or else it'll use the temp dir
-	// which disappears when dev ends
-	const localPersistencePath = enableLocalPersistence
-		? // Maybe we could make the path configurable as well?
-		  path.join(process.cwd(), "wrangler-local-state")
-		: // We otherwise choose null, but choose true later
-		  // so that it's persisted in the temp dir across a dev session
-		  // even when we change source and reload
-		  null;
 
 	const abortController = new AbortController();
 	async function startLocalWorker() {
@@ -297,6 +286,7 @@ export async function startLocalServer({
 			usageModel,
 			kv_namespaces: bindings?.kv_namespaces,
 			r2_buckets: bindings?.r2_buckets,
+			d1_databases: bindings?.d1_databases,
 			internalDurableObjects,
 			externalDurableObjects,
 			localPersistencePath,

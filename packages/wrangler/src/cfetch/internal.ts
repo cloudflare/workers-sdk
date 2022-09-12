@@ -37,8 +37,6 @@ export async function performApiFetch(
 	addUserAgent(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
-	const method = init.method ?? "GET";
-
 	logger.debug(
 		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
 	);

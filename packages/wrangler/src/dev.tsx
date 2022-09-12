@@ -474,6 +474,7 @@ export async function startApiDev(args: StartDevOptions) {
 		getLocalPort,
 		getInspectorPort,
 		cliDefines,
+		localPersistencePath,
 	} = await validateDevServerSettings(args, config);
 
 	await metrics.sendMetricsEvent(
@@ -510,7 +511,7 @@ export async function startApiDev(args: StartDevOptions) {
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol || configParam.dev.local_protocol,
 			localUpstream: args["local-upstream"] || host,
-			enableLocalPersistence: args.experimentalEnableLocalPersistence || false,
+			localPersistencePath,
 			liveReload: args.liveReload || false,
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,

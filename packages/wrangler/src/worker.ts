@@ -119,7 +119,7 @@ export interface CfR2Bucket {
 }
 
 export const D1_BETA_PREFIX = `__D1_BETA__` as const;
-interface CfD1Database {
+export interface CfD1Database {
 	// For now, all D1 bindings are beta
 	binding: `${typeof D1_BETA_PREFIX}${string}`;
 	database_id: string;
