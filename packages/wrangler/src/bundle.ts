@@ -714,7 +714,9 @@ async function applyD1BetaFacade(
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 
 	await esbuild.build({
-		entryPoints: [path.resolve(__dirname, "../templates/d1-beta-facade.js")],
+		entryPoints: [
+			path.resolve(getBasePath(), "../templates/d1-beta-facade.js"),
+		],
 		bundle: true,
 		format: "esm",
 		sourcemap: true,
