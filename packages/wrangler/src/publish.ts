@@ -237,6 +237,8 @@ export default async function publish(props: Props): Promise<void> {
 			)
 				return;
 		} catch (e) {
+			// code: 10090, message: workers.api.error.service_not_found
+			// is thrown from the above fetchResult on the first publish of a Worker
 			if ((e as { code?: number }).code !== 10090) {
 				logger.error(e);
 			}
