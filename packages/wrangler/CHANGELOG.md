@@ -1,5 +1,22 @@
 # wrangler
 
+## 2.1.1
+
+### Patch Changes
+
+- [#1827](https://github.com/cloudflare/wrangler2/pull/1827) [`32a58fee`](https://github.com/cloudflare/wrangler2/commit/32a58fee8efd2c0c07dcb75ad5e52cbca8785b12) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: Publish error when deploying new Workers
+
+  This fix adds a try/catch when checking when the Worker was last deployed.
+
+  The check was failing when a Worker had never been deployed, causing deployments of new Workers to fail.
+
+  fixes #1824
+
+* [#1799](https://github.com/cloudflare/wrangler2/pull/1799) [`a89786ba`](https://github.com/cloudflare/wrangler2/commit/a89786ba3b08a7cd7c074c52b6b83ab91223dddf) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: Bulk Secret Upload
+  Created a flag that allows for passing in a JSON file with key/value's of secrets.
+
+  resolve #1610
+
 ## 2.1.0
 
 ### Minor Changes
