@@ -237,8 +237,9 @@ export default async function publish(props: Props): Promise<void> {
 			)
 				return;
 		} catch (e) {
-			if ((e as { code?: number }).code === 10090) return;
-			logger.error(e);
+			if ((e as { code?: number }).code !== 10090) {
+				logger.error(e);
+			}
 		}
 	}
 
