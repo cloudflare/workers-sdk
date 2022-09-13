@@ -983,7 +983,7 @@ describe("init", () => {
 					text: "Would you like to use TypeScript?",
 					result: false,
 				},
-				{ text: "Would you like to write your tests with Jest?", result: false }
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
@@ -1564,7 +1564,7 @@ describe("init", () => {
 					text: "Would you like to use TypeScript?",
 					result: false,
 				},
-				{ text: "Would you like to write your tests with Jest?", result: false }
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
@@ -1613,7 +1613,7 @@ describe("init", () => {
 					text: "Would you like to use TypeScript?",
 					result: false,
 				},
-				{ text: "Would you like to write your tests with Jest?", result: false }
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
