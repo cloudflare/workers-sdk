@@ -2,13 +2,11 @@
 "wrangler": patch
 ---
 
-feat: allow specifying a path with unstable_dev fetch
-
-Allows to specify a path in `unstable_dev`.
+feat: make it possible to specify a path for `unstable_dev()`'s fetch method
 
 ```
 const worker = await unstable_dev(
-  "script.js", {}, {}
+  "script.js"
 );
 const res = await worker.fetch(req);
 ```
