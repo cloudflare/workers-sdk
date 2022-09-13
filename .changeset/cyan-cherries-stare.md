@@ -3,8 +3,8 @@
 ---
 
 fix: Publish error when no upstream Worker existed
-try/catch handles the check for last deployed source.
-The check breaking when no available Worker was upstream to check,
+Add a try/catch when checking when the worker was last deployed
+The check was failing when a Worker had never been deployed, causing deployments of new Workers to fail.
 which was causing deployments of new workers to fail.
 
 fixes #1824
