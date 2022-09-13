@@ -576,7 +576,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 					shouldCreateTests =
 						yesFlag ||
-						(await confirm("Would you like to write your tests with Jest?"));
+						(await confirm("Would you like us to write your first test?"));
 					if (shouldCreateTests) {
 						devDepsToInstall.push("jest");
 						await writeFile(
