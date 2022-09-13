@@ -100,7 +100,7 @@ async function generateAssetsFetch(
 	let metadata = createMetadataObject({
 		redirects,
 		headers,
-		logger: log.warn,
+		logger: (message) => log.warn(message),
 	});
 
 	watch([headersFile, redirectsFile], { persistent: true }).on(
