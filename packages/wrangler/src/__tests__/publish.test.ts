@@ -6488,6 +6488,38 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 	});
+
+	it("should publish if the last deployed source check fails", async () => {
+		writeWorkerSource();
+		writeWranglerToml();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		setMockRawResponse(
+			"/accounts/:accountId/workers/scripts/:scriptName",
+			"PUT",
+			() => {
+				return createFetchResult({}, true, [
+					{
+						code: 10090,
+						message: "workers.api.error.service_not_found",
+					},
+				]);
+			}
+		);
+
+		await runWrangler("publish index.js");
+		expect(std).toMatchInlineSnapshot(`
+		Object {
+		  "debug": "",
+		  "err": "",
+		  "out": "Total Upload: xx KiB / gzip: xx KiB
+		Uploaded test-name (TIMINGS)
+		Published test-name (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev",
+		  "warn": "",
+		}
+	`);
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
