@@ -23,7 +23,7 @@ describe("unstable_dev", () => {
 
 	describe("protocol", () => {
 		it("should use parse to give https url with localProtocol", async () => {
-			const [input, init] = parseRequestInput(
+			const [input, _] = parseRequestInput(
 				"0.0.0.0",
 				8080,
 				"/test",
