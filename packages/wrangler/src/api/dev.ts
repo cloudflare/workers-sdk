@@ -169,7 +169,7 @@ export async function unstable_dev(
 	}
 }
 
-async function apiDevFetch(
+export async function apiDevFetch(
 	readyAddress: string,
 	readyPort: number,
 	input?: RequestInfo,
@@ -177,7 +177,7 @@ async function apiDevFetch(
 	protocol: "http" | "https" = "http"
 ) {
 	if (input instanceof Request) {
-		input = new Request(input);
+		return await fetch(input);
 	} else if (input instanceof URL) {
 		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
 	} else if (typeof input === "string") {
@@ -191,7 +191,7 @@ async function apiDevFetch(
 			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
 		}
 	} else {
-		input = `${protocol}://${readyAddress}:${readyPort}/`;
+		input = `${protocol}://${readyAddress}:${readyPort}`;
 	}
 	return await fetch(input, init);
 }
