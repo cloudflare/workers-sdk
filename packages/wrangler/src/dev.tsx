@@ -24,7 +24,6 @@ import {
 	isLegacyEnv,
 	DEFAULT_INSPECTOR_PORT,
 } from "./index";
-
 import type { Config } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
@@ -66,6 +65,8 @@ interface DevArgs {
 	define?: string[];
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	persist?: boolean;
+	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: (ip: string, port: number) => void;
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
@@ -239,8 +240,22 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
-				describe: "Enable persistence for this session (only for local mode)",
+				describe:
+					"Enable persistence for local mode (deprecated, use --persist)",
 				type: "boolean",
+				deprecated: true,
+				hidden: true,
+			})
+			.option("persist", {
+				describe:
+					"Enable persistence for local mode, using default path: .wrangler/state",
+				type: "boolean",
+			})
+			.option("persist-to", {
+				describe:
+					"Specify directory to use for local persistence (implies --persist)",
+				type: "string",
+				requiresArg: true,
 			})
 			.option("live-reload", {
 				// TODO: Add back in once we have remote `--live-reload`
@@ -342,6 +357,7 @@ export async function startDev(args: StartDevOptions) {
 			getLocalPort,
 			getInspectorPort,
 			cliDefines,
+			localPersistencePath,
 		} = await validateDevServerSettings(args, config);
 
 		await metrics.sendMetricsEvent(
@@ -382,9 +398,7 @@ export async function startDev(args: StartDevOptions) {
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
-					enableLocalPersistence={
-						args.experimentalEnableLocalPersistence || false
-					}
+					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
 					accountId={configParam.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
@@ -457,6 +471,7 @@ export async function startApiDev(args: StartDevOptions) {
 		getLocalPort,
 		getInspectorPort,
 		cliDefines,
+		localPersistencePath,
 	} = await validateDevServerSettings(args, config);
 
 	await metrics.sendMetricsEvent(
@@ -493,7 +508,7 @@ export async function startApiDev(args: StartDevOptions) {
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol || configParam.dev.local_protocol,
 			localUpstream: args["local-upstream"] || host,
-			enableLocalPersistence: args.experimentalEnableLocalPersistence || false,
+			localPersistencePath: localPersistencePath,
 			liveReload: args.liveReload || false,
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,
@@ -670,6 +685,23 @@ async function validateDevServerSettings(
 		);
 	}
 
+	if (args.experimentalEnableLocalPersistence) {
+		logger.warn(
+			`--experimental-enable-local-persistence is deprecated.\n` +
+				`Move any existing data to .wrangler/state and use --persist, or\n` +
+				`use --persist-to=./wrangler-local-state to keep using the old path.`
+		);
+	}
+
+	const localPersistencePath = args.persistTo
+		? // If path specified, always treat it as relative to cwd()
+		  path.resolve(process.cwd(), args.persistTo)
+		: args.persist
+		? // If just flagged on, treat it as relative to wrangler.toml,
+		  // if one can be found, otherwise cwd()
+		  path.resolve(config.configPath || process.cwd(), ".wrangler/state")
+		: null;
+
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
 			const [key, ...value] = d.split(":");
@@ -687,6 +719,7 @@ async function validateDevServerSettings(
 		host,
 		routes,
 		cliDefines,
+		localPersistencePath,
 	};
 }
 

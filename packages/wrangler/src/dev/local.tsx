@@ -42,7 +42,7 @@ export interface LocalProps {
 	ip: string;
 	rules: Config["rules"];
 	inspectorPort: number;
-	enableLocalPersistence: boolean;
+	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	localProtocol: "http" | "https";
@@ -77,7 +77,7 @@ function useLocalWorker({
 	port,
 	inspectorPort,
 	rules,
-	enableLocalPersistence,
+	localPersistencePath,
 	liveReload,
 	ip,
 	crons,
@@ -93,16 +93,6 @@ function useLocalWorker({
 	const local = useRef<ChildProcess>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
-	// if we're using local persistence for data, we should use the cwd
-	// as an explicit path, or else it'll use the temp dir
-	// which disappears when dev ends
-	const localPersistencePath = enableLocalPersistence
-		? // Maybe we could make the path configurable as well?
-		  path.join(process.cwd(), "wrangler-local-state")
-		: // We otherwise choose null, but choose true later
-		  // so that it's persisted in the temp dir across a dev session
-		  // even when we change source and reload
-		  null;
 
 	useEffect(() => {
 		if (bindings.services && bindings.services.length > 0) {
