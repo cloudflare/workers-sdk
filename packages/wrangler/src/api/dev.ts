@@ -115,14 +115,17 @@ export async function unstable_dev(
 				// with an object that lets you fetch and stop the dev server
 				resolve({
 					stop: devServer.stop,
-					fetch: async (input?: RequestInfo, init?: RequestInit) =>
-						apiDevFetch(
-							readyAddress,
-							readyPort,
-							input,
-							init,
-							options?.localProtocol
-						),
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
+					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
 						return;
@@ -154,14 +157,17 @@ export async function unstable_dev(
 			}).then((devServer) => {
 				resolve({
 					stop: devServer.stop,
-					fetch: async (input?: RequestInfo, init?: RequestInit) =>
-						apiDevFetch(
-							readyAddress,
-							readyPort,
-							input,
-							init,
-							options?.localProtocol
-						),
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
+					},
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});
@@ -169,15 +175,15 @@ export async function unstable_dev(
 	}
 }
 
-async function apiDevFetch(
+export function parseRequestInput(
 	readyAddress: string,
 	readyPort: number,
 	input?: RequestInfo,
 	init?: RequestInit,
 	protocol: "http" | "https" = "http"
-) {
+): [RequestInfo, RequestInit | undefined] {
 	if (input instanceof Request) {
-		input = new Request(input);
+		return [input, undefined];
 	} else if (input instanceof URL) {
 		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
 	} else if (typeof input === "string") {
@@ -193,5 +199,6 @@ async function apiDevFetch(
 	} else {
 		input = `${protocol}://${readyAddress}:${readyPort}/`;
 	}
-	return await fetch(input, init);
+
+	return [input, init];
 }
