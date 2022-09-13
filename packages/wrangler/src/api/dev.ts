@@ -116,7 +116,13 @@ export async function unstable_dev(
 				resolve({
 					stop: devServer.stop,
 					fetch: async (input?: RequestInfo, init?: RequestInit) =>
-						apiDevFetch(readyAddress, readyPort, input, init),
+						apiDevFetch(
+							readyAddress,
+							readyPort,
+							input,
+							init,
+							options?.localProtocol
+						),
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
 						return;
@@ -149,7 +155,13 @@ export async function unstable_dev(
 				resolve({
 					stop: devServer.stop,
 					fetch: async (input?: RequestInfo, init?: RequestInit) =>
-						apiDevFetch(readyAddress, readyPort, input, init),
+						apiDevFetch(
+							readyAddress,
+							readyPort,
+							input,
+							init,
+							options?.localProtocol
+						),
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});
@@ -161,24 +173,25 @@ async function apiDevFetch(
 	readyAddress: string,
 	readyPort: number,
 	input?: RequestInfo,
-	init?: RequestInit
+	init?: RequestInit,
+	protocol: "http" | "https" = "http"
 ) {
 	if (input instanceof Request) {
-		input = new Request(input, {
-			...init,
-		});
+		input = new Request(input);
 	} else if (input instanceof URL) {
-		input = `http://${readyAddress}:${readyPort}${input.pathname}`;
+		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
 	} else if (typeof input === "string") {
 		try {
 			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
 			// Will error if we try and pass "/something" into new URL("/something")
-			input = `http://${readyAddress}:${readyPort}${new URL(input).pathname}`;
+			input = `${protocol}://${readyAddress}:${readyPort}${
+				new URL(input).pathname
+			}`;
 		} catch {
-			input = `http://${readyAddress}:${readyPort}${input}`;
+			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
 		}
 	} else {
-		input = `http://${readyAddress}:${readyPort}/`;
+		input = `${protocol}://${readyAddress}:${readyPort}/`;
 	}
 	return await fetch(input, init);
 }
