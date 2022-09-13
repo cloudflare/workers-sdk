@@ -195,8 +195,6 @@ async function generateAssetsFetch(
 		});
 	};
 
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
 	return async (input: RequestInfo, init?: RequestInit) => {
 		const request = new MiniflareRequest(input, init);
 		return await generateResponse(request as unknown as Request);
