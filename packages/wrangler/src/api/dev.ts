@@ -1,4 +1,4 @@
-import { fetch } from "undici";
+import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
@@ -177,8 +177,8 @@ async function apiDevFetch(
 		} catch {
 			input = `http://${readyAddress}:${readyPort}${input}`;
 		}
+	} else {
+		input = `http://${readyAddress}:${readyPort}/`;
 	}
-
-	const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-	return await fetch((input = urlToFetch), init);
+	return await fetch(input, init);
 }
