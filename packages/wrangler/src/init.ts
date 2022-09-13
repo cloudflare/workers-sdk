@@ -235,6 +235,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		"package.json"
 	);
 	let shouldCreatePackageJson = false;
+	let shouldCreateTests = false;
 
 	if (!pathToPackageJson) {
 		// If no package.json exists, ask to create one
@@ -358,14 +359,15 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	async function writePackageJsonScriptsAndUpdateWranglerToml({
 		isWritingScripts,
+		isAddingTests,
 		isCreatingWranglerToml,
 		packagePath,
 		scriptPath,
 		extraToml,
 	}: {
 		isWritingScripts: boolean;
-		isCreatingWranglerToml: boolean;
 		isAddingTests?: boolean;
+		isCreatingWranglerToml: boolean;
 		packagePath: string;
 		scriptPath: string;
 		extraToml: TOML.JsonMap;
@@ -394,6 +396,8 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						...packageJsonContent,
 						scripts: {
 							...packageJsonContent.scripts,
+							...(isAddingTests &&
+								!packageJsonContent.scripts?.test && { test: "jest" }),
 							start: isCreatingWranglerToml
 								? `wrangler dev`
 								: `wrangler dev ${scriptPath}`,
@@ -569,6 +573,25 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 							path.join(creationDirectory, "./src/index.js")
 						)}`
 					);
+
+					shouldCreateTests =
+						yesFlag ||
+						(await confirm("Would you like us to write your first test?"));
+					if (shouldCreateTests) {
+						devDepsToInstall.push("jest");
+						await writeFile(
+							path.join(creationDirectory, "./src/index.test.js"),
+							readFileSync(
+								path.join(getBasePath(), `templates/test-new-worker.js`)
+							)
+						);
+						logger.log(
+							`✨ Created ${path.relative(
+								process.cwd(),
+								path.join(creationDirectory, "./src/index.test.js")
+							)}`
+						);
+					}
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
