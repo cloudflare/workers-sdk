@@ -146,7 +146,7 @@ export async function fromDashMessagePrompt(
 			`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.
 		Edits that have been made via the dashboard will be overridden by your local code and config.`
 		);
-		if (!isInteractive() || CI.isCI()) return;
+		if (!isInteractive() || CI.isCI()) return true;
 		return await confirm("Would you like to continue?");
 	}
 }
