@@ -1,5 +1,23 @@
 # wrangler
 
+## 2.1.3
+
+### Patch Changes
+
+- [#1836](https://github.com/cloudflare/wrangler2/pull/1836) [`3583f313`](https://github.com/cloudflare/wrangler2/commit/3583f313f50d1b0ba703286a44842d1c70b730e9) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler publish for CI after a manual deployment
+
+  Prior to this change, if you edited your Worker via the Cloudflare Dashboard, then used CI to deploy your script, `wrangler publish` would fail.
+
+  This change logs a warning that your manual changes are going to be overriden, but doesn't require user input to proceed.
+
+  Closes #1832
+
+* [#1644](https://github.com/cloudflare/wrangler2/pull/1644) [`dc1c9595`](https://github.com/cloudflare/wrangler2/commit/dc1c959548b41c617dd220ff3b222c076b62ea78) Thanks [@geelen](https://github.com/geelen)! - Deprecated --experimental-enable-local-persistence.
+
+  Added --persist and --persist-to in its place. Changed the default persistence directory to .wrangler/state, relative to wrangler.toml.
+
+  To migrate to the new flag, run `mkdir -p .wrangler && mv wrangler-local-state .wrangler/state` then use `--persist`. Alternatively, you can use `--persist-to=./wrangler-local-state` to keep using the files in the old location.
+
 ## 2.1.2
 
 ### Patch Changes
