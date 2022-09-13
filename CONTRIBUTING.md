@@ -243,6 +243,9 @@ drwxr-xr-x     - glen 27 Jul 17:51 └──  wrangler2
 Inside `packages/wrangler/package.json`, replace:
 
 ```
+"@miniflare/d1": "^2.x.x",
+"@miniflare/core": "^2.x.x",
+"@miniflare/durable-objects": "^2.x.x",
 "miniflare": "^2.x.x",
 ```
 
