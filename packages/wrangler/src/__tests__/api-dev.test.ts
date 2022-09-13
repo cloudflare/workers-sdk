@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
 import { Request } from "undici";
 import { unstable_dev } from "../api";
-import { msw } from "./helpers/msw";
+import { parseRequestInput } from "../api/dev";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("undici");
@@ -23,26 +22,16 @@ describe("unstable_dev", () => {
 	});
 
 	describe("protocol", () => {
-		it("should use https localProtocol", async () => {
-			const port = 8080;
-			msw.use(
-				rest.get("https://localhost:8080/*", (req, res, ctx) => {
-					// expect(req.json()).toEqual({ hello: "world" });
-					return res.once(ctx.status(200), ctx.text("Hello World!"));
-				})
+		it("should use parse to give https url with localProtocol", async () => {
+			const [input, init] = parseRequestInput(
+				"0.0.0.0",
+				8080,
+				"/test",
+				{},
+				"https"
 			);
 
-			const worker = await unstable_dev(
-				"src/__tests__/helpers/hello-world-worker.js",
-				{ localProtocol: "https", port },
-				{ disableExperimentalWarning: true }
-			);
-			const res = await worker.fetch();
-			if (res) {
-				const text = await res.text();
-				expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-			}
-			await worker.stop();
+			expect(input).toMatchInlineSnapshot(`"https://0.0.0.0:8080/test"`);
 		});
 
 		it("should use http localProtocol", async () => {
