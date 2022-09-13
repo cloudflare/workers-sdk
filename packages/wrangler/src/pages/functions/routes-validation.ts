@@ -7,6 +7,7 @@ import {
 import { getRoutesValidationErrorMessage } from "../errors";
 import type { RoutesJSONSpec } from "./routes-transformation";
 
+/* eslint-disable-next-line no-shadow */
 export enum RoutesValidationError {
 	INVALID_JSON_SPEC,
 	NO_INCLUDE_RULES,
@@ -83,7 +84,10 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 		);
 	}
 
-	if (hasNoOverlappingRules(routesJSON)) {
+	if (
+		hasOverlappingRules(routesJSON.include) ||
+		hasOverlappingRules(routesJSON.exclude)
+	) {
 		throw new FatalError(
 			getRoutesValidationErrorMessage(
 				RoutesValidationError.OVERLAPPING_RULES,
@@ -164,13 +168,34 @@ function hasValidRules(routesJSON: RoutesJSONSpec): boolean {
 	return rules.filter((rule) => !rule.match(/^\//)).length === 0;
 }
 
-// TODO @Carmen
-function hasNoOverlappingRules(routesJSON: RoutesJSONSpec): boolean {
-	// sanity check
-	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
+/**
+ * Returns true if the given routes array has overlapping routing rules (eg. ["/api/*"", "/api/foo"])
+ *
+ * based on `consolidateRoutes()`
+ * 🚨 O(n2) time complexity 🚨
+ */
+function hasOverlappingRules(routes: string[]): boolean {
+	if (!routes) {
 		throw new Error(
-			"Function `hasNoOverlappingRules` was called out of context. Attempting to validate rules for routes that are undefined or an invalid RoutesJSONSpec"
+			"Function `hasverlappingRules` was called out of context. Attempting to validate rules for routes that are undefined"
 		);
+	}
+
+	// Find routes that might render other routes redundant
+	const endingSplatRoutes = routes.filter((route) => route.endsWith("/*"));
+
+	for (let i = 0; i < endingSplatRoutes.length; i++) {
+		const crrRoute = endingSplatRoutes[i];
+		// Remove splat at the end, leaving the /
+		// eg. /api/* -> /api/
+		const crrRouteTrimmed = crrRoute.substring(0, crrRoute.length - 1);
+
+		for (let j = 0; j < routes.length; j++) {
+			const nextRoute = routes[j];
+			if (nextRoute !== crrRoute && nextRoute.startsWith(crrRouteTrimmed)) {
+				return true;
+			}
+		}
 	}
 
 	return false;

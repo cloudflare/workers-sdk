@@ -2,20 +2,15 @@
 import worker from "__ENTRY_POINT__";
 // @ts-ignore entry point will get replaced
 export * from "__ENTRY_POINT__";
-import { isRoutesJSONSpec } from "./../src/pages/functions/routes-validation";
-
-declare const __ROUTES__: unknown;
-
-if (!isRoutesJSONSpec(__ROUTES__)) {
-	throw new Error("Missing global __ROUTES__ value");
-}
 
 const transformToRegex = (filter: string) => {
 	return filter.replace("*", ".*");
 };
 
 const routes = {
+	// @ts-ignore routes are injected
 	include: __ROUTES__.include.map(transformToRegex),
+	// @ts-ignore routes are injected
 	exclude: __ROUTES__.exclude.map(transformToRegex) || [],
 };
 

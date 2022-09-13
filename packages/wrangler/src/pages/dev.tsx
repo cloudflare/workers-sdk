@@ -11,11 +11,12 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
-import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
+import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
 
@@ -170,6 +171,7 @@ export const Handler = async ({
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = existsSync(functionsDirectory);
+	let usingWorkerScript = false;
 
 	const command = remaining;
 
@@ -274,8 +276,9 @@ export const Handler = async ({
 			directory !== undefined
 				? join(directory, singleWorkerScriptPath)
 				: singleWorkerScriptPath;
+		usingWorkerScript = existsSync(scriptPath);
 
-		if (!existsSync(scriptPath)) {
+		if (!usingWorkerScript) {
 			logger.log("No functions. Shimming...");
 			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 		} else {
@@ -311,25 +314,17 @@ export const Handler = async ({
 
 	let entrypoint = scriptPath;
 
-	if (directory) {
+	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
+	if (directory && (usingFunctions || usingWorkerScript)) {
 		const routesJSONPath = join(directory, "_routes.json");
 
 		if (existsSync(routesJSONPath)) {
-			const routesJSONContents = readFileSync(routesJSONPath, "utf-8");
-			entrypoint = join(tmpdir(), `${Math.random().toString(36).slice(2)}.js`);
-
-			const validateRoutesAndBuild = async (routesPath: string) => {
-				try {
-					validateRoutes(JSON.parse(routesJSONContents), routesPath);
-				} catch (err) {
-					if (err instanceof Error) {
-						throw new FatalError(
-							`Could not validate _routes.json at ${routesPath}: ${err}`,
-							1
-						);
-					}
-				}
-
+			let routesJSONContents: string;
+			const runBuild = async (
+				entrypointFile: string,
+				outfile: string,
+				routes: string
+			) => {
 				await esbuild.build({
 					entryPoints: [
 						resolve(getBasePath(), "templates/pages-dev-pipeline.ts"),
@@ -339,22 +334,80 @@ export const Handler = async ({
 					format: "esm",
 					plugins: [
 						esbuildAliasExternalPlugin({
-							__ENTRY_POINT__: scriptPath,
+							__ENTRY_POINT__: entrypointFile,
 						}),
 					],
-					outfile: entrypoint,
+					outfile,
 					define: {
-						__ROUTES__: routesJSONContents,
+						__ROUTES__: routes,
 					},
 				});
 			};
 
-			await validateRoutesAndBuild(directory);
+			try {
+				// always run the routes validation first. If _routes.json is invalid we
+				// want to throw accordingly and exit.
+				routesJSONContents = readFileSync(routesJSONPath, "utf-8");
+				validateRoutes(JSON.parse(routesJSONContents), directory);
+
+				entrypoint = join(
+					tmpdir(),
+					`${Math.random().toString(36).slice(2)}.js`
+				);
+				await runBuild(scriptPath, entrypoint, routesJSONContents);
+			} catch (err) {
+				if (err instanceof FatalError) {
+					throw err;
+				} else {
+					throw new FatalError(
+						`Could not validate _routes.json at ${directory}: ${err}`,
+						1
+					);
+				}
+			}
+
 			watch([routesJSONPath], {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async () => {
-				await validateRoutesAndBuild(directory as string);
+				try {
+					/**
+					 * Watch for _routes.json file changes and validate file each time.
+					 * If file is valid proceed to running the build.
+					 */
+					routesJSONContents = readFileSync(routesJSONPath, "utf-8");
+					validateRoutes(JSON.parse(routesJSONContents), directory as string);
+					await runBuild(scriptPath, entrypoint, routesJSONContents);
+				} catch (err) {
+					/**
+					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
+					 * and continue to serve the assets. At the same time make sure we warn users that we
+					 * we detected an invalid file and that we'll be using a default.
+					 * This basically equivalates to serving a Functions or _worker.js project as is,
+					 * without applying any additional routing rules on top.
+					 */
+					const error =
+						err instanceof FatalError
+							? err
+							: `Could not validate _routes.json at ${directory}: ${err}`;
+					const defaultRoutesJSONSpec: RoutesJSONSpec = {
+						version: ROUTES_SPEC_VERSION,
+						include: ["/*"],
+						exclude: [],
+					};
+
+					logger.error(error);
+					logger.warn(
+						`Falling back to the following _routes.json default: ${JSON.stringify(
+							defaultRoutesJSONSpec,
+							null,
+							2
+						)}`
+					);
+
+					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
+					await runBuild(scriptPath, entrypoint, routesJSONContents);
+				}
 			});
 		}
 	}
@@ -413,7 +466,7 @@ export const Handler = async ({
 			experimentalEnableLocalPersistence,
 			showInteractiveDevSession: undefined,
 			inspect: true,
-			logLevel: "error",
+			logLevel: "warn",
 			logPrefix: "pages",
 		},
 		{ testMode: false, disableExperimentalWarning: true }

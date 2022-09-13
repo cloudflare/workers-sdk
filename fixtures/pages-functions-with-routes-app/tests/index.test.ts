@@ -53,35 +53,27 @@ describe("Pages Functions with custom _routes.json", () => {
 		});
 	});
 
-	it("renders static pages", async () => {
+	it("should render static pages", async () => {
 		const response = await waitUntilReady("http://localhost:8776/");
 		const text = await response.text();
 		expect(text).toContain(
-			"Bonjour de notre projet ✨pages-functions-with-routes-app✨!"
+			"Bienvenue sur notre projet &#10024; pages-functions-with-routes-app!"
 		);
 	});
 
-	it("runs each Pages Function when their corresponding URL path is hit", async () => {
+	it("should correctly apply the routing rules provided in the custom _routes.json file", async () => {
 		let response = await waitUntilReady("http://localhost:8776/greeting/hello");
 		let text = await response.text();
-		expect(text).toMatch("Bonjour le monde!");
+		expect(text).toEqual("Bonjour le monde!");
 
 		response = await waitUntilReady("http://localhost:8776/greeting/goodbye");
 		text = await response.text();
-		expect(text).toMatch("A plus tard alligator 👋");
+		expect(text).toEqual("A plus tard alligator 👋");
 
-		/**
-		 * :sad_panda:
-		 * only because we are in `dev` mode. For a deployed Pages project such as this,
-		 * `/date` would return a `404` because we explicitly excluded it in our custom
-		 * `_routes.json` file.
-		 *
-		 * `cd fixtures/pages-functions-with-routes-app && npx wrangler pages publish public`
-		 * for now if you want to test that
-		 *
-		 */
 		response = await waitUntilReady("http://localhost:8776/date");
 		text = await response.text();
-		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
+		expect(text).toContain(
+			"Bienvenue sur notre projet &#10024; pages-functions-with-routes-app!"
+		);
 	});
 });

@@ -1474,15 +1474,15 @@ describe("pages", () => {
 			});
 
 			await expect(runWrangler("pages publish public --project-name=foo"))
-				.rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Invalid _routes.json file found at: public/_routes.json. Please make sure the JSON object has the following format:
-			      {
-			        version: ${ROUTES_SPEC_VERSION};
-			        include: string[];
-			        exclude: string[];
-			      }
-			and that at least one include rule is provided.
-			      "
+				.rejects
+				.toThrow(`Invalid _routes.json file found at: public/_routes.json
+Please make sure the JSON object has the following format:
+{
+	version: ${ROUTES_SPEC_VERSION};
+	include: string[];
+	exclude: string[];
+}
+and that at least one include rule is provided.
 		`);
 		});
 
@@ -1711,15 +1711,15 @@ describe("pages", () => {
 			});
 
 			await expect(runWrangler("pages publish public --project-name=foo"))
-				.rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Invalid _routes.json file found at: public/_routes.json. Please make sure the JSON object has the following format:
-			      {
-			        version: ${ROUTES_SPEC_VERSION};
-			        include: string[];
-			        exclude: string[];
-			      }
-			and that at least one include rule is provided.
-			      "
+				.rejects
+				.toThrow(`Invalid _routes.json file found at: public/_routes.json
+Please make sure the JSON object has the following format:
+{
+	version: ${ROUTES_SPEC_VERSION};
+	include: string[];
+	exclude: string[];
+}
+and that at least one include rule is provided.
 		`);
 		});
 	});
