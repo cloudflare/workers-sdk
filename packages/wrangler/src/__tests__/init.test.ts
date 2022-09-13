@@ -1598,6 +1598,61 @@ describe("init", () => {
 			        To publish your Worker to the Internet, run \`npm run deploy\`"
 		      `);
 		});
+		it("should add tests for a non-ts project with .js extension", async () => {
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install wrangler into package.json?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				},
+				{ text: "Would you like us to write your first test?", result: true }
+			);
+			mockSelect({
+				text: "Would you like to create a Worker at src/index.js?",
+				result: "fetch",
+			});
+
+			await runWrangler("init");
+
+			checkFiles({
+				items: {
+					"src/index.js": true,
+					"src/index.test.js": true,
+					"src/index.ts": false,
+					"package.json": {
+						contents: expect.objectContaining({
+							name: expect.stringContaining("wrangler-tests"),
+							version: "0.0.0",
+							scripts: {
+								start: "wrangler dev",
+								deploy: "wrangler publish",
+							},
+						}),
+					},
+				},
+			});
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created src/index.js
+			✨ Created src/index.test.js
+			✨ Installed jest into devDependencies
+
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
+		});
 
 		it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
 			mockConfirm(
