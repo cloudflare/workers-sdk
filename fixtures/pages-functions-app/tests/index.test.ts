@@ -206,4 +206,22 @@ describe("Pages Functions", () => {
 			expect(getObject.version).toEqual(object.version);
 		});
 	});
+
+	describe("redirects", () => {
+		it("still attaches redirects correctly", async () => {
+			const response = await waitUntilReady("http://localhost:8789/redirect", {
+				redirect: "manual",
+			});
+			expect(response.status).toEqual(302);
+			expect(response.headers.get("Location")).toEqual("/me");
+		});
+	});
+
+	describe("headers", () => {
+		it("still attaches headers correctly", async () => {
+			const response = await waitUntilReady("http://localhost:8789/");
+
+			expect(response.headers.get("A-Header")).toEqual("Some-Value");
+		});
+	});
 });
