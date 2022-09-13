@@ -197,7 +197,7 @@ export function parseRequestInput(
 			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
 		}
 	} else {
-		input = `${protocol}://${readyAddress}:${readyPort}/`;
+		input = `${protocol}://${readyAddress}:${readyPort}`;
 	}
 
 	return [input, init];
