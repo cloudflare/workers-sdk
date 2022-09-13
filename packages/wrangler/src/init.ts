@@ -396,14 +396,14 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						...packageJsonContent,
 						scripts: {
 							...packageJsonContent.scripts,
-							...(isAddingTests &&
-								!packageJsonContent.scripts?.test && { test: "jest" }),
 							start: isCreatingWranglerToml
 								? `wrangler dev`
 								: `wrangler dev ${scriptPath}`,
 							deploy: isCreatingWranglerToml
 								? `wrangler publish`
 								: `wrangler publish ${scriptPath}`,
+							...(isAddingTests &&
+								!packageJsonContent.scripts?.test && { test: "jest" }),
 						},
 					},
 					null,
@@ -595,6 +595,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
+						isAddingTests: shouldCreateTests,
 						isCreatingWranglerToml: justCreatedWranglerToml,
 						packagePath: pathToPackageJson,
 						scriptPath: "src/index.js",
