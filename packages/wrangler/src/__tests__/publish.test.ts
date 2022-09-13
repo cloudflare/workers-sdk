@@ -6490,19 +6490,17 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should publish if the last deployed source check fails", async () => {
+		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
 		setMockRawResponse(
-			"/accounts/:accountId/workers/scripts/:scriptName",
-			"PUT",
+			"/accounts/:accountId/workers/services/:scriptName",
+			"GET",
 			() => {
-				return createFetchResult({}, true, [
-					{
-						code: 10090,
-						message: "workers.api.error.service_not_found",
-					},
+				return createFetchResult(null, false, [
+					{ code: 10090, message: "workers.api.error.service_not_found" },
 				]);
 			}
 		);
@@ -6519,6 +6517,28 @@ addEventListener('fetch', event => {});`
 		  "warn": "",
 		}
 	`);
+	});
+
+	it("should not publish if there's any other kind of error when checking deployment source", async () => {
+		unsetAllMocks();
+		writeWorkerSource();
+		writeWranglerToml();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		setMockRawResponse(
+			"/accounts/:accountId/workers/services/:scriptName",
+			"GET",
+			() => {
+				return createFetchResult(null, false, [
+					{ code: 10000, message: "Authentication error" },
+				]);
+			}
+		);
+
+		await runWrangler("publish index.js");
+		expect(std.err).toContain(
+			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
+		);
 	});
 });
 
