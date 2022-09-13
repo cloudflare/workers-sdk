@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { setup as createCloudflare } from "create-cloudflare";
+import degit from "degit";
 import { initHandler } from "./init";
 import { logger } from "./logger";
 import { CommandLineArgsError, printWranglerBanner } from ".";
@@ -66,6 +66,7 @@ export async function generateHandler({
 	}
 
 	const creationDirectory = generateWorkerDirectoryName(name);
+	const canonicalTemplate = normalizeTemplate(template);
 
 	if (site) {
 		const gitDirectory =
@@ -85,14 +86,15 @@ export async function generateHandler({
 	}
 
 	logger.log(
-		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
+		`Creating a worker in ${path.basename(
+			creationDirectory
+		)} from ${canonicalTemplate}`
 	);
 
-	await createCloudflare(path.basename(creationDirectory), template, {
-		init: true, // initialize a git repository
-		debug: logger.loggerLevel === "debug",
-		force: false, // do not overwrite an existing directory
-	});
+	await degit(canonicalTemplate, { cache: false, force: false, verbose: true })
+		.on("info", (info) => logger.debug(info.message))
+		.on("warn", (warning) => logger.warn(warning.message))
+		.clone(creationDirectory);
 }
 
 /**
@@ -128,4 +130,19 @@ function generateWorkerDirectoryName(workerName: string): string {
 	}
 
 	return workerDirectoryPath;
+}
+
+/**
+ * Normalizes template strings (such as `worker-typescript`) into a
+ * form degit understands (such as `cloudflare/templates/worker-typescript`)
+ *
+ * @param template a template string passed in via the command line
+ * @returns a normalized template string intelligible to degit
+ */
+function normalizeTemplate(template: string): string {
+	if (/\//.test(template)) {
+		return template;
+	} else {
+		return `cloudflare/templates/${template}`;
+	}
 }
