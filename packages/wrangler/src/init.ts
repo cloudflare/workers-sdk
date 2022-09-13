@@ -21,6 +21,7 @@ import type { RawConfig } from "./config";
 import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
+import type { PackageManager } from "./package-manager";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 export async function initOptions(yargs: Argv) {
@@ -355,48 +356,20 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		!packageJsonContent.scripts?.publish &&
 		shouldCreatePackageJson;
 
-	/*
-	 * Passes the array of accumulated devDeps to install through to
-	 * the package manager. Also generates a human-readable list
-	 * of packages it installed.
-	 * If there are no devDeps to install, optionally runs
-	 * the package manager's install command.
-	 */
-	async function installPackages(
-		shouldRunInstall: boolean,
-		depsToInstall: string[]
-	) {
-		//lets install the devDeps they asked for
-		//and run their package manager's install command if needed
-		if (depsToInstall.length > 0) {
-			const formatter = new Intl.ListFormat("en", {
-				style: "long",
-				type: "conjunction",
-			});
-			await packageManager.addDevDeps(...depsToInstall);
-			const versionlessPackages = depsToInstall.map((dep) =>
-				dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
-			);
-
-			logger.log(
-				`✨ Installed ${formatter.format(
-					versionlessPackages
-				)} into devDependencies`
-			);
-		} else {
-			if (shouldRunInstall) {
-				await packageManager.install();
-			}
-		}
-	}
-
-	async function writePackageJsonScriptsAndUpdateWranglerToml(
-		isWritingScripts: boolean,
-		isCreatingWranglerToml: boolean,
-		packagePath: string,
-		scriptPath: string,
-		extraToml: TOML.JsonMap
-	) {
+	async function writePackageJsonScriptsAndUpdateWranglerToml({
+		isWritingScripts,
+		isCreatingWranglerToml,
+		packagePath,
+		scriptPath,
+		extraToml,
+	}: {
+		isWritingScripts: boolean;
+		isCreatingWranglerToml: boolean;
+		isAddingTests?: boolean;
+		packagePath: string;
+		scriptPath: string;
+		extraToml: TOML.JsonMap;
+	}) {
 		if (isCreatingWranglerToml) {
 			// rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
 			const parsedWranglerToml = parseTOML(
@@ -455,53 +428,6 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		}
 	}
 
-	async function getNewWorkerType(newWorkerFilename: string) {
-		return select(
-			`Would you like to create a Worker at ${newWorkerFilename}?`,
-			[
-				{
-					value: "none",
-					label: "None",
-				},
-				{
-					value: "fetch",
-					label: "Fetch handler",
-				},
-				{
-					value: "scheduled",
-					label: "Scheduled handler",
-				},
-			],
-			1
-		) as Promise<"none" | "fetch" | "scheduled">;
-	}
-
-	function getNewWorkerTemplate(
-		lang: "js" | "ts",
-		workerType: "fetch" | "scheduled"
-	) {
-		const templates = {
-			"js-fetch": "new-worker.js",
-			"js-scheduled": "new-worker-scheduled.js",
-			"ts-fetch": "new-worker.ts",
-			"ts-scheduled": "new-worker-scheduled.ts",
-		};
-
-		return templates[`${lang}-${workerType}`];
-	}
-
-	function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
-		if (workerType === "scheduled") {
-			return {
-				triggers: {
-					crons: ["1 * * * *"],
-				},
-			};
-		}
-
-		return {};
-	}
-
 	if (isTypescriptProject) {
 		if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
 			const newWorkerFilename = path.relative(
@@ -533,17 +459,16 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					dashScript
 				);
 
-				await writePackageJsonScriptsAndUpdateWranglerToml(
-					shouldWritePackageJsonScripts,
-					justCreatedWranglerToml,
-					pathToPackageJson,
-					"src/index.ts",
-
-					(await getWorkerConfig(accountId, fromDashScriptName, {
+				await writePackageJsonScriptsAndUpdateWranglerToml({
+					isWritingScripts: shouldWritePackageJsonScripts,
+					isCreatingWranglerToml: justCreatedWranglerToml,
+					packagePath: pathToPackageJson,
+					scriptPath: "src/index.ts",
+					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
 						environments: serviceMetaData.environments,
-					})) as TOML.JsonMap
-				);
+					})) as TOML.JsonMap,
+				});
 			} else {
 				const newWorkerType = yesFlag
 					? "fetch"
@@ -567,13 +492,13 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						)}`
 					);
 
-					await writePackageJsonScriptsAndUpdateWranglerToml(
-						shouldWritePackageJsonScripts,
-						justCreatedWranglerToml,
-						pathToPackageJson,
-						"src/index.ts",
-						getNewWorkerToml(newWorkerType)
-					);
+					await writePackageJsonScriptsAndUpdateWranglerToml({
+						isWritingScripts: shouldWritePackageJsonScripts,
+						isCreatingWranglerToml: justCreatedWranglerToml,
+						packagePath: pathToPackageJson,
+						scriptPath: "src/index.ts",
+						extraToml: getNewWorkerToml(newWorkerType),
+					});
 				}
 			}
 		}
@@ -611,17 +536,17 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					dashScript
 				);
 
-				await writePackageJsonScriptsAndUpdateWranglerToml(
-					shouldWritePackageJsonScripts,
-					justCreatedWranglerToml,
-					pathToPackageJson,
-					"src/index.ts",
+				await writePackageJsonScriptsAndUpdateWranglerToml({
+					isWritingScripts: shouldWritePackageJsonScripts,
+					isCreatingWranglerToml: justCreatedWranglerToml,
+					packagePath: pathToPackageJson,
+					scriptPath: "src/index.ts",
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
-					(await getWorkerConfig(accountId, fromDashScriptName, {
+					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
 						environments: serviceMetaData.environments,
-					})) as TOML.JsonMap
-				);
+					})) as TOML.JsonMap,
+				});
 			} else {
 				const newWorkerType = yesFlag
 					? "fetch"
@@ -645,20 +570,24 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						)}`
 					);
 
-					await writePackageJsonScriptsAndUpdateWranglerToml(
-						shouldWritePackageJsonScripts,
-						justCreatedWranglerToml,
-						pathToPackageJson,
-						"src/index.js",
-						getNewWorkerToml(newWorkerType)
-					);
+					await writePackageJsonScriptsAndUpdateWranglerToml({
+						isWritingScripts: shouldWritePackageJsonScripts,
+						isCreatingWranglerToml: justCreatedWranglerToml,
+						packagePath: pathToPackageJson,
+						scriptPath: "src/index.js",
+						extraToml: getNewWorkerToml(newWorkerType),
+					});
 				}
 			}
 		}
 	}
 	// install packages as the final step of init
 	try {
-		await installPackages(shouldRunPackageManagerInstall, devDepsToInstall);
+		await installPackages(
+			shouldRunPackageManagerInstall,
+			devDepsToInstall,
+			packageManager
+		);
 	} catch (e) {
 		// fetching packages could fail due to loss of internet, etc
 		// we should let folks know we failed to fetch, but their
@@ -671,6 +600,89 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	// let users know what to do now
 	instructions.forEach((instruction) => logger.log(instruction));
+}
+
+/*
+ * Passes the array of accumulated devDeps to install through to
+ * the package manager. Also generates a human-readable list
+ * of packages it installed.
+ * If there are no devDeps to install, optionally runs
+ * the package manager's install command.
+ */
+async function installPackages(
+	shouldRunInstall: boolean,
+	depsToInstall: string[],
+	packageManager: PackageManager
+) {
+	//lets install the devDeps they asked for
+	//and run their package manager's install command if needed
+	if (depsToInstall.length > 0) {
+		const formatter = new Intl.ListFormat("en", {
+			style: "long",
+			type: "conjunction",
+		});
+		await packageManager.addDevDeps(...depsToInstall);
+		const versionlessPackages = depsToInstall.map((dep) =>
+			dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
+		);
+
+		logger.log(
+			`✨ Installed ${formatter.format(
+				versionlessPackages
+			)} into devDependencies`
+		);
+	} else {
+		if (shouldRunInstall) {
+			await packageManager.install();
+		}
+	}
+}
+
+async function getNewWorkerType(newWorkerFilename: string) {
+	return select(
+		`Would you like to create a Worker at ${newWorkerFilename}?`,
+		[
+			{
+				value: "none",
+				label: "None",
+			},
+			{
+				value: "fetch",
+				label: "Fetch handler",
+			},
+			{
+				value: "scheduled",
+				label: "Scheduled handler",
+			},
+		],
+		1
+	) as Promise<"none" | "fetch" | "scheduled">;
+}
+
+function getNewWorkerTemplate(
+	lang: "js" | "ts",
+	workerType: "fetch" | "scheduled"
+) {
+	const templates = {
+		"js-fetch": "new-worker.js",
+		"js-scheduled": "new-worker-scheduled.js",
+		"ts-fetch": "new-worker.ts",
+		"ts-scheduled": "new-worker-scheduled.ts",
+	};
+
+	return templates[`${lang}-${workerType}`];
+}
+
+function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
+	if (workerType === "scheduled") {
+		return {
+			triggers: {
+				crons: ["1 * * * *"],
+			},
+		};
+	}
+
+	return {};
 }
 
 /**
