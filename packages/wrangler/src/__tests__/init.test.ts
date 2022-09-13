@@ -1637,6 +1637,7 @@ describe("init", () => {
 							scripts: {
 								start: "wrangler dev",
 								deploy: "wrangler publish",
+								test: "jest",
 							},
 						}),
 					},
