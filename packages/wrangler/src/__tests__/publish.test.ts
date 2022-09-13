@@ -6510,13 +6510,13 @@ addEventListener('fetch', event => {});`
 		await runWrangler("publish index.js");
 		expect(std).toMatchInlineSnapshot(`
 		Object {
-			"debug": "",
-			"err": "",
-			"out": "Total Upload: xx KiB / gzip: xx KiB
+		  "debug": "",
+		  "err": "",
+		  "out": "Total Upload: xx KiB / gzip: xx KiB
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
-			https://test-name.test-sub-domain.workers.dev",
-			"warn": "",
+		  https://test-name.test-sub-domain.workers.dev",
+		  "warn": "",
 		}
 	`);
 	});
