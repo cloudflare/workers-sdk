@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.1.2
+
+### Patch Changes
+
+- [#1833](https://github.com/cloudflare/wrangler2/pull/1833) [`b1622395`](https://github.com/cloudflare/wrangler2/commit/b1622395641057b1eda0d165951fd9079036fefc) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: \_headers and \_redirects parsing in 'wrangler pages dev'
+
 ## 2.1.1
 
 ### Patch Changes
