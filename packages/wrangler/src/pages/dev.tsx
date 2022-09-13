@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
-import { build, build as workerJsBuild } from "esbuild";
+import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
 import { esbuildAliasExternalPlugin } from "../bundle";
 import { FatalError } from "../errors";
@@ -17,7 +17,6 @@ import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { YargsOptionsToInterface } from "./types";
-import type { Plugin } from "esbuild";
 import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
@@ -282,7 +281,7 @@ export const Handler = async ({
 		} else {
 			const runBuild = async () => {
 				try {
-					await workerJsBuild({
+					await esbuild.build({
 						entryPoints: [scriptPath],
 						write: false,
 						plugins: [blockWorkerJsImports],
@@ -317,31 +316,45 @@ export const Handler = async ({
 
 		if (existsSync(routesJSONPath)) {
 			const routesJSONContents = readFileSync(routesJSONPath, "utf-8");
-
-			try {
-				validateRoutes(JSON.parse(routesJSONContents), directory);
-			} catch (err) {
-				throw err;
-			}
-
 			entrypoint = join(tmpdir(), `${Math.random().toString(36).slice(2)}.js`);
 
-			await build({
-				entryPoints: [
-					resolve(getBasePath(), "templates/pages-dev-pipeline.ts"),
-				],
-				bundle: true,
-				sourcemap: true,
-				format: "esm",
-				plugins: [
-					esbuildAliasExternalPlugin({
-						__ENTRY_POINT__: scriptPath,
-					}),
-				],
-				outfile: entrypoint,
-				define: {
-					__ROUTES__: routesJSONContents,
-				},
+			const validateRoutesAndBuild = async (routesPath: string) => {
+				try {
+					validateRoutes(JSON.parse(routesJSONContents), routesPath);
+				} catch (err) {
+					if (err instanceof Error) {
+						throw new FatalError(
+							`Could not validate _routes.json at ${routesPath}: ${err}`,
+							1
+						);
+					}
+				}
+
+				await esbuild.build({
+					entryPoints: [
+						resolve(getBasePath(), "templates/pages-dev-pipeline.ts"),
+					],
+					bundle: true,
+					sourcemap: true,
+					format: "esm",
+					plugins: [
+						esbuildAliasExternalPlugin({
+							__ENTRY_POINT__: scriptPath,
+						}),
+					],
+					outfile: entrypoint,
+					define: {
+						__ROUTES__: routesJSONContents,
+					},
+				});
+			};
+
+			await validateRoutesAndBuild(directory);
+			watch([routesJSONPath], {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async () => {
+				await validateRoutesAndBuild(directory as string);
 			});
 		}
 	}
@@ -555,9 +568,9 @@ async function spawnProxyProcess({
 	return port;
 }
 
-const blockWorkerJsImports: Plugin = {
+const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
-	setup(build) {
+	setup(build: esbuild.PluginBuild) {
 		build.onResolve({ filter: /.*/g }, (_args) => {
 			logger.error(
 				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`

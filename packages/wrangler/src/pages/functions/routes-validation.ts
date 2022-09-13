@@ -33,69 +33,64 @@ export function isRoutesJSONSpec(data: unknown): data is RoutesJSONSpec {
 }
 
 export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
-	try {
-		if (!isRoutesJSONSpec(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.INVALID_JSON_SPEC,
-					routesPath
-				),
-				1
-			);
-		}
+	if (!isRoutesJSONSpec(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.INVALID_JSON_SPEC,
+				routesPath
+			),
+			1
+		);
+	}
 
-		if (!hasIncludeRules(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.NO_INCLUDE_RULES,
-					routesPath
-				),
-				1
-			);
-		}
+	if (!hasIncludeRules(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.NO_INCLUDE_RULES,
+				routesPath
+			),
+			1
+		);
+	}
 
-		if (!hasValidRulesCount(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.TOO_MANY_RULES,
-					routesPath
-				),
-				1
-			);
-		}
+	if (!hasValidRulesCount(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.TOO_MANY_RULES,
+				routesPath
+			),
+			1
+		);
+	}
 
-		if (!hasValidRuleCharCount(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.RULE_TOO_LONG,
-					routesPath
-				),
-				1
-			);
-		}
+	if (!hasValidRuleCharCount(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.RULE_TOO_LONG,
+				routesPath
+			),
+			1
+		);
+	}
 
-		if (!hasValidRules(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.INVALID_RULES,
-					routesPath
-				),
-				1
-			);
-		}
+	if (!hasValidRules(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.INVALID_RULES,
+				routesPath
+			),
+			1
+		);
+	}
 
-		if (hasNoOverlappingRules(routesJSON)) {
-			throw new FatalError(
-				getRoutesValidationErrorMessage(
-					RoutesValidationError.OVERLAPPING_RULES,
-					routesPath
-				),
-				1
-			);
-		}
-	} catch (err) {
-		// TODO what do we want here
-		throw err;
+	if (hasNoOverlappingRules(routesJSON)) {
+		throw new FatalError(
+			getRoutesValidationErrorMessage(
+				RoutesValidationError.OVERLAPPING_RULES,
+				routesPath
+			),
+			1
+		);
 	}
 }
 
@@ -105,10 +100,12 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
  */
 function hasIncludeRules(routesJSON: RoutesJSONSpec): boolean {
 	// sanity check
-	// this should never be the case, because of the context from which tehse validation fns are
+	// this should never be the case, because of the context from which these validation fns are
 	// called, but let's not assume anything
 	if (!routesJSON || !routesJSON.include) {
-		throw new Error();
+		throw new Error(
+			"Function `hasIncludeRules` was called out of context. Attempting to validate include rules for routes that are undefined or an invalid RoutesJSONSpec"
+		);
 	}
 
 	return routesJSON?.include?.length > 0;
@@ -121,7 +118,9 @@ function hasIncludeRules(routesJSON: RoutesJSONSpec): boolean {
 function hasValidRulesCount(routesJSON: RoutesJSONSpec): boolean {
 	// sanity check
 	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error();
+		throw new Error(
+			"Function `hasValidRulesCount` was called out of context. Attempting to validate maximum rules count for routes that are undefined or an invalid RoutesJSONSpec"
+		);
 	}
 
 	return (
@@ -137,7 +136,9 @@ function hasValidRulesCount(routesJSON: RoutesJSONSpec): boolean {
 function hasValidRuleCharCount(routesJSON: RoutesJSONSpec): boolean {
 	// sanity check
 	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error();
+		throw new Error(
+			"Function `hasValidRuleCharCount` was called out of context. Attempting to validate rules maximum character count for routes that are undefined or an invalid RoutesJSONSpec"
+		);
 	}
 
 	const rules = [...routesJSON.include, ...routesJSON.exclude];
@@ -154,7 +155,9 @@ function hasValidRuleCharCount(routesJSON: RoutesJSONSpec): boolean {
 function hasValidRules(routesJSON: RoutesJSONSpec): boolean {
 	// sanity check
 	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error();
+		throw new Error(
+			"Function `hasValidRules` was called out of context. Attempting to validate rules for routes that are undefined or an invalid RoutesJSONSpec"
+		);
 	}
 
 	const rules = [...routesJSON.include, ...routesJSON.exclude];
@@ -165,7 +168,9 @@ function hasValidRules(routesJSON: RoutesJSONSpec): boolean {
 function hasNoOverlappingRules(routesJSON: RoutesJSONSpec): boolean {
 	// sanity check
 	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error();
+		throw new Error(
+			"Function `hasNoOverlappingRules` was called out of context. Attempting to validate rules for routes that are undefined or an invalid RoutesJSONSpec"
+		);
 	}
 
 	return false;

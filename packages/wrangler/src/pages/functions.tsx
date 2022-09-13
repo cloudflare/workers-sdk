@@ -66,11 +66,7 @@ export async function OptimizeRoutesHandler({
 
 	const routes = JSON.parse(routesFileContents);
 
-	try {
-		validateRoutes(routes, routesPath);
-	} catch (err) {
-		throw err;
-	}
+	validateRoutes(routes, routesPath);
 
 	const optimizedRoutes = optimizeRoutesJSONSpec(routes);
 	const optimizedRoutesContents = JSON.stringify(optimizedRoutes);
