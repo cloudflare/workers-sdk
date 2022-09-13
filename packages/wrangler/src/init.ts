@@ -582,7 +582,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.js"),
 							readFileSync(
-								path.join(getBasePath(), `templates/new-worker.test.js`)
+								path.join(getBasePath(), `templates/test-new-worker.js`)
 							)
 						);
 						logger.log(
