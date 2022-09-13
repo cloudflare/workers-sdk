@@ -696,7 +696,7 @@ async function validateDevServerSettings(
 	const localPersistencePath = args.persistTo
 		? // If path specified, always treat it as relative to cwd()
 		  path.resolve(process.cwd(), args.persistTo)
-		: args.experimentalEnableLocalPersistence || args.persist
+		: args.persist
 		? // If just flagged on, treat it as relative to wrangler.toml,
 		  // if one can be found, otherwise cwd()
 		  path.resolve(config.configPath || process.cwd(), ".wrangler/state")

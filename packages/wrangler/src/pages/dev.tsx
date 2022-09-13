@@ -129,7 +129,7 @@ export function Options(yargs: Argv) {
 			},
 			"persist-to": {
 				describe:
-					"Specify directory to use for local persistance (implies --persist)",
+					"Specify directory to use for local persistence (implies --persist)",
 				type: "string",
 				requiresArg: true,
 			},
@@ -202,6 +202,14 @@ export const Handler = async ({
 		if (proxyPort === undefined) return undefined;
 	} else {
 		directory = resolve(directory);
+	}
+
+	if (experimentalEnableLocalPersistence) {
+		logger.warn(
+			`--experimental-enable-local-persistence is deprecated.\n` +
+				`Move any existing data to .wrangler/state and use --persist, or\n` +
+				`use --persist-to=./wrangler-local-state to keep using the old path.`
+		);
 	}
 
 	let scriptReadyResolve: () => void;
@@ -373,7 +381,6 @@ export const Handler = async ({
 				directory,
 			},
 			forceLocal: true,
-			experimentalEnableLocalPersistence,
 			persist,
 			persistTo,
 			showInteractiveDevSession: undefined,
