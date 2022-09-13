@@ -6490,19 +6490,17 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should publish if the last deployed source check fails", async () => {
+		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
 		setMockRawResponse(
-			"/accounts/:accountId/workers/scripts/:scriptName",
-			"PUT",
+			"/accounts/:accountId/workers/services/:scriptName",
+			"GET",
 			() => {
-				return createFetchResult({}, true, [
-					{
-						code: 10090,
-						message: "workers.api.error.service_not_found",
-					},
+				return createFetchResult(null, false, [
+					{ code: 10090, message: "workers.api.error.service_not_found" },
 				]);
 			}
 		);
