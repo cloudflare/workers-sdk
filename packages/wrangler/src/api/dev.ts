@@ -3,7 +3,7 @@ import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
-import type { RequestInit, Response } from "undici";
+import type { RequestInit, Response, RequestInfo } from "undici";
 
 interface DevOptions {
 	config?: string;
@@ -59,7 +59,10 @@ interface DevApiOptions {
 
 interface UnstableDev {
 	stop: () => Promise<void>;
-	fetch: (init?: RequestInit) => Promise<Response | undefined>;
+	fetch: (
+		input?: RequestInfo,
+		init?: RequestInit
+	) => Promise<Response | undefined>;
 	waitUntilExit: () => Promise<void>;
 }
 /**
@@ -112,10 +115,8 @@ export async function unstable_dev(
 				// with an object that lets you fetch and stop the dev server
 				resolve({
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
-					},
+					fetch: async (input?: RequestInfo, init?: RequestInit) =>
+						apiDevFetch(readyAddress, readyPort, input, init),
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
 						return;
@@ -147,13 +148,37 @@ export async function unstable_dev(
 			}).then((devServer) => {
 				resolve({
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
-					},
+					fetch: async (input?: RequestInfo, init?: RequestInit) =>
+						apiDevFetch(readyAddress, readyPort, input, init),
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});
 		});
 	}
+}
+
+async function apiDevFetch(
+	readyAddress: string,
+	readyPort: number,
+	input?: RequestInfo,
+	init?: RequestInit
+) {
+	if (input instanceof Request) {
+		input = new Request(input, {
+			...init,
+		});
+	} else if (input instanceof URL) {
+		input = `http://${readyAddress}:${readyPort}${input.pathname}`;
+	} else if (typeof input === "string") {
+		try {
+			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
+			// Will error if we try and pass "/something" into new URL("/something")
+			input = `http://${readyAddress}:${readyPort}${new URL(input).pathname}`;
+		} catch {
+			input = `http://${readyAddress}:${readyPort}${input}`;
+		}
+	}
+
+	const urlToFetch = `http://${readyAddress}:${readyPort}/`;
+	return await fetch((input = urlToFetch), init);
 }
