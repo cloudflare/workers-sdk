@@ -207,8 +207,8 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	describe("it still attaches redirects correctly", () => {
-		it("should allow creates", async () => {
+	describe("redirects", () => {
+		it("still attaches redirects correctly", async () => {
 			const response = await waitUntilReady("http://localhost:8789/redirect", {
 				redirect: "manual",
 			});
@@ -217,8 +217,8 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	describe("it still attaches headers correctly", () => {
-		it("should allow creates", async () => {
+	describe("headers", () => {
+		it("still attaches headers correctly", async () => {
 			const response = await waitUntilReady("http://localhost:8789/");
 
 			expect(response.headers.get("A-Header")).toEqual("Some-Value");
