@@ -588,7 +588,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 							readFileSync(
 								path.join(
 									getBasePath(),
-									`templates/test-new-worker-${newWorkerTestType}.js`
+									`templates/test-${newWorkerTestType}-new-worker.js`
 								)
 							)
 						);
