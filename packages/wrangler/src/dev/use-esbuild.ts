@@ -180,6 +180,7 @@ export function useEsbuild({
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
 		targetConsumer,
+		testScheduled,
 	]);
 	return bundle;
 }

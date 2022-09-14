@@ -65,6 +65,7 @@ export async function startDevServer(
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
 			services: props.bindings.services,
+			testScheduled: props.testScheduled,
 		});
 
 		//run local now
@@ -129,6 +130,7 @@ async function runEsbuild({
 	nodeCompat,
 	define,
 	noBundle,
+	testScheduled,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -143,6 +145,7 @@ async function runEsbuild({
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
+	testScheduled?: boolean;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -178,6 +181,7 @@ async function runEsbuild({
 				workerDefinitions: undefined,
 				firstPartyWorkerDevFacade: undefined,
 				targetConsumer: "dev", // We are starting a dev server
+				testScheduled,
 		  });
 
 	return {

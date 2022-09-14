@@ -76,7 +76,7 @@ export async function bundleWorker(
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
 		targetConsumer: "dev" | "publish";
-		testScheduled: boolean | undefined;
+		testScheduled?: boolean | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
