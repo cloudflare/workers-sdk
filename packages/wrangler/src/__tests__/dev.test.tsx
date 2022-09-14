@@ -1027,7 +1027,8 @@ describe("wrangler dev", () => {
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
 			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
-			      --inspect                                    Enable dev tools  [deprecated] [boolean]",
+			      --inspect                                    Enable dev tools  [deprecated] [boolean]
+			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]",
 			  "warn": "",
 			}
 		`);
