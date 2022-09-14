@@ -236,6 +236,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	);
 	let shouldCreatePackageJson = false;
 	let shouldCreateTests = false;
+	let newWorkerTestType: "jest" | "vitest" = "jest";
 
 	if (!pathToPackageJson) {
 		// If no package.json exists, ask to create one
@@ -360,6 +361,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	async function writePackageJsonScriptsAndUpdateWranglerToml({
 		isWritingScripts,
 		isAddingTests,
+		testRunner,
 		isCreatingWranglerToml,
 		packagePath,
 		scriptPath,
@@ -367,11 +369,15 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	}: {
 		isWritingScripts: boolean;
 		isAddingTests?: boolean;
+		testRunner?: "jest" | "vitest";
 		isCreatingWranglerToml: boolean;
 		packagePath: string;
 		scriptPath: string;
 		extraToml: TOML.JsonMap;
 	}) {
+		if (isAddingTests && !testRunner) {
+			logger.error("testRunner is required if isAddingTests");
+		}
 		if (isCreatingWranglerToml) {
 			// rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
 			const parsedWranglerToml = parseTOML(
@@ -403,7 +409,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 							deploy: isCreatingWranglerToml
 								? `wrangler publish`
 								: `wrangler publish ${scriptPath}`,
-							...(isAddingTestScripts && { test: "jest" }),
+							...(isAddingTestScripts && { test: testRunner }),
 						},
 					},
 					null,
@@ -580,12 +586,17 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					shouldCreateTests =
 						yesFlag ||
 						(await confirm("Would you like us to write your first test?"));
+
 					if (shouldCreateTests) {
-						devDepsToInstall.push("jest");
+						newWorkerTestType = await getNewWorkerTestType();
+						devDepsToInstall.push(newWorkerTestType);
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.js"),
 							readFileSync(
-								path.join(getBasePath(), `templates/test-new-worker.js`)
+								path.join(
+									getBasePath(),
+									`templates/init-tests/test-${newWorkerTestType}-new-worker.js`
+								)
 							)
 						);
 						logger.log(
@@ -599,6 +610,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
 						isAddingTests: shouldCreateTests,
+						testRunner: newWorkerTestType,
 						isCreatingWranglerToml: justCreatedWranglerToml,
 						packagePath: pathToPackageJson,
 						scriptPath: "src/index.js",
@@ -684,6 +696,23 @@ async function getNewWorkerType(newWorkerFilename: string) {
 		],
 		1
 	) as Promise<"none" | "fetch" | "scheduled">;
+}
+
+async function getNewWorkerTestType() {
+	return select(
+		`Which test runner would you like to use?`,
+		[
+			{
+				value: "vitest",
+				label: "Vitest",
+			},
+			{
+				value: "jest",
+				label: "Jest",
+			},
+		],
+		1
+	) as Promise<"jest" | "vitest">;
 }
 
 function getNewWorkerTemplate(
