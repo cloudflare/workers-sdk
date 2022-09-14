@@ -124,6 +124,7 @@ describe("wrangler secret", () => {
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: secret-name-1
 			✨ Successfully created secret for key: secret-name-2
+
 			Finished processing secrets JSON file:
 			✨ 2 secrets successfully uploaded"
 		`);
@@ -158,6 +159,7 @@ describe("wrangler secret", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
+
 			Finished processing secrets JSON file:
 			✨ 0 secrets successfully uploaded
 			🚨 2 secrets failed to upload"
@@ -216,6 +218,7 @@ describe("wrangler secret", () => {
 			✨ Successfully created secret for key: secret-name-2
 			✨ Successfully created secret for key: secret-name-4
 			✨ Successfully created secret for key: secret-name-6
+
 			Finished processing secrets JSON file:
 			✨ 3 secrets successfully uploaded
 			🚨 4 secrets failed to upload"

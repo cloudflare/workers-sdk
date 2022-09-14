@@ -1253,6 +1253,7 @@ function createCLIParser(argv: string[]) {
 			);
 			const successes = bulkOutcomes.filter((outcome) => outcome).length;
 			const failures = bulkOutcomes.length - successes;
+			logger.log("");
 			logger.log("Finished processing secrets JSON file:");
 			logger.log(`✨ ${successes} secrets successfully uploaded`);
 			if (failures > 0) {
