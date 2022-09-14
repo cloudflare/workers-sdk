@@ -550,7 +550,7 @@ export async function startApiDev(args: StartDevOptions) {
 			local: true,
 			firstPartyWorker: undefined,
 			sendMetrics: undefined,
-			testScheduled: args["test-scheduled"],
+			testScheduled: args.testScheduled,
 		});
 	}
 

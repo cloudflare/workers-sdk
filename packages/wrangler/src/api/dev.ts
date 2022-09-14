@@ -155,6 +155,7 @@ export async function unstable_dev(
 						readyAddress = address;
 						ready(devServer);
 					},
+					testScheduled: options?.testScheduled ?? false,
 				});
 			}).then((devServer) => {
 				resolve({
