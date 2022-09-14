@@ -1,4 +1,4 @@
-import { unstable_dev } from "wrangler";
+const { unstable_dev } = require("wrangler");
 
 describe("Worker", () => {
 	let worker;
