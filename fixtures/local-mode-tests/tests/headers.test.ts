@@ -2,7 +2,10 @@ import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
 	let worker: {
-		fetch: (init?: RequestInit) => Promise<Response | undefined>;
+		fetch: (
+			input?: RequestInfo,
+			init?: RequestInit
+		) => Promise<Response | undefined>;
 		stop: () => Promise<void>;
 	};
 
@@ -19,7 +22,7 @@ describe("worker", () => {
 	});
 
 	it("should return Hi by default", async () => {
-		const resp = await worker.fetch();
+		const resp = await worker.fetch("/");
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -27,7 +30,7 @@ describe("worker", () => {
 		}
 	});
 	it("should return Bonjour when French", async () => {
-		const resp = await worker.fetch({ headers: { lang: "fr-FR" } });
+		const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -36,7 +39,7 @@ describe("worker", () => {
 	});
 
 	it("should return G'day when Australian", async () => {
-		const resp = await worker.fetch({ headers: { lang: "en-AU" } });
+		const resp = await worker.fetch("/", { headers: { lang: "en-AU" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -45,7 +48,7 @@ describe("worker", () => {
 	});
 
 	it("should return Good day when British", async () => {
-		const resp = await worker.fetch({ headers: { lang: "en-GB" } });
+		const resp = await worker.fetch("/", { headers: { lang: "en-GB" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -54,7 +57,7 @@ describe("worker", () => {
 	});
 
 	it("should return Howdy when Texan", async () => {
-		const resp = await worker.fetch({ headers: { lang: "en-TX" } });
+		const resp = await worker.fetch("/", { headers: { lang: "en-TX" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -63,7 +66,7 @@ describe("worker", () => {
 	});
 
 	it("should return Hello when American", async () => {
-		const resp = await worker.fetch({ headers: { lang: "en-US" } });
+		const resp = await worker.fetch("/", { headers: { lang: "en-US" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -72,7 +75,7 @@ describe("worker", () => {
 	});
 
 	it("should return Hola when Spanish", async () => {
-		const resp = await worker.fetch({ headers: { lang: "es-ES" } });
+		const resp = await worker.fetch("/", { headers: { lang: "es-ES" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();

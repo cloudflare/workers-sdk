@@ -1,9 +1,9 @@
-import { fetch } from "undici";
+import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
-import type { RequestInit, Response } from "undici";
+import type { RequestInit, Response, RequestInfo } from "undici";
 
 interface DevOptions {
 	config?: string;
@@ -59,7 +59,10 @@ interface DevApiOptions {
 
 export interface UnstableDevWorker {
 	stop: () => Promise<void>;
-	fetch: (init?: RequestInit) => Promise<Response | undefined>;
+	fetch: (
+		input?: RequestInfo,
+		init?: RequestInit
+	) => Promise<Response | undefined>;
 	waitUntilExit: () => Promise<void>;
 }
 /**
@@ -112,9 +115,16 @@ export async function unstable_dev(
 				// with an object that lets you fetch and stop the dev server
 				resolve({
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
 					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
@@ -147,13 +157,48 @@ export async function unstable_dev(
 			}).then((devServer) => {
 				resolve({
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
 					},
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});
 		});
 	}
+}
+
+export function parseRequestInput(
+	readyAddress: string,
+	readyPort: number,
+	input?: RequestInfo,
+	init?: RequestInit,
+	protocol: "http" | "https" = "http"
+): [RequestInfo, RequestInit | undefined] {
+	if (input instanceof Request) {
+		return [input, undefined];
+	} else if (input instanceof URL) {
+		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
+	} else if (typeof input === "string") {
+		try {
+			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
+			// Will error if we try and pass "/something" into new URL("/something")
+			input = `${protocol}://${readyAddress}:${readyPort}${
+				new URL(input).pathname
+			}`;
+		} catch {
+			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
+		}
+	} else {
+		input = `${protocol}://${readyAddress}:${readyPort}`;
+	}
+
+	return [input, init];
 }
