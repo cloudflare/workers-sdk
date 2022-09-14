@@ -1227,7 +1227,7 @@ function createCLIParser(argv: string[]) {
 					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
 					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
 			// Until we have a bulk route for secrets, we need to make a request for each key/value pair
-			await Promise.allSettled(
+			const bulkOutcomes = await Promise.all(
 				Object.entries(content).map(async ([key, value]) => {
 					return fetchResult(url, {
 						method: "PUT",
@@ -1240,16 +1240,24 @@ function createCLIParser(argv: string[]) {
 					})
 						.then(() => {
 							logger.log(`✨ Successfully created secret for key: ${key}`);
+							return true;
 						})
 						.catch((e) => {
 							logger.error(
 								`🚨 Error uploading secret for key: ${key}:
 										${e.message}`
 							);
+							return false;
 						});
 				})
 			);
-			return logger.log("✨ Finished processing secrets JSON file");
+			const successes = bulkOutcomes.filter((outcome) => outcome).length;
+			const failures = bulkOutcomes.length - successes;
+			logger.log("Finished processing secrets JSON file:");
+			logger.log(`✨ ${successes} secrets successfully uploaded`);
+			if (failures > 0) {
+				logger.log(`🚨 ${failures} secrets failed to upload`);
+			}
 		}
 	);
 
