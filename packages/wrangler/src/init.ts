@@ -416,7 +416,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				}npm start\``
 			);
 			if (isAddingTests && !packageJsonContent.scripts?.test) {
-				instructions.push(`To start testing your Worker, run \`npm run test\``);
+				instructions.push(`To start testing your Worker, run \`npm test\``);
 			}
 			instructions.push(
 				`To publish your Worker to the Internet, run \`npm run deploy\``

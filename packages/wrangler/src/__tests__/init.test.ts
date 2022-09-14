@@ -1651,6 +1651,7 @@ describe("init", () => {
 			✨ Installed jest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 		});
