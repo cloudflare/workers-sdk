@@ -124,7 +124,9 @@ describe("wrangler secret", () => {
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: secret-name-1
 			✨ Successfully created secret for key: secret-name-2
-			✨ Finished processing secrets JSON file"
+
+			Finished processing secrets JSON file:
+			✨ 2 secrets successfully uploaded"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -157,7 +159,10 @@ describe("wrangler secret", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
-			✨ Finished processing secrets JSON file"
+
+			Finished processing secrets JSON file:
+			✨ 0 secrets successfully uploaded
+			🚨 2 secrets failed to upload"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
@@ -168,6 +173,75 @@ describe("wrangler secret", () => {
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-2:[0m
 
 			  										Failed to create secret 2
+
+			"
+		`);
+			});
+
+			it("should count success and failed secret:bulk", async () => {
+				writeFileSync(
+					"secret.json",
+					JSON.stringify({
+						"secret-name-1": "secret_text",
+						"secret-name-2": "secret_text",
+						"secret-name-3": "secret_text",
+						"secret-name-4": "secret_text",
+						"secret-name-5": "secret_text",
+						"secret-name-6": "secret_text",
+						"secret-name-7": "secret_text",
+					})
+				);
+
+				// User counter to pass different secrets to the request mock
+				let counter = 0;
+				setMockResponse(
+					`/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					"PUT",
+					([_url, accountId]) => {
+						expect(accountId).toEqual("some-account-id");
+						counter++;
+
+						if (counter % 2 === 0) {
+							return { name: `secret-name-${counter}`, type: "secret_text" };
+						} else {
+							return Promise.reject(
+								new Error(`Failed to create secret ${counter}`)
+							);
+						}
+					}
+				);
+
+				await runWrangler("secret:bulk ./secret.json --name script-name");
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret-name-2
+			✨ Successfully created secret for key: secret-name-4
+			✨ Successfully created secret for key: secret-name-6
+
+			Finished processing secrets JSON file:
+			✨ 3 secrets successfully uploaded
+			🚨 4 secrets failed to upload"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
+
+			  										Failed to create secret 1
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-3:[0m
+
+			  										Failed to create secret 3
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-5:[0m
+
+			  										Failed to create secret 5
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-7:[0m
+
+			  										Failed to create secret 7
 
 			"
 		`);
