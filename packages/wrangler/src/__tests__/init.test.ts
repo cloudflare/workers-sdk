@@ -1618,10 +1618,13 @@ describe("init", () => {
 				},
 				{ text: "Would you like us to write your first test?", result: true }
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.js?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "jest" }
+			);
 
 			await runWrangler("init");
 

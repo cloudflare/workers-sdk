@@ -581,11 +581,15 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 						yesFlag ||
 						(await confirm("Would you like us to write your first test?"));
 					if (shouldCreateTests) {
-						devDepsToInstall.push("jest");
+						const newWorkerTestType = await getNewWorkerTestType();
+						devDepsToInstall.push(newWorkerTestType);
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.js"),
 							readFileSync(
-								path.join(getBasePath(), `templates/test-new-worker.js`)
+								path.join(
+									getBasePath(),
+									`templates/test-new-worker-${newWorkerTestType}.js`
+								)
 							)
 						);
 						logger.log(
@@ -684,6 +688,23 @@ async function getNewWorkerType(newWorkerFilename: string) {
 		],
 		1
 	) as Promise<"none" | "fetch" | "scheduled">;
+}
+
+async function getNewWorkerTestType() {
+	return select(
+		`Which test runner would you like to use?`,
+		[
+			{
+				value: "vitest",
+				label: "Vitest",
+			},
+			{
+				value: "jest",
+				label: "Jest",
+			},
+		],
+		1
+	) as Promise<"jest" | "vitest">;
 }
 
 function getNewWorkerTemplate(
