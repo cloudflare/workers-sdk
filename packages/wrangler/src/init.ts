@@ -387,7 +387,8 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		}
 		const isNamedWorker =
 			isCreatingWranglerToml && path.dirname(packagePath) !== process.cwd();
-
+		const isAddingTestScripts =
+			isAddingTests && !packageJsonContent.scripts?.test;
 		if (isWritingScripts) {
 			await writeFile(
 				packagePath,
@@ -402,8 +403,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 							deploy: isCreatingWranglerToml
 								? `wrangler publish`
 								: `wrangler publish ${scriptPath}`,
-							...(isAddingTests &&
-								!packageJsonContent.scripts?.test && { test: "jest" }),
+							...(isAddingTestScripts && { test: "jest" }),
 						},
 					},
 					null,
@@ -415,7 +415,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					isNamedWorker ? `cd ${args.name} && ` : ""
 				}npm start\``
 			);
-			if (isAddingTests && !packageJsonContent.scripts?.test) {
+			if (isAddingTestScripts) {
 				instructions.push(`To start testing your Worker, run \`npm test\``);
 			}
 			instructions.push(
