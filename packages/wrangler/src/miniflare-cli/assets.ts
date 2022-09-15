@@ -189,7 +189,14 @@ async function generateAssetsFetch(
 				}
 				const body = readFileSync(filepath) as unknown as ReadableStream;
 
-				const contentType = getType(filepath) || "application/octet-stream";
+				let contentType = getType(filepath) || "application/octet-stream";
+				if (
+					contentType.startsWith("text/") &&
+					!contentType.includes("charset")
+				) {
+					contentType = `${contentType}; charset=utf-8`;
+				}
+
 				return { body, contentType };
 			},
 		});

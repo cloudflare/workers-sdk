@@ -8,7 +8,7 @@ globalThis.URL = (function (globalURL) {
 	return PatchedURL as unknown as typeof globalURL;
 
 	function PatchedURL(input: string, base?: string | URL) {
-		const url = new URL(encodeURI(input), base);
+		const url = new globalURL(encodeURI(input), base);
 
 		return new Proxy(url, {
 			get(target, prop) {
