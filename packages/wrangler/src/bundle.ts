@@ -433,6 +433,11 @@ async function applyMiddlewareLoaderFacade(
 			export default facade;`
 		);
 
+		middleware.map((val) => {
+			console.log(path.resolve(getBasePath(), val.path));
+			console.log(toUrlPath(path.resolve(getBasePath(), val.path)));
+		});
+
 		await esbuild.build({
 			entryPoints: [path.resolve(getBasePath(), dynamicFacadePath)],
 			bundle: true,
