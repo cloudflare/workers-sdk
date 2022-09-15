@@ -433,11 +433,6 @@ async function applyMiddlewareLoaderFacade(
 			export default facade;`
 		);
 
-		middleware.map((val) => {
-			console.log(path.resolve(getBasePath(), val.path));
-			console.log(toUrlPath(path.resolve(getBasePath(), val.path)));
-		});
-
 		await esbuild.build({
 			entryPoints: [path.resolve(getBasePath(), dynamicFacadePath)],
 			bundle: true,
@@ -475,9 +470,8 @@ async function applyMiddlewareLoaderFacade(
 		const imports = middlewareIdentifiers
 			.map(
 				(m, i) =>
-					`import ${m} from "${path.resolve(
-						getBasePath(),
-						middleware[i].path
+					`import ${m} from "${toUrlPath(
+						path.resolve(getBasePath(), middleware[i].path)
 					)}";`
 			)
 			.join("\n");
