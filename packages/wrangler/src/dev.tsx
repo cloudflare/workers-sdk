@@ -72,6 +72,7 @@ interface DevArgs {
 	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
+	"test-scheduled"?: boolean;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -273,6 +274,11 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Use legacy environments",
 				hidden: true,
 			})
+			.option("test-scheduled", {
+				describe: "Test scheduled events by visiting /__scheduled in browser",
+				type: "boolean",
+				default: false,
+			})
 	);
 }
 
@@ -430,6 +436,7 @@ export async function startDev(args: StartDevOptions) {
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
+					testScheduled={args["test-scheduled"]}
 				/>
 			);
 		}
@@ -543,6 +550,7 @@ export async function startApiDev(args: StartDevOptions) {
 			local: true,
 			firstPartyWorker: undefined,
 			sendMetrics: undefined,
+			testScheduled: args.testScheduled,
 		});
 	}
 

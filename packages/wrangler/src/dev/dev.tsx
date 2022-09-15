@@ -164,6 +164,7 @@ export type DevProps = {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
+	testScheduled: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -259,6 +260,7 @@ function DevSession(props: DevSessionProps) {
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		// Enable the bundling to know whether we are using dev or publish
 		targetConsumer: "dev",
+		testScheduled: props.testScheduled ?? false,
 	});
 
 	return props.local ? (

@@ -52,6 +52,7 @@ export interface LocalProps {
 	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+	testScheduled?: boolean;
 }
 
 export function Local(props: LocalProps) {
