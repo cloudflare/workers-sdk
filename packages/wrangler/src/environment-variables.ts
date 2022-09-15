@@ -15,6 +15,35 @@ type DeprecatedNames =
 	| "CF_API_KEY"
 	| "CF_EMAIL"
 	| "CF_API_BASE_URL";
+
+/**
+ * Create a function used to access an environment variable.
+ *
+ * This is not memoized to allow us to change the value at runtime, such as in testing.
+ * A warning is shown if the client is using a deprecated version - but only once.
+ */
+export function getEnvironmentVariableFactory({
+	variableName,
+	deprecatedName,
+}: {
+	variableName: VariableNames;
+	deprecatedName?: DeprecatedNames;
+}): () => string | undefined;
+/**
+ * Create a function used to access an environment variable, with a default value.
+ *
+ * This is not memoized to allow us to change the value at runtime, such as in testing.
+ * A warning is shown if the client is using a deprecated version - but only once.
+ */
+export function getEnvironmentVariableFactory({
+	variableName,
+	deprecatedName,
+	defaultValue,
+}: {
+	variableName: VariableNames;
+	deprecatedName?: DeprecatedNames;
+	defaultValue: string;
+}): () => string;
 /**
  * Create a function used to access an environment variable.
  *
@@ -29,7 +58,7 @@ export function getEnvironmentVariableFactory({
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
 	defaultValue?: string;
-}) {
+}): () => string | undefined {
 	let hasWarned = false;
 	return () => {
 		if (process.env[variableName]) {
