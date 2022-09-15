@@ -110,7 +110,6 @@ export async function unstable_dev(
 						readyAddress = address;
 						ready(devServer);
 					},
-					testScheduled: options?.testScheduled ?? false,
 				});
 			}).then((devServer) => {
 				// now that the inner promise has resolved, we can resolve the outer promise
@@ -155,7 +154,6 @@ export async function unstable_dev(
 						readyAddress = address;
 						ready(devServer);
 					},
-					testScheduled: options?.testScheduled ?? false,
 				});
 			}).then((devServer) => {
 				resolve({
