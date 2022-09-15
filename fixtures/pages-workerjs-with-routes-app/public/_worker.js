@@ -9,6 +9,10 @@ export default {
 			return new Response("A plus tard alligator 👋");
 		}
 
+		if (url.pathname.startsWith("/party")) {
+			return new Response("Oops! Tous les alligators sont allés à la fête 🎉");
+		}
+
 		if (url.pathname.startsWith("/date")) {
 			return new Response(new Date().toISOString());
 		}

@@ -15,9 +15,9 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
-import { PAGES_CONFIG_CACHE_FILENAME, ROUTES_SPEC_VERSION } from "./constants";
+import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
-import { isRoutesJSONSpec } from "./functions/routes-transformation";
+import { validateRoutes } from "./functions/routes-validation";
 import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
@@ -343,7 +343,8 @@ export const Handler = async ({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				validateRoutesFile(_routesCustom, join(directory, "_routes.json"));
+				const routesCustomJSON = JSON.parse(_routesCustom);
+				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
 					"_routes.json",
@@ -380,7 +381,8 @@ export const Handler = async ({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				validateRoutesFile(_routesCustom, join(directory, "_routes.json"));
+				const routesCustomJSON = JSON.parse(_routesCustom);
+				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
 					"_routes.json",
@@ -415,21 +417,3 @@ export const Handler = async ({
 	);
 	await metrics.sendMetricsEvent("create pages deployment");
 };
-
-function validateRoutesFile(_routes: string, routesPath: string) {
-	const routes = JSON.parse(_routes);
-
-	if (!isRoutesJSONSpec(routes)) {
-		throw new FatalError(
-			`Invalid _routes.json file found at: ${routesPath}. Please make sure the JSON object has the following format:
-      {
-        version: ${ROUTES_SPEC_VERSION};
-        include: string[];
-        exclude: string[];
-      }
-and that at least one include rule is provided.
-      `,
-			1
-		);
-	}
-}
