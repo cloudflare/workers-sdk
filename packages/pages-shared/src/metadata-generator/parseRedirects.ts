@@ -88,7 +88,8 @@ export function parseRedirects(input: string): ParsedRedirects {
 		if (
 			canCreateStaticRule &&
 			!from.match(SPLAT_REGEX) &&
-			!from.match(PLACEHOLDER_REGEX)
+			!from.match(PLACEHOLDER_REGEX) &&
+			!from.includes("?")
 		) {
 			staticRules += 1;
 

@@ -48,7 +48,7 @@ export const generateRulesMatcher = <T>(
 				rule = rule.split(host_match[0]).join(`(?<${host_match[1]}>[^/.]+)`);
 			}
 
-			const split = rule.split("?");
+			const split = rule.split(/\?(?!<splat>)/g);
 			let pathPart = split[0];
 			const queryParts = split.slice(1);
 

@@ -224,7 +224,7 @@ describe("Pages Functions", () => {
 				}
 			);
 			expect(response.status).toEqual(301);
-			expect(response.headers.get("Location")).toEqual("/users/1");
+			expect(response.headers.get("Location")).toEqual("/users/1?id=1");
 		});
 
 		it("understands query parameters with dynamic params", async () => {
@@ -246,7 +246,9 @@ describe("Pages Functions", () => {
 				}
 			);
 			expect(response.status).toEqual(302);
-			expect(response.headers.get("Location")).toEqual("/blog/2022/Skye?year=2022&author=Skye");
+			expect(response.headers.get("Location")).toEqual(
+				"/blog/2022/Skye?year=2022&author=Skye"
+			);
 		});
 	});
 

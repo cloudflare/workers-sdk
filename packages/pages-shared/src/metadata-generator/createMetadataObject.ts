@@ -68,7 +68,11 @@ function constructRedirects({
 	const dynamicRedirects: MetadataRedirects = {};
 	let canCreateStaticRule = true;
 	for (const rule of redirects.rules) {
-		if (!rule.from.match(SPLAT_REGEX) && !rule.from.match(PLACEHOLDER_REGEX)) {
+		if (
+			!rule.from.match(SPLAT_REGEX) &&
+			!rule.from.match(PLACEHOLDER_REGEX) &&
+			!rule.from.includes("?")
+		) {
 			if (canCreateStaticRule) {
 				staticRedirects[rule.from] = { status: rule.status, to: rule.to };
 				continue;
