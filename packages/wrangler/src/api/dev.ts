@@ -64,6 +64,7 @@ export interface UnstableDevWorker {
 		input?: RequestInfo,
 		init?: RequestInit
 	) => Promise<Response | undefined>;
+	scheduled: (cron?: string) => Promise<Response | undefined>;
 	waitUntilExit: () => Promise<void>;
 }
 /**
@@ -127,6 +128,13 @@ export async function unstable_dev(
 							)
 						);
 					},
+					scheduled: async (cron?: string) => {
+						return await fetch(
+							`http://${readyAddress}:${readyPort}/__scheduled${
+								cron ? "?cron=" + cron : ""
+							}`
+						);
+					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
 						return;
@@ -167,6 +175,13 @@ export async function unstable_dev(
 								init,
 								options?.localProtocol
 							)
+						);
+					},
+					scheduled: async (cron?: string) => {
+						return await fetch(
+							`http://${readyAddress}:${readyPort}/__scheduled${
+								cron ? "?cron=" + cron : ""
+							}`
 						);
 					},
 					waitUntilExit: devServer.devReactElement.waitUntilExit,

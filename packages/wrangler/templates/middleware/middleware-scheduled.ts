@@ -7,7 +7,9 @@ const scheduled: Middleware = async (request, env, _ctx, middlewareCtx) => {
 		const cron = url.searchParams.get("cron") ?? "";
 		await middlewareCtx.dispatch("scheduled", { cron });
 
-		return new Response("Ran scheduled event");
+		return new Response(
+			`Ran scheduled event${cron ? " with cron `" + cron + "`" : ""}`
+		);
 	}
 	return middlewareCtx.next(request, env);
 };

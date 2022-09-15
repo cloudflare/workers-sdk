@@ -118,6 +118,22 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
+		it("should intercept when middleware is enabled and pass cron", async () => {
+			const worker = await unstable_dev(
+				"index.js",
+				{ testScheduled: true },
+				{ disableExperimentalWarning: true }
+			);
+
+			const resp = await worker.fetch("/__scheduled?cron=*+*+*+*+*");
+			let text;
+			if (resp) text = await resp.text();
+			expect(text).toMatchInlineSnapshot(
+				`"Ran scheduled event with cron \`* * * * *\`"`
+			);
+			await worker.stop();
+		});
+
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev(
 				"index.js",

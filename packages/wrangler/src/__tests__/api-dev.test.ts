@@ -187,3 +187,103 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 });
+
+describe("unstable_dev worker.scheduled()", () => {
+	runInTempDir();
+
+	describe("module workers", () => {
+		beforeEach(() => {
+			const scriptContent = `
+			export default {
+				fetch(request, env, ctx) {
+					const url = new URL(request.url);
+					if (url.pathname === "/__scheduled") {
+						return new Response("Fetch triggered at /__scheduled");
+					}
+					return new Response("Hello world!");
+				},
+				scheduled(event, env, ctx) {
+					console.log("Doing something scheduled in modules...");
+				},
+			};
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+		});
+
+		it("should trigger scheduled event", async () => {
+			const worker = await unstable_dev(
+				"index.js",
+				{ testScheduled: true },
+				{ disableExperimentalWarning: true }
+			);
+			const resp = await worker.scheduled();
+			let text;
+			if (resp) text = await resp.text();
+			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
+			await worker.stop();
+		});
+
+		it("should trigger scheduled with cron input", async () => {
+			const worker = await unstable_dev(
+				"index.js",
+				{ testScheduled: true },
+				{ disableExperimentalWarning: true }
+			);
+			const resp = await worker.scheduled("* * * * *");
+			let text;
+			if (resp) text = await resp.text();
+			expect(text).toMatchInlineSnapshot(
+				`"Ran scheduled event with cron \`* * * * *\`"`
+			);
+			await worker.stop();
+		});
+	});
+
+	describe("service workers", () => {
+		beforeEach(() => {
+			const scriptContent = `
+			addEventListener("scheduled", (event) => {
+				console.log("Doing something scheduled in service worker...");
+			});
+
+			addEventListener("fetch", (event) => {
+				const url = new URL(event.request.url);
+				if (url.pathname === "/__scheduled") {
+					event.respondWith(new Response("Fetch triggered at /__scheduled"));
+				} else {
+					event.respondWith(new Response("Hello world!"));
+				}
+			});
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+		});
+
+		it("should trigger scheduled event", async () => {
+			const worker = await unstable_dev(
+				"index.js",
+				{ testScheduled: true },
+				{ disableExperimentalWarning: true }
+			);
+			const resp = await worker.scheduled();
+			let text;
+			if (resp) text = await resp.text();
+			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
+			await worker.stop();
+		});
+
+		it("should trigger scheduled with cron input", async () => {
+			const worker = await unstable_dev(
+				"index.js",
+				{ testScheduled: true },
+				{ disableExperimentalWarning: true }
+			);
+			const resp = await worker.scheduled("* * * * *");
+			let text;
+			if (resp) text = await resp.text();
+			expect(text).toMatchInlineSnapshot(
+				`"Ran scheduled event with cron \`* * * * *\`"`
+			);
+			await worker.stop();
+		});
+	});
+});
