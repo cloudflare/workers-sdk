@@ -1,5 +1,36 @@
 # wrangler
 
+## 2.1.4
+
+### Patch Changes
+
+- [#1843](https://github.com/cloudflare/wrangler2/pull/1843) [`c5ee6dee`](https://github.com/cloudflare/wrangler2/commit/c5ee6deec547a69dc092cbcda2df212a6836013f) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: teach wrangler init how to write js tests
+
+* [#1856](https://github.com/cloudflare/wrangler2/pull/1856) [`6aae958a`](https://github.com/cloudflare/wrangler2/commit/6aae958aafc7a2a5be8853214438bc7c1ccda939) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add vitest as a test runner option
+
+- [#1839](https://github.com/cloudflare/wrangler2/pull/1839) [`2660872a`](https://github.com/cloudflare/wrangler2/commit/2660872a391b6c4662889bfdd5fda035f48ca54d) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: make it possible to specify a path for `unstable_dev()`'s fetch method
+
+  ```
+  const worker = await unstable_dev(
+    "script.js"
+  );
+  const res = await worker.fetch(req);
+  ```
+
+  where `req` can be anything from `RequestInfo`: `string | URL | Request`.
+
+* [#1851](https://github.com/cloudflare/wrangler2/pull/1851) [`afca1b6c`](https://github.com/cloudflare/wrangler2/commit/afca1b6c47933ddb22ccb3317fbd4976c5b926c8) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: summary output for secret:bulk
+
+  When wrangler `secret:bulk <json>` is run, a summary is outputted at the end with the number of secrets successfully / unsuccessfully created.
+
+- [#1847](https://github.com/cloudflare/wrangler2/pull/1847) [`5726788f`](https://github.com/cloudflare/wrangler2/commit/5726788fa1b50765c8455c98f508acffad6ca588) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: add instructions as part of wrangler init for testing
+
+* [#1846](https://github.com/cloudflare/wrangler2/pull/1846) [`f450e387`](https://github.com/cloudflare/wrangler2/commit/f450e387f61cf7e28b84fefd018d9758b7b2c931) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: when running `wrangler init`, add a `test` script to package.json when the user asks us to write their first test
+
+- [#1837](https://github.com/cloudflare/wrangler2/pull/1837) [`aa5ede62`](https://github.com/cloudflare/wrangler2/commit/aa5ede624d9b9465dbe80cdfe2b21b85a8a217ba) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: explicitly export UnstableDevWorker type
+
+* [#1779](https://github.com/cloudflare/wrangler2/pull/1779) [`974f3311`](https://github.com/cloudflare/wrangler2/commit/974f3311145175f77baacbf0b41fd81865c99159) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Add debug outputs to the exchange request
+
 ## 2.1.3
 
 ### Patch Changes
