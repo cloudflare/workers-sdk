@@ -10,7 +10,6 @@ import { validateUrl } from "./validateURL";
 import type {
 	InvalidRedirectRule,
 	ParsedRedirects,
-	RedirectLine,
 	RedirectRule,
 } from "./types";
 
@@ -39,16 +38,25 @@ export function parseRedirects(input: string): ParsedRedirects {
 
 		const tokens = line.split(/\s+/);
 
-		if (tokens.length < 2 || tokens.length > 3) {
+		if (tokens.length < 2) {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: `Expected exactly 2 or 3 whitespace-separated tokens. Got ${tokens.length}.`,
+				message: `Expected at least 2 whitespace-separated tokens. Got ${tokens.length}.`,
 			});
 			continue;
 		}
 
-		const [str_from, str_to, str_status = "302"] = tokens as RedirectLine;
+		const str_from = tokens[0];
+
+		let str_status: number | undefined = parseInt(tokens[tokens.length - 1]);
+		let index = tokens.length - 1;
+		if (str_status && !isNaN(str_status)) {
+			index = tokens.length - 2;
+		} else {
+			str_status = 302;
+		}
+		const str_to = tokens[index];
 
 		const fromResult = validateUrl(str_from, true, false, false);
 		if (fromResult[0] === undefined) {
@@ -59,7 +67,23 @@ export function parseRedirects(input: string): ParsedRedirects {
 			});
 			continue;
 		}
-		const from = fromResult[0];
+		let from = fromResult[0];
+		const queryParams = tokens.slice(1, index);
+		const hasInvalidQueryParam = queryParams.some((token) =>
+			token.includes("&")
+		);
+		if (hasInvalidQueryParam) {
+			invalid.push({
+				line,
+				lineNumber: i + 1,
+				message: "Query parameters cannot contain '&'.",
+			});
+			continue;
+		}
+
+		if (queryParams.length) {
+			from = `${from}?${queryParams.join("&")}`;
+		}
 
 		if (
 			canCreateStaticRule &&
@@ -104,7 +128,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: `Valid status codes are 301, 302 (default), 303, 307, or 308. Got ${str_status}.`,
+				message: `Valid status codes are 301, 302 (default), 303, 307, or 308. Got ${status}.`,
 			});
 			continue;
 		}

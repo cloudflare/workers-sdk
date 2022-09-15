@@ -48,9 +48,28 @@ export const generateRulesMatcher = <T>(
 				rule = rule.split(host_match[0]).join(`(?<${host_match[1]}>[^/.]+)`);
 			}
 
-			const path_matches = rule.matchAll(PLACEHOLDER_REGEX);
-			for (const path_match of path_matches) {
-				rule = rule.split(path_match[0]).join(`(?<${path_match[1]}>[^/]+)`);
+			const split = rule.split("?");
+			let pathPart = split[0];
+			const queryParts = split.slice(1);
+
+			const path_matches = pathPart.matchAll(PLACEHOLDER_REGEX);
+			for (const pathMatch of path_matches) {
+				pathPart = pathPart
+					.split(pathMatch[0])
+					.join(`(?<${pathMatch[1]}>[^/?]+)`);
+			}
+			rule = pathPart;
+
+			let queryPart = "";
+			if (queryParts.length > 0) {
+				queryPart = queryParts.join("?").split("&").sort().join(".*&");
+				const query_matches = queryPart.matchAll(PLACEHOLDER_REGEX);
+				for (const queryMatch of query_matches) {
+					queryPart = queryPart
+						.split(queryMatch[0])
+						.join(`(?<${queryMatch[1]}>[^/&]+)`);
+				}
+				rule += "?.*" + queryPart + ".*";
 			}
 
 			// Wrap in line terminators to be safe.
@@ -67,11 +86,17 @@ export const generateRulesMatcher = <T>(
 	][];
 
 	return ({ request }: { request: Request }) => {
-		const { pathname, host } = new URL(request.url);
+		const { pathname, host, search } = new URL(request.url);
+		const sortedSearch =
+			search && search.length
+				? "?" + search.slice(1).split("&").sort().join("&")
+				: search;
 
 		return compiledRules
 			.map(([{ crossHost, regExp }, match]) => {
-				const test = crossHost ? `https://${host}${pathname}` : pathname;
+				const test = crossHost
+					? `https://${host}${pathname}${sortedSearch}`
+					: `${pathname}${sortedSearch}`;
 				const result = regExp.exec(test);
 				if (result) {
 					return replacerFn(match, result.groups || {});

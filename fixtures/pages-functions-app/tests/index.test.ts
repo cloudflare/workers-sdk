@@ -215,6 +215,39 @@ describe("Pages Functions", () => {
 			expect(response.status).toEqual(302);
 			expect(response.headers.get("Location")).toEqual("/me");
 		});
+
+		it("understands a single query parameter", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/users?id=1",
+				{
+					redirect: "manual",
+				}
+			);
+			expect(response.status).toEqual(301);
+			expect(response.headers.get("Location")).toEqual("/users/1");
+		});
+
+		it("understands query parameters with dynamic params", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/news?post=123",
+				{
+					redirect: "manual",
+				}
+			);
+			expect(response.status).toEqual(302);
+			expect(response.headers.get("Location")).toEqual("/blog/123?post=123");
+		});
+
+		it("understands multiple query parameters", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/news?year=2022&author=Skye",
+				{
+					redirect: "manual",
+				}
+			);
+			expect(response.status).toEqual(302);
+			expect(response.headers.get("Location")).toEqual("/blog/2022/Skye?year=2022&author=Skye");
+		});
 	});
 
 	describe("headers", () => {

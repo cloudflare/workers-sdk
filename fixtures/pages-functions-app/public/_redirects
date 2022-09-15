@@ -1,1 +1,5 @@
 /redirect /me
+
+/users id=1 /users/1 301
+/news post=:post /blog/:post
+/news year=:year author=:author /blog/:year/:author
