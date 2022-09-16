@@ -146,6 +146,13 @@ export function Options(yargs: Argv) {
 				type: "string",
 				hidden: true,
 			},
+
+			"log-level": {
+				// "none" will currently default to "error" for Wrangler Logger
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				describe: "Specify logging level",
+				default: "log",
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -172,9 +179,20 @@ export const Handler = async ({
 	"node-compat": nodeCompat,
 	config: config,
 	_: [_pages, _dev, ...remaining],
+	logLevel,
 }: PagesDevArgs) => {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
+
+	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
+	if (logLevel) {
+		// we don't define a "none" logLevel, so "error" will do for now.
+		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
+		logger.loggerLevel =
+			(logLevel as LogLevelArg) === "none"
+				? "error"
+				: (logLevel as Exclude<"none", LogLevelArg>);
+	}
 
 	if (!local) {
 		throw new FatalError("Only local mode is supported at the moment.", 1);
