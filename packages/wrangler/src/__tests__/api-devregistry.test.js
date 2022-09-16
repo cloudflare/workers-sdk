@@ -3,6 +3,10 @@ import { fetch } from "undici";
 
 jest.unmock("undici");
 
+/**
+ * a huge caveat to how testing multi-worker scripts works:
+ * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
+ */
 describe("childWorker", () => {
 	let helloWorldWorker;
 	let childWorker;
