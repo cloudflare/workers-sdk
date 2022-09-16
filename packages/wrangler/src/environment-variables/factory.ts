@@ -1,4 +1,4 @@
-import { logger } from "./logger";
+import { logger } from "../logger";
 
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
@@ -7,7 +7,13 @@ type VariableNames =
 	| "CLOUDFLARE_EMAIL"
 	| "WRANGLER_SEND_METRICS"
 	| "CLOUDFLARE_API_BASE_URL"
-	| "WRANGLER_LOG";
+	| "WRANGLER_LOG"
+	| "WRANGLER_API_ENVIRONMENT"
+	| "WRANGLER_CLIENT_ID"
+	| "WRANGLER_AUTH_URL"
+	| "WRANGLER_TOKEN_URL"
+	| "WRANGLER_REVOKE_URL"
+	| "WRANGLER_CF_AUTHORIZATION_TOKEN";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"
@@ -29,6 +35,7 @@ export function getEnvironmentVariableFactory({
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
 }): () => string | undefined;
+
 /**
  * Create a function used to access an environment variable, with a default value.
  *
@@ -44,6 +51,7 @@ export function getEnvironmentVariableFactory({
 	deprecatedName?: DeprecatedNames;
 	defaultValue: string;
 }): () => string;
+
 /**
  * Create a function used to access an environment variable.
  *

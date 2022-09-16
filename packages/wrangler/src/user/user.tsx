@@ -223,18 +223,51 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
+import {
+	getAuthUrlFromEnv,
+	getClientIdFromEnv,
+	getCloudflareAccessToken,
+	getCloudflareAPITokenFromEnv,
+	getCloudflareGlobalAuthEmailFromEnv,
+	getCloudflareGlobalAuthKeyFromEnv,
+	getRevokeUrlFromEnv,
+	getTokenUrlFromEnv,
+} from "./auth-variables";
 import { ChooseAccount, getAccountChoices } from "./choose-account";
-import { getAuthFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ApiCredentials } from "./env-vars";
 import type { ParsedUrlQuery } from "node:querystring";
+
+export type ApiCredentials =
+	| {
+			apiToken: string;
+	  }
+	| {
+			authKey: string;
+			authEmail: string;
+	  };
+
+/**
+ * Try to read an API token or Global Auth from the environment.
+ */
+export function getAuthFromEnv(): ApiCredentials | undefined {
+	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
+	const globalApiEmail = getCloudflareGlobalAuthEmailFromEnv();
+	const apiToken = getCloudflareAPITokenFromEnv();
+
+	if (globalApiKey && globalApiEmail) {
+		return { authKey: globalApiKey, authEmail: globalApiEmail };
+	} else if (apiToken) {
+		return { apiToken };
+	}
+}
 
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
@@ -330,11 +363,6 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in Scopes);
 }
 
-const CLIENT_ID = "54d11594-84e4-41aa-b438-e81b8fa78ee7";
-const AUTH_URL = "https://dash.cloudflare.com/oauth2/auth";
-const TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
-const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
-
 /**
  * To allow OAuth callbacks in environments such as WebContainer we need to
  * create a host URL which only resolves `localhost` to a WebContainer
@@ -386,7 +414,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 }
 
 /**
- * Run the initialisation of the auth state, in the case that something changed.
+ * Run the initialization of the auth state, in the case that something changed.
  *
  * This runs automatically whenever `writeAuthConfigFile` is run, so generally
  * you won't need to call it yourself.
@@ -625,8 +653,8 @@ export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
 	});
 
 	return generateAuthUrl({
-		authUrl: AUTH_URL,
-		clientId: CLIENT_ID,
+		authUrl: getAuthUrlFromEnv(),
+		clientId: getClientIdFromEnv(),
 		callbackUrl: CALLBACK_URL,
 		scopes,
 		stateQueryParam,
@@ -656,15 +684,9 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 	const body =
 		`grant_type=refresh_token&` +
 		`refresh_token=${LocalState.refreshToken?.value}&` +
-		`client_id=${CLIENT_ID}`;
+		`client_id=${getClientIdFromEnv()}`;
 
-	const response = await fetch(TOKEN_URL, {
-		method: "POST",
-		body,
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-	});
+	const response = await fetchAuthToken(body);
 
 	if (response.status >= 400) {
 		let tokenExchangeResErr = undefined;
@@ -747,16 +769,10 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		`grant_type=authorization_code&` +
 		`code=${encodeURIComponent(authorizationCode || "")}&` +
 		`redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-		`client_id=${encodeURIComponent(CLIENT_ID)}&` +
+		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`code_verifier=${codeVerifier}`;
 
-	const response = await fetch(TOKEN_URL, {
-		method: "POST",
-		body,
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-	});
+	const response = await fetchAuthToken(body);
 	if (!response.ok) {
 		const { error } = (await response.json()) as { error: string };
 		// .catch((_) => ({ error: "invalid_json" }));
@@ -1038,11 +1054,11 @@ export async function logout(): Promise<void> {
 		}
 
 		const body =
-			`client_id=${encodeURIComponent(CLIENT_ID)}&` +
+			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 			`token_type_hint=refresh_token&` +
 			`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
 
-		const response = await fetch(REVOKE_URL, {
+		const response = await fetch(getRevokeUrlFromEnv(), {
 			method: "POST",
 			body,
 			headers: {
@@ -1055,11 +1071,11 @@ export async function logout(): Promise<void> {
 		);
 	}
 	const body =
-		`client_id=${encodeURIComponent(CLIENT_ID)}&` +
+		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
 		`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
 
-	const response = await fetch(REVOKE_URL, {
+	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
 		body,
 		headers: {
@@ -1195,4 +1211,22 @@ export function getAccountFromCache():
  */
 export function getScopes(): Scope[] | undefined {
 	return LocalState.scopes;
+}
+
+/**
+ * Make a request to the Cloudflare OAuth endpoint to get a token.
+ */
+async function fetchAuthToken(body: string) {
+	const headers: Record<string, string> = {
+		"Content-Type": "application/x-www-form-urlencoded",
+	};
+	if (getCloudflareApiEnvironmentFromEnv() === "staging") {
+		// We are trying to access the staging API so we need an "access token".
+		headers["Cookie"] = `CF_Authorization=${getCloudflareAccessToken()}`;
+	}
+	return await fetch(getTokenUrlFromEnv(), {
+		method: "POST",
+		body,
+		headers,
+	});
 }
