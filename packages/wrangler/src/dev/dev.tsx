@@ -11,7 +11,7 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import {
-	getRegisteredWorkers,
+	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
@@ -53,32 +53,21 @@ function useDevRegistry(
 			logger.error("failed to start worker registry", err);
 		});
 
-		const serviceNames = (services || []).map(
-			(serviceBinding) => serviceBinding.service
-		);
-		const durableObjectServices = (
-			durableObjects || { bindings: [] }
-		).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
 		const interval =
 			// TODO: enable this for remote mode as well
 			// https://github.com/cloudflare/wrangler2/issues/1182
 			mode === "local"
 				? setInterval(() => {
-						getRegisteredWorkers().then(
-							(workerDefinitions: WorkerRegistry | undefined) => {
-								// We only want the workers that we're bound to
-								// so let's filter out the others
-								const filteredWorkers = Object.fromEntries(
-									Object.entries(workerDefinitions || {}).filter(
-										([key, _value]) =>
-											serviceNames.includes(key) ||
-											durableObjectServices.includes(key)
-									)
-								);
+						getBoundRegisteredWorkers({
+							services,
+							durableObjects,
+						}).then(
+							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
 								setWorkers((prevWorkers) => {
-									if (!util.isDeepStrictEqual(filteredWorkers, prevWorkers)) {
-										return filteredWorkers;
+									if (
+										!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
+									) {
+										return boundRegisteredWorkers || {};
 									}
 									return prevWorkers;
 								});

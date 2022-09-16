@@ -5,6 +5,8 @@ import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
 import { logger } from "./logger";
+
+import type { Config } from "./config";
 import type { Server } from "http";
 import type { HttpTerminator } from "http-terminator";
 
@@ -157,4 +159,32 @@ export async function getRegisteredWorkers(): Promise<
 			throw e;
 		}
 	}
+}
+
+/**
+ * a function that takes your serviceNames and durableObjectNames and returns a
+ * list of the running workers that we're bound to
+ */
+export async function getBoundRegisteredWorkers({
+	services,
+	durableObjects,
+}: {
+	services: Config["services"] | undefined;
+	durableObjects: Config["durable_objects"] | undefined;
+}) {
+	const serviceNames = (services || []).map(
+		(serviceBinding) => serviceBinding.service
+	);
+	const durableObjectServices = (
+		durableObjects || { bindings: [] }
+	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
+
+	const workerDefinitions = await getRegisteredWorkers();
+	const filteredWorkers = Object.fromEntries(
+		Object.entries(workerDefinitions || {}).filter(
+			([key, _value]) =>
+				serviceNames.includes(key) || durableObjectServices.includes(key)
+		)
+	);
+	return filteredWorkers;
 }

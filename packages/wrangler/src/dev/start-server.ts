@@ -2,10 +2,16 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import * as util from "node:util";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
-import { registerWorker } from "../dev-registry";
+import {
+	getBoundRegisteredWorkers,
+	registerWorker,
+	startWorkerRegistry,
+	stopWorkerRegistry,
+} from "../dev-registry";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
@@ -17,6 +23,7 @@ import {
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
+import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
@@ -30,6 +37,7 @@ export async function startDevServer(
 	}
 ) {
 	try {
+		let workerDefinitions: WorkerRegistry = {};
 		validateDevProps(props);
 
 		if (props.build.command) {
@@ -48,6 +56,21 @@ export async function startDevServer(
 			throw new Error("Failed to create temporary directory.");
 		}
 
+		//start the worker registry
+		startWorkerRegistry().catch((err) => {
+			logger.error("failed to start worker registry", err);
+		});
+		if (props.local) {
+			const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+				services: props.bindings.services,
+				durableObjects: props.bindings.durable_objects,
+			});
+
+			if (!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)) {
+				workerDefinitions = boundRegisteredWorkers || {};
+			}
+		}
+
 		//implement a react-free version of useEsbuild
 		const bundle = await runEsbuild({
 			entry: props.entry,
@@ -64,7 +87,9 @@ export async function startDevServer(
 			define: props.define,
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
+			workerDefinitions,
 			services: props.bindings.services,
+			firstPartyWorkerDevFacade: props.firstPartyWorker,
 			testScheduled: props.testScheduled,
 		});
 
@@ -91,13 +116,14 @@ export async function startDevServer(
 			inspect: props.inspect,
 			onReady: props.onReady,
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-			usageModel: undefined,
-			workerDefinitions: undefined,
+			usageModel: props.usageModel,
+			workerDefinitions,
 		});
 
 		return {
 			stop: async () => {
 				stop();
+				await stopWorkerRegistry();
 			},
 			inspectorUrl,
 		};
@@ -130,6 +156,9 @@ async function runEsbuild({
 	nodeCompat,
 	define,
 	noBundle,
+	workerDefinitions,
+	services,
+	firstPartyWorkerDevFacade,
 	testScheduled,
 }: {
 	entry: Entry;
@@ -145,6 +174,8 @@ async function runEsbuild({
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
+	workerDefinitions: WorkerRegistry;
+	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
@@ -177,9 +208,9 @@ async function runEsbuild({
 					// disable the cache in dev
 					bypassCache: true,
 				},
-				services: undefined,
-				workerDefinitions: undefined,
-				firstPartyWorkerDevFacade: undefined,
+				workerDefinitions,
+				services,
+				firstPartyWorkerDevFacade,
 				targetConsumer: "dev", // We are starting a dev server
 				testScheduled,
 		  });
@@ -241,8 +272,8 @@ export async function startLocalServer({
 		}
 
 		if (bindings.services && bindings.services.length > 0) {
-			throw new Error(
-				"⎔ Service bindings are not yet supported in local mode."
+			logger.warn(
+				"⎔ Support for service bindings in local mode is experimental and may change."
 			);
 		}
 
