@@ -610,36 +610,40 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 							break;
 						case "weakmap":
 						case "map":
-							args.push(
-								"{\n" +
-									// Maps always have entries
-									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-									ro.preview
-										.entries!.map(({ key, value }) => {
-											return `  ${key?.description ?? "<unknown>"} => ${
-												value.description
-											}`;
-										})
-										.join(",\n") +
-									(ro.preview.overflow ? "\n  ..." : "") +
-									"\n}"
-							);
+							ro.preview.entries === undefined
+								? args.push("{}")
+								: args.push(
+										"{\n" +
+											// Maps always have entries
+											// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+											ro.preview
+												.entries!.map(({ key, value }) => {
+													return `  ${key?.description ?? "<unknown>"} => ${
+														value.description
+													}`;
+												})
+												.join(",\n") +
+											(ro.preview.overflow ? "\n  ..." : "") +
+											"\n}"
+								  );
 
 							break;
 						case "weakset":
 						case "set":
-							args.push(
-								"{ " +
-									// Sets always have entries
-									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-									ro.preview
-										.entries!.map(({ value }) => {
-											return `${value.description}`;
-										})
-										.join(", ") +
-									(ro.preview.overflow ? ", ..." : "") +
-									" }"
-							);
+							ro.preview.entries === undefined
+								? args.push("{}")
+								: args.push(
+										"{ " +
+											// Sets always have entries
+											// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+											ro.preview
+												.entries!.map(({ value }) => {
+													return `${value.description}`;
+												})
+												.join(", ") +
+											(ro.preview.overflow ? ", ..." : "") +
+											" }"
+								  );
 							break;
 						case "regexp":
 							break;
