@@ -60,28 +60,16 @@ export async function startDevServer(
 		startWorkerRegistry().catch((err) => {
 			logger.error("failed to start worker registry", err);
 		});
-		const interval = props.local
-			? setInterval(() => {
-					getBoundRegisteredWorkers({
-						services: props.bindings.services,
-						durableObjects: props.bindings.durable_objects,
-					}).then(
-						(boundRegisteredWorkers) => {
-							if (
-								!util.isDeepStrictEqual(
-									boundRegisteredWorkers,
-									workerDefinitions
-								)
-							) {
-								workerDefinitions = boundRegisteredWorkers || {};
-							}
-						},
-						(err) => {
-							logger.warn("Failed to get worker definitions", err);
-						}
-					);
-			  }, 300)
-			: undefined;
+		if (props.local) {
+			const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+				services: props.bindings.services,
+				durableObjects: props.bindings.durable_objects,
+			});
+
+			if (!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)) {
+				workerDefinitions = boundRegisteredWorkers || {};
+			}
+		}
 
 		//implement a react-free version of useEsbuild
 		const bundle = await runEsbuild({
@@ -135,7 +123,6 @@ export async function startDevServer(
 		return {
 			stop: async () => {
 				stop();
-				interval && clearInterval(interval);
 				await stopWorkerRegistry();
 			},
 			inspectorUrl,
@@ -285,8 +272,8 @@ export async function startLocalServer({
 		}
 
 		if (bindings.services && bindings.services.length > 0) {
-			throw new Error(
-				"⎔ Service bindings are not yet supported in local mode."
+			logger.warn(
+				"⎔ Support for service bindings in local mode is experimental and may change."
 			);
 		}
 

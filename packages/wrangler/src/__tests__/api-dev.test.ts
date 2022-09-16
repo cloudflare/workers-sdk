@@ -8,7 +8,7 @@ jest.unmock("undici");
 describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
-			"src/__tests__/helpers/hello-world-worker.js",
+			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{},
 			{ disableExperimentalWarning: true }
 		);
@@ -24,7 +24,7 @@ describe("unstable_dev", () => {
 describe("unstable dev fetch input protocol", () => {
 	it("should use http localProtocol", async () => {
 		const worker = await unstable_dev(
-			"src/__tests__/helpers/hello-world-worker.js",
+			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{ localProtocol: "http" },
 			{ disableExperimentalWarning: true }
 		);
@@ -38,7 +38,7 @@ describe("unstable dev fetch input protocol", () => {
 
 	it("should use undefined localProtocol", async () => {
 		const worker = await unstable_dev(
-			"src/__tests__/helpers/hello-world-worker.js",
+			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{ localProtocol: undefined },
 			{ disableExperimentalWarning: true }
 		);
