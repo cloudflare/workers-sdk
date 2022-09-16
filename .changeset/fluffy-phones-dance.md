@@ -1,11 +1,20 @@
-import { unstable_dev } from "../api";
-import { fetch } from "undici";
+---
+"wrangler": patch
+---
 
-jest.unmock("undici");
+feat: multi-worker testing
+
+This change introduces the ability to test multi-worker setups via the wrangler API's [unstable_dev](https://developers.cloudflare.com/workers/wrangler/api/#unstable_dev) function.
+
+Usage:
+
+```js
+import { unstable_dev } from "wrangler";
 
 /**
- * a huge caveat to how testing multi-worker scripts works:
- * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
+ * Note: if you shut down the first worker you spun up,
+ * the parent worker won't know the child worker exists
+ * and your tests will fail
  */
 describe("multi-worker testing", () => {
 	let childWorker;
@@ -13,13 +22,13 @@ describe("multi-worker testing", () => {
 
 	beforeAll(async () => {
 		childWorker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{ config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml" },
+			"src/child-worker.js",
+			{ config: "src/child-wrangler.toml" },
 			{ disableExperimentalWarning: true }
 		);
 		parentWorker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/parent-worker.js",
-			{ config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml" },
+			"src/parent-worker.js",
+			{ config: "src/parent-wrangler.toml" },
 			{ disableExperimentalWarning: true }
 		);
 	});
@@ -27,15 +36,6 @@ describe("multi-worker testing", () => {
 	afterAll(async () => {
 		await childWorker.stop();
 		await parentWorker.stop();
-	});
-
-	it("parentWorker and childWorker should be added devRegistry", async () => {
-		const resp = await fetch("http://localhost:6284/workers");
-		if (resp) {
-			const parsedResp = await resp.json();
-			expect(parsedResp.parent).toBeTruthy();
-			expect(parsedResp.child).toBeTruthy();
-		}
 	});
 
 	it("childWorker should return Hello World itself", async () => {
@@ -54,3 +54,4 @@ describe("multi-worker testing", () => {
 		}
 	});
 });
+```
