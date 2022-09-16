@@ -57,12 +57,18 @@ export const generateRulesMatcher = <T>(
 				rule = rule.replaceAll(pathMatch[0], `(?<${pathMatch[1]}>[^/?]+)`);
 			}
 
-			let queryPart = "";
 			if (queryParts.length > 0) {
-				queryPart = queryParts.join("?").replaceAll("&", ".*&");
-				const query_matches = queryPart.matchAll(PLACEHOLDER_REGEX);
-				for (const queryMatch of query_matches) {
-					rule = rule.replaceAll(queryMatch[0], `(?<${queryMatch[1]}>[^/&]+)`);
+				for (let queryPart of queryParts) {
+					const original = queryPart;
+					queryPart = queryPart.replaceAll("&", ".*&");
+					const query_matches = queryPart.matchAll(PLACEHOLDER_REGEX);
+					for (const queryMatch of query_matches) {
+						queryPart = queryPart.replaceAll(
+							queryMatch[0],
+							`(?<${queryMatch[1]}>[^/&]+)`
+						);
+					}
+					rule = rule.replaceAll(original, ".*" + queryPart + ".*");
 				}
 			}
 
