@@ -82,7 +82,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 		}
 
 		if (queryParams.length) {
-			from = `${from}?${queryParams.join("&")}`;
+			from = `${from}?${queryParams.sort().join("&")}`;
 		}
 
 		if (

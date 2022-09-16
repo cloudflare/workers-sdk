@@ -62,7 +62,7 @@ export const generateRulesMatcher = <T>(
 
 			let queryPart = "";
 			if (queryParts.length > 0) {
-				queryPart = queryParts.join("?").split("&").sort().join(".*&");
+				queryPart = queryParts.join("?").replaceAll("&", ".*&");
 				const query_matches = queryPart.matchAll(PLACEHOLDER_REGEX);
 				for (const queryMatch of query_matches) {
 					queryPart = queryPart

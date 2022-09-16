@@ -236,7 +236,7 @@ describe("Pages Functions", () => {
 			);
 			expect(response.status).toEqual(200);
 			expect(response.headers.get("Location")).toEqual(null);
-		})
+		});
 
 		it("understands query parameters with dynamic params", async () => {
 			const response = await waitUntilReady(
