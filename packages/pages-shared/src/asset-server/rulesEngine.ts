@@ -49,27 +49,21 @@ export const generateRulesMatcher = <T>(
 				rule = rule.split(host_match[0]).join(`(?<${host_match[1]}>[^/.]+)`);
 			}
 
-			let pathPart = split[0];
+			const pathPart = split[0];
 			const queryParts = split.slice(1);
 
 			const path_matches = pathPart.matchAll(PLACEHOLDER_REGEX);
 			for (const pathMatch of path_matches) {
-				pathPart = pathPart
-					.split(pathMatch[0])
-					.join(`(?<${pathMatch[1]}>[^/?]+)`);
+				rule = rule.replaceAll(pathMatch[0], `(?<${pathMatch[1]}>[^/?]+)`);
 			}
-			rule = pathPart;
 
 			let queryPart = "";
 			if (queryParts.length > 0) {
 				queryPart = queryParts.join("?").replaceAll("&", ".*&");
 				const query_matches = queryPart.matchAll(PLACEHOLDER_REGEX);
 				for (const queryMatch of query_matches) {
-					queryPart = queryPart
-						.split(queryMatch[0])
-						.join(`(?<${queryMatch[1]}>[^/&]+)`);
+					rule = rule.replaceAll(queryMatch[0], `(?<${queryMatch[1]}>[^/&]+)`);
 				}
-				rule += "\\?.*" + queryPart + ".*";
 			}
 
 			// Wrap in line terminators to be safe.
