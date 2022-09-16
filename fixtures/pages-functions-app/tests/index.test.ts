@@ -227,6 +227,17 @@ describe("Pages Functions", () => {
 			expect(response.headers.get("Location")).toEqual("/users/1?id=1");
 		});
 
+		it("does not redirect 'static' query parameters which don't match", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/users?id=2",
+				{
+					redirect: "manual",
+				}
+			);
+			expect(response.status).toEqual(200);
+			expect(response.headers.get("Location")).toEqual(null);
+		})
+
 		it("understands query parameters with dynamic params", async () => {
 			const response = await waitUntilReady(
 				"http://localhost:8789/news?post=123",
@@ -248,6 +259,19 @@ describe("Pages Functions", () => {
 			expect(response.status).toEqual(302);
 			expect(response.headers.get("Location")).toEqual(
 				"/blog/2022/Skye?year=2022&author=Skye"
+			);
+		});
+
+		it("doesn't care about order of query parameters", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/news?author=Skye&year=2022",
+				{
+					redirect: "manual",
+				}
+			);
+			expect(response.status).toEqual(302);
+			expect(response.headers.get("Location")).toEqual(
+				"/blog/2022/Skye?author=Skye&year=2022"
 			);
 		});
 	});

@@ -32,6 +32,7 @@ export const generateRulesMatcher = <T>(
 	const compiledRules = Object.entries(rules)
 		.map(([rule, match]) => {
 			const crossHost = rule.startsWith("https://");
+			const split = rule.split("?");
 
 			// Create :splat capturer then escape.
 			rule = rule.split("*").map(escapeRegex).join("(?<splat>.*)");
@@ -48,7 +49,6 @@ export const generateRulesMatcher = <T>(
 				rule = rule.split(host_match[0]).join(`(?<${host_match[1]}>[^/.]+)`);
 			}
 
-			const split = rule.split(/\?(?!<splat>)/g);
 			let pathPart = split[0];
 			const queryParts = split.slice(1);
 
@@ -69,7 +69,7 @@ export const generateRulesMatcher = <T>(
 						.split(queryMatch[0])
 						.join(`(?<${queryMatch[1]}>[^/&]+)`);
 				}
-				rule += "?.*" + queryPart + ".*";
+				rule += "\\?.*" + queryPart + ".*";
 			}
 
 			// Wrap in line terminators to be safe.

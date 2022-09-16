@@ -78,7 +78,7 @@ function constructRedirects({
 				continue;
 			} else {
 				logger(
-					`Info: the redirect rule ${rule.from} → ${rule.status} ${rule.to} could be made more performant by bringing it above any lines with splats or placeholders.`
+					`Info: the redirect rule ${rule.from} → ${rule.status} ${rule.to} could be made more performant by bringing it above any lines with splats, placeholders or query parameters.`
 				);
 			}
 		}

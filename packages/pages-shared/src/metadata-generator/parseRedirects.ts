@@ -129,7 +129,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: `Valid status codes are 301, 302 (default), 303, 307, or 308. Got ${status}.`,
+				message: `Valid status codes are 301, 302 (default), 303, 307, or 308. Got ${str_status}.`,
 			});
 			continue;
 		}
