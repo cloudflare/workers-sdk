@@ -39,6 +39,7 @@
 		"TESTTEXTBLOBNAME",
 		"TESTWASMNAME",
 		"extensionless",
+		"webcontainer",
 		"yxxx"
 	],
 	"eslint.runtime": "node",

@@ -4,7 +4,7 @@ import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
-import { getEnvironmentVariableFactory } from "../environment-variables";
+import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";

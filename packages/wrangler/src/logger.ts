@@ -1,6 +1,6 @@
 import { format } from "node:util";
 import { formatMessagesSync } from "esbuild";
-import { getEnvironmentVariableFactory } from "./environment-variables";
+import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import type { BuildFailure } from "esbuild";
 
 export const LOGGER_LEVELS = {
