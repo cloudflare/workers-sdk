@@ -614,10 +614,8 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 								? args.push("{}")
 								: args.push(
 										"{\n" +
-											// Maps always have entries
-											// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-											ro.preview
-												.entries!.map(({ key, value }) => {
+											ro.preview.entries
+												.map(({ key, value }) => {
 													return `  ${key?.description ?? "<unknown>"} => ${
 														value.description
 													}`;
@@ -634,10 +632,8 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 								? args.push("{}")
 								: args.push(
 										"{ " +
-											// Sets always have entries
-											// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-											ro.preview
-												.entries!.map(({ value }) => {
+											ro.preview.entries
+												.map(({ value }) => {
 													return `${value.description}`;
 												})
 												.join(", ") +
