@@ -252,6 +252,16 @@ function DevSession(props: DevSessionProps) {
 		testScheduled: props.testScheduled ?? false,
 	});
 
+	const announceAndOnReady: typeof props.onReady = (ip, port) => {
+		if (process.send) {
+			process.send(JSON.stringify({ event: "DEV_SERVER_READY", ip, port }));
+		}
+
+		if (props.onReady) {
+			props.onReady(ip, port);
+		}
+	};
+
 	return props.local ? (
 		<Local
 			name={props.name}
@@ -275,7 +285,7 @@ function DevSession(props: DevSessionProps) {
 			logLevel={props.logLevel}
 			logPrefix={props.logPrefix}
 			inspect={props.inspect}
-			onReady={props.onReady}
+			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 		/>
 	) : (
@@ -302,7 +312,7 @@ function DevSession(props: DevSessionProps) {
 			zone={props.zone}
 			host={props.host}
 			routes={props.routes}
-			onReady={props.onReady}
+			onReady={announceAndOnReady}
 			sourceMapPath={bundle?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
 		/>
