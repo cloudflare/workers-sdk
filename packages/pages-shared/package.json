@@ -8,7 +8,9 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.js",
-		"check:type": "tsc"
+		"check:type": "tsc",
+		"test": "npx jest",
+		"test:ci": "npx jest"
 	},
 	"jest": {
 		"coverageReporters": [

@@ -20,8 +20,8 @@
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspaces --if-present",
-		"test:ci": "npm run test:ci --workspaces --if-present"
+		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit",
+		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit"
 	},
 	"eslintConfig": {
 		"parser": "@typescript-eslint/parser",
@@ -132,6 +132,11 @@
 			"packages/wrangler-devtools/built-devtools"
 		],
 		"root": true
+	},
+	"jest": {
+		"projects": [
+			"<rootDir>/fixtures/**/package.json"
+		]
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
