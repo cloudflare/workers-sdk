@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -5,23 +6,29 @@ describe("worker", () => {
 		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
-			"src/sw.ts",
+			join(__dirname, "../src/sw.ts"),
 			{
-				config: "src/wrangler.sw.toml",
+				config: join(__dirname, "../src/wrangler.sw.toml"),
 			},
 			{ disableExperimentalWarning: true }
 		);
+		resolveReadyPromise(null);
 	});
 
 	afterAll(async () => {
 		await worker.stop();
 	});
 
-	it("renders", async () => {
+	it.concurrent("renders", async () => {
+		await readyPromise;
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 

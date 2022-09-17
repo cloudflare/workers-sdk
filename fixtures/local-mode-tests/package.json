@@ -9,11 +9,14 @@
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "cross-env NODE_ENV=local-testing npx jest --forceExit",
-		"test:ci": "cross-env NODE_ENV=local-testing npx jest --forceExit"
+		"test": "npx jest --forceExit",
+		"test:ci": "npx jest --forceExit"
 	},
 	"jest": {
 		"restoreMocks": true,
+		"setupFilesAfterEnv": [
+			"./jest.setup.ts"
+		],
 		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
 		"testTimeout": 30000,
 		"transform": {
