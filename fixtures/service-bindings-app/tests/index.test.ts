@@ -27,7 +27,6 @@ describe.skip("Pages Functions", () => {
 		wranglerProcess = spawn("npm", ["run", "dev"], {
 			shell: isWindows,
 			cwd: path.resolve(__dirname, "../"),
-			env: { BROWSER: "none", ...process.env },
 		});
 		wranglerProcess.stdout?.on("data", (chunk) => {
 			console.log(chunk.toString());

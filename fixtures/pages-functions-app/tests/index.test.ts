@@ -2,45 +2,46 @@ import { spawn } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response, RequestInit } from "undici";
-
-const waitUntilReady = async (
-	url: string,
-	requestInit?: RequestInit
-): Promise<Response> => {
-	let response: Response | undefined = undefined;
-
-	while (response === undefined) {
-		await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-		try {
-			response = await fetch(url, requestInit);
-		} catch {}
-	}
-
-	return response as Response;
-};
 
 const isWindows = process.platform === "win32";
 
 describe("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
+	let ip: string;
+	let port: number;
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
-	beforeEach(() => {
-		wranglerProcess = spawn("npm", ["run", "dev"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
-			env: { BROWSER: "none", ...process.env },
-		});
-		wranglerProcess.stdout?.on("data", (chunk) => {
-			console.log(chunk.toString());
-		});
-		wranglerProcess.stderr?.on("data", (chunk) => {
-			console.log(chunk.toString());
+	beforeAll(() => {
+		wranglerProcess = spawn(
+			"node",
+			[
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				"pages",
+				"dev",
+				"public",
+				"--binding=NAME=VALUE",
+				"--binding=OTHER_NAME=THING=WITH=EQUALS",
+				"--r2=BUCKET",
+				"--port",
+				"0",
+			],
+			{
+				shell: isWindows,
+				stdio: ["inherit", "inherit", "inherit", "ipc"],
+				cwd: path.resolve(__dirname, "../"),
+			}
+		).on("message", (message) => {
+			const parsedMessage = JSON.parse(message.toString());
+			ip = parsedMessage.ip;
+			port = parsedMessage.port;
+			resolveReadyPromise(null);
 		});
 	});
 
-	afterEach(async () => {
+	afterAll(async () => {
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -53,36 +54,39 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	it("renders static pages", async () => {
-		const response = await waitUntilReady("http://localhost:8789/");
+	it.concurrent("renders static pages", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
 		expect(text).toContain("Hello, world!");
 	});
 
-	it("renders pages with . characters", async () => {
-		const response = await waitUntilReady("http://localhost:8789/a.b");
+	it.concurrent("renders pages with . characters", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/a.b`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
 		expect(text).toContain("Hello, a.b!");
 	});
 
-	it("parses URL encoded requests", async () => {
-		const response = await waitUntilReady("http://localhost:8789/[id].js");
+	it.concurrent("parses URL encoded requests", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/[id].js`);
 		const text = await response.text();
 		expect(text).toContain("// test script");
 	});
 
-	it("parses URLs with regex chars", async () => {
-		const response = await waitUntilReady(
-			"http://localhost:8789/regex_chars/my-file"
-		);
+	it.concurrent("parses URLs with regex chars", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/regex_chars/my-file`);
 		const text = await response.text();
 		expect(text).toEqual("My file with regex chars");
 	});
 
-	it("passes environment variables", async () => {
-		const response = await waitUntilReady("http://localhost:8789/variables");
+	it.concurrent("passes environment variables", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/variables`);
 		const env = await response.json();
 		expect(env).toEqual({
 			ASSETS: {},
@@ -98,61 +102,68 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	it("intercepts static requests with next()", async () => {
-		const response = await waitUntilReady("http://localhost:8789/intercept");
+	it.concurrent("intercepts static requests with next()", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/intercept`);
 		const text = await response.text();
 		expect(text).toContain("Hello, world!");
 		expect(response.headers.get("x-set-from-functions")).toBe("true");
 	});
 
-	it("can make SSR responses", async () => {
-		const response = await waitUntilReady("http://localhost:8789/date");
+	it.concurrent("can make SSR responses", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/date`);
 		const text = await response.text();
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 	});
 
-	it("can use parameters", async () => {
-		const response = await waitUntilReady(
-			"http://localhost:8789/blog/hello-world"
-		);
+	it.concurrent("can use parameters", async () => {
+		await readyPromise;
+		const response = await fetch(`http://${ip}:${port}/blog/hello-world`);
 		const text = await response.text();
 		expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
 	});
 
-	it("can override the incoming request with next() parameters", async () => {
-		const response = await waitUntilReady("http://localhost:8789/next");
-		const text = await response.text();
-		expect(text).toContain("<h1>An asset</h1>");
-	});
+	it.concurrent(
+		"can override the incoming request with next() parameters",
+		async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/next`);
+			const text = await response.text();
+			expect(text).toContain("<h1>An asset</h1>");
+		}
+	);
 
 	describe("can mount a plugin", () => {
-		it("should mount Middleware", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/mounted-plugin/some-page"
+		it.concurrent("should mount Middleware", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/some-page`
 			);
 			const text = await response.text();
 			expect(text).toContain("<footer>Set from a Plugin!</footer>");
 		});
 
-		it("should mount Fixed page", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/mounted-plugin/fixed"
-			);
+		it.concurrent("should mount Fixed page", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/mounted-plugin/fixed`);
 			const text = await response.text();
 			expect(text).toContain("I'm a fixed response");
 		});
 	});
 
 	describe("can import static assets", () => {
-		it("should render a static asset", async () => {
-			const response = await waitUntilReady("http://localhost:8789/static");
+		it.concurrent("should render a static asset", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/static`);
 			const text = await response.text();
 			expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
 		});
 
-		it("should render from a Plugin", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/mounted-plugin/static"
+		it.concurrent("should render from a Plugin", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/static`
 			);
 			const text = await response.text();
 			expect(text).toContain(
@@ -160,26 +171,27 @@ describe("Pages Functions", () => {
 			);
 		});
 
-		it("should render static/foo", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/mounted-plugin/static/foo"
+		it.concurrent("should render static/foo", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/static/foo`
 			);
 			const text = await response.text();
 			expect(text).toContain("<h1>foo</h1>");
 		});
 
-		it("should render static/dir/bar", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/mounted-plugin/static/dir/bar"
+		it.concurrent("should render static/dir/bar", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/static/dir/bar`
 			);
 			const text = await response.text();
 			expect(text).toContain("<h1>bar</h1>");
 		});
 
-		it("supports importing .html from a function", async () => {
-			const response = await waitUntilReady(
-				"http://localhost:8789/import-html"
-			);
+		it.concurrent("supports importing .html from a function", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/import-html`);
 			expect(response.headers.get("x-custom")).toBe("header value");
 			const text = await response.text();
 			expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
@@ -187,8 +199,9 @@ describe("Pages Functions", () => {
 	});
 
 	describe("it supports R2", () => {
-		it("should allow creates", async () => {
-			const response = await waitUntilReady("http://localhost:8789/r2/create", {
+		it.concurrent("should allow creates", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/r2/create`, {
 				method: "PUT",
 			});
 			const object = (await response.json()) as {
@@ -197,7 +210,7 @@ describe("Pages Functions", () => {
 			};
 			expect(object.key).toEqual("test");
 
-			const getResponse = await waitUntilReady("http://localhost:8789/r2/get");
+			const getResponse = await fetch(`http://${ip}:${port}/r2/get`);
 			const getObject = (await getResponse.json()) as {
 				key: string;
 				version: string;
@@ -208,8 +221,9 @@ describe("Pages Functions", () => {
 	});
 
 	describe("redirects", () => {
-		it("still attaches redirects correctly", async () => {
-			const response = await waitUntilReady("http://localhost:8789/redirect", {
+		it.concurrent("still attaches redirects correctly", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/redirect`, {
 				redirect: "manual",
 			});
 			expect(response.status).toEqual(302);
@@ -218,8 +232,9 @@ describe("Pages Functions", () => {
 	});
 
 	describe("headers", () => {
-		it("still attaches headers correctly", async () => {
-			const response = await waitUntilReady("http://localhost:8789/");
+		it.concurrent("still attaches headers correctly", async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/`);
 
 			expect(response.headers.get("A-Header")).toEqual("Some-Value");
 		});
