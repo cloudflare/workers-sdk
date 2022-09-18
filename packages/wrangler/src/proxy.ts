@@ -1,6 +1,7 @@
 import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
 import { createServer as createHttpsServer } from "node:https";
+import { networkInterfaces } from "node:os";
 import WebSocket from "faye-websocket";
 import { createHttpTerminator } from "http-terminator";
 import { useEffect, useRef, useState } from "react";
@@ -328,6 +329,11 @@ export function usePreviewServer({
 			.then(() => {
 				proxy.server.on("listening", () => {
 					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
+					const accessibleHosts =
+						ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
+					for (const accessibleHost of accessibleHosts) {
+						logger.log(`- ${localProtocol}://${accessibleHost}:${port}`);
+					}
 				});
 				proxy.server.listen(port, ip);
 			})
@@ -483,4 +489,15 @@ export async function waitForPortToBeAvailable(
 			);
 		}
 	});
+}
+
+function getAccessibleHosts(): string[] {
+	const hosts: string[] = [];
+	Object.values(networkInterfaces()).forEach((net) => {
+		net?.forEach(({ family, address }) => {
+			// @ts-expect-error the `family` property is numeric as of Node.js 18.0.0
+			if (family === "IPv4" || family === 4) hosts.push(address);
+		});
+	});
+	return hosts;
 }
