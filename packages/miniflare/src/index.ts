@@ -1,6 +1,7 @@
 import assert from "assert";
 import http from "http";
 import path from "path";
+import exitHook from "exit-hook";
 import getPort from "get-port";
 import { bold, green, grey } from "kleur/colors";
 import stoppable from "stoppable";
@@ -99,6 +100,7 @@ type PluginRouters = {
 	[Key in keyof Plugins]: OptionalInstanceType<Plugins[Key]["router"]>;
 };
 
+// `__dirname` relative to bundled output `dist/src/index.js`
 const RUNTIME_PATH = path.resolve(__dirname, "..", "..", "lib", "cfwrkr");
 
 type StoppableServer = http.Server & stoppable.WithStop;
@@ -114,6 +116,7 @@ export class Miniflare {
 
 	readonly #runtimeConstructor: RuntimeConstructor;
 	#runtime?: Runtime;
+	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
 
 	readonly #disposeController: AbortController;
@@ -181,6 +184,8 @@ export class Miniflare {
 			entryPort,
 			loopbackPort
 		);
+		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
+
 		this.#runtimeEntryURL = new URL(`http://127.0.0.1:${entryPort}`);
 
 		const config = await this.#initialConfigPromise;
@@ -410,6 +415,7 @@ export class Miniflare {
 		this.#disposeController.abort();
 		await this.#initPromise;
 		await this.#updatePromise;
+		this.#removeRuntimeExitHook?.();
 		this.#runtime?.dispose();
 		await this.#stopLoopbackServer();
 	}
