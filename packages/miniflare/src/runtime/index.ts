@@ -1,10 +1,20 @@
 import childProcess from "child_process";
-import { Awaitable, MiniflareError } from "../helpers";
+import crypto from "crypto";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { Awaitable, MiniflareCoreError } from "../helpers";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 
-export interface Runtime {
-	updateConfig(configBuffer: Buffer): Awaitable<void>;
-	dispose(): Awaitable<void>;
+export abstract class Runtime {
+	constructor(
+		protected readonly runtimeBinaryPath: string,
+		protected readonly entryPort: number,
+		protected readonly loopbackPort: number
+	) {}
+
+	abstract updateConfig(configBuffer: Buffer): Awaitable<void>;
+	abstract dispose(): Awaitable<void>;
 }
 
 export interface RuntimeConstructor {
@@ -21,14 +31,16 @@ export interface RuntimeConstructor {
 }
 
 const COMMON_RUNTIME_ARGS = ["serve", "--binary", "--verbose"];
+// `__dirname` relative to bundled output `dist/src/index.js`
+const RESTART_PATH = path.resolve(__dirname, "..", "..", "lib", "restart.sh");
 
-function waitForExit(process: childProcess.ChildProcess): Promise<number> {
+function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	return new Promise((resolve) => {
-		process.once("exit", (code) => resolve(code ?? -1));
+		process.once("exit", () => resolve());
 	});
 }
 
-class NativeRuntime implements Runtime {
+class NativeRuntime extends Runtime {
 	static isSupported() {
 		return process.platform === "linux"; // TODO: and "darwin"?
 	}
@@ -40,13 +52,14 @@ class NativeRuntime implements Runtime {
 	readonly #args: string[];
 
 	#process?: childProcess.ChildProcess;
-	#processExitPromise?: Promise<number>;
+	#processExitPromise?: Promise<void>;
 
 	constructor(
-		protected readonly runtimeBinaryPath: string,
-		protected readonly entryPort: number,
-		protected readonly loopbackPort: number
+		runtimeBinaryPath: string,
+		entryPort: number,
+		loopbackPort: number
 	) {
+		super(runtimeBinaryPath, entryPort, loopbackPort);
 		const [command, ...args] = this.getCommand();
 		this.#command = command;
 		this.#args = args;
@@ -71,7 +84,7 @@ class NativeRuntime implements Runtime {
 		// TODO: what happens if runtime crashes?
 
 		// 2. Start new process
-		const runtimeProcess = await childProcess.spawn(this.#command, this.#args, {
+		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
 			stdio: "pipe",
 			shell: true,
 		});
@@ -86,11 +99,12 @@ class NativeRuntime implements Runtime {
 
 		// 3. Write config
 		runtimeProcess.stdin.write(configBuffer);
+		runtimeProcess.stdin.end();
 	}
 
-	async dispose() {
+	dispose(): Awaitable<void> {
 		this.#process?.kill();
-		await this.#processExitPromise;
+		return this.#processExitPromise;
 	}
 }
 
@@ -112,7 +126,7 @@ class WSLRuntime extends NativeRuntime {
 	}
 }
 
-class DockerRuntime extends NativeRuntime {
+class DockerRuntime extends Runtime {
 	static isSupported() {
 		const result = childProcess.spawnSync("docker", ["--version"]); // TODO: check daemon running too?
 		return result.error === undefined;
@@ -123,23 +137,68 @@ class DockerRuntime extends NativeRuntime {
 	static description = "using Docker 🐳";
 	static distribution = `linux-${process.arch}`;
 
-	getCommand(): string[] {
-		// TODO: consider reusing container, but just restarting process within
-		return [
+	#configPath = path.join(
+		os.tmpdir(),
+		`miniflare-config-${crypto.randomBytes(16).toString("hex")}.bin`
+	);
+
+	#process?: childProcess.ChildProcess;
+	#processExitPromise?: Promise<void>;
+
+	async updateConfig(configBuffer: Buffer) {
+		// 1. Write config to file (this is much easier than trying to buffer STDIN
+		//    in the restart script)
+		fs.writeFileSync(this.#configPath, configBuffer);
+
+		// 2. If process running, send SIGUSR1 to restart runtime with new config
+		//    (see `lib/restart.sh`)
+		if (this.#process) {
+			this.#process.kill("SIGUSR1");
+			return;
+		}
+
+		// 3. Otherwise, start new process
+		const runtimeProcess = childProcess.spawn(
 			"docker",
-			"run",
-			"--platform=linux/amd64",
-			"--interactive",
-			"--rm",
-			`--volume=${this.runtimeBinaryPath}:/runtime`,
-			`--publish=127.0.0.1:${this.entryPort}:8787`,
-			"debian:bullseye-slim",
-			"/runtime",
-			...COMMON_RUNTIME_ARGS,
-			`--socket-addr=${SOCKET_ENTRY}=*:8787`,
-			`--external-addr=${SERVICE_LOOPBACK}=host.docker.internal:${this.loopbackPort}`,
-			"-",
-		];
+			[
+				"run",
+				"--platform=linux/amd64",
+				"--interactive",
+				"--rm",
+				`--volume=${RESTART_PATH}:/restart.sh`,
+				`--volume=${this.runtimeBinaryPath}:/runtime`,
+				`--volume=${this.#configPath}:/miniflare-config.bin`,
+				`--publish=127.0.0.1:${this.entryPort}:8787`,
+				"debian:bullseye-slim",
+				"/restart.sh",
+				"/runtime",
+				...COMMON_RUNTIME_ARGS,
+				`--socket-addr=${SOCKET_ENTRY}=*:8787`,
+				`--external-addr=${SERVICE_LOOPBACK}=host.docker.internal:${this.loopbackPort}`,
+				"/miniflare-config.bin",
+			],
+			{
+				stdio: "pipe",
+				shell: true,
+			}
+		);
+		this.#process = runtimeProcess;
+		this.#processExitPromise = waitForExit(runtimeProcess);
+
+		// TODO: may want to proxy these and prettify ✨
+		runtimeProcess.stdout.pipe(process.stdout);
+		runtimeProcess.stderr.pipe(process.stderr);
+	}
+
+	dispose(): Awaitable<void> {
+		this.#process?.kill();
+		try {
+			fs.unlinkSync(this.#configPath);
+		} catch (e: any) {
+			// Ignore not found errors if we called dispose() without updateConfig()
+			if (e.code !== "ENOENT") throw e;
+		}
+		return this.#processExitPromise;
 	}
 }
 
@@ -160,7 +219,7 @@ export function getSupportedRuntime(): RuntimeConstructor {
 	const suggestions = RUNTIMES.map(
 		({ supportSuggestion }) => `- ${supportSuggestion}`
 	);
-	throw new MiniflareError(
+	throw new MiniflareCoreError(
 		"ERR_RUNTIME_UNSUPPORTED",
 		`The 🦄 Cloudflare Workers Runtime 🦄 does not support your system (${
 			process.platform

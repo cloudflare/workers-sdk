@@ -39,6 +39,7 @@
 		"acorn": "^8.8.0",
 		"acorn-walk": "^8.2.0",
 		"capnp-ts": "^0.7.0",
+		"exit-hook": "^2.2.1",
 		"get-port": "^5.1.1",
 		"kleur": "^4.1.5",
 		"stoppable": "^1.1.0",
