@@ -94,39 +94,44 @@ export async function startDevServer(
 		});
 
 		//run local now
-		const { stop, inspectorUrl } = await startLocalServer({
-			name: props.name,
-			bundle: bundle,
-			format: props.entry.format,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-			bindings: props.bindings,
-			assetPaths: props.assetPaths,
-			port: props.port,
-			ip: props.ip,
-			rules: props.rules,
-			inspectorPort: props.inspectorPort,
-			localPersistencePath: props.localPersistencePath,
-			liveReload: props.liveReload,
-			crons: props.crons,
-			localProtocol: props.localProtocol,
-			localUpstream: props.localUpstream,
-			logLevel: props.logLevel,
-			logPrefix: props.logPrefix,
-			inspect: props.inspect,
-			onReady: props.onReady,
-			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-			usageModel: props.usageModel,
-			workerDefinitions,
-		});
+		console.log("props.local: ", props.local);
+		if (props.local) {
+			const { stop, inspectorUrl } = await startLocalServer({
+				name: props.name,
+				bundle: bundle,
+				format: props.entry.format,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				bindings: props.bindings,
+				assetPaths: props.assetPaths,
+				port: props.port,
+				ip: props.ip,
+				rules: props.rules,
+				inspectorPort: props.inspectorPort,
+				localPersistencePath: props.localPersistencePath,
+				liveReload: props.liveReload,
+				crons: props.crons,
+				localProtocol: props.localProtocol,
+				localUpstream: props.localUpstream,
+				logLevel: props.logLevel,
+				logPrefix: props.logPrefix,
+				inspect: props.inspect,
+				onReady: props.onReady,
+				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+				usageModel: props.usageModel,
+				workerDefinitions,
+			});
 
-		return {
-			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
-			},
-			inspectorUrl,
-		};
+			return {
+				stop: async () => {
+					stop();
+					await stopWorkerRegistry();
+				},
+				inspectorUrl,
+			};
+		} else {
+			console.log("NOT IMPLEMENTED LOL");
+		}
 	} catch (err) {
 		logger.error(err);
 	}

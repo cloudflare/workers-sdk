@@ -33,7 +33,7 @@ import type {
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 
-export function Remote(props: {
+export interface RemoteProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
@@ -57,7 +57,9 @@ export function Remote(props: {
 	onReady?: ((ip: string, port: number) => void) | undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
-}) {
+}
+
+export function Remote(props: RemoteProps) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
