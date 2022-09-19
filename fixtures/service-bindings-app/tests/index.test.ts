@@ -2,60 +2,109 @@ import { spawn } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
-
-const waitUntilReady = async (url: string): Promise<Response> => {
-	let response: Response | undefined = undefined;
-
-	while (response === undefined) {
-		await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-		try {
-			response = await fetch(url);
-		} catch {}
-	}
-
-	return response as Response;
-};
 
 const isWindows = process.platform === "win32";
 
-describe.skip("Pages Functions", () => {
-	let wranglerProcess: ChildProcess;
+describe("Pages Functions", () => {
+	let aProcess: ChildProcess;
+	let aIP: string;
+	let aPort: number;
+	let aResolveReadyPromise: (value: unknown) => void;
+	const aReadyPromise = new Promise((resolve) => {
+		aResolveReadyPromise = resolve;
+	});
 
-	beforeEach(() => {
-		wranglerProcess = spawn("npm", ["run", "dev"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
+	let bProcess: ChildProcess;
+	let bIP: string;
+	let bPort: number;
+	let bResolveReadyPromise: (value: unknown) => void;
+	const bReadyPromise = new Promise((resolve) => {
+		bResolveReadyPromise = resolve;
+	});
+
+	beforeAll(() => {
+		aProcess = spawn(
+			"node",
+			[
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				"dev",
+				"a/index.ts",
+				"--local",
+				"--port",
+				"0",
+			],
+			{
+				shell: isWindows,
+				stdio: ["inherit", "inherit", "inherit", "ipc"],
+				cwd: path.resolve(__dirname, "../"),
+			}
+		).on("message", (message) => {
+			const parsedMessage = JSON.parse(message.toString());
+			aIP = parsedMessage.ip;
+			aPort = parsedMessage.port;
+			aResolveReadyPromise(null);
 		});
-		wranglerProcess.stdout?.on("data", (chunk) => {
-			console.log(chunk.toString());
-		});
-		wranglerProcess.stderr?.on("data", (chunk) => {
-			console.log(chunk.toString());
+
+		bProcess = spawn(
+			"node",
+			[
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				"dev",
+				"b/index.ts",
+				"--local",
+				"--port",
+				"0",
+			],
+			{
+				shell: isWindows,
+				stdio: ["inherit", "inherit", "inherit", "ipc"],
+				cwd: path.resolve(__dirname, "../"),
+			}
+		).on("message", (message) => {
+			const parsedMessage = JSON.parse(message.toString());
+			bIP = parsedMessage.ip;
+			bPort = parsedMessage.port;
+			bResolveReadyPromise(null);
 		});
 	});
 
-	afterEach(async () => {
+	afterAll(async () => {
 		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
+			aProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			wranglerProcess.kill("SIGTERM");
+			aProcess.kill("SIGTERM");
+
+			bProcess.once("exit", (code) => {
+				if (!code) {
+					resolve(code);
+				} else {
+					reject(code);
+				}
+			});
+			bProcess.kill("SIGTERM");
 		});
 	});
 
-	it("connects up Durable Objects and keeps state across wrangler instances", async () => {
-		const responseA = await waitUntilReady("http://localhost:8300/");
-		const textA = await responseA.text();
-		expect(textA).toEqual("hello world");
+	it.concurrent(
+		"connects up Durable Objects and keeps state across wrangler instances",
+		async () => {
+			await aReadyPromise;
+			await bReadyPromise;
 
-		const responseB = await waitUntilReady("http://localhost:8301/");
-		const textB = (await responseB.text()) as { count: number; id: string };
-		expect(textB).toEqual("hello world");
-	});
+			console.log(`http://${aIP}:${aPort}/`);
+			console.log(`http://${bIP}:${bPort}/`);
+			const responseA = await fetch(`http://${aIP}:${aPort}/`);
+			const textA = await responseA.text();
+			// expect(textA).toEqual("hello world");
+
+			const responseB = await fetch(`http://${bIP}:${bPort}/`);
+			const textB = (await responseB.text()) as { count: number; id: string };
+			expect(textB).toEqual("hello world");
+		}
+	);
 });
