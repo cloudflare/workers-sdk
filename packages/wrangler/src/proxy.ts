@@ -328,11 +328,14 @@ export function usePreviewServer({
 		})
 			.then(() => {
 				proxy.server.on("listening", () => {
-					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${port}`);
+					const address = proxy.server.address();
+					const usedPort =
+						address && typeof address === "object" ? address.port : port;
+					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
 					const accessibleHosts =
 						ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
 					for (const accessibleHost of accessibleHosts) {
-						logger.log(`- ${localProtocol}://${accessibleHost}:${port}`);
+						logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
 					}
 				});
 				proxy.server.listen(port, ip);
