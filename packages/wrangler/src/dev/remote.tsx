@@ -169,19 +169,6 @@ export function useWorker(props: {
 	sendMetrics: boolean | undefined;
 	port: number;
 }): CfPreviewToken | undefined {
-	const {
-		name,
-		bundle,
-		format,
-		modules,
-		accountId,
-		bindings,
-		assetPaths,
-		compatibilityDate,
-		compatibilityFlags,
-		usageModel,
-		onReady,
-	} = props;
 	const [session, setSession] = useState<CfPreviewSession | undefined>();
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
 	const [restartCounter, setRestartCounter] = useState<number>(0);
@@ -194,12 +181,12 @@ export function useWorker(props: {
 	useEffect(() => {
 		const abortController = new AbortController();
 		async function start() {
-			if (accountId === undefined) {
+			if (props.accountId === undefined) {
 				return;
 			}
 
 			const workerAccount: CfAccount = {
-				accountId,
+				accountId: props.accountId,
 				apiToken: requireApiToken(),
 			};
 
@@ -232,7 +219,7 @@ export function useWorker(props: {
 			abortController.abort();
 		};
 	}, [
-		accountId,
+		props.accountId,
 		props.env,
 		props.host,
 		props.legacyEnv,
@@ -246,7 +233,7 @@ export function useWorker(props: {
 	useEffect(() => {
 		const abortController = new AbortController();
 		async function start() {
-			if (accountId === undefined) {
+			if (props.accountId === undefined) {
 				return;
 			}
 			if (session === undefined) {
@@ -254,7 +241,7 @@ export function useWorker(props: {
 			}
 			setToken(undefined); // reset token in case we're re-running
 
-			if (!bundle || !format) return;
+			if (!props.bundle || !props.format) return;
 
 			if (!startedRef.current) {
 				startedRef.current = true;
@@ -262,34 +249,34 @@ export function useWorker(props: {
 				logger.log("⎔ Detected changes, restarted server.");
 			}
 
-			const content = await readFile(bundle.path, "utf-8");
+			const content = await readFile(props.bundle.path, "utf-8");
 
 			// TODO: For Dev we could show the reporter message in the interactive box.
 			void printBundleSize(
-				{ name: path.basename(bundle.path), content: content },
-				modules
+				{ name: path.basename(props.bundle.path), content: content },
+				props.modules
 			);
 
 			const assets = await syncAssets(
-				accountId,
+				props.accountId,
 				// When we're using the newer service environments, we wouldn't
 				// have added the env name on to the script name. However, we must
 				// include it in the kv namespace name regardless (since there's no
 				// concept of service environments for kv namespaces yet).
-				name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
-				props.isWorkersSite ? assetPaths : undefined,
+				props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
+				props.isWorkersSite ? props.assetPaths : undefined,
 				true,
 				false
 			); // TODO: cancellable?
 
 			const init: CfWorkerInit = {
-				name,
+				name: props.name,
 				main: {
-					name: path.basename(bundle.path),
-					type: format === "modules" ? "esm" : "commonjs",
+					name: path.basename(props.bundle.path),
+					type: props.format === "modules" ? "esm" : "commonjs",
 					content,
 				},
-				modules: modules.concat(
+				modules: props.modules.concat(
 					assets.manifest
 						? {
 								name: "__STATIC_CONTENT_MANIFEST",
@@ -299,29 +286,29 @@ export function useWorker(props: {
 						: []
 				),
 				bindings: {
-					...bindings,
-					kv_namespaces: (bindings.kv_namespaces || []).concat(
+					...props.bindings,
+					kv_namespaces: (props.bindings.kv_namespaces || []).concat(
 						assets.namespace
 							? { binding: "__STATIC_CONTENT", id: assets.namespace }
 							: []
 					),
 					text_blobs: {
-						...bindings.text_blobs,
+						...props.bindings.text_blobs,
 						...(assets.manifest &&
-							format === "service-worker" && {
+							props.format === "service-worker" && {
 								__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 							}),
 					},
 				},
 				migrations: undefined, // no migrations in dev
-				compatibility_date: compatibilityDate,
-				compatibility_flags: compatibilityFlags,
-				usage_model: usageModel,
+				compatibility_date: props.compatibilityDate,
+				compatibility_flags: props.compatibilityFlags,
+				usage_model: props.usageModel,
 				keep_bindings: true,
 			};
 
 			const workerAccount: CfAccount = {
-				accountId,
+				accountId: props.accountId,
 				apiToken: requireApiToken(),
 			};
 
@@ -364,8 +351,9 @@ export function useWorker(props: {
 				});
 			}
 			*/
-
-			onReady?.(props.host || "localhost", props.port);
+			if (props.onReady) {
+				props.onReady(props.host || "localhost", props.port);
+			}
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -379,7 +367,7 @@ export function useWorker(props: {
 						"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
 					const solutionMessage =
 						"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-					const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+					const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 					logger.error(
 						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
 					);
@@ -400,26 +388,27 @@ export function useWorker(props: {
 			abortController.abort();
 		};
 	}, [
-		name,
-		bundle,
-		format,
-		accountId,
-		assetPaths,
+		props.name,
+		props.bundle,
+		props.format,
+		props.accountId,
+		props.assetPaths,
 		props.isWorkersSite,
-		compatibilityDate,
-		compatibilityFlags,
-		usageModel,
-		bindings,
-		modules,
+		props.compatibilityDate,
+		props.compatibilityFlags,
+		props.usageModel,
+		props.bindings,
+		props.modules,
 		props.env,
 		props.legacyEnv,
 		props.zone,
 		props.host,
 		props.routes,
 		session,
-		onReady,
+		props.onReady,
 		props.sendMetrics,
 		props.port,
 	]);
+
 	return token;
 }
