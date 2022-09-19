@@ -91,11 +91,62 @@ export async function startWorkerRegistry() {
 	}
 }
 
+async function handOff() {
+	if (server) {
+		const handOffableWorkers = Object.entries(workers).filter(
+			([_, workerDefintion]) =>
+				workerDefintion.handOffReceiverPort !== undefined &&
+				workerDefintion.handOffReceiverPort !== handOffReceiverPort
+		) as [string, WorkerDefinition & { handOffReceiverPort: number }][];
+
+		if (handOffableWorkers.length > 0) {
+			const [chosenHandOffName, chosenHandOff] =
+				handOffableWorkers[
+					Math.floor(Math.random() * handOffableWorkers.length)
+				];
+
+			logger.debug(
+				`Handing off local service registry to ${chosenHandOffName}...`
+			);
+
+			try {
+				console.log("stopping registry");
+				await stopWorkerRegistry();
+				console.log("passing off");
+				await fetch(
+					`http://${chosenHandOff.host}:${chosenHandOff.handOffReceiverPort}/`,
+					{
+						method: "POST",
+						body: JSON.stringify(workers),
+					}
+				);
+				console.log("done");
+			} catch (e) {
+				console.error(e);
+			}
+		} else {
+			logger.debug(
+				"No other wrangler processes available to hand off local service registry to."
+			);
+		}
+	}
+
+	await stopWorkerRegistry();
+	await stopHandOffReceiverServer();
+}
+
 /**
  * Stop the service registry.
  */
-export async function stopWorkerRegistry() {
+async function stopWorkerRegistry() {
 	await terminator?.terminate();
+}
+
+/**
+ * Stop the hand off receiver server.
+ */
+async function stopHandOffReceiverServer() {
+	await handOffReceiverTerminator?.terminate();
 }
 
 /**
@@ -156,6 +207,7 @@ export async function unregisterWorker(name: string) {
 		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "DELETE",
 		});
+		await handOff();
 	} catch (e) {
 		if (
 			!["ECONNRESET", "ECONNREFUSED"].includes(

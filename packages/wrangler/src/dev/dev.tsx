@@ -13,7 +13,6 @@ import { fetch } from "undici";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
-	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
 import { runCustomBuild } from "../entry";
@@ -81,28 +80,12 @@ function useDevRegistry(
 
 		return () => {
 			interval && clearInterval(interval);
-			Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]).then(
-				([unregisterResult, stopRegistryResult]) => {
-					if (unregisterResult.status === "rejected") {
-						logger.error(
-							"Failed to unregister worker",
-							unregisterResult.reason
-						);
-					}
-					if (stopRegistryResult.status === "rejected") {
-						logger.error(
-							"Failed to stop worker registry",
-							stopRegistryResult.reason
-						);
-					}
-				},
-				(err) => {
-					logger.error("Failed to clear dev registry effect", err);
-				}
-			);
+			console.log("mee");
+			if (name) {
+				unregisterWorker(name).catch((e) =>
+					logger.error("Failed to unregister worker")
+				);
+			}
 		};
 	}, [name, services, durableObjects, mode]);
 

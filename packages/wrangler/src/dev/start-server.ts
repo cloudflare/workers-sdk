@@ -10,7 +10,7 @@ import {
 	getBoundRegisteredWorkers,
 	registerWorker,
 	startWorkerRegistry,
-	stopWorkerRegistry,
+	unregisterWorker,
 } from "../dev-registry";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
@@ -123,7 +123,9 @@ export async function startDevServer(
 		return {
 			stop: async () => {
 				stop();
-				await stopWorkerRegistry();
+				if (props.name) {
+					await unregisterWorker(props.name);
+				}
 			},
 			inspectorUrl,
 		};
