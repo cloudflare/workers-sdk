@@ -176,7 +176,8 @@ export function useWorker(props: {
 	// something's "happened" in our system; We make a ref and
 	// mark it once we log our initial message. Refs are vars!
 	const startedRef = useRef(false);
-
+	// functions must be destructured before use inside a useEffect, otherwise the entire props object has to be added to the dependency array
+	const { onReady } = props;
 	// This effect sets up the preview session
 	useEffect(() => {
 		const abortController = new AbortController();
@@ -351,9 +352,7 @@ export function useWorker(props: {
 				});
 			}
 			*/
-			if (props.onReady) {
-				props.onReady(props.host || "localhost", props.port);
-			}
+			onReady?.(props.host || "localhost", props.port);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -405,7 +404,7 @@ export function useWorker(props: {
 		props.host,
 		props.routes,
 		session,
-		props.onReady,
+		onReady,
 		props.sendMetrics,
 		props.port,
 	]);
