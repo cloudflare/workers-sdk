@@ -651,6 +651,11 @@ export async function waitForPortToBeAvailable(
 		}
 
 		function checkPort() {
+			if (port === 0) {
+				doResolve();
+				return;
+			}
+
 			// Testing whether a port is 'available' involves simply
 			// trying to make a server listen on that port, and retrying
 			// until it succeeds.

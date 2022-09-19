@@ -112,8 +112,8 @@ export async function startDevServer(
 				compatibilityFlags: props.compatibilityFlags,
 				bindings: props.bindings,
 				assetPaths: props.assetPaths,
-				port: props.port,
-				ip: props.ip,
+				initialPort: props.initialPort,
+				initialIp: props.initialIp,
 				rules: props.rules,
 				inspectorPort: props.inspectorPort,
 				localPersistencePath: props.localPersistencePath,
@@ -149,8 +149,8 @@ export async function startDevServer(
 				bindings: props.bindings,
 				assetPaths: props.assetPaths,
 				isWorkersSite: props.isWorkersSite,
-				port: props.port,
-				ip: props.ip,
+				port: props.initialPort,
+				ip: props.initialIp,
 				localProtocol: props.localProtocol,
 				inspectorPort: props.inspectorPort,
 				inspect: props.inspect,
@@ -294,12 +294,12 @@ export async function startLocalServer({
 	bindings,
 	workerDefinitions,
 	assetPaths,
-	port,
+	initialPort,
 	inspectorPort,
 	rules,
 	localPersistencePath,
 	liveReload,
-	ip,
+	initialIp,
 	crons,
 	queueConsumers,
 	localProtocol,
@@ -325,14 +325,11 @@ export async function startLocalServer({
 		if (!bundle || !format) return;
 
 		// port for the worker
-
-		if (port !== 0) {
-			await waitForPortToBeAvailable(port, {
-				retryPeriod: 200,
-				timeout: 2000,
-				abortSignal: abortController.signal,
-			});
-		}
+		await waitForPortToBeAvailable(initialPort, {
+			retryPeriod: 200,
+			timeout: 2000,
+			abortSignal: abortController.signal,
+		});
 
 		if (bindings.services && bindings.services.length > 0) {
 			logger.warn(
@@ -373,10 +370,10 @@ export async function startLocalServer({
 
 		const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 			workerName,
-			port,
+			port: initialPort,
 			scriptPath,
 			localProtocol,
-			ip,
+			ip: initialIp,
 			format,
 			rules,
 			compatibilityDate,
@@ -429,7 +426,11 @@ export async function startLocalServer({
 			return;
 		}
 
-		const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
+		const nodeOptions = setupNodeOptions({
+			inspect,
+			ip: initialIp,
+			inspectorPort,
+		});
 		logger.log("⎔ Starting a local server...");
 
 		const child = (local = fork(miniflareCLIPath, forkOptions, {
@@ -446,21 +447,21 @@ export async function startLocalServer({
 					await registerWorker(workerName, {
 						protocol: localProtocol,
 						mode: "local",
-						port: message.mfPort,
-						host: ip,
+						port: message.port,
+						host: initialIp,
 						durableObjects: internalDurableObjects.map((binding) => ({
 							name: binding.name,
 							className: binding.class_name,
 						})),
 						...(message.durableObjectsPort
 							? {
-									durableObjectsHost: ip,
+									durableObjectsHost: initialIp,
 									durableObjectsPort: message.durableObjectsPort,
 							  }
 							: {}),
 					});
 				}
-				onReady?.(ip, message.mfPort);
+				onReady?.(initialIp, message.port);
 			}
 		});
 

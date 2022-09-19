@@ -196,7 +196,7 @@ async function main() {
 		process.send &&
 			process.send(
 				JSON.stringify({
-					mfPort: mfPort,
+					port: mfPort,
 					ready: true,
 					durableObjectsPort: durableObjectsMfPort,
 				})

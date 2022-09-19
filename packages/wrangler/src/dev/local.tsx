@@ -57,8 +57,8 @@ export interface LocalProps {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
-	port: number;
-	ip: string;
+	initialPort: number;
+	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number;
 	localPersistencePath: string | null;
@@ -109,12 +109,12 @@ function useLocalWorker({
 	bindings,
 	workerDefinitions,
 	assetPaths,
-	port,
+	initialPort,
 	inspectorPort,
 	rules,
 	localPersistencePath,
 	liveReload,
-	ip,
+	initialIp,
 	crons,
 	queueConsumers,
 	localProtocol,
@@ -160,7 +160,7 @@ function useLocalWorker({
 			if (!bundle || !format) return;
 
 			// port for the worker
-			await waitForPortToBeAvailable(port, {
+			await waitForPortToBeAvailable(initialPort, {
 				retryPeriod: 200,
 				timeout: 2000,
 				abortSignal: abortController.signal,
@@ -199,10 +199,10 @@ function useLocalWorker({
 
 			const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 				workerName,
-				port,
+				port: initialPort,
 				scriptPath,
 				localProtocol,
-				ip,
+				ip: initialIp,
 				format,
 				rules,
 				compatibilityDate,
@@ -295,7 +295,11 @@ function useLocalWorker({
 				return;
 			}
 
-			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
+			const nodeOptions = setupNodeOptions({
+				inspect,
+				ip: initialIp,
+				inspectorPort,
+			});
 			logger.log("⎔ Starting a local server...");
 
 			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
@@ -316,21 +320,21 @@ function useLocalWorker({
 						await registerWorker(workerName, {
 							protocol: localProtocol,
 							mode: "local",
-							port,
-							host: ip,
+							port: message.port,
+							host: initialIp,
 							durableObjects: internalDurableObjects.map((binding) => ({
 								name: binding.name,
 								className: binding.class_name,
 							})),
 							...(message.durableObjectsPort
 								? {
-										durableObjectsHost: ip,
+										durableObjectsHost: initialIp,
 										durableObjectsPort: message.durableObjectsPort,
 								  }
 								: {}),
 						});
 					}
-					onReady?.(ip, message.mfPort);
+					onReady?.(initialIp, message.port);
 				}
 			});
 
@@ -399,9 +403,9 @@ function useLocalWorker({
 		bundle,
 		workerName,
 		format,
-		port,
+		initialPort,
 		inspectorPort,
-		ip,
+		initialIp,
 		queueConsumers,
 		bindings.queues,
 		bindings.durable_objects,

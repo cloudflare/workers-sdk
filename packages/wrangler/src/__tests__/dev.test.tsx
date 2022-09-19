@@ -792,7 +792,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -807,7 +807,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("1.2.3.4");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("1.2.3.4");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -822,7 +822,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --ip=5.6.7.8");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("5.6.7.8");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("5.6.7.8");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -933,7 +933,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(8787);
+			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8787);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -951,7 +951,7 @@ describe("wrangler dev", () => {
 			(getPort as jest.Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(8888);
+			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8888);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -985,7 +985,7 @@ describe("wrangler dev", () => {
 			(getPort as jest.Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev --port=9999");
-			expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(9999);
+			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(9999);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1000,7 +1000,7 @@ describe("wrangler dev", () => {
 			(getPort as jest.Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].port).toEqual(98765);
+			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(98765);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1030,7 +1030,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].ip).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:
