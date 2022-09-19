@@ -355,7 +355,7 @@ export async function startLocalServer({
 					await registerWorker(workerName, {
 						protocol: localProtocol,
 						mode: "local",
-						port: message.mfPort,
+						port: message.port,
 						host: ip,
 						durableObjects: internalDurableObjects.map((binding) => ({
 							name: binding.name,
@@ -369,7 +369,7 @@ export async function startLocalServer({
 							: {}),
 					});
 				}
-				onReady?.(ip, message.mfPort);
+				onReady?.(ip, message.port);
 			}
 		});
 

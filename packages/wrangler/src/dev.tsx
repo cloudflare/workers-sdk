@@ -416,11 +416,11 @@ export async function startDev(args: StartDevOptions) {
 					accountId={configParam.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
 					assetsConfig={configParam.assets}
-					port={args.port || configParam.dev.port || (await getLocalPort())}
+					port={args.port ?? configParam.dev.port ?? (await getLocalPort())}
 					ip={args.ip || configParam.dev.ip}
 					inspectorPort={
-						args.inspectorPort ||
-						configParam.dev.inspector_port ||
+						args.inspectorPort ??
+						configParam.dev.inspector_port ??
 						(await getInspectorPort())
 					}
 					isWorkersSite={Boolean(args.site || configParam.site)}
@@ -528,14 +528,11 @@ export async function startApiDev(args: StartDevOptions) {
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
 			//port can be 0, which means to use a random port
-			port:
-				args.port === 0
-					? args.port
-					: args.port || configParam.dev.port || (await getLocalPort()),
+			port: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			ip: args.ip || configParam.dev.ip,
 			inspectorPort:
-				args["inspector-port"] ||
-				configParam.dev.inspector_port ||
+				args["inspector-port"] ??
+				configParam.dev.inspector_port ??
 				(await getInspectorPort()),
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
