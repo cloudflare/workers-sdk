@@ -2,21 +2,6 @@ import { spawn } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
-
-const waitUntilReady = async (url: string): Promise<Response> => {
-	let response: Response | undefined = undefined;
-
-	while (response === undefined) {
-		await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-		try {
-			response = await fetch(url);
-		} catch {}
-	}
-
-	return response as Response;
-};
 
 const isWindows = process.platform === "win32";
 
@@ -201,19 +186,19 @@ describe("Pages Functions", () => {
 			await cReadyPromise;
 			await dReadyPromise;
 
-			const responseA = await waitUntilReady(`http://${aIP}:${aPort}/`);
+			const responseA = await fetch(`http://${aIP}:${aPort}/`);
 			const dataA = (await responseA.json()) as { count: number; id: string };
 			expect(dataA.count).toEqual(1);
-			const responseB = await waitUntilReady(`http://${bIP}:${bPort}/`);
+			const responseB = await fetch(`http://${bIP}:${bPort}/`);
 			const dataB = (await responseB.json()) as { count: number; id: string };
 			expect(dataB.count).toEqual(2);
-			const responseC = await waitUntilReady(`http://${cIP}:${cPort}/`);
+			const responseC = await fetch(`http://${cIP}:${cPort}/`);
 			const dataC = (await responseC.json()) as { count: number; id: string };
 			expect(dataC.count).toEqual(3);
-			const responseD = await waitUntilReady(`http://${dIP}:${dPort}/`);
+			const responseD = await fetch(`http://${dIP}:${dPort}/`);
 			const dataD = (await responseD.json()) as { count: number; id: string };
 			expect(dataD.count).toEqual(4);
-			const responseA2 = await waitUntilReady(`http://${aIP}:${aPort}/`);
+			const responseA2 = await fetch(`http://${aIP}:${aPort}/`);
 			const dataA2 = (await responseA2.json()) as { count: number; id: string };
 			expect(dataA2.count).toEqual(5);
 
