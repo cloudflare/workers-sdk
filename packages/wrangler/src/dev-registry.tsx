@@ -16,6 +16,10 @@ const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
 let server: Server;
 let terminator: HttpTerminator;
 
+let handOffReceiverServer: Server;
+let handOffReceiverPort: number;
+let handOffReceiverTerminator: HttpTerminator;
+
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
 type WorkerDefinition = {
@@ -27,6 +31,7 @@ type WorkerDefinition = {
 	durableObjects: { name: string; className: string }[];
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
+	handOffReceiverPort?: number;
 };
 
 /**
@@ -54,6 +59,7 @@ async function isPortAvailable() {
 
 const jsonBodyParser = bodyParser.json();
 
+let workers: WorkerRegistry = {};
 /**
  * Start the service registry. It's a simple server
  * that exposes endpoints for registering and unregistering
@@ -63,7 +69,6 @@ export async function startWorkerRegistry() {
 	if ((await isPortAvailable()) && !server) {
 		const app = express();
 
-		let workers: WorkerRegistry = {};
 		app
 			.get("/workers", async (req, res) => {
 				res.json(workers);
@@ -100,13 +105,35 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
+	const handOffReceiverApp = express();
+
+	handOffReceiverApp.post("/", jsonBodyParser, async (req, res) => {
+		workers = req.body;
+		await startWorkerRegistry();
+		res.json(null);
+	});
+
+	handOffReceiverServer = http.createServer(handOffReceiverApp);
+	handOffReceiverTerminator = createHttpTerminator({
+		server: handOffReceiverServer,
+	});
+	handOffReceiverServer.listen(0);
+	const handOffReceiverAddress = handOffReceiverServer.address();
+	if (!handOffReceiverAddress || typeof handOffReceiverAddress !== "object") {
+		logger.error(
+			"Could not create hand-off receiver for local service registry"
+		);
+	} else {
+		handOffReceiverPort = handOffReceiverAddress.port;
+	}
+
 	try {
 		return await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(definition),
+			body: JSON.stringify({ ...definition, handOffReceiverPort }),
 		});
 	} catch (e) {
 		if (
