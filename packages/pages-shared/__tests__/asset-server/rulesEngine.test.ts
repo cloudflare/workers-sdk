@@ -71,6 +71,34 @@ describe("rules engine", () => {
 			matcher({ request: new Request("https://next.my.pages.dev/magic") })
 		).toEqual(["6/my/"]);
 	});
+
+	test("it should support query params", () => {
+		const matcher = generateRulesMatcher({
+			"/foo?bar": "1",
+			"/foo2?bar=:val": "2/:val",
+			"/foo3?bar=:splat&thing": "3/:splat",
+			"/foo": "4",
+			"/foo5?bar&val": "5",
+			"/foo6?banana=:banana&carrot=:carrot&apple=:apple":
+				"6/:apple/:banana/:carrot",
+		});
+		expect(matcher({ request: new Request("/foo?bar") })).toEqual(["1"]);
+		expect(matcher({ request: new Request("/foo?bar&other") })).toEqual(["1"]);
+		expect(
+			matcher({ request: new Request("/foo2?bar=someval&other") })
+		).toEqual(["2/someval"]);
+		expect(
+			matcher({ request: new Request("/foo3?bar=someval&other&thing") })
+		).toEqual(["3/someval"]);
+		expect(matcher({ request: new Request("/foo") })).toEqual(["4"]);
+		expect(matcher({ request: new Request("/foo?other") })).toEqual(["4"]);
+		expect(matcher({ request: new Request("/foo?bar&val") })).toEqual(["5"]);
+		expect(matcher({ request: new Request("/foo?val&bar") })).toEqual(["5"]);
+		expect(matcher({ request: new Request("/foo?val=&bar=") })).toEqual(["5"]);
+		expect(
+			matcher({ request: new Request("/foo?apple=a&carrot=c&banana=b") })
+		).toEqual(["6/a/b/c"]);
+	});
 });
 
 describe("replacer", () => {
