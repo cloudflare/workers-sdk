@@ -5,7 +5,6 @@ import {
 } from "@miniflare/durable-objects";
 import {
 	Log,
-	LogLevel,
 	Miniflare,
 	Response as MiniflareResponse,
 	Request as MiniflareRequest,
@@ -14,7 +13,6 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { FatalError } from "../errors";
 import generateASSETSBinding from "./assets";
-import { enumKeys } from "./enum-keys";
 import { getRequestContextCheckOptions } from "./request-context";
 import type { Options } from "./assets";
 import type { AddressInfo } from "net";
@@ -35,25 +33,22 @@ class NoOpLog extends Log {
 }
 
 async function main() {
-	const args = await yargs(hideBin(process.argv))
-		.help(false)
-		.version(false)
-		.option("log", {
-			choices: enumKeys(LogLevel),
-		}).argv;
+	const args = await yargs(hideBin(process.argv)).help(false).version(false)
+		.argv;
 
-	const logLevel = LogLevel[args.log ?? "INFO"];
 	const requestContextCheckOptions = await getRequestContextCheckOptions();
 	const config = {
 		...JSON.parse((args._[0] as string) ?? "{}"),
 		...requestContextCheckOptions,
 	};
-	//miniflare's logLevel 0 still logs routes, so lets override the logger
-	config.log = config.disableLogs
-		? new NoOpLog()
-		: new Log(logLevel, config.logOptions);
+	const logLevel = config.logLevel.toUpperCase();
 
-	if (logLevel > LogLevel.INFO) {
+	config.log =
+		config.logLevel === "none"
+			? new NoOpLog()
+			: new Log(logLevel, config.logOptions);
+
+	if (logLevel === "DEBUG" || logLevel === "VERBOSE") {
 		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
 	}
 

@@ -454,7 +454,6 @@ export function setupMiniflareOptions({
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
 }: SetupMiniflareOptionsProps): MiniflareOptions {
-	// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
 		name: workerName,
@@ -542,7 +541,7 @@ export function setupMiniflareOptions({
 		logUnhandledRejections: true,
 		crons,
 		upstream,
-		disableLogs: logger.loggerLevel === "none",
+		logLevel: logger.loggerLevel,
 		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};

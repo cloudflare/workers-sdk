@@ -280,8 +280,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				default: false,
 			})
 			.option("log-level", {
-				// "none" will currently default to "error" for Wrangler Logger
-				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				choices: ["debug", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 				default: "log",
 			})

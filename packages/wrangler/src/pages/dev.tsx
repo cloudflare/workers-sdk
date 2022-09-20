@@ -147,9 +147,8 @@ export function Options(yargs: Argv) {
 				hidden: true,
 			},
 			"log-level": {
-				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				choices: ["debug", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
-				default: "log",
 			},
 		})
 		.epilogue(pagesBetaWarning);
@@ -182,13 +181,10 @@ export const Handler = async ({
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
-	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
+	type LogLevelArg = "debug" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
 		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
-		logger.loggerLevel =
-			(logLevel as LogLevelArg) === "none"
-				? "error"
-				: (logLevel as Exclude<"none", LogLevelArg>);
+		logger.loggerLevel = logLevel as LogLevelArg;
 	}
 
 	if (!local) {
@@ -450,8 +446,6 @@ export const Handler = async ({
 		}
 	}
 
-	// No longer passing the logLevel into the Dev Servers
-	logger.loggerLevel = "warn";
 	const { stop, waitUntilExit } = await unstable_dev(
 		entrypoint,
 		{
@@ -508,6 +502,7 @@ export const Handler = async ({
 			showInteractiveDevSession: undefined,
 			inspect: true,
 			logPrefix: "pages",
+			logLevel: logLevel ?? "warn",
 		},
 		{ testMode: false, disableExperimentalWarning: true }
 	);
