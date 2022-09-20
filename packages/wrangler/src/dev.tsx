@@ -714,7 +714,10 @@ async function validateDevServerSettings(
 		: args.persist
 		? // If just flagged on, treat it as relative to wrangler.toml,
 		  // if one can be found, otherwise cwd()
-		  path.resolve(config.configPath || process.cwd(), ".wrangler/state")
+		  path.resolve(
+				config.configPath ? path.dirname(config.configPath) : process.cwd(),
+				".wrangler/state"
+		  )
 		: null;
 
 	const cliDefines =
