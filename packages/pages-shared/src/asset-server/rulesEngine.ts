@@ -86,12 +86,13 @@ export const generateRulesMatcher = <T>(
 		const { pathname, host, searchParams } = new URL(request.url);
 		searchParams.sort();
 		const sortedSearch = searchParams.toString();
+		const search = sortedSearch ? "?" + sortedSearch : "";
 
 		return compiledRules
 			.map(([{ crossHost, regExp }, match]) => {
 				const test = crossHost
-					? `https://${host}${pathname}${sortedSearch}`
-					: `${pathname}${sortedSearch.length > 0 ? `?${sortedSearch}` : ""}`;
+					? `https://${host}${pathname}${search}`
+					: `${pathname}${search}`;
 				const result = regExp.exec(test);
 				if (result) {
 					return replacerFn(match, result.groups || {});
