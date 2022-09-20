@@ -73,15 +73,18 @@ describe("rules engine", () => {
 	});
 
 	test("it should support query params", () => {
-		const matcher = generateRulesMatcher({
-			"/foo?bar": "1",
-			"/foo2?bar=:val": "2/:val",
-			"/foo3?bar=:splat&thing": "3/:splat",
-			"/foo": "4",
-			"/foo5?bar&val": "5",
-			"/foo6?banana=:banana&carrot=:carrot&apple=:apple":
-				"6/:apple/:banana/:carrot",
-		});
+		const matcher = generateRulesMatcher(
+			{
+				"/foo?bar": "1",
+				"/foo2?bar=:val": "2/:val",
+				"/foo3?bar=:splat&thing": "3/:splat",
+				"/foo": "4",
+				"/foo?bar&val": "5",
+				"/foo6?banana=:banana&carrot=:carrot&apple=:apple":
+					"6/:apple/:banana/:carrot",
+			},
+			(match, replacements) => replacer(match, replacements)
+		);
 		expect(matcher({ request: new Request("/foo?bar") })).toEqual(["1"]);
 		expect(matcher({ request: new Request("/foo?bar&other") })).toEqual(["1"]);
 		expect(
@@ -92,11 +95,20 @@ describe("rules engine", () => {
 		).toEqual(["3/someval"]);
 		expect(matcher({ request: new Request("/foo") })).toEqual(["4"]);
 		expect(matcher({ request: new Request("/foo?other") })).toEqual(["4"]);
-		expect(matcher({ request: new Request("/foo?bar&val") })).toEqual(["5"]);
-		expect(matcher({ request: new Request("/foo?val&bar") })).toEqual(["5"]);
-		expect(matcher({ request: new Request("/foo?val=&bar=") })).toEqual(["5"]);
+		expect(matcher({ request: new Request("/foo?bar&val") })).toEqual([
+			"1",
+			"5",
+		]);
+		expect(matcher({ request: new Request("/foo?val&bar") })).toEqual([
+			"1",
+			"5",
+		]);
+		expect(matcher({ request: new Request("/foo?val=&bar=") })).toEqual([
+			"1",
+			"5",
+		]);
 		expect(
-			matcher({ request: new Request("/foo?apple=a&carrot=c&banana=b") })
+			matcher({ request: new Request("/foo6?apple=a&carrot=c&banana=b") })
 		).toEqual(["6/a/b/c"]);
 	});
 });
