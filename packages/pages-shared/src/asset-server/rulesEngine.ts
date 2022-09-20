@@ -62,7 +62,7 @@ export const generateRulesMatcher = <T>(
 					for (const queryMatch of query_matches) {
 						queryPart = queryPart.replaceAll(
 							queryMatch[0],
-							`(?<${queryMatch[1]}>[^/&]+)`
+							`(?<${queryMatch[1]}>[^&]+)`
 						);
 					}
 					rule = rule.replaceAll(original, ".*" + queryPart + ".*");
@@ -83,17 +83,15 @@ export const generateRulesMatcher = <T>(
 	][];
 
 	return ({ request }: { request: Request }) => {
-		const { pathname, host, search } = new URL(request.url);
-		const sortedSearch =
-			search && search.length
-				? "?" + search.slice(1).split("&").sort().join("&")
-				: search;
+		const { pathname, host, searchParams } = new URL(request.url);
+		searchParams.sort();
+		const sortedSearch = searchParams.toString();
 
 		return compiledRules
 			.map(([{ crossHost, regExp }, match]) => {
 				const test = crossHost
 					? `https://${host}${pathname}${sortedSearch}`
-					: `${pathname}${sortedSearch}`;
+					: `${pathname}${sortedSearch.length > 0 ? `?${sortedSearch}` : ""}`;
 				const result = regExp.exec(test);
 				if (result) {
 					return replacerFn(match, result.groups || {});
