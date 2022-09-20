@@ -19,12 +19,12 @@ test("parseRedirects should reject malformed lines", () => {
 			{
 				line: `/c`,
 				lineNumber: 3,
-				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 1.",
+				message: "Expected at least 2 whitespace-separated tokens. Got 1.",
 			},
 			{
 				line: `/d /e 302 !important`,
 				lineNumber: 5,
-				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 4.",
+				message: "URLs should either be relative (e.g. begin with a forward-slash), or use HTTPS (e.g. begin with \"https://\").",
 			},
 		],
 	});
@@ -223,7 +223,7 @@ test("parseRedirects should reject malformed URLs", () => {
 			{
 				line: `/some page /somewhere else`,
 				lineNumber: 3,
-				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 4.",
+				message: "URLs should either be relative (e.g. begin with a forward-slash), or use HTTPS (e.g. begin with \"https://\").",
 			},
 			{
 				line: `https://yeah.com https://nah.com`,
