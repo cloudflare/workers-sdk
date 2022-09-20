@@ -69,17 +69,21 @@ export function parseRedirects(input: string): ParsedRedirects {
 		}
 		let from = fromResult[0];
 		const queryParams = tokens.slice(1, index);
-		const hasInvalidQueryParam = queryParams.some((token) =>
-			token.includes("&")
-		);
-		if (hasInvalidQueryParam) {
-			invalid.push({
-				line,
-				lineNumber: i + 1,
-				message: "Query parameters cannot contain '&'.",
-			});
-			continue;
-		}
+		let shouldContinue = false;
+		queryParams.forEach((param, i) => {
+			if (param.includes("&")) {
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: "Query parameters cannot contain '&'.",
+				});
+				shouldContinue = true;
+			}
+			if (param.endsWith("=")) {
+				queryParams[index] = param.slice(0, -1);
+			}
+		});
+		if(shouldContinue) continue;
 
 		if (queryParams.length) {
 			from = `${from}?${queryParams.sort().join("&")}`;
