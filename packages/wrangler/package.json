@@ -94,6 +94,7 @@
 		"@cloudflare/kv-asset-handler": "^0.2.0",
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
 		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+		"@miniflare/tre": "file:../../../miniflare3/packages/tre",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.51",

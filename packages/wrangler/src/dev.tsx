@@ -60,6 +60,7 @@ interface DevArgs {
 	"jsx-fragment"?: string;
 	tsconfig?: string;
 	local?: boolean;
+	"experimental-local"?: boolean;
 	minify?: boolean;
 	var?: string[];
 	define?: string[];
@@ -231,6 +232,11 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Run on my machine",
 				type: "boolean",
 				default: false, // I bet this will a point of contention. We'll revisit it.
+			})
+			.option("experimental-local", {
+				describe: "Run on my machine using the Cloudflare Workers runtime",
+				type: "boolean",
+				default: false,
 			})
 			.option("minify", {
 				describe: "Minify the script",
@@ -404,7 +410,9 @@ export async function startDev(args: StartDevOptions) {
 					nodeCompat={nodeCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
-					initialMode={args.local ? "local" : "remote"}
+					initialMode={
+						args.local || args.experimentalLocal ? "local" : "remote"
+					}
 					jsxFactory={args["jsx-factory"] || configParam.jsx_factory}
 					jsxFragment={args["jsx-fragment"] || configParam.jsx_fragment}
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
@@ -444,6 +452,7 @@ export async function startDev(args: StartDevOptions) {
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args["test-scheduled"]}
+					experimentalMiniflare3={args.experimentalLocal}
 				/>
 			);
 		}
@@ -558,6 +567,7 @@ export async function startApiDev(args: StartDevOptions) {
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
+			experimentalMiniflare3: undefined,
 		});
 	}
 

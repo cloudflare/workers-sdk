@@ -154,6 +154,7 @@ export type DevProps = {
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
+	experimentalMiniflare3: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -214,6 +215,7 @@ function InteractiveDevSession(props: DevProps) {
 
 type DevSessionProps = DevProps & {
 	local: boolean;
+	experimentalMiniflare3?: boolean;
 };
 
 function DevSession(props: DevSessionProps) {
@@ -277,6 +279,7 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={props.onReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
+			experimentalMiniflare3={props.experimentalMiniflare3}
 		/>
 	) : (
 		<Remote

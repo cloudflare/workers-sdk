@@ -26,8 +26,13 @@ import type {
 	CfVars,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	Miniflare as Miniflare3Type,
+	MiniflareOptions as Miniflare3Options,
+} from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+
 export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -53,6 +58,7 @@ export interface LocalProps {
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
+	experimentalMiniflare3?: boolean;
 }
 
 export function Local(props: LocalProps) {
@@ -63,6 +69,10 @@ export function Local(props: LocalProps) {
 		logToTerminal: false,
 	});
 	return null;
+}
+
+function arrayToObject(values: string[] = []): Record<string, string> {
+	return Object.fromEntries(values.map((value) => [value, value]));
 }
 
 function useLocalWorker({
@@ -89,9 +99,11 @@ function useLocalWorker({
 	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
+	experimentalMiniflare3,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
+	const experimentalLocal = useRef<Miniflare3Type>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 
@@ -188,6 +200,33 @@ function useLocalWorker({
 				enablePagesAssetsServiceBinding,
 			});
 
+			if (experimentalMiniflare3) {
+				// TODO: refactor setupMiniflareOptions so we don't need to parse here
+				const miniflare2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+				const options: Miniflare3Options = {
+					...miniflare2Options,
+					// Miniflare 3 distinguishes between binding name and namespace/bucket
+					// IDs. For now, just use the same value as we did in Miniflare 2.
+					// TODO: use defined KV preview ID if any
+					kvNamespaces: arrayToObject(miniflare2Options.kvNamespaces),
+					r2Buckets: arrayToObject(miniflare2Options.r2Buckets),
+					// TODO: pass-through collected modules instead of getting Miniflare
+					//  to collect them again
+				};
+
+				logger.log("⎔ Starting an experimental local server...");
+				const { Miniflare } = await import("@miniflare/tre");
+				const mf = new Miniflare(options);
+				experimentalLocal.current = mf;
+				removeSignalExitListener.current = onExit((_code, _signal) => {
+					logger.log("⎔ Shutting down experimental local server.");
+					mf.dispose();
+					experimentalLocal.current = undefined;
+				});
+				await mf.ready;
+				return;
+			}
+
 			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 			logger.log("⎔ Starting a local server...");
 
@@ -280,9 +319,14 @@ function useLocalWorker({
 				logger.log("⎔ Shutting down local server.");
 				local.current?.kill();
 				local.current = undefined;
-				removeSignalExitListener.current && removeSignalExitListener.current();
-				removeSignalExitListener.current = undefined;
 			}
+			if (experimentalLocal.current) {
+				logger.log("⎔ Shutting down experimental local server.");
+				experimentalLocal.current?.dispose();
+				experimentalLocal.current = undefined;
+			}
+			removeSignalExitListener.current?.();
+			removeSignalExitListener.current = undefined;
 		};
 	}, [
 		bundle,
@@ -459,7 +503,10 @@ export function setupMiniflareOptions({
 	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
-}: SetupMiniflareOptionsProps): MiniflareOptions {
+}: SetupMiniflareOptionsProps): {
+	miniflareCLIPath: string;
+	forkOptions: string[];
+} {
 	// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
