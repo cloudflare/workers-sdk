@@ -44,7 +44,6 @@ interface DevOptions {
 		preview_bucket_name?: string;
 	}[];
 	showInteractiveDevSession?: boolean;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	inspect?: boolean;
 	forceLocal?: boolean;
@@ -99,7 +98,6 @@ export async function unstable_dev(
 				const devServer = startApiDev({
 					script: script,
 					inspect: false,
-					logLevel: "none",
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
@@ -144,7 +142,6 @@ export async function unstable_dev(
 				const devServer = startDev({
 					script: script,
 					inspect: false,
-					logLevel: "none",
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",

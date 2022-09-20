@@ -335,7 +335,6 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		if (args.logLevel) {
-			// we don't define a "none" logLevel, so "error" will do for now.
 			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
 		}
 		await printWranglerBanner();
@@ -434,7 +433,6 @@ export async function startDev(args: StartDevOptions) {
 					usageModel={configParam.usage_model}
 					bindings={bindings}
 					crons={configParam.triggers.crons}
-					logLevel={args.logLevel}
 					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
@@ -464,7 +462,6 @@ export async function startDev(args: StartDevOptions) {
 
 export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
 		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
 	}
 	await printWranglerBanner();
@@ -547,7 +544,6 @@ export async function startApiDev(args: StartDevOptions) {
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
-			logLevel: args.logLevel,
 			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,

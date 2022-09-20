@@ -49,7 +49,6 @@ export interface LocalProps {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: ((ip: string, port: number) => void) | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
@@ -86,7 +85,6 @@ function useLocalWorker({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 }: LocalProps) {
@@ -182,7 +180,6 @@ function useLocalWorker({
 				dataBlobBindings,
 				crons,
 				upstream,
-				logLevel,
 				logPrefix,
 				workerDefinitions,
 				enablePagesAssetsServiceBinding,
@@ -311,7 +308,6 @@ function useLocalWorker({
 		localProtocol,
 		localUpstream,
 		inspect,
-		logLevel,
 		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
@@ -425,7 +421,6 @@ interface SetupMiniflareOptionsProps {
 	dataBlobBindings: Record<string, string>;
 	crons: Config["triggers"]["crons"];
 	upstream: string | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix: string | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -455,7 +450,6 @@ export function setupMiniflareOptions({
 	dataBlobBindings,
 	crons,
 	upstream,
-	logLevel,
 	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
@@ -548,7 +542,7 @@ export function setupMiniflareOptions({
 		logUnhandledRejections: true,
 		crons,
 		upstream,
-		disableLogs: logLevel === "none",
+		disableLogs: logger.loggerLevel === "none",
 		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};

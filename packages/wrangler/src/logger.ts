@@ -3,6 +3,8 @@ import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 
 const LOGGER_LEVELS = {
+	noRoutes: -2,
+	none: -1,
 	error: 0,
 	warn: 1,
 	log: 2,
@@ -35,13 +37,19 @@ class Logger {
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);
 
-	private doLog(messageLevel: LoggerLevel, args: unknown[]) {
+	private doLog(
+		messageLevel: Exclude<LoggerLevel, "none" | "noRoutes">,
+		args: unknown[]
+	) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
 		}
 	}
 
-	private formatMessage(level: LoggerLevel, message: string): string {
+	private formatMessage(
+		level: Exclude<LoggerLevel, "none" | "noRoutes">,
+		message: string
+	): string {
 		const kind = LOGGER_LEVEL_FORMAT_TYPE_MAP[level];
 		if (kind) {
 			// Format the message using the esbuild formatter.
