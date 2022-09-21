@@ -527,6 +527,12 @@ function createCLIParser(argv: string[]) {
 						describe: "Don't actually publish",
 						type: "boolean",
 					})
+					.option("keep-vars", {
+						describe:
+							"Stop wrangler from deleting vars that are not present in the wrangler.toml",
+						default: false,
+						type: "boolean",
+					})
 					.option("legacy-env", {
 						type: "boolean",
 						describe: "Use legacy environments",
@@ -631,6 +637,7 @@ function createCLIParser(argv: string[]) {
 				outDir: args.outdir,
 				dryRun: args.dryRun,
 				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
 			});
 		}
 	);
