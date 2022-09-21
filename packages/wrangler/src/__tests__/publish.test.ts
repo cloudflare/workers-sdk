@@ -6540,6 +6540,54 @@ addEventListener('fetch', event => {});`
 			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
 		);
 	});
+	describe("--keep-vars", () => {
+		it("should send keep_bindings when keep-vars is passed in", async () => {
+			process.env = {
+				CLOUDFLARE_API_TOKEN: "hunter2",
+				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+			};
+			setIsTTY(false);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ keepVars: true });
+			mockOAuthServerCallback();
+			mockGetMemberships([]);
+
+			await runWrangler("publish index.js --keep-vars");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+		it("should not send keep_bindings by default", async () => {
+			process.env = {
+				CLOUDFLARE_API_TOKEN: "hunter2",
+				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+			};
+			setIsTTY(false);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockOAuthServerCallback();
+			mockGetMemberships([]);
+
+			await runWrangler("publish index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -6571,6 +6619,7 @@ function mockUploadWorkerRequest(
 		env?: string;
 		legacyEnv?: boolean;
 		sendScriptIds?: boolean;
+		keepVars?: boolean;
 	} = {}
 ) {
 	const {
@@ -6586,6 +6635,7 @@ function mockUploadWorkerRequest(
 		legacyEnv = false,
 		expectedMigrations,
 		sendScriptIds,
+		keepVars,
 	} = options;
 	setMockResponse(
 		env && !legacyEnv
@@ -6617,7 +6667,11 @@ function mockUploadWorkerRequest(
 				expect(metadata.body_part).toEqual("index.js");
 			}
 
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+			if (keepVars) {
+				expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+			} else {
+				expect(metadata.keep_bindings).toBeFalsy();
+			}
 
 			if ("expectedBindings" in options) {
 				expect(metadata.bindings).toEqual(expectedBindings);
