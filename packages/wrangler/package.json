@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.1.5",
+	"version": "2.1.6",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
