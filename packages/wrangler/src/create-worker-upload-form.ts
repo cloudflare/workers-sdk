@@ -59,7 +59,7 @@ export interface WorkerMetadata {
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
-	keep_bindings: WorkerMetadataBinding["type"][];
+	keep_bindings?: WorkerMetadataBinding["type"][];
 }
 
 /**
@@ -74,6 +74,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		usage_model,
 		compatibility_date,
 		compatibility_flags,
+		keepVars,
 	} = worker;
 
 	let { modules } = worker;
@@ -257,7 +258,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
-		keep_bindings: ["plain_text", "json"],
+		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));
