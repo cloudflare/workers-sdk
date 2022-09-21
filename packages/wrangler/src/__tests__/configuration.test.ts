@@ -73,6 +73,7 @@ describe("normalizeAndValidateConfig()", () => {
 			minify: undefined,
 			node_compat: undefined,
 			first_party_worker: undefined,
+			keep_vars: undefined,
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -106,6 +107,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const expectedConfig = {
 				legacy_env: "FOO",
 				send_metrics: "BAD",
+				keep_vars: "NEVER",
 				dev: {
 					ip: 222,
 					port: "FOO",
@@ -128,6 +130,7 @@ describe("normalizeAndValidateConfig()", () => {
 			"Processing wrangler configuration:
 			  - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
 			  - Expected \\"send_metrics\\" to be of type boolean but got \\"BAD\\".
+			  - Expected \\"keep_vars\\" to be of type boolean but got \\"NEVER\\".
 			  - Expected \\"dev.ip\\" to be of type string but got 222.
 			  - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
 			  - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
