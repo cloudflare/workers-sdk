@@ -6540,6 +6540,7 @@ addEventListener('fetch', event => {});`
 			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
 		);
 	});
+
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			process.env = {
@@ -6564,6 +6565,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
 		it("should not send keepVars by default", async () => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
