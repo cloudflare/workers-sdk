@@ -497,6 +497,13 @@ export async function startApiDev(args: StartDevOptions) {
 			configParam
 		);
 
+		console.log("args.bundle: ", args.bundle);
+		console.log("configParam.no_bundle: ", configParam.no_bundle);
+		console.log(
+			"noBundle arg for startDevServer: ",
+			!(args.bundle ?? !configParam.no_bundle)
+		);
+
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
 			noBundle: !(args.bundle ?? !configParam.no_bundle),

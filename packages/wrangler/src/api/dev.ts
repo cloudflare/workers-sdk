@@ -107,6 +107,7 @@ export async function unstable_dev(
 					...options,
 					local: true,
 					onReady: (address, port) => {
+						console.log("firing onReady");
 						readyPort = port;
 						readyAddress = address;
 						ready(devServer);
@@ -118,15 +119,15 @@ export async function unstable_dev(
 				resolve({
 					stop: devServer.stop,
 					fetch: async (input?: RequestInfo, init?: RequestInit) => {
-						return await fetch(
-							...parseRequestInput(
-								readyAddress,
-								readyPort,
-								input,
-								init,
-								options?.localProtocol
-							)
+						const fetchArgs = parseRequestInput(
+							readyAddress,
+							readyPort,
+							input,
+							init,
+							options?.localProtocol
 						);
+						console.log("fetchArgs: ", fetchArgs);
+						return await fetch(...fetchArgs);
 					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
