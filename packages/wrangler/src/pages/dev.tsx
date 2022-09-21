@@ -151,7 +151,6 @@ export function Options(yargs: Argv) {
 				// "none" will currently default to "error" for Wrangler Logger
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
-				default: "warn",
 			},
 		})
 		.epilogue(pagesBetaWarning);
@@ -191,7 +190,7 @@ export const Handler = async ({
 		logger.loggerLevel =
 			(logLevel as LogLevelArg) === "none"
 				? "error"
-				: (logLevel as Exclude<"none", LogLevelArg>);
+				: (logLevel as Exclude<"none", LogLevelArg>) ?? "log";
 	}
 
 	if (!local) {
@@ -508,7 +507,7 @@ export const Handler = async ({
 			persistTo,
 			showInteractiveDevSession: undefined,
 			inspect: true,
-			logLevel: logLevel as Exclude<LogLevelArg, "info">,
+			logLevel: (logLevel as Exclude<LogLevelArg, "info">) ?? "warn",
 			logPrefix: "pages",
 		},
 		{ testMode: false, disableExperimentalWarning: true }
