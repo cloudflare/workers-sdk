@@ -6541,7 +6541,7 @@ addEventListener('fetch', event => {});`
 		);
 	});
 	describe("--keep-vars", () => {
-		it("should send keep_bindings when keep-vars is passed in", async () => {
+		it("should send keepVars when keep-vars is passed in", async () => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
@@ -6564,7 +6564,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
-		it("should not send keep_bindings by default", async () => {
+		it("should not send keepVars by default", async () => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",

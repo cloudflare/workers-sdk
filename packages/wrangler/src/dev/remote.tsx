@@ -305,7 +305,7 @@ export function useWorker(props: {
 				compatibility_date: props.compatibilityDate,
 				compatibility_flags: props.compatibilityFlags,
 				usage_model: props.usageModel,
-				keep_bindings: true,
+				keepVars: true,
 			};
 
 			const workerAccount: CfAccount = {

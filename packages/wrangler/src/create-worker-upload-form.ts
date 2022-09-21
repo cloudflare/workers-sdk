@@ -74,7 +74,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		usage_model,
 		compatibility_date,
 		compatibility_flags,
-		keep_bindings,
+		keepVars,
 	} = worker;
 
 	let { modules } = worker;
@@ -258,7 +258,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
-		...(keep_bindings && { keep_bindings: ["plain_text", "json"] }),
+		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));
