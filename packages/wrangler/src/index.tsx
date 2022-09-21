@@ -529,7 +529,7 @@ function createCLIParser(argv: string[]) {
 					})
 					.option("keep-vars", {
 						describe:
-							"Stop wrangler from deleting vars that are not present in the wrangler.toml",
+							"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
 						default: false,
 						type: "boolean",
 					})
