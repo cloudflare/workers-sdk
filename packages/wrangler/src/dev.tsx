@@ -69,7 +69,7 @@ interface DevArgs {
 	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: (ip: string, port: number) => void;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
@@ -280,7 +280,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				default: false,
 			})
 			.option("log-level", {
-				choices: ["debug", "log", "warn", "error", "none"] as const,
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 				default: "log",
 			})

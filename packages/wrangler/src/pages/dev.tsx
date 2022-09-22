@@ -147,7 +147,7 @@ export function Options(yargs: Argv) {
 				hidden: true,
 			},
 			"log-level": {
-				choices: ["debug", "log", "warn", "error", "none"] as const,
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
 		})
