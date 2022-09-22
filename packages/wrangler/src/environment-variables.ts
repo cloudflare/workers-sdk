@@ -1,5 +1,19 @@
 import { logger } from "./logger";
 
+type VariableNames =
+	| "CLOUDFLARE_ACCOUNT_ID"
+	| "CLOUDFLARE_API_TOKEN"
+	| "CLOUDFLARE_API_KEY"
+	| "CLOUDFLARE_EMAIL"
+	| "WRANGLER_SEND_METRICS"
+	| "CLOUDFLARE_API_BASE_URL"
+	| "WRANGLER_LOG";
+type DeprecatedNames =
+	| "CF_ACCOUNT_ID"
+	| "CF_API_TOKEN"
+	| "CF_API_KEY"
+	| "CF_EMAIL"
+	| "CF_API_BASE_URL";
 /**
  * Create a function used to access an environment variable.
  *
@@ -11,8 +25,8 @@ export function getEnvironmentVariableFactory({
 	deprecatedName,
 	defaultValue,
 }: {
-	variableName: string;
-	deprecatedName?: string;
+	variableName: VariableNames;
+	deprecatedName?: DeprecatedNames;
 	defaultValue?: string;
 }) {
 	let hasWarned = false;
