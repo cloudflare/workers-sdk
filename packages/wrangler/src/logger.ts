@@ -3,7 +3,6 @@ import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 
 const LOGGER_LEVELS = {
-	noRoutes: -2,
 	none: -1,
 	error: 0,
 	warn: 1,
