@@ -12,7 +12,7 @@ describe("worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			"src/headers.ts",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 	});
