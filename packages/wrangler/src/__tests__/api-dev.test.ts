@@ -9,7 +9,7 @@ describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 		const resp = await worker.fetch();
@@ -25,7 +25,7 @@ describe("unstable dev fetch input protocol", () => {
 	it("should use http localProtocol", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{ logLevel: "none", localProtocol: "http" },
+			{ localProtocol: "http" },
 			{ disableExperimentalWarning: true }
 		);
 		const res = await worker.fetch();
@@ -39,7 +39,7 @@ describe("unstable dev fetch input protocol", () => {
 	it("should use undefined localProtocol", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{ logLevel: "none", localProtocol: undefined },
+			{ localProtocol: undefined },
 			{ disableExperimentalWarning: true }
 		);
 		const res = await worker.fetch();
@@ -73,7 +73,7 @@ describe("unstable dev fetch input parsing", () => {
 		const port = 21213;
 		const worker = await unstable_dev(
 			"index.js",
-			{ logLevel: "none", port },
+			{ port },
 			{ disableExperimentalWarning: true }
 		);
 		const req = new Request("http://0.0.0.0:21213/test", {
@@ -101,7 +101,7 @@ describe("unstable dev fetch input parsing", () => {
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev(
 			"index.js",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 		const url = new URL("http://localhost:80/test");
@@ -127,7 +127,7 @@ describe("unstable dev fetch input parsing", () => {
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev(
 			"index.js",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 		const resp = await worker.fetch("http://example.com/test");
@@ -152,7 +152,7 @@ describe("unstable dev fetch input parsing", () => {
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev(
 			"index.js",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 		const resp = await worker.fetch("/test");
@@ -177,7 +177,7 @@ describe("unstable dev fetch input parsing", () => {
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev(
 			"index.js",
-			{ logLevel: "none" },
+			{},
 			{ disableExperimentalWarning: true }
 		);
 		const resp = await worker.fetch("");

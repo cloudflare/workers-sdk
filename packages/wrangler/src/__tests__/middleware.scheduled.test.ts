@@ -29,7 +29,7 @@ describe("run scheduled events with middleware", () => {
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none" },
+				{},
 				{ disableExperimentalWarning: true }
 			);
 
@@ -43,7 +43,7 @@ describe("run scheduled events with middleware", () => {
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none", testScheduled: true },
+				{ testScheduled: true },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -57,7 +57,7 @@ describe("run scheduled events with middleware", () => {
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none", testScheduled: true },
+				{ testScheduled: true },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -93,7 +93,7 @@ describe("run scheduled events with middleware", () => {
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none" },
+				{},
 				{ disableExperimentalWarning: true }
 			);
 
@@ -107,7 +107,7 @@ describe("run scheduled events with middleware", () => {
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none", testScheduled: true },
+				{ testScheduled: true },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -121,7 +121,7 @@ describe("run scheduled events with middleware", () => {
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev(
 				"index.js",
-				{ logLevel: "none", testScheduled: true },
+				{ testScheduled: true },
 				{ disableExperimentalWarning: true }
 			);
 

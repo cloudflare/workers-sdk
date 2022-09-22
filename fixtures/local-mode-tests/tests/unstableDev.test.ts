@@ -13,7 +13,10 @@ describe("worker", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
 			"src/basicModule.ts",
-			{ logLevel: "none", ip: "127.0.0.1", port: 1337 },
+			{
+				ip: "127.0.0.1",
+				port: 1337,
+			},
 			{ disableExperimentalWarning: true }
 		);
 	});

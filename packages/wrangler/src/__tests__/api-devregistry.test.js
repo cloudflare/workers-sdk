@@ -14,18 +14,12 @@ describe("multi-worker testing", () => {
 	beforeAll(async () => {
 		childWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				logLevel: "none",
-				config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
-			},
+			{ config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml" },
 			{ disableExperimentalWarning: true }
 		);
 		parentWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/parent-worker.js",
-			{
-				logLevel: "none",
-				config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml",
-			},
+			{ config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml" },
 			{ disableExperimentalWarning: true }
 		);
 	});
