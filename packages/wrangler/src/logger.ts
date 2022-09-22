@@ -36,10 +36,7 @@ class Logger {
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);
 
-	private doLog(
-		messageLevel: Exclude<LoggerLevel, "none">,
-		args: unknown[]
-	) {
+	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
 		}
