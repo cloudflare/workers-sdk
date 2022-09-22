@@ -10,9 +10,7 @@ describe("worker", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
 			"src/module.ts",
-			{
-				config: "src/wrangler.module.toml",
-			},
+			{ logLevel: "none", config: "src/wrangler.module.toml" },
 			{ disableExperimentalWarning: true }
 		);
 	});

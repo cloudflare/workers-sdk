@@ -29,7 +29,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -59,7 +59,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -92,7 +92,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -123,7 +123,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -152,7 +152,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -181,7 +181,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -213,7 +213,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -244,7 +244,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -269,7 +269,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -297,7 +297,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -330,7 +330,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -358,7 +358,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -398,7 +398,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -421,7 +421,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -445,7 +445,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -472,7 +472,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -504,7 +504,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -534,7 +534,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -565,7 +565,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -595,7 +595,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -626,7 +626,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -651,7 +651,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -682,7 +682,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 
@@ -712,7 +712,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 
 			const worker = await unstable_dev(
 				"index.js",
-				{},
+				{ logLevel: "none" },
 				{ disableExperimentalWarning: true }
 			);
 

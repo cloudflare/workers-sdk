@@ -6,7 +6,7 @@ describe("Worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			"src/index.js",
-			{},
+			{ logLevel: "none" },
 			{ disableExperimentalWarning: true }
 		);
 	});
