@@ -99,6 +99,7 @@ export async function unstable_dev(
 				const devServer = startApiDev({
 					script: script,
 					inspect: false,
+					logLevel: "none",
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
