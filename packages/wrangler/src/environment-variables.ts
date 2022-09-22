@@ -8,6 +8,7 @@ type VariableNames =
 	| "WRANGLER_SEND_METRICS"
 	| "CLOUDFLARE_API_BASE_URL"
 	| "WRANGLER_LOG";
+
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"
 	| "CF_API_TOKEN"
