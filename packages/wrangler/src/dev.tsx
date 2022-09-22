@@ -462,7 +462,7 @@ export async function startDev(args: StartDevOptions) {
 
 export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
-		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+		logger.loggerLevel = args.logLevel;
 	}
 	await printWranglerBanner();
 
