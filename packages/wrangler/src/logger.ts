@@ -38,7 +38,7 @@ class Logger {
 	error = (...args: unknown[]) => this.doLog("error", args);
 
 	private doLog(
-		messageLevel: Exclude<LoggerLevel, "none" | "noRoutes">,
+		messageLevel: Exclude<LoggerLevel, "none">,
 		args: unknown[]
 	) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
@@ -47,7 +47,7 @@ class Logger {
 	}
 
 	private formatMessage(
-		level: Exclude<LoggerLevel, "none" | "noRoutes">,
+		level: Exclude<LoggerLevel, "none">,
 		message: string
 	): string {
 		const kind = LOGGER_LEVEL_FORMAT_TYPE_MAP[level];

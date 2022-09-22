@@ -335,7 +335,7 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		if (args.logLevel) {
-			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
 
