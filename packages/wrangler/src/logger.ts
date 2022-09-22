@@ -6,8 +6,9 @@ const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
 	warn: 1,
-	log: 2,
-	debug: 3,
+	info: 2,
+	log: 3,
+	debug: 4,
 } as const;
 
 type LoggerLevel = keyof typeof LOGGER_LEVELS;
@@ -16,6 +17,7 @@ type LoggerLevel = keyof typeof LOGGER_LEVELS;
 const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 	error: "error",
 	warn: "warning",
+	info: undefined,
 	log: undefined,
 	debug: undefined,
 } as const;
@@ -32,6 +34,7 @@ class Logger {
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
+	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);

@@ -49,7 +49,7 @@ async function main() {
 			: new Log(logLevel, config.logOptions);
 
 	if (logLevel === "DEBUG" || logLevel === "VERBOSE") {
-		console.log("OPTIONS:\n", JSON.stringify(config, null, 2));
+		console.log("MINIFLARE OPTIONS:\n", JSON.stringify(config, null, 2));
 	}
 
 	config.bindings = {

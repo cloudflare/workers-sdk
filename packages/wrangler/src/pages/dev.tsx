@@ -181,7 +181,7 @@ export const Handler = async ({
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
-	type LogLevelArg = "debug" | "log" | "warn" | "error" | "none";
+	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
 		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
 		logger.loggerLevel = logLevel as LogLevelArg;
