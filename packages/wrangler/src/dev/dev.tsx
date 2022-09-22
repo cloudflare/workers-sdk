@@ -145,7 +145,6 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	onReady: ((ip: string, port: number) => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
@@ -272,7 +271,6 @@ function DevSession(props: DevSessionProps) {
 			crons={props.crons}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
-			logLevel={props.logLevel}
 			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}

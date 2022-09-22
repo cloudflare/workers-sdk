@@ -69,7 +69,7 @@ interface DevArgs {
 	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: (ip: string, port: number) => void;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
@@ -280,7 +280,6 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				default: false,
 			})
 			.option("log-level", {
-				// "none" will currently default to "error" for Wrangler Logger
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 				default: "log",
@@ -335,8 +334,7 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		if (args.logLevel) {
-			// we don't define a "none" logLevel, so "error" will do for now.
-			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
 
@@ -434,7 +432,6 @@ export async function startDev(args: StartDevOptions) {
 					usageModel={configParam.usage_model}
 					bindings={bindings}
 					crons={configParam.triggers.crons}
-					logLevel={args.logLevel}
 					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
@@ -464,8 +461,7 @@ export async function startDev(args: StartDevOptions) {
 
 export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
-		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+		logger.loggerLevel = args.logLevel;
 	}
 	await printWranglerBanner();
 
@@ -547,7 +543,6 @@ export async function startApiDev(args: StartDevOptions) {
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
-			logLevel: args.logLevel,
 			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,

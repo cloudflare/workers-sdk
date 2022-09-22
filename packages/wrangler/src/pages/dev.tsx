@@ -146,12 +146,9 @@ export function Options(yargs: Argv) {
 				type: "string",
 				hidden: true,
 			},
-
 			"log-level": {
-				// "none" will currently default to "error" for Wrangler Logger
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
-				default: "log",
 			},
 		})
 		.epilogue(pagesBetaWarning);
@@ -186,12 +183,8 @@ export const Handler = async ({
 
 	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
 		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
-		logger.loggerLevel =
-			(logLevel as LogLevelArg) === "none"
-				? "error"
-				: (logLevel as Exclude<"none", LogLevelArg>);
+		logger.loggerLevel = logLevel as LogLevelArg;
 	}
 
 	if (!local) {
@@ -508,8 +501,8 @@ export const Handler = async ({
 			persistTo,
 			showInteractiveDevSession: undefined,
 			inspect: true,
-			logLevel: "warn",
 			logPrefix: "pages",
+			logLevel: logLevel ?? "warn",
 		},
 		{ testMode: false, disableExperimentalWarning: true }
 	);

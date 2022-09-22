@@ -111,7 +111,6 @@ export async function startDevServer(
 			crons: props.crons,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
-			logLevel: props.logLevel,
 			logPrefix: props.logPrefix,
 			inspect: props.inspect,
 			onReady: props.onReady,
@@ -246,7 +245,6 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 }: LocalProps) {
@@ -332,7 +330,6 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logLevel,
 			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
