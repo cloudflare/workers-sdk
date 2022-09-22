@@ -295,41 +295,6 @@ export async function generateHandler<
 			...Object.fromEntries(extraHeaders.entries()),
 		});
 
-		// Iterate through rules and find rules that match the path
-		const headersMatcher = generateRulesMatcher(
-			headerRules,
-			({ set = {}, unset = [] }, replacements) => {
-				const replacedSet: Record<string, string> = {};
-				Object.keys(set).forEach((key) => {
-					replacedSet[key] = replacer(set[key], replacements);
-				});
-				return {
-					set: replacedSet,
-					unset,
-				};
-			}
-		);
-		const matches = headersMatcher({ request });
-
-		// This keeps track of every header that we've set from _headers
-		// because we want to combine user declared headers but overwrite
-		// existing and extra ones
-		const setMap = new Set();
-		// Apply every matched rule in order
-		matches.forEach(({ set = {}, unset = [] }) => {
-			Object.keys(set).forEach((key) => {
-				if (setMap.has(key.toLowerCase())) {
-					headers.append(key, set[key]);
-				} else {
-					headers.set(key, set[key]);
-					setMap.add(key.toLowerCase());
-				}
-			});
-			unset.forEach((key) => {
-				headers.delete(key);
-			});
-		});
-
 		if (earlyHintsCache) {
 			const preEarlyHintsHeaders = new Headers(headers);
 
@@ -395,6 +360,41 @@ export async function generateHandler<
 				);
 			}
 		}
+
+		// Iterate through rules and find rules that match the path
+		const headersMatcher = generateRulesMatcher(
+			headerRules,
+			({ set = {}, unset = [] }, replacements) => {
+				const replacedSet: Record<string, string> = {};
+				Object.keys(set).forEach((key) => {
+					replacedSet[key] = replacer(set[key], replacements);
+				});
+				return {
+					set: replacedSet,
+					unset,
+				};
+			}
+		);
+		const matches = headersMatcher({ request });
+
+		// This keeps track of every header that we've set from _headers
+		// because we want to combine user declared headers but overwrite
+		// existing and extra ones
+		const setMap = new Set();
+		// Apply every matched rule in order
+		matches.forEach(({ set = {}, unset = [] }) => {
+			Object.keys(set).forEach((key) => {
+				if (setMap.has(key.toLowerCase())) {
+					headers.append(key, set[key]);
+				} else {
+					headers.set(key, set[key]);
+					setMap.add(key.toLowerCase());
+				}
+			});
+			unset.forEach((key) => {
+				headers.delete(key);
+			});
+		});
 
 		// https://fetch.spec.whatwg.org/#null-body-status
 		return new Response(
