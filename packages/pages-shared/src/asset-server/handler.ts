@@ -34,6 +34,8 @@ export const HEADERS_VERSION = 2;
 export const HEADERS_VERSION_V1 = 1;
 export const ANALYTICS_VERSION = 1;
 
+const ALLOW_LISTED_EARLY_HINT_LINK_ATTRIBUTES = ["rel", "as", "href"];
+
 // Takes metadata headers and "normalise" them
 // to the latest version
 export function normaliseHeaders(
@@ -322,6 +324,16 @@ export async function generateHandler<
 							const transformedResponse = new HTMLRewriter()
 								.on("link[rel=preconnect],link[rel=preload]", {
 									element(element) {
+										for (const [attributeName] of element.attributes) {
+											if (
+												!ALLOW_LISTED_EARLY_HINT_LINK_ATTRIBUTES.includes(
+													attributeName.toLowerCase()
+												)
+											) {
+												return;
+											}
+										}
+
 										const href = element.getAttribute("href") || undefined;
 										const rel = element.getAttribute("rel") || undefined;
 										const as = element.getAttribute("as") || undefined;
