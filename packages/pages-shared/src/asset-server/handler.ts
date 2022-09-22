@@ -34,7 +34,10 @@ export const HEADERS_VERSION = 2;
 export const HEADERS_VERSION_V1 = 1;
 export const ANALYTICS_VERSION = 1;
 
-const ALLOW_LISTED_EARLY_HINT_LINK_ATTRIBUTES = ["rel", "as", "href"];
+// In rolling this out, we're taking a conservative approach to only generate these Link headers from <link> elements that have these attributes.
+// We'll ignore any <link> elements that contain other attributes (e.g. `fetchpriority`, `crossorigin` or `data-please-dont-generate-a-header`).
+// We're not confident in browser support for all of these additional attributes, so we'll wait until we have that information before proceeding further.
+const ALLOWED_EARLY_HINT_LINK_ATTRIBUTES = ["rel", "as", "href"];
 
 // Takes metadata headers and "normalise" them
 // to the latest version
@@ -326,7 +329,7 @@ export async function generateHandler<
 									element(element) {
 										for (const [attributeName] of element.attributes) {
 											if (
-												!ALLOW_LISTED_EARLY_HINT_LINK_ATTRIBUTES.includes(
+												!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
 													attributeName.toLowerCase()
 												)
 											) {
