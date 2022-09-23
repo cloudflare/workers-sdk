@@ -1665,6 +1665,108 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[d1_databases]", () => {
+			it("should error if d1_databases is an object", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got {}."
+		              `);
+			});
+
+			it("should error if d1_databases is a string", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got \\"BAD\\"."
+		              `);
+			});
+
+			it("should error if d1_databases is a number", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got 999."
+		              `);
+			});
+
+			it("should error if d1_databases is null", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got null."
+		              `);
+			});
+
+			it("should error if d1_databases.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, id: 2111 },
+							{
+								binding: "D1_BINDING_2",
+								id: "my-db",
+								preview_id: 2222,
+							},
+							{ binding: "VALID", id: "" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"d1_databases[0]\\" bindings must have a \\"database_id\\" field but got {}.
+			  - \\"d1_databases[1]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\"}.
+			  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			  - \\"d1_databases[2]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
+			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+		`);
+			});
+		});
+
 		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(

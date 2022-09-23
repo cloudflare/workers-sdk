@@ -233,12 +233,12 @@ Assume you have the two directories checked out right beside each other:
 
 ```
 ❯ ll src
-drwxr-xr-x     - glen 30 Jun 14:12  src
-drwxr-xr-x     - glen 26 Jul 17:34 ├──  miniflare
-drwxr-xr-x     - glen 27 Jul 17:51 └──  wrangler2
+drwxr-xr-x     - user 30 Jun 14:12 src
+drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
+drwxr-xr-x     - user 27 Jul 17:51 └── wrangler2
 ```
 
-> Note: use [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` to be as cool as me
+> Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output
 
 Inside `packages/wrangler/package.json`, replace:
 

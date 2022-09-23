@@ -222,6 +222,8 @@ function DevSession(props: DevSessionProps) {
 	const handleError = useErrorHandler();
 
 	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
+	// Additionally, useMemo is used so that new arrays aren't created on every render
+	// cause re-rendering further down.
 	const betaD1Shims = useMemo(
 		() => props.bindings.d1_databases?.map((db) => db.binding),
 		[props.bindings.d1_databases]

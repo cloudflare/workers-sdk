@@ -18,11 +18,18 @@ import type { Config } from "../config";
 import type { Database } from "./types";
 import type splitSqlQuery from "@databases/split-sql-query";
 import type { SQL, SQLQuery } from "@databases/sql";
-import type {
-	Statement as StatementType,
-	createSQLiteDB as createSQLiteDBType,
-} from "@miniflare/d1";
+import type { Statement as StatementType } from "@miniflare/d1";
+import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
 import type { Argv } from "yargs";
+
+type MiniflareNpxImportTypes = [
+	{
+		Statement: typeof StatementType;
+	},
+	{
+		createSQLiteDB: typeof createSQLiteDBType;
+	}
+];
 
 type ExecuteArgs = {
 	config?: string;
@@ -160,10 +167,11 @@ async function executeLocally(
 
 	const dbDir = path.join(persistencePath, "d1");
 	const dbPath = path.join(dbDir, `${localDB.binding}.sqlite3`);
-	const { Statement, createSQLiteDB } = await npxImport<{
-		Statement: typeof StatementType;
-		createSQLiteDB: typeof createSQLiteDBType;
-	}>("@miniflare/d1", logDim);
+	const [{ Statement }, { createSQLiteDB }] =
+		await npxImport<MiniflareNpxImportTypes>(
+			["@miniflare/d1", "@miniflare/shared"],
+			logDim
+		);
 
 	if (!existsSync(dbDir) && isInteractive) {
 		const ok = await confirm(

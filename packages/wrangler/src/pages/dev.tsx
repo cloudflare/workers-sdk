@@ -499,7 +499,7 @@ export const Handler = async ({
 
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
-				database_id: "fake-uuid",
+				database_id: "", // Required for types, but unused by dev
 				database_name: `local-${binding}`,
 			})),
 

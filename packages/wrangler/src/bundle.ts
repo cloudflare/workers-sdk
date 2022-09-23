@@ -77,7 +77,7 @@ export async function bundleWorker(
 		workerDefinitions: WorkerRegistry | undefined;
 		firstPartyWorkerDevFacade: boolean | undefined;
 		targetConsumer: "dev" | "publish";
-		local?: boolean;
+		local: boolean;
 		testScheduled?: boolean | undefined;
 	}
 ): Promise<BundleResult> {
@@ -92,7 +92,7 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
-		local = false,
+		local,
 		assets,
 		workerDefinitions,
 		services,

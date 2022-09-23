@@ -119,9 +119,11 @@ export interface CfR2Bucket {
 }
 
 export const D1_BETA_PREFIX = `__D1_BETA__` as const;
+export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
+
 export interface CfD1Database {
 	// For now, all D1 bindings are beta
-	binding: `${typeof D1_BETA_PREFIX}${string}`;
+	binding: D1PrefixedBinding;
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
@@ -224,4 +226,9 @@ export function identifyD1BindingsAsBeta(
 		...db,
 		binding: `${D1_BETA_PREFIX}${db.binding}`,
 	}));
+}
+
+// Remove beta prefix
+export function removeD1BetaPrefix(binding: D1PrefixedBinding): string {
+	return binding.slice(D1_BETA_PREFIX.length);
 }

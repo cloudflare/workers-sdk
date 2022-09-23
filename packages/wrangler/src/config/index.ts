@@ -1,7 +1,7 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
-import { D1_BETA_PREFIX } from "../worker";
+import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
@@ -146,7 +146,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "D1 Databases",
 			entries: d1_databases.map(({ binding, database_name, database_id }) => {
 				return {
-					key: binding.slice(D1_BETA_PREFIX.length),
+					key: removeD1BetaPrefix(binding),
 					value: database_name
 						? `${database_name} (${database_id})`
 						: database_id,

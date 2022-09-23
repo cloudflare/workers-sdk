@@ -19,7 +19,7 @@ describe("paths", () => {
 describe("readableRelative", () => {
 	const base = process.cwd();
 
-	it("should leave files in the current directory as-is", () => {
+	it("should leave paths to files in the current directory as-is", () => {
 		expect(readableRelative(path.join(base, "wrangler.toml"))).toBe(
 			`wrangler.toml`
 		);
