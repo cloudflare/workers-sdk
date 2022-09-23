@@ -10,7 +10,7 @@ interface DevOptions {
 	env?: string;
 	ip?: string;
 	port?: number;
-	noBundle?: boolean;
+	bundle?: boolean;
 	inspectorPort?: number;
 	localProtocol?: "http" | "https";
 	assets?: string;
