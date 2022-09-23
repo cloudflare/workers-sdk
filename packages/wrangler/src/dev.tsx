@@ -497,9 +497,13 @@ export async function startApiDev(args: StartDevOptions) {
 			configParam
 		);
 
+		//if args.bundle is on, don't disable bundling
+		//if there's no args.bundle, and configParam.no_bundle is on, disable bundling
+		//otherwise, enable bundling
+		const enableBundling = args.bundle ?? !configParam.no_bundle;
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
-			noBundle: !(args.bundle ?? !configParam.no_bundle),
+			noBundle: enableBundling,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,
