@@ -1,5 +1,5 @@
 import { Data, List, Message, Struct } from "capnp-ts";
-import { Config } from "./sserve-conf";
+import { Config, kVoid } from "./sserve-conf";
 import { Config as CapnpConfig } from "./sserve-conf.capnp.js";
 
 function capitalize<S extends string>(str: S): Capitalize<S> {
@@ -8,10 +8,14 @@ function capitalize<S extends string>(str: S): Capitalize<S> {
 	) as Capitalize<S>;
 }
 
-// TODO(important): this will fail if someone sets `{ script: undefined }` or
-//  something manually, where we're expecting an optional string, need a better
-//  solution
-function encodeCapnpStruct(obj: any, struct: Struct, padding = "") {
+// Dynamically encode a capnp struct based on keys and the types of values.
+// `obj` should be an instance of a type in `./sserve-conf.ts`. The safety of
+// this function relies on getting `./sserve-conf.ts` correct, TypeScript's type
+// safety guarantees, and us validating all user input with zod.
+//
+// TODO: generate `./sserve-conf.ts` and corresponding encoders automatically
+//  from the `.capnp` file.
+function encodeCapnpStruct(obj: any, struct: Struct) {
 	const anyStruct = struct as any;
 	for (const [key, value] of Object.entries(obj)) {
 		const capitalized = capitalize(key);
@@ -22,17 +26,19 @@ function encodeCapnpStruct(obj: any, struct: Struct, padding = "") {
 			const newList: List<any> = anyStruct[`init${capitalized}`](value.length);
 			for (let i = 0; i < value.length; i++) {
 				if (typeof value[i] === "object") {
-					encodeCapnpStruct(value[i], newList.get(i), padding + "  ");
+					encodeCapnpStruct(value[i], newList.get(i));
 				} else {
 					newList.set(i, value[i]);
 				}
 			}
 		} else if (typeof value === "object") {
 			const newStruct: Struct = anyStruct[`init${capitalized}`]();
-			encodeCapnpStruct(value, newStruct, padding + "  ");
-		} else {
-			// TODO: could we catch here if value is actually undefined, but meant to
-			//  be a different type
+			encodeCapnpStruct(value, newStruct);
+		} else if (value === kVoid) {
+			anyStruct[`set${capitalized}`]();
+		} else if (value !== undefined) {
+			// Ignore all `undefined` values, explicitly `undefined` values should use
+			// kVoid symbol instead.
 			anyStruct[`set${capitalized}`](value);
 		}
 	}
