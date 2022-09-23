@@ -106,6 +106,7 @@ export const KV_PLUGIN: Plugin<
 						{ name: BINDING_TEXT_NAMESPACE, text: id },
 						loopbackBinding,
 					],
+					compatibilityDate: "2022-09-01",
 				},
 			})
 		);

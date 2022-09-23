@@ -7,6 +7,6 @@ runtime... 👀
 
 # Additional Development Setup
 
-1. Copy the open-source runtime binary to `./lib/cfwrkr`
+1. Copy the open-source runtime binary to `./lib/workerd`
 2. Copy the config files `sserve-conf.{capnp,capnp.d.ts,capnp.js,ts}` to
    `./src/runtime/config/`
