@@ -503,7 +503,7 @@ export async function startApiDev(args: StartDevOptions) {
 		const enableBundling = args.bundle ?? !configParam.no_bundle;
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
-			noBundle: enableBundling,
+			noBundle: !enableBundling,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,
