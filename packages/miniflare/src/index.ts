@@ -101,7 +101,7 @@ type PluginRouters = {
 };
 
 // `__dirname` relative to bundled output `dist/src/index.js`
-const RUNTIME_PATH = path.resolve(__dirname, "..", "..", "lib", "cfwrkr");
+const RUNTIME_PATH = path.resolve(__dirname, "..", "..", "lib", "workerd");
 
 type StoppableServer = http.Server & stoppable.WithStop;
 

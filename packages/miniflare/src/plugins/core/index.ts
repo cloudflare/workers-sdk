@@ -157,6 +157,7 @@ export const CORE_PLUGIN: Plugin<
 				worker: {
 					serviceWorkerScript: SCRIPT_ENTRY,
 					bindings: serviceEntryBindings,
+					compatibilityDate: "2022-09-01",
 				},
 			},
 		];

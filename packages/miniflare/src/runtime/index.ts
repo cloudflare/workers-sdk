@@ -42,7 +42,7 @@ function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 
 class NativeRuntime extends Runtime {
 	static isSupported() {
-		return process.platform === "linux"; // TODO: and "darwin"?
+		return process.platform === "linux" || process.platform === "darwin";
 	}
 	static supportSuggestion = "Run using a Linux or macOS based system";
 	static description = "natively ⚡️";
