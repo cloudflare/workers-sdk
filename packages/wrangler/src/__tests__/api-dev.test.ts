@@ -19,6 +19,26 @@ describe("unstable_dev", () => {
 		}
 		await worker.stop();
 	});
+
+	it("should return the port that the server started on (1)", async () => {
+		const worker = await unstable_dev(
+			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
+			{},
+			{ disableExperimentalWarning: true }
+		);
+		expect(worker.port).toBeGreaterThan(0);
+		await worker.stop();
+	});
+
+	it("should return the port that the server started on (2)", async () => {
+		const worker = await unstable_dev(
+			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
+			{ port: 9191 },
+			{ disableExperimentalWarning: true }
+		);
+		expect(worker.port).toBe(9191);
+		await worker.stop();
+	});
 });
 
 describe("unstable dev fetch input protocol", () => {

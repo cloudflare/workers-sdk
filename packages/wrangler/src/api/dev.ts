@@ -60,25 +60,20 @@ interface DevApiOptions {
 }
 
 export interface UnstableDevWorker {
+	port: number;
+	address: string;
 	stop: () => Promise<void>;
-	fetch: (
-		input?: RequestInfo,
-		init?: RequestInit
-	) => Promise<Response | undefined>;
+	fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 	waitUntilExit: () => Promise<void>;
 }
 /**
  *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
- *  @param {string} script
- *  @param {DevOptions} options
- *  @param {DevApiOptions} apiOptions
- * @returns {Promise<UnstableDev>}
  */
 export async function unstable_dev(
 	script: string,
 	options?: DevOptions,
 	apiOptions?: DevApiOptions
-) {
+): Promise<UnstableDevWorker> {
 	const { testMode = true, disableExperimentalWarning = false } =
 		apiOptions || {};
 	if (!disableExperimentalWarning) {
@@ -116,6 +111,8 @@ export async function unstable_dev(
 				// now that the inner promise has resolved, we can resolve the outer promise
 				// with an object that lets you fetch and stop the dev server
 				resolve({
+					port: readyPort,
+					address: readyAddress,
 					stop: devServer.stop,
 					fetch: async (input?: RequestInfo, init?: RequestInit) => {
 						return await fetch(
@@ -157,6 +154,8 @@ export async function unstable_dev(
 				});
 			}).then((devServer) => {
 				resolve({
+					port: readyPort,
+					address: readyAddress,
 					stop: devServer.stop,
 					fetch: async (input?: RequestInfo, init?: RequestInit) => {
 						return await fetch(
