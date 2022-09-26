@@ -539,7 +539,11 @@ function createCLIParser(argv: string[]) {
 
 			const configPath =
 				(args.config as ConfigPath) ||
-				(args.script && findWranglerToml(path.dirname(args.script)));
+				(args.script &&
+					findWranglerToml(
+						path.dirname(args.script),
+						args["experimental-json-config"] as boolean
+					));
 			const config = readConfig(configPath, args);
 			const entry = await getEntry(args, config, "publish");
 			await metrics.sendMetricsEvent(
@@ -2296,12 +2300,17 @@ function createCLIParser(argv: string[]) {
 
 	wrangler.option("config", {
 		alias: "c",
-		describe: "Path to .toml configuration file",
+		describe: "Path to Wrangler configuration file",
 		type: "string",
 		requiresArg: true,
 	});
+	wrangler.option("experimental-json-config", {
+		alias: "j",
+		describe: "(Experimental) Use JSON configuration",
+		type: "boolean",
+	});
 
-	wrangler.group(["config", "help", "version"], "Flags:");
+	wrangler.group(["config", "help", "version", "json"], "Flags:");
 	wrangler.help().alias("h", "help");
 
 	wrangler.exitProcess(false);

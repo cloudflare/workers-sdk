@@ -1,6 +1,6 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
-import { parseTOML, readFileSync } from "../parse";
+import { parseTOML, parseJSON, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
@@ -23,18 +23,23 @@ export type {
  */
 export function readConfig(
 	configPath: string | undefined,
-	args: unknown
+	args: Record<string, unknown>
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {
-		configPath = findWranglerToml();
+		configPath = args?.json ? findWranglerJSON() : findWranglerToml();
 	}
 
 	// Load the configuration from disk if available
 	if (configPath) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
+		rawConfig = args?.json
+			? parseJSON(readFileSync(configPath), configPath)
+			: parseTOML(readFileSync(configPath), configPath);
 	}
-
+	if (args?.json) {
+		logger.warn(`Using experimental JSON configuration (${configPath})`);
+		logger.debug("JSON CONFIG", JSON.stringify(rawConfig, null, "  "));
+	}
 	// Process the top-level configuration.
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
@@ -57,9 +62,24 @@ export function readConfig(
  * from the current working directory.
  */
 export function findWranglerToml(
+	referencePath: string = process.cwd(),
+	useJsonConfig?: boolean
+): string | undefined {
+	const configPath = findUpSync(
+		useJsonConfig ? "wrangler.json" : "wrangler.toml",
+		{ cwd: referencePath }
+	);
+	return configPath;
+}
+
+/**
+ * Find the wrangler.json file by searching up the file-system
+ * from the current working directory.
+ */
+export function findWranglerJSON(
 	referencePath: string = process.cwd()
 ): string | undefined {
-	const configPath = findUpSync("wrangler.toml", { cwd: referencePath });
+	const configPath = findUpSync("wrangler.json", { cwd: referencePath });
 	return configPath;
 }
 
