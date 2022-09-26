@@ -1,9 +1,11 @@
+import type { Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { ApiCredentials } from "./user";
 
 /**
  * A Cloudflare account.
  */
+
 export interface CfAccount {
 	/**
 	 * An API token.
@@ -116,6 +118,17 @@ export interface CfR2Bucket {
 	bucket_name: string;
 }
 
+export const D1_BETA_PREFIX = `__D1_BETA__` as const;
+export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
+
+export interface CfD1Database {
+	// For now, all D1 bindings are beta
+	binding: D1PrefixedBinding;
+	database_id: string;
+	database_name?: string;
+	preview_database_id?: string;
+}
+
 interface CfService {
 	binding: string;
 	service: string;
@@ -182,6 +195,7 @@ export interface CfWorkerInit {
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
+		d1_databases: CfD1Database[] | undefined;
 		services: CfService[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
@@ -191,7 +205,7 @@ export interface CfWorkerInit {
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
-	keep_bindings: boolean | undefined;
+	keepVars: boolean | undefined;
 }
 
 export interface CfWorkerContext {
@@ -201,4 +215,20 @@ export interface CfWorkerContext {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
+}
+
+// Prefix binding with identifier which will then get picked up by the D1 shim.
+// Once the D1 Api is out of beta, this function can be removed.
+export function identifyD1BindingsAsBeta(
+	dbs: Environment["d1_databases"]
+): CfD1Database[] | undefined {
+	return dbs?.map((db) => ({
+		...db,
+		binding: `${D1_BETA_PREFIX}${db.binding}`,
+	}));
+}
+
+// Remove beta prefix
+export function removeD1BetaPrefix(binding: D1PrefixedBinding): string {
+	return binding.slice(D1_BETA_PREFIX.length);
 }

@@ -3,10 +3,12 @@ import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 
 const LOGGER_LEVELS = {
+	none: -1,
 	error: 0,
 	warn: 1,
-	log: 2,
-	debug: 3,
+	info: 2,
+	log: 3,
+	debug: 4,
 } as const;
 
 type LoggerLevel = keyof typeof LOGGER_LEVELS;
@@ -15,6 +17,7 @@ type LoggerLevel = keyof typeof LOGGER_LEVELS;
 const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 	error: "error",
 	warn: "warning",
+	info: undefined,
 	log: undefined,
 	debug: undefined,
 } as const;
@@ -31,17 +34,21 @@ class Logger {
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
+	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);
 
-	private doLog(messageLevel: LoggerLevel, args: unknown[]) {
+	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
 		}
 	}
 
-	private formatMessage(level: LoggerLevel, message: string): string {
+	private formatMessage(
+		level: Exclude<LoggerLevel, "none">,
+		message: string
+	): string {
 		const kind = LOGGER_LEVEL_FORMAT_TYPE_MAP[level];
 		if (kind) {
 			// Format the message using the esbuild formatter.

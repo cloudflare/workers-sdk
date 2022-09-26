@@ -1,9 +1,11 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
+import { removeD1BetaPrefix } from "../worker";
 import { parseTOML, parseJSON, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
+import type { CamelCaseKey } from "yargs";
 
 export type {
 	Config,
@@ -104,6 +106,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		d1_databases,
 		r2_buckets,
 		logfwdr,
 		services,
@@ -153,6 +156,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: id,
+				};
+			}),
+		});
+	}
+
+	if (d1_databases !== undefined && d1_databases.length > 0) {
+		output.push({
+			type: "D1 Databases",
+			entries: d1_databases.map(({ binding, database_name, database_id }) => {
+				return {
+					key: removeD1BetaPrefix(binding),
+					value: database_name
+						? `${database_name} (${database_id})`
+						: database_id,
 				};
 			}),
 		});
@@ -268,4 +285,19 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	].join("\n");
 
 	logger.log(message);
+}
+
+type CamelCase<T> = {
+	[key in keyof T as key | CamelCaseKey<key>]: T[key];
+};
+
+export function withConfig<T extends { config?: string }>(
+	handler: (
+		t: Omit<CamelCase<T>, "config"> & { config: Config }
+	) => Promise<void>
+) {
+	return (t: CamelCase<T>) => {
+		const { config: configPath, ...rest } = t;
+		return handler({ ...rest, config: readConfig(configPath, rest) });
+	};
 }

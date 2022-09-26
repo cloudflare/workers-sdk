@@ -941,7 +941,9 @@ async function getWorkerConfig(
 			: { route: routeOrRoutes[0] };
 
 	return {
-		compatibility_date: serviceEnvMetadata.script.compatibility_date,
+		compatibility_date:
+			serviceEnvMetadata.script.compatibility_date ??
+			new Date().toISOString().substring(0, 10),
 		...routeOrRoutesToConfig,
 		usage_model: serviceEnvMetadata.script.usage_model,
 		migrations: [

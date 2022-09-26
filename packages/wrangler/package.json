@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.1.5",
+	"version": "2.1.7",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -87,17 +87,20 @@
 			]
 		},
 		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes|npx-import)"
 		]
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.2.0",
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
 		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+		"@miniflare/core": "2.9.0",
+		"@miniflare/d1": "2.9.0",
+		"@miniflare/durable-objects": "2.9.0",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.51",
-		"miniflare": "^2.8.1",
+		"miniflare": "2.9.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
@@ -105,12 +108,16 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@databases/split-sql-query": "^1.0.3",
+		"@databases/sql": "^3.2.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
+		"@types/better-sqlite3": "^7.6.0",
 		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/express": "^4.17.13",
 		"@types/glob-to-regexp": "0.4.1",
+		"@types/javascript-time-ago": "^2.0.3",
 		"@types/mime": "^2.0.3",
 		"@types/prompts": "^2.0.14",
 		"@types/react": "^17.0.37",
@@ -145,16 +152,19 @@
 		"ink-testing-library": "^2.1.0",
 		"ink-text-input": "^4.0.3",
 		"is-ci": "^3.0.1",
+		"javascript-time-ago": "^2.5.4",
 		"jest-fetch-mock": "^3.0.3",
 		"jest-websocket-mock": "^2.3.0",
 		"mime": "^3.0.0",
 		"msw": "^0.47.1",
+		"npx-import": "^1.0.2",
 		"open": "^8.4.0",
 		"p-queue": "^7.2.0",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
 		"react": "^17.0.2",
 		"react-error-boundary": "^3.1.4",
+		"remove-accents-esm": "^0.0.1",
 		"serve-static": "^1.15.0",
 		"signal-exit": "^3.0.7",
 		"supports-color": "^9.2.2",
