@@ -25,6 +25,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_date: undefined,
 			compatibility_flags: [],
 			configPath: undefined,
+			d1_databases: [],
 			dev: {
 				ip: "0.0.0.0",
 				local_protocol: "http",
@@ -1664,6 +1665,108 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[d1_databases]", () => {
+			it("should error if d1_databases is an object", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got {}."
+		              `);
+			});
+
+			it("should error if d1_databases is a string", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got \\"BAD\\"."
+		              `);
+			});
+
+			it("should error if d1_databases is a number", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got 999."
+		              `);
+			});
+
+			it("should error if d1_databases is null", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ d1_databases: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ d1_databases: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"d1_databases\\" should be an array but got null."
+		              `);
+			});
+
+			it("should error if d1_databases.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, id: 2111 },
+							{
+								binding: "D1_BINDING_2",
+								id: "my-db",
+								preview_id: 2222,
+							},
+							{ binding: "VALID", id: "" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"d1_databases[0]\\" bindings must have a \\"database_id\\" field but got {}.
+			  - \\"d1_databases[1]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\"}.
+			  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			  - \\"d1_databases[2]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
+			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+		`);
+			});
+		});
+
 		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2664,28 +2767,28 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - \\"unsafe\\" fields are experimental and may change or break at any time.
-			          - \\"env.ENV1\\" environment configuration
-			            - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"vars\\" is not inherited by environments.
-			              Please add \\"vars\\" to \\"env.ENV1\\".
-			            - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"define\\" is not inherited by environments.
-			              Please add \\"define\\" to \\"env.ENV1\\".
-			            - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-			              Please add \\"durable_objects\\" to \\"env.ENV1\\".
-			            - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
-			              Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
-			            - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
-			              Please add \\"r2_buckets\\" to \\"env.ENV1\\".
-			            - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
-			              This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-			              Please add \\"unsafe\\" to \\"env.ENV1\\"."
-		      `);
+			"Processing wrangler configuration:
+			  - \\"unsafe\\" fields are experimental and may change or break at any time.
+			  - \\"env.ENV1\\" environment configuration
+			    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"vars\\" is not inherited by environments.
+			      Please add \\"vars\\" to \\"env.ENV1\\".
+			    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"define\\" is not inherited by environments.
+			      Please add \\"define\\" to \\"env.ENV1\\".
+			    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
+			      Please add \\"durable_objects\\" to \\"env.ENV1\\".
+			    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
+			      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
+			    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
+			      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
+			    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
+			      Please add \\"unsafe\\" to \\"env.ENV1\\"."
+		`);
 		});
 
 		it("should error on invalid environment values", () => {

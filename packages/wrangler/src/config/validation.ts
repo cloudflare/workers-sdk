@@ -898,6 +898,7 @@ function normalizeAndValidateEnvironment(
 	);
 
 	// The field "experimental_services" doesn't exist anymore in the config, but we still want to error about any older usage.
+
 	deprecated(
 		diagnostics,
 		rawEnv,
@@ -1082,6 +1083,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"r2_buckets",
 			validateBindingArray(envName, validateR2Binding),
+			[]
+		),
+		d1_databases: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"d1_databases",
+			validateBindingArray(envName, validateD1Binding),
 			[]
 		),
 		services: notInheritable(
@@ -1548,6 +1559,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"text_blob",
 			"kv_namespace",
 			"durable_object_namespace",
+			"d1_database",
 			"r2_bucket",
 			"service",
 			"logfwdr",
@@ -1698,6 +1710,53 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
+	}
+	return isValid;
+};
+
+const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"d1_databases" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// D1 databases must have a binding and either a database_name or database_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		// TODO: allow name only, where we look up the ID dynamically
+		// !isOptionalProperty(value, "database_name", "string") &&
+		!isRequiredProperty(value, "database_id", "string")
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "preview_database_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "preview_database_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (isValid && !process.env.NO_D1_WARNING) {
+		diagnostics.warnings.push(
+			`D1 Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose\nNote: set NO_D1_WARNING=true to hide this message`
+		);
 	}
 	return isValid;
 };

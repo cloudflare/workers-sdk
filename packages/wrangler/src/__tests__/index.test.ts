@@ -43,6 +43,7 @@ describe("wrangler", () => {
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
+			  wrangler d1                  🗄  Interact with a D1 database
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
@@ -83,6 +84,7 @@ describe("wrangler", () => {
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
+			  wrangler d1                  🗄  Interact with a D1 database
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare

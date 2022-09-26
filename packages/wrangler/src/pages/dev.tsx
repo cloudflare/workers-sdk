@@ -99,6 +99,10 @@ export function Options(yargs: Argv) {
 				description: "KV namespace to bind (--kv KV_BINDING)",
 				alias: "k",
 			},
+			d1: {
+				type: "array",
+				description: "D1 database to bind",
+			},
 			do: {
 				type: "array",
 				description: "Durable Object to bind (--do NAME=CLASS)",
@@ -167,6 +171,7 @@ export const Handler = async ({
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
+	d1: d1s = [],
 	r2: r2s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
@@ -491,6 +496,12 @@ export const Handler = async ({
 			r2: r2s.map((binding) => {
 				return { binding: binding.toString(), bucket_name: "" };
 			}),
+
+			d1Databases: d1s.map((binding) => ({
+				binding: binding.toString(),
+				database_id: "", // Required for types, but unused by dev
+				database_name: `local-${binding}`,
+			})),
 
 			enablePagesAssetsServiceBinding: {
 				proxyPort,

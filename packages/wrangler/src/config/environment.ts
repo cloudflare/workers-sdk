@@ -344,6 +344,26 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies D1 databases that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	d1_databases: {
+		/** The binding name used to refer to the D1 database in the worker. */
+		binding: string;
+		/** The name of this D1 database. */
+		database_name: string;
+		/** The UUID of this D1 database (not required). */
+		database_id: string;
+		/** The UUID of this D1 database for Wrangler Dev (if specified). */
+		preview_database_id?: string;
+	}[];
+
+	/**
 	 * Specifies service bindings (worker-to-worker) that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
