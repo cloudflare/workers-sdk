@@ -34,3 +34,10 @@ export function decodePersist(headers: Headers): Persistence {
 		? undefined
 		: PersistenceSchema.parse(JSON.parse(header));
 }
+
+export enum CfHeader {
+	Error = "cf-r2-error",
+	Request = "cf-r2-request",
+	MetadataSize = "cf-r2-metadata-size",
+	Blob = "cf-blob",
+}

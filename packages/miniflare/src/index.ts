@@ -5,8 +5,10 @@ import exitHook from "exit-hook";
 import getPort from "get-port";
 import { bold, green, grey } from "kleur/colors";
 import stoppable from "stoppable";
+import { RequestInfo, RequestInit, fetch } from "undici";
 import { HeadersInit, Request, Response } from "undici";
 import { z } from "zod";
+import { setupCf } from "./cf";
 import {
 	DeferredPromise,
 	HttpError,
@@ -15,6 +17,7 @@ import {
 	UnionToIntersection,
 	ValueOf,
 } from "./helpers";
+
 import {
 	GatewayConstructor,
 	GatewayFactory,
@@ -36,7 +39,6 @@ import {
 	serializeConfig,
 } from "./runtime";
 import { waitForRequest } from "./wait";
-
 // ===== `Miniflare` User Options =====
 export type WorkerOptions = UnionToIntersection<
 	z.infer<ValueOf<Plugins>["options"]>
@@ -108,11 +110,9 @@ type StoppableServer = http.Server & stoppable.WithStop;
 export class Miniflare {
 	readonly #gatewayFactories: PluginGatewayFactories;
 	readonly #routers: PluginRouters;
-
 	#optionsVersion: number;
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
-	#initialConfigPromise?: Promise<Config>;
 
 	readonly #runtimeConstructor: RuntimeConstructor;
 	#runtime?: Runtime;
@@ -136,8 +136,6 @@ export class Miniflare {
 		this.#optionsVersion = 1;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
-		// Assemble config asynchronously whilst initialising finishes
-		this.#initialConfigPromise = this.#assembleConfig();
 
 		// Get supported shell for executing runtime binary
 		// TODO: allow this to be configured if necessary
@@ -165,6 +163,20 @@ export class Miniflare {
 		}
 	}
 
+	startServer(): Promise<void> {
+		return this.ready;
+	}
+
+	async dispatchFetch(
+		input: RequestInfo,
+		init?: RequestInit
+	): Promise<Response> {
+		await this.ready;
+		const forward = new Request(input, init);
+		const url = new URL(forward.url);
+		url.host = this.#runtimeEntryURL!.host;
+		return fetch(url, forward as RequestInit);
+	}
 	async #init() {
 		// Start loopback server (how the runtime accesses with Miniflare's storage)
 		this.#loopbackServer = await this.#startLoopbackServer(0, "127.0.0.1");
@@ -175,8 +187,8 @@ export class Miniflare {
 		const loopbackPort = address.port;
 
 		// Start runtime
-		const entryPort =
-			this.#sharedOpts.core.port ?? (await getPort({ port: 8787 }));
+		const entryPort = await getPort({ port: this.#sharedOpts.core.port });
+
 		// TODO: respect entry `host` option
 		// TODO: download/cache from GitHub releases or something, or include in pkg?
 		this.#runtime = new this.#runtimeConstructor(
@@ -188,9 +200,8 @@ export class Miniflare {
 
 		this.#runtimeEntryURL = new URL(`http://127.0.0.1:${entryPort}`);
 
-		const config = await this.#initialConfigPromise;
+		const config = await this.#assembleConfig();
 		assert(config !== undefined);
-		this.#initialConfigPromise = undefined;
 		const configBuffer = serializeConfig(config);
 		await this.#runtime.updateConfig(configBuffer);
 
@@ -321,9 +332,15 @@ export class Miniflare {
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
+		sharedOpts.core.cf = await setupCf(sharedOpts.core.cf);
+
 		const services: Service[] = [];
 		const sockets: Socket[] = [
-			{ name: SOCKET_ENTRY, http: {}, service: { name: SERVICE_ENTRY } },
+			{
+				name: SOCKET_ENTRY,
+				http: {},
+				service: { name: SERVICE_ENTRY },
+			},
 		];
 
 		// Dedupe services by name

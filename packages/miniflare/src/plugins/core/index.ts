@@ -12,13 +12,11 @@ import {
 	STRING_SCRIPT_PATH,
 	convertModuleDefinition,
 } from "./modules";
-
 // (request: Request) => Awaitable<Response>
 export const ServiceFetch = z
 	.function()
 	.args(z.instanceof(Request))
 	.returns(z.instanceof(Response).or(z.promise(z.instanceof(Response))));
-
 export const CoreOptionsSchema = z.object({
 	name: z.string().optional(),
 	script: z.string().optional(),
@@ -43,9 +41,59 @@ export const CoreOptionsSchema = z.object({
 	dataBlobBindings: z.record(z.string()).optional(),
 	serviceBindings: z.record(z.union([z.string(), ServiceFetch])).optional(),
 });
+
+export const IncomingRequestCfPropertiesBotManagementSchema = z.object({
+	score: z.number().optional(),
+	staticResource: z.boolean().optional(),
+	verifiedBot: z.boolean().optional(),
+});
+
+export const IncomingRequestCfPropertiesTLSClientAuthSchema = z.object({
+	certIssuerDNLegacy: z.string().optional(),
+	certIssuerDN: z.string().optional(),
+	certPresented: z.enum(["0", "1"]).optional(),
+	certSubjectDNLegacy: z.string().optional(),
+	certSubjectDN: z.string().optional(),
+	certNotBefore: z.string().optional(),
+	certNotAfter: z.string().optional(),
+	certSerial: z.string().optional(),
+	certFingerprintSHA1: z.string().optional(),
+	certVerified: z.string().optional(),
+});
+export const IncomingRequestCfPropertiesSchema = z.object({
+	asn: z.number().optional(),
+	botManagement: IncomingRequestCfPropertiesBotManagementSchema.optional(),
+	city: z.string().optional(),
+	clientAcceptEncoding: z.union([z.string(), z.array(z.string())]).optional(),
+	clientTcpRtt: z.number().optional(),
+	clientTrustScore: z.number().optional(),
+	colo: z.string().optional(),
+	continent: z.string().optional(),
+	country: z.string().optional(),
+	httpProtocol: z.string().optional(),
+	latitude: z.string().optional(),
+	longitude: z.string().optional(),
+	metroCode: z.string().optional(),
+	postalCode: z.string().optional(),
+	region: z.string().optional(),
+	regionCode: z.string().optional(),
+	requestPriority: z.string().optional(),
+	timezone: z.string().optional(),
+	tlsVersion: z.string().optional(),
+	tlsCipher: z.string().optional(),
+	tlsClientAuth: IncomingRequestCfPropertiesTLSClientAuthSchema.optional(),
+});
+
 export const CoreSharedOptionsSchema = z.object({
 	host: z.string().optional(),
 	port: z.number().optional(),
+	cf: z
+		.union([
+			z.boolean(),
+			z.string(),
+			IncomingRequestCfPropertiesSchema.passthrough(),
+		])
+		.optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -65,11 +113,15 @@ export const HEADER_CUSTOM_SERVICE = "MF-Custom-Service";
 const BINDING_JSON_VERSION = "MINIFLARE_VERSION";
 const BINDING_SERVICE_USER = "MINIFLARE_USER";
 const BINDING_TEXT_CUSTOM_SERVICE = "MINIFLARE_CUSTOM_SERVICE";
+const BINDING_JSON_CF_BLOB = "CF_BLOB";
 
 // TODO: is there a way of capturing the full stack trace somehow?
 // Using `>=` for version check to handle multiple `setOptions` calls before
 // reload complete.
 export const SCRIPT_ENTRY = `addEventListener("fetch", (event) => {
+  const request = new Request(event.request, {
+    cf: ${BINDING_JSON_CF_BLOB}
+  })
   const probe = event.request.headers.get("${HEADER_PROBE}");
   if (probe !== null) {
     const probeMin = parseInt(probe);
@@ -78,7 +130,7 @@ export const SCRIPT_ENTRY = `addEventListener("fetch", (event) => {
   }
 
   if (globalThis.${BINDING_SERVICE_USER} !== undefined) {
-    event.respondWith(${BINDING_SERVICE_USER}.fetch(event.request).catch((err) => new Response(err.stack)));
+    event.respondWith(${BINDING_SERVICE_USER}.fetch(request).catch((err) => new Response(err.stack)));
   } else {
     event.respondWith(new Response("No script! 😠", { status: 404 }));
   }
@@ -150,12 +202,19 @@ export const CORE_PLUGIN: Plugin<
 
 		return Promise.all(bindings);
 	},
-	async getServices({ options, optionsVersion, workerBindings, workerIndex }) {
+	async getServices({
+		options,
+		optionsVersion,
+		workerBindings,
+		workerIndex,
+		sharedOptions,
+	}) {
 		// Define core/shared services.
 		// Services get de-duped by name, so only the first worker's
 		// SERVICE_LOOPBACK and SERVICE_ENTRY will be used
 		const serviceEntryBindings: Worker_Binding[] = [
 			{ name: BINDING_JSON_VERSION, json: optionsVersion.toString() },
+			{ name: BINDING_JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		];
 		const services: Service[] = [
 			{ name: SERVICE_LOOPBACK, external: { http: {} } },
