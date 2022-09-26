@@ -34,11 +34,6 @@ export const HEADERS_VERSION = 2;
 export const HEADERS_VERSION_V1 = 1;
 export const ANALYTICS_VERSION = 1;
 
-// In rolling this out, we're taking a conservative approach to only generate these Link headers from <link> elements that have these attributes.
-// We'll ignore any <link> elements that contain other attributes (e.g. `fetchpriority`, `crossorigin` or `data-please-dont-generate-a-header`).
-// We're not confident in browser support for all of these additional attributes, so we'll wait until we have that information before proceeding further.
-const ALLOWED_EARLY_HINT_LINK_ATTRIBUTES = ["rel", "as", "href"];
-
 // Takes metadata headers and "normalise" them
 // to the latest version
 export function normaliseHeaders(
@@ -300,6 +295,41 @@ export async function generateHandler<
 			...Object.fromEntries(extraHeaders.entries()),
 		});
 
+		// Iterate through rules and find rules that match the path
+		const headersMatcher = generateRulesMatcher(
+			headerRules,
+			({ set = {}, unset = [] }, replacements) => {
+				const replacedSet: Record<string, string> = {};
+				Object.keys(set).forEach((key) => {
+					replacedSet[key] = replacer(set[key], replacements);
+				});
+				return {
+					set: replacedSet,
+					unset,
+				};
+			}
+		);
+		const matches = headersMatcher({ request });
+
+		// This keeps track of every header that we've set from _headers
+		// because we want to combine user declared headers but overwrite
+		// existing and extra ones
+		const setMap = new Set();
+		// Apply every matched rule in order
+		matches.forEach(({ set = {}, unset = [] }) => {
+			Object.keys(set).forEach((key) => {
+				if (setMap.has(key.toLowerCase())) {
+					headers.append(key, set[key]);
+				} else {
+					headers.set(key, set[key]);
+					setMap.add(key.toLowerCase());
+				}
+			});
+			unset.forEach((key) => {
+				headers.delete(key);
+			});
+		});
+
 		if (earlyHintsCache) {
 			const preEarlyHintsHeaders = new Headers(headers);
 
@@ -327,16 +357,6 @@ export async function generateHandler<
 							const transformedResponse = new HTMLRewriter()
 								.on("link[rel=preconnect],link[rel=preload]", {
 									element(element) {
-										for (const [attributeName] of element.attributes) {
-											if (
-												!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
-													attributeName.toLowerCase()
-												)
-											) {
-												return;
-											}
-										}
-
 										const href = element.getAttribute("href") || undefined;
 										const rel = element.getAttribute("rel") || undefined;
 										const as = element.getAttribute("as") || undefined;
@@ -375,41 +395,6 @@ export async function generateHandler<
 				);
 			}
 		}
-
-		// Iterate through rules and find rules that match the path
-		const headersMatcher = generateRulesMatcher(
-			headerRules,
-			({ set = {}, unset = [] }, replacements) => {
-				const replacedSet: Record<string, string> = {};
-				Object.keys(set).forEach((key) => {
-					replacedSet[key] = replacer(set[key], replacements);
-				});
-				return {
-					set: replacedSet,
-					unset,
-				};
-			}
-		);
-		const matches = headersMatcher({ request });
-
-		// This keeps track of every header that we've set from _headers
-		// because we want to combine user declared headers but overwrite
-		// existing and extra ones
-		const setMap = new Set();
-		// Apply every matched rule in order
-		matches.forEach(({ set = {}, unset = [] }) => {
-			Object.keys(set).forEach((key) => {
-				if (setMap.has(key.toLowerCase())) {
-					headers.append(key, set[key]);
-				} else {
-					headers.set(key, set[key]);
-					setMap.add(key.toLowerCase());
-				}
-			});
-			unset.forEach((key) => {
-				headers.delete(key);
-			});
-		});
 
 		// https://fetch.spec.whatwg.org/#null-body-status
 		return new Response(
