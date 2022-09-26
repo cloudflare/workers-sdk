@@ -27,6 +27,10 @@ import type {
 	CfVars,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	Miniflare as Miniflare3Type,
+	MiniflareOptions as Miniflare3Options,
+} from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
 
@@ -59,7 +63,7 @@ export interface LocalProps {
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
-	experimentalMiniflare3?: boolean;
+	experimentalLocal?: boolean;
 }
 
 export function Local(props: LocalProps) {
@@ -100,11 +104,11 @@ function useLocalWorker({
 	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
-	experimentalMiniflare3,
+	experimentalLocal,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
-	const experimentalLocal = useRef<Miniflare3Type>();
+	const experimentalLocalRef = useRef<Miniflare3Type>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 
@@ -201,7 +205,7 @@ function useLocalWorker({
 				enablePagesAssetsServiceBinding,
 			});
 
-			if (experimentalMiniflare3) {
+			if (experimentalLocal) {
 				// TODO: refactor setupMiniflareOptions so we don't need to parse here
 				const miniflare2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
 				const options: Miniflare3Options = {
@@ -225,11 +229,11 @@ function useLocalWorker({
 				}
 
 				const mf = new Miniflare(options);
-				experimentalLocal.current = mf;
+				experimentalLocalRef.current = mf;
 				removeSignalExitListener.current = onExit((_code, _signal) => {
 					logger.log("⎔ Shutting down experimental local server.");
 					mf.dispose();
-					experimentalLocal.current = undefined;
+					experimentalLocalRef.current = undefined;
 				});
 				await mf.ready;
 				return;
@@ -328,10 +332,10 @@ function useLocalWorker({
 				local.current?.kill();
 				local.current = undefined;
 			}
-			if (experimentalLocal.current) {
+			if (experimentalLocalRef.current) {
 				logger.log("⎔ Shutting down experimental local server.");
-				experimentalLocal.current?.dispose();
-				experimentalLocal.current = undefined;
+				experimentalLocalRef.current?.dispose();
+				experimentalLocalRef.current = undefined;
 			}
 			removeSignalExitListener.current?.();
 			removeSignalExitListener.current = undefined;

@@ -453,7 +453,7 @@ export async function startDev(args: StartDevOptions) {
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args["test-scheduled"]}
-					experimentalMiniflare3={args.experimentalLocal}
+					experimentalLocal={args.experimentalLocal}
 				/>
 			);
 		}
@@ -568,7 +568,7 @@ export async function startApiDev(args: StartDevOptions) {
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
-			experimentalMiniflare3: undefined,
+			experimentalLocal: undefined,
 		});
 	}
 
