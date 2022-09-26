@@ -1,3 +1,5 @@
+export const KV_PLUGIN_NAME = "kv";
+
 export const MIN_CACHE_TTL = 60; /* 60s */
 export const MAX_LIST_KEYS = 1000;
 export const MAX_KEY_SIZE = 512; /* 512B */

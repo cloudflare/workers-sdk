@@ -41,13 +41,16 @@
 		"capnp-ts": "^0.7.0",
 		"exit-hook": "^2.2.1",
 		"get-port": "^5.1.1",
+		"glob-to-regexp": "^0.4.1",
 		"kleur": "^4.1.5",
 		"stoppable": "^1.1.0",
+		"undici": "5.8.2",
 		"zod": "^3.18.0"
 	},
 	"devDependencies": {
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
+		"@types/glob-to-regexp": "^0.4.1",
 		"@types/stoppable": "^1.1.1"
 	}
 }

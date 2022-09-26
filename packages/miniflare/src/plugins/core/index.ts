@@ -89,6 +89,13 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
 })`;
 
+const now = new Date();
+const fallbackCompatibilityDate = [
+	now.getFullYear(),
+	(now.getMonth() + 1).toString().padStart(2, "0"),
+	now.getDate().toString().padStart(2, "0"),
+].join("-");
+
 export const CORE_PLUGIN: Plugin<
 	typeof CoreOptionsSchema,
 	typeof CoreSharedOptionsSchema
@@ -156,6 +163,7 @@ export const CORE_PLUGIN: Plugin<
 				name: SERVICE_ENTRY,
 				worker: {
 					serviceWorkerScript: SCRIPT_ENTRY,
+					compatibilityDate: "2022-09-01",
 					bindings: serviceEntryBindings,
 					compatibilityDate: "2022-09-01",
 				},
@@ -170,7 +178,8 @@ export const CORE_PLUGIN: Plugin<
 				name,
 				worker: {
 					...workerScript,
-					compatibilityDate: options.compatibilityDate,
+					compatibilityDate:
+						options.compatibilityDate ?? fallbackCompatibilityDate,
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
 				},
@@ -189,6 +198,7 @@ export const CORE_PLUGIN: Plugin<
 						name: `${SERVICE_CUSTOM_PREFIX}:${name}`,
 						worker: {
 							serviceWorkerScript: SCRIPT_CUSTOM_SERVICE,
+							compatibilityDate: "2022-09-01",
 							bindings: [
 								{
 									name: BINDING_TEXT_CUSTOM_SERVICE,
