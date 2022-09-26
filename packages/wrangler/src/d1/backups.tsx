@@ -5,10 +5,11 @@ import React from "react";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
 import { withConfig } from "../config";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
-import { getDatabaseByNameOrBinding } from "./utils";
+import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
 import type { Argv } from "yargs";
@@ -22,6 +23,7 @@ export function ListOptions(yargs: Argv): Argv<BackupListArgs> {
 export const ListHandler = withConfig<BackupListArgs>(
 	async ({ config, name }): Promise<void> => {
 		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -83,6 +85,7 @@ export function CreateOptions(yargs: Argv): Argv<BackupCreateArgs> {
 export const CreateHandler = withConfig<BackupCreateArgs>(
 	async ({ config, name }): Promise<void> => {
 		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -130,6 +133,7 @@ export function RestoreOptions(yargs: Argv): Argv<BackupRestoreArgs> {
 export const RestoreHandler = withConfig<BackupRestoreArgs>(
 	async ({ config, name, backupId }): Promise<void> => {
 		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -179,6 +183,7 @@ export function DownloadOptions(yargs: Argv): Argv<BackupDownloadArgs> {
 export const DownloadHandler = withConfig<BackupDownloadArgs>(
 	async ({ name, backupId, output, config }): Promise<void> => {
 		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,

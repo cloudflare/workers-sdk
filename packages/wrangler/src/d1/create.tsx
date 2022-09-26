@@ -1,24 +1,29 @@
 import { render, Text, Box } from "ink";
 import React from "react";
 import { fetchResult } from "../cfetch";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { d1BetaWarning } from "./utils";
 import type { Database } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type CreateArgs = { name: string };
 
 export function Options(yargs: Argv): Argv<CreateArgs> {
-	return yargs.positional("name", {
-		describe: "The name of the new DB",
-		type: "string",
-		demandOption: true,
-	});
+	return yargs
+		.positional("name", {
+			describe: "The name of the new DB",
+			type: "string",
+			demandOption: true,
+		})
+		.epilogue(d1BetaWarning);
 }
 
 export async function Handler({
 	name,
 }: ArgumentsCamelCase<CreateArgs>): Promise<void> {
 	const accountId = await requireAuth({});
+	logger.log(d1BetaWarning);
 
 	const db: Database = await fetchResult(`/accounts/${accountId}/d1/database`, {
 		method: "POST",

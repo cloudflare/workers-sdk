@@ -2,18 +2,21 @@ import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { d1BetaWarning } from "./utils";
 import type { Database } from "./types";
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 type ListArgs = Record<string, never>;
 
 export function Options(d1ListYargs: Argv): Argv<ListArgs> {
-	return d1ListYargs;
+	return d1ListYargs.epilogue(d1BetaWarning);
 }
 
 export async function Handler(_: ArgumentsCamelCase<ListArgs>): Promise<void> {
 	const accountId = await requireAuth({});
+	logger.log(d1BetaWarning);
 
 	const dbs: Array<Database> = await listDatabases(accountId);
 

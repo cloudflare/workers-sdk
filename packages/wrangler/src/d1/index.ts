@@ -3,6 +3,7 @@ import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
 import * as List from "./list";
+import { d1BetaWarning } from "./utils";
 import type { Argv } from "yargs";
 
 export const d1api = (yargs: Argv) => {
@@ -47,6 +48,7 @@ export const d1api = (yargs: Argv) => {
 						Backups.DownloadOptions,
 						Backups.DownloadHandler
 					)
+					.epilogue(d1BetaWarning)
 			)
 			// .command(
 			//   "console <name>",
@@ -68,5 +70,6 @@ export const d1api = (yargs: Argv) => {
 				Execute.Options,
 				Execute.Handler
 			)
+			.epilogue(d1BetaWarning)
 	);
 };

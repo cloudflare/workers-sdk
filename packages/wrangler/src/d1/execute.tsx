@@ -10,10 +10,15 @@ import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm, logDim } from "../dialogs";
+import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { Name } from "./options";
-import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
+import {
+	d1BetaWarning,
+	getDatabaseByNameOrBinding,
+	getDatabaseInfoFromConfig,
+} from "./utils";
 import type { Config } from "../config";
 import type { Database } from "./types";
 import type splitSqlQuery from "@databases/split-sql-query";
@@ -79,6 +84,7 @@ function shorten(query: string | undefined, length: number) {
 
 export const Handler = withConfig<ExecuteArgs>(
 	async ({ config, name, file, command, local, persistTo }): Promise<void> => {
+		logger.log(d1BetaWarning);
 		if (file && command)
 			return console.error(`Error: can't provide both --command and --file.`);
 		const { parser, splitter } = await loadSqlUtils();
