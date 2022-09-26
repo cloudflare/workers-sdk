@@ -1,5 +1,25 @@
 # wrangler
 
+## 2.1.7
+
+### Patch Changes
+
+- [#1881](https://github.com/cloudflare/wrangler2/pull/1881) [`6ff5a030`](https://github.com/cloudflare/wrangler2/commit/6ff5a0308b8f65f0422719ede3a2a4863311d3d9) Thanks [@Skye-31](https://github.com/Skye-31)! - Chore: correctly log all listening ports on remote mode (closes #1652)
+
+* [#1913](https://github.com/cloudflare/wrangler2/pull/1913) [`9f7cc5a0`](https://github.com/cloudflare/wrangler2/commit/9f7cc5a06a704ff2320d0a1996baf6a1da7845a4) Thanks [@threepointone](https://github.com/threepointone)! - feat: expose port and address on (Unstable)DevWorker
+
+  when using `unstable_dev()`, I think we want to expose the port/address that the server has started on. The usecase is when trying to connect to the server _without_ calling `.fetch()` (example: when making a websocket connection).
+
+- [#1911](https://github.com/cloudflare/wrangler2/pull/1911) [`16c28502`](https://github.com/cloudflare/wrangler2/commit/16c28502593c27a1b372d8056a55cdee32b5c4cf) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: put config cache log behind logger.debug
+
+  Prior to this change, wrangler would print `Retrieving cached values for...` after almost every single command.
+
+  After this change, you'll only see this message if you add `WRANGLER_DEBUG=true` before your command.
+
+  Closes #1808
+
+* [#1687](https://github.com/cloudflare/wrangler2/pull/1687) [`28cd7361`](https://github.com/cloudflare/wrangler2/commit/28cd7361a6386913b62389705c335dd1b12d1dd6) Thanks [@geelen](https://github.com/geelen)! - Wrangler now supports the beta release of D1.
+
 ## 2.1.6
 
 ### Patch Changes
