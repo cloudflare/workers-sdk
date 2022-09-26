@@ -34,5 +34,6 @@ export const getDatabaseByNameOrBinding = async (
 	return matchingDB;
 };
 
-export const d1BetaWarning =
-	"🚧 'wrangler d1 <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+export const d1BetaWarning = process.env.NO_D1_WARNING
+	? ""
+	: "🚧 'wrangler d1 <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
