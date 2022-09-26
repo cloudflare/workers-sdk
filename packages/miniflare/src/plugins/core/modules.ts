@@ -3,13 +3,17 @@ import { readFileSync } from "fs";
 import { builtinModules } from "module";
 import path from "path";
 import { TextDecoder, TextEncoder } from "util";
-import { Matcher, globsToMatcher } from "@miniflare/shared";
 import acorn from "acorn";
 import walk from "acorn-walk";
 import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
-import { MiniflareCoreError } from "../../helpers";
+import {
+	MatcherRegExps,
+	MiniflareCoreError,
+	globsToRegExps,
+	testRegExps,
+} from "../../helpers";
 import { Worker_Module } from "../../runtime";
 
 const SUGGEST_BUNDLE =
@@ -55,7 +59,7 @@ const DEFAULT_MODULE_RULES: ModuleRule[] = [
 
 interface CompiledModuleRule {
 	type: ModuleRuleType;
-	include: Matcher;
+	include: MatcherRegExps;
 }
 
 function compileModuleRules(rules?: ModuleRule[]) {
@@ -66,7 +70,7 @@ function compileModuleRules(rules?: ModuleRule[]) {
 		if (finalisedTypes.has(rule.type)) continue;
 		compiledRules.push({
 			type: rule.type,
-			include: globsToMatcher(rule.include),
+			include: globsToRegExps(rule.include),
 		});
 		if (!rule.fallthrough) finalisedTypes.add(rule.type);
 	}
@@ -210,7 +214,7 @@ ${dim(modulesConfig)}`;
 
 		// Find first matching module rule
 		const rule = this.#compiledRules.find((rule) =>
-			rule.include.test(identifier)
+			testRegExps(rule.include, identifier)
 		);
 		if (rule === undefined) {
 			const prefix = getResolveErrorPrefix(referencingPath);
