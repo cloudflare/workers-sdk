@@ -1559,6 +1559,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"text_blob",
 			"kv_namespace",
 			"durable_object_namespace",
+			"d1_database",
 			"r2_bucket",
 			"service",
 			"logfwdr",
