@@ -27,8 +27,9 @@ export function toUrlPath(filePath: string): UrlPath {
 }
 
 /**
- * Get a path, relative to process.cwd(), prefixed with ./ if in a nested
- * subdirectory, to aid with readability:
+ * Get a human-readable path, relative to process.cwd(), prefixed with ./ if
+ * in a nested subdirectory, to aid with readability.
+ * Only used for logging e.g. `Loading DB at ${readableRelative(dbPath)}`:
  *
  * E.g. (assuming process.cwd() is /pwd)
  *
