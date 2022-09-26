@@ -238,6 +238,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 				default: false,
 			})
+			.check(demandOneOfOption("local", "experimental-local"))
 			.option("minify", {
 				describe: "Minify the script",
 				type: "boolean",
