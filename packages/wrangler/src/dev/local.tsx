@@ -24,6 +24,7 @@ import type {
 	CfKvNamespace,
 	CfR2Bucket,
 	CfVars,
+	CfD1Database,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions } from "miniflare";
@@ -49,7 +50,6 @@ export interface LocalProps {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: ((ip: string, port: number) => void) | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
@@ -86,7 +86,6 @@ function useLocalWorker({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 }: LocalProps) {
@@ -171,6 +170,7 @@ function useLocalWorker({
 				usageModel,
 				kv_namespaces: bindings?.kv_namespaces,
 				r2_buckets: bindings?.r2_buckets,
+				d1_databases: bindings?.d1_databases,
 				internalDurableObjects,
 				externalDurableObjects,
 				localPersistencePath,
@@ -182,7 +182,6 @@ function useLocalWorker({
 				dataBlobBindings,
 				crons,
 				upstream,
-				logLevel,
 				logPrefix,
 				workerDefinitions,
 				enablePagesAssetsServiceBinding,
@@ -294,6 +293,7 @@ function useLocalWorker({
 		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
+		bindings.d1_databases,
 		bindings.vars,
 		bindings.services,
 		workerDefinitions,
@@ -311,7 +311,6 @@ function useLocalWorker({
 		localProtocol,
 		localUpstream,
 		inspect,
-		logLevel,
 		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
@@ -414,6 +413,7 @@ interface SetupMiniflareOptionsProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	kv_namespaces: CfKvNamespace[] | undefined;
 	r2_buckets: CfR2Bucket[] | undefined;
+	d1_databases: CfD1Database[] | undefined;
 	internalDurableObjects: CfDurableObject[];
 	externalDurableObjects: CfDurableObject[];
 	localPersistencePath: string | null;
@@ -425,7 +425,6 @@ interface SetupMiniflareOptionsProps {
 	dataBlobBindings: Record<string, string>;
 	crons: Config["triggers"]["crons"];
 	upstream: string | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix: string | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -444,6 +443,7 @@ export function setupMiniflareOptions({
 	usageModel,
 	kv_namespaces,
 	r2_buckets,
+	d1_databases,
 	internalDurableObjects,
 	externalDurableObjects,
 	localPersistencePath,
@@ -455,12 +455,10 @@ export function setupMiniflareOptions({
 	dataBlobBindings,
 	crons,
 	upstream,
-	logLevel,
 	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
 }: SetupMiniflareOptionsProps): MiniflareOptions {
-	// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
 		name: workerName,
@@ -511,12 +509,14 @@ export function setupMiniflareOptions({
 				})
 				.filter(([_, details]) => !!details)
 		),
+		d1Databases: d1_databases?.map((db) => db.binding),
 		...(localPersistencePath
 			? {
 					cachePersist: path.join(localPersistencePath, "cache"),
 					durableObjectsPersist: path.join(localPersistencePath, "do"),
 					kvPersist: path.join(localPersistencePath, "kv"),
 					r2Persist: path.join(localPersistencePath, "r2"),
+					d1Persist: path.join(localPersistencePath, "d1"),
 			  }
 			: {
 					// We mark these as true, so that they'll
@@ -548,7 +548,7 @@ export function setupMiniflareOptions({
 		logUnhandledRejections: true,
 		crons,
 		upstream,
-		disableLogs: logLevel === "none",
+		logLevel: logger.loggerLevel,
 		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};

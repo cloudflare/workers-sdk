@@ -183,7 +183,6 @@ describe("wrangler dev", () => {
 			);
 		});
 	});
-
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
 			writeWranglerToml({
@@ -1028,7 +1027,8 @@ describe("wrangler dev", () => {
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
 			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
 			      --inspect                                    Enable dev tools  [deprecated] [boolean]
-			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]",
+			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
+			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
 			  "warn": "",
 			}
 		`);
@@ -1107,7 +1107,6 @@ describe("wrangler dev", () => {
 			await runWrangler("dev --assets abc");
 			expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
-
 		it("should warn if --assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
@@ -1209,6 +1208,42 @@ describe("wrangler dev", () => {
 			  "warn": "",
 			}
 		`);
+		});
+	});
+
+	describe("--log-level", () => {
+		it("should not output warnings with log-level 'none'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level none");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should output warnings with log-level 'warn'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level warn");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
+
+			",
+			}
+		`);
+		});
+
+		it("should not output Errors with log-level error", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level debug");
+			expect(std.debug.length > 1).toBe(true);
 		});
 	});
 

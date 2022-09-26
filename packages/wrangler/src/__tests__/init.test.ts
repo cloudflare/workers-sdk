@@ -2270,6 +2270,12 @@ describe("init", () => {
 			expectedAccountId = "",
 			expectedScriptName = "",
 			expectedEnvironment = "",
+			expectedCompatDate,
+		}: {
+			expectedAccountId: string;
+			expectedScriptName: string;
+			expectedEnvironment: string;
+			expectedCompatDate: string | undefined;
 		}) {
 			setMockResponse(
 				`/accounts/:accountId/workers/services/:scriptName`,
@@ -2278,6 +2284,9 @@ describe("init", () => {
 					expect(accountId).toEqual(expectedAccountId);
 					expect(scriptName).toEqual(expectedScriptName);
 
+					if (expectedCompatDate === undefined)
+						(mockServiceMetadata.default_environment.script
+							.compatibility_date as unknown) = expectedCompatDate;
 					return mockServiceMetadata;
 				}
 			);
@@ -2340,6 +2349,7 @@ describe("init", () => {
 				expectedAccountId: "LCARS",
 				expectedScriptName: "memory-crystal",
 				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
 			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
@@ -2394,6 +2404,7 @@ describe("init", () => {
 				expectedAccountId: "LCARS",
 				expectedScriptName: "isolinear-optical-chip",
 				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
 			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
@@ -2447,6 +2458,7 @@ describe("init", () => {
 				expectedAccountId: "LCARS",
 				expectedScriptName: "isolinear-optical-chip",
 				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
 			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
@@ -2494,6 +2506,66 @@ describe("init", () => {
 				},
 			});
 		});
+
+		it("should use fallback compatibility date if none is upstream", async () => {
+			const mockDate = "1988-08-07";
+			jest
+				.spyOn(Date.prototype, "toISOString")
+				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "isolinear-optical-chip",
+				expectedEnvironment: "test",
+				expectedCompatDate: undefined,
+			});
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			mockConfigExpected.compatibility_date = "1988-08-07";
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.ts": {
+						contents: mockDashboardScript,
+					},
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": true,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...mockConfigExpected,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
 		it("should throw an error to retry if a request fails", async () => {
 			setMockResponse(
 				`/accounts/:accountId/workers/services/:scriptName`,

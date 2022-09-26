@@ -14,6 +14,7 @@ import { logger } from "./logger";
 import { getMetricsUsageHeaders } from "./metrics";
 import { ParseError } from "./parse";
 import { syncAssets } from "./sites";
+import { identifyD1BindingsAsBeta } from "./worker";
 import { getZoneForRoute } from "./zones";
 import type { Config } from "./config";
 import type {
@@ -50,6 +51,7 @@ type Props = {
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
+	keepVars: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -288,6 +290,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
+	const keepVars = props.keepVars ?? config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
@@ -405,6 +408,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{
 						serveAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.assetPaths),
+						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
+							(db) => db.binding
+						),
 						jsxFactory,
 						jsxFragment,
 						rules: props.rules,
@@ -427,6 +433,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and publish?
 						targetConsumer: "publish",
+						local: false,
 					}
 			  );
 
@@ -474,6 +481,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
 			r2_buckets: config.r2_buckets,
+			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
 			dispatch_namespaces: config.dispatch_namespaces,
 			logfwdr: config.logfwdr,
@@ -502,7 +510,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_flags:
 				props.compatibilityFlags ?? config.compatibility_flags,
 			usage_model: config.usage_model,
-			keep_bindings: true,
+			keepVars,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously

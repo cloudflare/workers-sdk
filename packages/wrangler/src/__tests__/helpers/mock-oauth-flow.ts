@@ -97,7 +97,8 @@ export const mockOAuthFlow = () => {
 		};
 
 		fetchMock.mockIf(outcome.expected.url, async (req) => {
-			outcome.actual = req;
+			// TODO: update Miniflare typings to match full undici Request
+			outcome.actual = req as unknown as Request;
 			return "";
 		});
 
@@ -117,7 +118,8 @@ export const mockOAuthFlow = () => {
 		};
 
 		fetchMock.mockOnceIf(outcome.expected.url, async (req) => {
-			outcome.actual = req;
+			// TODO: update Miniflare typings to match full undici Request
+			outcome.actual = req as unknown as Request;
 			return makeTokenResponse(respondWith);
 		});
 

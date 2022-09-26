@@ -1,5 +1,110 @@
 # wrangler
 
+## 2.1.6
+
+### Patch Changes
+
+- [#1890](https://github.com/cloudflare/wrangler2/pull/1890) [`5a4c7113`](https://github.com/cloudflare/wrangler2/commit/5a4c7113bd34753f571d7c7984658c8b3bb033e0) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add missing noBundle type to api/dev
+
+* [#1895](https://github.com/cloudflare/wrangler2/pull/1895) [`1b53bf9d`](https://github.com/cloudflare/wrangler2/commit/1b53bf9d06fbe2afbd43c18b6406e59e85618dc3) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: rename keep_bindings to keep_vars, and make it opt-in, to keep wrangler.toml compatible with being used for Infrastructure as Code
+
+  By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+
+  If you change your settings (particularly your vars) in the dashboard, wrangler _will_ override them. If you want to disable this behavior, set this field to true.
+
+  Between wrangler 2.0.28 and 2.1.5, by default wrangler would _not_ delete your vars by default, breaking expected wrangler.toml behaviour.
+
+- [#1889](https://github.com/cloudflare/wrangler2/pull/1889) [`98f756c7`](https://github.com/cloudflare/wrangler2/commit/98f756c7dfcdefaf1426b6770d0c0450ce4a8619) Thanks [@penalosa](https://github.com/penalosa)! - fix: Correctly place the `.wrangler/state` local state directory in the same directory as `wrangler.toml` by default
+
+* [#1886](https://github.com/cloudflare/wrangler2/pull/1886) [`8b647175`](https://github.com/cloudflare/wrangler2/commit/8b647175d31716ef5ff6f801bfd9ed47e2af4bcc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: potential missing compatibility_date in wrangler.toml when running `wrangler init --from-dash`
+  Fixed a bug where compatibility_date wasn't being added to wrangler.toml when initializing a worker via `wrangler init --from-dash`
+
+  fixes #1855
+
+## 2.1.5
+
+### Patch Changes
+
+- [#1819](https://github.com/cloudflare/wrangler2/pull/1819) [`d8a18070`](https://github.com/cloudflare/wrangler2/commit/d8a18070c5abe5d9e62da4d5adab794626156ab3) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Adds support for custom \_routes.json when running `wrangler pages dev`
+
+* [#1815](https://github.com/cloudflare/wrangler2/pull/1815) [`d8fe95d2`](https://github.com/cloudflare/wrangler2/commit/d8fe95d252a4fd8da5d65eacc32c3be49fca212d) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: testing scheduled events with `wrangler dev` remote mode
+
+  Using the new middleware (https://github.com/cloudflare/wrangler2/pull/1735), we implement a way of testing scheduled workers from a fetch using `wrangler dev` in remote mode, by passing a new command line flag `--test-scheduled`. This exposes a route `/__scheduled` which will trigger the scheduled event.
+
+  ```sh
+  $ npx wrangler dev index.js --test-scheduled
+
+  $ curl http://localhost:8787/__scheduled
+  ```
+
+  Closes https://github.com/cloudflare/wrangler2/issues/570
+
+- [#1801](https://github.com/cloudflare/wrangler2/pull/1801) [`07fc90d6`](https://github.com/cloudflare/wrangler2/commit/07fc90d60912d6906a4b419db8cefc501e693473) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: multi-worker testing
+
+  This change introduces the ability to test multi-worker setups via the wrangler API's [unstable_dev](https://developers.cloudflare.com/workers/wrangler/api/#unstable_dev) function.
+
+  Usage:
+
+  ```js
+  import { unstable_dev } from "wrangler";
+
+  /**
+   * Note: if you shut down the first worker you spun up,
+   * the parent worker won't know the child worker exists
+   * and your tests will fail
+   */
+  describe("multi-worker testing", () => {
+  	let childWorker;
+  	let parentWorker;
+
+  	beforeAll(async () => {
+  		childWorker = await unstable_dev(
+  			"src/child-worker.js",
+  			{ config: "src/child-wrangler.toml" },
+  			{ disableExperimentalWarning: true }
+  		);
+  		parentWorker = await unstable_dev(
+  			"src/parent-worker.js",
+  			{ config: "src/parent-wrangler.toml" },
+  			{ disableExperimentalWarning: true }
+  		);
+  	});
+
+  	afterAll(async () => {
+  		await childWorker.stop();
+  		await parentWorker.stop();
+  	});
+
+  	it("childWorker should return Hello World itself", async () => {
+  		const resp = await childWorker.fetch();
+  		if (resp) {
+  			const text = await resp.text();
+  			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+  		}
+  	});
+
+  	it("parentWorker should return Hello World by invoking the child worker", async () => {
+  		const resp = await parentWorker.fetch();
+  		if (resp) {
+  			const parsedResp = await resp.text();
+  			expect(parsedResp).toEqual("Parent worker sees: Hello World!");
+  		}
+  	});
+  });
+  ```
+
+* [#1865](https://github.com/cloudflare/wrangler2/pull/1865) [`adfc52d6`](https://github.com/cloudflare/wrangler2/commit/adfc52d6961ca3a43c846d7bce62a5864a80b373) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - polish: loglevel flag
+  Added a '--log-level' flag that allows the user to specify between 'debug', 'info', 'log', 'warning', 'error', 'none'
+  Currently 'none' will turn off all outputs in Miniflare (local mode), however, Wrangler will still output Errors.
+
+  resolves #185
+
+- [#1861](https://github.com/cloudflare/wrangler2/pull/1861) [`3d51d553`](https://github.com/cloudflare/wrangler2/commit/3d51d5536d1c125142bfea1879609411905051ce) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Add 'charset' to 'Content-Type' on 'wrangler pages dev' responses
+
+* [#1867](https://github.com/cloudflare/wrangler2/pull/1867) [`5a6ccc58`](https://github.com/cloudflare/wrangler2/commit/5a6ccc584dffcbc0ae176bed7102dda8e50cdbea) Thanks [@cameron-robey](https://github.com/cameron-robey)! - fix: handle logging of empty map/set/weak-map/weak-set
+
+- [#1882](https://github.com/cloudflare/wrangler2/pull/1882) [`ba0aed63`](https://github.com/cloudflare/wrangler2/commit/ba0aed63903d88ca2111084558625935cf7daddb) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: refactor remote.tsx to only destructure when necessary
+
 ## 2.1.4
 
 ### Patch Changes

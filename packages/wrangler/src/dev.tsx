@@ -6,6 +6,7 @@ import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
+import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
 import { getEntry } from "./entry";
@@ -13,18 +14,19 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
-import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
+import { identifyD1BindingsAsBeta } from "./worker";
+import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
-	printWranglerBanner,
-	DEFAULT_LOCAL_PORT,
 	type ConfigPath,
-	getScriptName,
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
 	getDevCompatibilityDate,
 	getRules,
+	getScriptName,
 	isLegacyEnv,
-	DEFAULT_INSPECTOR_PORT,
+	printWranglerBanner,
 } from "./index";
-import type { Config } from "./config";
+import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
@@ -69,7 +71,7 @@ interface DevArgs {
 	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: (ip: string, port: number) => void;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
@@ -279,6 +281,11 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 				default: false,
 			})
+			.option("log-level", {
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				describe: "Specify logging level",
+				default: "log",
+			})
 	);
 }
 
@@ -314,7 +321,9 @@ export type AdditionalDevProps = {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	d1Databases?: Environment["d1_databases"];
 };
+
 type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
@@ -328,8 +337,7 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		if (args.logLevel) {
-			// we don't define a "none" logLevel, so "error" will do for now.
-			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
 
@@ -427,7 +435,6 @@ export async function startDev(args: StartDevOptions) {
 					usageModel={configParam.usage_model}
 					bindings={bindings}
 					crons={configParam.triggers.crons}
-					logLevel={args.logLevel}
 					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
@@ -457,8 +464,7 @@ export async function startDev(args: StartDevOptions) {
 
 export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
-		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+		logger.loggerLevel = args.logLevel;
 	}
 	await printWranglerBanner();
 
@@ -494,9 +500,13 @@ export async function startApiDev(args: StartDevOptions) {
 			configParam
 		);
 
+		//if args.bundle is on, don't disable bundling
+		//if there's no args.bundle, and configParam.no_bundle is on, disable bundling
+		//otherwise, enable bundling
+		const enableBundling = args.bundle ?? !configParam.no_bundle;
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
-			noBundle: !(args.bundle ?? !configParam.no_bundle),
+			noBundle: !enableBundling,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,
@@ -515,7 +525,7 @@ export async function startApiDev(args: StartDevOptions) {
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol || configParam.dev.local_protocol,
 			localUpstream: args["local-upstream"] || host,
-			localPersistencePath: localPersistencePath,
+			localPersistencePath,
 			liveReload: args.liveReload || false,
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,
@@ -540,7 +550,6 @@ export async function startApiDev(args: StartDevOptions) {
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
-			logLevel: args.logLevel,
 			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
@@ -548,8 +557,8 @@ export async function startApiDev(args: StartDevOptions) {
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
 			local: true,
-			firstPartyWorker: undefined,
-			sendMetrics: undefined,
+			firstPartyWorker: configParam.first_party_worker,
+			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
 		});
 	}
@@ -676,7 +685,6 @@ async function validateDevServerSettings(
 			"The --assets argument is experimental and may change or break at any time"
 		);
 	}
-
 	const upstreamProtocol =
 		args["upstream-protocol"] || config.dev.upstream_protocol;
 	if (upstreamProtocol === "http") {
@@ -701,14 +709,11 @@ async function validateDevServerSettings(
 		);
 	}
 
-	const localPersistencePath = args.persistTo
-		? // If path specified, always treat it as relative to cwd()
-		  path.resolve(process.cwd(), args.persistTo)
-		: args.persist
-		? // If just flagged on, treat it as relative to wrangler.toml,
-		  // if one can be found, otherwise cwd()
-		  path.resolve(config.configPath || process.cwd(), ".wrangler/state")
-		: null;
+	const localPersistencePath = getLocalPersistencePath(
+		args.persistTo,
+		Boolean(args.persist),
+		config.configPath
+	);
 
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
@@ -748,6 +753,7 @@ async function getBindingsAndAssetPaths(
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
+		d1Databases: args.d1Databases,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -834,6 +840,10 @@ async function getBindings(
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
+		d1_databases: identifyD1BindingsAsBeta([
+			...configParam.d1_databases,
+			...(args.d1Databases || []),
+		]),
 	};
 
 	return bindings;
