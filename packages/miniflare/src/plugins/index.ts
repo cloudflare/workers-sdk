@@ -20,7 +20,12 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 ][];
 
 export * from "./shared";
-export { SERVICE_LOOPBACK, SERVICE_ENTRY, HEADER_PROBE } from "./core";
+export {
+	SERVICE_LOOPBACK,
+	SERVICE_ENTRY,
+	HEADER_PROBE,
+	IncomingRequestCfPropertiesSchema,
+} from "./core";
 
 // TODO: be more liberal on exports?
 export * from "./cache";

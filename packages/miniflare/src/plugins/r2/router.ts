@@ -1,6 +1,13 @@
 import { TextDecoder } from "util";
 import { Request, Response } from "undici";
-import { GET, PUT, RouteHandler, Router, decodePersist } from "../shared";
+import {
+	GET,
+	PUT,
+	RouteHandler,
+	Router,
+	decodePersist,
+	CfHeader,
+} from "../shared";
 import { InternalError, InvalidMetadata, R2Error } from "./errors";
 import {
 	R2Gateway,
@@ -10,11 +17,6 @@ import {
 } from "./gateway";
 import { R2HTTPMetadata, R2Object } from "./r2Object";
 
-export enum CfHeader {
-	Error = "cf-r2-error",
-	Request = "cf-r2-request",
-	MetadataSize = "cf-r2-metadata-size",
-}
 export interface R2Params {
 	bucket: string;
 }
