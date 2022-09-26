@@ -2,6 +2,7 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
@@ -26,12 +27,12 @@ import type {
 	CfVars,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
-import type {
-	Miniflare as Miniflare3Type,
-	MiniflareOptions as Miniflare3Options,
-} from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+
+// caching of the miniflare package
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Miniflare: typeof import("@miniflare/tre")["Miniflare"];
 
 export interface LocalProps {
 	name: string | undefined;
@@ -215,7 +216,14 @@ function useLocalWorker({
 				};
 
 				logger.log("⎔ Starting an experimental local server...");
-				const { Miniflare } = await import("@miniflare/tre");
+
+				if (Miniflare === undefined) {
+					({ Miniflare } = await npxImport<
+						// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+						typeof import("@miniflare/tre")
+					>("@miniflare/tre"));
+				}
+
 				const mf = new Miniflare(options);
 				experimentalLocal.current = mf;
 				removeSignalExitListener.current = onExit((_code, _signal) => {
