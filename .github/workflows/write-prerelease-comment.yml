@@ -57,3 +57,9 @@ jobs:
             ```sh
             npx https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }} dev path/to/script.js
             ```
+
+            <details><summary>Additional artifacts:</summary>
+
+            ```sh
+            npm install https://prerelease-registry.developers.workers.dev/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-cloudflare-pages-shared-${{ env.WORKFLOW_RUN_PR }}
+            ```
