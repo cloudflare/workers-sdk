@@ -19,13 +19,18 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
 	defaultValue: "https://api.cloudflare.com/client/v4",
 });
 
+/*
+ * performApiFetch does everything required to make a CF API request,
+ * but doesn't parse the response as JSON. For normal V4 API responses,
+ * use `fetchInternal`
+ * */
 export async function performApiFetch(
 	resource: string,
-	method = "GET",
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal
 ) {
+	const method = init.method ?? "GET";
 	assert(
 		resource.startsWith("/"),
 		`CF API fetch - resource path must start with a "/" but got "${resource}"`
@@ -69,7 +74,6 @@ export async function fetchInternal<ResponseType>(
 	const method = init.method ?? "GET";
 	const response = await performApiFetch(
 		resource,
-		method,
 		init,
 		queryParams,
 		abortSignal
