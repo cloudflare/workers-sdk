@@ -238,7 +238,15 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 				default: false,
 			})
-			.check(demandOneOfOption("local", "experimental-local"))
+			.check((argv) => {
+				if (argv.local && argv["experimental-local"]) {
+					throw new Error(
+						"--local and --experimental-local are mutually exclusive. " +
+							"Please select one or the other."
+					);
+				}
+				return true;
+			})
 			.option("minify", {
 				describe: "Minify the script",
 				type: "boolean",
