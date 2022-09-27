@@ -111,7 +111,6 @@ export async function startDevServer(
 			crons: props.crons,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
-			logLevel: props.logLevel,
 			logPrefix: props.logPrefix,
 			inspect: props.inspect,
 			onReady: props.onReady,
@@ -212,6 +211,7 @@ async function runEsbuild({
 				services,
 				firstPartyWorkerDevFacade,
 				targetConsumer: "dev", // We are starting a dev server
+				local: false,
 				testScheduled,
 		  });
 
@@ -246,7 +246,6 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 }: LocalProps) {
@@ -321,6 +320,7 @@ export async function startLocalServer({
 			usageModel,
 			kv_namespaces: bindings?.kv_namespaces,
 			r2_buckets: bindings?.r2_buckets,
+			d1_databases: bindings?.d1_databases,
 			internalDurableObjects,
 			externalDurableObjects,
 			localPersistencePath,
@@ -332,7 +332,6 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logLevel,
 			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,

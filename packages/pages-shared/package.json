@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"files": [
 		"tsconfig.json",
 		"src/**/*",
@@ -36,11 +36,11 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.8.1"
+		"@miniflare/core": "2.9.0"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.8.1",
-		"@miniflare/html-rewriter": "2.8.1",
+		"@miniflare/cache": "2.9.0",
+		"@miniflare/html-rewriter": "2.9.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",

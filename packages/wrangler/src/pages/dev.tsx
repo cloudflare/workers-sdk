@@ -99,6 +99,10 @@ export function Options(yargs: Argv) {
 				description: "KV namespace to bind (--kv KV_BINDING)",
 				alias: "k",
 			},
+			d1: {
+				type: "array",
+				description: "D1 database to bind",
+			},
 			do: {
 				type: "array",
 				description: "Durable Object to bind (--do NAME=CLASS)",
@@ -146,12 +150,9 @@ export function Options(yargs: Argv) {
 				type: "string",
 				hidden: true,
 			},
-
 			"log-level": {
-				// "none" will currently default to "error" for Wrangler Logger
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
-				default: "log",
 			},
 		})
 		.epilogue(pagesBetaWarning);
@@ -170,6 +171,7 @@ export const Handler = async ({
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
+	d1: d1s = [],
 	r2: r2s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
@@ -186,12 +188,8 @@ export const Handler = async ({
 
 	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
 		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
-		logger.loggerLevel =
-			(logLevel as LogLevelArg) === "none"
-				? "error"
-				: (logLevel as Exclude<"none", LogLevelArg>);
+		logger.loggerLevel = logLevel as LogLevelArg;
 	}
 
 	if (!local) {
@@ -499,6 +497,12 @@ export const Handler = async ({
 				return { binding: binding.toString(), bucket_name: "" };
 			}),
 
+			d1Databases: d1s.map((binding) => ({
+				binding: binding.toString(),
+				database_id: "", // Required for types, but unused by dev
+				database_name: `local-${binding}`,
+			})),
+
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
@@ -508,8 +512,8 @@ export const Handler = async ({
 			persistTo,
 			showInteractiveDevSession: undefined,
 			inspect: true,
-			logLevel: "warn",
 			logPrefix: "pages",
+			logLevel: logLevel ?? "warn",
 		},
 		{ testMode: false, disableExperimentalWarning: true }
 	);

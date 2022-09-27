@@ -32,7 +32,7 @@ const arrayFormatter = new Intl.ListFormat("en", {
 function showCacheMessage(fields: string[], folder: string) {
 	if (!cacheMessageShown && isInteractive() && !CI.isCI()) {
 		if (fields.length > 0) {
-			logger.log(
+			logger.debug(
 				`Retrieving cached values for ${arrayFormatter.format(
 					fields
 				)} from ${path.relative(process.cwd(), folder)}`

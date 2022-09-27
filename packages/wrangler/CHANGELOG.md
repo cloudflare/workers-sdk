@@ -1,5 +1,46 @@
 # wrangler
 
+## 2.1.7
+
+### Patch Changes
+
+- [#1881](https://github.com/cloudflare/wrangler2/pull/1881) [`6ff5a030`](https://github.com/cloudflare/wrangler2/commit/6ff5a0308b8f65f0422719ede3a2a4863311d3d9) Thanks [@Skye-31](https://github.com/Skye-31)! - Chore: correctly log all listening ports on remote mode (closes #1652)
+
+* [#1913](https://github.com/cloudflare/wrangler2/pull/1913) [`9f7cc5a0`](https://github.com/cloudflare/wrangler2/commit/9f7cc5a06a704ff2320d0a1996baf6a1da7845a4) Thanks [@threepointone](https://github.com/threepointone)! - feat: expose port and address on (Unstable)DevWorker
+
+  when using `unstable_dev()`, I think we want to expose the port/address that the server has started on. The usecase is when trying to connect to the server _without_ calling `.fetch()` (example: when making a websocket connection).
+
+- [#1911](https://github.com/cloudflare/wrangler2/pull/1911) [`16c28502`](https://github.com/cloudflare/wrangler2/commit/16c28502593c27a1b372d8056a55cdee32b5c4cf) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: put config cache log behind logger.debug
+
+  Prior to this change, wrangler would print `Retrieving cached values for...` after almost every single command.
+
+  After this change, you'll only see this message if you add `WRANGLER_DEBUG=true` before your command.
+
+  Closes #1808
+
+* [#1687](https://github.com/cloudflare/wrangler2/pull/1687) [`28cd7361`](https://github.com/cloudflare/wrangler2/commit/28cd7361a6386913b62389705c335dd1b12d1dd6) Thanks [@geelen](https://github.com/geelen)! - Wrangler now supports the beta release of D1.
+
+## 2.1.6
+
+### Patch Changes
+
+- [#1890](https://github.com/cloudflare/wrangler2/pull/1890) [`5a4c7113`](https://github.com/cloudflare/wrangler2/commit/5a4c7113bd34753f571d7c7984658c8b3bb033e0) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add missing noBundle type to api/dev
+
+* [#1895](https://github.com/cloudflare/wrangler2/pull/1895) [`1b53bf9d`](https://github.com/cloudflare/wrangler2/commit/1b53bf9d06fbe2afbd43c18b6406e59e85618dc3) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: rename keep_bindings to keep_vars, and make it opt-in, to keep wrangler.toml compatible with being used for Infrastructure as Code
+
+  By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+
+  If you change your settings (particularly your vars) in the dashboard, wrangler _will_ override them. If you want to disable this behavior, set this field to true.
+
+  Between wrangler 2.0.28 and 2.1.5, by default wrangler would _not_ delete your vars by default, breaking expected wrangler.toml behaviour.
+
+- [#1889](https://github.com/cloudflare/wrangler2/pull/1889) [`98f756c7`](https://github.com/cloudflare/wrangler2/commit/98f756c7dfcdefaf1426b6770d0c0450ce4a8619) Thanks [@penalosa](https://github.com/penalosa)! - fix: Correctly place the `.wrangler/state` local state directory in the same directory as `wrangler.toml` by default
+
+* [#1886](https://github.com/cloudflare/wrangler2/pull/1886) [`8b647175`](https://github.com/cloudflare/wrangler2/commit/8b647175d31716ef5ff6f801bfd9ed47e2af4bcc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: potential missing compatibility_date in wrangler.toml when running `wrangler init --from-dash`
+  Fixed a bug where compatibility_date wasn't being added to wrangler.toml when initializing a worker via `wrangler init --from-dash`
+
+  fixes #1855
+
 ## 2.1.5
 
 ### Patch Changes

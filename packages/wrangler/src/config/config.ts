@@ -168,6 +168,18 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				[key: string]: string;
 		  }
 		| undefined;
+
+	/**
+	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+	 *
+	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next publish.
+	 *
+	 * If you want to keep your dashboard vars when wrangler deploys, set this field to true.
+	 *
+	 * @default false
+	 * @nonInheritable
+	 */
+	keep_vars?: boolean;
 }
 
 export interface DevConfig {

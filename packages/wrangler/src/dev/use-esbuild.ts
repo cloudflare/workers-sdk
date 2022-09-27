@@ -30,12 +30,14 @@ export function useEsbuild({
 	tsconfig,
 	minify,
 	nodeCompat,
+	betaD1Shims,
 	define,
 	noBundle,
 	workerDefinitions,
 	services,
 	durableObjects,
 	firstPartyWorkerDevFacade,
+	local,
 	targetConsumer,
 	testScheduled,
 	experimentalLocalStubCache,
@@ -52,10 +54,12 @@ export function useEsbuild({
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
+	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
+	local: boolean;
 	targetConsumer: "dev" | "publish";
 	testScheduled: boolean;
 	experimentalLocalStubCache: boolean | undefined;
@@ -112,6 +116,7 @@ export function useEsbuild({
 						tsconfig,
 						minify,
 						nodeCompat,
+						betaD1Shims,
 						define,
 						checkFetch: true,
 						assets: assets && {
@@ -122,6 +127,7 @@ export function useEsbuild({
 						workerDefinitions,
 						services,
 						firstPartyWorkerDevFacade,
+						local,
 						targetConsumer,
 						testScheduled,
 						experimentalLocalStubCache,
@@ -143,7 +149,6 @@ export function useEsbuild({
 					watcher.close();
 				};
 			}
-
 			setBundle({
 				id: 0,
 				entry,
@@ -182,6 +187,8 @@ export function useEsbuild({
 		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
+		betaD1Shims,
+		local,
 		targetConsumer,
 		testScheduled,
 		experimentalLocalStubCache,
