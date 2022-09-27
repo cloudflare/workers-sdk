@@ -280,11 +280,17 @@ export function usePreviewServer({
 			const { headers, url } = message;
 			addCfPreviewTokenHeader(headers, previewToken.value);
 			headers["host"] = previewToken.host;
-			const localWebsocket = new WebSocket(message, socket, body) as IWebsocket;
-			// TODO(soon): Custom WebSocket protocol is not working?
+			const protocols = headers["sec-websocket-protocol"];
+			const localWebsocket = new WebSocket(
+				message,
+				socket,
+				body,
+				protocols
+			) as IWebsocket;
+
 			const remoteWebsocketClient = new WebSocket.Client(
 				`wss://${previewToken.host}${url}`,
-				[],
+				protocols,
 				{ headers }
 			) as IWebsocket;
 			localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
