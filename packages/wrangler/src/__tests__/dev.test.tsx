@@ -1022,6 +1022,7 @@ describe("wrangler dev", () => {
 			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
 			  -l, --local                                      Run on my machine  [boolean] [default: false]
+			      --experimental-local                         Run on my machine using the Cloudflare Workers runtime  [boolean] [default: false]
 			      --minify                                     Minify the script  [boolean]
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
