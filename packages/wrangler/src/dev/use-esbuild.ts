@@ -38,6 +38,7 @@ export function useEsbuild({
 	firstPartyWorkerDevFacade,
 	targetConsumer,
 	testScheduled,
+	experimentalLocalStubCache,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -57,6 +58,7 @@ export function useEsbuild({
 	firstPartyWorkerDevFacade: boolean | undefined;
 	targetConsumer: "dev" | "publish";
 	testScheduled: boolean;
+	experimentalLocalStubCache: boolean | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -122,6 +124,7 @@ export function useEsbuild({
 						firstPartyWorkerDevFacade,
 						targetConsumer,
 						testScheduled,
+						experimentalLocalStubCache,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -181,6 +184,7 @@ export function useEsbuild({
 		firstPartyWorkerDevFacade,
 		targetConsumer,
 		testScheduled,
+		experimentalLocalStubCache,
 	]);
 	return bundle;
 }
