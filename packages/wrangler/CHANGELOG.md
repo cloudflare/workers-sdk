@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.1.8
+
+### Patch Changes
+
+- [#1894](https://github.com/cloudflare/wrangler2/pull/1894) [`ed646cf9`](https://github.com/cloudflare/wrangler2/commit/ed646cf902a86f467ec2ed08545ced3f97468d31) Thanks [@mrbbot](https://github.com/mrbbot)! - Add experimental support for using the open-source Workers runtime [`workerd`](https://github.com/cloudflare/workerd) in `wrangler dev`.
+  Use `wrangler dev --experimental-local` to try it out! 🚀
+  Note this feature is still under active development.
+
 ## 2.1.7
 
 ### Patch Changes
