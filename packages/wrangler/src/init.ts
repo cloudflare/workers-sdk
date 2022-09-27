@@ -946,12 +946,16 @@ async function getWorkerConfig(
 			new Date().toISOString().substring(0, 10),
 		...routeOrRoutesToConfig,
 		usage_model: serviceEnvMetadata.script.usage_model,
-		migrations: [
-			{
-				tag: serviceEnvMetadata.script.migration_tag,
-				new_classes: durableObjectClassNames,
-			},
-		],
+		...(durableObjectClassNames.length
+			? {
+					migrations: [
+						{
+							tag: serviceEnvMetadata.script.migration_tag,
+							new_classes: durableObjectClassNames,
+						},
+					],
+			  }
+			: {}),
 		triggers: {
 			crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 		},

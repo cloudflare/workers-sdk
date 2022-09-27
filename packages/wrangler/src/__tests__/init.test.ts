@@ -2608,6 +2608,101 @@ describe("init", () => {
 			).rejects.toThrowError();
 		});
 
+		it("should not inlcude migrations in config file when none are necessary", async () => {
+			const mockData = {
+				id: "memory-crystal",
+				default_environment: {
+					environment: "test",
+					created_on: "1987-9-27",
+					modified_on: "1987-9-27",
+					script: {
+						id: "memory-crystal",
+						tag: "test-tag",
+						etag: "some-etag",
+						handlers: [],
+						modified_on: "1987-9-27",
+						created_on: "1987-9-27",
+						usage_model: "bundled",
+						compatibility_date: "1987-9-27",
+					},
+				},
+				environments: [],
+			};
+
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName`,
+				"GET",
+				() => mockData
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+				"GET",
+				() => []
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+				"GET",
+				() => []
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+				"GET",
+				() => mockServiceMetadata.default_environment
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+				"GET",
+				() => {
+					return {
+						schedules: [],
+					};
+				}
+			);
+
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						compatibility_date: "2022-09-27",
+						env: {},
+						main: "src/index.ts",
+						triggers: {
+							crons: [],
+						},
+						usage_model: "bundled",
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
 		it("should not continue if no worker name is provided", async () => {
 			await expect(
 				runWrangler("init  --from-dash")
