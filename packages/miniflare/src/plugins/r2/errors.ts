@@ -1,6 +1,6 @@
 import { Response } from "undici";
-import { R2Object } from "./r2Object";
 import { CfHeader } from "../shared/constants";
+import { R2Object } from "./r2Object";
 
 enum Status {
 	BadRequest = 400,

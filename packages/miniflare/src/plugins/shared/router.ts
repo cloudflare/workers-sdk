@@ -1,5 +1,5 @@
-import { Awaitable } from "@miniflare/shared";
 import { Request, Response } from "undici";
+import { Awaitable } from "../../shared";
 import { GatewayFactory } from "./gateway";
 
 export type RouteHandler<Params = unknown> = (

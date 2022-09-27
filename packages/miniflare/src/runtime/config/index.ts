@@ -1,6 +1,6 @@
 import { Data, List, Message, Struct } from "capnp-ts";
-import { Config, kVoid } from "./sserve-conf";
-import { Config as CapnpConfig } from "./sserve-conf.capnp.js";
+import { Config, kVoid } from "./workerd";
+import { Config as CapnpConfig } from "./workerd.capnp.js";
 
 function capitalize<S extends string>(str: S): Capitalize<S> {
 	return (
@@ -9,11 +9,11 @@ function capitalize<S extends string>(str: S): Capitalize<S> {
 }
 
 // Dynamically encode a capnp struct based on keys and the types of values.
-// `obj` should be an instance of a type in `./sserve-conf.ts`. The safety of
-// this function relies on getting `./sserve-conf.ts` correct, TypeScript's type
+// `obj` should be an instance of a type in `./workerd.ts`. The safety of
+// this function relies on getting `./workerd.ts` correct, TypeScript's type
 // safety guarantees, and us validating all user input with zod.
 //
-// TODO: generate `./sserve-conf.ts` and corresponding encoders automatically
+// TODO: generate `./workerd.ts` and corresponding encoders automatically
 //  from the `.capnp` file.
 function encodeCapnpStruct(obj: any, struct: Struct) {
 	const anyStruct = struct as any;
@@ -51,4 +51,4 @@ export function serializeConfig(config: Config): Buffer {
 	return Buffer.from(message.toArrayBuffer());
 }
 
-export * from "./sserve-conf";
+export * from "./workerd";

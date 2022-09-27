@@ -1,4 +1,4 @@
-import { RangeStoredValueMeta, Storage } from "@miniflare/shared";
+import { RangeStoredValueMeta, Storage } from "../../storage";
 import { InvalidRange, NoSuchKey } from "./errors";
 import {
 	R2HTTPMetadata,

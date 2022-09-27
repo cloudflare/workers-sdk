@@ -1,4 +1,4 @@
-import { ValueOf } from "../helpers";
+import { ValueOf } from "../shared";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
@@ -20,12 +20,7 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 ][];
 
 export * from "./shared";
-export {
-	SERVICE_LOOPBACK,
-	SERVICE_ENTRY,
-	HEADER_PROBE,
-	IncomingRequestCfPropertiesSchema,
-} from "./core";
+export { SERVICE_LOOPBACK, SERVICE_ENTRY, HEADER_PROBE } from "./core";
 
 // TODO: be more liberal on exports?
 export * from "./cache";

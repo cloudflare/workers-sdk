@@ -3,8 +3,8 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { Awaitable, MiniflareCoreError } from "../helpers";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
+import { Awaitable, MiniflareCoreError } from "../shared";
 
 export abstract class Runtime {
 	constructor(
@@ -14,6 +14,7 @@ export abstract class Runtime {
 	) {}
 
 	abstract updateConfig(configBuffer: Buffer): Awaitable<void>;
+	abstract get exitPromise(): Promise<void> | undefined;
 	abstract dispose(): Awaitable<void>;
 }
 
@@ -38,6 +39,28 @@ function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	return new Promise((resolve) => {
 		process.once("exit", () => resolve());
 	});
+}
+
+function trimTrailingNewline(buffer: Buffer) {
+	let string = buffer.toString();
+	if (string.endsWith("\n")) string = string.substring(0, string.length - 1);
+	return string;
+}
+function pipeOutput(runtime: childProcess.ChildProcessWithoutNullStreams) {
+	// TODO: may want to proxy these and prettify ✨
+	// We can't just pipe() to `process.stdout/stderr` here, as Ink (used by
+	// wrangler), only patches the `console.*` methods:
+	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
+	// Writing directly to `process.stdout/stderr` would result in graphical
+	// glitches.
+	runtime.stdout.on("data", (data) => {
+		console.log(trimTrailingNewline(data));
+	});
+	runtime.stderr.on("data", (data) => {
+		console.error(trimTrailingNewline(data));
+	});
+	// runtime.stdout.pipe(process.stdout);
+	// runtime.stderr.pipe(process.stderr);
 }
 
 class NativeRuntime extends Runtime {
@@ -90,16 +113,15 @@ class NativeRuntime extends Runtime {
 		});
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
-
-		// TODO: may want to proxy these and prettify ✨
-		// runtimeProcess.stdout.on("data", (data) => process.stdout.write(data));
-		// runtimeProcess.stderr.on("data", (data) => process.stderr.write(data));
-		runtimeProcess.stdout.pipe(process.stdout);
-		runtimeProcess.stderr.pipe(process.stderr);
+		pipeOutput(runtimeProcess);
 
 		// 3. Write config
 		runtimeProcess.stdin.write(configBuffer);
 		runtimeProcess.stdin.end();
+	}
+
+	get exitPromise(): Promise<void> | undefined {
+		return this.#processExitPromise;
 	}
 
 	dispose(): Awaitable<void> {
@@ -184,10 +206,11 @@ class DockerRuntime extends Runtime {
 		);
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
+		pipeOutput(runtimeProcess);
+	}
 
-		// TODO: may want to proxy these and prettify ✨
-		runtimeProcess.stdout.pipe(process.stdout);
-		runtimeProcess.stderr.pipe(process.stderr);
+	get exitPromise(): Promise<void> | undefined {
+		return this.#processExitPromise;
 	}
 
 	dispose(): Awaitable<void> {

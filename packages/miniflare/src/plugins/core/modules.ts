@@ -8,13 +8,13 @@ import walk from "acorn-walk";
 import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
+import { Worker_Module } from "../../runtime";
 import {
 	MatcherRegExps,
 	MiniflareCoreError,
 	globsToRegExps,
 	testRegExps,
-} from "../../helpers";
-import { Worker_Module } from "../../runtime";
+} from "../../shared";
 
 const SUGGEST_BUNDLE =
 	"If you're trying to import an npm package, you'll need to bundle your Worker first.";
