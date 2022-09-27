@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import { Request, Response } from "undici";
 import { z } from "zod";
 import { Awaitable, JsonSchema } from "../../helpers";
-import { Service, Worker_Binding, Worker_Module } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module, kVoid } from "../../runtime";
 import { BINDING_SERVICE_LOOPBACK, Plugin } from "../shared";
 import {
 	ModuleDefinitionSchema,
@@ -107,6 +107,10 @@ const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for custom fetch functions defined in `serviceBindings` option
 const SERVICE_CUSTOM_PREFIX = `${CORE_PLUGIN_NAME}:custom`;
 
+export function getUserServiceName(name = "") {
+	return `${SERVICE_USER_PREFIX}:${name}`;
+}
+
 export const HEADER_PROBE = "MF-Probe";
 export const HEADER_CUSTOM_SERVICE = "MF-Custom-Service";
 
@@ -141,12 +145,7 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
 })`;
 
-const now = new Date();
-const fallbackCompatibilityDate = [
-	now.getFullYear(),
-	(now.getMonth() + 1).toString().padStart(2, "0"),
-	now.getDate().toString().padStart(2, "0"),
-].join("-");
+const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
 export const CORE_PLUGIN: Plugin<
 	typeof CoreOptionsSchema,
@@ -208,6 +207,7 @@ export const CORE_PLUGIN: Plugin<
 		workerBindings,
 		workerIndex,
 		sharedOptions,
+		durableObjectClassNames,
 	}) {
 		// Define core/shared services.
 		// Services get de-duped by name, so only the first worker's
@@ -224,7 +224,6 @@ export const CORE_PLUGIN: Plugin<
 					serviceWorkerScript: SCRIPT_ENTRY,
 					compatibilityDate: "2022-09-01",
 					bindings: serviceEntryBindings,
-					compatibilityDate: "2022-09-01",
 				},
 			},
 		];
@@ -232,15 +231,22 @@ export const CORE_PLUGIN: Plugin<
 		// Define regular user worker if script is set
 		const workerScript = getWorkerScript(options);
 		if (workerScript !== undefined) {
-			const name = `${SERVICE_USER_PREFIX}:${options.name ?? ""}`;
+			const name = getUserServiceName(options.name);
+			const classNames = durableObjectClassNames.get(name) ?? [];
+
 			services.push({
 				name,
 				worker: {
 					...workerScript,
 					compatibilityDate:
-						options.compatibilityDate ?? fallbackCompatibilityDate,
+						options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
+					durableObjectNamespaces: classNames.map((className) => ({
+						className,
+						uniqueKey: className,
+					})),
+					durableObjectStorage: { inMemory: kVoid },
 				},
 			});
 			serviceEntryBindings.push({

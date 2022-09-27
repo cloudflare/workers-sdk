@@ -4,6 +4,8 @@ import { Service, Worker_Binding } from "../../runtime";
 import { GatewayConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
+export type DurableObjectClassNames = Map<string, string[]>;
+
 export interface PluginServicesOptions<
 	Options extends z.ZodType,
 	SharedOptions extends z.ZodType | undefined,
@@ -13,6 +15,7 @@ export interface PluginServicesOptions<
 	sharedOptions: OptionalZodTypeOf<SharedOptions>;
 	workerBindings: Worker_Binding[];
 	workerIndex: number;
+	durableObjectClassNames: DurableObjectClassNames;
 }
 
 export interface PluginBase<
@@ -20,12 +23,10 @@ export interface PluginBase<
 	SharedOptions extends z.ZodType | undefined,
 > {
 	options: Options;
-	getBindings(
-		options: z.infer<Options>
-	): Awaitable<Worker_Binding[] | undefined>;
+	getBindings(options: z.infer<Options>): Awaitable<Worker_Binding[] | void>;
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
-	): Awaitable<Service[] | undefined>;
+	): Awaitable<Service[] | void>;
 }
 
 export type Plugin<

@@ -46,7 +46,7 @@ export const KV_PLUGIN: Plugin<
 	sharedOptions: KVSharedOptionsSchema,
 	async getBindings(options) {
 		const bindings = Object.entries(
-			options.kvNamespaces ?? []
+			options.kvNamespaces ?? {}
 		).map<Worker_Binding>(([name, id]) => ({
 			name,
 			kvNamespace: { name: `${SERVICE_NAMESPACE_PREFIX}:${id}` },
@@ -75,7 +75,6 @@ export const KV_PLUGIN: Plugin<
 							service: { name: SERVICE_LOOPBACK },
 						},
 					],
-					compatibilityDate: "2022-09-01",
 				},
 			})
 		);
