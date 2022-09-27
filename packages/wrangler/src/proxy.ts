@@ -281,6 +281,7 @@ export function usePreviewServer({
 			addCfPreviewTokenHeader(headers, previewToken.value);
 			headers["host"] = previewToken.host;
 			const protocols = headers["sec-websocket-protocol"];
+			logger.debug("protocols: ", protocols);
 			const localWebsocket = new WebSocket(
 				message,
 				socket,
