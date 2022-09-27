@@ -44,7 +44,7 @@ export interface RawR2ObjectMetadata
 	customFields: { k: string; v: string }[];
 }
 
-interface EncodedMetadata {
+export interface EncodedMetadata {
 	metadataSize: number;
 	value: Uint8Array;
 }
