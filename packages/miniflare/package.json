@@ -44,7 +44,7 @@
 		"kleur": "^4.1.5",
 		"stoppable": "^1.1.0",
 		"undici": "^5.10.0",
-		"workerd": "^1.20220920.0",
+		"workerd": "^1.20220926.0",
 		"zod": "^3.18.0"
 	},
 	"devDependencies": {
