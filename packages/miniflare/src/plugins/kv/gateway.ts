@@ -1,11 +1,5 @@
-import {
-	Clock,
-	Storage,
-	StoredKeyMeta,
-	StoredValueMeta,
-	millisToSeconds,
-} from "@miniflare/shared";
-import { HttpError } from "../../helpers";
+import { Clock, HttpError, millisToSeconds } from "../../shared";
+import { Storage, StoredKeyMeta, StoredValueMeta } from "../../storage";
 import {
 	MAX_KEY_SIZE,
 	MAX_LIST_KEYS,

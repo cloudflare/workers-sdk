@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { Awaitable, OptionalZodTypeOf } from "../../helpers";
 import { Service, Worker_Binding } from "../../runtime";
+import { Awaitable, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 

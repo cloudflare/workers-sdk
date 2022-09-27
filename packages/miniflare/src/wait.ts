@@ -21,6 +21,7 @@ export async function waitForRequest(...options: Parameters<typeof request>) {
 			if (code !== undefined && 200 <= code && code < 300) return;
 		} catch (e: any) {
 			const code = e.code;
+			if (code === "UND_ERR_ABORTED") return;
 			if (
 				// Adapted from https://github.com/dwmkerr/wait-port/blob/0d58d29a6d6b8ea996de9c6829706bb3b0952ee8/lib/wait-port.js
 				code !== "ECONNREFUSED" &&
@@ -37,6 +38,11 @@ export async function waitForRequest(...options: Parameters<typeof request>) {
 		attempts++;
 
 		if (signal?.aborted) return;
-		await setTimeout(attemptDelay(attempts), undefined, timeoutOptions);
+		try {
+			await setTimeout(attemptDelay(attempts), undefined, timeoutOptions);
+		} catch (e: any) {
+			if (e.code === "ABORT_ERR") return;
+			throw e;
+		}
 	}
 }

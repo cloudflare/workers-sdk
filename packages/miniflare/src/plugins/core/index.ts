@@ -2,8 +2,8 @@ import { readFileSync } from "fs";
 import fs from "fs/promises";
 import { Request, Response } from "undici";
 import { z } from "zod";
-import { Awaitable, JsonSchema } from "../../helpers";
 import { Service, Worker_Binding, Worker_Module, kVoid } from "../../runtime";
+import { Awaitable, JsonSchema } from "../../shared";
 import { BINDING_SERVICE_LOOPBACK, Plugin } from "../shared";
 import {
 	ModuleDefinitionSchema,
@@ -12,6 +12,7 @@ import {
 	STRING_SCRIPT_PATH,
 	convertModuleDefinition,
 } from "./modules";
+
 // (request: Request) => Awaitable<Response>
 export const ServiceFetch = z
 	.function()
@@ -42,58 +43,11 @@ export const CoreOptionsSchema = z.object({
 	serviceBindings: z.record(z.union([z.string(), ServiceFetch])).optional(),
 });
 
-export const IncomingRequestCfPropertiesBotManagementSchema = z.object({
-	score: z.number().optional(),
-	staticResource: z.boolean().optional(),
-	verifiedBot: z.boolean().optional(),
-});
-
-export const IncomingRequestCfPropertiesTLSClientAuthSchema = z.object({
-	certIssuerDNLegacy: z.string().optional(),
-	certIssuerDN: z.string().optional(),
-	certPresented: z.enum(["0", "1"]).optional(),
-	certSubjectDNLegacy: z.string().optional(),
-	certSubjectDN: z.string().optional(),
-	certNotBefore: z.string().optional(),
-	certNotAfter: z.string().optional(),
-	certSerial: z.string().optional(),
-	certFingerprintSHA1: z.string().optional(),
-	certVerified: z.string().optional(),
-});
-export const IncomingRequestCfPropertiesSchema = z.object({
-	asn: z.number().optional(),
-	botManagement: IncomingRequestCfPropertiesBotManagementSchema.optional(),
-	city: z.string().optional(),
-	clientAcceptEncoding: z.union([z.string(), z.array(z.string())]).optional(),
-	clientTcpRtt: z.number().optional(),
-	clientTrustScore: z.number().optional(),
-	colo: z.string().optional(),
-	continent: z.string().optional(),
-	country: z.string().optional(),
-	httpProtocol: z.string().optional(),
-	latitude: z.string().optional(),
-	longitude: z.string().optional(),
-	metroCode: z.string().optional(),
-	postalCode: z.string().optional(),
-	region: z.string().optional(),
-	regionCode: z.string().optional(),
-	requestPriority: z.string().optional(),
-	timezone: z.string().optional(),
-	tlsVersion: z.string().optional(),
-	tlsCipher: z.string().optional(),
-	tlsClientAuth: IncomingRequestCfPropertiesTLSClientAuthSchema.optional(),
-});
-
 export const CoreSharedOptionsSchema = z.object({
 	host: z.string().optional(),
 	port: z.number().optional(),
-	cf: z
-		.union([
-			z.boolean(),
-			z.string(),
-			IncomingRequestCfPropertiesSchema.passthrough(),
-		])
-		.optional(),
+	// TODO: add back validation of cf object
+	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";

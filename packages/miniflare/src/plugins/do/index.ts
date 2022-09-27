@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { MiniflareError } from "../../helpers";
 import { Worker_Binding } from "../../runtime";
+import { MiniflareError } from "../../shared";
 import { getUserServiceName } from "../core";
 import { PersistenceSchema, Plugin } from "../shared";
 import { DurableObjectsStorageGateway } from "./gateway";

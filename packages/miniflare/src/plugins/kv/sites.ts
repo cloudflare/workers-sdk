@@ -1,14 +1,14 @@
 import assert from "assert";
 import { pathToFileURL } from "url";
-import { FileStorage } from "@miniflare/storage-file";
+import { Service, Worker_Binding } from "../../runtime";
 import {
 	MatcherRegExps,
 	deserialiseRegExps,
 	globsToRegExps,
 	serialiseRegExps,
 	testRegExps,
-} from "../../helpers";
-import { Service, Worker_Binding } from "../../runtime";
+} from "../../shared";
+import { FileStorage } from "../../storage";
 import { SERVICE_LOOPBACK } from "../core";
 import {
 	BINDING_SERVICE_LOOPBACK,

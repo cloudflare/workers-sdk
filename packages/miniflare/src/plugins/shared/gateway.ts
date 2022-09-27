@@ -1,10 +1,13 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { Clock, Storage, defaultClock, sanitisePath } from "@miniflare/shared";
-import { FileStorage } from "@miniflare/storage-file";
-import { MemoryStorage } from "@miniflare/storage-memory";
 import { z } from "zod";
-import { MiniflareCoreError } from "../../helpers";
+import {
+	Clock,
+	MiniflareCoreError,
+	defaultClock,
+	sanitisePath,
+} from "../../shared";
+import { FileStorage, MemoryStorage, Storage } from "../../storage";
 
 // TODO: explain why persist passed as header, want options set to be atomic,
 //  if set gateway before script update, may be using new persist before new script

@@ -1,17 +1,15 @@
 import assert from "assert";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import path from "path";
-import { fetch } from "@miniflare/core";
 import { bold, dim, grey, red } from "kleur/colors";
-import { OptionalZodTypeOf } from "./helpers";
-import { Plugins, IncomingRequestCfPropertiesSchema } from "./plugins";
-import { TypeOf } from "zod";
+import { fetch } from "undici";
+import { Plugins } from "./plugins";
+import { OptionalZodTypeOf } from "./shared";
+
 const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
-type IncomingRequestCfProperties = TypeOf<
-	typeof IncomingRequestCfPropertiesSchema
->;
-const fallbackCf: IncomingRequestCfProperties = {
+
+const fallbackCf = {
 	asn: 395747,
 	colo: "DFW",
 	city: "Austin",
@@ -51,13 +49,13 @@ type CoreOptions = OptionalZodTypeOf<Plugins["core"]["sharedOptions"]>;
 
 export async function setupCf(
 	cf: CoreOptions["cf"]
-): Promise<IncomingRequestCfProperties> {
+): Promise<Record<string, any>> {
 	if (!(cf ?? process.env.NODE_ENV !== "test")) {
 		return fallbackCf;
 	}
 
 	if (typeof cf === "object") {
-		return cf as IncomingRequestCfProperties;
+		return cf;
 	}
 
 	let cfPath = defaultCfPath;

@@ -1,12 +1,12 @@
 import { TextDecoder } from "util";
 import { Request, Response } from "undici";
 import {
+	CfHeader,
 	GET,
 	PUT,
 	RouteHandler,
 	Router,
 	decodePersist,
-	CfHeader,
 } from "../shared";
 import { InternalError, InvalidMetadata, R2Error } from "./errors";
 import {

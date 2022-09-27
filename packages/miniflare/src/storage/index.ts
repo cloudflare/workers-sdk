@@ -1,3 +1,4 @@
-// TODO: move from @miniflare/shared, @miniflare/storage-memory, @miniflare/storage-file
-
-export {};
+export * from "./file";
+export * from "./local";
+export * from "./memory";
+export * from "./storage";

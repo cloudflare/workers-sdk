@@ -1,4 +1,5 @@
-import { Clock, Storage } from "@miniflare/shared";
+import { Clock } from "../../shared";
+import { Storage } from "../../storage";
 
 export class DurableObjectsStorageGateway {
 	constructor(
