@@ -9,7 +9,6 @@ import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
 import { logger } from "./logger";
 import type { CfPreviewToken } from "./create-worker-preview";
-import type WebSocket from "faye-websocket";
 import type { HttpTerminator } from "http-terminator";
 import type {
 	IncomingHttpHeaders,
@@ -20,7 +19,7 @@ import type {
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import type { Server as HttpsServer } from "node:https";
-import type { Writable } from "node:stream";
+import type { Duplex, Writable } from "node:stream";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -290,7 +289,7 @@ export function usePreviewServer({
 		/** HTTP/1 -> WebSocket (over HTTP/1)  */
 		const handleUpgrade = (
 			originalMessage: IncomingMessage,
-			originalSocket: WebSocket,
+			originalSocket: Duplex,
 			originalBody: Buffer
 		) => {
 			const { headers, method, url } = originalMessage;
