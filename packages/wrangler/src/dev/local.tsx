@@ -1,6 +1,7 @@
+import assert from "node:assert";
 import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
@@ -8,7 +9,10 @@ import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
-import { DEFAULT_MODULE_RULES } from "../module-collection";
+import {
+	DEFAULT_MODULE_RULES,
+	ModuleTypeToRuleType,
+} from "../module-collection";
 import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
@@ -217,6 +221,32 @@ function useLocalWorker({
 					// TODO: pass-through collected modules instead of getting Miniflare
 					//  to collect them again
 				};
+
+				if (format === "modules") {
+					// Manually specify all modules from the bundle. If we didn't do this,
+					// Miniflare 3 would try collect them automatically again itself.
+
+					// Resolve entrypoint relative to the temporary directory, ensuring
+					// path doesn't start with `..`, which causes issues in `workerd`.
+					// Also ensures other modules with relative names can be resolved.
+					const root = path.dirname(bundle.path);
+
+					assert.strictEqual(bundle.type, "esm");
+					options.modules = [
+						// Entrypoint
+						{
+							type: "ESModule",
+							path: path.relative(root, bundle.path),
+							contents: await readFile(bundle.path, "utf-8"),
+						},
+						// Misc (WebAssembly, etc, ...)
+						...bundle.modules.map((module) => ({
+							type: ModuleTypeToRuleType[module.type ?? "esm"],
+							path: module.name,
+							contents: module.content,
+						})),
+					];
+				}
 
 				logger.log("⎔ Starting an experimental local server...");
 
