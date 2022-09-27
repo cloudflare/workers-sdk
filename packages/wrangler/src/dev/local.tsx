@@ -334,7 +334,9 @@ function useLocalWorker({
 			}
 			if (experimentalLocalRef.current) {
 				logger.log("⎔ Shutting down experimental local server.");
-				experimentalLocalRef.current?.dispose();
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef.current?.dispose().catch(() => {});
 				experimentalLocalRef.current = undefined;
 			}
 			removeSignalExitListener.current?.();
@@ -371,6 +373,7 @@ function useLocalWorker({
 		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
+		experimentalLocal,
 	]);
 	return { inspectorUrl };
 }
