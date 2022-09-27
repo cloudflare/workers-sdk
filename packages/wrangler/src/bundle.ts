@@ -79,6 +79,7 @@ export async function bundleWorker(
 		targetConsumer: "dev" | "publish";
 		local: boolean;
 		testScheduled?: boolean | undefined;
+		experimentalLocalStubCache: boolean | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -99,6 +100,7 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade,
 		targetConsumer,
 		testScheduled,
+		experimentalLocalStubCache,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -233,12 +235,20 @@ export async function bundleWorker(
 
 	// At this point, inputEntry points to the entry point we want to build.
 
+	const inject: string[] = [];
+	if (checkFetch) inject.push(checkedFetchFileToInject);
+	if (experimentalLocalStubCache) {
+		inject.push(
+			path.resolve(getBasePath(), "templates/experimental-local-cache-stubs.js")
+		);
+	}
+
 	const result = await esbuild.build({
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		inject: checkFetch ? [checkedFetchFileToInject] : [],
+		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",

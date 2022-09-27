@@ -153,6 +153,7 @@ export type DevProps = {
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
+	experimentalLocal: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -213,6 +214,7 @@ function InteractiveDevSession(props: DevProps) {
 
 type DevSessionProps = DevProps & {
 	local: boolean;
+	experimentalLocal?: boolean;
 };
 
 function DevSession(props: DevSessionProps) {
@@ -274,6 +276,7 @@ function DevSession(props: DevSessionProps) {
 		// Enable the bundling to know whether we are using dev or publish
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
+		experimentalLocalStubCache: props.local && props.experimentalLocal,
 	});
 
 	return props.local ? (
@@ -300,6 +303,7 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={props.onReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
+			experimentalLocal={props.experimentalLocal}
 		/>
 	) : (
 		<Remote

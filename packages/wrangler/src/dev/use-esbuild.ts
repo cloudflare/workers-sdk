@@ -40,6 +40,7 @@ export function useEsbuild({
 	local,
 	targetConsumer,
 	testScheduled,
+	experimentalLocalStubCache,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -61,6 +62,7 @@ export function useEsbuild({
 	local: boolean;
 	targetConsumer: "dev" | "publish";
 	testScheduled: boolean;
+	experimentalLocalStubCache: boolean | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -128,6 +130,7 @@ export function useEsbuild({
 						local,
 						targetConsumer,
 						testScheduled,
+						experimentalLocalStubCache,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -188,6 +191,7 @@ export function useEsbuild({
 		local,
 		targetConsumer,
 		testScheduled,
+		experimentalLocalStubCache,
 	]);
 	return bundle;
 }

@@ -2,6 +2,7 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
@@ -27,8 +28,17 @@ import type {
 	CfD1Database,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	Miniflare as Miniflare3Type,
+	MiniflareOptions as Miniflare3Options,
+} from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+
+// caching of the miniflare package
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Miniflare: typeof import("@miniflare/tre")["Miniflare"];
+
 export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -53,6 +63,7 @@ export interface LocalProps {
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
+	experimentalLocal?: boolean;
 }
 
 export function Local(props: LocalProps) {
@@ -63,6 +74,10 @@ export function Local(props: LocalProps) {
 		logToTerminal: false,
 	});
 	return null;
+}
+
+function arrayToObject(values: string[] = []): Record<string, string> {
+	return Object.fromEntries(values.map((value) => [value, value]));
 }
 
 function useLocalWorker({
@@ -88,9 +103,11 @@ function useLocalWorker({
 	onReady,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
+	experimentalLocal,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
+	const experimentalLocalRef = useRef<Miniflare3Type>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 
@@ -187,6 +204,40 @@ function useLocalWorker({
 				enablePagesAssetsServiceBinding,
 			});
 
+			if (experimentalLocal) {
+				// TODO: refactor setupMiniflareOptions so we don't need to parse here
+				const miniflare2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+				const options: Miniflare3Options = {
+					...miniflare2Options,
+					// Miniflare 3 distinguishes between binding name and namespace/bucket
+					// IDs. For now, just use the same value as we did in Miniflare 2.
+					// TODO: use defined KV preview ID if any
+					kvNamespaces: arrayToObject(miniflare2Options.kvNamespaces),
+					r2Buckets: arrayToObject(miniflare2Options.r2Buckets),
+					// TODO: pass-through collected modules instead of getting Miniflare
+					//  to collect them again
+				};
+
+				logger.log("⎔ Starting an experimental local server...");
+
+				if (Miniflare === undefined) {
+					({ Miniflare } = await npxImport<
+						// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+						typeof import("@miniflare/tre")
+					>("@miniflare/tre"));
+				}
+
+				const mf = new Miniflare(options);
+				experimentalLocalRef.current = mf;
+				removeSignalExitListener.current = onExit((_code, _signal) => {
+					logger.log("⎔ Shutting down experimental local server.");
+					mf.dispose();
+					experimentalLocalRef.current = undefined;
+				});
+				await mf.ready;
+				return;
+			}
+
 			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 			logger.log("⎔ Starting a local server...");
 
@@ -279,9 +330,16 @@ function useLocalWorker({
 				logger.log("⎔ Shutting down local server.");
 				local.current?.kill();
 				local.current = undefined;
-				removeSignalExitListener.current && removeSignalExitListener.current();
-				removeSignalExitListener.current = undefined;
 			}
+			if (experimentalLocalRef.current) {
+				logger.log("⎔ Shutting down experimental local server.");
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef.current?.dispose().catch(() => {});
+				experimentalLocalRef.current = undefined;
+			}
+			removeSignalExitListener.current?.();
+			removeSignalExitListener.current = undefined;
 		};
 	}, [
 		bundle,
@@ -314,6 +372,7 @@ function useLocalWorker({
 		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
+		experimentalLocal,
 	]);
 	return { inspectorUrl };
 }
@@ -458,7 +517,10 @@ export function setupMiniflareOptions({
 	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
-}: SetupMiniflareOptionsProps): MiniflareOptions {
+}: SetupMiniflareOptionsProps): {
+	miniflareCLIPath: string;
+	forkOptions: string[];
+} {
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
 		name: workerName,
