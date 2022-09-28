@@ -7,15 +7,15 @@ export class DurableObjectsStorageGateway {
 		private readonly clock: Clock
 	) {}
 
-	async get(key: string) {
+	async get(_key: string) {
 		throw new Error("Not yet implemented!");
 	}
 
-	async put(key: string, value: Uint8Array) {
+	async put(_key: string, _value: Uint8Array) {
 		throw new Error("Not yet implemented!");
 	}
 
-	async delete(key: string) {
+	async delete(_key: string) {
 		throw new Error("Not yet implemented!");
 	}
 

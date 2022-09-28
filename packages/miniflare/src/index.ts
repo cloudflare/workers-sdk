@@ -12,7 +12,6 @@ import {
 	Response,
 	fetch,
 } from "undici";
-import workerd from "workerd";
 import { z } from "zod";
 import { setupCf } from "./cf";
 

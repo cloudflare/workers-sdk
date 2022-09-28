@@ -21,10 +21,10 @@ export const CACHE_PLUGIN: Plugin<
 	router: CacheRouter,
 	options: CacheOptionsSchema,
 	sharedOptions: CacheSharedOptionsSchema,
-	getBindings(options) {
+	getBindings(_options) {
 		return undefined;
 	},
-	getServices(options) {
+	getServices(_options) {
 		return undefined;
 	},
 };
