@@ -296,7 +296,7 @@ export function usePreviewServer({
 			addCfPreviewTokenHeader(headers, previewToken.value);
 			headers["host"] = previewToken.host;
 
-			if (originalBody?.byteLength) originalSocket.unshift(originalBody);
+			if (originalHead?.byteLength) originalSocket.unshift(originalHead);
 
 			const runtimeRequest = https.request(
 				{
