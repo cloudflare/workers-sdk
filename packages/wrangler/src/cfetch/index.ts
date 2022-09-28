@@ -1,7 +1,8 @@
 import { URLSearchParams } from "node:url";
 import { ParseError } from "../parse";
-import { fetchInternal } from "./internal";
+import { fetchInternal, formData, performApiFetch } from "./internal";
 import type { RequestInit } from "undici";
+import { logger } from "../logger";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
@@ -41,6 +42,43 @@ export async function fetchResult<ResponseType>(
 		return json.result;
 	} else {
 		throwFetchError(resource, json);
+	}
+}
+
+/**
+ * Make a fetch request, and extract the `result` from the JSON response.
+ */
+export async function fetchScriptContent(
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+): Promise<string> {
+	const response = await performApiFetch(
+		resource,
+		init,
+		queryParams,
+		abortSignal
+	);
+
+	logger.debug(
+		"-- START CF API RESPONSE:",
+		response.statusText,
+		response.status
+	);
+
+	logger.debug("HEADERS:", { ...response.headers });
+	// logger.debug("RESPONSE:", text);
+	logger.debug("-- END CF API RESPONSE");
+	const contentType = response.headers.get("content-type");
+
+	const usesModules = contentType?.startsWith("multipart");
+	if (usesModules && contentType) {
+		const form = await formData(response);
+		const entries = Array.from(form.entries());
+		return entries.map((e) => e[1]).join("\n");
+	} else {
+		return await response.text();
 	}
 }
 

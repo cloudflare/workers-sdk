@@ -156,3 +156,17 @@ export async function fromDashMessagePrompt(
 		return await confirm("Would you like to continue?");
 	}
 }
+
+export async function tailDOLogPrompt(
+	scriptName: string
+): Promise<boolean | void> {
+	logger.warn(
+		`Beginning log collection requires restarting the Durable Objects associated with ${chalk.green(
+			scriptName
+		)}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
+	);
+
+	if (!isInteractive() || CI.isCI()) return true;
+
+	return await confirm("Would you like to continue?");
+}

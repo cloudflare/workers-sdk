@@ -263,7 +263,7 @@ export async function fetchDashboardScript(
 	}
 }
 
-async function formData({ headers, body }: Response): Promise<FormData> {
+export async function formData({ headers, body }: Response): Promise<FormData> {
 	// undici doesn't include a multipart/form-data parser yet, so we parse
 	// form data with busboy instead
 	const contentType = headers.get("Content-Type") ?? "";

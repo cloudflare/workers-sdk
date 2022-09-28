@@ -10,12 +10,12 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { fetchResult } from "./cfetch";
+import { fetchResult, fetchScriptContent } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { d1api } from "./d1";
 import { devHandler, devOptions } from "./dev";
-import { confirm, prompt } from "./dialogs";
+import { confirm, prompt, tailDOLogPrompt } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
@@ -77,6 +77,7 @@ import { whoami } from "./whoami";
 
 import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
+import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
 import type { Readable } from "node:stream";
@@ -749,6 +750,27 @@ function createCLIParser(argv: string[]) {
 				search: args.search,
 				clientIp: args.ip,
 			};
+
+			const scriptContent: string = await fetchScriptContent(
+				(!isLegacyEnv(config) ? args.env : undefined)
+					? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/content`
+					: `/accounts/${accountId}/workers/scripts/${scriptName}`
+			);
+
+			const bindings = await fetchResult<WorkerMetadata["bindings"]>(
+				(!isLegacyEnv(config) ? args.env : undefined)
+					? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/bindings`
+					: `/accounts/${accountId}/workers/scripts/${scriptName}/bindings`
+			);
+			if (
+				scriptContent.includes("websocket") &&
+				bindings.find((b) => b.type === "durable_object_namespace")
+			) {
+				const shouldContinue = await tailDOLogPrompt(scriptName);
+				if (!shouldContinue) {
+					return;
+				}
+			}
 
 			const filters = translateCLICommandToFilterMessage(cliFilters);
 
