@@ -1,6 +1,9 @@
 import { unstable_dev } from "wrangler";
 
-describe.each([false, true])("experimentalLocal: %s", (experimentalLocal) => {
+// TODO: add test for `experimentalLocal: true` once issue with dynamic
+//  `import()` and `npx-import` resolved:
+//  https://github.com/cloudflare/wrangler2/pull/1940#issuecomment-1261166695
+describe("worker", () => {
 	let worker: {
 		fetch: (
 			input?: RequestInfo,
@@ -16,10 +19,6 @@ describe.each([false, true])("experimentalLocal: %s", (experimentalLocal) => {
 			{
 				ip: "127.0.0.1",
 				port: 1337,
-				experimentalLocal,
-				// Compatibility date currently required when experimentalLocal is
-				// enabled due to `workerd` restrictions
-				compatibilityDate: "2022-09-26",
 			},
 			{ disableExperimentalWarning: true }
 		);
