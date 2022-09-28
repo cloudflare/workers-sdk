@@ -2609,21 +2609,25 @@ describe("init", () => {
 		});
 
 		it("should not inlcude migrations in config file when none are necessary", async () => {
+			const mockDate = "1988-08-07";
+			jest
+				.spyOn(Date.prototype, "toISOString")
+				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
 			const mockData = {
 				id: "memory-crystal",
 				default_environment: {
 					environment: "test",
-					created_on: "1987-9-27",
-					modified_on: "1987-9-27",
+					created_on: "1988-08-07",
+					modified_on: "1988-08-07",
 					script: {
 						id: "memory-crystal",
 						tag: "test-tag",
 						etag: "some-etag",
 						handlers: [],
-						modified_on: "1987-9-27",
-						created_on: "1987-9-27",
+						modified_on: "1988-08-07",
+						created_on: "1988-08-07",
 						usage_model: "bundled",
-						compatibility_date: "1987-9-27",
+						compatibility_date: "1988-08-07",
 					},
 				},
 				environments: [],
@@ -2690,7 +2694,7 @@ describe("init", () => {
 			checkFiles({
 				items: {
 					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						compatibility_date: "2022-09-27",
+						compatibility_date: "1988-08-07",
 						env: {},
 						main: "src/index.ts",
 						triggers: {
