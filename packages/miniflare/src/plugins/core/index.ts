@@ -1,9 +1,16 @@
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import { bold, yellow } from "kleur/colors";
 import { Request, Response } from "undici";
 import { z } from "zod";
-import { Service, Worker_Binding, Worker_Module, kVoid } from "../../runtime";
-import { Awaitable, JsonSchema } from "../../shared";
+import {
+	Service,
+	Worker_Binding,
+	Worker_Module,
+	kVoid,
+	supportedCompatibilityDate,
+} from "../../runtime";
+import { Awaitable, JsonSchema, MiniflareCoreError } from "../../shared";
 import { BINDING_SERVICE_LOOPBACK, Plugin } from "../shared";
 import {
 	ModuleDefinitionSchema,
@@ -12,6 +19,8 @@ import {
 	STRING_SCRIPT_PATH,
 	convertModuleDefinition,
 } from "./modules";
+
+const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 // (request: Request) => Awaitable<Response>
 export const ServiceFetch = z
@@ -99,7 +108,45 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
 })`;
 
+const now = new Date();
+const CURRENT_COMPATIBILITY_DATE = [
+	now.getFullYear(),
+	(now.getMonth() + 1).toString().padStart(2, "0"),
+	now.getDate().toString().padStart(2, "0"),
+].join("-");
+
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
+
+function validateCompatibilityDate(compatibilityDate: string) {
+	if (numericCompare(compatibilityDate, CURRENT_COMPATIBILITY_DATE) > 0) {
+		// If this compatibility date is in the future, throw
+		throw new MiniflareCoreError(
+			"ERR_FUTURE_COMPATIBILITY_DATE",
+			`Compatibility date "${compatibilityDate}" is in the future and unsupported`
+		);
+	} else if (
+		numericCompare(compatibilityDate, supportedCompatibilityDate) > 0
+	) {
+		// If this compatibility date is greater than the maximum supported
+		// compatibility date of the runtime, but not in the future, warn,
+		// and use the maximum supported date instead
+		console.warn(
+			yellow(
+				[
+					"The newest compatibility date supported by the installed version of the Cloudflare Workers Runtime is ",
+					bold(`"${supportedCompatibilityDate}"`),
+					",\nbut you've requested ",
+					bold(`"${compatibilityDate}"`),
+					". Falling back to ",
+					bold(`"${supportedCompatibilityDate}"`),
+					"...",
+				].join("")
+			)
+		);
+		return supportedCompatibilityDate;
+	}
+	return compatibilityDate;
+}
 
 export const CORE_PLUGIN: Plugin<
 	typeof CoreOptionsSchema,
@@ -187,13 +234,15 @@ export const CORE_PLUGIN: Plugin<
 		if (workerScript !== undefined) {
 			const name = getUserServiceName(options.name);
 			const classNames = durableObjectClassNames.get(name) ?? [];
+			const compatibilityDate = validateCompatibilityDate(
+				options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
+			);
 
 			services.push({
 				name,
 				worker: {
 					...workerScript,
-					compatibilityDate:
-						options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
+					compatibilityDate,
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
 					durableObjectNamespaces: classNames.map((className) => ({

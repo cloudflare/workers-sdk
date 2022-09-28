@@ -6,7 +6,6 @@ import { bold, green, grey } from "kleur/colors";
 import stoppable from "stoppable";
 import { RequestInfo, RequestInit, fetch } from "undici";
 import { HeadersInit, Request, Response } from "undici";
-import workerd from "workerd";
 import { z } from "zod";
 import { setupCf } from "./cf";
 
@@ -217,11 +216,7 @@ export class Miniflare {
 		const entryPort = await getPort({ port: this.#sharedOpts.core.port });
 
 		// TODO: respect entry `host` option
-		this.#runtime = new this.#runtimeConstructor(
-			workerd,
-			entryPort,
-			loopbackPort
-		);
+		this.#runtime = new this.#runtimeConstructor(entryPort, loopbackPort);
 		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
 
 		this.#runtimeEntryURL = new URL(`http://127.0.0.1:${entryPort}`);
