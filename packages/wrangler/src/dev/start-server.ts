@@ -351,13 +351,14 @@ export async function startLocalServer({
 			// TODO: refactor setupMiniflareOptions so we don't need to parse here
 			const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
 			const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+			const runtimeURL = await mf.ready;
 			experimentalLocalRef = mf;
 			removeSignalExitListener = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down experimental local server.");
 				mf.dispose();
 				experimentalLocalRef = undefined;
 			});
-			onReady?.(ip, mf2Options.port ?? 8787);
+			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));
 			return;
 		}
 

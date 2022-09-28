@@ -204,6 +204,7 @@ function useLocalWorker({
 				// TODO: refactor setupMiniflareOptions so we don't need to parse here
 				const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
 				const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+				await mf.ready;
 				experimentalLocalRef.current = mf;
 				removeSignalExitListener.current = onExit(() => {
 					logger.log("⎔ Shutting down experimental local server.");
@@ -678,10 +679,8 @@ export async function setupExperimentalLocal(
 		({ Miniflare } = await npxImport<
 			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 			typeof import("@miniflare/tre")
-		>("@miniflare/tre"));
+		>("@miniflare/tre@next"));
 	}
 
-	const mf = new Miniflare(options);
-	await mf.ready;
-	return mf;
+	return new Miniflare(options);
 }
