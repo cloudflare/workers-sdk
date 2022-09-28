@@ -1,5 +1,36 @@
 # wrangler
 
+## 2.1.9
+
+### Patch Changes
+
+- [#1937](https://github.com/cloudflare/wrangler2/pull/1937) [`905fce4f`](https://github.com/cloudflare/wrangler2/commit/905fce4feb0ac34200b597ff5e8c325aaf65b491) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: fails to publish due to empty migrations
+  After this change, `wrangler init --from-dash` will not attempt to add durable object migrations to `wrangler.toml` for Workers that don't have durable objects.
+
+  fixes #1854
+
+* [#1943](https://github.com/cloudflare/wrangler2/pull/1943) [`58a430f2`](https://github.com/cloudflare/wrangler2/commit/58a430f27fb683f422e552f7c26338f950f39c2b) Thanks [@cameron-robey](https://github.com/cameron-robey)! - chore: add `env` and `ctx` params to `fetch` in javascript example template
+
+  Just like in the typescript templates, and the javascript template for scheduled workers, we include `env` and `ctx` as parameters to the `fetch` export. This makes it clearer where environment variables live.
+
+- [#1934](https://github.com/cloudflare/wrangler2/pull/1934) [`7ebaec1a`](https://github.com/cloudflare/wrangler2/commit/7ebaec1a38384b5f04001ad2d8603d7ac0322534) Thanks [@mrbbot](https://github.com/mrbbot)! - Allow `--experimental-local` to be used with module workers
+
+* [#1939](https://github.com/cloudflare/wrangler2/pull/1939) [`5854cb69`](https://github.com/cloudflare/wrangler2/commit/5854cb6918cd0271683b4f3f62987f3e9e4b3300) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: respect variable binding type when printing
+
+  After this change, when printing the bindings it has access to, wrangler will correctly only add quotes around string variables, and serialize objects via JSON.stringify (rather than printing `"[object Object]"`).
+
+- [#1953](https://github.com/cloudflare/wrangler2/pull/1953) [`20195479`](https://github.com/cloudflare/wrangler2/commit/20195479c9f57d9fede1f5924f6a4ab36f860bea) Thanks [@mrbbot](https://github.com/mrbbot)! - Add `--experimental-local` support to `unstable_dev`
+
+* [#1930](https://github.com/cloudflare/wrangler2/pull/1930) [`56798155`](https://github.com/cloudflare/wrangler2/commit/5679815521d7e62d24866eee1653ba409a53e12b) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: use node http instead of faye-websocket in proxy server
+
+  We change how websockets are handled in the proxy server, fixing multiple issues of websocket behaviour, particularly to do with headers.
+
+  In particular this fixes:
+
+  - the protocol passed between the client and the worker was being stripped out by wrangler
+  - wrangler was discarding additional headesr from websocket upgrade response
+  - websocket close code and reason was not being propagated by wrangler
+
 ## 2.1.8
 
 ### Patch Changes
