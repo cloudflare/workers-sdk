@@ -194,7 +194,7 @@ export const CORE_PLUGIN: Plugin<
 						name:
 							typeof service === "function"
 								? `${SERVICE_CUSTOM_PREFIX}:${name}` // Custom `fetch` function
-								: `${SERVICE_USER_PREFIX}:${name}`, // Regular user worker
+								: `${SERVICE_USER_PREFIX}:${service}`, // Regular user worker
 					},
 				}))
 			);
