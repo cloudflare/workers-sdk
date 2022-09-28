@@ -133,7 +133,7 @@ function validateCompatibilityDate(compatibilityDate: string) {
 		console.warn(
 			yellow(
 				[
-					"The newest compatibility date supported by the installed version of the Cloudflare Workers Runtime is ",
+					"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
 					bold(`"${supportedCompatibilityDate}"`),
 					",\nbut you've requested ",
 					bold(`"${compatibilityDate}"`),
