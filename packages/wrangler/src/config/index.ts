@@ -219,10 +219,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (vars !== undefined && Object.keys(vars).length > 0) {
 		output.push({
 			type: "Vars",
-			entries: Object.entries(vars).map(([key, value]) => ({
-				key,
-				value: `"${truncate(`${value}`)}"`,
-			})),
+			entries: Object.entries(vars).map(([key, value]) => {
+				let parsedValue;
+				if (typeof value === "string") {
+					parsedValue = `"${truncate(value)}"`;
+				} else if (typeof value === "object") {
+					parsedValue = JSON.stringify(value, null, 1);
+				} else {
+					parsedValue = `${truncate(`${value}`)}`;
+				}
+				return {
+					key,
+					value: parsedValue,
+				};
+			}),
 		});
 	}
 
