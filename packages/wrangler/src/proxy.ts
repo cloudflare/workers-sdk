@@ -300,7 +300,7 @@ export function usePreviewServer({
 
 			const runtimeRequest = https.request(
 				{
-					hostname: `${previewToken.host}`,
+					hostname: previewToken.host,
 					path: url,
 					method,
 					headers,
