@@ -200,10 +200,6 @@ export const Handler = async ({
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
 
-	const functionsDirectory = "./functions";
-	let usingFunctions = existsSync(functionsDirectory);
-	let usingWorkerScript = false;
-
 	const command = remaining;
 
 	let proxyPort: number | undefined;
@@ -236,10 +232,42 @@ export const Handler = async ({
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
+	const workerScriptPath =
+		directory !== undefined
+			? join(directory, singleWorkerScriptPath)
+			: singleWorkerScriptPath;
+	const usingWorkerScript = existsSync(workerScriptPath);
+
+	const functionsDirectory = "./functions";
+	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
+
 	let scriptPath = "";
 
-	// Try to use Functions
-	if (usingFunctions) {
+	if (usingWorkerScript) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		scriptReadyResolve!();
+
+		scriptPath = workerScriptPath;
+
+		const runBuild = async () => {
+			try {
+				await esbuild.build({
+					entryPoints: [scriptPath],
+					write: false,
+					plugins: [blockWorkerJsImports],
+				});
+			} catch {}
+		};
+
+		await runBuild();
+		watch([scriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		}).on("all", async () => {
+			await runBuild();
+		});
+	} else if (usingFunctions) {
+		// Try to use Functions
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		scriptPath = outfile;
 
@@ -307,37 +335,12 @@ export const Handler = async ({
 
 	// Depending on the result of building Functions, we may not actually be using
 	// Functions even if the directory exists.
-	if (!usingFunctions) {
+	if (!usingFunctions && !usingWorkerScript) {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
-		scriptPath =
-			directory !== undefined
-				? join(directory, singleWorkerScriptPath)
-				: singleWorkerScriptPath;
-		usingWorkerScript = existsSync(scriptPath);
-
-		if (!usingWorkerScript) {
-			logger.log("No functions. Shimming...");
-			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
-		} else {
-			const runBuild = async () => {
-				try {
-					await esbuild.build({
-						entryPoints: [scriptPath],
-						write: false,
-						plugins: [blockWorkerJsImports],
-					});
-				} catch {}
-			};
-			await runBuild();
-			watch([scriptPath], {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async () => {
-				await runBuild();
-			});
-		}
+		logger.log("No functions. Shimming...");
+		scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 	}
 
 	await scriptReadyPromise;
