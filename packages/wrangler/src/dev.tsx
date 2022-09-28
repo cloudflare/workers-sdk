@@ -561,10 +561,13 @@ export async function startApiDev(args: StartDevOptions) {
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
-				args["compatibility-date"]
+				// Only `compatibilityDate` will be set when using `unstable_dev`
+				args["compatibility-date"] ?? args.compatibilityDate
 			),
 			compatibilityFlags:
-				args["compatibility-flags"] || configParam.compatibility_flags,
+				args["compatibility-flags"] ??
+				args.compatibilityFlags ??
+				configParam.compatibility_flags,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
@@ -578,7 +581,7 @@ export async function startApiDev(args: StartDevOptions) {
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
-			experimentalLocal: undefined,
+			experimentalLocal: args.experimentalLocal,
 		});
 	}
 
