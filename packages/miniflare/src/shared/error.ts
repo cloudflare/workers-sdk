@@ -22,7 +22,8 @@ export type MiniflareCoreErrorCode =
 	| "ERR_MODULE_STRING_SCRIPT" // Attempt to resolve module within string script
 	| "ERR_MODULE_DYNAMIC_SPEC" // Attempted to import/require a module without a literal spec
 	| "ERR_MODULE_RULE" // No matching module rule for file
-	| "ERR_PERSIST_UNSUPPORTED"; // Unsupported storage persistence protocol
+	| "ERR_PERSIST_UNSUPPORTED" // Unsupported storage persistence protocol
+	| "ERR_FUTURE_COMPATIBILITY_DATE"; // Compatibility date in the future
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
 
 export class HttpError extends MiniflareError<number> {

@@ -3,12 +3,14 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import workerdPath, {
+	compatibilityDate as supportedCompatibilityDate,
+} from "workerd";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { Awaitable, MiniflareCoreError } from "../shared";
 
 export abstract class Runtime {
 	constructor(
-		protected readonly runtimeBinaryPath: string,
 		protected readonly entryPort: number,
 		protected readonly loopbackPort: number
 	) {}
@@ -19,11 +21,7 @@ export abstract class Runtime {
 }
 
 export interface RuntimeConstructor {
-	new (
-		runtimeBinaryPath: string,
-		entryPort: number,
-		loopbackPort: number
-	): Runtime;
+	new (entryPort: number, loopbackPort: number): Runtime;
 
 	isSupported(): boolean;
 	supportSuggestion: string;
@@ -77,12 +75,8 @@ class NativeRuntime extends Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
-	constructor(
-		runtimeBinaryPath: string,
-		entryPort: number,
-		loopbackPort: number
-	) {
-		super(runtimeBinaryPath, entryPort, loopbackPort);
+	constructor(entryPort: number, loopbackPort: number) {
+		super(entryPort, loopbackPort);
 		const [command, ...args] = this.getCommand();
 		this.#command = command;
 		this.#args = args;
@@ -90,7 +84,7 @@ class NativeRuntime extends Runtime {
 
 	getCommand(): string[] {
 		return [
-			this.runtimeBinaryPath,
+			workerdPath,
 			...COMMON_RUNTIME_ARGS,
 			`--socket-addr=${SOCKET_ENTRY}=127.0.0.1:${this.entryPort}`,
 			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.loopbackPort}`,
@@ -188,7 +182,7 @@ class DockerRuntime extends Runtime {
 				"--interactive",
 				"--rm",
 				`--volume=${RESTART_PATH}:/restart.sh`,
-				`--volume=${this.runtimeBinaryPath}:/runtime`,
+				`--volume=${workerdPath}:/runtime`,
 				`--volume=${this.#configPath}:/miniflare-config.bin`,
 				`--publish=127.0.0.1:${this.entryPort}:8787`,
 				"debian:bullseye-slim",
@@ -251,3 +245,4 @@ export function getSupportedRuntime(): RuntimeConstructor {
 }
 
 export * from "./config";
+export { supportedCompatibilityDate };
