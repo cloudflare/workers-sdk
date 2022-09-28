@@ -1326,18 +1326,18 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Using vars defined in .dev.vars
-			        Your worker has access to the following bindings:
-			        - Vars:
-			          - variable: \\"123\\"
-			          - overriden: \\"(hidden)\\"
-			          - SECRET: \\"(hidden)\\"",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Using vars defined in .dev.vars
+			Your worker has access to the following bindings:
+			- Vars:
+			  - variable: 123
+			  - overriden: \\"(hidden)\\"
+			  - SECRET: \\"(hidden)\\"",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 });

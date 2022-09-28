@@ -512,7 +512,7 @@ describe("publish", () => {
 		"Total Upload: xx KiB / gzip: xx KiB
 		Your worker has access to the following bindings:
 		- Vars:
-		  - xyz: \\"123\\"
+		  - xyz: 123
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev"
@@ -4527,7 +4527,7 @@ addEventListener('fetch', event => {});`
 			  - some unsafe thing: UNSAFE_BINDING_ONE
 			  - another unsafe thing: UNSAFE_BINDING_TWO
 			- Vars:
-			  - ENV_VAR_ONE: \\"123\\"
+			  - ENV_VAR_ONE: 123
 			  - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
 			- Wasm Modules:
 			  - WASM_MODULE_ONE: some_wasm.wasm
@@ -5275,8 +5275,11 @@ addEventListener('fetch', event => {});`
 			Your worker has access to the following bindings:
 			- Vars:
 			  - text: \\"plain ol' string\\"
-			  - count: \\"1\\"
-			  - complex: \\"[object Object]\\"
+			  - count: 1
+			  - complex: {
+			 \\"enabled\\": true,
+			 \\"id\\": 123
+			}
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev"
