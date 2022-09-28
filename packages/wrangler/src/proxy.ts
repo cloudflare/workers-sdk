@@ -290,7 +290,7 @@ export function usePreviewServer({
 		const handleUpgrade = (
 			originalMessage: IncomingMessage,
 			originalSocket: Duplex,
-			originalBody: Buffer
+			originalHead: Buffer
 		) => {
 			const { headers, method, url } = originalMessage;
 			addCfPreviewTokenHeader(headers, previewToken.value);
