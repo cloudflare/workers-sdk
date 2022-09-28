@@ -1,8 +1,8 @@
 import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
 import { createServer as createHttpsServer } from "node:https";
+import https from "node:https";
 import { networkInterfaces } from "node:os";
-import WebSocket from "faye-websocket";
 import { createHttpTerminator } from "http-terminator";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
@@ -19,12 +19,7 @@ import type {
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import type { Server as HttpsServer } from "node:https";
-import type ws from "ws";
-
-interface IWebsocket extends ws {
-	// Pipe implements .on("message", ...)
-	pipe<T>(fn: T): IWebsocket;
-}
+import type { Duplex, Writable } from "node:stream";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -68,6 +63,26 @@ function rewriteRemoteHostToLocalHostInHeaders(
 				.replaceAll(remoteHost, `localhost:${localPort}`);
 		}
 	}
+}
+
+function writeHead(
+	socket: Writable,
+	res: Pick<
+		IncomingMessage,
+		"httpVersion" | "statusCode" | "statusMessage" | "headers"
+	>
+) {
+	socket.write(
+		`HTTP/${res.httpVersion} ${res.statusCode} ${res.statusMessage}\r\n`
+	);
+	for (const [key, values] of Object.entries(res.headers)) {
+		if (Array.isArray(values)) {
+			for (const value of values) socket.write(`${key}: ${value}\r\n`);
+		} else {
+			socket.write(`${key}: ${values}\r\n`);
+		}
+	}
+	socket.write("\r\n");
 }
 
 type PreviewProxy = {
@@ -273,27 +288,47 @@ export function usePreviewServer({
 
 		/** HTTP/1 -> WebSocket (over HTTP/1)  */
 		const handleUpgrade = (
-			message: IncomingMessage,
-			socket: WebSocket,
-			body: Buffer
+			originalMessage: IncomingMessage,
+			originalSocket: Duplex,
+			originalHead: Buffer
 		) => {
-			const { headers, url } = message;
+			const { headers, method, url } = originalMessage;
 			addCfPreviewTokenHeader(headers, previewToken.value);
 			headers["host"] = previewToken.host;
-			const localWebsocket = new WebSocket(message, socket, body) as IWebsocket;
-			// TODO(soon): Custom WebSocket protocol is not working?
-			const remoteWebsocketClient = new WebSocket.Client(
-				`wss://${previewToken.host}${url}`,
-				[],
-				{ headers }
-			) as IWebsocket;
-			localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
-			// We close down websockets whenever we refresh the token.
-			cleanupListeners.push(() => {
-				localWebsocket.close();
-				remoteWebsocketClient.close();
-			});
+
+			if (originalHead?.byteLength) originalSocket.unshift(originalHead);
+
+			const runtimeRequest = https.request(
+				{
+					hostname: previewToken.host,
+					path: url,
+					method,
+					headers,
+				},
+				(runtimeResponse) => {
+					if (!(runtimeResponse as { upgrade?: boolean }).upgrade) {
+						writeHead(originalSocket, runtimeResponse);
+						runtimeResponse.pipe(originalSocket);
+					}
+				}
+			);
+
+			runtimeRequest.on(
+				"upgrade",
+				(runtimeResponse, runtimeSocket, runtimeHead) => {
+					if (runtimeHead?.byteLength) runtimeSocket.unshift(runtimeHead);
+					writeHead(originalSocket, {
+						httpVersion: "1.1",
+						statusCode: 101,
+						statusMessage: "Switching Protocols",
+						headers: runtimeResponse.headers,
+					});
+					runtimeSocket.pipe(originalSocket).pipe(runtimeSocket);
+				}
+			);
+			originalMessage.pipe(runtimeRequest);
 		};
+
 		proxy.server.on("upgrade", handleUpgrade);
 		cleanupListeners.push(() => proxy.server.off("upgrade", handleUpgrade));
 
