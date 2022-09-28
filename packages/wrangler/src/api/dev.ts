@@ -54,6 +54,7 @@ interface DevOptions {
 	_?: (string | number)[]; //yargs wants this
 	$0?: string; //yargs wants this
 	testScheduled?: boolean;
+	experimentalLocal?: boolean;
 }
 
 interface DevApiOptions {

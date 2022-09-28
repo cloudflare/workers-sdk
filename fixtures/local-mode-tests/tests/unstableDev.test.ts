@@ -1,5 +1,8 @@
 import { unstable_dev } from "wrangler";
 
+// TODO: add test for `experimentalLocal: true` once issue with dynamic
+//  `import()` and `npx-import` resolved:
+//  https://github.com/cloudflare/wrangler2/pull/1940#issuecomment-1261166695
 describe("worker", () => {
 	let worker: {
 		fetch: (
@@ -22,7 +25,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		await worker?.stop();
 	});
 
 	it("should invoke the worker and exit", async () => {

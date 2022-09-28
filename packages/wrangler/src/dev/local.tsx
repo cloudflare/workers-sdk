@@ -39,10 +39,6 @@ import type {
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
 
-// caching of the miniflare package
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let Miniflare: typeof import("@miniflare/tre")["Miniflare"];
-
 export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -78,10 +74,6 @@ export function Local(props: LocalProps) {
 		logToTerminal: false,
 	});
 	return null;
-}
-
-function arrayToObject(values: string[] = []): Record<string, string> {
-	return Object.fromEntries(values.map((value) => [value, value]));
 }
 
 function useLocalWorker({
@@ -210,61 +202,15 @@ function useLocalWorker({
 
 			if (experimentalLocal) {
 				// TODO: refactor setupMiniflareOptions so we don't need to parse here
-				const miniflare2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
-				const options: Miniflare3Options = {
-					...miniflare2Options,
-					// Miniflare 3 distinguishes between binding name and namespace/bucket
-					// IDs. For now, just use the same value as we did in Miniflare 2.
-					// TODO: use defined KV preview ID if any
-					kvNamespaces: arrayToObject(miniflare2Options.kvNamespaces),
-					r2Buckets: arrayToObject(miniflare2Options.r2Buckets),
-					// TODO: pass-through collected modules instead of getting Miniflare
-					//  to collect them again
-				};
-
-				if (format === "modules") {
-					// Manually specify all modules from the bundle. If we didn't do this,
-					// Miniflare 3 would try collect them automatically again itself.
-
-					// Resolve entrypoint relative to the temporary directory, ensuring
-					// path doesn't start with `..`, which causes issues in `workerd`.
-					// Also ensures other modules with relative names can be resolved.
-					const root = path.dirname(bundle.path);
-
-					assert.strictEqual(bundle.type, "esm");
-					options.modules = [
-						// Entrypoint
-						{
-							type: "ESModule",
-							path: path.relative(root, bundle.path),
-							contents: await readFile(bundle.path, "utf-8"),
-						},
-						// Misc (WebAssembly, etc, ...)
-						...bundle.modules.map((module) => ({
-							type: ModuleTypeToRuleType[module.type ?? "esm"],
-							path: module.name,
-							contents: module.content,
-						})),
-					];
-				}
-
-				logger.log("⎔ Starting an experimental local server...");
-
-				if (Miniflare === undefined) {
-					({ Miniflare } = await npxImport<
-						// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-						typeof import("@miniflare/tre")
-					>("@miniflare/tre"));
-				}
-
-				const mf = new Miniflare(options);
+				const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+				const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+				await mf.ready;
 				experimentalLocalRef.current = mf;
-				removeSignalExitListener.current = onExit((_code, _signal) => {
+				removeSignalExitListener.current = onExit(() => {
 					logger.log("⎔ Shutting down experimental local server.");
 					mf.dispose();
 					experimentalLocalRef.current = undefined;
 				});
-				await mf.ready;
 				return;
 			}
 
@@ -677,4 +623,64 @@ export function setupNodeOptions({
 		nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
 	}
 	return nodeOptions;
+}
+
+// Caching of the `npx-import`ed `@miniflare/tre` package
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Miniflare: typeof import("@miniflare/tre").Miniflare;
+
+function arrayToObject(values: string[] = []): Record<string, string> {
+	return Object.fromEntries(values.map((value) => [value, value]));
+}
+
+export async function setupExperimentalLocal(
+	mf2Options: MiniflareOptions,
+	format: CfScriptFormat,
+	bundle: EsbuildBundle
+): Promise<Miniflare3Type> {
+	const options: Miniflare3Options = {
+		...mf2Options,
+		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
+		// For now, just use the same value as we did in Miniflare 2.
+		// TODO: use defined KV preview ID if any
+		kvNamespaces: arrayToObject(mf2Options.kvNamespaces),
+		r2Buckets: arrayToObject(mf2Options.r2Buckets),
+	};
+
+	if (format === "modules") {
+		// Manually specify all modules from the bundle. If we didn't do this,
+		// Miniflare 3 would try collect them automatically again itself.
+
+		// Resolve entrypoint relative to the temporary directory, ensuring
+		// path doesn't start with `..`, which causes issues in `workerd`.
+		// Also ensures other modules with relative names can be resolved.
+		const root = path.dirname(bundle.path);
+
+		assert.strictEqual(bundle.type, "esm");
+		options.modules = [
+			// Entrypoint
+			{
+				type: "ESModule",
+				path: path.relative(root, bundle.path),
+				contents: await readFile(bundle.path, "utf-8"),
+			},
+			// Misc (WebAssembly, etc, ...)
+			...bundle.modules.map((module) => ({
+				type: ModuleTypeToRuleType[module.type ?? "esm"],
+				path: module.name,
+				contents: module.content,
+			})),
+		];
+	}
+
+	logger.log("⎔ Starting an experimental local server...");
+
+	if (Miniflare === undefined) {
+		({ Miniflare } = await npxImport<
+			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+			typeof import("@miniflare/tre")
+		>("@miniflare/tre@next"));
+	}
+
+	return new Miniflare(options);
 }

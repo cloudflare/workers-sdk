@@ -17,6 +17,7 @@ import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
 import {
 	setupBindings,
+	setupExperimentalLocal,
 	setupMiniflareOptions,
 	setupNodeOptions,
 } from "./local";
@@ -28,6 +29,8 @@ import type { Entry } from "../entry";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
+import type { MiniflareOptions } from "miniflare";
 
 import type { ChildProcess } from "node:child_process";
 
@@ -118,6 +121,7 @@ export async function startDevServer(
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
+			experimentalLocal: props.experimentalLocal,
 		});
 
 		return {
@@ -252,8 +256,10 @@ export async function startLocalServer({
 	onReady,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
+	experimentalLocal,
 }: LocalProps) {
 	let local: ChildProcess | undefined;
+	let experimentalLocalRef: Miniflare3Type | undefined;
 	let removeSignalExitListener: (() => void) | undefined;
 	let inspectorUrl: string | undefined;
 	const setInspectorUrl = (url: string) => {
@@ -340,6 +346,21 @@ export async function startLocalServer({
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
 		});
+
+		if (experimentalLocal) {
+			// TODO: refactor setupMiniflareOptions so we don't need to parse here
+			const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+			const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+			const runtimeURL = await mf.ready;
+			experimentalLocalRef = mf;
+			removeSignalExitListener = onExit((_code, _signal) => {
+				logger.log("⎔ Shutting down experimental local server.");
+				mf.dispose();
+				experimentalLocalRef = undefined;
+			});
+			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));
+			return;
+		}
 
 		const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 		logger.log("⎔ Starting a local server...");
@@ -435,9 +456,16 @@ export async function startLocalServer({
 				logger.log("⎔ Shutting down local server.");
 				local.kill();
 				local = undefined;
-				removeSignalExitListener && removeSignalExitListener();
-				removeSignalExitListener = undefined;
 			}
+			if (experimentalLocalRef) {
+				logger.log("⎔ Shutting down experimental local server.");
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef?.dispose().catch(() => {});
+				experimentalLocalRef = undefined;
+			}
+			removeSignalExitListener?.();
+			removeSignalExitListener = undefined;
 		},
 	};
 }
