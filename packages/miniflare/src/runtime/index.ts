@@ -29,7 +29,16 @@ export interface RuntimeConstructor {
 	distribution: string;
 }
 
-const COMMON_RUNTIME_ARGS = ["serve", "--binary", "--verbose"];
+const COMMON_RUNTIME_ARGS = [
+	"serve",
+	// Required to use binary capnp config
+	"--binary",
+	// Required to display `console.log()` output
+	"--verbose",
+	// Required to use compatibility flags without a default-on date,
+	// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
+	"--experimental",
+];
 // `__dirname` relative to bundled output `dist/src/index.js`
 const RESTART_PATH = path.resolve(__dirname, "..", "..", "lib", "restart.sh");
 
