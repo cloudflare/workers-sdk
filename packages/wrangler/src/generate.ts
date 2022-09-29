@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import degit from "degit";
+import { cloneIntoDirectory, initializeGit } from "./git-client";
 import { initHandler } from "./init";
 import { logger } from "./logger";
 import { CommandLineArgsError, printWranglerBanner } from ".";
@@ -65,8 +65,11 @@ export async function generateHandler({
 		throw new CommandLineArgsError(message);
 	}
 
+	if (isRemote(name)) {
+		[template, name] = [name, template];
+	}
+
 	const creationDirectory = generateWorkerDirectoryName(name);
-	const canonicalTemplate = normalizeTemplate(template);
 
 	if (site) {
 		const gitDirectory =
@@ -86,15 +89,22 @@ export async function generateHandler({
 	}
 
 	logger.log(
-		`Creating a worker in ${path.basename(
-			creationDirectory
-		)} from ${canonicalTemplate}`
+		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
 	);
 
-	await degit(canonicalTemplate, { cache: false, force: false, verbose: true })
-		.on("info", (info) => logger.debug(info.message))
-		.on("warn", (warning) => logger.warn(warning.message))
-		.clone(creationDirectory);
+	let remote = "",
+		subdirectory: string | undefined;
+	if (isRemote(template)) {
+		remote = template;
+	} else {
+		remote = "https://github.com/cloudflare/templates.git";
+		subdirectory = template;
+	}
+
+	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
+	await initializeGit(creationDirectory);
+
+	logger.log("✨ Success!");
 }
 
 /**
@@ -133,16 +143,12 @@ function generateWorkerDirectoryName(workerName: string): string {
 }
 
 /**
- * Normalizes template strings (such as `worker-typescript`) into a
- * form degit understands (such as `cloudflare/templates/worker-typescript`)
+ * Checks if an arg is a template, which can be useful if the order
+ * of template & worker name args is switched
  *
- * @param template a template string passed in via the command line
- * @returns a normalized template string intelligible to degit
+ * @param arg a template to generate from, or a folder to generate into
+ * @returns true if the given arg was remote (a template)
  */
-function normalizeTemplate(template: string): string {
-	if (/\//.test(template)) {
-		return template;
-	} else {
-		return `cloudflare/templates/${template}`;
-	}
+function isRemote(arg: string) {
+	return /^(https?|ftps?|file|git|ssh):\/\//.test(arg) || arg.includes(":");
 }
