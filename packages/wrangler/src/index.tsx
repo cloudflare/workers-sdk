@@ -1172,7 +1172,7 @@ function createCLIParser(argv: string[]) {
 
 	wrangler.command(
 		"secret:bulk <json>",
-		"🗄️ Bulk upload secrets for a Worker",
+		"🗄️  Bulk upload secrets for a Worker",
 		(yargs) => {
 			return yargs
 				.positional("json", {
