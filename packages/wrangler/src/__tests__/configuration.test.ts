@@ -1317,15 +1317,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[durable_objects]", () => {
 			it("should error if durable_objects is an array", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: [] } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1334,15 +1331,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1351,15 +1345,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1368,15 +1359,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1385,15 +1373,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is not defined", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1402,17 +1387,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: {} } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1421,17 +1401,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1440,17 +1415,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1459,17 +1429,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: null } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1478,7 +1443,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						durable_objects: {
 							bindings: [
@@ -1513,11 +1478,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -1560,15 +1520,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1577,15 +1534,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1594,15 +1548,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1611,15 +1562,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1628,7 +1576,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						kv_namespaces: [
 							{},
@@ -1646,11 +1594,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						kv_namespaces: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -1667,15 +1610,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[d1_databases]", () => {
 			it("should error if d1_databases is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ d1_databases: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1684,15 +1624,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if d1_databases is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ d1_databases: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1701,15 +1638,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if d1_databases is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ d1_databases: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1718,15 +1652,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if d1_databases is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ d1_databases: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1769,15 +1700,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1786,15 +1714,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1803,15 +1728,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1820,15 +1742,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
@@ -1837,7 +1756,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						r2_buckets: [
 							{},
@@ -1855,11 +1774,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						r2_buckets: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -1876,15 +1790,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[services]", () => {
 			it("should error if services is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ services: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1898,15 +1809,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if services is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ services: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1920,15 +1828,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if services is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ services: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1942,15 +1847,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if services is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ services: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1964,7 +1866,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if services bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						services: [
 							{},
@@ -1988,11 +1890,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						services: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2021,7 +1918,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[dispatch_namespaces]", () => {
 			it("should log an experimental warning when dispatch_namespaces is used", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
 							{
@@ -2033,9 +1930,6 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-				expect(config).toEqual(
-					expect.not.objectContaining({ dispatch_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2045,7 +1939,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if dispatch_namespaces is not an array", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: "just a string",
 					} as unknown as RawConfig,
@@ -2053,9 +1947,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ dispatch_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2069,7 +1960,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error on non valid dispatch_namespaces", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
 							"a string",
@@ -2100,11 +1991,6 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						dispatch_namespaces: expect.anything,
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2127,15 +2013,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: [] } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2147,15 +2030,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: "BAD" } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2167,15 +2047,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: 999 } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2187,15 +2064,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: null } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2207,15 +2081,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is not defined", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2227,17 +2098,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: {} } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2249,17 +2115,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2271,17 +2132,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2293,17 +2149,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: null } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -2315,7 +2166,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe: {
 							bindings: [
@@ -2334,11 +2185,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
@@ -3079,15 +2925,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[durable_objects]", () => {
 			it("should error if durable_objects is an array", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3098,15 +2941,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3117,15 +2957,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3136,15 +2973,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3155,15 +2989,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is not defined", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ durable_objects: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3174,7 +3005,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: {} } } },
 					} as unknown as RawConfig,
@@ -3182,11 +3013,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3197,7 +3023,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: "BAD" } } },
 					} as unknown as RawConfig,
@@ -3205,11 +3031,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3220,7 +3041,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: 999 } } },
 					} as unknown as RawConfig,
@@ -3228,11 +3049,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3243,7 +3059,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: null } } },
 					} as unknown as RawConfig,
@@ -3251,11 +3067,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3266,7 +3077,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if durable_objects.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
 							ENV1: {
@@ -3289,11 +3100,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3322,15 +3128,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3341,15 +3144,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3360,15 +3160,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3379,15 +3176,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ kv_namespaces: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3398,7 +3192,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if kv_namespaces.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
 							ENV1: {
@@ -3419,11 +3213,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						kv_namespaces: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3441,15 +3230,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3460,15 +3246,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3479,15 +3262,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3498,15 +3278,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ r2_buckets: expect.anything })
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3517,7 +3294,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if r2_buckets.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
 							ENV1: {
@@ -3538,11 +3315,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						r2_buckets: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -3560,15 +3332,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3584,15 +3353,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3608,15 +3374,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3632,15 +3395,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3656,15 +3416,12 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is not defined", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({ unsafe: expect.anything })
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3680,7 +3437,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: {} } } },
 					} as unknown as RawConfig,
@@ -3688,11 +3445,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3708,7 +3460,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is a string", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: "BAD" } } },
 					} as unknown as RawConfig,
@@ -3716,11 +3468,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3736,7 +3483,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is a number", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: 999 } } },
 					} as unknown as RawConfig,
@@ -3744,11 +3491,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3764,7 +3506,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings is null", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: null } } },
 					} as unknown as RawConfig,
@@ -3772,11 +3514,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						unsafe: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -3792,7 +3529,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if unsafe.bindings are not valid", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
 							ENV1: {
@@ -3815,11 +3552,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: "ENV1" }
 				);
 
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						durable_objects: { bindings: expect.anything },
-					})
-				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
