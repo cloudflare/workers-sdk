@@ -9,7 +9,7 @@ import {
 } from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
-import { usePreviewServer } from "../proxy";
+import { startPreviewServer, usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
 	ChooseAccount,
@@ -150,7 +150,7 @@ export function Remote(props: RemoteProps) {
 	) : null;
 }
 
-export function useWorker(props: {
+interface RemoteWorkerProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
@@ -170,7 +170,11 @@ export function useWorker(props: {
 	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
 	port: number;
-}): CfPreviewToken | undefined {
+}
+
+export function useWorker(
+	props: RemoteWorkerProps
+): CfPreviewToken | undefined {
 	const [session, setSession] = useState<CfPreviewSession | undefined>();
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
 	const [restartCounter, setRestartCounter] = useState<number>(0);
@@ -263,24 +267,20 @@ export function useWorker(props: {
 				usageModel: props.usageModel,
 			});
 
-			const workerAccount: CfAccount = {
+			const { workerAccount, workerContext } = getWorkerAccountAndContext({
 				accountId: props.accountId,
-				apiToken: requireApiToken(),
-			};
-
-			const workerCtx: CfWorkerContext = {
 				env: props.env,
 				legacyEnv: props.legacyEnv,
 				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
 				sendMetrics: props.sendMetrics,
-			};
+			});
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
 				workerAccount,
-				workerCtx,
+				workerContext,
 				session,
 				abortController.signal
 			);
@@ -365,6 +365,22 @@ export function useWorker(props: {
 	]);
 
 	return token;
+}
+export async function startRemoteServer(props: RemoteProps) {
+	const previewToken = await getRemotePreviewToken(props);
+	if (previewToken === undefined) {
+		logger.error("Failed to start remote server");
+		return;
+	}
+	await startPreviewServer({
+		previewToken,
+		assetDirectory: props.isWorkersSite
+			? undefined
+			: props.assetPaths?.assetDirectory,
+		localProtocol: props.localProtocol,
+		localPort: props.port,
+		ip: props.ip,
+	});
 }
 
 async function createRemoteWorkerInit(props: {

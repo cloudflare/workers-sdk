@@ -102,8 +102,8 @@ export async function unstable_dev(
 					_: [],
 					$0: "",
 					port: options?.port ?? 0,
-					...options,
 					local: true,
+					...options,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;

@@ -21,6 +21,7 @@ import {
 	setupMiniflareOptions,
 	setupNodeOptions,
 } from "./local";
+import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
@@ -96,6 +97,32 @@ export async function startDevServer(
 			testScheduled: props.testScheduled,
 			experimentalLocalStubCache: props.experimentalLocal,
 		});
+		console.log("props.local: ", props.local);
+		if (props.local) {
+			const { stop, inspectorUrl } = await startLocalServer({
+				name: props.name,
+				bundle: bundle,
+				format: props.entry.format,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				bindings: props.bindings,
+				assetPaths: props.assetPaths,
+				port: props.port,
+				ip: props.ip,
+				rules: props.rules,
+				inspectorPort: props.inspectorPort,
+				localPersistencePath: props.localPersistencePath,
+				liveReload: props.liveReload,
+				crons: props.crons,
+				localProtocol: props.localProtocol,
+				localUpstream: props.localUpstream,
+				logPrefix: props.logPrefix,
+				inspect: props.inspect,
+				onReady: props.onReady,
+				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+				usageModel: props.usageModel,
+				workerDefinitions,
+			});
 
 		//run local now
 		const { stop, inspectorUrl } = await startLocalServer({
