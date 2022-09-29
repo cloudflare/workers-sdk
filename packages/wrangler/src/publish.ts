@@ -390,6 +390,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
+		// If we are using d1 bindings, and are not bundling the worker
+		// we should error here as the d1 shim won't be added
+		const betaD1Shims = identifyD1BindingsAsBeta(config.d1_databases);
+		if (
+			Array.isArray(betaD1Shims) &&
+			betaD1Shims.length > 0 &&
+			props.noBundle
+		) {
+			throw new Error(
+				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
+			);
+		}
+
 		const {
 			modules,
 			resolvedEntryPointPath,
