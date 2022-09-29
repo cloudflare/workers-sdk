@@ -101,7 +101,7 @@ export async function cloneIntoDirectory(
 	await execa("git", args);
 
 	// if we can use sparse checkout, run it now.
-	// ootherwise, the entire repo was cloned anyway, so skip this step
+	// otherwise, the entire repo was cloned anyway, so skip this step
 	if (subdirectory && useSparseCheckout) {
 		await execa("git", [`sparse-checkout`, `set`, subdirectory], {
 			cwd: tempDir,
@@ -112,7 +112,11 @@ export async function cloneIntoDirectory(
 		subdirectory !== undefined ? path.join(tempDir, subdirectory) : tempDir;
 
 	// cleanup: move the template to the target directory and delete `.git`
-	fs.renameSync(templatePath, targetDirectory);
+	try {
+		fs.renameSync(templatePath, targetDirectory);
+	} catch {
+		throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+	}
 	fs.rmSync(path.join(targetDirectory, ".git"), {
 		recursive: true,
 		force: true,

@@ -31,10 +31,10 @@ describe("generate", () => {
 
 	it("clones a given template", async () => {
 		await expect(
-			runWrangler("generate my-worker some-template")
+			runWrangler("generate my-worker worker-typescript")
 		).resolves.toBeUndefined();
 
-		// expect(createCloudflareMock).toBeCalled();
+		expect(fs.existsSync("my-worker")).toBe(true);
 	});
 
 	it("complains when given the --type argument", async () => {
@@ -63,26 +63,17 @@ describe("generate", () => {
 
 	it("auto-increments the worker directory name", async () => {
 		fs.mkdirSync("my-worker");
-		await expect(
-			runWrangler("generate my-worker some-template")
-		).resolves.toBeUndefined();
-
-		// expect(createCloudflareMock).lastCalledWith(
-		// 	"my-worker-1",
-		// 	"some-template",
-		// 	{ debug: false, force: false, init: true }
-		// );
-
-		fs.mkdirSync("my-worker-1");
 
 		await expect(
-			runWrangler("generate my-worker some-template")
+			runWrangler("generate my-worker worker-typescript")
 		).resolves.toBeUndefined();
 
-		// expect(createCloudflareMock).lastCalledWith(
-		// 	"my-worker-2",
-		// 	"some-template",
-		// 	{ debug: false, force: false, init: true }
-		// );
+		expect(fs.existsSync("my-worker-1")).toBe(true);
+
+		await expect(
+			runWrangler("generate my-worker worker-typescript")
+		).resolves.toBeUndefined();
+
+		expect(fs.existsSync("my-worker-2")).toBe(true);
 	});
 });
