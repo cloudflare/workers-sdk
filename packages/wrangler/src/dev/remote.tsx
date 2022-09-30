@@ -370,11 +370,10 @@ export function useWorker(
 export async function startRemoteServer(props: RemoteProps) {
 	const previewToken = await getRemotePreviewToken(props);
 	if (previewToken === undefined) {
-		logger.error("Failed to start remote server");
-		return;
+		throw logger.error("Failed to start remote server");
 	}
 	// start our proxy server
-	await startPreviewServer({
+	const previewServer = await startPreviewServer({
 		previewToken,
 		assetDirectory: props.isWorkersSite
 			? undefined
@@ -382,7 +381,12 @@ export async function startRemoteServer(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
+		onReady: props.onReady,
 	});
+	if (!previewServer) {
+		throw logger.error("Failed to start remote server");
+	}
+	return { stop: previewServer.stop };
 }
 
 /**
@@ -441,7 +445,6 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			session,
 			abortController.signal
 		);
-		props.onReady?.(props.host || "localhost", props.port);
 		return workerPreviewToken;
 	}
 	return start().catch((err) => {

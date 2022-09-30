@@ -96,12 +96,14 @@ export async function startPreviewServer({
 	localProtocol,
 	localPort: port,
 	ip,
+	onReady,
 }: {
 	previewToken: CfPreviewToken;
 	assetDirectory: string | undefined;
 	localProtocol: "https" | "http";
 	localPort: number;
 	ip: string;
+	onReady: ((readyIp: string, readyPort: number) => void) | undefined;
 }) {
 	try {
 		const abortController = new AbortController();
@@ -115,137 +117,49 @@ export async function startPreviewServer({
 			}),
 		};
 
-		const cleanupListeners: (() => void)[] = [];
 		// We have a token. Let's proxy requests to the preview end point.
-
-		// create a ClientHttp2Session
-		logger.debug("PREVIEW URL:", `https://${previewToken.host}`);
-		const remote = connect(`https://${previewToken.host}`);
-		cleanupListeners.push(() => remote.destroy());
-
-		/** HTTP/2 -> HTTP/2  */
-		const handleStream = createStreamHandler(
+		const streamBufferRef = { current: [] };
+		const requestResponseBufferRef = { current: [] };
+		const cleanupListeners = configureProxyServer({
+			proxy,
 			previewToken,
-			remote,
+			streamBufferRef,
+			requestResponseBufferRef,
+			retryServerSetup: () => {}, // no-op outside of React
+			assetDirectory,
+			localProtocol,
 			port,
-			localProtocol
-		);
-		proxy.server.on("stream", handleStream);
-		cleanupListeners.push(() => proxy.server.off("stream", handleStream));
+		});
 
-		/** HTTP/1 -> HTTP/2  */
-		const handleRequest: RequestListener = (
-			message: IncomingMessage,
-			response: ServerResponse
-		) => {
-			const { httpVersionMajor, headers, method, url } = message;
-			if (httpVersionMajor >= 2) {
-				return; // Already handled by the "stream" event.
-			}
-			addCfPreviewTokenHeader(headers, previewToken.value);
-			headers[":method"] = method;
-			headers[":path"] = url;
-			headers[":authority"] = previewToken.host;
-			headers[":scheme"] = "https";
-			for (const name of Object.keys(headers)) {
-				if (HTTP1_HEADERS.has(name.toLowerCase())) {
-					delete headers[name];
-				}
-			}
-			const request = message.pipe(remote.request(headers));
-			logger.debug(
-				"WORKER REQUEST",
-				new Date().toLocaleTimeString(),
-				method,
-				url
-			);
-			logger.debug("HEADERS", JSON.stringify(headers, null, 2));
-			logger.debug("PREVIEW TOKEN", previewToken);
-
-			request.on("response", (responseHeaders) => {
-				const status = responseHeaders[":status"] ?? 500;
-
-				// log all requests to terminal
-				logger.log(new Date().toLocaleTimeString(), method, url, status);
-
-				rewriteRemoteHostToLocalHostInHeaders(
-					responseHeaders,
-					previewToken.host,
-					port,
-					localProtocol
-				);
-				for (const name of Object.keys(responseHeaders)) {
-					if (name.startsWith(":")) {
-						delete responseHeaders[name];
-					}
-				}
-				response.writeHead(status, responseHeaders);
-				request.pipe(response, { end: true });
-			});
-		};
-
-		// If an asset path is defined, check the file system
-		// for a file first and serve if it exists.
-		const actualHandleRequest = assetDirectory
-			? createHandleAssetsRequest(assetDirectory, handleRequest)
-			: handleRequest;
-
-		proxy.server.on("request", actualHandleRequest);
-		cleanupListeners.push(() =>
-			proxy.server.off("request", actualHandleRequest)
-		);
-
-		/** HTTP/1 -> WebSocket (over HTTP/1)  */
-		const handleUpgrade = (
-			message: IncomingMessage,
-			socket: WebSocket,
-			body: Buffer
-		) => {
-			const { headers, url } = message;
-			addCfPreviewTokenHeader(headers, previewToken.value);
-			headers["host"] = previewToken.host;
-			const localWebsocket = new WebSocket(message, socket, body) as IWebsocket;
-			// TODO(soon): Custom WebSocket protocol is not working?
-			const remoteWebsocketClient = new WebSocket.Client(
-				`wss://${previewToken.host}${url}`,
-				[],
-				{ headers }
-			) as IWebsocket;
-			localWebsocket.pipe(remoteWebsocketClient).pipe(localWebsocket);
-			// We close down websockets whenever we refresh the token.
-			cleanupListeners.push(() => {
-				localWebsocket.close();
-				remoteWebsocketClient.close();
-			});
-		};
-		proxy.server.on("upgrade", handleUpgrade);
-		cleanupListeners.push(() => proxy.server.off("upgrade", handleUpgrade));
-
-		waitForPortToBeAvailable(port, {
+		await waitForPortToBeAvailable(port, {
 			retryPeriod: 200,
 			timeout: 2000,
 			abortSignal: abortController.signal,
-		})
-			.then(() => {
-				proxy.server.on("listening", () => {
-					const address = proxy.server.address();
-					const usedPort =
-						address && typeof address === "object" ? address.port : port;
-					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
-					const accessibleHosts =
-						ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
-					for (const accessibleHost of accessibleHosts) {
-						logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
-					}
-				});
-				proxy.server.listen(port, ip);
-			})
-			.catch((err) => {
-				if ((err as { code: string }).code !== "ABORT_ERR") {
-					logger.error(`Failed to start server: ${err}`);
-				}
-			});
+		});
+
+		proxy.server.on("listening", () => {
+			const address = proxy.server.address();
+			const usedPort =
+				address && typeof address === "object" ? address.port : port;
+			logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
+			const accessibleHosts = ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
+			for (const accessibleHost of accessibleHosts) {
+				logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
+			}
+			onReady?.(ip, usedPort);
+		});
+
+		proxy.server.listen(port, ip);
+		return {
+			stop: () => {
+				abortController.abort();
+				cleanupListeners?.forEach((cleanup) => cleanup());
+			},
+		};
 	} catch (err) {
+		if ((err as { code: string }).code !== "ABORT_ERR") {
+			logger.error(`Failed to start server: ${err}`);
+		}
 		logger.error("Failed to create proxy server:", err);
 	}
 }

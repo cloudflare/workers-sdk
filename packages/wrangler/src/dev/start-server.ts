@@ -133,8 +133,7 @@ export async function startDevServer(
 				inspectorUrl,
 			};
 		} else {
-			//TODO: implement a stop function
-			await startRemoteServer({
+			const { stop } = await startRemoteServer({
 				name: props.name,
 				bundle: bundle,
 				format: props.entry.format,
@@ -159,6 +158,13 @@ export async function startDevServer(
 				sourceMapPath: bundle?.sourceMapPath,
 				sendMetrics: props.sendMetrics,
 			});
+			return {
+				stop: async () => {
+					stop();
+					await stopWorkerRegistry();
+				},
+				// TODO: inspectorUrl,
+			};
 		}
 	} catch (err) {
 		logger.error(err);
