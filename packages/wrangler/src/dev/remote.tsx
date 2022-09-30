@@ -446,20 +446,18 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		return workerPreviewToken;
 	}
 	return start().catch((err) => {
-		// we want to log the error, but not end the process
-		// since it could recover after the developer fixes whatever's wrong
-		if ((err as { code: string }).code !== "ABORT_ERR") {
+		if ((err as { code?: string })?.code !== "ABORT_ERR") {
 			// instead of logging the raw API error to the user,
 			// give them friendly instructions
 			// for error 10063 (workers.dev subdomain required)
-			if (err.code === 10063) {
+			if (err?.code === 10063) {
 				const errorMessage =
 					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
 				const solutionMessage =
 					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-			} else if (err.code === 10049) {
+			} else if (err?.code === 10049) {
 				// code 10049 happens when the preview token expires
 				logger.log("Preview token expired, restart server to fetch a new one");
 			} else {
