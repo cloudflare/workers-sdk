@@ -1,5 +1,30 @@
 # wrangler
 
+## 2.1.10
+
+### Patch Changes
+
+- [#1955](https://github.com/cloudflare/wrangler2/pull/1955) [`b6dd07a1`](https://github.com/cloudflare/wrangler2/commit/b6dd07a1ba823c45244de18c2ebbe1e3b56c1ed7) Thanks [@cameron-robey](https://github.com/cameron-robey)! - chore: error if d1 bindings used with `no-bundle`
+
+  While in beta, you cannot use D1 bindings without bundling your worker as these are added in through a facade which gets bypassed when using the `no-bundle` option.
+
+* [#1964](https://github.com/cloudflare/wrangler2/pull/1964) [`1f50578e`](https://github.com/cloudflare/wrangler2/commit/1f50578ee8f8a007464b7bd4061a5df74488dbc0) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - chore: Emoji space in help description
+  Added a space between the Emoji and description for the secret:bulk command.
+
+- [#1967](https://github.com/cloudflare/wrangler2/pull/1967) [`02261f27`](https://github.com/cloudflare/wrangler2/commit/02261f27d9d3a6b83087d12b8e653d0039176a83) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: implement remote mode for unstable_dev
+
+  With this change, `unstable_dev` can now perform end-to-end (e2e) tests against your workers as you dev.
+
+  Note that to use this feature in CI, you'll need to configure `CLOUDFLARE_API_TOKEN` as an environment variable in your CI, and potentially add `CLOUDFLARE_ACCOUNT_ID` as an environment variable in your CI, or `account_id` in your `wrangler.toml`.
+
+  Usage:
+
+  ```js
+  await unstable_dev("src/index.ts", {
+  	local: false
+  });
+  ```
+
 ## 2.1.9
 
 ### Patch Changes
