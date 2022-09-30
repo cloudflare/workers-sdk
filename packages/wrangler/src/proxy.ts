@@ -154,186 +154,18 @@ export function usePreviewServer({
 	}
 
 	useEffect(() => {
-		if (proxy === undefined) {
-			return;
-		}
-
-		// If we don't have a token, that means either we're just starting up,
-		// or we're refreshing the token.
-		if (!previewToken) {
-			const cleanupListeners: (() => void)[] = [];
-			const bufferStream = (
-				stream: ServerHttp2Stream,
-				headers: IncomingHttpHeaders
-			) => {
-				// store the stream in a buffer so we can replay it later
-				streamBufferRef.current.push({ stream, headers });
-			};
-			proxy.server.on("stream", bufferStream);
-			cleanupListeners.push(() => proxy.server.off("stream", bufferStream));
-
-			const bufferRequestResponse = (
-				request: IncomingMessage,
-				response: ServerResponse
-			) => {
-				// store the request and response in a buffer so we can replay it later
-				requestResponseBufferRef.current.push({ request, response });
-			};
-
-			proxy.server.on("request", bufferRequestResponse);
-			cleanupListeners.push(() =>
-				proxy.server.off("request", bufferRequestResponse)
-			);
-			return () => {
-				cleanupListeners.forEach((cleanup) => cleanup());
-			};
-		}
-
-		// We have a token. Let's proxy requests to the preview end point.
-		const cleanupListeners: (() => void)[] = [];
-
-		// create a ClientHttp2Session
-		logger.debug("PREVIEW URL:", `https://${previewToken.host}`);
-		const remote = connect(`https://${previewToken.host}`);
-		cleanupListeners.push(() => remote.destroy());
-
-		// As mentioned above, the session may die at any point,
-		// so we need to restart the effect.
-		remote.on("close", retryServerSetup);
-		cleanupListeners.push(() => remote.off("close", retryServerSetup));
-
-		/** HTTP/2 -> HTTP/2  */
-		const handleStream = createStreamHandler(
+		const cleanupListeners = configureProxyServer({
+			proxy,
 			previewToken,
-			remote,
+			streamBufferRef,
+			requestResponseBufferRef,
+			retryServerSetup,
+			assetDirectory,
+			localProtocol,
 			port,
-			localProtocol
-		);
-		proxy.server.on("stream", handleStream);
-		cleanupListeners.push(() => proxy.server.off("stream", handleStream));
-
-		// flush and replay buffered streams
-		streamBufferRef.current.forEach((buffer) =>
-			handleStream(buffer.stream, buffer.headers)
-		);
-		streamBufferRef.current = [];
-
-		/** HTTP/1 -> HTTP/2  */
-		const handleRequest: RequestListener = (
-			message: IncomingMessage,
-			response: ServerResponse
-		) => {
-			const { httpVersionMajor, headers, method, url } = message;
-			if (httpVersionMajor >= 2) {
-				return; // Already handled by the "stream" event.
-			}
-			addCfPreviewTokenHeader(headers, previewToken.value);
-			headers[":method"] = method;
-			headers[":path"] = url;
-			headers[":authority"] = previewToken.host;
-			headers[":scheme"] = "https";
-			for (const name of Object.keys(headers)) {
-				if (HTTP1_HEADERS.has(name.toLowerCase())) {
-					delete headers[name];
-				}
-			}
-			const request = message.pipe(remote.request(headers));
-			logger.debug(
-				"WORKER REQUEST",
-				new Date().toLocaleTimeString(),
-				method,
-				url
-			);
-			logger.debug("HEADERS", JSON.stringify(headers, null, 2));
-			logger.debug("PREVIEW TOKEN", previewToken);
-
-			request.on("response", (responseHeaders) => {
-				const status = responseHeaders[":status"] ?? 500;
-
-				// log all requests to terminal
-				logger.log(new Date().toLocaleTimeString(), method, url, status);
-
-				rewriteRemoteHostToLocalHostInHeaders(
-					responseHeaders,
-					previewToken.host,
-					port,
-					localProtocol
-				);
-				for (const name of Object.keys(responseHeaders)) {
-					if (name.startsWith(":")) {
-						delete responseHeaders[name];
-					}
-				}
-				response.writeHead(status, responseHeaders);
-				request.pipe(response, { end: true });
-			});
-		};
-
-		// If an asset path is defined, check the file system
-		// for a file first and serve if it exists.
-		const actualHandleRequest = assetDirectory
-			? createHandleAssetsRequest(assetDirectory, handleRequest)
-			: handleRequest;
-
-		proxy.server.on("request", actualHandleRequest);
-		cleanupListeners.push(() =>
-			proxy.server.off("request", actualHandleRequest)
-		);
-
-		// flush and replay buffered requests
-		requestResponseBufferRef.current.forEach(({ request, response }) =>
-			actualHandleRequest(request, response)
-		);
-		requestResponseBufferRef.current = [];
-
-		/** HTTP/1 -> WebSocket (over HTTP/1)  */
-		const handleUpgrade = (
-			originalMessage: IncomingMessage,
-			originalSocket: Duplex,
-			originalHead: Buffer
-		) => {
-			const { headers, method, url } = originalMessage;
-			addCfPreviewTokenHeader(headers, previewToken.value);
-			headers["host"] = previewToken.host;
-
-			if (originalHead?.byteLength) originalSocket.unshift(originalHead);
-
-			const runtimeRequest = https.request(
-				{
-					hostname: previewToken.host,
-					path: url,
-					method,
-					headers,
-				},
-				(runtimeResponse) => {
-					if (!(runtimeResponse as { upgrade?: boolean }).upgrade) {
-						writeHead(originalSocket, runtimeResponse);
-						runtimeResponse.pipe(originalSocket);
-					}
-				}
-			);
-
-			runtimeRequest.on(
-				"upgrade",
-				(runtimeResponse, runtimeSocket, runtimeHead) => {
-					if (runtimeHead?.byteLength) runtimeSocket.unshift(runtimeHead);
-					writeHead(originalSocket, {
-						httpVersion: "1.1",
-						statusCode: 101,
-						statusMessage: "Switching Protocols",
-						headers: runtimeResponse.headers,
-					});
-					runtimeSocket.pipe(originalSocket).pipe(runtimeSocket);
-				}
-			);
-			originalMessage.pipe(runtimeRequest);
-		};
-
-		proxy.server.on("upgrade", handleUpgrade);
-		cleanupListeners.push(() => proxy.server.off("upgrade", handleUpgrade));
-
+		});
 		return () => {
-			cleanupListeners.forEach((cleanup) => cleanup());
+			cleanupListeners?.forEach((cleanup) => cleanup());
 		};
 	}, [
 		previewToken,
@@ -390,6 +222,216 @@ export function usePreviewServer({
 				.catch(() => logger.error("Failed to terminate the proxy server."));
 		};
 	}, [port, ip, proxy, localProtocol]);
+}
+
+function configureProxyServer({
+	proxy,
+	previewToken,
+	streamBufferRef,
+	requestResponseBufferRef,
+	retryServerSetup,
+	port,
+	localProtocol,
+	assetDirectory,
+}: {
+	proxy: PreviewProxy | undefined;
+	previewToken: CfPreviewToken | undefined;
+	// normally the type of streamBufferRef should be
+	// React.MutableRefObject<T>, but we don't want to require react
+	streamBufferRef: {
+		current: { stream: ServerHttp2Stream; headers: IncomingHttpHeaders }[];
+	};
+	// normally the type of requestResponseBufferRef should be
+	// React.MutableRefObject<T>, but we don't want to require react
+	requestResponseBufferRef: {
+		current: { request: IncomingMessage; response: ServerResponse }[];
+	};
+	retryServerSetup: () => void;
+	port: number;
+	localProtocol: "https" | "http";
+	assetDirectory: string | undefined;
+}) {
+	if (proxy === undefined) {
+		return;
+	}
+
+	// If we don't have a token, that means either we're just starting up,
+	// or we're refreshing the token.
+	if (!previewToken) {
+		const cleanupListeners: (() => void)[] = [];
+		const bufferStream = (
+			stream: ServerHttp2Stream,
+			headers: IncomingHttpHeaders
+		) => {
+			// store the stream in a buffer so we can replay it later
+			streamBufferRef.current.push({ stream, headers });
+		};
+		proxy.server.on("stream", bufferStream);
+		cleanupListeners.push(() => proxy.server.off("stream", bufferStream));
+
+		const bufferRequestResponse = (
+			request: IncomingMessage,
+			response: ServerResponse
+		) => {
+			// store the request and response in a buffer so we can replay it later
+			requestResponseBufferRef.current.push({ request, response });
+		};
+
+		proxy.server.on("request", bufferRequestResponse);
+		cleanupListeners.push(() =>
+			proxy.server.off("request", bufferRequestResponse)
+		);
+		return cleanupListeners;
+	}
+
+	// We have a token. Let's proxy requests to the preview end point.
+	const cleanupListeners: (() => void)[] = [];
+
+	// create a ClientHttp2Session
+	logger.debug("PREVIEW URL:", `https://${previewToken.host}`);
+	const remote = connect(`https://${previewToken.host}`);
+	cleanupListeners.push(() => remote.destroy());
+
+	// As mentioned above, the session may die at any point,
+	// so we need to restart the effect.
+	remote.on("close", retryServerSetup);
+	cleanupListeners.push(() => remote.off("close", retryServerSetup));
+
+	/** HTTP/2 -> HTTP/2  */
+	const handleStream = createStreamHandler(
+		previewToken,
+		remote,
+		port,
+		localProtocol
+	);
+	proxy.server.on("stream", handleStream);
+	cleanupListeners.push(() => proxy.server.off("stream", handleStream));
+
+	// flush and replay buffered streams
+	streamBufferRef.current.forEach(
+		(buffer: { stream: ServerHttp2Stream; headers: IncomingHttpHeaders }) =>
+			handleStream(buffer.stream, buffer.headers)
+	);
+	streamBufferRef.current = [];
+
+	/** HTTP/1 -> HTTP/2  */
+	const handleRequest: RequestListener = (
+		message: IncomingMessage,
+		response: ServerResponse
+	) => {
+		const { httpVersionMajor, headers, method, url } = message;
+		if (httpVersionMajor >= 2) {
+			return; // Already handled by the "stream" event.
+		}
+		addCfPreviewTokenHeader(headers, previewToken.value);
+		headers[":method"] = method;
+		headers[":path"] = url;
+		headers[":authority"] = previewToken.host;
+		headers[":scheme"] = "https";
+		for (const name of Object.keys(headers)) {
+			if (HTTP1_HEADERS.has(name.toLowerCase())) {
+				delete headers[name];
+			}
+		}
+		const request = message.pipe(remote.request(headers));
+		logger.debug(
+			"WORKER REQUEST",
+			new Date().toLocaleTimeString(),
+			method,
+			url
+		);
+		logger.debug("HEADERS", JSON.stringify(headers, null, 2));
+		logger.debug("PREVIEW TOKEN", previewToken);
+
+		request.on("response", (responseHeaders) => {
+			const status = responseHeaders[":status"] ?? 500;
+
+			// log all requests to terminal
+			logger.log(new Date().toLocaleTimeString(), method, url, status);
+
+			rewriteRemoteHostToLocalHostInHeaders(
+				responseHeaders,
+				previewToken.host,
+				port,
+				localProtocol
+			);
+			for (const name of Object.keys(responseHeaders)) {
+				if (name.startsWith(":")) {
+					delete responseHeaders[name];
+				}
+			}
+			response.writeHead(status, responseHeaders);
+			request.pipe(response, { end: true });
+		});
+	};
+
+	// If an asset path is defined, check the file system
+	// for a file first and serve if it exists.
+	const actualHandleRequest = assetDirectory
+		? createHandleAssetsRequest(assetDirectory, handleRequest)
+		: handleRequest;
+
+	proxy.server.on("request", actualHandleRequest);
+	cleanupListeners.push(() => proxy.server.off("request", actualHandleRequest));
+
+	// flush and replay buffered requests
+	requestResponseBufferRef.current.forEach(
+		({
+			request,
+			response,
+		}: {
+			request: IncomingMessage;
+			response: ServerResponse;
+		}) => actualHandleRequest(request, response)
+	);
+	requestResponseBufferRef.current = [];
+
+	/** HTTP/1 -> WebSocket (over HTTP/1)  */
+	const handleUpgrade = (
+		originalMessage: IncomingMessage,
+		originalSocket: Duplex,
+		originalHead: Buffer
+	) => {
+		const { headers, method, url } = originalMessage;
+		addCfPreviewTokenHeader(headers, previewToken.value);
+		headers["host"] = previewToken.host;
+
+		if (originalHead?.byteLength) originalSocket.unshift(originalHead);
+
+		const runtimeRequest = https.request(
+			{
+				hostname: previewToken.host,
+				path: url,
+				method,
+				headers,
+			},
+			(runtimeResponse) => {
+				if (!(runtimeResponse as { upgrade?: boolean }).upgrade) {
+					writeHead(originalSocket, runtimeResponse);
+					runtimeResponse.pipe(originalSocket);
+				}
+			}
+		);
+
+		runtimeRequest.on(
+			"upgrade",
+			(runtimeResponse, runtimeSocket, runtimeHead) => {
+				if (runtimeHead?.byteLength) runtimeSocket.unshift(runtimeHead);
+				writeHead(originalSocket, {
+					httpVersion: "1.1",
+					statusCode: 101,
+					statusMessage: "Switching Protocols",
+					headers: runtimeResponse.headers,
+				});
+				runtimeSocket.pipe(originalSocket).pipe(runtimeSocket);
+			}
+		);
+		originalMessage.pipe(runtimeRequest);
+	};
+
+	proxy.server.on("upgrade", handleUpgrade);
+	cleanupListeners.push(() => proxy.server.off("upgrade", handleUpgrade));
+	return cleanupListeners;
 }
 
 function createHandleAssetsRequest(
