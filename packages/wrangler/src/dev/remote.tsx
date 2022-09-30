@@ -368,7 +368,27 @@ export function useWorker(
 }
 
 export async function startRemoteServer(props: RemoteProps) {
-	const previewToken = await getRemotePreviewToken(props);
+	let accountId = props.accountId;
+	if (accountId === undefined) {
+		const accountChoices = await getAccountChoices();
+		if (accountChoices.length === 1) {
+			saveAccountToCache({
+				id: accountChoices[0].id,
+				name: accountChoices[0].name,
+			});
+			accountId = accountChoices[0].id;
+		} else {
+			throw logger.error(
+				"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+			);
+		}
+	}
+
+	const previewToken = await getRemotePreviewToken({
+		...props,
+		accountId: accountId,
+	});
+
 	if (previewToken === undefined) {
 		throw logger.error("Failed to get a previewToken");
 	}
