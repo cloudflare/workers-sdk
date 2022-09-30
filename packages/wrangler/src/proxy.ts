@@ -90,6 +90,80 @@ type PreviewProxy = {
 	terminator: HttpTerminator;
 };
 
+export async function startPreviewServer({
+	previewToken,
+	assetDirectory,
+	localProtocol,
+	localPort: port,
+	ip,
+	onReady,
+}: {
+	previewToken: CfPreviewToken;
+	assetDirectory: string | undefined;
+	localProtocol: "https" | "http";
+	localPort: number;
+	ip: string;
+	onReady: ((readyIp: string, readyPort: number) => void) | undefined;
+}) {
+	try {
+		const abortController = new AbortController();
+
+		const server = await createProxyServer(localProtocol);
+		const proxy = {
+			server,
+			terminator: createHttpTerminator({
+				server,
+				gracefulTerminationTimeout: 0,
+			}),
+		};
+
+		// We have a token. Let's proxy requests to the preview end point.
+		const streamBufferRef = { current: [] };
+		const requestResponseBufferRef = { current: [] };
+		const cleanupListeners = configureProxyServer({
+			proxy,
+			previewToken,
+			streamBufferRef,
+			requestResponseBufferRef,
+			retryServerSetup: () => {}, // no-op outside of React
+			assetDirectory,
+			localProtocol,
+			port,
+		});
+
+		await waitForPortToBeAvailable(port, {
+			retryPeriod: 200,
+			timeout: 2000,
+			abortSignal: abortController.signal,
+		});
+
+		proxy.server.on("listening", () => {
+			const address = proxy.server.address();
+			const usedPort =
+				address && typeof address === "object" ? address.port : port;
+			logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
+			const accessibleHosts = ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
+			for (const accessibleHost of accessibleHosts) {
+				logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
+			}
+			onReady?.(ip, usedPort);
+		});
+
+		proxy.server.listen(port, ip);
+		return {
+			stop: () => {
+				abortController.abort();
+				cleanupListeners?.forEach((cleanup) => cleanup());
+			},
+		};
+	} catch (err) {
+		if ((err as { code: string }).code !== "ABORT_ERR") {
+			logger.error(`Failed to start server: ${err}`);
+		}
+		logger.error("Failed to create proxy server:", err);
+	}
+}
+
 export function usePreviewServer({
 	previewToken,
 	assetDirectory,

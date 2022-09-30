@@ -9,7 +9,7 @@ import {
 } from "../create-worker-preview";
 import useInspector from "../inspect";
 import { logger } from "../logger";
-import { usePreviewServer } from "../proxy";
+import { startPreviewServer, usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
 	ChooseAccount,
@@ -150,7 +150,7 @@ export function Remote(props: RemoteProps) {
 	) : null;
 }
 
-export function useWorker(props: {
+interface RemoteWorkerProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
@@ -170,7 +170,11 @@ export function useWorker(props: {
 	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
 	port: number;
-}): CfPreviewToken | undefined {
+}
+
+export function useWorker(
+	props: RemoteWorkerProps
+): CfPreviewToken | undefined {
 	const [session, setSession] = useState<CfPreviewSession | undefined>();
 	const [token, setToken] = useState<CfPreviewToken | undefined>();
 	const [restartCounter, setRestartCounter] = useState<number>(0);
@@ -263,24 +267,20 @@ export function useWorker(props: {
 				usageModel: props.usageModel,
 			});
 
-			const workerAccount: CfAccount = {
+			const { workerAccount, workerContext } = getWorkerAccountAndContext({
 				accountId: props.accountId,
-				apiToken: requireApiToken(),
-			};
-
-			const workerCtx: CfWorkerContext = {
 				env: props.env,
 				legacyEnv: props.legacyEnv,
 				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
 				sendMetrics: props.sendMetrics,
-			};
+			});
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
 				workerAccount,
-				workerCtx,
+				workerContext,
 				session,
 				abortController.signal
 			);
@@ -365,6 +365,126 @@ export function useWorker(props: {
 	]);
 
 	return token;
+}
+
+export async function startRemoteServer(props: RemoteProps) {
+	let accountId = props.accountId;
+	if (accountId === undefined) {
+		const accountChoices = await getAccountChoices();
+		if (accountChoices.length === 1) {
+			saveAccountToCache({
+				id: accountChoices[0].id,
+				name: accountChoices[0].name,
+			});
+			accountId = accountChoices[0].id;
+		} else {
+			throw logger.error(
+				"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+			);
+		}
+	}
+
+	const previewToken = await getRemotePreviewToken({
+		...props,
+		accountId: accountId,
+	});
+
+	if (previewToken === undefined) {
+		throw logger.error("Failed to get a previewToken");
+	}
+	// start our proxy server
+	const previewServer = await startPreviewServer({
+		previewToken,
+		assetDirectory: props.isWorkersSite
+			? undefined
+			: props.assetPaths?.assetDirectory,
+		localProtocol: props.localProtocol,
+		localPort: props.port,
+		ip: props.ip,
+		onReady: props.onReady,
+	});
+	if (!previewServer) {
+		throw logger.error("Failed to start remote server");
+	}
+	return { stop: previewServer.stop };
+}
+
+/**
+ * getRemotePreviewToken is a react-free version of `useWorker`.
+ * It returns a preview token, which we then use in our proxy server
+ */
+export async function getRemotePreviewToken(props: RemoteProps) {
+	//setup the preview session
+	async function start() {
+		if (props.accountId === undefined) {
+			throw logger.error("no accountId provided");
+		}
+		const abortController = new AbortController();
+		const { workerAccount, workerContext } = getWorkerAccountAndContext({
+			accountId: props.accountId,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			zone: props.zone,
+			host: props.host,
+			routes: props.routes,
+			sendMetrics: props.sendMetrics,
+		});
+		const session = await createPreviewSession(
+			workerAccount,
+			workerContext,
+			abortController.signal
+		);
+		//use the session to upload the worker, and create a preview
+
+		if (session === undefined) {
+			throw logger.error("Failed to start a session");
+		}
+		if (!props.bundle || !props.format) return;
+
+		const init = await createRemoteWorkerInit({
+			bundle: props.bundle,
+			modules: props.bundle ? props.bundle.modules : [],
+			accountId: props.accountId,
+			name: props.name,
+			legacyEnv: props.legacyEnv,
+			env: props.env,
+			isWorkersSite: props.isWorkersSite,
+			assetPaths: props.assetPaths,
+			format: props.format,
+			bindings: props.bindings,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+		});
+		const workerPreviewToken = await createWorkerPreview(
+			init,
+			workerAccount,
+			workerContext,
+			session,
+			abortController.signal
+		);
+		return workerPreviewToken;
+	}
+	return start().catch((err) => {
+		if ((err as { code?: string })?.code !== "ABORT_ERR") {
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+			// for error 10063 (workers.dev subdomain required)
+			if (err?.code === 10063) {
+				const errorMessage =
+					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+				const solutionMessage =
+					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
+				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (err?.code === 10049) {
+				// code 10049 happens when the preview token expires
+				logger.log("Preview token expired, restart server to fetch a new one");
+			} else {
+				logger.error("Error on remote worker:", err);
+			}
+		}
+	});
 }
 
 async function createRemoteWorkerInit(props: {
