@@ -366,12 +366,14 @@ export function useWorker(
 
 	return token;
 }
+
 export async function startRemoteServer(props: RemoteProps) {
 	const previewToken = await getRemotePreviewToken(props);
 	if (previewToken === undefined) {
 		logger.error("Failed to start remote server");
 		return;
 	}
+	// start our proxy server
 	await startPreviewServer({
 		previewToken,
 		assetDirectory: props.isWorkersSite
@@ -380,6 +382,89 @@ export async function startRemoteServer(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
+	});
+}
+
+/**
+ * getRemotePreviewToken is a react-free version of `useWorker`.
+ * It returns a preview token, which we then use in our proxy server
+ */
+export async function getRemotePreviewToken(props: RemoteProps) {
+	//setup the preview session
+	async function start() {
+		if (props.accountId === undefined) {
+			return;
+		}
+		const abortController = new AbortController();
+		const { workerAccount, workerContext } = getWorkerAccountAndContext({
+			accountId: props.accountId,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			zone: props.zone,
+			host: props.host,
+			routes: props.routes,
+			sendMetrics: props.sendMetrics,
+		});
+		const session = await createPreviewSession(
+			workerAccount,
+			workerContext,
+			abortController.signal
+		);
+		//use the session to upload the worker, and create a preview
+		if (props.accountId === undefined) {
+			return;
+		}
+		if (session === undefined) {
+			return;
+		}
+		if (!props.bundle || !props.format) return;
+
+		const init = await createRemoteWorkerInit({
+			bundle: props.bundle,
+			modules: props.bundle ? props.bundle.modules : [],
+			accountId: props.accountId,
+			name: props.name,
+			legacyEnv: props.legacyEnv,
+			env: props.env,
+			isWorkersSite: props.isWorkersSite,
+			assetPaths: props.assetPaths,
+			format: props.format,
+			bindings: props.bindings,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+		});
+		const workerPreviewToken = await createWorkerPreview(
+			init,
+			workerAccount,
+			workerContext,
+			session,
+			abortController.signal
+		);
+		props.onReady?.(props.host || "localhost", props.port);
+		return workerPreviewToken;
+	}
+	return start().catch((err) => {
+		// we want to log the error, but not end the process
+		// since it could recover after the developer fixes whatever's wrong
+		if ((err as { code: string }).code !== "ABORT_ERR") {
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+			// for error 10063 (workers.dev subdomain required)
+			if (err.code === 10063) {
+				const errorMessage =
+					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+				const solutionMessage =
+					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
+				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (err.code === 10049) {
+				// code 10049 happens when the preview token expires
+				logger.log("Preview token expired, restart server to fetch a new one");
+			} else {
+				logger.error("Error on remote worker:", err);
+			}
+		}
 	});
 }
 
