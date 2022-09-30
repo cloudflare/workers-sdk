@@ -60,6 +60,8 @@ jobs:
 
       - name: Run tests & collect coverage
         run: npm run test:ci
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Report Code Coverage
         uses: codecov/codecov-action@v3
