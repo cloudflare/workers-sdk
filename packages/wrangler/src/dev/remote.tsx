@@ -370,7 +370,7 @@ export function useWorker(
 export async function startRemoteServer(props: RemoteProps) {
 	const previewToken = await getRemotePreviewToken(props);
 	if (previewToken === undefined) {
-		throw logger.error("Failed to start remote server");
+		throw logger.error("Failed to get a previewToken");
 	}
 	// start our proxy server
 	const previewServer = await startPreviewServer({
