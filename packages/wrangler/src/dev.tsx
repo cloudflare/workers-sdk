@@ -742,7 +742,7 @@ async function validateDevServerSettings(
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
 			const [key, ...value] = d.split(":");
-			collectDefines[key] = value.join("");
+			collectDefines[key] = value.join(":");
 			return collectDefines;
 		}, {}) || {};
 
@@ -767,7 +767,7 @@ async function getBindingsAndAssetPaths(
 	const cliVars =
 		args.var?.reduce<Record<string, string>>((collectVars, v) => {
 			const [key, ...value] = v.split(":");
-			collectVars[key] = value.join("");
+			collectVars[key] = value.join(":");
 			return collectVars;
 		}, {}) || {};
 
