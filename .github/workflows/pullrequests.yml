@@ -62,6 +62,7 @@ jobs:
         run: npm run test:ci
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Report Code Coverage
         uses: codecov/codecov-action@v3

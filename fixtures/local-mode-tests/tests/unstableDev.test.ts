@@ -53,6 +53,11 @@ describe("worker in remote mode", () => {
 		if (process.env.TMP_CLOUDFLARE_API_TOKEN) {
 			process.env.CLOUDFLARE_API_TOKEN = process.env.TMP_CLOUDFLARE_API_TOKEN;
 		}
+
+		if (process.env.TMP_CLOUDFLARE_ACCOUNT_ID) {
+			process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TMP_CLOUDFLARE_ACCOUNT_ID;
+		}
+
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
 			"src/basicModule.ts",
