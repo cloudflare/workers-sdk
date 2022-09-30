@@ -65,7 +65,6 @@ describe("worker in remote mode", () => {
 				ip: "127.0.0.1",
 				port: 1337,
 				local: false,
-				logLevel: "debug",
 			},
 			{ disableExperimentalWarning: true }
 		);
