@@ -397,7 +397,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	//setup the preview session
 	async function start() {
 		if (props.accountId === undefined) {
-			return;
+			throw logger.error("no accountId provided");
 		}
 		const abortController = new AbortController();
 		const { workerAccount, workerContext } = getWorkerAccountAndContext({
@@ -415,11 +415,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			abortController.signal
 		);
 		//use the session to upload the worker, and create a preview
-		if (props.accountId === undefined) {
-			return;
-		}
+
 		if (session === undefined) {
-			return;
+			throw logger.error("Failed to start a session");
 		}
 		if (!props.bundle || !props.format) return;
 
