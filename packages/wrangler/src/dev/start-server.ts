@@ -97,7 +97,7 @@ export async function startDevServer(
 			testScheduled: props.testScheduled,
 			experimentalLocalStubCache: props.experimentalLocal,
 		});
-		console.log("props.local: ", props.local);
+
 		if (props.local) {
 			const { stop, inspectorUrl } = await startLocalServer({
 				name: props.name,
@@ -122,42 +122,44 @@ export async function startDevServer(
 				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 				usageModel: props.usageModel,
 				workerDefinitions,
+				experimentalLocal: props.experimentalLocal,
 			});
 
-		//run local now
-		const { stop, inspectorUrl } = await startLocalServer({
-			name: props.name,
-			bundle: bundle,
-			format: props.entry.format,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-			bindings: props.bindings,
-			assetPaths: props.assetPaths,
-			port: props.port,
-			ip: props.ip,
-			rules: props.rules,
-			inspectorPort: props.inspectorPort,
-			localPersistencePath: props.localPersistencePath,
-			liveReload: props.liveReload,
-			crons: props.crons,
-			localProtocol: props.localProtocol,
-			localUpstream: props.localUpstream,
-			logPrefix: props.logPrefix,
-			inspect: props.inspect,
-			onReady: props.onReady,
-			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-			usageModel: props.usageModel,
-			workerDefinitions,
-			experimentalLocal: props.experimentalLocal,
-		});
-
-		return {
-			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
-			},
-			inspectorUrl,
-		};
+			return {
+				stop: async () => {
+					stop();
+					await stopWorkerRegistry();
+				},
+				inspectorUrl,
+			};
+		} else {
+			//TODO: implement a stop function
+			await startRemoteServer({
+				name: props.name,
+				bundle: bundle,
+				format: props.entry.format,
+				accountId: props.accountId,
+				bindings: props.bindings,
+				assetPaths: props.assetPaths,
+				isWorkersSite: props.isWorkersSite,
+				port: props.port,
+				ip: props.ip,
+				localProtocol: props.localProtocol,
+				inspectorPort: props.inspectorPort,
+				inspect: props.inspect,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				usageModel: props.usageModel,
+				env: props.env,
+				legacyEnv: props.legacyEnv,
+				zone: props.zone,
+				host: props.host,
+				routes: props.routes,
+				onReady: props.onReady,
+				sourceMapPath: bundle?.sourceMapPath,
+				sendMetrics: props.sendMetrics,
+			});
+		}
 	} catch (err) {
 		logger.error(err);
 	}
