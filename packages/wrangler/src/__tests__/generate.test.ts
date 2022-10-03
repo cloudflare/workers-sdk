@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, clearConfirmMocks } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -6,10 +7,9 @@ import { runWrangler } from "./helpers/run-wrangler";
 
 describe("generate", () => {
 	runInTempDir();
+	const std = mockConsoleMethods();
 
 	describe("cli functionality", () => {
-		const std = mockConsoleMethods();
-
 		afterEach(() => {
 			clearConfirmMocks();
 		});
@@ -58,29 +58,110 @@ describe("generate", () => {
 		it("auto-increments the worker directory name", async () => {
 			fs.mkdirSync("my-worker");
 
-			await expect(
-				runWrangler("generate my-worker worker-typescript")
-			).resolves.toBeUndefined();
-
-			expect(fs.existsSync("my-worker-1")).toBe(true);
+			expect(fs.existsSync("my-worker-1")).toBe(false);
 
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
 
-			expect(fs.existsSync("my-worker-2")).toBe(true);
+			expect(std.out).toStrictEqual(expect.stringContaining("my-worker-1"));
+
+			expect(readDirectory("my-worker-1")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
+			expect(fs.existsSync("my-worker-2")).toBe(false);
+
+			await expect(
+				runWrangler("generate my-worker worker-typescript")
+			).resolves.toBeUndefined();
+
+			expect(std.out).toStrictEqual(expect.stringContaining("my-worker-2"));
+
+			expect(readDirectory("my-worker-2")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
 		});
 	});
 
 	describe("cloning", () => {
-		it("clones a given template", async () => {
+		it("clones a cloudflare template with sparse checkouts", async () => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
 
-			expect(fs.existsSync("my-worker")).toBe(true);
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
 		});
 
-		// TODO: more tests around cloning behavior
+		it.todo("clones a cloudflare template with full checkouts");
+
+		it.todo("clones a user/repo template");
+
+		it.todo("clones a user/repo/path/to/subdirectory template");
+
+		it.todo("clones a github.com/user/repo template");
+
+		it.todo("clones a github.com/user/repo/path/to/subdirectory template");
 	});
 });
+
+type FileName = string;
+type FileContents = string;
+type Directory = { [key: FileName]: FileContents | Directory };
+
+function readDirectory(directoryPath: string): Directory {
+	if (!fs.existsSync(directoryPath)) {
+		throw new Error(`${directoryPath} does not exist!`);
+	}
+
+	if (!fs.lstatSync(directoryPath).isDirectory()) {
+		throw new Error(`${directoryPath} is not a directory!`);
+	}
+
+	return fs
+		.readdirSync(directoryPath, { withFileTypes: true })
+		.reduce((output, child) => {
+			const childPath = path.join(directoryPath, child.name);
+
+			if (child.isDirectory()) {
+				output[child.name] = readDirectory(childPath);
+			} else if (child.isFile()) {
+				output[child.name] = fs.readFileSync(childPath, { encoding: "utf-8" });
+			} else {
+				throw new Error(`${childPath} was not a file or directory!`);
+			}
+
+			return output;
+		}, {} as Directory);
+}
