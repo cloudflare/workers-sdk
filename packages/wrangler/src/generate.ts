@@ -156,8 +156,6 @@ function isRemote(arg: string) {
  * - `ftp(s)`
  * - `file`
  * - `ssh`
- *
- * Also of note, this regex captures an optional tag, but we don't support that.
  */
 const TEMPLATE_REGEX =
 	/^(?:(?:https:\/\/)?(?<httpsUrl>[^:/]+\.[^:/]+)\/|git@(?<gitUrl>[^:/]+)[:/]|(?<shorthandUrl>[^/]+):)?(?<user>[^/\s]+)\/(?<repository>[^/\s#]+)(?:(?<subdirectoryPath>(?:\/[^/\s#]+)+))?(?:\/)?(?:#(?<tag>.+))?/;
@@ -254,12 +252,14 @@ function parseTemplate(template: string): {
 		throw new Error(`Unable to parse ${template} as a template`);
 	}
 
-	const { user, repository, subdirectoryPath, ...urlGroups } = groups;
+	const { user, repository, subdirectoryPath, tag, ...urlGroups } = groups;
 
 	const urlBase = toUrlBase(urlGroups);
-	const remote = urlBase.startsWith("git")
-		? `${urlBase}:${user}/${repository}.git`
-		: `${urlBase}/${user}/${repository}.git`;
+	const isHttp = urlBase.startsWith("http");
+
+	const remote = `${urlBase}${isHttp ? "/" : ":"}${user}/${repository}.git${
+		tag ? `#${tag}` : ""
+	}`;
 
 	// remove starting /
 	const subdirectory = subdirectoryPath?.slice(1);
