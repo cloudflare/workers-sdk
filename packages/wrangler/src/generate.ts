@@ -165,27 +165,51 @@ const TEMPLATE_REGEX =
 // - `https://<httpsUrl>
 // - `git@<gitUrl>`
 // - `(bb|bitbucket|gh|github|gl|gitlab):user/repo` -> parse shorthand into https url
-type NoUrlAssumeGitHub = {
+
+/**
+ * There's no URL, so assume a github repo
+ */
+type NoUrl = {
 	httpsUrl: undefined;
 	gitUrl: undefined;
 	shorthandUrl: undefined;
 };
-type HttpsUrl = Omit<NoUrlAssumeGitHub, "httpsUrl"> & { httpsUrl: string };
-type GitUrl = Omit<NoUrlAssumeGitHub, "gitUrl"> & { gitUrl: string };
-type ShorthandUrl = Omit<NoUrlAssumeGitHub, "shorthandUrl"> & {
-	shorthandUrl: string;
-};
 
-type TemplateRegexUrlGroup =
-	| NoUrlAssumeGitHub
-	| HttpsUrl
-	| GitUrl
-	| ShorthandUrl;
+/**
+ * A https url (e.g. https://bitbucket.org/user/repo)
+ */
+type HttpsUrl = Omit<NoUrl, "httpsUrl"> & { httpsUrl: string };
 
+/**
+ * A git url (e.g. git@gitlab.com:user/repo)
+ */
+type GitUrl = Omit<NoUrl, "gitUrl"> & { gitUrl: string };
+
+/**
+ * A shorthand url (e.g. github:user/repo)
+ */
+type ShorthandUrl = Omit<NoUrl, "shorthandUrl"> & { shorthandUrl: string };
+
+/**
+ * Union of all possible URL groups. Exactly one will be present, the rest
+ * will be `undefined`.
+ */
+type TemplateRegexUrlGroup = NoUrl | HttpsUrl | GitUrl | ShorthandUrl;
+
+/**
+ * Possible matches of `TEMPLATE_REGEX` against a passed-in template arg
+ */
 type TemplateRegexGroups = {
+	/** The user the repo is under */
 	user: string;
+
+	/** The repo name */
 	repository: string;
+
+	/** Optional, path to subdirectory containing template. Begins with `/` */
 	subdirectoryPath?: string;
+
+	/** Optional tag (or branch, etc.) to clone */
 	tag?: string;
 } & TemplateRegexUrlGroup;
 
