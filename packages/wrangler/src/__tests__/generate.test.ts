@@ -163,9 +163,44 @@ describe("generate", () => {
 			});
 		});
 
-		it.todo("clones a git@github.com/user/repo template");
+		it("clones a git@github.com/user/repo template", async () => {
+			await expect(
+				runWrangler(
+					"generate my-worker git@github.com:caass/wrangler-generate-test-template"
+				)
+			).resolves.toBeUndefined();
 
-		it.todo("clones a git@github.com/user/repo/path/to/subdirectory template");
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
+		});
+
+		it("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
+			await expect(
+				runWrangler(
+					"generate my-worker git@github.com:cloudflare/templates/worker-typescript"
+				)
+			).resolves.toBeUndefined();
+
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
+		});
 	});
 });
 
