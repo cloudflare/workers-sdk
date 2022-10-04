@@ -79,7 +79,7 @@ export async function cloneIntoDirectory(
 	// the whole repo. useful for monorepos that may, for example,
 	// contain multiple wrangler templates
 	const useSparseCheckout = semiver(gitVersion, "2.26.0") > -1;
-	if (useSparseCheckout) {
+	if (subdirectory && useSparseCheckout) {
 		args.push("--filter=blob:none", "--sparse");
 	}
 
