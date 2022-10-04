@@ -1,8 +1,8 @@
 import { rest } from "msw";
 
-export const mswOauthHandlers = [
+export const mswSucessOauthHandlers = [
 	rest.all("*/oauth/callback", (_, response, context) => {
-		return response(
+		return response.once(
 			context.status(200),
 			context.json({
 				success: true,
@@ -15,14 +15,14 @@ export const mswOauthHandlers = [
 	// revoke access token
 	rest.post(
 		"https://dash.cloudflare.com/oauth2/revoke",
-		(_, response, context) => response(context.status(200), context.text(""))
+		(_, response, context) =>
+			response.once(context.status(200), context.text(""))
 	),
-
 	// exchange (auth code | refresh token) for access token
 	rest.post(
 		"https://dash.cloudflare.com/oauth2/token",
 		(_, response, context) => {
-			return response(
+			return response.once(
 				context.status(200),
 				context.json({
 					access_token: "test-access-token",
