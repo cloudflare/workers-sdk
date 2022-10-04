@@ -4,7 +4,11 @@ import { pathToRegexp } from "path-to-regexp";
 import { Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
-import type { fetchInternal, fetchR2Objects } from "../../cfetch/internal";
+import type {
+	fetchInternal,
+	fetchR2Objects,
+	performApiFetch,
+} from "../../cfetch/internal";
 import type { RequestInit, BodyInit, HeadersInit } from "undici";
 
 /**
@@ -19,6 +23,12 @@ const {
 const {
 	fetchR2Objects: realFetchR2Objects,
 }: { fetchR2Objects: typeof fetchR2Objects } = jest.requireActual(
+	"../../cfetch/internal"
+);
+
+const {
+	performApiFetch: realPerformApiFetch,
+}: { performApiFetch: typeof performApiFetch } = jest.requireActual(
 	"../../cfetch/internal"
 );
 
@@ -67,6 +77,13 @@ export async function mockFetchInternal(
 	// (do a real, unmocked fetch)
 	return await realFetchInternal(resource, init, queryParams);
 }
+
+/**
+ * We don't have loads of infrastructure around performApiFetch
+ * the same way we do for cfetch, so we'll just pass off the real
+ * deal to avoid getting it auto-mocked, so that msw can catch it.
+ */
+export const mockPerformApiFetch = realPerformApiFetch;
 
 /**
  * Specify an expected resource path that is to be handled, resulting in a raw JSON response.

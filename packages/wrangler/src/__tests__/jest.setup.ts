@@ -5,6 +5,7 @@ import {
 	fetchKVGetValue,
 	fetchR2Objects,
 	getCloudflareAPIBaseURL,
+	performApiFetch,
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import {
@@ -12,6 +13,7 @@ import {
 	mockFetchInternal,
 	mockFetchKVGetValue,
 	mockFetchR2Objects,
+	mockPerformApiFetch,
 } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
@@ -81,6 +83,7 @@ jest.mock("../cfetch/internal");
 );
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
 (fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
+(performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
 jest.mock("../dialogs");
 
