@@ -92,14 +92,7 @@ export async function generateHandler({
 		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
 	);
 
-	let remote = "",
-		subdirectory: string | undefined;
-	if (isRemote(template)) {
-		remote = template;
-	} else {
-		remote = "https://github.com/cloudflare/templates.git";
-		subdirectory = template;
-	}
+	const { remote, subdirectory } = parseTemplate(template);
 
 	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
 	await initializeGit(creationDirectory);
@@ -152,3 +145,163 @@ function generateWorkerDirectoryName(workerName: string): string {
 function isRemote(arg: string) {
 	return /^(https?|ftps?|file|git|ssh):\/\//.test(arg) || arg.includes(":");
 }
+
+/**
+ * unreadable regex basically copied from degit. i put some named capture groups in,
+ * but uhh...there's not much to do short of using pomsky or some other tool.
+ *
+ * notably: this only supports `https://` and `git@` urls,
+ * and is missing support for:
+ * - `http`
+ * - `ftp(s)`
+ * - `file`
+ * - `ssh`
+ *
+ * Also of note, this regex captures an optional tag, but we don't support that.
+ */
+const TEMPLATE_REGEX =
+	/^(?:(?:https:\/\/)?(?<httpsUrl>[^:/]+\.[^:/]+)\/|git@(?<gitUrl>[^:/]+)[:/]|(?<shorthandUrl>[^/]+):)?(?<user>[^/\s]+)\/(?<repository>[^/\s#]+)(?:(?<subdirectory>(?:\/[^/\s#]+)+))?(?:\/)?(?:#(?<tag>.+))?/;
+
+// there are a few URL formats we support:
+// - `user/repo` -> assume github, use "https://github.com/user/repo.git"
+// - `https://<httpsUrl>
+// - `git@<gitUrl>`
+// - `(bb|bitbucket|gh|github|gl|gitlab):user/repo` -> parse shorthand into https url
+type NoUrlAssumeGitHub = {
+	httpsUrl: undefined;
+	gitUrl: undefined;
+	shorthandUrl: undefined;
+};
+type HttpsUrl = Omit<NoUrlAssumeGitHub, "httpsUrl"> & { httpsUrl: string };
+type GitUrl = Omit<NoUrlAssumeGitHub, "gitUrl"> & { gitUrl: string };
+type ShorthandUrl = Omit<NoUrlAssumeGitHub, "shorthandUrl"> & {
+	shorthandUrl: string;
+};
+
+type TemplateRegexUrlGroup =
+	| NoUrlAssumeGitHub
+	| HttpsUrl
+	| GitUrl
+	| ShorthandUrl;
+
+type TemplateRegexGroups = {
+	user: string;
+	repository: string;
+	subdirectory?: string;
+	tag?: string;
+} & TemplateRegexUrlGroup;
+
+/**
+ * Parses a regex match on any of the URL groups into a URL base
+ *
+ * @param urlGroup a regex hit for a URL of any sort
+ * @returns the protocol and domain name of the url to clone from
+ */
+function toUrlBase({ httpsUrl, gitUrl, shorthandUrl }: TemplateRegexUrlGroup) {
+	if (httpsUrl !== undefined) {
+		return `https://${httpsUrl}`;
+	}
+
+	if (gitUrl !== undefined) {
+		return `git@${gitUrl}`;
+	}
+
+	if (shorthandUrl !== undefined) {
+		switch (shorthandUrl) {
+			case "github":
+			case "gh":
+				return "https://github.com";
+			case "gitlab":
+			case "gl":
+				return "https://gitlab.com";
+			case "bitbucket":
+			case "bb":
+				return "https://bitbucket.org";
+			default:
+				throw new Error(
+					`Unable to parse shorthand ${shorthandUrl}. Supported options are "bitbucket" ("bb"), "github" ("gh"), and "gitlab" ("gl")`
+				);
+		}
+	}
+
+	return "https://github.com";
+}
+
+/**
+ * Parses a template string (e.g. "user/repo", "github:user/repo/path/to/subdirectory")
+ * into a remote URL to clone from and an optional subdirectory to filter for
+ *
+ * @param template the template string to parse
+ * @returns an object containing the remote url and an optional subdirectory to clone
+ */
+function parseTemplate(template: string): {
+	remote: string;
+	subdirectory?: string;
+} {
+	if (!template.includes("/")) {
+		// template is a cloudflare canonical template, it doesn't include a slash in the name
+		return {
+			remote: "https://github.com/cloudflare/templates.git",
+			subdirectory: template,
+		};
+	}
+
+	const groups = TEMPLATE_REGEX.exec(template)?.groups as unknown as
+		| TemplateRegexGroups
+		| undefined;
+
+	if (!groups) {
+		throw new Error(`Unable to parse ${template} as a template`);
+	}
+
+	const { user, repository, subdirectory, ...urlGroups } = groups;
+
+	const urlBase = toUrlBase(urlGroups);
+	const remote = urlBase.startsWith("git")
+		? `${urlBase}:${user}/${repository}.git`
+		: `${urlBase}/${user}/${repository}.git`;
+
+	return { remote, subdirectory };
+}
+
+/*
+
+function parse(src) {
+	const match = /^(?:(?:https:\/\/)?([^:/]+\.[^:/]+)\/|git@([^:/]+)[:/]|([^/]+):)?([^/\s]+)\/([^/\s#]+)(?:((?:\/[^/\s#]+)+))?(?:\/)?(?:#(.+))?/.exec(
+		src
+	);
+	if (!match) {
+		throw new DegitError(`could not parse ${src}`, {
+			code: 'BAD_SRC'
+		});
+	}
+
+	const site = (match[1] || match[2] || match[3] || 'github').replace(
+		/\.(com|org)$/,
+		''
+	);
+	if (!supported.has(site)) {
+		throw new DegitError(
+			`degit supports GitHub, GitLab, Sourcehut and BitBucket`,
+			{
+				code: 'UNSUPPORTED_HOST'
+			}
+		);
+	}
+
+	const user = match[4];
+	const name = match[5].replace(/\.git$/, '');
+	const subdir = match[6];
+	const ref = match[7] || 'HEAD';
+
+	const domain = `${site}.${
+		site === 'bitbucket' ? 'org' : site === 'git.sr.ht' ? '' : 'com'
+	}`;
+	const url = `https://${domain}/${user}/${name}`;
+	const ssh = `git@${domain}:${user}/${name}`;
+
+	const mode = supported.has(site) ? 'tar' : 'git';
+
+	return { site, user, name, ref, url, ssh, subdir, mode };
+}
+*/
