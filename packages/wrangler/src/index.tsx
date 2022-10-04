@@ -763,9 +763,15 @@ function createCLIParser(argv: string[]) {
 					: `/accounts/${accountId}/workers/scripts/${scriptName}/bindings`
 			);
 			if (
-				scriptContent.includes("websocket") &&
+				scriptContent.toLowerCase().includes("websocket") &&
 				bindings.find((b) => b.type === "durable_object_namespace")
 			) {
+				logger.warn(
+					`Beginning log collection requires restarting the Durable Objects associated with ${chalk.green(
+						scriptName
+					)}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
+				);
+
 				const shouldContinue = await tailDOLogPrompt(scriptName);
 				if (!shouldContinue) {
 					return;

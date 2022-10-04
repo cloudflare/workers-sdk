@@ -46,7 +46,8 @@ export async function fetchResult<ResponseType>(
 }
 
 /**
- * Make a fetch request, and extract the `result` from the JSON response.
+ * Fetch the raw script content of a Worker
+ * Note, this will concatenate the files of multi-module workers
  */
 export async function fetchScriptContent(
 	resource: string,

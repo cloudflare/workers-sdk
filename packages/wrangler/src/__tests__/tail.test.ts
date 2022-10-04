@@ -35,6 +35,8 @@ describe("tail", () => {
 	 * deletion, and connection.
 	 */
 	describe("API interaction", () => {
+		const { setIsTTY } = useMockIsTTY();
+
 		it("should throw an error if name isn't provided", async () => {
 			await expect(
 				runWrangler("tail")
@@ -56,6 +58,20 @@ describe("tail", () => {
 			api.ws.close();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
+		it("warns about durable object restarts for tty", async () => {
+			setIsTTY(true);
+			const api = mockWebsocketAPIs();
+			expect(api.requests.creation.length).toStrictEqual(0);
+			await runWrangler("tail durable-object--websocket--response");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with [32mdurable-object--websocket--response[39m. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
+
+"
+`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should connect to the worker assigned to a given route", async () => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
@@ -587,7 +603,8 @@ type RequestCounter = {
 function mockCreateTailRequest(
 	websocketURL: string,
 	env?: string,
-	legacyEnv = false
+	legacyEnv = false,
+	expectedScriptName = legacyEnv && env ? `test-worker-${env}` : "test-worker"
 ): RequestInit[] {
 	const requests: RequestInit[] = [];
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
@@ -598,9 +615,7 @@ function mockCreateTailRequest(
 		([_url, accountId, scriptName, envName], req) => {
 			requests.push(req);
 			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-worker-${env}` : "test-worker"
-			);
+			expect(scriptName).toEqual(expectedScriptName);
 			if (!legacyEnv) {
 				expect(envName).toEqual(env);
 			}
@@ -637,7 +652,8 @@ const mockEventScheduledTime = new Date(mockEventTimestamp).toISOString();
  */
 function mockDeleteTailRequest(
 	env?: string,
-	legacyEnv = false
+	legacyEnv = false,
+	expectedScriptName = legacyEnv && env ? `test-worker-${env}` : "test-worker"
 ): RequestCounter {
 	const requests = { count: 0 };
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
@@ -649,9 +665,7 @@ function mockDeleteTailRequest(
 		([_url, accountId, scriptName, envNameOrTailId, tailId]) => {
 			requests.count++;
 			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-worker-${env}` : "test-worker"
-			);
+			expect(scriptName).toEqual(expectedScriptName);
 			if (!legacyEnv) {
 				if (env) {
 					expect(envNameOrTailId).toEqual(env);
@@ -678,7 +692,11 @@ const mockWebSockets: MockWebSocket[] = [];
  * @param websocketURL a fake websocket URL for wrangler to connect to
  * @returns a mocked-out version of the API
  */
-function mockWebsocketAPIs(env?: string, legacyEnv = false): MockAPI {
+function mockWebsocketAPIs(
+	env?: string,
+	legacyEnv = false,
+	expectedScriptName?: string
+): MockAPI {
 	const websocketURL = "ws://localhost:1234";
 	const api: MockAPI = {
 		requests: {
@@ -697,8 +715,17 @@ function mockWebsocketAPIs(env?: string, legacyEnv = false): MockAPI {
 			return JSON.parse(message as string);
 		},
 	};
-	api.requests.creation = mockCreateTailRequest(websocketURL, env, legacyEnv);
-	api.requests.deletion = mockDeleteTailRequest(env, legacyEnv);
+	api.requests.creation = mockCreateTailRequest(
+		websocketURL,
+		env,
+		legacyEnv,
+		expectedScriptName
+	);
+	api.requests.deletion = mockDeleteTailRequest(
+		env,
+		legacyEnv,
+		expectedScriptName
+	);
 	api.ws = new MockWebSocket(websocketURL);
 	mockWebSockets.push(api.ws);
 
