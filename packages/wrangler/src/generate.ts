@@ -92,7 +92,7 @@ export async function generateHandler({
 		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
 	);
 
-	const { remote, subdirectory } = parseTemplate(template);
+	const { remote, subdirectory } = parseTemplatePath(template);
 
 	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
 	await initializeGit(creationDirectory);
@@ -253,27 +253,27 @@ function toUrlBase({ httpsUrl, gitUrl, shorthandUrl }: TemplateRegexUrlGroup) {
  * Parses a template string (e.g. "user/repo", "github:user/repo/path/to/subdirectory")
  * into a remote URL to clone from and an optional subdirectory to filter for
  *
- * @param template the template string to parse
+ * @param templatePath the template string to parse
  * @returns an object containing the remote url and an optional subdirectory to clone
  */
-function parseTemplate(template: string): {
+function parseTemplatePath(templatePath: string): {
 	remote: string;
 	subdirectory?: string;
 } {
-	if (!template.includes("/")) {
+	if (!templatePath.includes("/")) {
 		// template is a cloudflare canonical template, it doesn't include a slash in the name
 		return {
 			remote: "https://github.com/cloudflare/templates.git",
-			subdirectory: template,
+			subdirectory: templatePath,
 		};
 	}
 
-	const groups = TEMPLATE_REGEX.exec(template)?.groups as unknown as
+	const groups = TEMPLATE_REGEX.exec(templatePath)?.groups as unknown as
 		| TemplateRegexGroups
 		| undefined;
 
 	if (!groups) {
-		throw new Error(`Unable to parse ${template} as a template`);
+		throw new Error(`Unable to parse ${templatePath} as a template`);
 	}
 
 	const { user, repository, subdirectoryPath, tag, ...urlGroups } = groups;

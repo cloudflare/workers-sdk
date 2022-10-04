@@ -17,20 +17,20 @@ export async function isInsideGitRepo(cwd: string) {
 /**
  * Check whether git is installed by trying to run it.
  *
- * Returns the installed version if git is installed, and false otherwise
+ * @returns a `string` containing the version of git that's installed, or `null` if git isn't installed
  */
-export async function isGitInstalled() {
+export async function getGitVersioon(): Promise<string | null> {
 	try {
 		const gitVersionExecutionResult = await execa("git", ["--version"]);
 		if (gitVersionExecutionResult.exitCode !== 0) {
-			return false;
+			return null;
 		}
 
 		const [gitVersion] =
 			/\d+.\d+.\d+/.exec(gitVersionExecutionResult.stdout) || [];
 		return gitVersion;
 	} catch (err) {
-		return false;
+		return null;
 	}
 }
 
@@ -69,7 +69,7 @@ export async function cloneIntoDirectory(
 ) {
 	const args = ["clone", "--depth", "1"];
 
-	const gitVersion = await isGitInstalled();
+	const gitVersion = await getGitVersioon();
 	if (!gitVersion) {
 		throw new Error("Failed to find git installation");
 	}
@@ -78,8 +78,8 @@ export async function cloneIntoDirectory(
 	// basically it means you can checkout only certain files/folders/etc. instead of
 	// the whole repo. useful for monorepos that may, for example,
 	// contain multiple wrangler templates
-	const useSparseCheckout = semiver(gitVersion, "2.26.0") > -1;
-	if (subdirectory && useSparseCheckout) {
+	const useSparseCheckout = subdirectory && semiver(gitVersion, "2.26.0") > -1;
+	if (useSparseCheckout) {
 		args.push("--filter=blob:none", "--sparse");
 	}
 
@@ -102,7 +102,7 @@ export async function cloneIntoDirectory(
 
 	// if we can use sparse checkout, run it now.
 	// otherwise, the entire repo was cloned anyway, so skip this step
-	if (subdirectory && useSparseCheckout) {
+	if (useSparseCheckout) {
 		await execa("git", [`sparse-checkout`, `set`, subdirectory], {
 			cwd: tempDir,
 		});

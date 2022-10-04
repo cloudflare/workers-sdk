@@ -9,7 +9,7 @@ import { fetchResult } from "./cfetch";
 import { fetchDashboardScript } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
-import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
+import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
@@ -207,7 +207,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	const yesFlag = args.yes ?? false;
 
-	if (!(await isInsideGitRepo(creationDirectory)) && (await isGitInstalled())) {
+	if (!(await isInsideGitRepo(creationDirectory)) && (await getGitVersioon())) {
 		const shouldInitGit =
 			yesFlag ||
 			(await confirm("Would you like to use git to manage this Worker?"));
