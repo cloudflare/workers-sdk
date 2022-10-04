@@ -5,20 +5,6 @@ import { mockConfirm, clearConfirmMocks } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
-const WORKER_TEMPLATE_TYPESCRIPT: Directory = {
-	".git": expect.any(Object),
-	".gitignore": expect.any(String),
-	"README.md": expect.stringContaining("Template: worker-typescript"),
-	"jest.config.json": expect.any(String),
-	"package.json": expect.stringContaining("@cloudflare/workers-types"),
-	src: expect.objectContaining({ "index.ts": expect.any(String) }),
-	test: expect.objectContaining({
-		"index.test.ts": expect.any(String),
-	}),
-	"tsconfig.json": expect.any(String),
-	"wrangler.toml": expect.any(String),
-};
-
 describe("generate", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
@@ -101,9 +87,19 @@ describe("generate", () => {
 
 			expect(std.out).toStrictEqual(expect.stringContaining("my-worker-2"));
 
-			expect(readDirectory("my-worker-2")).toMatchObject<Directory>(
-				WORKER_TEMPLATE_TYPESCRIPT
-			);
+			expect(readDirectory("my-worker-2")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
 		});
 	});
 
@@ -113,9 +109,19 @@ describe("generate", () => {
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
 
-			expect(readDirectory("my-worker")).toMatchObject<Directory>(
-				WORKER_TEMPLATE_TYPESCRIPT
-			);
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"jest.config.json": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				test: expect.objectContaining({
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
 		});
 
 		// mocking out calls to either `isGitInstalled` or `execa("git", ["--version"])`
@@ -126,6 +132,15 @@ describe("generate", () => {
 			await expect(
 				runWrangler("generate my-worker caass/wrangler-generate-test-template")
 			).resolves.toBeUndefined();
+
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({ "index.ts": expect.any(String) }),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
 		});
 
 		it.todo("clones a user/repo/path/to/subdirectory template");
