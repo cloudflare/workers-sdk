@@ -1,6 +1,5 @@
 import assert from "node:assert";
-import Busboy from "busboy";
-import { fetch, File, FormData, Headers } from "undici";
+import { fetch, File, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { logger } from "../logger";
