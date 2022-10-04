@@ -1,13 +1,13 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"files": [
 		"tsconfig.json",
-		"src/**/*",
-		"dist/**/*"
+		"asset-server/**/*",
+		"environment-polyfills/**/*",
+		"metadata-generator/**/*"
 	],
 	"scripts": {
-		"build": "node scripts/build.js",
 		"check:type": "tsc"
 	},
 	"jest": {

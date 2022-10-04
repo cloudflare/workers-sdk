@@ -3,7 +3,7 @@ const maxDynamicRedirectRules = 100;
 const maxLineLength = 2000;
 const maxStaticRedirectRules = 2000;
 
-import { parseRedirects } from "../../src/metadata-generator/parseRedirects";
+import { parseRedirects } from "../..//metadata-generator/parseRedirects";
 
 test("parseRedirects should reject malformed lines", () => {
 	const input = `

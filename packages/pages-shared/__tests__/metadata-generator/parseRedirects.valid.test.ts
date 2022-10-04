@@ -1,4 +1,4 @@
-import { parseRedirects } from "../../src/metadata-generator/parseRedirects";
+import { parseRedirects } from "../../metadata-generator/parseRedirects";
 
 test("parseRedirects should handle a single rule", () => {
 	const input = `/a /b 301`;
