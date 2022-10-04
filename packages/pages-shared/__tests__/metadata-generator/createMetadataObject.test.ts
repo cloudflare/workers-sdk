@@ -1,8 +1,8 @@
-import { createMetadataObject } from "../../src/metadata-generator/createMetadataObject";
+import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
 import type {
 	RedirectRule,
 	HeadersRule,
-} from "../../src/metadata-generator/types";
+} from "../..//metadata-generator/types";
 
 const homeRedirectRule: RedirectRule = {
 	from: "/home",

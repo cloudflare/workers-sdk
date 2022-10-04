@@ -1,8 +1,8 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createMetadataObject } from "@cloudflare/pages-shared/src/metadata-generator/createMetadataObject";
-import { parseHeaders } from "@cloudflare/pages-shared/src/metadata-generator/parseHeaders";
-import { parseRedirects } from "@cloudflare/pages-shared/src/metadata-generator/parseRedirects";
+import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
+import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
+import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
 import { fetch as miniflareFetch } from "@miniflare/core";
 import {
 	Response as MiniflareResponse,
@@ -11,15 +11,15 @@ import {
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { hashFile } from "../pages/hash";
-import type { Metadata } from "@cloudflare/pages-shared/src/asset-server/metadata";
+import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	fetch,
 	Request,
-} from "@cloudflare/pages-shared/src/environment-polyfills/types";
+} from "@cloudflare/pages-shared/environment-polyfills/types";
 import type {
 	ParsedRedirects,
 	ParsedHeaders,
-} from "@cloudflare/pages-shared/src/metadata-generator/types";
+} from "@cloudflare/pages-shared/metadata-generator/types";
 import type { RequestInfo, RequestInit, FetcherFetch } from "@miniflare/core";
 import type { Log } from "miniflare";
 
@@ -73,10 +73,10 @@ async function generateAssetsFetch(
 	log: Log
 ): Promise<typeof fetch> {
 	// Defer importing miniflare until we really need it
-	await import("@cloudflare/pages-shared/src/environment-polyfills/miniflare");
+	await import("@cloudflare/pages-shared/environment-polyfills/miniflare");
 
 	const { generateHandler, parseQualityWeightedList } = await import(
-		"@cloudflare/pages-shared/src/asset-server/handler"
+		"@cloudflare/pages-shared/asset-server/handler"
 	);
 
 	const headersFile = join(directory, "_headers");
