@@ -160,7 +160,7 @@ function isRemote(arg: string) {
  * Also of note, this regex captures an optional tag, but we don't support that.
  */
 const TEMPLATE_REGEX =
-	/^(?:(?:https:\/\/)?(?<httpsUrl>[^:/]+\.[^:/]+)\/|git@(?<gitUrl>[^:/]+)[:/]|(?<shorthandUrl>[^/]+):)?(?<user>[^/\s]+)\/(?<repository>[^/\s#]+)(?:(?<subdirectory>(?:\/[^/\s#]+)+))?(?:\/)?(?:#(?<tag>.+))?/;
+	/^(?:(?:https:\/\/)?(?<httpsUrl>[^:/]+\.[^:/]+)\/|git@(?<gitUrl>[^:/]+)[:/]|(?<shorthandUrl>[^/]+):)?(?<user>[^/\s]+)\/(?<repository>[^/\s#]+)(?:(?<subdirectoryPath>(?:\/[^/\s#]+)+))?(?:\/)?(?:#(?<tag>.+))?/;
 
 // there are a few URL formats we support:
 // - `user/repo` -> assume github, use "https://github.com/user/repo.git"
@@ -187,7 +187,7 @@ type TemplateRegexUrlGroup =
 type TemplateRegexGroups = {
 	user: string;
 	repository: string;
-	subdirectory?: string;
+	subdirectoryPath?: string;
 	tag?: string;
 } & TemplateRegexUrlGroup;
 
@@ -254,12 +254,15 @@ function parseTemplate(template: string): {
 		throw new Error(`Unable to parse ${template} as a template`);
 	}
 
-	const { user, repository, subdirectory, ...urlGroups } = groups;
+	const { user, repository, subdirectoryPath, ...urlGroups } = groups;
 
 	const urlBase = toUrlBase(urlGroups);
 	const remote = urlBase.startsWith("git")
 		? `${urlBase}:${user}/${repository}.git`
 		: `${urlBase}/${user}/${repository}.git`;
+
+	// remove starting /
+	const subdirectory = subdirectoryPath?.slice(1);
 
 	return { remote, subdirectory };
 }
