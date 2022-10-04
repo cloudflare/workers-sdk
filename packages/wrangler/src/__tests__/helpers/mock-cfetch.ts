@@ -78,6 +78,11 @@ export async function mockFetchInternal(
 	return await realFetchInternal(resource, init, queryParams);
 }
 
+/**
+ * We don't have loads of infrastructure around performApiFetch
+ * the same way we do for cfetch, so we'll just pass off the real
+ * deal to avoid getting it auto-mocked, so that msw can catch it.
+ */
 export const mockPerformApiFetch = realPerformApiFetch;
 
 /**
