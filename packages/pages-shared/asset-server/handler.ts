@@ -398,6 +398,9 @@ export async function generateHandler<
 		const setMap = new Set();
 		// Apply every matched rule in order
 		matches.forEach(({ set = {}, unset = [] }) => {
+			unset.forEach((key) => {
+				headers.delete(key);
+			});
 			Object.keys(set).forEach((key) => {
 				if (setMap.has(key.toLowerCase())) {
 					headers.append(key, set[key]);
@@ -405,9 +408,6 @@ export async function generateHandler<
 					headers.set(key, set[key]);
 					setMap.add(key.toLowerCase());
 				}
-			});
-			unset.forEach((key) => {
-				headers.delete(key);
 			});
 		});
 
