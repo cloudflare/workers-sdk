@@ -1722,6 +1722,122 @@ Please make sure the JSON object has the following format:
 and that at least one include rule is provided.
 		`);
 		});
+
+		it("should ignore the entire /functions directory if _worker.js is provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				export async function onRequest() {
+					return new Response("Hello, world!");
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+				};
+			`
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo/deployments",
+				async ([_url, accountId], init) => {
+					assertLater(async () => {
+						expect(accountId).toEqual("some-account-id");
+						expect(init.method).toEqual("POST");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual(["manifest", "_worker.js"]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                          }
+			                      `);
+
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+				"
+								export default {
+									async fetch(request, env) {
+										const url = new URL(request.url);
+										return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+								};
+							"
+			`);
+					});
+
+					return {
+						url: "https://abcxyz.foo.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish public --project-name=foo");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading _worker.js
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
 	});
 
 	describe("project upload", () => {
