@@ -163,7 +163,7 @@ describe("generate", () => {
 			});
 		});
 
-		it("clones a git@github.com/user/repo template", async () => {
+		it.skip("clones a git@github.com/user/repo template", async () => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:caass/wrangler-generate-test-template"
@@ -180,7 +180,7 @@ describe("generate", () => {
 			});
 		});
 
-		it("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
+		it.skip("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:cloudflare/templates/worker-typescript"
