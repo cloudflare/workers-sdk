@@ -65,7 +65,12 @@ jest.mock("../package-manager");
 fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
-		onUnhandledRequest: "warn",
+		onUnhandledRequest: (request) => {
+			throw new Error(
+				`No mock found for ${request.method} ${request.url.href}
+				`
+			);
+		},
 	});
 });
 afterEach(() => {
