@@ -1,10 +1,10 @@
 import { rest } from "msw";
 
-export const mswNamespacesHandlers = [
+export const mswSuccessNamespacesHandlers = [
 	rest.post(
 		"*/accounts/:accountId/workers/dispatch/namespaces",
-		(request, response, context) => {
-			return response(
+		(_, response, context) => {
+			return response.once(
 				context.status(200),
 				context.json({
 					success: true,
@@ -25,7 +25,7 @@ export const mswNamespacesHandlers = [
 	rest.delete(
 		"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceName",
 		(_, response, context) => {
-			return response(
+			return response.once(
 				context.status(200),
 				context.json({
 					success: true,
@@ -39,7 +39,7 @@ export const mswNamespacesHandlers = [
 	rest.put(
 		"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceName",
 		(_, response, context) => {
-			return response(
+			return response.once(
 				context.status(200),
 				context.json({
 					success: true,
@@ -60,7 +60,7 @@ export const mswNamespacesHandlers = [
 	rest.get(
 		"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceName",
 		(_, response, context) => {
-			return response(
+			return response.once(
 				context.status(200),
 				context.json({
 					success: true,
@@ -81,7 +81,7 @@ export const mswNamespacesHandlers = [
 	rest.get(
 		"*/accounts/:accountId/workers/dispatch/namespaces",
 		(_, response, context) => {
-			return response(
+			return response.once(
 				context.status(200),
 				context.json({
 					success: true,
