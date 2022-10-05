@@ -999,7 +999,6 @@ describe("wrangler dev", () => {
 			Options:
 			      --name                                       Name of the worker  [string]
 			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
-			      --format                                     Choose an entry type  [deprecated] [choices: \\"modules\\", \\"service-worker\\"]
 			  -e, --env                                        Perform on a specific environment  [string]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
@@ -1027,7 +1026,6 @@ describe("wrangler dev", () => {
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
 			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
-			      --inspect                                    Enable dev tools  [deprecated] [boolean]
 			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
 			  "warn": "",
