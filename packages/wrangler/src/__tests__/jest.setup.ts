@@ -65,7 +65,7 @@ jest.mock("../package-manager");
 fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
-		onUnhandledRequest: "error",
+		onUnhandledRequest: "warn",
 	});
 });
 afterEach(() => {
