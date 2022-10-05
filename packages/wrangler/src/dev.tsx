@@ -107,6 +107,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 			.option("format", {
 				choices: ["modules", "service-worker"] as const,
 				describe: "Choose an entry type",
+				hidden: true,
 				deprecated: true,
 			})
 			.option("env", {
@@ -285,6 +286,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Enable dev tools",
 				type: "boolean",
 				deprecated: true,
+				hidden: true,
 			})
 			.option("legacy-env", {
 				type: "boolean",

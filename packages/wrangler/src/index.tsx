@@ -424,6 +424,7 @@ function createCLIParser(argv: string[]) {
 						choices: ["modules", "service-worker"] as const,
 						describe: "Choose an entry type",
 						deprecated: true,
+						hidden: true,
 					})
 					.option("compatibility-date", {
 						describe: "Date to use for compatibility checks",
