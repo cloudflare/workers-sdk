@@ -1,8 +1,7 @@
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw } from "./helpers/msw";
-import { mswSucessNamespacesHandlers } from "./helpers/msw/handlers/namespaces";
+import { msw, mswSucessNamespacesHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
