@@ -1,9 +1,9 @@
 import { rest } from "msw";
 
-export const mswR2handlers = [
+export const mswSucessR2handlers = [
 	// List endpoint r2Buckets
 	rest.get("*/accounts/:accountId/r2/buckets", (_, response, context) =>
-		response(
+		response.once(
 			context.status(200),
 			context.json({
 				success: true,
@@ -19,7 +19,7 @@ export const mswR2handlers = [
 		)
 	),
 	rest.post("*/accounts/:accountId/r2/buckets", (_, response, context) =>
-		response(
+		response.once(
 			context.status(200),
 			context.json({ success: true, errors: [], messages: [], result: {} })
 		)
@@ -27,7 +27,7 @@ export const mswR2handlers = [
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
 		(_, response, context) =>
-			response(
+			response.once(
 				context.status(200),
 				context.json({ success: true, errors: [], messages: [], result: {} })
 			)
@@ -35,7 +35,7 @@ export const mswR2handlers = [
 	rest.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
 		(_, response, context) =>
-			response(
+			response.once(
 				context.status(200),
 				context.json({ success: true, errors: [], messages: [], result: null })
 			)
@@ -44,7 +44,7 @@ export const mswR2handlers = [
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) => {
 			const imageBuffer = Buffer.from("wormhole-img.png");
-			return response(
+			return response.once(
 				context.set("Content-Length", imageBuffer.byteLength.toString()),
 				context.set("Content-Type", "image/png"),
 				context.status(200),
@@ -55,7 +55,7 @@ export const mswR2handlers = [
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>
-			response(
+			response.once(
 				context.status(200),
 				context.json({
 					success: true,
@@ -72,7 +72,7 @@ export const mswR2handlers = [
 	rest.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>
-			response(
+			response.once(
 				context.status(200),
 				context.json({ success: true, errors: [], messages: [], result: null })
 			)
