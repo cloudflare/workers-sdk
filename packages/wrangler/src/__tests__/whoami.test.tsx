@@ -7,8 +7,8 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	msw,
-	mswSucessOauthHandlers,
-	mswSucessUserHandlers,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
@@ -21,7 +21,7 @@ describe("getUserInfo()", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
-		msw.use(...mswSucessOauthHandlers, ...mswSucessUserHandlers);
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		setIsTTY(true);
 	});
 

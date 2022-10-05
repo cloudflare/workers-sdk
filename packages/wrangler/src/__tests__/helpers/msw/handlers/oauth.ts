@@ -1,6 +1,6 @@
 import { rest } from "msw";
 
-export const mswSucessOauthHandlers = [
+export const mswSuccessOauthHandlers = [
 	rest.all("*/oauth/callback", (_, response, context) => {
 		return response.once(
 			context.status(200),

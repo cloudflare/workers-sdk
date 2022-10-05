@@ -1,14 +1,14 @@
 import { setupServer } from "msw/node";
-import { mswSucessNamespacesHandlers } from "./handlers/namespaces";
-import { mswSucessOauthHandlers } from "./handlers/oauth";
-import { mswSucessR2handlers } from "./handlers/r2";
-import { mswSucessUserHandlers } from "./handlers/user";
+import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
+import { mswSuccessOauthHandlers } from "./handlers/oauth";
+import { mswSuccessR2handlers } from "./handlers/r2";
+import { mswSuccessUserHandlers } from "./handlers/user";
 
 export const msw = setupServer();
 
 export {
-	mswSucessUserHandlers,
-	mswSucessR2handlers,
-	mswSucessOauthHandlers,
-	mswSucessNamespacesHandlers,
+	mswSuccessUserHandlers,
+	mswSuccessR2handlers,
+	mswSuccessOauthHandlers,
+	mswSuccessNamespacesHandlers,
 };

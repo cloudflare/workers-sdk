@@ -1,6 +1,6 @@
 import { rest } from "msw";
 
-export const mswSucessR2handlers = [
+export const mswSuccessR2handlers = [
 	// List endpoint r2Buckets
 	rest.get("*/accounts/:accountId/r2/buckets", (_, response, context) =>
 		response.once(

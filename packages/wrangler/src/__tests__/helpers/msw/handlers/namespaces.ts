@@ -1,6 +1,6 @@
 import { rest } from "msw";
 
-export const mswSucessNamespacesHandlers = [
+export const mswSuccessNamespacesHandlers = [
 	rest.post(
 		"*/accounts/:accountId/workers/dispatch/namespaces",
 		(_, response, context) => {

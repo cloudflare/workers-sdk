@@ -1,6 +1,6 @@
 import { rest } from "msw";
 
-export const mswSucessUserHandlers = [
+export const mswSuccessUserHandlers = [
 	rest.get("*/user", (_, response, cxt) => {
 		return response.once(
 			cxt.status(200),

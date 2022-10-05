@@ -2,14 +2,14 @@ import * as fs from "node:fs";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw, mswSucessR2handlers } from "./helpers/msw";
+import { msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { R2BucketInfo } from "../r2";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
-	beforeEach(() => msw.use(...mswSucessR2handlers));
+	beforeEach(() => msw.use(...mswSuccessR2handlers));
 
 	mockAccountId();
 	mockApiToken();
