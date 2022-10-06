@@ -223,5 +223,13 @@ describe("Pages Functions", () => {
 
 			expect(response.headers.get("A-Header")).toEqual("Some-Value");
 		});
+
+		it("can unset and set together", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/header-test"
+			);
+
+			expect(response.headers.get("A-Header")).toEqual("New-Value");
+		});
 	});
 });
