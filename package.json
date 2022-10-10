@@ -1,6 +1,7 @@
 {
 	"name": "wrangler-root",
 	"version": "0.0.0",
+	"private": true,
 	"description": "Monorepo for wrangler and associated packages",
 	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"bugs": {

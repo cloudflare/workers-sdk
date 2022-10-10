@@ -28,6 +28,11 @@
 	"bugs": {
 		"url": "https://github.com/cloudflare/wrangler2/issues"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/wrangler2.git",
+		"directory": "packages/wrangler"
+	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"main": "wrangler-dist/cli.js",
