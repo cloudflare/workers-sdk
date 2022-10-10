@@ -183,7 +183,6 @@ describe("wrangler dev", () => {
 			);
 		});
 	});
-
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
 			writeWranglerToml({
@@ -1000,7 +999,6 @@ describe("wrangler dev", () => {
 			Options:
 			      --name                                       Name of the worker  [string]
 			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
-			      --format                                     Choose an entry type  [deprecated] [choices: \\"modules\\", \\"service-worker\\"]
 			  -e, --env                                        Perform on a specific environment  [string]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
@@ -1023,10 +1021,13 @@ describe("wrangler dev", () => {
 			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
 			  -l, --local                                      Run on my machine  [boolean] [default: false]
+			      --experimental-local                         Run on my machine using the Cloudflare Workers runtime  [boolean] [default: false]
 			      --minify                                     Minify the script  [boolean]
 			      --node-compat                                Enable node.js compatibility  [boolean]
-			      --experimental-enable-local-persistence      Enable persistence for this session (only for local mode)  [boolean]
-			      --inspect                                    Enable dev tools  [deprecated] [boolean]",
+			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
+			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
+			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
+			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
 			  "warn": "",
 			}
 		`);
@@ -1105,7 +1106,6 @@ describe("wrangler dev", () => {
 			await runWrangler("dev --assets abc");
 			expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
-
 		it("should warn if --assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
@@ -1210,6 +1210,42 @@ describe("wrangler dev", () => {
 		});
 	});
 
+	describe("--log-level", () => {
+		it("should not output warnings with log-level 'none'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level none");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should output warnings with log-level 'warn'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level warn");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
+
+			",
+			}
+		`);
+		});
+
+		it("should not output Errors with log-level error", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev index.js --inspect --log-level debug");
+			expect(std.debug.length > 1).toBe(true);
+		});
+	});
+
 	describe("service bindings", () => {
 		it("should warn when using service bindings", async () => {
 			writeWranglerToml({
@@ -1288,18 +1324,18 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Using vars defined in .dev.vars
-			        Your worker has access to the following bindings:
-			        - Vars:
-			          - variable: \\"123\\"
-			          - overriden: \\"(hidden)\\"
-			          - SECRET: \\"(hidden)\\"",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Using vars defined in .dev.vars
+			Your worker has access to the following bindings:
+			- Vars:
+			  - variable: 123
+			  - overriden: \\"(hidden)\\"
+			  - SECRET: \\"(hidden)\\"",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 });

@@ -1,15 +1,17 @@
-import { fetch } from "undici";
+import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
+import type { Environment } from "../config";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
-import type { RequestInit, Response } from "undici";
+import type { RequestInit, Response, RequestInfo } from "undici";
 
 interface DevOptions {
 	config?: string;
 	env?: string;
 	ip?: string;
 	port?: number;
+	bundle?: boolean;
 	inspectorPort?: number;
 	localProtocol?: "http" | "https";
 	assets?: string;
@@ -19,7 +21,8 @@ interface DevOptions {
 	nodeCompat?: boolean;
 	compatibilityDate?: string;
 	compatibilityFlags?: string[];
-	experimentalEnableLocalPersistence?: boolean;
+	persist?: boolean;
+	persistTo?: string;
 	liveReload?: boolean;
 	watch?: boolean;
 	vars?: {
@@ -41,14 +44,17 @@ interface DevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	d1Databases?: Environment["d1_databases"];
 	showInteractiveDevSession?: boolean;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	inspect?: boolean;
 	forceLocal?: boolean;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	_?: (string | number)[]; //yargs wants this
 	$0?: string; //yargs wants this
+	testScheduled?: boolean;
+	experimentalLocal?: boolean;
 }
 
 interface DevApiOptions {
@@ -56,23 +62,21 @@ interface DevApiOptions {
 	disableExperimentalWarning?: boolean;
 }
 
-interface UnstableDev {
+export interface UnstableDevWorker {
+	port: number;
+	address: string;
 	stop: () => Promise<void>;
-	fetch: (init?: RequestInit) => Promise<Response | undefined>;
+	fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 	waitUntilExit: () => Promise<void>;
 }
 /**
  *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
- *  @param {string} script
- *  @param {DevOptions} options
- *  @param {DevApiOptions} apiOptions
- * @returns {Promise<UnstableDev>}
  */
 export async function unstable_dev(
 	script: string,
 	options?: DevOptions,
 	apiOptions?: DevApiOptions
-) {
+): Promise<UnstableDevWorker> {
 	const { testMode = true, disableExperimentalWarning = false } =
 		apiOptions || {};
 	if (!disableExperimentalWarning) {
@@ -85,7 +89,7 @@ export async function unstable_dev(
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
 	if (testMode) {
 		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
-		return new Promise<UnstableDev>((resolve) => {
+		return new Promise<UnstableDevWorker>((resolve) => {
 			//lmao
 			return new Promise<Awaited<ReturnType<typeof startApiDev>>>((ready) => {
 				// once the devServer is ready for requests, we resolve the inner promise
@@ -98,8 +102,8 @@ export async function unstable_dev(
 					_: [],
 					$0: "",
 					port: options?.port ?? 0,
-					...options,
 					local: true,
+					...options,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
@@ -110,10 +114,19 @@ export async function unstable_dev(
 				// now that the inner promise has resolved, we can resolve the outer promise
 				// with an object that lets you fetch and stop the dev server
 				resolve({
+					port: readyPort,
+					address: readyAddress,
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
 					},
 					//no-op, does nothing in tests
 					waitUntilExit: async () => {
@@ -125,13 +138,12 @@ export async function unstable_dev(
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 
-		return new Promise<UnstableDev>((resolve) => {
+		return new Promise<UnstableDevWorker>((resolve) => {
 			//lmao
 			return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 				const devServer = startDev({
 					script: script,
 					inspect: false,
-					logLevel: "none",
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
@@ -145,14 +157,51 @@ export async function unstable_dev(
 				});
 			}).then((devServer) => {
 				resolve({
+					port: readyPort,
+					address: readyAddress,
 					stop: devServer.stop,
-					fetch: async (init?: RequestInit) => {
-						const urlToFetch = `http://${readyAddress}:${readyPort}/`;
-						return await fetch(urlToFetch, init);
+					fetch: async (input?: RequestInfo, init?: RequestInit) => {
+						return await fetch(
+							...parseRequestInput(
+								readyAddress,
+								readyPort,
+								input,
+								init,
+								options?.localProtocol
+							)
+						);
 					},
 					waitUntilExit: devServer.devReactElement.waitUntilExit,
 				});
 			});
 		});
 	}
+}
+
+export function parseRequestInput(
+	readyAddress: string,
+	readyPort: number,
+	input?: RequestInfo,
+	init?: RequestInit,
+	protocol: "http" | "https" = "http"
+): [RequestInfo, RequestInit | undefined] {
+	if (input instanceof Request) {
+		return [input, undefined];
+	} else if (input instanceof URL) {
+		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
+	} else if (typeof input === "string") {
+		try {
+			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
+			// Will error if we try and pass "/something" into new URL("/something")
+			input = `${protocol}://${readyAddress}:${readyPort}${
+				new URL(input).pathname
+			}`;
+		} catch {
+			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
+		}
+	} else {
+		input = `${protocol}://${readyAddress}:${readyPort}`;
+	}
+
+	return [input, init];
 }

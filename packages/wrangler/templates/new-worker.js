@@ -9,7 +9,7 @@
  */
 
 export default {
-	async fetch(request) {
+	async fetch(request, env, ctx) {
 		return new Response("Hello World!");
 	},
 };

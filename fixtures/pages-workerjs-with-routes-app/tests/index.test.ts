@@ -59,37 +59,27 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		const response = await waitUntilReady("http://127.0.0.1:8751/");
 		const text = await response.text();
 		expect(text).toContain(
-			"Bonjour de notre projet ✨pages-workerjs-with-routes-app✨!"
+			"Bienvenue sur notre projet &#10024; pages-workerjs-with-routes-app!"
 		);
 	});
 
 	it("runs our _worker.js", async () => {
 		let response = await waitUntilReady("http://127.0.0.1:8751/greeting/hello");
 		let text = await response.text();
-		expect(text).toContain("Bonjour le monde!");
+		expect(text).toEqual("Bonjour le monde!");
 
 		response = await waitUntilReady("http://127.0.0.1:8751/greeting/goodbye");
 		text = await response.text();
-		expect(text).toContain("A plus tard alligator 👋");
+		expect(text).toEqual("A plus tard alligator 👋");
 
 		response = await waitUntilReady("http://127.0.0.1:8751/date");
 		text = await response.text();
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 
-		/**
-		 * :sad_panda:
-		 * only because we are in `dev` mode. For a deployed Pages project such as this, `/date`
-		 * would return`index.html`, because we explicitly excluded it in our custom
-		 * `_routes.json` file.
-		 *
-		 * `cd fixtures/pages-workerjs-with-routes-app && npx wrangler pages publish public` for
-		 * now if you want to test that
-		 *
-		 */
 		response = await waitUntilReady("http://127.0.0.1:8751/party");
 		text = await response.text();
 		expect(text).toContain(
-			"Bonjour de notre projet ✨pages-workerjs-with-routes-app✨!"
+			"Bienvenue sur notre projet &#10024; pages-workerjs-with-routes-app!"
 		);
 	});
 });

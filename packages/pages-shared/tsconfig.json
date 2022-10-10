@@ -2,6 +2,6 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"module": "CommonJS",
-		"types": ["@cloudflare/workers-types", "jest"]
+		"types": ["jest"]
 	}
 }

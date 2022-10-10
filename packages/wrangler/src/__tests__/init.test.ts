@@ -6,7 +6,12 @@ import { parseConfigFileTextToJson } from "typescript";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockFetchDashScript, unsetAllMocks } from "./helpers/mock-cfetch";
+import {
+	setMockFetchDashScript,
+	setMockResponse,
+	unsetAllMocks,
+	unsetSpecialMockFns,
+} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	mockConfirm,
@@ -977,7 +982,8 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				}
+				},
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
@@ -1557,7 +1563,8 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				}
+				},
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
@@ -1591,6 +1598,127 @@ describe("init", () => {
 			        To publish your Worker to the Internet, run \`npm run deploy\`"
 		      `);
 		});
+		it("should add a jest test for a non-ts project with .js extension", async () => {
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install wrangler into package.json?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				},
+				{ text: "Would you like us to write your first test?", result: true }
+			);
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.js?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "jest" }
+			);
+
+			await runWrangler("init");
+
+			checkFiles({
+				items: {
+					"src/index.js": true,
+					"src/index.test.js": true,
+					"src/index.ts": false,
+					"package.json": {
+						contents: expect.objectContaining({
+							name: expect.stringContaining("wrangler-tests"),
+							version: "0.0.0",
+							scripts: {
+								start: "wrangler dev",
+								deploy: "wrangler publish",
+								test: "jest",
+							},
+						}),
+					},
+				},
+			});
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created src/index.js
+			✨ Created src/index.test.js
+			✨ Installed jest into devDependencies
+
+			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
+		});
+
+		it("should add a vitest test for a non-ts project with .js extension", async () => {
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install wrangler into package.json?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				},
+				{ text: "Would you like us to write your first test?", result: true }
+			);
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.js?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
+
+			await runWrangler("init");
+
+			checkFiles({
+				items: {
+					"src/index.js": true,
+					"src/index.test.js": true,
+					"src/index.ts": false,
+					"package.json": {
+						contents: expect.objectContaining({
+							name: expect.stringContaining("wrangler-tests"),
+							version: "0.0.0",
+							scripts: {
+								start: "wrangler dev",
+								deploy: "wrangler publish",
+								test: "vitest",
+							},
+						}),
+					},
+				},
+			});
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created src/index.js
+			✨ Created src/index.test.js
+			✨ Installed vitest into devDependencies
+
+			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
+		});
 
 		it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
 			mockConfirm(
@@ -1605,7 +1733,8 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				}
+				},
+				{ text: "Would you like us to write your first test?", result: false }
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
@@ -1908,6 +2037,7 @@ describe("init", () => {
 		mockAccountId({ accountId: "LCARS" });
 		afterEach(() => {
 			unsetAllMocks();
+			unsetSpecialMockFns();
 		});
 		const mockDashboardScript = `
 		export default {
@@ -1916,12 +2046,315 @@ describe("init", () => {
 			},
 		};
 		`;
+		const mockServiceMetadata = {
+			id: "memory-crystal",
+			default_environment: {
+				environment: "test",
+				created_on: "1987-9-27",
+				modified_on: "1987-9-27",
+				script: {
+					id: "memory-crystal",
+					tag: "test-tag",
+					etag: "some-etag",
+					handlers: [],
+					modified_on: "1987-9-27",
+					created_on: "1987-9-27",
+					migration_tag: "some-migration-tag",
+					usage_model: "bundled",
+					compatibility_date: "1987-9-27",
+				},
+			},
+			created_on: "1987-9-27",
+			modified_on: "1987-9-27",
+			usage_model: "bundled",
+			environments: [
+				{
+					environment: "test",
+					created_on: "1987-9-27",
+					modified_on: "1987-9-27",
+				},
+				{
+					environment: "staging",
+					created_on: "1987-9-27",
+					modified_on: "1987-9-27",
+				},
+			],
+		};
+		const mockBindingsRes = [
+			{
+				type: "secret_text",
+				name: "ABC",
+			},
+			{
+				type: "plain_text",
+				name: "ANOTHER",
+				text: "thing",
+			},
+			{
+				type: "durable_object_namespace",
+				name: "DURABLE_TEST",
+				class_name: "Durability",
+				script_name: "another-durable-object-worker",
+				environment: "production",
+			},
+			{
+				type: "kv_namespace",
+				name: "kv_testing",
+				namespace_id: "some-namespace-id",
+			},
+			{
+				type: "r2_bucket",
+				bucket_name: "test-bucket",
+				name: "test-bucket",
+			},
+			{
+				environment: "production",
+				name: "website",
+				service: "website",
+				type: "service",
+			},
+			{
+				type: "namespace",
+				name: "name-namespace-mock",
+				namespace: "namespace-mock",
+			},
+			{
+				name: "httplogs",
+				type: "logfwdr",
+				destination: "httplogs",
+			},
+			{
+				name: "trace",
+				type: "logfwdr",
+				destination: "trace",
+			},
+			{
+				type: "wasm_module",
+				name: "WASM_MODULE_ONE",
+				part: "./some_wasm.wasm",
+			},
+			{
+				type: "wasm_module",
+				name: "WASM_MODULE_TWO",
+				part: "./more_wasm.wasm",
+			},
+			{
+				type: "text_blob",
+				name: "TEXT_BLOB_ONE",
+				part: "./my-entire-app-depends-on-this.cfg",
+			},
+			{
+				type: "text_blob",
+				name: "TEXT_BLOB_TWO",
+				part: "./the-entirety-of-human-knowledge.txt",
+			},
+			{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
+			{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
+			{
+				type: "some unsafe thing",
+				name: "UNSAFE_BINDING_ONE",
+				data: { some: { unsafe: "thing" } },
+			},
+			{
+				type: "another unsafe thing",
+				name: "UNSAFE_BINDING_TWO",
+				data: 1337,
+			},
+		];
+		const mockRoutesRes = [
+			{
+				id: "some-route-id",
+				pattern: "delta.quadrant",
+			},
+		];
+		const mockConfigExpected = {
+			main: "src/index.ts",
+			compatibility_date: "1987-9-27",
+			name: "isolinear-optical-chip",
+			migrations: [
+				{
+					new_classes: ["Durability"],
+					tag: "some-migration-tag",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						class_name: "Durability",
+						name: "DURABLE_TEST",
+						script_name: "another-durable-object-worker",
+						environment: "production",
+					},
+				],
+			},
+			kv_namespaces: [
+				{
+					binding: "kv_testing",
+					id: "some-namespace-id",
+				},
+			],
+			r2_buckets: [
+				{
+					bucket_name: "test-bucket",
+					binding: "test-bucket",
+				},
+			],
+			dispatch_namespaces: [
+				{
+					binding: "name-namespace-mock",
+					namespace: "namespace-mock",
+				},
+			],
+			route: "delta.quadrant",
+			services: [
+				{
+					environment: "production",
+					binding: "website",
+					service: "website",
+				},
+			],
+			triggers: {
+				crons: ["0 0 0 * * *"],
+			},
+			usage_model: "bundled",
+			vars: {
+				name: "ANOTHER",
+				text: "thing",
+			},
+			env: {
+				test: {},
+				staging: {},
+			},
+			unsafe: {
+				bindings: [
+					{
+						name: "UNSAFE_BINDING_ONE",
+						type: "some unsafe thing",
+						data: { some: { unsafe: "thing" } },
+					},
+					{
+						name: "UNSAFE_BINDING_TWO",
+						type: "another unsafe thing",
+						data: 1337,
+					},
+				],
+			},
+			wasm_modules: {
+				WASM_MODULE_ONE: "./some_wasm.wasm",
+				WASM_MODULE_TWO: "./more_wasm.wasm",
+			},
+			text_blobs: {
+				TEXT_BLOB_ONE: "./my-entire-app-depends-on-this.cfg",
+				TEXT_BLOB_TWO: "./the-entirety-of-human-knowledge.txt",
+			},
+			data_blobs: {
+				DATA_BLOB_ONE: "DATA_BLOB_ONE",
+				DATA_BLOB_TWO: "DATA_BLOB_TWO",
+			},
+			logfwdr: {
+				schema: "",
+				bindings: [
+					{
+						name: "httplogs",
+						destination: "httplogs",
+					},
+					{
+						name: "trace",
+						destination: "trace",
+					},
+				],
+			},
+		};
+
+		function mockSupportingDashRequests({
+			expectedAccountId = "",
+			expectedScriptName = "",
+			expectedEnvironment = "",
+			expectedCompatDate,
+		}: {
+			expectedAccountId: string;
+			expectedScriptName: string;
+			expectedEnvironment: string;
+			expectedCompatDate: string | undefined;
+		}) {
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName`,
+				"GET",
+				([_url, accountId, scriptName]) => {
+					expect(accountId).toEqual(expectedAccountId);
+					expect(scriptName).toEqual(expectedScriptName);
+
+					if (expectedCompatDate === undefined)
+						(mockServiceMetadata.default_environment.script
+							.compatibility_date as unknown) = expectedCompatDate;
+					return mockServiceMetadata;
+				}
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+				"GET",
+				([_url, accountId, scriptName, environment]) => {
+					expect(accountId).toEqual(expectedAccountId);
+					expect(scriptName).toEqual(expectedScriptName);
+					expect(environment).toEqual(expectedEnvironment);
+
+					return mockBindingsRes;
+				}
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+				"GET",
+				([_url, accountId, scriptName, environment]) => {
+					expect(accountId).toEqual(expectedAccountId);
+					expect(scriptName).toEqual(expectedScriptName);
+					expect(environment).toEqual(expectedEnvironment);
+
+					return mockRoutesRes;
+				}
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+				"GET",
+				([_url, accountId, scriptName, environment]) => {
+					expect(accountId).toEqual(expectedAccountId);
+					expect(scriptName).toEqual(expectedScriptName);
+					expect(environment).toEqual(expectedEnvironment);
+
+					return mockServiceMetadata.default_environment;
+				}
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+				"GET",
+				([_url, accountId, scriptName]) => {
+					expect(accountId).toEqual(expectedAccountId);
+					expect(scriptName).toEqual(expectedScriptName);
+
+					return {
+						schedules: [
+							{
+								cron: "0 0 0 * * *",
+								created_on: new Date(1987, 9, 27),
+								modified_on: new Date(1987, 9, 27),
+							},
+						],
+					};
+				}
+			);
+		}
 
 		//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
 		it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "memory-crystal",
+				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
+			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
 				fromDashScriptName: "memory-crystal",
+				environment: mockServiceMetadata.default_environment.environment,
 				mockResponse: mockDashboardScript,
 			});
 			mockConfirm(
@@ -1960,17 +2393,23 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/tsconfig.json": true,
 					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "isolinear-optical-chip",
+						...mockConfigExpected,
 					}),
 				},
 			});
 		});
 
 		it("should download source script from dashboard w/ out positional <name>", async () => {
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "isolinear-optical-chip",
+				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
+			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
 				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
 				mockResponse: mockDashboardScript,
 			});
 			mockConfirm(
@@ -2007,7 +2446,7 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/tsconfig.json": true,
 					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
+						...mockConfigExpected,
 						name: "isolinear-optical-chip",
 					}),
 				},
@@ -2015,9 +2454,16 @@ describe("init", () => {
 		});
 
 		it("should download source script from dashboard as plain JavaScript", async () => {
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "isolinear-optical-chip",
+				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
+			});
 			setMockFetchDashScript({
 				accountId: "LCARS",
 				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
 				mockResponse: mockDashboardScript,
 			});
 			mockConfirm(
@@ -2054,7 +2500,207 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/tsconfig.json": false,
 					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
+						...mockConfigExpected,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
+		it("should use fallback compatibility date if none is upstream", async () => {
+			const mockDate = "1988-08-07";
+			jest
+				.spyOn(Date.prototype, "toISOString")
+				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "isolinear-optical-chip",
+				expectedEnvironment: "test",
+				expectedCompatDate: undefined,
+			});
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			mockConfigExpected.compatibility_date = "1988-08-07";
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.ts": {
+						contents: mockDashboardScript,
+					},
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": true,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...mockConfigExpected,
+						name: "isolinear-optical-chip",
+					}),
+				},
+			});
+		});
+
+		it("should throw an error to retry if a request fails", async () => {
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName`,
+				"GET",
+				() => mockServiceMetadata
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+				"GET",
+				() => Promise.reject()
+			);
+
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await expect(
+				runWrangler("init  --from-dash isolinear-optical-chip")
+			).rejects.toThrowError();
+		});
+
+		it("should not inlcude migrations in config file when none are necessary", async () => {
+			const mockDate = "1988-08-07";
+			jest
+				.spyOn(Date.prototype, "toISOString")
+				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+			const mockData = {
+				id: "memory-crystal",
+				default_environment: {
+					environment: "test",
+					created_on: "1988-08-07",
+					modified_on: "1988-08-07",
+					script: {
+						id: "memory-crystal",
+						tag: "test-tag",
+						etag: "some-etag",
+						handlers: [],
+						modified_on: "1988-08-07",
+						created_on: "1988-08-07",
+						usage_model: "bundled",
+						compatibility_date: "1988-08-07",
+					},
+				},
+				environments: [],
+			};
+
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName`,
+				"GET",
+				() => mockData
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+				"GET",
+				() => []
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+				"GET",
+				() => []
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+				"GET",
+				() => mockServiceMetadata.default_environment
+			);
+			setMockResponse(
+				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+				"GET",
+				() => {
+					return {
+						schedules: [],
+					};
+				}
+			);
+
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "isolinear-optical-chip",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						compatibility_date: "1988-08-07",
+						env: {},
+						main: "src/index.ts",
+						triggers: {
+							crons: [],
+						},
+						usage_model: "bundled",
 						name: "isolinear-optical-chip",
 					}),
 				},

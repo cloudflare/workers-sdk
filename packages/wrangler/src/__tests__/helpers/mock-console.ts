@@ -29,7 +29,9 @@ const std = {
 function normalizeOutput(spy: jest.SpyInstance): string {
 	return normalizeErrorMarkers(
 		replaceByte(
-			stripTrailingWhitespace(normalizeSlashes(stripTimings(captureCalls(spy))))
+			stripTrailingWhitespace(
+				normalizeSlashes(normalizeTempDirs(stripTimings(captureCalls(spy))))
+			)
 		)
 	);
 }
@@ -93,5 +95,12 @@ export function stripTrailingWhitespace(str: string): string {
  * variation causing every few tests the value to change by ± .01
  */
 function replaceByte(stdout: string): string {
-	return stdout.replaceAll(/.[0-9][0-9] KiB/g, "xx KiB");
+	return stdout.replaceAll(/\d+\.\d+ KiB/g, "xx KiB");
+}
+
+/**
+ * Temp directories are created with random names, so we replace all comments temp dirs in them
+ */
+export function normalizeTempDirs(stdout: string): string {
+	return stdout.replaceAll(/\/\/.+\/tmp.+/g, "//tmpdir");
 }

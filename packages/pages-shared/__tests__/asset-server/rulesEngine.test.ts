@@ -1,7 +1,7 @@
 import {
 	generateRulesMatcher,
 	replacer,
-} from "../../src/asset-server/rulesEngine";
+} from "../..//asset-server/rulesEngine";
 
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {

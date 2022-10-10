@@ -6,6 +6,7 @@ import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
+import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
 import { getEntry } from "./entry";
@@ -13,19 +14,19 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
-import { getZoneIdFromHost, getZoneForRoute, getHostFromRoute } from "./zones";
+import { identifyD1BindingsAsBeta } from "./worker";
+import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
-	printWranglerBanner,
-	DEFAULT_LOCAL_PORT,
 	type ConfigPath,
-	getScriptName,
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
 	getDevCompatibilityDate,
 	getRules,
+	getScriptName,
 	isLegacyEnv,
-	DEFAULT_INSPECTOR_PORT,
+	printWranglerBanner,
 } from "./index";
-
-import type { Config } from "./config";
+import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
@@ -61,16 +62,20 @@ interface DevArgs {
 	"jsx-fragment"?: string;
 	tsconfig?: string;
 	local?: boolean;
+	"experimental-local"?: boolean;
 	minify?: boolean;
 	var?: string[];
 	define?: string[];
 	"node-compat"?: boolean;
 	"experimental-enable-local-persistence"?: boolean;
+	persist?: boolean;
+	"persist-to"?: string;
 	"live-reload"?: boolean;
 	onReady?: (ip: string, port: number) => void;
-	logLevel?: "none" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
+	"test-scheduled"?: boolean;
 }
 
 export function devOptions(yargs: Argv): Argv<DevArgs> {
@@ -102,6 +107,7 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 			.option("format", {
 				choices: ["modules", "service-worker"] as const,
 				describe: "Choose an entry type",
+				hidden: true,
 				deprecated: true,
 			})
 			.option("env", {
@@ -230,6 +236,20 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 				default: false, // I bet this will a point of contention. We'll revisit it.
 			})
+			.option("experimental-local", {
+				describe: "Run on my machine using the Cloudflare Workers runtime",
+				type: "boolean",
+				default: false,
+			})
+			.check((argv) => {
+				if (argv.local && argv["experimental-local"]) {
+					throw new Error(
+						"--local and --experimental-local are mutually exclusive. " +
+							"Please select one or the other."
+					);
+				}
+				return true;
+			})
 			.option("minify", {
 				describe: "Minify the script",
 				type: "boolean",
@@ -239,8 +259,22 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
-				describe: "Enable persistence for this session (only for local mode)",
+				describe:
+					"Enable persistence for local mode (deprecated, use --persist)",
 				type: "boolean",
+				deprecated: true,
+				hidden: true,
+			})
+			.option("persist", {
+				describe:
+					"Enable persistence for local mode, using default path: .wrangler/state",
+				type: "boolean",
+			})
+			.option("persist-to", {
+				describe:
+					"Specify directory to use for local persistence (implies --persist)",
+				type: "string",
+				requiresArg: true,
 			})
 			.option("live-reload", {
 				// TODO: Add back in once we have remote `--live-reload`
@@ -252,11 +286,22 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Enable dev tools",
 				type: "boolean",
 				deprecated: true,
+				hidden: true,
 			})
 			.option("legacy-env", {
 				type: "boolean",
 				describe: "Use legacy environments",
 				hidden: true,
+			})
+			.option("test-scheduled", {
+				describe: "Test scheduled events by visiting /__scheduled in browser",
+				type: "boolean",
+				default: false,
+			})
+			.option("log-level", {
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				describe: "Specify logging level",
+				default: "log",
 			})
 	);
 }
@@ -293,7 +338,9 @@ export type AdditionalDevProps = {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	d1Databases?: Environment["d1_databases"];
 };
+
 type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
@@ -307,8 +354,7 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		if (args.logLevel) {
-			// we don't define a "none" logLevel, so "error" will do for now.
-			logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
 
@@ -342,6 +388,7 @@ export async function startDev(args: StartDevOptions) {
 			getLocalPort,
 			getInspectorPort,
 			cliDefines,
+			localPersistencePath,
 		} = await validateDevServerSettings(args, config);
 
 		await metrics.sendMetricsEvent(
@@ -375,16 +422,16 @@ export async function startDev(args: StartDevOptions) {
 					nodeCompat={nodeCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
-					initialMode={args.local ? "local" : "remote"}
+					initialMode={
+						args.local || args.experimentalLocal ? "local" : "remote"
+					}
 					jsxFactory={args["jsx-factory"] || configParam.jsx_factory}
 					jsxFragment={args["jsx-fragment"] || configParam.jsx_fragment}
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
 					localUpstream={args["local-upstream"] || host}
-					enableLocalPersistence={
-						args.experimentalEnableLocalPersistence || false
-					}
+					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
 					accountId={configParam.account_id || getAccountFromCache()?.id}
 					assetPaths={assetPaths}
@@ -408,7 +455,6 @@ export async function startDev(args: StartDevOptions) {
 					bindings={bindings}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
-					logLevel={args.logLevel}
 					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
@@ -417,6 +463,8 @@ export async function startDev(args: StartDevOptions) {
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
+					testScheduled={args["test-scheduled"]}
+					experimentalLocal={args.experimentalLocal}
 				/>
 			);
 		}
@@ -437,8 +485,7 @@ export async function startDev(args: StartDevOptions) {
 
 export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
-		// we don't define a "none" logLevel, so "error" will do for now.
-		logger.loggerLevel = args.logLevel === "none" ? "error" : args.logLevel;
+		logger.loggerLevel = args.logLevel;
 	}
 	await printWranglerBanner();
 
@@ -458,6 +505,7 @@ export async function startApiDev(args: StartDevOptions) {
 		getLocalPort,
 		getInspectorPort,
 		cliDefines,
+		localPersistencePath,
 	} = await validateDevServerSettings(args, config);
 
 	await metrics.sendMetricsEvent(
@@ -473,9 +521,13 @@ export async function startApiDev(args: StartDevOptions) {
 			configParam
 		);
 
+		//if args.bundle is on, don't disable bundling
+		//if there's no args.bundle, and configParam.no_bundle is on, disable bundling
+		//otherwise, enable bundling
+		const enableBundling = args.bundle ?? !configParam.no_bundle;
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
-			noBundle: !(args.bundle ?? !configParam.no_bundle),
+			noBundle: !enableBundling,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,
@@ -494,7 +546,7 @@ export async function startApiDev(args: StartDevOptions) {
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol || configParam.dev.local_protocol,
 			localUpstream: args["local-upstream"] || host,
-			enableLocalPersistence: args.experimentalEnableLocalPersistence || false,
+			localPersistencePath,
 			liveReload: args.liveReload || false,
 			accountId: configParam.account_id || getAccountFromCache()?.id,
 			assetPaths: assetPaths,
@@ -512,24 +564,28 @@ export async function startApiDev(args: StartDevOptions) {
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
-				args["compatibility-date"]
+				// Only `compatibilityDate` will be set when using `unstable_dev`
+				args["compatibility-date"] ?? args.compatibilityDate
 			),
 			compatibilityFlags:
-				args["compatibility-flags"] || configParam.compatibility_flags,
+				args["compatibility-flags"] ??
+				args.compatibilityFlags ??
+				configParam.compatibility_flags,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
-			logLevel: args.logLevel,
 			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
-			local: true,
-			firstPartyWorker: undefined,
-			sendMetrics: undefined,
+			local: args.local ?? true,
+			firstPartyWorker: configParam.first_party_worker,
+			sendMetrics: configParam.send_metrics,
+			testScheduled: args.testScheduled,
+			experimentalLocal: args.experimentalLocal,
 		});
 	}
 
@@ -655,7 +711,6 @@ async function validateDevServerSettings(
 			"The --assets argument is experimental and may change or break at any time"
 		);
 	}
-
 	const upstreamProtocol =
 		args["upstream-protocol"] || config.dev.upstream_protocol;
 	if (upstreamProtocol === "http") {
@@ -671,6 +726,20 @@ async function validateDevServerSettings(
 			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
+
+	if (args.experimentalEnableLocalPersistence) {
+		logger.warn(
+			`--experimental-enable-local-persistence is deprecated.\n` +
+				`Move any existing data to .wrangler/state and use --persist, or\n` +
+				`use --persist-to=./wrangler-local-state to keep using the old path.`
+		);
+	}
+
+	const localPersistencePath = getLocalPersistencePath(
+		args.persistTo,
+		Boolean(args.persist),
+		config.configPath
+	);
 
 	const cliDefines =
 		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
@@ -689,6 +758,7 @@ async function validateDevServerSettings(
 		host,
 		routes,
 		cliDefines,
+		localPersistencePath,
 	};
 }
 
@@ -709,6 +779,7 @@ async function getBindingsAndAssetPaths(
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
+		d1Databases: args.d1Databases,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -800,6 +871,10 @@ async function getBindings(
 		services: configParam.services,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
+		d1_databases: identifyD1BindingsAsBeta([
+			...configParam.d1_databases,
+			...(args.d1Databases || []),
+		]),
 	};
 
 	return bindings;

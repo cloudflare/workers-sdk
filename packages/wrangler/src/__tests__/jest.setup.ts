@@ -5,6 +5,7 @@ import {
 	fetchKVGetValue,
 	fetchR2Objects,
 	getCloudflareAPIBaseURL,
+	performApiFetch,
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import {
@@ -12,8 +13,10 @@ import {
 	mockFetchInternal,
 	mockFetchKVGetValue,
 	mockFetchR2Objects,
+	mockPerformApiFetch,
 } from "./helpers/mock-cfetch";
 import { MockWebSocket } from "./helpers/mock-web-socket";
+import { msw } from "./helpers/msw";
 
 /**
  * The relative path between the bundled code and the Wrangler package.
@@ -57,6 +60,25 @@ fetchMock.doMock(() => {
 
 jest.mock("../package-manager");
 
+// requests not mocked with `jest-fetch-mock` fall through
+// to `mock-service-worker`
+fetchMock.dontMock();
+beforeAll(() => {
+	msw.listen({
+		onUnhandledRequest: (request) => {
+			throw new Error(
+				`No mock found for ${request.method} ${request.url.href}
+				`
+			);
+		},
+	});
+});
+afterEach(() => {
+	msw.restoreHandlers();
+	msw.resetHandlers();
+});
+afterAll(() => msw.close());
+
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
@@ -65,6 +87,7 @@ jest.mock("../cfetch/internal");
 );
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
 (fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
+(performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
 jest.mock("../dialogs");
 
@@ -144,8 +167,6 @@ jest.mock("xdg-app-paths", () => {
 		}),
 	};
 });
-
-jest.mock("create-cloudflare");
 
 jest.mock("../metrics/metrics-config", () => {
 	const realModule = jest.requireActual("../metrics/metrics-config");

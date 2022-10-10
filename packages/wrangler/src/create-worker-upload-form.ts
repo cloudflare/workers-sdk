@@ -41,6 +41,7 @@ type WorkerMetadataBinding =
 	  }
 	| { type: "queue"; name: string; queue_name: string }
 	| { type: "r2_bucket"; name: string; bucket_name: string }
+	| { type: "d1"; name: string; id: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "namespace"; name: string; namespace: string }
 	| {
@@ -60,7 +61,7 @@ export interface WorkerMetadata {
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
-	keep_bindings: WorkerMetadataBinding["type"][];
+	keep_bindings?: WorkerMetadataBinding["type"][];
 }
 
 /**
@@ -75,6 +76,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		usage_model,
 		compatibility_date,
 		compatibility_flags,
+		keepVars,
 	} = worker;
 
 	let { modules } = worker;
@@ -122,6 +124,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "r2_bucket",
 			bucket_name,
+		});
+	});
+
+	bindings.d1_databases?.forEach(({ binding, database_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "d1",
+			id: database_id,
 		});
 	});
 
@@ -266,7 +276,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
-		keep_bindings: ["plain_text", "json"],
+		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));

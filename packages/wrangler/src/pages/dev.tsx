@@ -1,21 +1,23 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
-import { build as workerJsBuild } from "esbuild";
+import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
+import { esbuildAliasExternalPlugin } from "../bundle";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
-import { SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
+import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { YargsOptionsToInterface } from "./types";
-import type { Plugin } from "esbuild";
 import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
@@ -97,6 +99,10 @@ export function Options(yargs: Argv) {
 				description: "KV namespace to bind (--kv KV_BINDING)",
 				alias: "k",
 			},
+			d1: {
+				type: "array",
+				description: "D1 database to bind",
+			},
 			do: {
 				type: "array",
 				description: "Durable Object to bind (--do NAME=CLASS)",
@@ -116,9 +122,22 @@ export function Options(yargs: Argv) {
 				choices: ["http", "https"] as const,
 			},
 			"experimental-enable-local-persistence": {
+				describe:
+					"Enable persistence for local mode (deprecated, use --persist)",
 				type: "boolean",
-				default: false,
-				describe: "Enable persistence for this session (only for local mode)",
+				deprecated: true,
+				hidden: true,
+			},
+			persist: {
+				describe:
+					"Enable persistence for local mode, using default path: .wrangler/state",
+				type: "boolean",
+			},
+			"persist-to": {
+				describe:
+					"Specify directory to use for local persistence (implies --persist)",
+				type: "string",
+				requiresArg: true,
 			},
 			"node-compat": {
 				describe: "Enable node.js compatibility",
@@ -130,6 +149,10 @@ export function Options(yargs: Argv) {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
 				hidden: true,
+			},
+			"log-level": {
+				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+				describe: "Specify logging level",
 			},
 		})
 		.epilogue(pagesBetaWarning);
@@ -148,16 +171,26 @@ export const Handler = async ({
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
+	d1: d1s = [],
 	r2: r2s = [],
 	"live-reload": liveReload,
 	"local-protocol": localProtocol,
-	"experimental-enable-local-persistence": experimentalEnableLocalPersistence,
+	experimentalEnableLocalPersistence,
+	persist,
+	persistTo,
 	"node-compat": nodeCompat,
 	config: config,
 	_: [_pages, _dev, ...remaining],
+	logLevel,
 }: PagesDevArgs) => {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
+
+	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
+	if (logLevel) {
+		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
+		logger.loggerLevel = logLevel as LogLevelArg;
+	}
 
 	if (!local) {
 		throw new FatalError("Only local mode is supported at the moment.", 1);
@@ -166,9 +199,6 @@ export const Handler = async ({
 	if (config) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
-
-	const functionsDirectory = "./functions";
-	let usingFunctions = existsSync(functionsDirectory);
 
 	const command = remaining;
 
@@ -189,15 +219,55 @@ export const Handler = async ({
 		directory = resolve(directory);
 	}
 
+	if (experimentalEnableLocalPersistence) {
+		logger.warn(
+			`--experimental-enable-local-persistence is deprecated.\n` +
+				`Move any existing data to .wrangler/state and use --persist, or\n` +
+				`use --persist-to=./wrangler-local-state to keep using the old path.`
+		);
+	}
+
 	let scriptReadyResolve: () => void;
 	const scriptReadyPromise = new Promise<void>(
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
+	const workerScriptPath =
+		directory !== undefined
+			? join(directory, singleWorkerScriptPath)
+			: singleWorkerScriptPath;
+	const usingWorkerScript = existsSync(workerScriptPath);
+
+	const functionsDirectory = "./functions";
+	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
+
 	let scriptPath = "";
 
-	// Try to use Functions
-	if (usingFunctions) {
+	if (usingWorkerScript) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		scriptReadyResolve!();
+
+		scriptPath = workerScriptPath;
+
+		const runBuild = async () => {
+			try {
+				await esbuild.build({
+					entryPoints: [scriptPath],
+					write: false,
+					plugins: [blockWorkerJsImports],
+				});
+			} catch {}
+		};
+
+		await runBuild();
+		watch([scriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		}).on("all", async () => {
+			await runBuild();
+		});
+	} else if (usingFunctions) {
+		// Try to use Functions
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		scriptPath = outfile;
 
@@ -262,38 +332,15 @@ export const Handler = async ({
 			}
 		}
 	}
+
 	// Depending on the result of building Functions, we may not actually be using
 	// Functions even if the directory exists.
-	if (!usingFunctions) {
+	if (!usingFunctions && !usingWorkerScript) {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
-		scriptPath =
-			directory !== undefined
-				? join(directory, singleWorkerScriptPath)
-				: singleWorkerScriptPath;
-
-		if (!existsSync(scriptPath)) {
-			logger.log("No functions. Shimming...");
-			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
-		} else {
-			const runBuild = async () => {
-				try {
-					await workerJsBuild({
-						entryPoints: [scriptPath],
-						write: false,
-						plugins: [blockWorkerJsImports],
-					});
-				} catch {}
-			};
-			await runBuild();
-			watch([scriptPath], {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async () => {
-				await runBuild();
-			});
-		}
+		logger.log("No functions. Shimming...");
+		scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 	}
 
 	await scriptReadyPromise;
@@ -307,8 +354,108 @@ export const Handler = async ({
 		);
 	}
 
+	let entrypoint = scriptPath;
+
+	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
+	if (directory && (usingFunctions || usingWorkerScript)) {
+		const routesJSONPath = join(directory, "_routes.json");
+
+		if (existsSync(routesJSONPath)) {
+			let routesJSONContents: string;
+			const runBuild = async (
+				entrypointFile: string,
+				outfile: string,
+				routes: string
+			) => {
+				await esbuild.build({
+					entryPoints: [
+						resolve(getBasePath(), "templates/pages-dev-pipeline.ts"),
+					],
+					bundle: true,
+					sourcemap: true,
+					format: "esm",
+					plugins: [
+						esbuildAliasExternalPlugin({
+							__ENTRY_POINT__: entrypointFile,
+						}),
+					],
+					outfile,
+					define: {
+						__ROUTES__: routes,
+					},
+				});
+			};
+
+			try {
+				// always run the routes validation first. If _routes.json is invalid we
+				// want to throw accordingly and exit.
+				routesJSONContents = readFileSync(routesJSONPath, "utf-8");
+				validateRoutes(JSON.parse(routesJSONContents), directory);
+
+				entrypoint = join(
+					tmpdir(),
+					`${Math.random().toString(36).slice(2)}.js`
+				);
+				await runBuild(scriptPath, entrypoint, routesJSONContents);
+			} catch (err) {
+				if (err instanceof FatalError) {
+					throw err;
+				} else {
+					throw new FatalError(
+						`Could not validate _routes.json at ${directory}: ${err}`,
+						1
+					);
+				}
+			}
+
+			watch([routesJSONPath], {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async () => {
+				try {
+					/**
+					 * Watch for _routes.json file changes and validate file each time.
+					 * If file is valid proceed to running the build.
+					 */
+					routesJSONContents = readFileSync(routesJSONPath, "utf-8");
+					validateRoutes(JSON.parse(routesJSONContents), directory as string);
+					await runBuild(scriptPath, entrypoint, routesJSONContents);
+				} catch (err) {
+					/**
+					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
+					 * and continue to serve the assets. At the same time make sure we warn users that we
+					 * we detected an invalid file and that we'll be using a default.
+					 * This basically equivalates to serving a Functions or _worker.js project as is,
+					 * without applying any additional routing rules on top.
+					 */
+					const error =
+						err instanceof FatalError
+							? err
+							: `Could not validate _routes.json at ${directory}: ${err}`;
+					const defaultRoutesJSONSpec: RoutesJSONSpec = {
+						version: ROUTES_SPEC_VERSION,
+						include: ["/*"],
+						exclude: [],
+					};
+
+					logger.error(error);
+					logger.warn(
+						`Falling back to the following _routes.json default: ${JSON.stringify(
+							defaultRoutesJSONSpec,
+							null,
+							2
+						)}`
+					);
+
+					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
+					await runBuild(scriptPath, entrypoint, routesJSONContents);
+				}
+			});
+		}
+	}
+
 	const { stop, waitUntilExit } = await unstable_dev(
-		scriptPath,
+		entrypoint,
 		{
 			ip,
 			port,
@@ -353,16 +500,23 @@ export const Handler = async ({
 				return { binding: binding.toString(), bucket_name: "" };
 			}),
 
+			d1Databases: d1s.map((binding) => ({
+				binding: binding.toString(),
+				database_id: "", // Required for types, but unused by dev
+				database_name: `local-${binding}`,
+			})),
+
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
 			},
 			forceLocal: true,
-			experimentalEnableLocalPersistence,
+			persist,
+			persistTo,
 			showInteractiveDevSession: undefined,
 			inspect: true,
-			logLevel: "error",
 			logPrefix: "pages",
+			logLevel: logLevel ?? "warn",
 		},
 		{ testMode: false, disableExperimentalWarning: true }
 	);
@@ -451,9 +605,13 @@ async function spawnProxyProcess({
 	command: (string | number)[];
 }): Promise<undefined | number> {
 	if (command.length === 0) {
+		if (port !== undefined) {
+			return port;
+		}
+
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve or a command to run.",
+			"Must specify a directory of static assets to serve or a command to run or a proxy port.",
 			1
 		);
 	}
@@ -516,9 +674,9 @@ async function spawnProxyProcess({
 	return port;
 }
 
-const blockWorkerJsImports: Plugin = {
+const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
-	setup(build) {
+	setup(build: esbuild.PluginBuild) {
 		build.onResolve({ filter: /.*/g }, (_args) => {
 			logger.error(
 				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`

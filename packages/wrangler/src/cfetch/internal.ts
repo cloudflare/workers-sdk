@@ -1,6 +1,5 @@
 import assert from "node:assert";
-import Busboy from "busboy";
-import { fetch, File, FormData, Headers } from "undici";
+import { fetch, File, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getEnvironmentVariableFactory } from "../environment-variables";
 import { logger } from "../logger";
@@ -19,6 +18,43 @@ export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
 	defaultValue: "https://api.cloudflare.com/client/v4",
 });
 
+/*
+ * performApiFetch does everything required to make a CF API request,
+ * but doesn't parse the response as JSON. For normal V4 API responses,
+ * use `fetchInternal`
+ * */
+export async function performApiFetch(
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+) {
+	const method = init.method ?? "GET";
+	assert(
+		resource.startsWith("/"),
+		`CF API fetch - resource path must start with a "/" but got "${resource}"`
+	);
+	await requireLoggedIn();
+	const apiToken = requireApiToken();
+	const headers = cloneHeaders(init.headers);
+	addAuthorizationHeaderIfUnspecified(headers, apiToken);
+	addUserAgent(headers);
+
+	const queryString = queryParams ? `?${queryParams.toString()}` : "";
+	logger.debug(
+		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
+	);
+	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
+	logger.debug("INIT:", JSON.stringify(init, null, 2));
+	logger.debug("-- END CF API REQUEST");
+	return await fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
+		method,
+		...init,
+		headers,
+		signal: abortSignal,
+	});
+}
+
 /**
  * Make a fetch request to the Cloudflare API.
  *
@@ -34,33 +70,12 @@ export async function fetchInternal<ResponseType>(
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
-	assert(
-		resource.startsWith("/"),
-		`CF API fetch - resource path must start with a "/" but got "${resource}"`
-	);
-	await requireLoggedIn();
-	const apiToken = requireApiToken();
-	const headers = cloneHeaders(init.headers);
-	addAuthorizationHeaderIfUnspecified(headers, apiToken);
-	addUserAgent(headers);
-
-	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	const method = init.method ?? "GET";
-
-	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
-	);
-	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
-	logger.debug("INIT:", JSON.stringify(init, null, 2));
-	logger.debug("-- END CF API REQUEST");
-	const response = await fetch(
-		`${getCloudflareAPIBaseURL()}${resource}${queryString}`,
-		{
-			method,
-			...init,
-			headers,
-			signal: abortSignal,
-		}
+	const response = await performApiFetch(
+		resource,
+		init,
+		queryParams,
+		abortSignal
 	);
 	const jsonText = await response.text();
 	logger.debug(
@@ -228,7 +243,7 @@ export async function fetchDashboardScript(
 
 	if (usesModules) {
 		// Response from edge contains generic "name = worker.js" for dashboard created scripts
-		const form = await formData(response);
+		const form = await response.formData();
 		const entries = Array.from(form.entries());
 		if (entries.length > 1)
 			throw new RangeError("Expected only one entry in multipart response");
@@ -245,54 +260,4 @@ export async function fetchDashboardScript(
 	} else {
 		return response.text();
 	}
-}
-
-async function formData({ headers, body }: Response): Promise<FormData> {
-	// undici doesn't include a multipart/form-data parser yet, so we parse
-	// form data with busboy instead
-	const contentType = headers.get("Content-Type") ?? "";
-	if (!/multipart\/form-data/.test(contentType))
-		throw Error("Need Content-Type for multipart/form-data");
-
-	const responseFormData = new FormData();
-
-	let busboy: Busboy.Busboy;
-
-	const parsedHeaders = Object.fromEntries(
-		Array.from(headers).map(([header, value]) => [header.toLowerCase(), value])
-	);
-	try {
-		busboy = Busboy({ headers: parsedHeaders });
-	} catch (err) {
-		// Error due to headers:
-		throw Object.assign(new TypeError(), { cause: err });
-	}
-
-	busboy.on("field", (name, value) => {
-		responseFormData.append(name, value);
-	});
-	busboy.on("file", (name, value, info) => {
-		const { filename, encoding, mimeType } = info;
-		const base64 = encoding.toLowerCase() === "base64";
-		const chunks: Buffer[] = [];
-		value.on("data", (chunk) => {
-			if (base64) chunk = Buffer.from(chunk.toString(), "base64");
-			chunks.push(chunk);
-		});
-		value.on("end", () => {
-			const file = new File(chunks, filename, { type: mimeType });
-			responseFormData.append(name, file);
-		});
-	});
-
-	const busboyResolve = new Promise((resolve, reject) => {
-		busboy.on("finish", resolve);
-		busboy.on("error", (err) => reject(err));
-	});
-
-	if (body !== null) for await (const chunk of body) busboy.write(chunk);
-	busboy.end();
-	await busboyResolve;
-
-	return responseFormData;
 }

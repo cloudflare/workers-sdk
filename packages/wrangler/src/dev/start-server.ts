@@ -2,25 +2,36 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import * as util from "node:util";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
-import { registerWorker } from "../dev-registry";
+import {
+	getBoundRegisteredWorkers,
+	registerWorker,
+	startWorkerRegistry,
+	stopWorkerRegistry,
+} from "../dev-registry";
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
 import {
 	setupBindings,
+	setupExperimentalLocal,
 	setupMiniflareOptions,
 	setupNodeOptions,
 } from "./local";
+import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
+import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
+import type { MiniflareOptions } from "miniflare";
 
 import type { ChildProcess } from "node:child_process";
 
@@ -30,6 +41,7 @@ export async function startDevServer(
 	}
 ) {
 	try {
+		let workerDefinitions: WorkerRegistry = {};
 		validateDevProps(props);
 
 		if (props.build.command) {
@@ -48,6 +60,21 @@ export async function startDevServer(
 			throw new Error("Failed to create temporary directory.");
 		}
 
+		//start the worker registry
+		startWorkerRegistry().catch((err) => {
+			logger.error("failed to start worker registry", err);
+		});
+		if (props.local) {
+			const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+				services: props.bindings.services,
+				durableObjects: props.bindings.durable_objects,
+			});
+
+			if (!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)) {
+				workerDefinitions = boundRegisteredWorkers || {};
+			}
+		}
+
 		//implement a react-free version of useEsbuild
 		const bundle = await runEsbuild({
 			entry: props.entry,
@@ -64,43 +91,82 @@ export async function startDevServer(
 			define: props.define,
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
+			workerDefinitions,
 			services: props.bindings.services,
+			firstPartyWorkerDevFacade: props.firstPartyWorker,
+			testScheduled: props.testScheduled,
+			experimentalLocalStubCache: props.experimentalLocal,
 		});
 
-		//run local now
-		const { stop, inspectorUrl } = await startLocalServer({
-			name: props.name,
-			bundle: bundle,
-			format: props.entry.format,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-			bindings: props.bindings,
-			assetPaths: props.assetPaths,
-			port: props.port,
-			ip: props.ip,
-			rules: props.rules,
-			inspectorPort: props.inspectorPort,
-			enableLocalPersistence: props.enableLocalPersistence,
-			liveReload: props.liveReload,
-			crons: props.crons,
-			queueConsumers: props.queueConsumers,
-			localProtocol: props.localProtocol,
-			localUpstream: props.localUpstream,
-			logLevel: props.logLevel,
-			logPrefix: props.logPrefix,
-			inspect: props.inspect,
-			onReady: props.onReady,
-			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-			usageModel: undefined,
-			workerDefinitions: undefined,
-		});
+		if (props.local) {
+			const { stop, inspectorUrl } = await startLocalServer({
+				name: props.name,
+				bundle: bundle,
+				format: props.entry.format,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				bindings: props.bindings,
+				assetPaths: props.assetPaths,
+				port: props.port,
+				ip: props.ip,
+				rules: props.rules,
+				inspectorPort: props.inspectorPort,
+				localPersistencePath: props.localPersistencePath,
+				liveReload: props.liveReload,
+				crons: props.crons,
+				queueConsumers: props.queueConsumers,
+				localProtocol: props.localProtocol,
+				localUpstream: props.localUpstream,
+				logPrefix: props.logPrefix,
+				inspect: props.inspect,
+				onReady: props.onReady,
+				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+				usageModel: props.usageModel,
+				workerDefinitions,
+				experimentalLocal: props.experimentalLocal,
+			});
 
-		return {
-			stop: async () => {
-				stop();
-			},
-			inspectorUrl,
-		};
+			return {
+				stop: async () => {
+					stop();
+					await stopWorkerRegistry();
+				},
+				inspectorUrl,
+			};
+		} else {
+			const { stop } = await startRemoteServer({
+				name: props.name,
+				bundle: bundle,
+				format: props.entry.format,
+				accountId: props.accountId,
+				bindings: props.bindings,
+				assetPaths: props.assetPaths,
+				isWorkersSite: props.isWorkersSite,
+				port: props.port,
+				ip: props.ip,
+				localProtocol: props.localProtocol,
+				inspectorPort: props.inspectorPort,
+				inspect: props.inspect,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				usageModel: props.usageModel,
+				env: props.env,
+				legacyEnv: props.legacyEnv,
+				zone: props.zone,
+				host: props.host,
+				routes: props.routes,
+				onReady: props.onReady,
+				sourceMapPath: bundle?.sourceMapPath,
+				sendMetrics: props.sendMetrics,
+			});
+			return {
+				stop: async () => {
+					stop();
+					await stopWorkerRegistry();
+				},
+				// TODO: inspectorUrl,
+			};
+		}
 	} catch (err) {
 		logger.error(err);
 	}
@@ -130,6 +196,11 @@ async function runEsbuild({
 	nodeCompat,
 	define,
 	noBundle,
+	workerDefinitions,
+	services,
+	firstPartyWorkerDevFacade,
+	testScheduled,
+	experimentalLocalStubCache,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -144,6 +215,10 @@ async function runEsbuild({
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	noBundle: boolean;
+	workerDefinitions: WorkerRegistry;
+	firstPartyWorkerDevFacade: boolean | undefined;
+	testScheduled?: boolean;
+	experimentalLocalStubCache: boolean | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -175,9 +250,13 @@ async function runEsbuild({
 					// disable the cache in dev
 					bypassCache: true,
 				},
-				services: undefined,
-				workerDefinitions: undefined,
-				firstPartyWorkerDevFacade: undefined,
+				workerDefinitions,
+				services,
+				firstPartyWorkerDevFacade,
+				targetConsumer: "dev", // We are starting a dev server
+				local: false,
+				testScheduled,
+				experimentalLocalStubCache,
 		  });
 
 	return {
@@ -203,7 +282,7 @@ export async function startLocalServer({
 	port,
 	inspectorPort,
 	rules,
-	enableLocalPersistence,
+	localPersistencePath,
 	liveReload,
 	ip,
 	crons,
@@ -212,27 +291,17 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
+	experimentalLocal,
 }: LocalProps) {
 	let local: ChildProcess | undefined;
+	let experimentalLocalRef: Miniflare3Type | undefined;
 	let removeSignalExitListener: (() => void) | undefined;
 	let inspectorUrl: string | undefined;
 	const setInspectorUrl = (url: string) => {
 		inspectorUrl = url;
 	};
-
-	// if we're using local persistence for data, we should use the cwd
-	// as an explicit path, or else it'll use the temp dir
-	// which disappears when dev ends
-	const localPersistencePath = enableLocalPersistence
-		? // Maybe we could make the path configurable as well?
-		  path.join(process.cwd(), "wrangler-local-state")
-		: // We otherwise choose null, but choose true later
-		  // so that it's persisted in the temp dir across a dev session
-		  // even when we change source and reload
-		  null;
 
 	const abortController = new AbortController();
 	async function startLocalWorker() {
@@ -249,8 +318,8 @@ export async function startLocalServer({
 		}
 
 		if (bindings.services && bindings.services.length > 0) {
-			throw new Error(
-				"⎔ Service bindings are not yet supported in local mode."
+			logger.warn(
+				"⎔ Support for service bindings in local mode is experimental and may change."
 			);
 		}
 
@@ -300,6 +369,7 @@ export async function startLocalServer({
 			queueBindings: bindings?.queues,
 			queueConsumers,
 			r2_buckets: bindings?.r2_buckets,
+			d1_databases: bindings?.d1_databases,
 			internalDurableObjects,
 			externalDurableObjects,
 			localPersistencePath,
@@ -311,11 +381,25 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logLevel,
 			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
 		});
+
+		if (experimentalLocal) {
+			// TODO: refactor setupMiniflareOptions so we don't need to parse here
+			const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+			const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+			const runtimeURL = await mf.ready;
+			experimentalLocalRef = mf;
+			removeSignalExitListener = onExit((_code, _signal) => {
+				logger.log("⎔ Shutting down experimental local server.");
+				mf.dispose();
+				experimentalLocalRef = undefined;
+			});
+			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));
+			return;
+		}
 
 		const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 		logger.log("⎔ Starting a local server...");
@@ -411,9 +495,16 @@ export async function startLocalServer({
 				logger.log("⎔ Shutting down local server.");
 				local.kill();
 				local = undefined;
-				removeSignalExitListener && removeSignalExitListener();
-				removeSignalExitListener = undefined;
 			}
+			if (experimentalLocalRef) {
+				logger.log("⎔ Shutting down experimental local server.");
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef?.dispose().catch(() => {});
+				experimentalLocalRef = undefined;
+			}
+			removeSignalExitListener?.();
+			removeSignalExitListener = undefined;
 		},
 	};
 }

@@ -74,3 +74,4 @@ The following labels can also be added to issues to provide further information 
 | internal      | The issue refers to a problem with the Cloudflare internal API or processes that cannot be resolved within Wrangler alone.    |
 | maintenance   | The issue refers to changes that will improve the processes of the Wrangler team, rather than Wrangler itself.                |
 | polish        | Resolving the issue will improve the Developer Experience when using Wrangler, rather than changing it fundamental behaviour. |
+| quick win     | The issue only requires minor changes, and would be a good first contribution to Wrangler                                     |

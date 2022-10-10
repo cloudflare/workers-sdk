@@ -2,7 +2,7 @@ import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
 	type Worker = {
-		fetch: (init?: RequestInit) => Promise<Response>;
+		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
 	let workers: Worker[];

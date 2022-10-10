@@ -1,13 +1,18 @@
+import assert from "node:assert";
 import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
-import { DEFAULT_MODULE_RULES } from "../module-collection";
+import {
+	DEFAULT_MODULE_RULES,
+	ModuleTypeToRuleType,
+} from "../module-collection";
 import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
 import type { Config } from "../config";
@@ -25,10 +30,16 @@ import type {
 	CfR2Bucket,
 	CfVars,
 	CfQueue,
+	CfD1Database,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	Miniflare as Miniflare3Type,
+	MiniflareOptions as Miniflare3Options,
+} from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+
 export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -43,7 +54,7 @@ export interface LocalProps {
 	ip: string;
 	rules: Config["rules"];
 	inspectorPort: number;
-	enableLocalPersistence: boolean;
+	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
@@ -51,9 +62,10 @@ export interface LocalProps {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: ((ip: string, port: number) => void) | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+	testScheduled?: boolean;
+	experimentalLocal?: boolean;
 }
 
 export function Local(props: LocalProps) {
@@ -79,7 +91,7 @@ function useLocalWorker({
 	port,
 	inspectorPort,
 	rules,
-	enableLocalPersistence,
+	localPersistencePath,
 	liveReload,
 	ip,
 	crons,
@@ -88,24 +100,15 @@ function useLocalWorker({
 	localUpstream,
 	inspect,
 	onReady,
-	logLevel,
 	logPrefix,
 	enablePagesAssetsServiceBinding,
+	experimentalLocal,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
+	const experimentalLocalRef = useRef<Miniflare3Type>();
 	const removeSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
-	// if we're using local persistence for data, we should use the cwd
-	// as an explicit path, or else it'll use the temp dir
-	// which disappears when dev ends
-	const localPersistencePath = enableLocalPersistence
-		? // Maybe we could make the path configurable as well?
-		  path.join(process.cwd(), "wrangler-local-state")
-		: // We otherwise choose null, but choose true later
-		  // so that it's persisted in the temp dir across a dev session
-		  // even when we change source and reload
-		  null;
 
 	useEffect(() => {
 		if (bindings.services && bindings.services.length > 0) {
@@ -185,6 +188,7 @@ function useLocalWorker({
 				r2_buckets: bindings?.r2_buckets,
 				queueBindings: bindings?.queues,
 				queueConsumers: queueConsumers,
+				d1_databases: bindings?.d1_databases,
 				internalDurableObjects,
 				externalDurableObjects,
 				localPersistencePath,
@@ -196,11 +200,24 @@ function useLocalWorker({
 				dataBlobBindings,
 				crons,
 				upstream,
-				logLevel,
 				logPrefix,
 				workerDefinitions,
 				enablePagesAssetsServiceBinding,
 			});
+
+			if (experimentalLocal) {
+				// TODO: refactor setupMiniflareOptions so we don't need to parse here
+				const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
+				const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+				await mf.ready;
+				experimentalLocalRef.current = mf;
+				removeSignalExitListener.current = onExit(() => {
+					logger.log("⎔ Shutting down experimental local server.");
+					mf.dispose();
+					experimentalLocalRef.current = undefined;
+				});
+				return;
+			}
 
 			const nodeOptions = setupNodeOptions({ inspect, ip, inspectorPort });
 			logger.log("⎔ Starting a local server...");
@@ -294,9 +311,16 @@ function useLocalWorker({
 				logger.log("⎔ Shutting down local server.");
 				local.current?.kill();
 				local.current = undefined;
-				removeSignalExitListener.current && removeSignalExitListener.current();
-				removeSignalExitListener.current = undefined;
 			}
+			if (experimentalLocalRef.current) {
+				logger.log("⎔ Shutting down experimental local server.");
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef.current?.dispose().catch(() => {});
+				experimentalLocalRef.current = undefined;
+			}
+			removeSignalExitListener.current?.();
+			removeSignalExitListener.current = undefined;
 		};
 	}, [
 		bundle,
@@ -310,6 +334,7 @@ function useLocalWorker({
 		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
+		bindings.d1_databases,
 		bindings.vars,
 		bindings.services,
 		workerDefinitions,
@@ -327,10 +352,10 @@ function useLocalWorker({
 		localProtocol,
 		localUpstream,
 		inspect,
-		logLevel,
 		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
+		experimentalLocal,
 	]);
 	return { inspectorUrl };
 }
@@ -432,6 +457,7 @@ interface SetupMiniflareOptionsProps {
 	queueBindings: CfQueue[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	r2_buckets: CfR2Bucket[] | undefined;
+	d1_databases: CfD1Database[] | undefined;
 	internalDurableObjects: CfDurableObject[];
 	externalDurableObjects: CfDurableObject[];
 	localPersistencePath: string | null;
@@ -443,7 +469,6 @@ interface SetupMiniflareOptionsProps {
 	dataBlobBindings: Record<string, string>;
 	crons: Config["triggers"]["crons"];
 	upstream: string | undefined;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix: string | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -464,6 +489,7 @@ export function setupMiniflareOptions({
 	queueBindings,
 	queueConsumers,
 	r2_buckets,
+	d1_databases,
 	internalDurableObjects,
 	externalDurableObjects,
 	localPersistencePath,
@@ -475,12 +501,13 @@ export function setupMiniflareOptions({
 	dataBlobBindings,
 	crons,
 	upstream,
-	logLevel,
 	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
-}: SetupMiniflareOptionsProps): MiniflareOptions {
-	// TODO: This was already messy with the custom `disableLogs` and `logOptions`.
+}: SetupMiniflareOptionsProps): {
+	miniflareCLIPath: string;
+	forkOptions: string[];
+} {
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
 		name: workerName,
@@ -546,12 +573,14 @@ export function setupMiniflareOptions({
 				})
 				.filter(([_, details]) => !!details)
 		),
+		d1Databases: d1_databases?.map((db) => db.binding),
 		...(localPersistencePath
 			? {
 					cachePersist: path.join(localPersistencePath, "cache"),
 					durableObjectsPersist: path.join(localPersistencePath, "do"),
 					kvPersist: path.join(localPersistencePath, "kv"),
 					r2Persist: path.join(localPersistencePath, "r2"),
+					d1Persist: path.join(localPersistencePath, "d1"),
 			  }
 			: {
 					// We mark these as true, so that they'll
@@ -583,7 +612,7 @@ export function setupMiniflareOptions({
 		logUnhandledRejections: true,
 		crons,
 		upstream,
-		disableLogs: logLevel === "none",
+		logLevel: logger.loggerLevel,
 		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};
@@ -620,4 +649,64 @@ export function setupNodeOptions({
 		nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
 	}
 	return nodeOptions;
+}
+
+// Caching of the `npx-import`ed `@miniflare/tre` package
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Miniflare: typeof import("@miniflare/tre").Miniflare;
+
+function arrayToObject(values: string[] = []): Record<string, string> {
+	return Object.fromEntries(values.map((value) => [value, value]));
+}
+
+export async function setupExperimentalLocal(
+	mf2Options: MiniflareOptions,
+	format: CfScriptFormat,
+	bundle: EsbuildBundle
+): Promise<Miniflare3Type> {
+	const options: Miniflare3Options = {
+		...mf2Options,
+		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
+		// For now, just use the same value as we did in Miniflare 2.
+		// TODO: use defined KV preview ID if any
+		kvNamespaces: arrayToObject(mf2Options.kvNamespaces),
+		r2Buckets: arrayToObject(mf2Options.r2Buckets),
+	};
+
+	if (format === "modules") {
+		// Manually specify all modules from the bundle. If we didn't do this,
+		// Miniflare 3 would try collect them automatically again itself.
+
+		// Resolve entrypoint relative to the temporary directory, ensuring
+		// path doesn't start with `..`, which causes issues in `workerd`.
+		// Also ensures other modules with relative names can be resolved.
+		const root = path.dirname(bundle.path);
+
+		assert.strictEqual(bundle.type, "esm");
+		options.modules = [
+			// Entrypoint
+			{
+				type: "ESModule",
+				path: path.relative(root, bundle.path),
+				contents: await readFile(bundle.path, "utf-8"),
+			},
+			// Misc (WebAssembly, etc, ...)
+			...bundle.modules.map((module) => ({
+				type: ModuleTypeToRuleType[module.type ?? "esm"],
+				path: module.name,
+				contents: module.content,
+			})),
+		];
+	}
+
+	logger.log("⎔ Starting an experimental local server...");
+
+	if (Miniflare === undefined) {
+		({ Miniflare } = await npxImport<
+			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+			typeof import("@miniflare/tre")
+		>("@miniflare/tre@next"));
+	}
+
+	return new Miniflare(options);
 }

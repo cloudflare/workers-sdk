@@ -8,13 +8,14 @@ import { printBundleSize } from "./bundle-reporter";
 import { type FetchError, fetchListResult, fetchResult } from "./cfetch";
 import { printBindings } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { confirm } from "./dialogs";
+import { confirm, fromDashMessagePrompt } from "./dialogs";
 import { getMigrationsToUpload } from "./durable";
 import { logger } from "./logger";
 import { getMetricsUsageHeaders } from "./metrics";
 import { ParseError } from "./parse";
 import { GetQueue, PutConsumer, type PutConsumerBody } from "./queues/client";
 import { syncAssets } from "./sites";
+import { identifyD1BindingsAsBeta } from "./worker";
 import { getZoneForRoute } from "./zones";
 import type { Config } from "./config";
 import type {
@@ -51,6 +52,7 @@ type Props = {
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
+	keepVars: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -219,7 +221,32 @@ Update them to point to this script instead?`;
 
 export default async function publish(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId } = props;
+	const { config, accountId, name } = props;
+	if (accountId && name) {
+		try {
+			const serviceMetaData = await fetchResult(
+				`/accounts/${accountId}/workers/services/${name}`
+			);
+			const { default_environment } = serviceMetaData as {
+				default_environment: {
+					script: { last_deployed_from: "dash" | "wrangler" | "api" };
+				};
+			};
+
+			if (
+				(await fromDashMessagePrompt(
+					default_environment.script.last_deployed_from
+				)) === false
+			)
+				return;
+		} catch (e) {
+			// code: 10090, message: workers.api.error.service_not_found
+			// is thrown from the above fetchResult on the first publish of a Worker
+			if ((e as { code?: number }).code !== 10090) {
+				logger.error(e);
+			}
+		}
+	}
 
 	if (!(props.compatibilityDate || config.compatibility_date)) {
 		const compatibilityDateStr = `${new Date().getFullYear()}-${(
@@ -264,6 +291,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
+	const keepVars = props.keepVars ?? config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
@@ -363,6 +391,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
+		// If we are using d1 bindings, and are not bundling the worker
+		// we should error here as the d1 shim won't be added
+		const betaD1Shims = identifyD1BindingsAsBeta(config.d1_databases);
+		if (
+			Array.isArray(betaD1Shims) &&
+			betaD1Shims.length > 0 &&
+			props.noBundle
+		) {
+			throw new Error(
+				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
+			);
+		}
+
 		const {
 			modules,
 			resolvedEntryPointPath,
@@ -381,6 +422,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{
 						serveAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.assetPaths),
+						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
+							(db) => db.binding
+						),
 						jsxFactory,
 						jsxFragment,
 						rules: props.rules,
@@ -400,6 +444,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// facades on top of it
 						workerDefinitions: undefined,
 						firstPartyWorkerDevFacade: false,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and publish?
+						targetConsumer: "publish",
+						local: false,
+						experimentalLocalStubCache: false,
 					}
 			  );
 
@@ -450,6 +499,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				return { binding: x.binding, queue_name: x.queue };
 			}),
 			r2_buckets: config.r2_buckets,
+			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
 			dispatch_namespaces: config.dispatch_namespaces,
 			logfwdr: config.logfwdr,
@@ -478,13 +528,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_flags:
 				props.compatibilityFlags ?? config.compatibility_flags,
 			usage_model: config.usage_model,
-			keep_bindings: true,
+			keepVars,
 		};
 
-		void printBundleSize(
+		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
+		// We do not care about the timing outside of testing
+		const bundleSizePromise = printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
+		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
+		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,

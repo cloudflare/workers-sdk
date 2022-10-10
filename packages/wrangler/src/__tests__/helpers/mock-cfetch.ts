@@ -4,7 +4,33 @@ import { pathToRegexp } from "path-to-regexp";
 import { Response } from "undici";
 import { getCloudflareApiBaseUrl } from "../../cfetch";
 import type { FetchResult, FetchError } from "../../cfetch";
+import type {
+	fetchInternal,
+	fetchR2Objects,
+	performApiFetch,
+} from "../../cfetch/internal";
 import type { RequestInit, BodyInit, HeadersInit } from "undici";
+
+/**
+ * When the custom mocks fallthrough in tests because they aren't set, instead of throwing an error,
+ * we use real fetch to make the request which will use Mock Service Workers.
+ */
+const {
+	fetchInternal: realFetchInternal,
+}: { fetchInternal: typeof fetchInternal } = jest.requireActual(
+	"../../cfetch/internal"
+);
+const {
+	fetchR2Objects: realFetchR2Objects,
+}: { fetchR2Objects: typeof fetchR2Objects } = jest.requireActual(
+	"../../cfetch/internal"
+);
+
+const {
+	performApiFetch: realPerformApiFetch,
+}: { performApiFetch: typeof performApiFetch } = jest.requireActual(
+	"../../cfetch/internal"
+);
 
 /**
  * The signature of the function that will handle a mock request.
@@ -34,7 +60,7 @@ const mocks: MockFetch<unknown>[] = [];
 export async function mockFetchInternal(
 	resource: string,
 	init: RequestInit = {},
-	queryParams: URLSearchParams = new URLSearchParams()
+	queryParams: URLSearchParams | undefined
 ) {
 	for (const { regexp, method, handler } of mocks) {
 		const resourcePath = new URL(resource, getCloudflareApiBaseUrl()).pathname;
@@ -43,13 +69,21 @@ export async function mockFetchInternal(
 		if (uri !== null && (!method || method === (init.method ?? "GET"))) {
 			// The `resource` regular expression will extract the labelled groups from the URL.
 			// These are passed through to the `handler` call, to allow it to do additional checks or behaviour.
-			return await handler(uri, init, queryParams); // TODO: should we have some kind of fallthrough system? we'll see.
+			return await handler(uri, init, queryParams ?? new URLSearchParams()); // TODO: should we have some kind of fallthrough system? we'll see.
 		}
 	}
-	throw new Error(
-		`no mocks found for ${init.method ?? "any HTTP"} request to ${resource}`
-	);
+
+	// let it fall through to mock-service-worker
+	// (do a real, unmocked fetch)
+	return await realFetchInternal(resource, init, queryParams);
 }
+
+/**
+ * We don't have loads of infrastructure around performApiFetch
+ * the same way we do for cfetch, so we'll just pass off the real
+ * deal to avoid getting it auto-mocked, so that msw can catch it.
+ */
+export const mockPerformApiFetch = realPerformApiFetch;
 
 /**
  * Specify an expected resource path that is to be handled, resulting in a raw JSON response.
@@ -221,21 +255,24 @@ export async function mockFetchR2Objects(
 		method: "PUT" | "GET" | "DELETE";
 	}
 ): Promise<Response> {
-	/**
-	 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
-	 * mimicking the fetch request taking in the stream and draining it.
-	 */
-	if (bodyInit.body instanceof Readable) {
-		bodyInit.body.destroy();
-		bodyInit.body.removeAllListeners();
-	}
-
 	if (r2GetMocks.has(resource)) {
+		/**
+		 * Here we destroy & removeListeners to "drain" the stream, for testing purposes
+		 * mimicking the fetch request taking in the stream and draining it.
+		 */
+		if (bodyInit.body instanceof Readable) {
+			bodyInit.body.destroy();
+			bodyInit.body.removeAllListeners();
+		}
+
 		const value = r2GetMocks.get(resource);
 
 		return new Response(value);
 	}
-	throw new Error(`no mock found for \`r2 object\` - ${resource}`);
+
+	// No mocks found for ${init.method ?? "any HTTP"} request to ${resource}
+	// let it fall through to Mock Service Worker with a real fetch.
+	return await realFetchR2Objects(resource, bodyInit);
 }
 
 /**
@@ -270,9 +307,7 @@ export function unsetSpecialMockFns() {
  */
 export async function mockFetchDashScript(resource: string): Promise<string> {
 	if (dashScriptMocks.has(resource)) {
-		const value = dashScriptMocks.get(resource) ?? "";
-
-		return value;
+		return dashScriptMocks.get(resource) ?? "";
 	}
 	throw new Error(`no mock found for \`init from-dash\` - ${resource}`);
 }
@@ -283,14 +318,16 @@ export async function mockFetchDashScript(resource: string): Promise<string> {
 export function setMockFetchDashScript({
 	accountId,
 	fromDashScriptName,
+	environment,
 	mockResponse,
 }: {
 	accountId: string;
 	fromDashScriptName: string;
+	environment: string;
 	mockResponse?: string;
 }) {
 	dashScriptMocks.set(
-		`/accounts/${accountId}/workers/scripts/${fromDashScriptName}`,
+		`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${environment}/content`,
 		mockResponse
 	);
 }

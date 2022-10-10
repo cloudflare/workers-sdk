@@ -30,12 +30,17 @@ export function useEsbuild({
 	tsconfig,
 	minify,
 	nodeCompat,
+	betaD1Shims,
 	define,
 	noBundle,
 	workerDefinitions,
 	services,
 	durableObjects,
 	firstPartyWorkerDevFacade,
+	local,
+	targetConsumer,
+	testScheduled,
+	experimentalLocalStubCache,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -49,10 +54,15 @@ export function useEsbuild({
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
+	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
+	local: boolean;
+	targetConsumer: "dev" | "publish";
+	testScheduled: boolean;
+	experimentalLocalStubCache: boolean | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -106,6 +116,7 @@ export function useEsbuild({
 						tsconfig,
 						minify,
 						nodeCompat,
+						betaD1Shims,
 						define,
 						checkFetch: true,
 						assets: assets && {
@@ -116,6 +127,10 @@ export function useEsbuild({
 						workerDefinitions,
 						services,
 						firstPartyWorkerDevFacade,
+						local,
+						targetConsumer,
+						testScheduled,
+						experimentalLocalStubCache,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
@@ -134,7 +149,6 @@ export function useEsbuild({
 					watcher.close();
 				};
 			}
-
 			setBundle({
 				id: 0,
 				entry,
@@ -173,6 +187,11 @@ export function useEsbuild({
 		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
+		betaD1Shims,
+		local,
+		targetConsumer,
+		testScheduled,
+		experimentalLocalStubCache,
 	]);
 	return bundle;
 }

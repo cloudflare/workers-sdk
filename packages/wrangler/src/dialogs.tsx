@@ -4,7 +4,11 @@ import SelectInput from "ink-select-input";
 import TextInput from "ink-text-input";
 import * as React from "react";
 import { useState } from "react";
+
+import { CI } from "./is-ci";
+import isInteractive from "./is-interactive";
 import { logger } from "./logger";
+
 type ConfirmProps = {
 	text: string;
 	onConfirm: (answer: boolean) => void;
@@ -132,4 +136,23 @@ export function select(
 			/>
 		);
 	});
+}
+
+export function logDim(msg: string) {
+	console.log(chalk.gray(msg));
+}
+
+export async function fromDashMessagePrompt(
+	deploySource: "dash" | "wrangler" | "api"
+): Promise<boolean | void> {
+	if (deploySource === "dash") {
+		logger.warn(
+			`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.
+		Edits that have been made via the dashboard will be overridden by your local code and config.`
+		);
+
+		if (!isInteractive() || CI.isCI()) return true;
+
+		return await confirm("Would you like to continue?");
+	}
 }

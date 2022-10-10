@@ -7,6 +7,13 @@ import type { Config, ConfigModuleRuleType } from "./config";
 import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
 
+function flipObject<
+	K extends string | number | symbol,
+	V extends string | number | symbol
+>(obj: Record<K, V>): Record<V, K> {
+	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
+}
+
 const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {
 	ESModule: "esm",
 	CommonJS: "commonjs",
@@ -14,6 +21,8 @@ const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {
 	Data: "buffer",
 	Text: "text",
 };
+
+export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 
 // This is a combination of an esbuild plugin and a mutable array
 // that we use to collect module references from source code.

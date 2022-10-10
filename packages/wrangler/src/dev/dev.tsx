@@ -5,13 +5,13 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
 import {
-	getRegisteredWorkers,
+	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
@@ -53,32 +53,21 @@ function useDevRegistry(
 			logger.error("failed to start worker registry", err);
 		});
 
-		const serviceNames = (services || []).map(
-			(serviceBinding) => serviceBinding.service
-		);
-		const durableObjectServices = (
-			durableObjects || { bindings: [] }
-		).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
 		const interval =
 			// TODO: enable this for remote mode as well
 			// https://github.com/cloudflare/wrangler2/issues/1182
 			mode === "local"
 				? setInterval(() => {
-						getRegisteredWorkers().then(
-							(workerDefinitions: WorkerRegistry | undefined) => {
-								// We only want the workers that we're bound to
-								// so let's filter out the others
-								const filteredWorkers = Object.fromEntries(
-									Object.entries(workerDefinitions || {}).filter(
-										([key, _value]) =>
-											serviceNames.includes(key) ||
-											durableObjectServices.includes(key)
-									)
-								);
+						getBoundRegisteredWorkers({
+							services,
+							durableObjects,
+						}).then(
+							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
 								setWorkers((prevWorkers) => {
-									if (!util.isDeepStrictEqual(filteredWorkers, prevWorkers)) {
-										return filteredWorkers;
+									if (
+										!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
+									) {
+										return boundRegisteredWorkers || {};
 									}
 									return prevWorkers;
 								});
@@ -136,7 +125,7 @@ export type DevProps = {
 	upstreamProtocol: "https" | "http";
 	localProtocol: "https" | "http";
 	localUpstream: string | undefined;
-	enableLocalPersistence: boolean;
+	localPersistencePath: string | null;
 	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
@@ -157,7 +146,6 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	logLevel: "none" | "error" | "log" | "warn" | "debug" | undefined;
 	logPrefix?: string;
 	onReady: ((ip: string, port: number) => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
@@ -165,6 +153,8 @@ export type DevProps = {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
+	testScheduled: boolean | undefined;
+	experimentalLocal: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -225,12 +215,46 @@ function InteractiveDevSession(props: DevProps) {
 
 type DevSessionProps = DevProps & {
 	local: boolean;
+	experimentalLocal?: boolean;
 };
 
 function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
+	const handleError = useErrorHandler();
+
+	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
+	// Additionally, useMemo is used so that new arrays aren't created on every render
+	// cause re-rendering further down.
+	const betaD1Shims = useMemo(
+		() => props.bindings.d1_databases?.map((db) => db.binding),
+		[props.bindings.d1_databases]
+	);
+	const everyD1BindingHasPreview = props.bindings.d1_databases?.every(
+		(binding) => binding.preview_database_id
+	);
+	if (
+		betaD1Shims &&
+		betaD1Shims.length > 0 &&
+		!(props.local || everyD1BindingHasPreview)
+	) {
+		handleError(
+			new Error(
+				"D1 bindings require dev --local or preview_database_id for now"
+			)
+		);
+	}
+
+	// If we are using d1 bindings, and are not bundling the worker
+	// we should error here as the d1 shim won't be added
+	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0 && props.noBundle) {
+		handleError(
+			new Error(
+				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
+			)
+		);
+	}
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -251,6 +275,7 @@ function DevSession(props: DevSessionProps) {
 		tsconfig: props.tsconfig,
 		minify: props.minify,
 		nodeCompat: props.nodeCompat,
+		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
 		assets: props.assetsConfig,
@@ -258,6 +283,11 @@ function DevSession(props: DevSessionProps) {
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
+		local: props.local,
+		// Enable the bundling to know whether we are using dev or publish
+		targetConsumer: "dev",
+		testScheduled: props.testScheduled ?? false,
+		experimentalLocalStubCache: props.local && props.experimentalLocal,
 	});
 
 	// TODO(queues) support remote wrangler dev before merging into main
@@ -285,17 +315,17 @@ function DevSession(props: DevSessionProps) {
 			ip={props.ip}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
-			enableLocalPersistence={props.enableLocalPersistence}
+			localPersistencePath={props.localPersistencePath}
 			liveReload={props.liveReload}
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
-			logLevel={props.logLevel}
 			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={props.onReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
+			experimentalLocal={props.experimentalLocal}
 		/>
 	) : (
 		<Remote

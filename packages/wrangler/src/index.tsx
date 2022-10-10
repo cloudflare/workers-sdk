@@ -7,33 +7,34 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import supportsColor from "supports-color";
-import { setGlobalDispatcher, ProxyAgent } from "undici";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
+import { d1api } from "./d1";
 import { devHandler, devOptions } from "./dev";
 import { confirm, prompt } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
-import { initOptions, initHandler } from "./init";
+import { initHandler, initOptions } from "./init";
 import {
-	getKVNamespaceId,
-	listKVNamespaces,
-	listKVNamespaceKeys,
-	putKVKeyValue,
-	putKVBulkKeyValue,
-	deleteKVBulkKeyValue,
 	createKVNamespace,
-	isValidKVNamespaceBinding,
-	getKVKeyValue,
-	isKVKeyValue,
-	unexpectedKVKeyValueProps,
-	deleteKVNamespace,
+	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
+	deleteKVNamespace,
+	getKVKeyValue,
+	getKVNamespaceId,
+	isKVKeyValue,
+	isValidKVNamespaceBinding,
+	listKVNamespaceKeys,
+	listKVNamespaces,
+	putKVBulkKeyValue,
+	putKVKeyValue,
+	unexpectedKVKeyValueProps,
 } from "./kv";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -67,11 +68,11 @@ import {
 } from "./tail";
 import { updateCheck } from "./update-check";
 import {
+	listScopes,
 	login,
 	logout,
-	listScopes,
-	validateScopeKeys,
 	requireAuth,
+	validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
 
@@ -81,7 +82,6 @@ import type { KeyValue } from "./kv";
 import type { TailCLIFilters } from "./tail";
 import type { Readable } from "node:stream";
 import type { RawData } from "ws";
-import type { CommandModule } from "yargs";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -263,7 +263,7 @@ function createCLIParser(argv: string[]) {
 		.wrap(null);
 
 	// Default help command that supports the subcommands
-	const subHelp: CommandModule = {
+	const subHelp: Yargs.CommandModule = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -425,6 +425,7 @@ function createCLIParser(argv: string[]) {
 						choices: ["modules", "service-worker"] as const,
 						describe: "Choose an entry type",
 						deprecated: true,
+						hidden: true,
 					})
 					.option("compatibility-date", {
 						describe: "Date to use for compatibility checks",
@@ -528,6 +529,12 @@ function createCLIParser(argv: string[]) {
 						describe: "Don't actually publish",
 						type: "boolean",
 					})
+					.option("keep-vars", {
+						describe:
+							"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+						default: false,
+						type: "boolean",
+					})
 					.option("legacy-env", {
 						type: "boolean",
 						describe: "Use legacy environments",
@@ -573,7 +580,6 @@ function createCLIParser(argv: string[]) {
 					"The --assets argument is experimental and may change or break at any time"
 				);
 			}
-
 			if (args.latest) {
 				logger.warn(
 					"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
@@ -632,6 +638,7 @@ function createCLIParser(argv: string[]) {
 				outDir: args.outdir,
 				dryRun: args.dryRun,
 				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
 			});
 		}
 	);
@@ -745,15 +752,13 @@ function createCLIParser(argv: string[]) {
 				clientIp: args.ip,
 			};
 
-			const filters = translateCLICommandToFilterMessage(
-				cliFilters,
-				args.debug
-			);
+			const filters = translateCLICommandToFilterMessage(cliFilters);
 
 			const { tail, expiration, deleteTail } = await createTail(
 				accountId,
 				scriptName,
 				filters,
+				args.debug,
 				!isLegacyEnv(config) ? args.env : undefined
 			);
 
@@ -1012,6 +1017,7 @@ function createCLIParser(argv: string[]) {
 											durable_objects: { bindings: [] },
 											queues: [],
 											r2_buckets: [],
+											d1_databases: [],
 											services: [],
 											wasm_modules: {},
 											text_blobs: {},
@@ -1025,7 +1031,7 @@ function createCLIParser(argv: string[]) {
 										compatibility_date: undefined,
 										compatibility_flags: undefined,
 										usage_model: undefined,
-										keep_bindings: false, // this doesn't matter since it's a new script anyway
+										keepVars: false, // this doesn't matter since it's a new script anyway
 									}),
 								}
 							);
@@ -1164,6 +1170,105 @@ function createCLIParser(argv: string[]) {
 						});
 					}
 				);
+		}
+	);
+
+	wrangler.command(
+		"secret:bulk <json>",
+		"🗄️  Bulk upload secrets for a Worker",
+		(yargs) => {
+			return yargs
+				.positional("json", {
+					describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+					type: "string",
+					demandOption: "true",
+				})
+				.option("name", {
+					describe: "Name of the Worker",
+					type: "string",
+					requiresArg: true,
+				})
+				.option("env", {
+					type: "string",
+					requiresArg: true,
+					describe:
+						"Binds the secret to the Worker of the specific environment.",
+					alias: "e",
+				});
+		},
+		async (secretBulkArgs) => {
+			await printWranglerBanner();
+			const config = readConfig(
+				secretBulkArgs.config as ConfigPath,
+				secretBulkArgs
+			);
+
+			const scriptName = getLegacyScriptName(secretBulkArgs, config);
+			if (!scriptName) {
+				throw new Error(
+					"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+				);
+			}
+
+			const accountId = await requireAuth(config);
+
+			logger.log(
+				`🌀 Creating the secrets for the Worker "${scriptName}" ${
+					secretBulkArgs.env && !isLegacyEnv(config)
+						? `(${secretBulkArgs.env})`
+						: ""
+				}`
+			);
+			const jsonFilePath = path.resolve(secretBulkArgs.json);
+			const content = parseJSON<Record<string, string>>(
+				readFileSync(jsonFilePath),
+				jsonFilePath
+			);
+			for (const key in content) {
+				if (typeof content[key] !== "string") {
+					throw new Error(
+						`The value for ${key} in ${jsonFilePath} is not a string.`
+					);
+				}
+			}
+
+			const url =
+				!secretBulkArgs.env || isLegacyEnv(config)
+					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
+			// Until we have a bulk route for secrets, we need to make a request for each key/value pair
+			const bulkOutcomes = await Promise.all(
+				Object.entries(content).map(async ([key, value]) => {
+					return fetchResult(url, {
+						method: "PUT",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							name: key,
+							text: value,
+							type: "secret_text",
+						}),
+					})
+						.then(() => {
+							logger.log(`✨ Successfully created secret for key: ${key}`);
+							return true;
+						})
+						.catch((e) => {
+							logger.error(
+								`🚨 Error uploading secret for key: ${key}:
+										${e.message}`
+							);
+							return false;
+						});
+				})
+			);
+			const successes = bulkOutcomes.filter((outcome) => outcome).length;
+			const failures = bulkOutcomes.length - successes;
+			logger.log("");
+			logger.log("Finished processing secrets JSON file:");
+			logger.log(`✨ ${successes} secrets successfully uploaded`);
+			if (failures > 0) {
+				logger.log(`🚨 ${failures} secrets failed to upload`);
+			}
 		}
 	);
 
@@ -2087,6 +2192,8 @@ function createCLIParser(argv: string[]) {
 			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
 		}
 	);
+
+	wrangler.command("d1", "🗄  Interact with a D1 database", d1api);
 
 	wrangler.command(
 		"pubsub",

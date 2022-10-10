@@ -1,4 +1,4 @@
-import { parseHeaders } from "../../src/metadata-generator/parseHeaders";
+import { parseHeaders } from "../..//metadata-generator/parseHeaders";
 
 test("parseHeaders should reject malformed initial lines", () => {
 	const input = `

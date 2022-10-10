@@ -36,6 +36,7 @@ describe("wrangler", () => {
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.
 			  wrangler tail [worker]       🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret              🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk <json>  🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace        🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
@@ -43,6 +44,7 @@ describe("wrangler", () => {
 			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
+			  wrangler d1                  🗄  Interact with a D1 database
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
@@ -76,6 +78,7 @@ describe("wrangler", () => {
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.
 			  wrangler tail [worker]       🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret              🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk <json>  🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace        🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
@@ -83,6 +86,7 @@ describe("wrangler", () => {
 			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
+			  wrangler d1                  🗄  Interact with a D1 database
 			  wrangler pubsub              📮 Interact and manage Pub/Sub Brokers
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
@@ -229,16 +233,16 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-		        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-		        for more information.
-		        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
+		  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+		  for more information.
+		  Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-		      --dry-run: exiting now.
-		      Total Upload: 0xx KiB / gzip: 0xx KiB"
-	    `);
+		Total Upload: xx KiB / gzip: xx KiB
+		--dry-run: exiting now."
+	`);
 	});
 });
 

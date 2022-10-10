@@ -31,12 +31,22 @@ jobs:
         env:
           NODE_ENV: "production"
 
-      - name: Pack
+      - name: Pack wrangler
         run: npm pack
         working-directory: packages/wrangler
 
-      - name: Upload packaged artifact
+      - name: Pack @cloudflare/pages-shared
+        run: npm pack
+        working-directory: packages/pages-shared
+
+      - name: Upload packaged wrangler artifact
         uses: actions/upload-artifact@v2
         with:
           name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/wrangler/wrangler-*.tgz
+
+      - name: Upload packaged @cloudflare/pages-shared artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: npm-package-cloudflare-pages-shared-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/pages-shared/cloudflare-pages-shared-*.tgz

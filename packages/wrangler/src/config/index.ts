@@ -1,9 +1,11 @@
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
+import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
 import type { Config, RawConfig } from "./config";
+import type { CamelCaseKey } from "yargs";
 
 export type {
 	Config,
@@ -85,6 +87,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		durable_objects,
 		kv_namespaces,
 		queues,
+		d1_databases,
 		r2_buckets,
 		logfwdr,
 		services,
@@ -146,6 +149,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: queue_name,
+				};
+			}),
+		});
+	}
+
+	if (d1_databases !== undefined && d1_databases.length > 0) {
+		output.push({
+			type: "D1 Databases",
+			entries: d1_databases.map(({ binding, database_name, database_id }) => {
+				return {
+					key: removeD1BetaPrefix(binding),
+					value: database_name
+						? `${database_name} (${database_id})`
+						: database_id,
 				};
 			}),
 		});
@@ -215,10 +232,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (vars !== undefined && Object.keys(vars).length > 0) {
 		output.push({
 			type: "Vars",
-			entries: Object.entries(vars).map(([key, value]) => ({
-				key,
-				value: `"${truncate(`${value}`)}"`,
-			})),
+			entries: Object.entries(vars).map(([key, value]) => {
+				let parsedValue;
+				if (typeof value === "string") {
+					parsedValue = `"${truncate(value)}"`;
+				} else if (typeof value === "object") {
+					parsedValue = JSON.stringify(value, null, 1);
+				} else {
+					parsedValue = `${truncate(`${value}`)}`;
+				}
+				return {
+					key,
+					value: parsedValue,
+				};
+			}),
 		});
 	}
 
@@ -261,4 +288,19 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	].join("\n");
 
 	logger.log(message);
+}
+
+type CamelCase<T> = {
+	[key in keyof T as key | CamelCaseKey<key>]: T[key];
+};
+
+export function withConfig<T extends { config?: string }>(
+	handler: (
+		t: Omit<CamelCase<T>, "config"> & { config: Config }
+	) => Promise<void>
+) {
+	return (t: CamelCase<T>) => {
+		const { config: configPath, ...rest } = t;
+		return handler({ ...rest, config: readConfig(configPath, rest) });
+	};
 }
