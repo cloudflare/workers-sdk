@@ -1,6 +1,11 @@
 {
 	"name": "@cloudflare/pages-shared",
 	"version": "0.0.8",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/wrangler2.git",
+		"directory": "packages/pages-shared"
+	},
 	"files": [
 		"tsconfig.json",
 		"asset-server/**/*",
