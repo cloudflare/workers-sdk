@@ -166,7 +166,7 @@ export function getScriptName(
 /**
  * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler1
  */
-function getLegacyScriptName(
+export function getLegacyScriptName(
 	args: { name: string | undefined; env: string | undefined },
 	config: Config
 ) {
