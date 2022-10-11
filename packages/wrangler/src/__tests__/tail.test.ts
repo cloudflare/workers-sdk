@@ -13,7 +13,7 @@ import type {
 	RequestEvent,
 	ScheduledEvent,
 	AlarmEvent,
-} from "../tail";
+} from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
