@@ -42,7 +42,7 @@ export async function unstable_tail(
 	});
 }
 
-export async function unstable_tail_impl({
+async function unstable_tail_impl({
 	config: configPath,
 	worker,
 	filters = {},
