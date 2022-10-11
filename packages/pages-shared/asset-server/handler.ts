@@ -325,7 +325,7 @@ export async function generateHandler<
 							const links: { href: string; rel: string; as?: string }[] = [];
 
 							const transformedResponse = new HTMLRewriter()
-								.on("link[rel=preconnect],link[rel=preload]", {
+								.on("link[rel~=preconnect],link[rel~=preload]", {
 									element(element) {
 										for (const [attributeName] of element.attributes) {
 											if (
