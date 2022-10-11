@@ -1,5 +1,5 @@
 import { rest } from "msw";
-import type { WorkerMetadata } from "../../../../../emitted-types/src/create-worker-upload-form";
+import type { WorkerMetadata } from "../../../../create-worker-upload-form";
 
 const bindings: Record<string, WorkerMetadata["bindings"]> = {
 	"durable-object": [
@@ -11,7 +11,7 @@ const bindings: Record<string, WorkerMetadata["bindings"]> = {
 	],
 };
 const scripts: Record<string, string> = {
-	websocket: `new WebSocket("ws://dummy)`,
+	websocket: `new WebSocket("ws://dummy")`,
 	response: `return new Response("ok")`,
 };
 function getBindings(scriptName: string) {
@@ -28,7 +28,7 @@ function getScript(scriptName: string) {
 export default [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/content",
-		({ params: { accountId, scriptName, env } }, res, context) => {
+		({ params: { scriptName } }, res, context) => {
 			return res(
 				context.status(200),
 				context.text(getScript(scriptName as string))
@@ -38,7 +38,6 @@ export default [
 	rest.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName",
 		({ params: { scriptName } }, res, context) => {
-			const script = getScript(scriptName as string);
 			return res(
 				context.status(200),
 				context.text(getScript(scriptName as string))
