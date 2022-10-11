@@ -3,29 +3,29 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import tmp from "tmp-promise";
-import { bundleWorker } from "./bundle";
-import { printBundleSize } from "./bundle-reporter";
-import { fetchListResult, fetchResult } from "./cfetch";
-import { printBindings } from "./config";
-import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { confirm, fromDashMessagePrompt } from "./dialogs";
-import { getMigrationsToUpload } from "./durable";
-import { logger } from "./logger";
-import { getMetricsUsageHeaders } from "./metrics";
-import { ParseError } from "./parse";
-import { syncAssets } from "./sites";
-import { identifyD1BindingsAsBeta } from "./worker";
-import { getZoneForRoute } from "./zones";
-import type { Config } from "./config";
+import { bundleWorker } from "../bundle";
+import { printBundleSize } from "../bundle-reporter";
+import { fetchListResult, fetchResult } from "../cfetch";
+import { printBindings } from "../config";
+import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { confirm, fromDashMessagePrompt } from "../dialogs";
+import { getMigrationsToUpload } from "../durable";
+import { logger } from "../logger";
+import { getMetricsUsageHeaders } from "../metrics";
+import { ParseError } from "../parse";
+import { syncAssets } from "../sites";
+import { identifyD1BindingsAsBeta } from "../worker";
+import { getZoneForRoute } from "../zones";
+import type { Config } from "../config";
 import type {
 	Route,
 	ZoneIdRoute,
 	ZoneNameRoute,
 	CustomDomainRoute,
-} from "./config/environment";
-import type { Entry } from "./entry";
-import type { AssetPaths } from "./sites";
-import type { CfWorkerInit } from "./worker";
+} from "../config/environment";
+import type { Entry } from "../entry";
+import type { AssetPaths } from "../sites";
+import type { CfWorkerInit } from "../worker";
 
 type Props = {
 	config: Config;
