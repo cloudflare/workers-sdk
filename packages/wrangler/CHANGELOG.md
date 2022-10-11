@@ -1,5 +1,41 @@
 # wrangler
 
+## 2.1.11
+
+### Patch Changes
+
+- [#1957](https://github.com/cloudflare/wrangler2/pull/1957) [`b579c2b5`](https://github.com/cloudflare/wrangler2/commit/b579c2b5ad8dc1d19e1b4bf7ff11f56d0c8d4e1f) Thanks [@caass](https://github.com/caass)! - Remove dependency on create-cloudflare.
+
+  Previously, `wrangler generate` was a thin wrapper around [`create-cloudflare`](https://github.com/cloudflare/templates/tree/main/packages/create-cloudflare). Now, we've moved over the logic from that package directly into `wrangler`.
+
+* [#1985](https://github.com/cloudflare/wrangler2/pull/1985) [`51385e57`](https://github.com/cloudflare/wrangler2/commit/51385e5740c189ec4854c76307cb9ed821e3712f) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: hide deprecated flags from --help menu
+
+- [#1944](https://github.com/cloudflare/wrangler2/pull/1944) [`ea54623c`](https://github.com/cloudflare/wrangler2/commit/ea54623ce2f2f5bc5ac5c48a58730bb3f75afd9c) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - `wrangler pages publish` should prioritize `_worker.js` over `/functions` if both exist
+
+* [#1950](https://github.com/cloudflare/wrangler2/pull/1950) [`daf73fbe`](https://github.com/cloudflare/wrangler2/commit/daf73fbe03b55631383cdc86a05eac12d2775875) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - `wrangler pages dev` should prioritize `_worker.js`
+
+  When using a `_worker.js` file, the entire `/functions` directory should be ignored – this includes its routing and middleware characteristics. Currently `wrangler pages dev` does the reverse, by prioritizing
+  `/functions` over `_worker.js`. These changes fix the current behaviour.
+
+- [#1928](https://github.com/cloudflare/wrangler2/pull/1928) [`c1722170`](https://github.com/cloudflare/wrangler2/commit/c1722170e93101a292a3c14110b131457f7164d6) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Allow unsetting of automatically generated `Link` headers using `_headers` and the `! Link` operator
+
+* [#1928](https://github.com/cloudflare/wrangler2/pull/1928) [`c1722170`](https://github.com/cloudflare/wrangler2/commit/c1722170e93101a292a3c14110b131457f7164d6) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Only generate `Link` headers from simple `<link>` elements.
+
+  Specifically, only those with the `rel`, `href` and possibly `as` attributes. Any element with additional attributes will not be used to generate headers.
+
+- [#1974](https://github.com/cloudflare/wrangler2/pull/1974) [`a96f2585`](https://github.com/cloudflare/wrangler2/commit/a96f25856615befef5d03adffd3808a393bf145e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump @cloudflare/pages-shared@0.0.7 and use TS directly
+
+* [#1965](https://github.com/cloudflare/wrangler2/pull/1965) [`9709d3a3`](https://github.com/cloudflare/wrangler2/commit/9709d3a31d4fc192c257d0347f111dec465fd20c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - chore: remove hidden on --from-dash
+  The --from-dash can now be used with the dashboard features to support moving Worker developmment to a local machine.
+
+  resolves #1783
+
+- [#1978](https://github.com/cloudflare/wrangler2/pull/1978) [`6006ae50`](https://github.com/cloudflare/wrangler2/commit/6006ae5010ab32bbd81b002b26cd450cdf58b1a5) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - chore: Undici 5.11.0 multipart/form-data support
+  The 5.11.0 version of Undici now supports multipart/form-data previously needed a ponyfill
+  we can now handle the multipart/form-data without any custom code.
+
+  resolves #1977
+
 ## 2.1.10
 
 ### Patch Changes

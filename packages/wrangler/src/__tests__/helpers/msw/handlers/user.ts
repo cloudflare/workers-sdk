@@ -1,8 +1,8 @@
 import { rest } from "msw";
 
-export const mswUserHandlers = [
-	rest.get("*/user", (_, res, cxt) => {
-		return res(
+export const mswSuccessUserHandlers = [
+	rest.get("*/user", (_, response, cxt) => {
+		return response.once(
 			cxt.status(200),
 			cxt.json({
 				success: true,
@@ -25,8 +25,8 @@ export const mswUserHandlers = [
 			})
 		);
 	}),
-	rest.get("*/accounts", (_, res, cxt) => {
-		return res(
+	rest.get("*/accounts", (_, response, cxt) => {
+		return response.once(
 			cxt.status(200),
 			cxt.json({
 				success: true,
@@ -41,7 +41,7 @@ export const mswUserHandlers = [
 		);
 	}),
 	rest.get("*/memberships", (_, response, context) => {
-		return response(
+		return response.once(
 			context.status(200),
 			context.json({
 				success: true,

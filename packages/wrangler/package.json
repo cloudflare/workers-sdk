@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.1.10",
+	"version": "2.1.11",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -27,6 +27,11 @@
 	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/wrangler2/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/wrangler2.git",
+		"directory": "packages/wrangler"
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
@@ -94,13 +99,13 @@
 		"@cloudflare/kv-asset-handler": "^0.2.0",
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
 		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-		"@miniflare/core": "2.9.0",
-		"@miniflare/d1": "2.9.0",
-		"@miniflare/durable-objects": "2.9.0",
+		"@miniflare/core": "2.10.0",
+		"@miniflare/d1": "2.10.0",
+		"@miniflare/durable-objects": "2.10.0",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.14.51",
-		"miniflare": "2.9.0",
+		"miniflare": "2.10.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
@@ -129,7 +134,6 @@
 		"@types/yargs": "^17.0.10",
 		"@webcontainer/env": "^1.0.1",
 		"body-parser": "^1.20.0",
-		"busboy": "^1.6.0",
 		"clipboardy": "^3.0.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
@@ -171,7 +175,7 @@
 		"timeago.js": "^4.0.2",
 		"tmp-promise": "^3.0.3",
 		"ts-dedent": "^2.2.0",
-		"undici": "^5.9.1",
+		"undici": "^5.11.0",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",

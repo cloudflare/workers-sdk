@@ -11,13 +11,12 @@ import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { fetchResult, fetchScriptContent } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { d1api } from "./d1";
 import { devHandler, devOptions } from "./dev";
 import { confirm, prompt, tailDOLogPrompt } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
-import { getEntry } from "./entry";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { initHandler, initOptions } from "./init";
@@ -47,7 +46,7 @@ import {
 	readFileSyncToBuffer,
 } from "./parse";
 import { previewHandler, previewOptions } from "./preview";
-import publish from "./publish";
+import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import {
 	bucketAndKeyFromObjectPath,
@@ -58,7 +57,6 @@ import {
 	listR2Buckets,
 	putR2Object,
 } from "./r2";
-import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	createTail,
 	jsonPrintLogs,
@@ -383,263 +381,8 @@ function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"publish [script]",
 		"🆙 Publish your Worker to Cloudflare.",
-		(yargs) => {
-			return (
-				yargs
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
-					.positional("script", {
-						describe: "The path to an entry point for your worker",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("name", {
-						describe: "Name of the worker",
-						type: "string",
-						requiresArg: true,
-					})
-					// We want to have a --no-bundle flag, but yargs requires that
-					// we also have a --bundle flag (that it adds the --no to by itself)
-					// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
-					// that's visible to the user but doesn't "do" anything.
-					.option("bundle", {
-						describe: "Run wrangler's compilation step before publishing",
-						type: "boolean",
-						hidden: true,
-					})
-					.option("no-bundle", {
-						describe: "Skip internal build steps and directly publish Worker",
-						type: "boolean",
-						default: false,
-					})
-					.option("outdir", {
-						describe: "Output directory for the bundled worker",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("format", {
-						choices: ["modules", "service-worker"] as const,
-						describe: "Choose an entry type",
-						deprecated: true,
-					})
-					.option("compatibility-date", {
-						describe: "Date to use for compatibility checks",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("compatibility-flags", {
-						describe: "Flags to use for compatibility checks",
-						alias: "compatibility-flag",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("latest", {
-						describe: "Use the latest version of the worker runtime",
-						type: "boolean",
-						default: false,
-					})
-					.option("experimental-public", {
-						describe: "Static assets to be served",
-						type: "string",
-						requiresArg: true,
-						deprecated: true,
-						hidden: true,
-					})
-					.option("assets", {
-						describe: "Static assets to be served",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("site", {
-						describe: "Root folder of static assets for Workers Sites",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("site-include", {
-						describe:
-							"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("site-exclude", {
-						describe:
-							"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("var", {
-						describe:
-							"A key-value pair to be injected into the script as a variable",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("define", {
-						describe: "A key-value pair to be substituted in the script",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("triggers", {
-						describe: "cron schedules to attach",
-						alias: ["schedule", "schedules"],
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("routes", {
-						describe: "Routes to upload",
-						alias: "route",
-						type: "string",
-						requiresArg: true,
-						array: true,
-					})
-					.option("jsx-factory", {
-						describe: "The function that is called for each JSX element",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("jsx-fragment", {
-						describe: "The function that is called for each JSX fragment",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("tsconfig", {
-						describe: "Path to a custom tsconfig.json file",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("minify", {
-						describe: "Minify the Worker",
-						type: "boolean",
-					})
-					.option("node-compat", {
-						describe: "Enable node.js compatibility",
-						type: "boolean",
-					})
-					.option("dry-run", {
-						describe: "Don't actually publish",
-						type: "boolean",
-					})
-					.option("keep-vars", {
-						describe:
-							"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
-						default: false,
-						type: "boolean",
-					})
-					.option("legacy-env", {
-						type: "boolean",
-						describe: "Use legacy environments",
-						hidden: true,
-					})
-			);
-		},
-		async (args) => {
-			await printWranglerBanner();
-
-			const configPath =
-				(args.config as ConfigPath) ||
-				(args.script && findWranglerToml(path.dirname(args.script)));
-			const config = readConfig(configPath, args);
-			const entry = await getEntry(args, config, "publish");
-			await metrics.sendMetricsEvent(
-				"deploy worker script",
-				{
-					usesTypeScript: /\.tsx?$/.test(entry.file),
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-
-			if (args.public) {
-				throw new Error("The --public field has been renamed to --assets");
-			}
-			if (args["experimental-public"]) {
-				throw new Error(
-					"The --experimental-public field has been renamed to --assets"
-				);
-			}
-
-			if ((args.assets || config.assets) && (args.site || config.site)) {
-				throw new Error(
-					"Cannot use Assets and Workers Sites in the same Worker."
-				);
-			}
-
-			if (args.assets) {
-				logger.warn(
-					"The --assets argument is experimental and may change or break at any time"
-				);
-			}
-			if (args.latest) {
-				logger.warn(
-					"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
-				);
-			}
-
-			const cliVars =
-				args.var?.reduce<Record<string, string>>((collectVars, v) => {
-					const [key, ...value] = v.split(":");
-					collectVars[key] = value.join("");
-					return collectVars;
-				}, {}) || {};
-
-			const cliDefines =
-				args.define?.reduce<Record<string, string>>((collectDefines, d) => {
-					const [key, ...value] = d.split(":");
-					collectDefines[key] = value.join("");
-					return collectDefines;
-				}, {}) || {};
-
-			const accountId = args.dryRun ? undefined : await requireAuth(config);
-
-			const assetPaths =
-				args.assets || config.assets
-					? getAssetPaths(config, args.assets)
-					: getSiteAssetPaths(
-							config,
-							args.site,
-							args.siteInclude,
-							args.siteExclude
-					  );
-
-			await publish({
-				config,
-				accountId,
-				name: getScriptName(args, config),
-				rules: getRules(config),
-				entry,
-				env: args.env,
-				compatibilityDate: args.latest
-					? new Date().toISOString().substring(0, 10)
-					: args["compatibility-date"],
-				compatibilityFlags: args["compatibility-flags"],
-				vars: cliVars,
-				defines: cliDefines,
-				triggers: args.triggers,
-				jsxFactory: args["jsx-factory"],
-				jsxFragment: args["jsx-fragment"],
-				tsconfig: args.tsconfig,
-				routes: args.routes,
-				assetPaths,
-				legacyEnv: isLegacyEnv(config),
-				minify: args.minify,
-				nodeCompat: args.nodeCompat,
-				isWorkersSite: Boolean(args.site || config.site),
-				outDir: args.outdir,
-				dryRun: args.dryRun,
-				noBundle: !(args.bundle ?? !config.no_bundle),
-				keepVars: args.keepVars,
-			});
-		}
+		publishOptions,
+		publishHandler
 	);
 
 	// tail

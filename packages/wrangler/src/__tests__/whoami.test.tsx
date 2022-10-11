@@ -5,7 +5,11 @@ import { writeAuthConfigFile } from "../user";
 import { getUserInfo, WhoAmI } from "../whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+} from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { UserInfo } from "../whoami";
 
@@ -17,6 +21,7 @@ describe("getUserInfo()", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		setIsTTY(true);
 	});
 

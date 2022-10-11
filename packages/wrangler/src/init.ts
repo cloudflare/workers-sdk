@@ -51,7 +51,6 @@ export async function initOptions(yargs: Argv) {
 			describe: "Download script from the dashboard for local development",
 			type: "string",
 			requiresArg: true,
-			hidden: true,
 		});
 }
 

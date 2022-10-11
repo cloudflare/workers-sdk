@@ -67,12 +67,16 @@ beforeAll(() => {
 	msw.listen({
 		onUnhandledRequest: (request) => {
 			throw new Error(
-				`No mock found for ${request.method} ${request.url.href}`
+				`No mock found for ${request.method} ${request.url.href}
+				`
 			);
 		},
 	});
 });
-afterEach(() => msw.resetHandlers());
+afterEach(() => {
+	msw.restoreHandlers();
+	msw.resetHandlers();
+});
 afterAll(() => msw.close());
 
 jest.mock("../cfetch/internal");
