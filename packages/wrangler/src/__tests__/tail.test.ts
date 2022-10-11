@@ -6,6 +6,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
+import { msw, mswScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -18,6 +19,8 @@ import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 describe("tail", () => {
+	beforeEach(() => msw.use(...mswScriptHandlers));
+
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
