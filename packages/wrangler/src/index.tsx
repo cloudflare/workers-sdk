@@ -9,7 +9,7 @@ import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { d1api } from "./d1";
+import { d1 } from "./d1";
 import { devHandler, devOptions } from "./dev";
 import { confirm, prompt } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
@@ -1463,6 +1463,7 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// pages
 	wrangler.command(
 		"pages",
 		"⚡️ Configure Cloudflare Pages",
@@ -1471,10 +1472,12 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// r2
 	wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
 		return r2(r2Yargs.command(subHelp));
 	});
 
+	// dispatch-namespace
 	wrangler.command(
 		"dispatch-namespace",
 		"📦 Interact with a dispatch namespace",
@@ -1483,8 +1486,12 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
-	wrangler.command("d1", "🗄  Interact with a D1 database", d1api);
+	// d1
+	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
+		return d1(d1Yargs.command(subHelp));
+	});
 
+	// pubsub
 	wrangler.command(
 		"pubsub",
 		"📮 Interact and manage Pub/Sub Brokers",
