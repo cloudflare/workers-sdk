@@ -1483,7 +1483,9 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
-	wrangler.command("d1", "🗄  Interact with a D1 database", d1api);
+	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
+		return d1api(d1Yargs.command(subHelp));
+	});
 
 	wrangler.command(
 		"pubsub",
