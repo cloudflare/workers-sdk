@@ -2,13 +2,14 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import chalk from "chalk";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
 import { printBundleSize } from "../bundle-reporter";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
-import { confirm, fromDashMessagePrompt } from "../dialogs";
+import { confirm, fromDashMessagePrompt, prompt } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -712,7 +713,8 @@ function formatTime(duration: number) {
 
 async function getSubdomain(accountId: string): Promise<string> {
 	try {
-		const { subdomain } = await fetchResult(
+		// note: API docs say that this field is "name", but they're lying.
+		const { subdomain } = await fetchResult<{ subdomain: string }>(
 			`/accounts/${accountId}/workers/subdomain`
 		);
 		return subdomain;
@@ -722,17 +724,125 @@ async function getSubdomain(accountId: string): Promise<string> {
 			// 10007 error code: not found
 			// https://api.cloudflare.com/#worker-subdomain-get-subdomain
 
-			const errorMessage =
-				"Error: You need to register a workers.dev subdomain before publishing to workers.dev";
-			const solutionMessage =
-				"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
-			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+			logger.warn(
+				"You need to register a workers.dev subdomain before publishing to workers.dev"
+			);
 
-			throw new Error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			const wantsToRegister = await confirm(
+				"Would you like to register a workers.dev subdomain now?"
+			);
+			if (!wantsToRegister) {
+				const solutionMessage =
+					"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+
+				throw new Error(`${solutionMessage}\n${onboardingLink}`);
+			}
+
+			return await registerSubdomain(accountId);
 		} else {
 			throw e;
 		}
 	}
+}
+
+async function registerSubdomain(accountId: string): Promise<string> {
+	let subdomain: string | undefined;
+
+	while (subdomain === undefined) {
+		const potentialName = await prompt(
+			"What would you like your workers.dev subdomain to be? It will be accessible at https://<subdomain>.workers.dev"
+		);
+
+		if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(potentialName)) {
+			logger.warn(
+				`${potentialName} is invalid, please choose another subdomain.`
+			);
+			continue;
+		}
+
+		try {
+			await fetchResult<{ subdomain: string }>(
+				`/accounts/${accountId}/workers/subdomains/${potentialName}`
+			);
+		} catch (err) {
+			const subdomainAvailabilityCheckError = err as { code?: number };
+
+			if (
+				typeof subdomainAvailabilityCheckError === "object" &&
+				!!subdomainAvailabilityCheckError
+			) {
+				if (subdomainAvailabilityCheckError.code === 10032) {
+					// oddly enough, this is a `subdomain_unavailable` error, meaning...that the subdomain
+					// doesn't exist. and we can register it. this is exactly how the dashboard does it.
+				} else if (subdomainAvailabilityCheckError.code === 10031) {
+					logger.error(
+						"Subdomain is unavailable, please try a different subdomain"
+					);
+
+					continue;
+				} else {
+					logger.error("An unexpected error occurred, please try again.");
+
+					continue;
+				}
+			}
+		}
+
+		const ok = await confirm(
+			`Creating a workers.dev subdomain for your account at ${chalk.blue(
+				chalk.underline(`https://${potentialName}.workers.dev`)
+			)}. Ok to proceed?`
+		);
+		if (!ok) {
+			const solutionMessage =
+				"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+
+			throw new Error(`${solutionMessage}\n${onboardingLink}`);
+		}
+
+		try {
+			const result = await fetchResult<{ subdomain: string }>(
+				`/accounts/${accountId}/workers/subdomain`,
+				{
+					method: "PUT",
+					body: JSON.stringify({ subdomain: potentialName }),
+				}
+			);
+
+			subdomain = result.subdomain;
+		} catch (err) {
+			const subdomainCreationError = err as { code?: number };
+			if (
+				typeof subdomainCreationError === "object" &&
+				!!subdomainCreationError &&
+				subdomainCreationError.code !== undefined
+			) {
+				switch (subdomainCreationError.code) {
+					case 10031:
+						logger.error(
+							"Subdomain is unavailable, please try a different subdomain."
+						);
+						break;
+					default:
+						logger.error("An unexpected error occurred, please try again.");
+						break;
+				}
+			}
+		}
+	}
+
+	logger.log("Success! It may take a few minutes for DNS records to update.");
+	logger.log(
+		`Visit ${chalk.blue(
+			chalk.underline(
+				`https://dash.cloudflare.com/${accountId}/workers/subdomain`
+			)
+		)} to edit your workers.dev subdomain`
+	);
+
+	return subdomain;
 }
 
 /**
@@ -847,16 +957,19 @@ async function publishRoutesFallback(
 			}
 		}
 
-		const { pattern } = await fetchResult(`/zones/${zoneId}/workers/routes`, {
-			method: "POST",
-			body: JSON.stringify({
-				pattern: routePattern,
-				script: scriptName,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
+		const { pattern } = await fetchResult<{ pattern: string }>(
+			`/zones/${zoneId}/workers/routes`,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					pattern: routePattern,
+					script: scriptName,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}
+		);
 
 		deployedRoutes.push(pattern);
 	}
