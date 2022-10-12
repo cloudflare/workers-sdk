@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
-import { fetchResult } from "./cfetch";
-import { fetchR2Objects } from "./cfetch/internal";
+import { fetchResult } from "../cfetch";
+import { fetchR2Objects } from "../cfetch/internal";
 import type { HeadersInit } from "undici";
 
 /**
