@@ -2,10 +2,8 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as stream from "node:stream";
 import { StringDecoder } from "node:string_decoder";
-import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
-import onExit from "signal-exit";
 import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -57,12 +55,7 @@ import {
 	listR2Buckets,
 	putR2Object,
 } from "./r2";
-import {
-	createTail,
-	jsonPrintLogs,
-	prettyPrintLogs,
-	translateCLICommandToFilterMessage,
-} from "./tail";
+import { tailOptions, tailHandler } from "./tail";
 import { updateCheck } from "./update-check";
 import {
 	listScopes,
@@ -73,12 +66,9 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import { getWorkerForZone } from "./zones";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv";
-import type { TailCLIFilters } from "./tail";
 import type { Readable } from "node:stream";
-import type { RawData } from "ws";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -164,7 +154,7 @@ export function getScriptName(
 /**
  * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler1
  */
-function getLegacyScriptName(
+export function getLegacyScriptName(
 	args: { name: string | undefined; env: string | undefined },
 	config: Config
 ) {
@@ -388,174 +378,8 @@ function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"tail [worker]",
 		"🦚 Starts a log tailing session for a published Worker.",
-		(yargs) => {
-			return yargs
-				.positional("worker", {
-					describe: "Name or route of the worker to tail",
-					type: "string",
-				})
-				.option("format", {
-					default: process.stdout.isTTY ? "pretty" : "json",
-					choices: ["json", "pretty"],
-					describe: "The format of log entries",
-				})
-				.option("status", {
-					choices: ["ok", "error", "canceled"],
-					describe: "Filter by invocation status",
-					array: true,
-				})
-				.option("header", {
-					type: "string",
-					requiresArg: true,
-					describe: "Filter by HTTP header",
-				})
-				.option("method", {
-					type: "string",
-					requiresArg: true,
-					describe: "Filter by HTTP method",
-					array: true,
-				})
-				.option("sampling-rate", {
-					type: "number",
-					describe: "Adds a percentage of requests to log sampling rate",
-				})
-				.option("search", {
-					type: "string",
-					requiresArg: true,
-					describe: "Filter by a text match in console.log messages",
-				})
-				.option("ip", {
-					type: "string",
-					requiresArg: true,
-					describe:
-						'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
-					array: true,
-				})
-				.option("env", {
-					type: "string",
-					requiresArg: true,
-					describe: "Perform on a specific environment",
-					alias: "e",
-				})
-				.option("debug", {
-					type: "boolean",
-					hidden: true,
-					default: false,
-					describe:
-						"If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
-				})
-				.option("legacy-env", {
-					type: "boolean",
-					describe: "Use legacy environments",
-					hidden: true,
-				});
-		},
-		async (args) => {
-			if (args.format === "pretty") {
-				await printWranglerBanner();
-			}
-			const config = readConfig(args.config as ConfigPath, args);
-			await metrics.sendMetricsEvent("begin log stream", {
-				sendMetrics: config.send_metrics,
-			});
-
-			let scriptName;
-
-			// Worker names can't contain "." (and most routes should), so use that as a discriminator
-			if (args.worker?.includes(".")) {
-				scriptName = await getWorkerForZone(args.worker);
-				if (args.format === "pretty") {
-					logger.log(
-						`Connecting to worker ${scriptName} at route ${args.worker}`
-					);
-				}
-			} else {
-				scriptName = getLegacyScriptName(
-					{ name: args.worker, ...args },
-					config
-				);
-			}
-
-			if (!scriptName) {
-				throw new Error(
-					"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
-				);
-			}
-
-			const accountId = await requireAuth(config);
-
-			const cliFilters: TailCLIFilters = {
-				status: args.status as ("ok" | "error" | "canceled")[] | undefined,
-				header: args.header,
-				method: args.method,
-				samplingRate: args["sampling-rate"],
-				search: args.search,
-				clientIp: args.ip,
-			};
-
-			const filters = translateCLICommandToFilterMessage(cliFilters);
-
-			const { tail, expiration, deleteTail } = await createTail(
-				accountId,
-				scriptName,
-				filters,
-				args.debug,
-				!isLegacyEnv(config) ? args.env : undefined
-			);
-
-			const scriptDisplayName = `${scriptName}${
-				args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
-			}`;
-
-			if (args.format === "pretty") {
-				logger.log(
-					`Successfully created tail, expires at ${expiration.toLocaleString()}`
-				);
-			}
-
-			onExit(async () => {
-				tail.terminate();
-				await deleteTail();
-				await metrics.sendMetricsEvent("end log stream", {
-					sendMetrics: config.send_metrics,
-				});
-			});
-
-			const printLog: (data: RawData) => void =
-				args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
-
-			tail.on("message", printLog);
-
-			while (tail.readyState !== tail.OPEN) {
-				switch (tail.readyState) {
-					case tail.CONNECTING:
-						await setTimeout(100);
-						break;
-					case tail.CLOSING:
-						await setTimeout(100);
-						break;
-					case tail.CLOSED:
-						await metrics.sendMetricsEvent("end log stream", {
-							sendMetrics: config.send_metrics,
-						});
-						throw new Error(
-							`Connection to ${scriptDisplayName} closed unexpectedly.`
-						);
-				}
-			}
-
-			if (args.format === "pretty") {
-				logger.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
-			}
-
-			tail.on("close", async () => {
-				tail.terminate();
-				await deleteTail();
-				await metrics.sendMetricsEvent("end log stream", {
-					sendMetrics: config.send_metrics,
-				});
-			});
-		}
+		tailOptions,
+		tailHandler
 	);
 
 	// preview
