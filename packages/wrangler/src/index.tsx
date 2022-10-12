@@ -1,4 +1,3 @@
-import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
@@ -6,7 +5,6 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { d1api } from "./d1";
@@ -45,7 +43,7 @@ import { previewHandler, previewOptions } from "./preview";
 import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { r2 } from "./r2";
-import { secret } from "./secret";
+import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { updateCheck } from "./update-check";
 import {
@@ -445,100 +443,8 @@ function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"secret:bulk <json>",
 		"🗄️  Bulk upload secrets for a Worker",
-		(yargs) => {
-			return yargs
-				.positional("json", {
-					describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
-					type: "string",
-					demandOption: "true",
-				})
-				.option("name", {
-					describe: "Name of the Worker",
-					type: "string",
-					requiresArg: true,
-				})
-				.option("env", {
-					type: "string",
-					requiresArg: true,
-					describe:
-						"Binds the secret to the Worker of the specific environment.",
-					alias: "e",
-				});
-		},
-		async (secretBulkArgs) => {
-			await printWranglerBanner();
-			const config = readConfig(
-				secretBulkArgs.config as ConfigPath,
-				secretBulkArgs
-			);
-
-			const scriptName = getLegacyScriptName(secretBulkArgs, config);
-			if (!scriptName) {
-				throw new Error(
-					"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
-				);
-			}
-
-			const accountId = await requireAuth(config);
-
-			logger.log(
-				`🌀 Creating the secrets for the Worker "${scriptName}" ${
-					secretBulkArgs.env && !isLegacyEnv(config)
-						? `(${secretBulkArgs.env})`
-						: ""
-				}`
-			);
-			const jsonFilePath = path.resolve(secretBulkArgs.json);
-			const content = parseJSON<Record<string, string>>(
-				readFileSync(jsonFilePath),
-				jsonFilePath
-			);
-			for (const key in content) {
-				if (typeof content[key] !== "string") {
-					throw new Error(
-						`The value for ${key} in ${jsonFilePath} is not a string.`
-					);
-				}
-			}
-
-			const url =
-				!secretBulkArgs.env || isLegacyEnv(config)
-					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
-			// Until we have a bulk route for secrets, we need to make a request for each key/value pair
-			const bulkOutcomes = await Promise.all(
-				Object.entries(content).map(async ([key, value]) => {
-					return fetchResult(url, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							name: key,
-							text: value,
-							type: "secret_text",
-						}),
-					})
-						.then(() => {
-							logger.log(`✨ Successfully created secret for key: ${key}`);
-							return true;
-						})
-						.catch((e) => {
-							logger.error(
-								`🚨 Error uploading secret for key: ${key}:
-										${e.message}`
-							);
-							return false;
-						});
-				})
-			);
-			const successes = bulkOutcomes.filter((outcome) => outcome).length;
-			const failures = bulkOutcomes.length - successes;
-			logger.log("");
-			logger.log("Finished processing secrets JSON file:");
-			logger.log(`✨ ${successes} secrets successfully uploaded`);
-			if (failures > 0) {
-				logger.log(`🚨 ${failures} secrets failed to upload`);
-			}
-		}
+		secretBulkOptions,
+		secretBulkHandler
 	);
 
 	// kv
