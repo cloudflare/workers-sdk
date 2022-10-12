@@ -301,7 +301,10 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				routes: [
-					{ pattern: "https://some-domain.com/*", zone_name: "some-zone.com" },
+					{
+						pattern: "https://some-zone.com/*",
+						zone_name: "some-zone.com",
+					},
 				],
 			});
 			fs.writeFileSync("index.js", `export default {};`);

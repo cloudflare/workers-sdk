@@ -13,9 +13,7 @@ export function getHostFromRoute(route: Route): string | undefined {
 	return typeof route === "string"
 		? getHostFromUrl(route)
 		: typeof route === "object"
-		? "zone_name" in route
-			? getHostFromUrl(route.zone_name)
-			: getHostFromUrl(route.pattern)
+		? getHostFromUrl(route.pattern)
 		: undefined;
 }
 
