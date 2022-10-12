@@ -167,12 +167,12 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
 
-			  										Failed to create secret 1
+			                  Failed to create secret 1
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-2:[0m
 
-			  										Failed to create secret 2
+			                  Failed to create secret 2
 
 			"
 		`);
@@ -226,22 +226,22 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
 
-			  										Failed to create secret 1
+			                  Failed to create secret 1
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-3:[0m
 
-			  										Failed to create secret 3
+			                  Failed to create secret 3
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-5:[0m
 
-			  										Failed to create secret 5
+			                  Failed to create secret 5
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-7:[0m
 
-			  										Failed to create secret 7
+			                  Failed to create secret 7
 
 			"
 		`);
