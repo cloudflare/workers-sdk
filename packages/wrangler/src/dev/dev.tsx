@@ -293,7 +293,7 @@ function DevSession(props: DevSessionProps) {
 	// TODO(queues) support remote wrangler dev before merging into main
 	if (
 		!props.local &&
-		(props.bindings.queues?.length || props.queueConsumers.length)
+		(props.bindings.queues?.length || props.queueConsumers?.length)
 	) {
 		throw new Error(
 			"Wrangler dev remote mode does not support queues yet. Instead, try local mode by running: `wrangler dev -l`"

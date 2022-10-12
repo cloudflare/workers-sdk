@@ -530,7 +530,7 @@ export function setupMiniflareOptions({
 		queueBindings: queueBindings?.map((queue) => {
 			return { name: queue.binding, queueName: queue.queue_name };
 		}),
-		queueConsumers: queueConsumers.map((consumer) => {
+		queueConsumers: queueConsumers?.map((consumer) => {
 			const waitMs = consumer.max_batch_timeout
 				? 1000 * consumer.max_batch_timeout
 				: undefined;

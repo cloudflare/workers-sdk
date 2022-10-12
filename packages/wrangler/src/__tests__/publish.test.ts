@@ -6548,7 +6548,6 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				queues: {
 					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
-					consumers: [],
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -6579,7 +6578,6 @@ addEventListener('fetch', event => {});`
 		it("should update queue consumers on publish", async () => {
 			writeWranglerToml({
 				queues: {
-					producers: [],
 					consumers: [
 						{
 							queue: "queue1",

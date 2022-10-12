@@ -845,7 +845,7 @@ async function getBindings(
 			],
 		},
 		queues: [
-			...configParam.queues.producers.map((queue) => {
+			...(configParam.queues.producers || []).map((queue) => {
 				return { binding: queue.binding, queue_name: queue.queue };
 			}),
 		],

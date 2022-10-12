@@ -495,7 +495,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
-			queues: config.queues.producers.map((x) => {
+			queues: config.queues.producers?.map((x) => {
 				return { binding: x.binding, queue_name: x.queue };
 			}),
 			r2_buckets: config.r2_buckets,
@@ -695,7 +695,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (config.queues.consumers.length > 0) {
+	if (config.queues.consumers && config.queues.consumers.length) {
 		deployments.push(...updateQueueConsumers(config));
 	}
 
@@ -888,9 +888,10 @@ function isAuthenticationError(e: unknown): e is ParseError {
 }
 
 async function ensureQueuesExist(config: Config) {
-	const queueNames = config.queues.producers
-		.map((x) => x.queue)
-		.concat(config.queues.consumers.map((x) => x.queue));
+	const producers = (config.queues.producers || []).map((x) => x.queue);
+	const consumers = (config.queues.consumers || []).map((x) => x.queue);
+
+	const queueNames = producers.concat(consumers);
 	for (const queue of queueNames) {
 		try {
 			await GetQueue(config, queue);
@@ -907,7 +908,8 @@ async function ensureQueuesExist(config: Config) {
 }
 
 function updateQueueConsumers(config: Config): Promise<string[]>[] {
-	return config.queues.consumers.map((consumer) => {
+	const consumers = config.queues.consumers || [];
+	return consumers.map((consumer) => {
 		const body: PutConsumerBody = {
 			dead_letter_queue: consumer.dead_letter_queue,
 			settings: {

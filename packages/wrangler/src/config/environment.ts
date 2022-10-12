@@ -336,7 +336,7 @@ interface EnvironmentNonInheritable {
 	 */
 	queues: {
 		/** Producer bindings */
-		producers: {
+		producers?: {
 			/** The binding name used to refer to the Queue in the worker. */
 			binding: string;
 
@@ -345,7 +345,7 @@ interface EnvironmentNonInheritable {
 		}[];
 
 		/** Consumer configuration */
-		consumers: {
+		consumers?: {
 			/** The name of the queue from which this script should consume. */
 			queue: string;
 
