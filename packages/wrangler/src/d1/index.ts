@@ -6,7 +6,7 @@ import * as List from "./list";
 import { d1BetaWarning } from "./utils";
 import type { Argv } from "yargs";
 
-export const d1api = (yargs: Argv) => {
+export const d1 = (yargs: Argv) => {
 	return (
 		yargs
 			.command("list", "List D1 databases", List.Options, List.Handler)
