@@ -3,7 +3,9 @@ import { fetchResult } from "./cfetch";
 import { confirm, prompt } from "./dialogs";
 import { logger } from "./logger";
 
-export async function getSubdomain(accountId: string): Promise<string> {
+export async function getWorkersDevSubdomain(
+	accountId: string
+): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(

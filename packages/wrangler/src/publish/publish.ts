@@ -13,7 +13,7 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
-import { getSubdomain } from "../routes";
+import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
@@ -610,7 +610,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getSubdomain(accountId);
+		const userSubdomain = await getWorkersDevSubdomain(accountId);
 		const scriptURL =
 			props.legacyEnv || !props.env
 				? `${scriptName}.${userSubdomain}.workers.dev`
