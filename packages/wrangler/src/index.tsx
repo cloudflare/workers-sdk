@@ -13,6 +13,7 @@ import { workerNamespaceCommands } from "./dispatch-namespace";
 import { DeprecationError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { initHandler, initOptions } from "./init";
+import { kvNamespace } from "./kv";
 import {
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
@@ -53,7 +54,6 @@ import { whoami } from "./whoami";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv/helpers";
 import type Yargs from "yargs";
-import { kvNamespace } from "./kv";
 
 export type ConfigPath = string | undefined;
 
