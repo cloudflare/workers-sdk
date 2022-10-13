@@ -28,7 +28,7 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
-import type { KVNamespaceInfo } from "../kv";
+import type { KVNamespaceInfo } from "../kv/helpers";
 import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
