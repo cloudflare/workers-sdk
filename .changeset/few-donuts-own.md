@@ -21,7 +21,7 @@ Total Upload: 0.20 KiB / gzip: 0.17 KiB
 
   Unassign other workers from the routes you want to publish to, and then try again.
   Visit
-  https://dash.cloudflare.com/8046ced7e2c70129d1732280998af108/workers/overview
+  https://dash.cloudflare.com/<account_id>/workers/overview
   to unassign a worker from a route.
 ```
 
