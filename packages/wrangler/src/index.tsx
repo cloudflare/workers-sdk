@@ -6,17 +6,28 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { readConfig } from "./config";
 import { d1 } from "./d1";
+import {
+	buildHandler,
+	buildOptions,
+	configHandler,
+	noOpOptions,
+	generateHandler,
+	generateOptions,
+	previewHandler,
+	previewOptions,
+	route,
+	routeHandler,
+	subdomainHandler,
+	subdomainOptions,
+} from "./deprecated";
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
-import { DeprecationError } from "./errors";
-import { generateHandler, generateOptions } from "./generate";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { previewHandler, previewOptions } from "./preview";
 import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { r2 } from "./r2";
@@ -148,7 +159,7 @@ export function demandOneOfOption(...options: string[]) {
 
 export class CommandLineArgsError extends Error {}
 
-function createCLIParser(argv: string[]) {
+export function createCLIParser(argv: string[]) {
 	const wrangler = makeCLI(argv)
 		.strict()
 		// We handle errors ourselves in a try-catch around `yargs.parse`.
@@ -224,56 +235,11 @@ function createCLIParser(argv: string[]) {
 		initHandler
 	);
 
-	// build
-	wrangler.command(
-		"build",
-		false,
-		(yargs) => {
-			return yargs.option("env", {
-				describe: "Perform on a specific environment",
-				type: "string",
-			});
-		},
-		async (buildArgs) => {
-			// "[DEPRECATED] 🦀 Build your project (if applicable)",
+	// [DEPRECATED] build
+	wrangler.command("build", false, buildOptions, buildHandler);
 
-			const envFlag = buildArgs.env ? ` --env=${buildArgs.env}` : "";
-			logger.log(
-				formatMessage({
-					kind: "warning",
-					text: "Deprecation: `wrangler build` has been deprecated.",
-					notes: [
-						{
-							text: "Please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for more information.",
-						},
-						{
-							text: `Attempting to run \`wrangler publish --dry-run --outdir=dist${envFlag}\` for you instead:`,
-						},
-					],
-				})
-			);
-
-			await createCLIParser([
-				"publish",
-				"--dry-run",
-				"--outdir=dist",
-				...(buildArgs.env ? ["--env", buildArgs.env] : []),
-			]).parse();
-		}
-	);
-
-	// config
-	wrangler.command(
-		"config",
-		false,
-		() => {},
-		() => {
-			// "🕵️  Authenticate Wrangler with a Cloudflare API Token",
-			throw new DeprecationError(
-				"`wrangler config` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#config for alternatives"
-			);
-		}
-	);
+	// [DEPRECATED] config
+	wrangler.command("config", false, noOpOptions, configHandler);
 
 	// dev
 	wrangler.command(
@@ -299,7 +265,7 @@ function createCLIParser(argv: string[]) {
 		tailHandler
 	);
 
-	// preview
+	// [DEPRECATED] preview
 	wrangler.command(
 		"preview [method] [body]",
 		false,
@@ -313,92 +279,18 @@ function createCLIParser(argv: string[]) {
 		false, // I think we want to hide this command
 		// "➡️  List or delete worker routes",
 		(routeYargs) => {
-			return routeYargs
-				.command(
-					"list",
-					"List the routes associated with a zone",
-					(yargs) => {
-						return yargs
-							.option("env", {
-								type: "string",
-								requiresArg: true,
-								describe: "Perform on a specific environment",
-							})
-							.option("zone", {
-								type: "string",
-								requiresArg: true,
-								describe: "Zone id",
-							})
-							.positional("zone", {
-								describe: "Zone id",
-								type: "string",
-							});
-					},
-					() => {
-						// "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
-						const deprecationNotice =
-							"`wrangler route list` has been deprecated.";
-						const futureRoutes =
-							"Refer to wrangler.toml for a list of routes the worker will be deployed to upon publishing.";
-						const presentRoutes =
-							"Refer to the Cloudflare Dashboard to see the routes this worker is currently running on.";
-						throw new DeprecationError(
-							`${deprecationNotice}\n${futureRoutes}\n${presentRoutes}`
-						);
-					}
-				)
-				.command(
-					"delete [id]",
-					"Delete a route associated with a zone",
-					(yargs) => {
-						return yargs
-							.positional("id", {
-								describe: "The hash of the route ID to delete.",
-								type: "string",
-							})
-							.option("zone", {
-								type: "string",
-								requiresArg: true,
-								describe: "zone id",
-							})
-							.option("env", {
-								type: "string",
-								requiresArg: true,
-								describe: "Perform on a specific environment",
-							});
-					},
-					() => {
-						// "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
-						const deprecationNotice =
-							"`wrangler route delete` has been deprecated.";
-						const shouldDo =
-							"Remove the unwanted route(s) from wrangler.toml and run `wrangler publish` to remove your worker from those routes.";
-						throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
-					}
-				);
+			return route(routeYargs);
 		},
-		() => {
-			// "👯 [DEPRECATED]. Use wrangler.toml to manage routes.
-			const deprecationNotice = "`wrangler route` has been deprecated.";
-			const shouldDo =
-				"Please use wrangler.toml and/or `wrangler publish --routes` to modify routes";
-			throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
-		}
+		routeHandler
 	);
 
-	// subdomain
+	// [DEPRECATED] subdomain
 	wrangler.command(
 		"subdomain [name]",
 		false,
 		// "👷 Create or change your workers.dev subdomain.",
-		(yargs) => {
-			return yargs.positional("name", { type: "string" });
-		},
-		() => {
-			throw new DeprecationError(
-				"`wrangler subdomain` has been deprecated, please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#subdomain for alternatives"
-			);
-		}
+		subdomainOptions,
+		subdomainHandler
 	);
 
 	// secret
@@ -417,8 +309,7 @@ function createCLIParser(argv: string[]) {
 		secretBulkHandler
 	);
 
-	// kv
-	// :namespace
+	// kv namespace
 	wrangler.command(
 		"kv:namespace",
 		"🗂️  Interact with your Workers KV Namespaces",
@@ -426,8 +317,8 @@ function createCLIParser(argv: string[]) {
 			return kvNamespace(namespaceYargs.command(subHelp));
 		}
 	);
-	// kv
-	// :key
+
+	// kv key
 	wrangler.command(
 		"kv:key",
 		"🔑 Individually manage Workers KV key-value pairs",
@@ -436,8 +327,7 @@ function createCLIParser(argv: string[]) {
 		}
 	);
 
-	// kv
-	// :bulk
+	// kv bulk
 	wrangler.command(
 		"kv:bulk",
 		"💪 Interact with multiple Workers KV key-value pairs at once",
