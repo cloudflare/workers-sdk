@@ -15,6 +15,7 @@ import {
 	generateOptions,
 	previewHandler,
 	previewOptions,
+	route,
 	routeHandler,
 	subdomainHandler,
 	subdomainOptions,
@@ -277,7 +278,9 @@ export function createCLIParser(argv: string[]) {
 		"route",
 		false, // I think we want to hide this command
 		// "➡️  List or delete worker routes",
-		noOpOptions,
+		(routeYargs) => {
+			return route(routeYargs);
+		},
 		routeHandler
 	);
 
