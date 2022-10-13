@@ -317,6 +317,7 @@ export function createCLIParser(argv: string[]) {
 			return kvNamespace(namespaceYargs.command(subHelp));
 		}
 	);
+
 	// kv key
 	wrangler.command(
 		"kv:key",
