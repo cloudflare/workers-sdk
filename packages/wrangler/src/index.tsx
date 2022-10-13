@@ -10,12 +10,11 @@ import {
 	buildHandler,
 	buildOptions,
 	configHandler,
-	configOptions,
+	noOpOptions,
 	generateHandler,
 	generateOptions,
 	previewHandler,
 	previewOptions,
-	route,
 	routeHandler,
 	subdomainHandler,
 	subdomainOptions,
@@ -239,7 +238,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("build", false, buildOptions, buildHandler);
 
 	// [DEPRECATED] config
-	wrangler.command("config", false, configOptions, configHandler);
+	wrangler.command("config", false, noOpOptions, configHandler);
 
 	// dev
 	wrangler.command(
@@ -278,9 +277,7 @@ export function createCLIParser(argv: string[]) {
 		"route",
 		false, // I think we want to hide this command
 		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs.command(subHelp));
-		},
+		noOpOptions,
 		routeHandler
 	);
 

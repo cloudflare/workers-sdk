@@ -332,7 +332,7 @@ export async function buildHandler(buildArgs: BuildArgs) {
 	]).parse();
 }
 
-export const configOptions = () => {};
+export const noOpOptions = () => {};
 export const configHandler = () => {
 	// "🕵️  Authenticate Wrangler with a Cloudflare API Token",
 	throw new DeprecationError(
