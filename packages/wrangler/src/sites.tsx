@@ -9,10 +9,10 @@ import {
 	listKVNamespaces,
 	putKVBulkKeyValue,
 	deleteKVBulkKeyValue,
-} from "./kv";
+} from "./kv/helpers";
 import { logger } from "./logger";
 import type { Config } from "./config";
-import type { KeyValue } from "./kv";
+import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */

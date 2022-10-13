@@ -17,7 +17,11 @@ import { mockGetMemberships } from "./helpers/mock-oauth-flow";
 import { mockProcess } from "./helpers/mock-process";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { KeyValue, KVNamespaceInfo, NamespaceKeyInfo } from "../kv";
+import type {
+	KeyValue,
+	KVNamespaceInfo,
+	NamespaceKeyInfo,
+} from "../kv/helpers";
 
 describe("wrangler", () => {
 	mockAccountId();
