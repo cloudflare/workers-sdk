@@ -83,6 +83,17 @@ export async function startWorkerRegistry() {
 		server = http.createServer(app);
 		terminator = createHttpTerminator({ server });
 		server.listen(DEV_REGISTRY_PORT);
+
+		/**
+		 * The registry server may have already been started by another wrangler process.
+		 * If wrangler processes are run in parallel, isPortAvailable() can return true
+		 * while another process spins up the server
+		 */
+		server.once('error', (err) => {
+			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
+				throw err;
+			}
+		});
 	}
 }
 
