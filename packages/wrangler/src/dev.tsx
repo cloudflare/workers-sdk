@@ -14,6 +14,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache } from "./user";
+import { collect } from "./utils/collect";
 import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
@@ -739,12 +740,7 @@ async function validateDevServerSettings(
 		config.configPath
 	);
 
-	const cliDefines =
-		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
-			const [key, ...value] = d.split(":");
-			collectDefines[key] = value.join(":");
-			return collectDefines;
-		}, {}) || {};
+	const cliDefines = collect(args.define);
 
 	return {
 		entry,
@@ -764,12 +760,7 @@ async function getBindingsAndAssetPaths(
 	args: StartDevOptions,
 	configParam: Config
 ) {
-	const cliVars =
-		args.var?.reduce<Record<string, string>>((collectVars, v) => {
-			const [key, ...value] = v.split(":");
-			collectVars[key] = value.join(":");
-			return collectVars;
-		}, {}) || {};
+	const cliVars = collect(args.var);
 
 	// now log all available bindings into the terminal
 	const bindings = await getBindings(configParam, {

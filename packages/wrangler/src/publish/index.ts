@@ -11,6 +11,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
+import { collect } from "../utils/collect";
 import publish from "./publish";
 import type { ConfigPath } from "../index";
 import type { YargsOptionsToInterface } from "../yargs-types";
@@ -220,19 +221,8 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		);
 	}
 
-	const cliVars =
-		args.var?.reduce<Record<string, string>>((collectVars, v) => {
-			const [key, ...value] = v.split(":");
-			collectVars[key] = value.join("");
-			return collectVars;
-		}, {}) || {};
-
-	const cliDefines =
-		args.define?.reduce<Record<string, string>>((collectDefines, d) => {
-			const [key, ...value] = d.split(":");
-			collectDefines[key] = value.join("");
-			return collectDefines;
-		}, {}) || {};
+	const cliVars = collect(args.var);
+	const cliDefines = collect(args.define);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
