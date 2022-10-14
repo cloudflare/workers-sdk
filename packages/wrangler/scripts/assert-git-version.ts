@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import semiver from "semiver";
 
 const error = new Error(
@@ -7,7 +7,7 @@ const error = new Error(
 );
 
 const gitVersionOutput = /\d+\.\d+\.\d+/.exec(
-	execSync("git --version", { encoding: "utf-8" })
+	spawnSync("git", ["--version"], { encoding: "utf-8" }).stdout
 );
 
 if (gitVersionOutput === null) {
