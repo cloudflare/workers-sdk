@@ -157,9 +157,7 @@ export async function fromDashMessagePrompt(
 	}
 }
 
-export async function tailDOLogPrompt(
-	scriptName: string
-): Promise<boolean | void> {
+export async function tailDOLogPrompt(): Promise<boolean | void> {
 	if (!isInteractive() || CI.isCI()) return true;
 
 	return await confirm("Would you like to continue?");

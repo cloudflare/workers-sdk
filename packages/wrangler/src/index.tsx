@@ -515,7 +515,7 @@ function createCLIParser(argv: string[]) {
 					)}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
 				);
 
-				const shouldContinue = await tailDOLogPrompt(scriptName);
+				const shouldContinue = await tailDOLogPrompt();
 				if (!shouldContinue) {
 					return;
 				}
