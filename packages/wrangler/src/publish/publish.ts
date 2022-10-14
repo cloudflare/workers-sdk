@@ -650,51 +650,38 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				},
 			});
 		} else if (routes.length !== 0) {
-			// this is kinda unreadable, huh.
-			//
-			// basically it's just like, if you get to this point
+			// if you get to this point it's because
 			// you're trying to deploy a worker to a custom
 			// domain that's already bound to another worker.
-			// so this big array traversal thing is just about
-			// finding workers that have bindings to the routes
-			// you're trying to deploy to.
+			// so this thing is about finding workers that have
+			// bindings to the routes you're trying to deploy to.
 			//
 			// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
 			// except here we know we have a good API token or whatever so we don't need
 			// to bother with all the error handling tomfoolery.
-			const routesWithOtherBindings = (
-				await Promise.all(
-					routes.map(async (route) => {
-						const zone = await getZoneForRoute(route);
-						if (!zone) {
-							return [];
+			const routesWithOtherBindings: Record<string, string[]> = {};
+			for (const route of routes) {
+				const zone = await getZoneForRoute(route);
+				if (!zone) {
+					continue;
+				}
+
+				const routePattern = typeof route === "string" ? route : route.pattern;
+				const routesInZone = await fetchListResult<{
+					pattern: string;
+					script: string;
+				}>(`/zones/${zone.id}/workers/routes`);
+
+				routesInZone.forEach(({ script, pattern }) => {
+					if (pattern === routePattern && script !== scriptName) {
+						if (!(script in routesWithOtherBindings)) {
+							routesWithOtherBindings[script] = [];
 						}
 
-						const routePattern =
-							typeof route === "string" ? route : route.pattern;
-
-						return (
-							await fetchListResult<{
-								pattern: string;
-								script: string;
-							}>(`/zones/${zone.id}/workers/routes`)
-						).filter(
-							({ pattern, script }) =>
-								pattern === routePattern && script !== scriptName
-						);
-					})
-				)
-			)
-				.flat()
-				.reduce((scriptPatternMap, { pattern, script }) => {
-					if (!(script in scriptPatternMap)) {
-						scriptPatternMap[script] = [];
+						routesWithOtherBindings[script].push(pattern);
 					}
-
-					scriptPatternMap[script].push(pattern);
-
-					return scriptPatternMap;
-				}, {} as Record<string, string[]>);
+				});
+			}
 
 			if (Object.keys(routesWithOtherBindings).length > 0) {
 				let errorMessage =
@@ -702,15 +689,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				for (const worker in routesWithOtherBindings) {
 					const assignedRoutes = routesWithOtherBindings[worker];
-					if (assignedRoutes.length === 1) {
-						errorMessage += `"${worker}" is already assigned to route ${chalk.underline(
-							assignedRoutes[0]
-						)}\n`;
-					} else {
-						errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-							(r) => `  - ${chalk.underline(r)}\n`
-						)}`;
-					}
+					errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
+						(r) => `  - ${chalk.underline(r)}\n`
+					)}`;
 				}
 
 				const resolution =
