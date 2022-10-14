@@ -539,7 +539,7 @@ export function getDevCompatibilityDate(
 				"```\n" +
 				`--compatibility-date=${currentDate}\n` +
 				"```\n" +
-				"See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 	}
 	return compatibilityDate ?? currentDate;
