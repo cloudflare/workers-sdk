@@ -1,3 +1,4 @@
+import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import supportsColor from "supports-color";
@@ -512,6 +513,32 @@ export async function main(argv: string[]): Promise<void> {
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
+		} else if (
+			e instanceof Error &&
+			e.message.includes("Raw mode is not supported on")
+		) {
+			// the current terminal doesn't support raw mode, which Ink needs to render
+			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
+			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
+
+			const currentPlatform = os.platform();
+
+			const thisTerminalIsUnsupported =
+				"This terminal doesn't support raw mode.";
+			const soWranglerWontWork =
+				"Wrangler uses raw mode to read user input and write output to the terminal, and won't function correctly without it.";
+			const tryRunningItIn =
+				"Try running your previous command in a terminal that supports raw mode";
+			const oneOfThese =
+				currentPlatform === "win32"
+					? ", such as Command Prompt or Powershell."
+					: currentPlatform === "darwin"
+					? ", such as Terminal.app or iTerm."
+					: "."; // linux user detected, hand holding disengaged.
+
+			logger.error(
+				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
+			);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
 			logger.log(
