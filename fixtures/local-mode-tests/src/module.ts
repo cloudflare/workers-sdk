@@ -12,6 +12,7 @@ export default {
 					VAR1: env.VAR1,
 					VAR2: env.VAR2,
 					VAR3: env.VAR3,
+					VAR4: env.VAR4,
 					text,
 					data: new TextDecoder().decode(data),
 					NODE_ENV: process.env.NODE_ENV,
