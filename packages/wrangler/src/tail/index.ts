@@ -1,5 +1,4 @@
 import { setTimeout } from "node:timers/promises";
-import chalk from "chalk";
 import onExit from "signal-exit";
 
 import { fetchResult, fetchScriptContent } from "../cfetch";
