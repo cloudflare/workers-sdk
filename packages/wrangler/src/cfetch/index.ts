@@ -1,8 +1,8 @@
 import { URLSearchParams } from "node:url";
+import { logger } from "../logger";
 import { ParseError } from "../parse";
 import { fetchInternal, performApiFetch } from "./internal";
 import type { RequestInit } from "undici";
-import { logger } from "../logger";
 
 // Check out https://api.cloudflare.com/ for API docs.
 

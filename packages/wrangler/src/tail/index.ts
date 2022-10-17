@@ -145,9 +145,7 @@ export async function tailHandler(args: TailArgs) {
 		bindings.find((b) => b.type === "durable_object_namespace")
 	) {
 		logger.warn(
-			`Beginning log collection requires restarting the Durable Objects associated with ${chalk.green(
-				scriptName
-			)}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
+			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
 		);
 
 		const shouldContinue = await tailDOLogPrompt();

@@ -51,7 +51,7 @@ describe("tail", () => {
 			await runWrangler("tail durable-object--websocket--response");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with [32mdurable-object--websocket--response[39m. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
+"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with durable-object--websocket--response. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
 "
 `);
 			expect(std.err).toMatchInlineSnapshot(`""`);
