@@ -3671,6 +3671,31 @@ addEventListener('fetch', event => {});`
 				`console.log(789);`
 			);
 		});
+
+		it("can be overridden with cli args containing colons", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+				console.log(abc);
+			`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler(
+				"publish --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
+			);
+
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
+				// eslint-disable-next-line no-useless-escape
+				`console.log(\"https://www.abc.net.au/news/\");`
+			);
+		});
 	});
 	describe("custom builds", () => {
 		beforeEach(() => {
