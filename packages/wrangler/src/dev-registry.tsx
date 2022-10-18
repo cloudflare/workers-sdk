@@ -89,7 +89,7 @@ export async function startWorkerRegistry() {
 		 * If wrangler processes are run in parallel, isPortAvailable() can return true
 		 * while another process spins up the server
 		 */
-		server.once('error', (err) => {
+		server.once("error", (err) => {
 			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
 				throw err;
 			}
