@@ -38,9 +38,9 @@ export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
 /**
  * Given something that resembles a URL, try to extract a host from it.
  */
-function getHostFromUrl(urlLike: string): string | undefined {
+export function getHostFromUrl(urlLike: string): string | undefined {
 	// strip leading * / *.
-	urlLike = urlLike.replace(/^\*(\.)?/g, "");
+	urlLike = urlLike.replace(/\*(\.)?/g, "");
 
 	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
 		urlLike = "http://" + urlLike;
