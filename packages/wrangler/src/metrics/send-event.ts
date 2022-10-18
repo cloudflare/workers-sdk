@@ -7,6 +7,7 @@ import type { Properties } from "./metrics-dispatcher";
 export type EventNames =
 	| "view accounts"
 	| "deploy worker script"
+	| "delete worker script"
 	| "begin log stream"
 	| "end log stream"
 	| "create encrypted variable"

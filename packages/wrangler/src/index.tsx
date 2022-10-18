@@ -7,6 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { readConfig } from "./config";
 import { d1 } from "./d1";
+import { deleteHandler, deleteOptions } from "./delete";
 import {
 	buildHandler,
 	buildOptions,
@@ -256,6 +257,14 @@ export function createCLIParser(argv: string[]) {
 		"🆙 Publish your Worker to Cloudflare.",
 		publishOptions,
 		publishHandler
+	);
+
+	// delete
+	wrangler.command(
+		"delete [script]",
+		"🗑 Delete your Worker from Cloudflare.",
+		deleteOptions,
+		deleteHandler
 	);
 
 	// tail
