@@ -48,7 +48,7 @@ describe("wrangler dev", () => {
 			          \`\`\`
 			          --compatibility-date=<current-date>
 			          \`\`\`
-			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates[0m for more information.
+			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
 			        "
 		      `);

@@ -54,17 +54,6 @@ export function Options(yargs: Argv) {
 				type: "string",
 				array: true,
 			},
-
-			// TODO
-			// For now, all Pages projects are set to 2021-11-02. We're adding compat date soon, and we can then adopt `wrangler dev`'s `default: true`.
-			// However, it looks like it isn't actually connected up properly in `wrangler dev` at the moment, hence commenting this out for now.
-
-			// latest: {
-			// 	describe: "Use the latest version of the worker runtime",
-			// 	type: "boolean",
-			// 	default: false,
-			// },
-
 			ip: {
 				type: "string",
 				default: "0.0.0.0",
@@ -161,7 +150,7 @@ export function Options(yargs: Argv) {
 export const Handler = async ({
 	local,
 	directory,
-	"compatibility-date": compatibilityDate = "2021-11-02",
+	"compatibility-date": compatibilityDate,
 	"compatibility-flags": compatibilityFlags,
 	ip,
 	port,
@@ -217,6 +206,19 @@ export const Handler = async ({
 		if (proxyPort === undefined) return undefined;
 	} else {
 		directory = resolve(directory);
+	}
+
+	if (!compatibilityDate) {
+		const currentDate = new Date().toISOString().substring(0, 10);
+		logger.warn(
+			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+				"Pass it in your terminal:\n" +
+				"```\n" +
+				`--compatibility-date=${currentDate}\n` +
+				"```\n" +
+				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
+		);
+		compatibilityDate = currentDate;
 	}
 
 	if (experimentalEnableLocalPersistence) {
