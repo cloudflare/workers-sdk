@@ -40,7 +40,7 @@ export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
  */
 function getHostFromUrl(urlLike: string): string | undefined {
 	// strip leading * / *.
-	urlLike = urlLike.replace(/^\*(\.)?/g, "");
+	urlLike = urlLike.replace(/\*(\.)?/g, "");
 
 	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
 		urlLike = "http://" + urlLike;
