@@ -1,5 +1,24 @@
 # wrangler
 
+## 2.1.13
+
+### Patch Changes
+
+- [#2049](https://github.com/cloudflare/wrangler2/pull/2049) [`903b55d1`](https://github.com/cloudflare/wrangler2/commit/903b55d13d83f80a2893d7763f5bc220b0df2c3c) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add missing `local` argument to unstable_dev's DevOptions
+
+* [#2026](https://github.com/cloudflare/wrangler2/pull/2026) [`7d987ee2`](https://github.com/cloudflare/wrangler2/commit/7d987ee270b53105b2794e8d6bced785b4b0925d) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Default to today's compatibility date in `wrangler pages dev`
+
+  Like `wrangler dev` proper, `wrangler pages dev` now defaults to using today's compatibility date.
+  It can be overriden with `--compatibility-date=YYYY-MM-DD`.
+
+  https://developers.cloudflare.com/workers/platform/compatibility-dates/
+
+- [#2035](https://github.com/cloudflare/wrangler2/pull/2035) [`76a66fc2`](https://github.com/cloudflare/wrangler2/commit/76a66fc2b6148c1764ac55a4ad79c42fcef9cf22) Thanks [@penalosa](https://github.com/penalosa)! - Warn when opening a tail on workers for which a restart could be disruptive (i.e. Workers which use Durable Objects in conjunction with WebSockets)
+
+* [#2045](https://github.com/cloudflare/wrangler2/pull/2045) [`c2d3286f`](https://github.com/cloudflare/wrangler2/commit/c2d3286fab527042eca76fd3626d1be0f79612cf) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement a basic `wrangler delete`
+
+  This PR adds a simple (but useful!) implementation for `wrangler delete`. Of note, it'll delete a given service, including all it's bindings. It uses the same api as the dashboard.
+
 ## 2.1.12
 
 ### Patch Changes
