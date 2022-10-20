@@ -49,6 +49,7 @@ interface DevOptions {
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	inspect?: boolean;
+	local?: boolean;
 	forceLocal?: boolean;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	_?: (string | number)[]; //yargs wants this
@@ -147,8 +148,8 @@ export async function unstable_dev(
 					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
-					...options,
 					local: true,
+					...options,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
