@@ -17,6 +17,10 @@ export default {
 			return new Response(new Date().toISOString());
 		}
 
+		if (url.pathname === "/") {
+			return new Response("ROOT");
+		}
+
 		return env.ASSETS.fetch(request);
 	},
 };

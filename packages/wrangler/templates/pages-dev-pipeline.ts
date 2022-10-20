@@ -4,6 +4,10 @@ import worker from "__ENTRY_POINT__";
 export * from "__ENTRY_POINT__";
 
 const transformToRegex = (filter: string) => {
+	// special case rule that should match only the root
+	if (filter === "/") {
+		return "^/$";
+	}
 	return filter.replace("*", ".*");
 };
 
