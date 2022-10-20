@@ -37,7 +37,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		wranglerPackageDir
 	)}"`;
 	await build({
-		entryPoints: ["./src/cli.ts"],
+		entryPoints: ["./src/cli.ts", "./src/api.ts"],
 		bundle: true,
 		outdir,
 		platform: "node",

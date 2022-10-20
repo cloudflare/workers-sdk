@@ -35,8 +35,8 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
-	"main": "wrangler-dist/cli.js",
-	"types": "wrangler-dist/cli.d.ts",
+	"main": "wrangler-dist/api.js",
+	"types": "wrangler-dist/api.d.ts",
 	"bin": {
 		"wrangler": "./bin/wrangler.js",
 		"wrangler2": "./bin/wrangler.js"
