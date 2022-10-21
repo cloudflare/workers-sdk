@@ -211,7 +211,7 @@
 
   Prior to this change, wrangler would print `Retrieving cached values for...` after almost every single command.
 
-  After this change, you'll only see this message if you add `WRANGLER_DEBUG=true` before your command.
+  After this change, you'll only see this message if you add `WRANGLER_LOG=debug` before your command.
 
   Closes #1808
 
