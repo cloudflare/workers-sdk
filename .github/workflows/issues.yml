@@ -12,9 +12,12 @@ jobs:
     steps:
       - uses: actions/add-to-project@v0.3.0
         with:
-          # You can target a repository in a different organization
-          # to the issue
           project-url: https://github.com/orgs/cloudflare/projects/1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           labeled: bug, enhancement
           label-operator: OR
+      - uses: actions/add-to-project@v0.3.0
+        with:
+          project-url: https://github.com/orgs/cloudflare/projects/2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: pages
