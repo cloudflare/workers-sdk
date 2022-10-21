@@ -1,8 +1,8 @@
 import { URLSearchParams } from "node:url";
 import { FormData } from "undici";
-import { fetchListResult, fetchResult, fetchKVGetValue } from "./cfetch";
-import { logger } from "./logger";
-import type { Config } from "./config";
+import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
+import { logger } from "../logger";
+import type { Config } from "../config";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;

@@ -1,315 +1,217 @@
-import WebSocket from "ws";
-import { version as packageVersion } from "../../package.json";
-import { fetchResult } from "../cfetch";
-import type { TailFilterMessage, Outcome } from "./filters";
-export type { TailCLIFilters } from "./filters";
-export { translateCLICommandToFilterMessage } from "./filters";
-export { jsonPrintLogs, prettyPrintLogs } from "./printing";
-import type { Request } from "undici";
+import { setTimeout } from "node:timers/promises";
+import onExit from "signal-exit";
 
-/**
- * When creating a Tail, the response from the API contains
- * - an ID used for identifying the tail
- * - a URL to a WebSocket connection available for the tail to connect to
- * - an expiration date when the tail is no longer guaranteed to be valid
- */
-type TailCreationApiResponse = {
-	id: string;
-	url: string;
-	expires_at: Date;
-};
+import { fetchResult, fetchScriptContent } from "../cfetch";
+import { readConfig } from "../config";
+import { tailDOLogPrompt } from "../dialogs";
+import {
+	isLegacyEnv,
+	printWranglerBanner,
+	getLegacyScriptName,
+} from "../index";
+import { logger } from "../logger";
+import * as metrics from "../metrics";
+import { requireAuth } from "../user";
+import { getWorkerForZone } from "../zones";
+import {
+	createTail,
+	jsonPrintLogs,
+	prettyPrintLogs,
+	translateCLICommandToFilterMessage,
+} from "./createTail";
+import type { WorkerMetadata } from "../create-worker-upload-form";
+import type { ConfigPath } from "../index";
+import type { YargsOptionsToInterface } from "../yargs-types";
+import type { TailCLIFilters } from "./createTail";
+import type { RawData } from "ws";
+import type { Argv } from "yargs";
 
-/**
- * Generate a URL that, when `cfetch`ed, creates a tail.
- *
- * https://api.cloudflare.com/#worker-tail-logs-start-tail
- *
- * @param accountId the account ID associated with the worker to tail
- * @param workerName the name of the worker to tail
- * @returns a `cfetch`-ready URL for creating a new tail
- */
-function makeCreateTailUrl(
-	accountId: string,
-	workerName: string,
-	env: string | undefined
-): string {
-	return env
-		? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails`
-		: `/accounts/${accountId}/workers/scripts/${workerName}/tails`;
+export function tailOptions(yargs: Argv) {
+	return yargs
+		.positional("worker", {
+			describe: "Name or route of the worker to tail",
+			type: "string",
+		})
+		.option("format", {
+			default: process.stdout.isTTY ? "pretty" : "json",
+			choices: ["json", "pretty"],
+			describe: "The format of log entries",
+		})
+		.option("status", {
+			choices: ["ok", "error", "canceled"],
+			describe: "Filter by invocation status",
+			array: true,
+		})
+		.option("header", {
+			type: "string",
+			requiresArg: true,
+			describe: "Filter by HTTP header",
+		})
+		.option("method", {
+			type: "string",
+			requiresArg: true,
+			describe: "Filter by HTTP method",
+			array: true,
+		})
+		.option("sampling-rate", {
+			type: "number",
+			describe: "Adds a percentage of requests to log sampling rate",
+		})
+		.option("search", {
+			type: "string",
+			requiresArg: true,
+			describe: "Filter by a text match in console.log messages",
+		})
+		.option("ip", {
+			type: "string",
+			requiresArg: true,
+			describe:
+				'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
+			array: true,
+		})
+		.option("env", {
+			type: "string",
+			requiresArg: true,
+			describe: "Perform on a specific environment",
+			alias: "e",
+		})
+		.option("debug", {
+			type: "boolean",
+			hidden: true,
+			default: false,
+			describe:
+				"If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
+		})
+		.option("legacy-env", {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		});
 }
 
-/**
- * Generate a URL that, when `cfetch`ed, deletes a tail
- *
- * https://api.cloudflare.com/#worker-tail-logs-delete-tail
- *
- * @param accountId the account ID associated with the worker we're tailing
- * @param workerName the name of the worker we're tailing
- * @param tailId the ID of the tail we want to delete
- * @returns a `cfetch`-ready URL for deleting a tail
- */
-function makeDeleteTailUrl(
-	accountId: string,
-	workerName: string,
-	tailId: string,
-	env: string | undefined
-): string {
-	return env
-		? `/accounts/${accountId}/workers/services/${workerName}/environments/${env}/tails/${tailId}`
-		: `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
-}
+type TailArgs = YargsOptionsToInterface<typeof tailOptions>;
 
-/**
- * Create and connect to a tail.
- *
- * Under the hood, this function
- * - Registers a new Tail with the API
- * - Connects to the tail worker
- * - Sends any filters over the connection
- *
- * @param accountId the account ID associated with the worker to tail
- * @param workerName the name of the worker to tail
- * @param filters A list of `TailAPIFilters` given to the tail
- * @param debug Flag to run tail in debug mode
- * @returns a websocket connection, an expiration, and a function to call to delete the tail
- */
-export async function createTail(
-	accountId: string,
-	workerName: string,
-	filters: TailFilterMessage,
-	debug: boolean,
-	env: string | undefined
-): Promise<{
-	tail: WebSocket;
-	expiration: Date;
-	deleteTail: () => Promise<void>;
-}> {
-	// create the tail
-	const createTailUrl = makeCreateTailUrl(accountId, workerName, env);
-	const {
-		id: tailId,
-		url: websocketUrl,
-		expires_at: expiration,
-	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
-		method: "POST",
-		body: JSON.stringify(filters),
+export async function tailHandler(args: TailArgs) {
+	if (args.format === "pretty") {
+		await printWranglerBanner();
+	}
+	const config = readConfig(args.config as ConfigPath, args);
+	await metrics.sendMetricsEvent("begin log stream", {
+		sendMetrics: config.send_metrics,
 	});
 
-	// delete the tail (not yet!)
-	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
-	async function deleteTail() {
-		await fetchResult(deleteUrl, { method: "DELETE" });
+	let scriptName;
+
+	// Worker names can't contain "." (and most routes should), so use that as a discriminator
+	if (args.worker?.includes(".")) {
+		scriptName = await getWorkerForZone(args.worker);
+		if (args.format === "pretty") {
+			logger.log(`Connecting to worker ${scriptName} at route ${args.worker}`);
+		}
+	} else {
+		scriptName = getLegacyScriptName({ name: args.worker, ...args }, config);
 	}
 
-	// connect to the tail
-	const tail = new WebSocket(websocketUrl, "trace-v1", {
-		headers: {
-			"Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
-			"User-Agent": `wrangler-js/${packageVersion}`,
-		},
-	});
-
-	// send filters when we open up
-	tail.on("open", function () {
-		tail.send(
-			JSON.stringify({ debug: debug }),
-			{ binary: false, compress: false, mask: false, fin: true },
-			(err) => {
-				if (err) {
-					throw err;
-				}
-			}
+	if (!scriptName) {
+		throw new Error(
+			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
 		);
+	}
+
+	const accountId = await requireAuth(config);
+
+	const cliFilters: TailCLIFilters = {
+		status: args.status as ("ok" | "error" | "canceled")[] | undefined,
+		header: args.header,
+		method: args.method,
+		samplingRate: args["sampling-rate"],
+		search: args.search,
+		clientIp: args.ip,
+	};
+	const scriptContent: string = await fetchScriptContent(
+		(!isLegacyEnv(config) ? args.env : undefined)
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/content`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`
+	);
+
+	const bindings = await fetchResult<WorkerMetadata["bindings"]>(
+		(!isLegacyEnv(config) ? args.env : undefined)
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/bindings`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}/bindings`
+	);
+	if (
+		scriptContent.toLowerCase().includes("websocket") &&
+		bindings.find((b) => b.type === "durable_object_namespace")
+	) {
+		logger.warn(
+			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
+		);
+
+		const shouldContinue = await tailDOLogPrompt();
+		if (!shouldContinue) {
+			return;
+		}
+	}
+	const filters = translateCLICommandToFilterMessage(cliFilters);
+
+	const { tail, expiration, deleteTail } = await createTail(
+		accountId,
+		scriptName,
+		filters,
+		args.debug,
+		!isLegacyEnv(config) ? args.env : undefined
+	);
+
+	const scriptDisplayName = `${scriptName}${
+		args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+	}`;
+
+	if (args.format === "pretty") {
+		logger.log(
+			`Successfully created tail, expires at ${expiration.toLocaleString()}`
+		);
+	}
+
+	onExit(async () => {
+		tail.terminate();
+		await deleteTail();
+		await metrics.sendMetricsEvent("end log stream", {
+			sendMetrics: config.send_metrics,
+		});
 	});
 
-	return { tail, expiration, deleteTail };
+	const printLog: (data: RawData) => void =
+		args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
+
+	tail.on("message", printLog);
+
+	while (tail.readyState !== tail.OPEN) {
+		switch (tail.readyState) {
+			case tail.CONNECTING:
+				await setTimeout(100);
+				break;
+			case tail.CLOSING:
+				await setTimeout(100);
+				break;
+			case tail.CLOSED:
+				await metrics.sendMetricsEvent("end log stream", {
+					sendMetrics: config.send_metrics,
+				});
+				throw new Error(
+					`Connection to ${scriptDisplayName} closed unexpectedly.`
+				);
+		}
+	}
+
+	if (args.format === "pretty") {
+		logger.log(`Connected to ${scriptDisplayName}, waiting for logs...`);
+	}
+
+	tail.on("close", async () => {
+		tail.terminate();
+		await deleteTail();
+		await metrics.sendMetricsEvent("end log stream", {
+			sendMetrics: config.send_metrics,
+		});
+	});
 }
-
-/**
- * Everything captured by the trace worker and sent to us via
- * `wrangler tail` is structured JSON that deserializes to this type.
- */
-export type TailEventMessage = {
-	/**
-	 * Whether the execution of this worker succeeded or failed
-	 */
-	outcome: Outcome;
-
-	/**
-	 * The name of the script we're tailing
-	 */
-	scriptName?: string;
-
-	/**
-	 * Any exceptions raised by the worker
-	 */
-	exceptions: {
-		/**
-		 * The name of the exception.
-		 */
-		name: string;
-
-		/**
-		 * The error message
-		 */
-		message: unknown;
-
-		/**
-		 * When the exception was raised/thrown
-		 */
-		timestamp: number;
-	}[];
-
-	/**
-	 * Any logs sent out by the worker
-	 */
-	logs: {
-		message: unknown[];
-		level: string; // TODO: make this a union of possible values
-		timestamp: number;
-	}[];
-
-	/**
-	 * When the event was triggered
-	 */
-	eventTimestamp: number;
-
-	/**
-	 * The event that triggered the worker. In the case of an HTTP request,
-	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
-	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
-	 *
-	 * Until workers-types exposes individual types for export, we'll have
-	 * to just re-define these types ourselves.
-	 */
-	event: RequestEvent | ScheduledEvent | AlarmEvent | undefined | null;
-};
-
-/**
- * A request that triggered worker execution
- */
-
-export type RequestEvent = {
-	request: Pick<Request, "url" | "method" | "headers"> & {
-		/**
-		 * Cloudflare-specific properties
-		 * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties
-		 */
-		cf: {
-			/**
-			 * How long (in ms) it took for the client's TCP connection to make a
-			 * round trip to the worker and back. For all my gamers out there,
-			 * this is the request's ping
-			 */
-			clientTcpRtt?: number;
-
-			/**
-			 * Longitude and Latitude of where the request originated from
-			 */
-			longitude?: string;
-			latitude?: string;
-
-			/**
-			 * What cipher was used to establish the TLS connection
-			 */
-			tlsCipher: string;
-
-			/**
-			 * Which continent the request came from.
-			 */
-			continent?: "NA";
-
-			/**
-			 * ASN of the incoming request
-			 */
-			asn: number;
-
-			/**
-			 * The country the incoming request is coming from
-			 */
-			country?: string;
-
-			/**
-			 * The TLS version the connection used
-			 */
-			tlsVersion: string;
-
-			/**
-			 * The colo that processed the request (i.e. the airport code
-			 * of the closest city to the server that spun up the worker)
-			 */
-			colo: string;
-
-			/**
-			 * The timezone where the request came from
-			 */
-			timezone?: string;
-
-			/**
-			 * The city where the request came from
-			 */
-			city?: string;
-
-			/**
-			 * The browser-requested prioritization information in the request object
-			 */
-			requestPriority?: string;
-
-			/**
-			 * Which version of HTTP the request came over e.g. "HTTP/2"
-			 */
-			httpProtocol: string;
-
-			/**
-			 * The region where the request originated from
-			 */
-			region?: string;
-			regionCode?: string;
-
-			/**
-			 * The organization which owns the ASN of the incoming request, for example, Google Cloud.
-			 */
-			asOrganization: string;
-
-			/**
-			 * Metro code (DMA) of the incoming request, for example, "635".
-			 */
-			metroCode?: string;
-
-			/**
-			 * Postal code of the incoming request, for example, "78701".
-			 */
-			postalCode?: string;
-		};
-	};
-};
-
-/**
- * An event that was triggered at a certain time
- */
-export type ScheduledEvent = {
-	/**
-	 * The cron pattern that matched when this event fired
-	 */
-	cron: string;
-
-	/**
-	 * The time this worker was scheduled to run.
-	 * For some reason, this doesn't...work correctly when we
-	 * do it directly as a Date. So parse it later on your own.
-	 */
-	scheduledTime: number;
-};
-
-/**
- * A event that was triggered from a durable object alarm
- */
-export type AlarmEvent = {
-	/**
-	 * The datetime the alarm was scheduled for.
-	 *
-	 * This is sent as an ISO timestamp string (different than ScheduledEvent.scheduledTime),
-	 * you should parse it later on on your own.
-	 */
-	scheduledTime: string;
-};

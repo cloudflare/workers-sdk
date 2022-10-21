@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { R2BucketInfo } from "../r2";
+import type { R2BucketInfo } from "../r2/helpers";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();

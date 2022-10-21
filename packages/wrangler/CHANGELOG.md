@@ -1,5 +1,102 @@
 # wrangler
 
+## 2.1.13
+
+### Patch Changes
+
+- [#2049](https://github.com/cloudflare/wrangler2/pull/2049) [`903b55d1`](https://github.com/cloudflare/wrangler2/commit/903b55d13d83f80a2893d7763f5bc220b0df2c3c) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add missing `local` argument to unstable_dev's DevOptions
+
+* [#2026](https://github.com/cloudflare/wrangler2/pull/2026) [`7d987ee2`](https://github.com/cloudflare/wrangler2/commit/7d987ee270b53105b2794e8d6bced785b4b0925d) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Default to today's compatibility date in `wrangler pages dev`
+
+  Like `wrangler dev` proper, `wrangler pages dev` now defaults to using today's compatibility date.
+  It can be overriden with `--compatibility-date=YYYY-MM-DD`.
+
+  https://developers.cloudflare.com/workers/platform/compatibility-dates/
+
+- [#2035](https://github.com/cloudflare/wrangler2/pull/2035) [`76a66fc2`](https://github.com/cloudflare/wrangler2/commit/76a66fc2b6148c1764ac55a4ad79c42fcef9cf22) Thanks [@penalosa](https://github.com/penalosa)! - Warn when opening a tail on workers for which a restart could be disruptive (i.e. Workers which use Durable Objects in conjunction with WebSockets)
+
+* [#2045](https://github.com/cloudflare/wrangler2/pull/2045) [`c2d3286f`](https://github.com/cloudflare/wrangler2/commit/c2d3286fab527042eca76fd3626d1be0f79612cf) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement a basic `wrangler delete`
+
+  This PR adds a simple (but useful!) implementation for `wrangler delete`. Of note, it'll delete a given service, including all it's bindings. It uses the same api as the dashboard.
+
+## 2.1.12
+
+### Patch Changes
+
+- [#2023](https://github.com/cloudflare/wrangler2/pull/2023) [`d6660ce3`](https://github.com/cloudflare/wrangler2/commit/d6660ce3e26d44b4db39b149868cb850e47763f0) Thanks [@caass](https://github.com/caass)! - Display a more helpful error when trying to publish to a route in use by another worker.
+
+  Previously, when trying to publish a worker to a route that was in use by another worker,
+  there would be a really unhelpful message about a failed API call. Now, there's a much
+  nicer message that tells you what worker is running on that route, and gives you a link
+  to the workers overview page so you can unassign it if you want.
+
+  ```text
+   ⛅️ wrangler 2.1.11
+  --------------------
+  Total Upload: 0.20 KiB / gzip: 0.17 KiB
+
+  ✘ [ERROR] Can't publish a worker to routes that are assigned to another worker.
+
+    "test-custom-routes-redeploy" is already assigned to route
+    test-custom-worker.swag.lgbt
+
+    Unassign other workers from the routes you want to publish to, and then try again.
+    Visit
+    https://dash.cloudflare.com/<account_id>/workers/overview
+    to unassign a worker from a route.
+  ```
+
+  Closes #1849
+
+* [#2013](https://github.com/cloudflare/wrangler2/pull/2013) [`c63ca0a5`](https://github.com/cloudflare/wrangler2/commit/c63ca0a550a4c3801665161d6d6ce5d2d3bff0a5) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make d1 help print if a command is incomplete
+
+  Prior to this change, d1's commands would return silently if wrangler wasn't supplied enough arguments to run the command.
+
+  This change resolves this issue, and ensures help is always printed if the command couldn't run.
+
+- [#2016](https://github.com/cloudflare/wrangler2/pull/2016) [`932fecc0`](https://github.com/cloudflare/wrangler2/commit/932fecc0857dfdf8401b2293f71c34836a5bbb9d) Thanks [@caass](https://github.com/caass)! - Offer to create a workers.dev subdomain if a user needs one
+
+  Previously, when a user wanted to publish a worker to https://workers.dev by setting `workers_dev = true` in their `wrangler.toml`,
+  but their account didn't have a subdomain registered, we would error out.
+
+  Now, we offer to create one for them. It's not implemented for `wrangler dev`, which also expects you to have registered a
+  workers.dev subdomain, but we now error correctly and tell them what the problem is.
+
+* [#2003](https://github.com/cloudflare/wrangler2/pull/2003) [`3ed06b40`](https://github.com/cloudflare/wrangler2/commit/3ed06b4096d3ea9ed601ae05d77442e5b0217678) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@2.10.0
+
+- [#2024](https://github.com/cloudflare/wrangler2/pull/2024) [`4ad48e4d`](https://github.com/cloudflare/wrangler2/commit/4ad48e4d9b617dd322c6d4b9c0853588a1521a71) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible for values in vars and defines to have colons (:)
+
+  Prior to this change, passing --define someKey:https://some-value.com would result in an incomplete value being passed to the Worker.
+
+  This change correctly handles colons for var and define in `wrangler dev` and `wrangler publish`.
+
+* [#2032](https://github.com/cloudflare/wrangler2/pull/2032) [`f33805d2`](https://github.com/cloudflare/wrangler2/commit/f33805d28b23b613f03169726b91ac3b1b3428d5) Thanks [@caass](https://github.com/caass)! - Catch unsupported terminal errors and provide a nicer error message.
+
+  Wrangler depends on terminals supporting [raw mode](https://en.wikipedia.org/wiki/Terminal_mode). Previously, attempting to run wrangler from a terminal that didn't support raw mode would result in
+  an Ink error, which was both an exposure of an internal implementation detail to the user and also not actionable:
+
+  ```text
+    ERROR Raw mode is not supported on the current process.stdin, which Ink uses
+         as input stream by default.
+         Read about how to prevent this error on
+         https://github.com/vadimdemedes/ink/#israwmodesupported
+  ```
+
+  Now, we provide a much nicer error, which provides an easy next step for th user:
+
+  ```text
+
+  ERROR: This terminal doesn't support raw mode.
+
+  Wrangler uses raw mode to read user input and write output to the terminal, and won't function correctly without it.
+
+  Try running your previous command in a terminal that supports raw mode, such as Command Prompt or Powershell.
+  ```
+
+  Closes #1992
+
+- [#1946](https://github.com/cloudflare/wrangler2/pull/1946) [`7716c3b9`](https://github.com/cloudflare/wrangler2/commit/7716c3b9dfed540d7ddfec90f042e870a262be78) Thanks [@penalosa](https://github.com/penalosa)! - Support subdomains with wrangler dev for routes defined with `zone_name` (instead of just for routes defined with `zone_id`)
+
 ## 2.1.11
 
 ### Patch Changes
@@ -114,7 +211,7 @@
 
   Prior to this change, wrangler would print `Retrieving cached values for...` after almost every single command.
 
-  After this change, you'll only see this message if you add `WRANGLER_DEBUG=true` before your command.
+  After this change, you'll only see this message if you add `WRANGLER_LOG=debug` before your command.
 
   Closes #1808
 

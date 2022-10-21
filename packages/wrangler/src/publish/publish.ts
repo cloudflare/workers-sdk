@@ -2,31 +2,33 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import chalk from "chalk";
 import tmp from "tmp-promise";
-import { bundleWorker } from "./bundle";
-import { printBundleSize } from "./bundle-reporter";
-import { type FetchError, fetchListResult, fetchResult } from "./cfetch";
-import { printBindings } from "./config";
-import { createWorkerUploadForm } from "./create-worker-upload-form";
-import { confirm, fromDashMessagePrompt } from "./dialogs";
-import { getMigrationsToUpload } from "./durable";
-import { logger } from "./logger";
-import { getMetricsUsageHeaders } from "./metrics";
-import { ParseError } from "./parse";
-import { GetQueue, PutConsumer, type PutConsumerBody } from "./queues/client";
-import { syncAssets } from "./sites";
-import { identifyD1BindingsAsBeta } from "./worker";
-import { getZoneForRoute } from "./zones";
-import type { Config } from "./config";
+import { bundleWorker } from "../bundle";
+import { printBundleSize } from "../bundle-reporter";
+import { type FetchError, fetchListResult, fetchResult } from "../cfetch";
+import { printBindings } from "../config";
+import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { confirm, fromDashMessagePrompt } from "../dialogs";
+import { getMigrationsToUpload } from "../durable";
+import { logger } from "../logger";
+import { getMetricsUsageHeaders } from "../metrics";
+import { ParseError } from "../parse";
+import { GetQueue, PutConsumer, type PutConsumerBody } from "../queues/client";
+import { getWorkersDevSubdomain } from "../routes";
+import { syncAssets } from "../sites";
+import { identifyD1BindingsAsBeta } from "../worker";
+import { getZoneForRoute } from "../zones";
+import type { Config } from "../config";
 import type {
 	Route,
 	ZoneIdRoute,
 	ZoneNameRoute,
 	CustomDomainRoute,
-} from "./config/environment";
-import type { Entry } from "./entry";
-import type { AssetPaths } from "./sites";
-import type { CfWorkerInit } from "./worker";
+} from "../config/environment";
+import type { Entry } from "../entry";
+import type { AssetPaths } from "../sites";
+import type { CfWorkerInit } from "../worker";
 
 type Props = {
 	config: Config;
@@ -348,7 +350,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	let available_on_subdomain; // we'll set this later
+	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
 
 	const { format } = props.entry;
 
@@ -615,7 +617,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getSubdomain(accountId);
+		const userSubdomain = await getWorkersDevSubdomain(accountId);
 		const scriptURL =
 			props.legacyEnv || !props.env
 				? `${scriptName}.${userSubdomain}.workers.dev`
@@ -653,6 +655,61 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					"Content-Type": "application/json",
 				},
 			});
+		} else if (routes.length !== 0) {
+			// if you get to this point it's because
+			// you're trying to deploy a worker to a custom
+			// domain that's already bound to another worker.
+			// so this thing is about finding workers that have
+			// bindings to the routes you're trying to deploy to.
+			//
+			// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
+			// except here we know we have a good API token or whatever so we don't need
+			// to bother with all the error handling tomfoolery.
+			const routesWithOtherBindings: Record<string, string[]> = {};
+			for (const route of routes) {
+				const zone = await getZoneForRoute(route);
+				if (!zone) {
+					continue;
+				}
+
+				const routePattern = typeof route === "string" ? route : route.pattern;
+				const routesInZone = await fetchListResult<{
+					pattern: string;
+					script: string;
+				}>(`/zones/${zone.id}/workers/routes`);
+
+				routesInZone.forEach(({ script, pattern }) => {
+					if (pattern === routePattern && script !== scriptName) {
+						if (!(script in routesWithOtherBindings)) {
+							routesWithOtherBindings[script] = [];
+						}
+
+						routesWithOtherBindings[script].push(pattern);
+					}
+				});
+			}
+
+			if (Object.keys(routesWithOtherBindings).length > 0) {
+				let errorMessage =
+					"Can't publish a worker to routes that are assigned to another worker.\n";
+
+				for (const worker in routesWithOtherBindings) {
+					const assignedRoutes = routesWithOtherBindings[worker];
+					errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
+						(r) => `  - ${chalk.underline(r)}\n`
+					)}`;
+				}
+
+				const resolution =
+					"Unassign other workers from the routes you want to publish to, and then try again.";
+				const dashLink = `Visit ${chalk.blue(
+					chalk.underline(
+						`https://dash.cloudflare.com/${accountId}/workers/overview`
+					)
+				)} to unassign a worker from a route.`;
+
+				throw new Error(`${errorMessage}\n${resolution}\n${dashLink}`);
+			}
 		}
 	}
 
@@ -718,31 +775,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-async function getSubdomain(accountId: string): Promise<string> {
-	try {
-		const { subdomain } = await fetchResult(
-			`/accounts/${accountId}/workers/subdomain`
-		);
-		return subdomain;
-	} catch (e) {
-		const error = e as { code?: number };
-		if (typeof error === "object" && !!error && error.code === 10007) {
-			// 10007 error code: not found
-			// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-
-			const errorMessage =
-				"Error: You need to register a workers.dev subdomain before publishing to workers.dev";
-			const solutionMessage =
-				"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
-			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
-
-			throw new Error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-		} else {
-			throw e;
-		}
-	}
 }
 
 /**
@@ -857,16 +889,19 @@ async function publishRoutesFallback(
 			}
 		}
 
-		const { pattern } = await fetchResult(`/zones/${zoneId}/workers/routes`, {
-			method: "POST",
-			body: JSON.stringify({
-				pattern: routePattern,
-				script: scriptName,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
+		const { pattern } = await fetchResult<{ pattern: string }>(
+			`/zones/${zoneId}/workers/routes`,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					pattern: routePattern,
+					script: scriptName,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}
+		);
 
 		deployedRoutes.push(pattern);
 	}

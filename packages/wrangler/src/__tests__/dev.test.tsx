@@ -48,7 +48,7 @@ describe("wrangler dev", () => {
 			          \`\`\`
 			          --compatibility-date=<current-date>
 			          \`\`\`
-			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates[0m for more information.
+			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
 			        "
 		      `);
@@ -301,7 +301,10 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				routes: [
-					{ pattern: "https://some-domain.com/*", zone_name: "some-zone.com" },
+					{
+						pattern: "https://some-zone.com/*",
+						zone_name: "some-zone.com",
+					},
 				],
 			});
 			fs.writeFileSync("index.js", `export default {};`);

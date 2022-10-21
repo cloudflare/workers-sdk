@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/wrangler2.git",
@@ -41,11 +41,11 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.9.0"
+		"@miniflare/core": "2.10.0"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.9.0",
-		"@miniflare/html-rewriter": "2.9.0",
+		"@miniflare/cache": "2.10.0",
+		"@miniflare/html-rewriter": "2.10.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",

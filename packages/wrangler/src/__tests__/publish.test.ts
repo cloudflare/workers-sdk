@@ -29,8 +29,8 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
-import type { KVNamespaceInfo } from "../kv";
-import type { CustomDomainChangeset, CustomDomain } from "../publish";
+import type { KVNamespaceInfo } from "../kv/helpers";
+import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
 
@@ -401,17 +401,17 @@ describe("publish", () => {
 				await expect(
 					runWrangler("publish index.js --env some-env --legacy-env true")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-                "Processing wrangler.toml configuration:
-                  - No environment found in configuration with name \\"some-env\\".
-                    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
-                    The available configured environment names are: [\\"other-env\\"]
+			                "Processing wrangler.toml configuration:
+			                  - No environment found in configuration with name \\"some-env\\".
+			                    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+			                    The available configured environment names are: [\\"other-env\\"]
 
-                    Consider adding an environment configuration section to the wrangler.toml file:
-                    \`\`\`
-                    [env.some-env]
-                    \`\`\`
-                "
-              `);
+			                    Consider adding an environment configuration section to the wrangler.toml file:
+			                    \`\`\`
+			                    [env.some-env]
+			                    \`\`\`
+			                "
+		              `);
 			});
 
 			it("should throw an error w/ helpful message when using --env --name", async () => {
@@ -791,9 +791,9 @@ describe("publish", () => {
 			});
 			await expect(runWrangler("publish ./index --env=staging")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
-              Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
-            `);
+			              "Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
+			              Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+		            `);
 		});
 
 		describe("custom domains", () => {
@@ -1181,11 +1181,11 @@ Update them to point to this script instead?`,
 			});
 			await expect(runWrangler("publish")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Processing wrangler.toml configuration:
-                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
-                  They serve the same purpose: to point to the entry-point of your worker.
-                  Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config."
-            `);
+			              "Processing wrangler.toml configuration:
+			                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
+			                  They serve the same purpose: to point to the entry-point of your worker.
+			                  Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config."
+		            `);
 		});
 
 		it("should be able to transpile TypeScript (esm)", async () => {
@@ -1376,9 +1376,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("publish ./index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Processing wrangler.toml configuration:
-                - \\"site.bucket\\" is a required field."
-            `);
+			              "Processing wrangler.toml configuration:
+			                - \\"site.bucket\\" is a required field."
+		            `);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
@@ -1522,11 +1522,11 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("publish")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Processing wrangler.toml configuration:
-                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
-                  They serve the same purpose: to point to the entry-point of your worker.
-                  Delete the deprecated \`site.entry-point\` field from your config."
-            `);
+			              "Processing wrangler.toml configuration:
+			                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
+			                  They serve the same purpose: to point to the entry-point of your worker.
+			                  Delete the deprecated \`site.entry-point\` field from your config."
+		            `);
 		});
 
 		it("should error if there is no entry-point specified", async () => {
@@ -3302,7 +3302,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error politely when publishing to workers_dev when there is no workers.dev subdomain", async () => {
+		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
 			writeWranglerToml({
 				workers_dev: true,
 			});
@@ -3310,12 +3310,16 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockSubDomainRequest("does-not-exist", false);
 
+			mockConfirm({
+				text: `Would you like to register a workers.dev subdomain now?`,
+				result: false,
+			});
+
 			await expect(runWrangler("publish ./index")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Error: You need to register a workers.dev subdomain before publishing to workers.dev
-              You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
-              https://dash.cloudflare.com/some-account-id/workers/onboarding"
-            `);
+			"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
+			https://dash.cloudflare.com/some-account-id/workers/onboarding"
+		`);
 		});
 
 		it("should not deploy to workers.dev if there are any routes defined", async () => {
@@ -3668,6 +3672,31 @@ addEventListener('fetch', event => {});`
 				`console.log(789);`
 			);
 		});
+
+		it("can be overridden with cli args containing colons", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				define: {
+					abc: "123",
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+				console.log(abc);
+			`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler(
+				"publish --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
+			);
+
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
+				// eslint-disable-next-line no-useless-escape
+				`console.log(\"https://www.abc.net.au/news/\");`
+			);
+		});
 	});
 	describe("custom builds", () => {
 		beforeEach(() => {
@@ -3735,9 +3764,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("publish index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
-              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
-            `);
+			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
+			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
+		            `);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Running custom build: node -e \\"console.log('custom build');\\"
 
@@ -3767,16 +3796,16 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("publish")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "The expected output file at \\".\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
-              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
-              The provided entry-point path, \\".\\", points to a directory, rather than a file.
+			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
+			              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
+			              The provided entry-point path, \\".\\", points to a directory, rather than a file.
 
-              Did you mean to set the main field to one of:
-              \`\`\`
-              main = \\"./worker.js\\"
-              main = \\"./dist/index.ts\\"
-              \`\`\`"
-            `);
+			              Did you mean to set the main field to one of:
+			              \`\`\`
+			              main = \\"./worker.js\\"
+			              main = \\"./dist/index.ts\\"
+			              \`\`\`"
+		            `);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Running custom build: node -e \\"console.log('custom build');\\"
 
@@ -5539,12 +5568,12 @@ addEventListener('fetch', event => {});`
 
 				await expect(runWrangler("publish index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
-                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
-                              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
-                              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
-                              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
-                          `);
+			                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
+			                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
+			                              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
+			                              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
+			                              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
+		                          `);
 			});
 		});
 

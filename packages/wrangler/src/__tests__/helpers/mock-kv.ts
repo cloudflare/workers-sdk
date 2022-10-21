@@ -1,5 +1,5 @@
 import { createFetchResult, setMockRawResponse } from "./mock-cfetch";
-import type { NamespaceKeyInfo } from "../../kv";
+import type { NamespaceKeyInfo } from "../../kv/helpers";
 
 export function mockKeyListRequest(
 	expectedNamespaceId: string,
