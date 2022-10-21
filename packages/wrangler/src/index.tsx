@@ -510,7 +510,7 @@ export async function main(argv: string[]): Promise<void> {
 	try {
 		await wrangler.parse();
 	} catch (e) {
-		logger.log(""); // Just adds a bit of space
+		logger.log("e: ", e); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
 			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
