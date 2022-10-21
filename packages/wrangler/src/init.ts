@@ -109,6 +109,7 @@ export type CronTriggersRes = {
 };
 
 export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
+	throw new Error("testing something");
 	await printWranglerBanner();
 	if (args.type) {
 		let message = "The --type option is no longer supported.";
