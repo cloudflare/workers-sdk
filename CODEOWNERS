@@ -1,5 +1,5 @@
 # Global owners
-* @petebacondarwin
+* @rozenmd @petebacondarwin
 /packages/pages-shared/ @cloudflare/pages
 /packages/wrangler/pages/ @cloudflare/pages
 /packages/wrangler/src/pages/ @cloudflare/pages
