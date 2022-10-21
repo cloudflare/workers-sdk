@@ -1,6 +1,4 @@
-import type { BuildResult } from "esbuild";
-
-export const RUNNING_BUILDERS: BuildResult[] = [];
+export const RUNNING_BUILDERS: { stop?: (() => void) | undefined }[] = [];
 
 export const CLEANUP_CALLBACKS: (() => void)[] = [];
 export const CLEANUP = () => {

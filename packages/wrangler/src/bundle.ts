@@ -13,7 +13,7 @@ import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
-type BundleResult = {
+export type BundleResult = {
 	modules: CfModule[];
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
@@ -67,7 +67,7 @@ export async function bundleWorker(
 		jsxFactory: string | undefined;
 		jsxFragment: string | undefined;
 		rules: Config["rules"];
-		watch?: esbuild.WatchMode;
+		watch?: esbuild.WatchMode | boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
 		nodeCompat: boolean | undefined;
@@ -80,6 +80,12 @@ export async function bundleWorker(
 		local: boolean;
 		testScheduled?: boolean | undefined;
 		experimentalLocalStubCache: boolean | undefined;
+		inject?: string[] | undefined;
+		target?: string | undefined;
+		loader?: Record<string, string> | undefined;
+		sourcemap?: esbuild.CommonOptions["sourcemap"];
+		allowOverwrite?: boolean | undefined;
+		plugins?: esbuild.Plugin[] | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -101,6 +107,12 @@ export async function bundleWorker(
 		targetConsumer,
 		testScheduled,
 		experimentalLocalStubCache,
+		inject: injectOption,
+		target,
+		loader,
+		sourcemap,
+		allowOverwrite,
+		plugins,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -235,7 +247,7 @@ export async function bundleWorker(
 
 	// At this point, inputEntry points to the entry point we want to build.
 
-	const inject: string[] = [];
+	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
 	if (experimentalLocalStubCache) {
 		inject.push(
@@ -251,8 +263,8 @@ export async function bundleWorker(
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
-		target: "es2020",
-		sourcemap: true,
+		target: target || "es2020",
+		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
@@ -273,6 +285,7 @@ export async function bundleWorker(
 			".js": "jsx",
 			".mjs": "jsx",
 			".cjs": "jsx",
+			...(loader || {}),
 		},
 		plugins: [
 			// We run the moduleCollector plugin for service workers as part of the middleware loader
@@ -285,11 +298,13 @@ export async function bundleWorker(
 				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
 				  // if we find node builtins when nodeCompat isn't turned on
 				  [checkForNodeBuiltinsPlugin]),
+			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
 		watch,
+		allowOverwrite,
 	});
 
 	const entryPointOutputs = Object.entries(result.metafile.outputs).filter(

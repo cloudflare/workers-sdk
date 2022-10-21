@@ -294,6 +294,7 @@ export const Handler = async ({
 				onEnd: () => {},
 				buildOutputDirectory: dirname(outfile),
 				routesOutputPath,
+				local: false,
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");

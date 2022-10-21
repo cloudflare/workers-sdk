@@ -81,6 +81,12 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				hidden: true,
 			},
+			local: {
+				describe: "Build for local development",
+				default: false,
+				type: "boolean",
+				hidden: true,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -97,6 +103,7 @@ export const Handler = async ({
 	plugin,
 	buildOutputDirectory,
 	nodeCompat,
+	local,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
@@ -123,6 +130,7 @@ export const Handler = async ({
 			buildOutputDirectory,
 			nodeCompat,
 			routesOutputPath,
+			local,
 		});
 	} catch (e) {
 		if (e instanceof FunctionsNoRoutesError) {
@@ -154,6 +162,7 @@ export async function buildFunctions({
 	buildOutputDirectory,
 	routesOutputPath,
 	nodeCompat,
+	local,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -165,6 +174,7 @@ export async function buildFunctions({
 		| "plugin"
 		| "buildOutputDirectory"
 		| "nodeCompat"
+		| "local"
 	>
 > & {
 	functionsDirectory: string;
@@ -217,6 +227,8 @@ export async function buildFunctions({
 				sourcemap,
 				watch,
 				nodeCompat,
+				functionsDirectory,
+				local: local ?? false,
 				onEnd,
 			})
 		);
@@ -227,11 +239,13 @@ export async function buildFunctions({
 				outfile,
 				minify,
 				sourcemap,
-				fallbackService,
 				watch,
+				nodeCompat,
+				functionsDirectory,
+				local: local ?? false,
 				onEnd,
 				buildOutputDirectory,
-				nodeCompat,
+				fallbackService,
 			})
 		);
 	}

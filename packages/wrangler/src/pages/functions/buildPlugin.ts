@@ -4,16 +4,9 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
 import { getBasePath } from "../../paths";
+import type { Options as WorkerOptions } from "./buildWorker";
 
-type Options = {
-	routesModule: string;
-	outfile: string;
-	minify?: boolean;
-	sourcemap?: boolean;
-	watch?: boolean;
-	nodeCompat?: boolean;
-	onEnd?: () => void;
-};
+type Options = Omit<WorkerOptions, "fallbackService" | "buildOutputDirectory">;
 
 export function buildPlugin({
 	routesModule,
