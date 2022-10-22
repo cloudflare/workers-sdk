@@ -163,6 +163,7 @@ export async function buildFunctions({
 	routesOutputPath,
 	nodeCompat,
 	local,
+	d1Databases
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -181,6 +182,7 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	outfile: Required<PagesBuildArgs>["outfile"];
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
+	d1Databases?: string[];
 }) {
 	RUNNING_BUILDERS.forEach((runningBuilder) => runningBuilder.stop?.());
 
@@ -229,6 +231,7 @@ export async function buildFunctions({
 				nodeCompat,
 				functionsDirectory: absoluteFunctionsDirectory,
 				local: local ?? false,
+				betaD1Shims: d1Databases,
 				onEnd,
 			})
 		);
@@ -243,6 +246,7 @@ export async function buildFunctions({
 				nodeCompat,
 				functionsDirectory: absoluteFunctionsDirectory,
 				local: local ?? false,
+				betaD1Shims: d1Databases,
 				onEnd,
 				buildOutputDirectory,
 				fallbackService,

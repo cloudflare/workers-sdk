@@ -291,6 +291,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 				local: true,
+				d1Databases: d1s.map((x) => x.toString()),
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 
@@ -309,6 +310,7 @@ export const Handler = async ({
 						buildOutputDirectory: directory,
 						nodeCompat,
 						local: true,
+						d1Databases: d1s.map((x) => x.toString()),
 					});
 					await metrics.sendMetricsEvent("build pages functions");
 				} catch (e) {
