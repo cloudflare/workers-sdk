@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
+import { D1_BETA_PREFIX } from "../../worker";
 
 export type Options = {
 	routesModule: string;
@@ -54,7 +55,7 @@ export function buildWorker({
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims,
+			betaD1Shims: (betaD1Shims || []).map(b => `${D1_BETA_PREFIX}${b}`),
 			plugins: [
 				{
 					name: "wrangler notifier and monitor",
