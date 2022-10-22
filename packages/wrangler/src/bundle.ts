@@ -323,12 +323,6 @@ export async function bundleWorker(
 			listEntryPoints(entryPointOutputs)
 	);
 
-	if (isOutfile) {
-		const outputFile = entryPointOutputs[0][0];
-		const oldFile = path.join(path.dirname(inputEntry.file), outputFile);
-		fs.renameSync(oldFile, destination);
-	}
-
 	const entryPointExports = entryPointOutputs[0][1].exports;
 	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
