@@ -3,6 +3,7 @@ import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import chalk from "chalk";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
@@ -221,6 +222,10 @@ function useLocalWorker({
 				cwd: path.dirname(scriptPath),
 				execArgv: nodeOptions,
 				stdio: "pipe",
+				env: {
+					...process.env,
+					FORCE_COLOR: chalk.supportsColor.hasBasic ? "1" : undefined,
+				},
 			}));
 
 			child.on("message", async (messageString) => {

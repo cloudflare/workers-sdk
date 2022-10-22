@@ -4,16 +4,18 @@ import {
 	DurableObjectStub,
 } from "@miniflare/durable-objects";
 import {
-	Log,
+	Log as MiniflareLog,
+	LogLevel as MiniflareLogLevel,
 	Miniflare,
-	Response as MiniflareResponse,
 	Request as MiniflareRequest,
+	Response as MiniflareResponse,
 } from "miniflare";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { FatalError } from "../errors";
 import generateASSETSBinding from "./assets";
 import { getRequestContextCheckOptions } from "./request-context";
+import type { LoggerLevel } from "../logger";
 import type { Options } from "./assets";
 import type { AddressInfo } from "net";
 
@@ -24,7 +26,7 @@ export interface EnablePagesAssetsServiceBindingOptions {
 
 // miniflare defines this but importing it throws:
 // Dynamic require of "path" is not supported
-class NoOpLog extends Log {
+class MiniflareNoOpLog extends MiniflareLog {
 	log(): void {}
 
 	error(message: Error): void {
@@ -41,14 +43,17 @@ async function main() {
 		...JSON.parse((args._[0] as string) ?? "{}"),
 		...requestContextCheckOptions,
 	};
-	const logLevel = config.logLevel.toUpperCase();
+
+	let logLevelString: Uppercase<LoggerLevel> = config.logLevel.toUpperCase();
+	if (logLevelString === "LOG") logLevelString = "INFO";
+	const logLevel = MiniflareLogLevel[logLevelString];
 
 	config.log =
-		config.logLevel === "none"
-			? new NoOpLog()
-			: new Log(logLevel, config.logOptions);
+		logLevel === MiniflareLogLevel.NONE
+			? new MiniflareNoOpLog()
+			: new MiniflareLog(logLevel, config.logOptions);
 
-	if (logLevel === "DEBUG" || logLevel === "VERBOSE") {
+	if (logLevel === MiniflareLogLevel.DEBUG) {
 		console.log("MINIFLARE OPTIONS:\n", JSON.stringify(config, null, 2));
 	}
 
