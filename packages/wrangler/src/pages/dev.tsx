@@ -525,7 +525,6 @@ export const Handler = async ({
 			persist,
 			persistTo,
 			showInteractiveDevSession: undefined,
-			inspect: true,
 			logPrefix: "pages",
 			logLevel: logLevel ?? "warn",
 		},
