@@ -261,7 +261,7 @@ export async function bundleWorker(
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
-		...(isOutfile ? { outfile: destination } : { outdir: destination }),
+		outdir: isOutfile ? path.dirname(destination) : destination,
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
@@ -322,6 +322,12 @@ export async function bundleWorker(
 		"More than one entry-point found for generated bundle." +
 			listEntryPoints(entryPointOutputs)
 	);
+
+	if (isOutfile) {
+		const outputFile = entryPointOutputs[0][0];
+		const oldFile = path.join(path.dirname(inputEntry.file), outputFile);
+		fs.renameSync(oldFile, destination);
+	}
 
 	const entryPointExports = entryPointOutputs[0][1].exports;
 	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";

@@ -55,7 +55,7 @@ export function buildWorker({
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims: (betaD1Shims || []).map(b => `${D1_BETA_PREFIX}${b}`),
+			betaD1Shims: (betaD1Shims || []).map((b) => `${D1_BETA_PREFIX}${b}`),
 			plugins: [
 				{
 					name: "wrangler notifier and monitor",

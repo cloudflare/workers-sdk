@@ -270,7 +270,11 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
+		const outfile = join(
+			tmpdir(),
+			"pages-functions-build",
+			`./functionsWorker-${Math.random()}.js`
+		);
 		scriptPath = outfile;
 
 		if (nodeCompat) {
