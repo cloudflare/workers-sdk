@@ -151,6 +151,7 @@ export function buildWorker({
 					},
 				},
 			],
+			isOutfile: true,
 			// the options bundle requires
 			serveAssetsFromWorker: false,
 			assets: undefined,

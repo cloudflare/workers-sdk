@@ -86,6 +86,7 @@ export async function bundleWorker(
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
 		allowOverwrite?: boolean | undefined;
 		plugins?: esbuild.Plugin[] | undefined;
+		isOutfile?: boolean | undefined;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -113,6 +114,7 @@ export async function bundleWorker(
 		sourcemap,
 		allowOverwrite,
 		plugins,
+		isOutfile,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -255,11 +257,16 @@ export async function bundleWorker(
 		);
 	}
 
+	console.log({
+		entryPoints: [inputEntry.file],
+		absWorkingDir: entry.directory,
+		...(isOutfile ? { outfile: destination } : { outdir: destination }),
+	});
 	const result = await esbuild.build({
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
-		outdir: destination,
+		...(isOutfile ? { outfile: destination } : { outdir: destination }),
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",

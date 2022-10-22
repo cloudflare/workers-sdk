@@ -182,9 +182,7 @@ export async function buildFunctions({
 	outfile: Required<PagesBuildArgs>["outfile"];
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 }) {
-	RUNNING_BUILDERS.forEach(
-		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
-	);
+	RUNNING_BUILDERS.forEach((runningBuilder) => runningBuilder.stop?.());
 
 	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
 	const baseURL = toUrlPath("/");
@@ -218,6 +216,8 @@ export async function buildFunctions({
 		outfile: routesModule,
 	});
 
+	const absoluteFunctionsDirectory = join(process.cwd(), functionsDirectory);
+
 	if (plugin) {
 		RUNNING_BUILDERS.push(
 			await buildPlugin({
@@ -227,7 +227,7 @@ export async function buildFunctions({
 				sourcemap,
 				watch,
 				nodeCompat,
-				functionsDirectory,
+				functionsDirectory: absoluteFunctionsDirectory,
 				local: local ?? false,
 				onEnd,
 			})
@@ -241,7 +241,7 @@ export async function buildFunctions({
 				sourcemap,
 				watch,
 				nodeCompat,
-				functionsDirectory,
+				functionsDirectory: absoluteFunctionsDirectory,
 				local: local ?? false,
 				onEnd,
 				buildOutputDirectory,
