@@ -62,31 +62,31 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
-		assets: StaticAssetsConfig;
+		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
-		jsxFactory: string | undefined;
-		jsxFragment: string | undefined;
+		jsxFactory?: string;
+		jsxFragment?: string;
 		rules: Config["rules"];
 		watch?: esbuild.WatchMode | boolean;
-		tsconfig: string | undefined;
-		minify: boolean | undefined;
-		nodeCompat: boolean | undefined;
+		tsconfig?: string;
+		minify?: boolean;
+		nodeCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
-		services: Config["services"] | undefined;
-		workerDefinitions: WorkerRegistry | undefined;
-		firstPartyWorkerDevFacade: boolean | undefined;
+		services?: Config["services"];
+		workerDefinitions?: WorkerRegistry;
+		firstPartyWorkerDevFacade?: boolean;
 		targetConsumer: "dev" | "publish";
 		local: boolean;
-		testScheduled?: boolean | undefined;
-		experimentalLocalStubCache: boolean | undefined;
-		inject?: string[] | undefined;
-		target?: string | undefined;
-		loader?: Record<string, string> | undefined;
+		testScheduled?: boolean;
+		experimentalLocalStubCache?: boolean;
+		inject?: string[];
+		target?: string;
+		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
-		allowOverwrite?: boolean | undefined;
-		plugins?: esbuild.Plugin[] | undefined;
-		isOutfile?: boolean | undefined;
+		allowOverwrite?: boolean;
+		plugins?: esbuild.Plugin[];
+		isOutfile?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {

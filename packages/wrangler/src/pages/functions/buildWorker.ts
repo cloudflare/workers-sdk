@@ -155,17 +155,9 @@ export async function buildWorker({
 			isOutfile: true,
 			// the options bundle requires
 			serveAssetsFromWorker: false,
-			assets: undefined,
-			jsxFactory: undefined,
-			jsxFragment: undefined,
 			rules: [],
-			tsconfig: undefined,
 			checkFetch: false, //don't merge until this is checked
-			services: undefined,
-			workerDefinitions: undefined,
-			firstPartyWorkerDevFacade: undefined,
 			targetConsumer: "publish", //don't merge until this is checked - it seems to be for middlewares only atm?
-			experimentalLocalStubCache: undefined,
 			local,
 		}
 	);
