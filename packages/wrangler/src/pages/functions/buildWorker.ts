@@ -1,5 +1,5 @@
-import { access, cp, lstat, rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { access, cp, lstat, rm, writeFile } from "node:fs/promises";
+import path, { join, resolve } from "node:path";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
@@ -20,7 +20,7 @@ export type Options = {
 	betaD1Shims?: string[];
 };
 
-export function buildWorker({
+export async function buildWorker({
 	routesModule,
 	outfile = "bundle.js",
 	minify = false,
@@ -34,7 +34,7 @@ export function buildWorker({
 	local,
 	betaD1Shims,
 }: Options) {
-	return bundleWorker(
+	const bundle = await bundleWorker(
 		{
 			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 			directory: functionsDirectory,
@@ -169,4 +169,12 @@ export function buildWorker({
 			local,
 		}
 	);
+	for (const module of bundle.modules) {
+		await writeFile(
+			path.join(path.dirname(outfile), module.name),
+			module.content
+		);
+	}
+
+	return bundle;
 }
