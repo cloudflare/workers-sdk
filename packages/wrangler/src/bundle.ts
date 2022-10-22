@@ -257,11 +257,6 @@ export async function bundleWorker(
 		);
 	}
 
-	console.log({
-		entryPoints: [inputEntry.file],
-		absWorkingDir: entry.directory,
-		...(isOutfile ? { outfile: destination } : { outdir: destination }),
-	});
 	const result = await esbuild.build({
 		entryPoints: [inputEntry.file],
 		bundle: true,

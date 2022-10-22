@@ -163,7 +163,7 @@ export async function buildFunctions({
 	routesOutputPath,
 	nodeCompat,
 	local,
-	d1Databases
+	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,

@@ -472,6 +472,7 @@ export const Handler = async ({
 			compatibilityDate,
 			compatibilityFlags,
 			nodeCompat,
+			bundle: false,
 			vars: Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))
