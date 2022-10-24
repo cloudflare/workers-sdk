@@ -99,36 +99,35 @@ describe("generateTypes()", () => {
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
 		"interface Env {
-		    TEST_KV_NAMESPACE: KVNamespace;
-		      SOMETHING: \\"asdasdfasdf\\";
-		        ANOTHER: \\"thing\\";
-		        OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-		        DURABLE_TEST1: DurableObjectNamespace;
-		      DURABLE_TEST2: DurableObjectNamespace;
-		      R2_BUCKET_BINDING: R2Bucket;
-		      __D1_BETA__D1_TESTING_SOMETHING: D1Database;
-		      SERVICE_BINDING: Fetcher;
-		      NAMESPACE_BINDING: any;
-		      LOGFWDR_SCHEMA: any;
-		    SOME_DATA_BLOB1: ArrayBuffer;
-		      SOME_DATA_BLOB2: ArrayBuffer;
-		      SOME_TEXT_BLOB1: string;
-		      SOME_TEXT_BLOB2: string;
-		      testing_unsafe: any;
-		      }
+			TEST_KV_NAMESPACE: KVNamespace;
+			SOMETHING: asdasdfasdf;
+			ANOTHER: thing;
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			DURABLE_TEST1: DurableObjectNamespace;
+			DURABLE_TEST2: DurableObjectNamespace;
+			R2_BUCKET_BINDING: R2Bucket;
+			D1_TESTING_SOMETHING: D1Database;
+			SERVICE_BINDING: Fetcher;
+			NAMESPACE_BINDING: any;
+			LOGFWDR_SCHEMA: any;
+			SOME_DATA_BLOB1: ArrayBuffer;
+			SOME_DATA_BLOB2: ArrayBuffer;
+			SOME_TEXT_BLOB1: string;
+			SOME_TEXT_BLOB2: string;
+			testing_unsafe: any;
+		}
 		declare module \\"**/*.txt\\" {
-					      const value: string;
-					      export default value;
-					    }
-					    declare module \\"**/*.webp\\" {
-		            const value: ArrayBuffer;
-		            export default value;
-		          }
-		          declare module \\"**/*.wasm\\" {
-		            const value: WebAssembly.Module;
-		            export default value;
-		          }
-		          "
+			const value: string;
+			export default value;
+		}
+		declare module \\"**/*.webp\\" {
+			const value: ArrayBuffer;
+			export default value;
+		}
+		declare module \\"**/*.wasm\\" {
+			const value: WebAssembly.Module;
+			export default value;
+		}"
 	`);
 	});
 
@@ -187,5 +186,32 @@ describe("generateTypes()", () => {
 			`[Error: A non-wrangler wrangler-overrides.d.ts already exists, please rename and try again.]`
 		);
 		expect(fs.existsSync("./wrangler-overrides.d.ts")).toBe(true);
+	});
+
+	it("should log the declare global type generated and declare modules", async () => {
+		fs.writeFileSync(
+			"./index.ts",
+			`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
+		}); async function handleRequest(request) {  return new Response('Hello worker!', {headers: { 'content-type': 'text/plain' },});}`
+		);
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "./index.ts",
+				// @ts-expect-error This type is out of sync with the actual bindingsConfig type
+				unsafe: bindingsConfigMock.unsafe?.at(0) ?? {},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+		expect(std.out).toMatchInlineSnapshot(`
+		"declare global {
+			testing_unsafe: any;
+		}
+		"
+	`);
 	});
 });
