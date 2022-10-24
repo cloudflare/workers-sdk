@@ -273,7 +273,7 @@ export const Handler = async ({
 		const outfile = join(
 			tmpdir(),
 			"pages-functions-build",
-			`./functionsWorker-${Math.random()}.js`
+			`./functionsWorker-${Math.random()}.mjs`
 		);
 		scriptPath = outfile;
 
