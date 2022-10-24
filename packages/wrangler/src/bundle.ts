@@ -28,31 +28,48 @@ type StaticAssetsConfig =
 	| undefined;
 
 /**
- * Searches for any uses of node's builtin modules, and throws an error if it
- * finds anything. This plugin is only used when nodeCompat is not enabled.
- * Supports both regular node builtins, and the new "node:<MODULE>" format.
+ * RegExp matching against esbuild's error text when it is unable to resolve
+ * a Node built-in module. If we detect this when node_compat is disabled,
+ * we'll rewrite the error to suggest enabling it.
  */
-const checkForNodeBuiltinsPlugin = {
-	name: "checkForNodeBuiltins",
-	setup(build: esbuild.PluginBuild) {
-		build.onResolve(
-			{
-				filter: new RegExp(
-					"^(" +
-						builtinModules.join("|") +
-						"|" +
-						builtinModules.map((module) => "node:" + module).join("|") +
-						")$"
-				),
-			},
-			() => {
-				throw new Error(
-					`Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
-				);
-			}
-		);
-	},
-};
+const nodeBuiltinResolveErrorText = new RegExp(
+	'^Could not resolve "(' +
+		builtinModules.join("|") +
+		"|" +
+		builtinModules.map((module) => "node:" + module).join("|") +
+		')"$'
+);
+
+/**
+ * Returns true if the passed value looks like an esbuild BuildFailure object
+ */
+export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		"errors" in err &&
+		"warnings" in err
+	);
+}
+
+/**
+ * Rewrites esbuild BuildFailures for failing to resolve Node built-in modules
+ * to suggest enabling Node compat as opposed to `platform: "node"`.
+ */
+export function rewriteNodeCompatBuildFailure(err: esbuild.BuildFailure) {
+	for (const error of err.errors) {
+		const match = nodeBuiltinResolveErrorText.exec(error.text);
+		if (match !== null) {
+			error.notes = [
+				{
+					location: null,
+					text: `The package "${match[1]}" wasn't found on the file system but is built into node.
+Add "node_compat = true" to your wrangler.toml file to enable Node compatibility.`,
+				},
+			];
+		}
+	}
+}
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
@@ -243,7 +260,7 @@ export async function bundleWorker(
 		);
 	}
 
-	const result = await esbuild.build({
+	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
@@ -282,15 +299,24 @@ export async function bundleWorker(
 				: []),
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
-				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
-				  // if we find node builtins when nodeCompat isn't turned on
-				  [checkForNodeBuiltinsPlugin]),
+				: []),
 		],
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
 		watch,
-	});
+		// The default logLevel is "warning". So that we can rewrite errors before
+		// logging, we disable esbuild's default logging, and log build failures
+		// ourselves.
+		logLevel: "silent",
+	};
+	let result;
+	try {
+		result = await esbuild.build(buildOptions);
+	} catch (e) {
+		if (!nodeCompat && isBuildFailure(e)) rewriteNodeCompatBuildFailure(e);
+		throw e;
+	}
 
 	const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
 		([_path, output]) => output.entryPoint !== undefined

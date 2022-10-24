@@ -5,6 +5,7 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { isBuildFailure } from "./bundle";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { d1 } from "./d1";
@@ -27,7 +28,7 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
-import { logger } from "./logger";
+import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
@@ -640,6 +641,9 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
+		} else if (isBuildFailure(e)) {
+			logBuildFailure(e);
+			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
 			logger.log(
