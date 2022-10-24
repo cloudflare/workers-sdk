@@ -22,9 +22,10 @@ import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
 import type { PackageManager } from "./package-manager";
+import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
-export async function initOptions(yargs: Argv) {
+export async function initOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("name", {
 			describe: "The name of your worker",

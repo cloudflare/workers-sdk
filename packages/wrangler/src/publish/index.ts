@@ -14,18 +14,15 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import publish from "./publish";
 import type { ConfigPath } from "../index";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "../yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
-export function publishOptions(yargs: Argv) {
+export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 	return (
 		yargs
-			.option("env", {
-				type: "string",
-				requiresArg: true,
-				describe: "Perform on a specific environment",
-				alias: "e",
-			})
 			.positional("script", {
 				describe: "The path to an entry point for your worker",
 				type: "string",

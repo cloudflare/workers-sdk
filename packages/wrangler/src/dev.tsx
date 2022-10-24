@@ -31,6 +31,7 @@ import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
 import type { CfWorkerInit } from "./worker";
+import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -79,7 +80,7 @@ interface DevArgs {
 	"test-scheduled"?: boolean;
 }
 
-export function devOptions(yargs: Argv): Argv<DevArgs> {
+export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 	return (
 		yargs
 			.positional("script", {
@@ -110,12 +111,6 @@ export function devOptions(yargs: Argv): Argv<DevArgs> {
 				describe: "Choose an entry type",
 				hidden: true,
 				deprecated: true,
-			})
-			.option("env", {
-				describe: "Perform on a specific environment",
-				type: "string",
-				requiresArg: true,
-				alias: "e",
 			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
@@ -765,7 +760,7 @@ async function getBindingsAndAssetPaths(
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal
-	const bindings = await getBindings(configParam, {
+	const bindings = await getBindings(configParam, args.env, {
 		kv: args.kv,
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
@@ -794,6 +789,7 @@ async function getBindingsAndAssetPaths(
 
 async function getBindings(
 	configParam: Config,
+	env: string | undefined,
 	args: AdditionalDevProps
 ): Promise<CfWorkerInit["bindings"]> {
 	const bindings = {
@@ -823,7 +819,7 @@ async function getBindings(
 		],
 		// Use a copy of combinedVars since we're modifying it later
 		vars: {
-			...getVarsForDev(configParam),
+			...getVarsForDev(configParam, env),
 			...args.vars,
 		},
 		wasm_modules: configParam.wasm_modules,

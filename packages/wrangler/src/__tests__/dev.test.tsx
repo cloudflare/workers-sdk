@@ -664,6 +664,40 @@ describe("wrangler dev", () => {
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		describe(".env", () => {
+			beforeEach(() => {
+				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
+				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
+				fs.writeFileSync("index.js", `export default {};`);
+				writeWranglerToml({
+					main: "index.js",
+					env: { custom: {} },
+					build: {
+						// Ideally, we'd just log the var here and match it in `std.out`,
+						// but stdout from custom builds is piped directly to
+						// `process.stdout` which we don't capture.
+						command: `node -e "require('fs').writeFileSync('var.txt', process.env.CUSTOM_BUILD_VAR)"`,
+					},
+				});
+
+				// We won't overwrite existing process.env keys with .env values (to
+				// allow .env overrides to specified on then shell), so make sure this
+				// key definitely doesn't exist.
+				delete process.env.CUSTOM_BUILD_VAR;
+			});
+
+			it("should load environment variables from `.env`", async () => {
+				await runWrangler("dev");
+				const output = fs.readFileSync("var.txt", "utf8");
+				expect(output).toMatch("default");
+			});
+			it("should prefer to load environment variables from `.env.<environment>` if `--env <environment>` is set", async () => {
+				await runWrangler("dev --env custom");
+				const output = fs.readFileSync("var.txt", "utf8");
+				expect(output).toMatch("custom");
+			});
+		});
 	});
 
 	describe("upstream-protocol", () => {
@@ -1068,6 +1102,27 @@ describe("wrangler dev", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should prefer `.dev.vars.<environment>` if `--env <environment> set`", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
+			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
+
+			writeWranglerToml({ main: "index.js", env: { custom: {} } });
+			await runWrangler("dev --env custom");
+			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+				.calls[0][0].bindings.vars;
+
+			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
+			expect(std.out).toMatchInlineSnapshot(`
+			        "Using vars defined in .dev.vars.custom
+			        Your worker has access to the following bindings:
+			        - Vars:
+			          - CUSTOM_VAR: \\"(hidden)\\""
+		      `);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("serve static assets", () => {
@@ -1094,13 +1149,13 @@ describe("wrangler dev", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
 
 			Options:
 			      --name                                       Name of the worker  [string]
 			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
-			  -e, --env                                        Perform on a specific environment  [string]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
@@ -1357,24 +1412,23 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
-			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Your worker has access to the following bindings:
-			        - Services:
-			          - WorkerA: A
-			          - WorkerB: B - staging",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			expect(std.out).toMatchInlineSnapshot(`
+			"Your worker has access to the following bindings:
+			- Services:
+			  - WorkerA: A
+			  - WorkerB: B - staging"
+		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"services\\" fields are experimental and may change or break at any time.
+			    - \\"services\\" fields are experimental and may change or break at any time.
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
-			        ",
-			        }
-		      `);
+			"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 
