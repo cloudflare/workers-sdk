@@ -145,7 +145,7 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 		await runWrangler("types");
-		expect(fs.existsSync("./wrangler-overrides.d.ts")).toBe(true);
+		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
 	it("should not create DTS file if there is nothing in the config to generate types from", async () => {
@@ -160,13 +160,13 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 		await runWrangler("types");
-		expect(fs.existsSync("./wrangler-overrides.d.ts")).toBe(false);
+		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should create a DTS file at the location that the command is executed from", async () => {
 		fs.writeFileSync(
-			"./wrangler-overrides.d.ts",
+			"./worker-configuration.d.ts",
 			"NOT THE CONTENTS OF THE GENERATED FILE"
 		);
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
@@ -183,9 +183,9 @@ describe("generateTypes()", () => {
 		);
 
 		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
-			`[Error: A non-wrangler wrangler-overrides.d.ts already exists, please rename and try again.]`
+			`[Error: A non-wrangler worker-configuration.d.ts already exists, please rename and try again.]`
 		);
-		expect(fs.existsSync("./wrangler-overrides.d.ts")).toBe(true);
+		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
 	it("should log the declare global type generated and declare modules", async () => {
