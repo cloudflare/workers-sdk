@@ -3,6 +3,7 @@ import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
 import * as List from "./list";
+import * as Migrations from "./migrations";
 import { d1BetaWarning } from "./utils";
 import type { Argv } from "yargs";
 
@@ -69,6 +70,28 @@ export const d1 = (yargs: Argv) => {
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
+				yargs2
+					.command(
+						"list <name>",
+						"List your D1 migrations",
+						Migrations.ListOptions,
+						Migrations.ListHandler
+					)
+					.command(
+						"create <name>",
+						"Create a new Migration",
+						Migrations.CreateOptions,
+						Migrations.CreateHandler
+					)
+					.command(
+						"apply <name>",
+						"Apply D1 Migrations",
+						Migrations.ApplyOptions,
+						Migrations.ApplyHandler
+					)
+					.epilogue(d1BetaWarning)
 			)
 			.epilogue(d1BetaWarning)
 	);

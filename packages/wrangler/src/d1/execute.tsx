@@ -7,7 +7,7 @@ import Table from "ink-table";
 import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { ConfigFields, DevConfig, Environment, withConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm, logDim } from "../dialogs";
 import { logger } from "../logger";
@@ -36,16 +36,19 @@ type MiniflareNpxImportTypes = [
 	}
 ];
 
-type ExecuteArgs = {
+export type BaseSqlExecuteArgs = {
 	config?: string;
 	name: string;
-	file?: string;
-	command?: string;
 	local?: boolean;
 	"persist-to"?: string;
 };
 
-type QueryResult = {
+type ExecuteArgs = BaseSqlExecuteArgs & {
+	file?: string;
+	command?: string;
+};
+
+export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
 	success: boolean;
 	duration: number;
@@ -82,38 +85,59 @@ function shorten(query: string | undefined, length: number) {
 		: query;
 }
 
+export async function executeSql(
+	local: undefined | boolean,
+	config: ConfigFields<DevConfig> & Environment,
+	name: string,
+	isInteractive: boolean | undefined,
+	persistTo: undefined | string,
+	file?: string,
+	command?: string
+) {
+	const { parser, splitter } = await loadSqlUtils();
+
+	const sql = file
+		? parser.file(file)
+		: command
+		? parser.__dangerous__rawValue(command)
+		: null;
+
+	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (persistTo && !local)
+		throw new Error(`Error: can't use --persist-to without --local`);
+
+	return local
+		? await executeLocally(
+				config,
+				name,
+				isInteractive,
+				splitSql(splitter, sql),
+				persistTo
+		  )
+		: await executeRemotely(
+				config,
+				name,
+				isInteractive,
+				batchSplit(splitter, sql)
+		  );
+}
+
 export const Handler = withConfig<ExecuteArgs>(
 	async ({ config, name, file, command, local, persistTo }): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
 			return console.error(`Error: can't provide both --command and --file.`);
-		const { parser, splitter } = await loadSqlUtils();
-
-		const sql = file
-			? parser.file(file)
-			: command
-			? parser.__dangerous__rawValue(command)
-			: null;
-
-		if (!sql) throw new Error(`Error: must provide --command or --file.`);
-		if (persistTo && !local)
-			throw new Error(`Error: can't use --persist-to without --local`);
 
 		const isInteractive = process.stdout.isTTY;
-		const response: QueryResult[] | null = local
-			? await executeLocally(
-					config,
-					name,
-					isInteractive,
-					splitSql(splitter, sql),
-					persistTo
-			  )
-			: await executeRemotely(
-					config,
-					name,
-					isInteractive,
-					batchSplit(splitter, sql)
-			  );
+		const response: QueryResult[] | null = await executeSql(
+			local,
+			config,
+			name,
+			isInteractive,
+			persistTo,
+			file,
+			command
+		);
 
 		// Early exit if prompt rejected
 		if (!response) return;
@@ -154,7 +178,7 @@ export const Handler = withConfig<ExecuteArgs>(
 async function executeLocally(
 	config: Config,
 	name: string,
-	isInteractive: boolean,
+	isInteractive: boolean | undefined,
 	queries: string[],
 	persistTo: string | undefined
 ) {
@@ -202,7 +226,7 @@ async function executeLocally(
 async function executeRemotely(
 	config: Config,
 	name: string,
-	isInteractive: boolean,
+	isInteractive: boolean | undefined,
 	batches: string[]
 ) {
 	if (batches.length > 1) {
@@ -231,7 +255,9 @@ async function executeRemotely(
 
 	if (isInteractive) {
 		console.log(`Executing on ${name} (${db.uuid}):`);
-	} else {
+
+		// Don't output if isInteractive is undefined
+	} else if (isInteractive !== undefined) {
 		// Pipe to error so we don't break jq
 		console.error(`Executing on ${name} (${db.uuid}):`);
 	}
