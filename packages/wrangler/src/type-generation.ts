@@ -104,7 +104,9 @@ export async function generateTypes(
 				];
 			if (typeScriptType !== undefined) {
 				ruleObject.globs.forEach((glob) => {
-					modulesTypeStructure.push(`declare module "${glob}" {
+					modulesTypeStructure.push(`declare module "*.${glob
+						.split(".")
+						.at(-1)}" {
 	const value: ${typeScriptType};
 	export default value;
 }`);

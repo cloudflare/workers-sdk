@@ -479,7 +479,7 @@ export function createCLIParser(argv: string[]) {
 			const config = readConfig(undefined, {});
 
 			const configBindings: PartialConfigToDTS = {
-				kv_namespaces: config.kv_namespaces || [],
+				kv_namespaces: config.kv_namespaces ?? [],
 				vars: { ...config.vars },
 				wasm_modules: config.wasm_modules,
 				text_blobs: {
@@ -488,7 +488,7 @@ export function createCLIParser(argv: string[]) {
 				data_blobs: config.data_blobs,
 				durable_objects: config.durable_objects,
 				r2_buckets: config.r2_buckets,
-				// @ts-expect-error - We dont want the type generated to inlcude Beta prefix
+				// @ts-expect-error - We don't want the type generated to inlcude the Beta prefix
 				d1_databases: config.d1_databases,
 				services: config.services,
 				dispatch_namespaces: config.dispatch_namespaces,

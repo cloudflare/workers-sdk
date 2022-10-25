@@ -116,15 +116,15 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
 		}
-		declare module \\"**/*.txt\\" {
+		declare module \\"*.txt\\" {
 			const value: string;
 			export default value;
 		}
-		declare module \\"**/*.webp\\" {
+		declare module \\"*.webp\\" {
 			const value: ArrayBuffer;
 			export default value;
 		}
-		declare module \\"**/*.wasm\\" {
+		declare module \\"*.wasm\\" {
 			const value: WebAssembly.Module;
 			export default value;
 		}"
