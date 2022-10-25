@@ -16,8 +16,8 @@ import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
+import type { YargsOptionsToInterface } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(

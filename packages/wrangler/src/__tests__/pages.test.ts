@@ -273,6 +273,7 @@ describe("pages", () => {
 					id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
 					url: "https://87bbc8fe.images.pages.dev",
 					environment: "preview",
+					created_on: "2021-11-17T14:52:26.133835Z",
 					latest_stage: {
 						ended_on: "2021-11-17T14:52:26.133835Z",
 						status: "success",

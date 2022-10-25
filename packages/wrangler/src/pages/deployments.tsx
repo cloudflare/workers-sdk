@@ -1,5 +1,4 @@
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
+import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
@@ -9,13 +8,10 @@ import { FatalError } from "../errors";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { listProjects } from "./projects";
+import { promptSelectProject } from "./prompt-select-project";
 import { pagesBetaWarning } from "./utils";
-import type {
-	Deployment,
-	PagesConfigCache,
-	YargsOptionsToInterface,
-} from "./types";
+import type { YargsOptionsToInterface } from "../yargs-types";
+import type { Deployment, PagesConfigCache } from "./types";
 import type { Argv } from "yargs";
 
 type ListArgs = YargsOptionsToInterface<typeof ListOptions>;
@@ -40,25 +36,7 @@ export async function ListHandler({ projectName }: ListArgs) {
 
 	const isInteractive = process.stdin.isTTY;
 	if (!projectName && isInteractive) {
-		const projects = await listProjects({ accountId });
-		projectName = await new Promise((resolve) => {
-			const { unmount } = render(
-				<>
-					<Text>Select a project:</Text>
-					<SelectInput
-						items={projects.map((project) => ({
-							key: project.name,
-							label: project.name,
-							value: project,
-						}))}
-						onSelect={async (selected) => {
-							resolve(selected.value.name);
-							unmount();
-						}}
-					/>
-				</>
-			);
-		});
+		projectName = await promptSelectProject({ accountId });
 	}
 
 	if (!projectName) {

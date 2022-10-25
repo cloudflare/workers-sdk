@@ -10,6 +10,8 @@ export type EventNames =
 	| "delete worker script"
 	| "begin log stream"
 	| "end log stream"
+	| "begin pages log stream"
+	| "end pages log stream"
 	| "create encrypted variable"
 	| "delete encrypted variable"
 	| "list encrypted variables"

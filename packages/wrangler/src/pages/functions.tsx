@@ -6,7 +6,7 @@ import { isInPagesCI } from "./constants";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "./types";
+import type { YargsOptionsToInterface } from "../yargs-types";
 import type { Argv } from "yargs";
 
 type OptimizeRoutesArgs = YargsOptionsToInterface<typeof OptimizeRoutesOptions>;

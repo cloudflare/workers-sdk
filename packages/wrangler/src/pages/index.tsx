@@ -2,6 +2,7 @@
 
 import * as Build from "./build";
 import * as Deployments from "./deployments";
+import * as DeploymentTails from "./deployment-tails";
 import * as Dev from "./dev";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
@@ -80,6 +81,12 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 							"🆙 Publish a directory of static assets as a Pages deployment",
 							Publish.Options,
 							Publish.Handler
+						)
+						.command(
+							"tail [deployment-id]",
+							"Tail requests and logs on a deployment",
+							DeploymentTails.Options,
+							DeploymentTails.Handler
 						)
 						.epilogue(pagesBetaWarning)
 			)

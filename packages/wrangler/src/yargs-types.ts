@@ -9,6 +9,10 @@ export interface CommonYargsOptions {
 	env: string | undefined;
 }
 
+export type YargvToInterface<T> = T extends Argv<infer P>
+	? ArgumentsCamelCase<P>
+	: never;
+
 /**
  * Given some Yargs Options function factory, extract the interface
  * that corresponds to the yargs arguments
