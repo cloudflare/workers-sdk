@@ -246,7 +246,7 @@ function DevSession(props: DevSessionProps) {
 	}
 
 	// If we are using d1 bindings, and are not bundling the worker
-	// we should error here as the d1 shim won't be added.
+	// we should error here as the d1 shim won't be added
 	if (
 		Array.isArray(betaD1Shims) &&
 		betaD1Shims.length > 0 &&

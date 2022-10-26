@@ -499,6 +499,7 @@ export function setupMiniflareOptions({
 } {
 	const defaultRules = DEFAULT_MODULE_RULES.slice();
 	if (enablePagesAssetsServiceBinding) {
+		//pages always uses ESM syntax
 		defaultRules.push({
 			globs: ["**/*.js"],
 			type: "ESModule",

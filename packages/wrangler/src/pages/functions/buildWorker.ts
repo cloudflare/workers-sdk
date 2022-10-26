@@ -1,4 +1,4 @@
-import { access, cp, lstat, rm, writeFile, rename } from "node:fs/promises";
+import { access, cp, lstat, rm, writeFile } from "node:fs/promises";
 import path, { join, resolve } from "node:path";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
@@ -161,13 +161,6 @@ export async function buildWorker({
 			local,
 		}
 	);
-
-	const outputFile = bundle.resolvedEntryPointPath;
-	try {
-		await rename(outputFile, outfile);
-	} catch (e) {
-		console.warn("Failed to rename output file", outputFile, "to", outfile);
-	}
 
 	for (const module of bundle.modules) {
 		await writeFile(
