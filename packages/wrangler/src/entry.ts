@@ -26,7 +26,7 @@ export async function getEntry(
 		assets?: string | undefined;
 	},
 	config: Config,
-	command: "dev" | "publish"
+	command: "dev" | "publish" | "types"
 ): Promise<Entry> {
 	let file: string;
 	let directory = process.cwd();

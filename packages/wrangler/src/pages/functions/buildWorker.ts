@@ -156,8 +156,8 @@ export async function buildWorker({
 			// the options bundle requires
 			serveAssetsFromWorker: false,
 			rules: [],
-			checkFetch: false, //don't merge until this is checked
-			targetConsumer: "publish", //don't merge until this is checked - it seems to be for middlewares only atm?
+			checkFetch: local,
+			targetConsumer: local ? "dev" : "publish", //don't merge until this is checked - it seems to be for middlewares only atm?
 			local,
 		}
 	);
