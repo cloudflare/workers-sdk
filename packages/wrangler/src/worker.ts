@@ -127,6 +127,7 @@ export interface CfD1Database {
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
+	database_internal_env?: string;
 }
 
 interface CfService {
