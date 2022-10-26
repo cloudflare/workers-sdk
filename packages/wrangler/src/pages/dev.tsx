@@ -687,11 +687,17 @@ async function spawnProxyProcess({
 const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
 	setup(build: esbuild.PluginBuild) {
-		build.onResolve({ filter: /.*/g }, (_args) => {
+		build.onResolve({ filter: /.*/g }, (args) => {
+			if (args.kind === "entry-point") {
+				return {
+					path: args.path,
+				};
+			}
 			logger.error(
 				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`
 			);
-			return null;
+			// Miniflare will error with this briefly down the line -- there's no point in continuing.
+			process.exit(1);
 		});
 	},
 };
