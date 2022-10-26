@@ -256,6 +256,8 @@ export const Handler = async ({
 				await esbuild.build({
 					entryPoints: [scriptPath],
 					write: false,
+					// we need it to be bundled so that any imports that are used are affected by the blocker plugin
+					bundle: true,
 					plugins: [blockWorkerJsImports],
 				});
 			} catch {}
@@ -686,13 +688,15 @@ async function spawnProxyProcess({
 
 const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
-	setup(build: esbuild.PluginBuild) {
+	setup(build) {
 		build.onResolve({ filter: /.*/g }, (args) => {
+			// If it's the entrypoint, let it be as is
 			if (args.kind === "entry-point") {
 				return {
 					path: args.path,
 				};
 			}
+			// Otherwise, block any imports that the file is requesting
 			logger.error(
 				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`
 			);

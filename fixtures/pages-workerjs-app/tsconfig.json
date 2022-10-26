@@ -4,7 +4,7 @@
 		"esModuleInterop": true,
 		"module": "CommonJS",
 		"lib": ["ES2020"],
-		"types": ["jest"],
+		"types": ["jest", "node"],
 		"moduleResolution": "node"
 	}
 }
