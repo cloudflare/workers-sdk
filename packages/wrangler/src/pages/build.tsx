@@ -186,11 +186,7 @@ export async function buildFunctions({
 }) {
 	RUNNING_BUILDERS.forEach((runningBuilder) => runningBuilder.stop?.());
 
-	const routesModule = join(
-		tmpdir(),
-		"pages-functions-build",
-		`./functionsRoutes-${Math.random()}.mjs`
-	);
+	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
 	const baseURL = toUrlPath("/");
 
 	const config: Config = await generateConfigFromFileTree({
