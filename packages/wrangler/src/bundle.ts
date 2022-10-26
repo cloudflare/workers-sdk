@@ -257,12 +257,24 @@ export async function bundleWorker(
 		);
 	}
 
+	const outFilepath = isOutfile
+		? path.isAbsolute(destination)
+			? destination
+			: entry.directory.endsWith("functions")
+			? path.join(entry.directory, "..", destination)
+			: path.join(entry.directory, destination)
+		: undefined;
 	const result = await esbuild.build({
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		...(isOutfile ? { outdir: undefined, outfile: destination } : {}),
+		...(isOutfile
+			? {
+					outdir: undefined,
+					outfile: outFilepath,
+			  }
+			: {}),
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
