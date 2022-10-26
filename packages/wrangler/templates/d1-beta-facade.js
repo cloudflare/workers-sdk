@@ -52,7 +52,7 @@ var D1Database = class {
 			return {
 				count: exec.length,
 				duration: exec.reduce((p, c) => {
-					return p + c.duration;
+					return p + c.meta.duration;
 				}, 0),
 			};
 		}
@@ -163,12 +163,9 @@ function getMaskedEnv(env) {
 	return newEnvObj;
 }
 var shim_default = {
+	...worker,
 	async fetch(request, env, ctx) {
 		return worker.fetch(request, getMaskedEnv(env), ctx);
-	},
-
-	async scheduled(controller, env, ctx) {
-		return worker.scheduled(controller, getMaskedEnv(env), ctx);
 	},
 };
 export { shim_default as default };
