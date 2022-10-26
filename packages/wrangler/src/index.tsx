@@ -35,11 +35,13 @@ import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
+import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
+import type { PartialConfigToDTS } from "./type-generation";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -464,6 +466,38 @@ export function createCLIParser(argv: string[]) {
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
 			});
+		}
+	);
+
+	// type generation
+	wrangler.command(
+		"types",
+		"📝  Generate types from bindings & module rules in config",
+		() => {},
+		async () => {
+			await printWranglerBanner();
+			const config = readConfig(undefined, {});
+
+			const configBindings: PartialConfigToDTS = {
+				kv_namespaces: config.kv_namespaces ?? [],
+				vars: { ...config.vars },
+				wasm_modules: config.wasm_modules,
+				text_blobs: {
+					...config.text_blobs,
+				},
+				data_blobs: config.data_blobs,
+				durable_objects: config.durable_objects,
+				r2_buckets: config.r2_buckets,
+				// @ts-expect-error - We don't want the type generated to inlcude the Beta prefix
+				d1_databases: config.d1_databases,
+				services: config.services,
+				dispatch_namespaces: config.dispatch_namespaces,
+				logfwdr: config.logfwdr,
+				unsafe: config.unsafe?.bindings,
+				rules: config.rules,
+			};
+
+			await generateTypes(configBindings, config);
 		}
 	);
 

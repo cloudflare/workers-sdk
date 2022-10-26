@@ -49,6 +49,7 @@ describe("wrangler", () => {
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
+			  wrangler types               📝  Generate types from bindings & module rules in config
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -91,6 +92,7 @@ describe("wrangler", () => {
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
+			  wrangler types               📝  Generate types from bindings & module rules in config
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
