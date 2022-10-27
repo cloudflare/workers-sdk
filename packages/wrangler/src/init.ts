@@ -16,8 +16,8 @@ import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
-import type { RawConfig } from "./config";
 
+import type { RawConfig } from "./config";
 import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
