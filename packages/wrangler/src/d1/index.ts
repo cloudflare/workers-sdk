@@ -80,7 +80,7 @@ export const d1 = (yargs: Argv) => {
 						Migrations.ListHandler
 					)
 					.command(
-						"create <name>",
+						"create <name> <message>",
 						"Create a new Migration",
 						Migrations.CreateOptions,
 						Migrations.CreateHandler

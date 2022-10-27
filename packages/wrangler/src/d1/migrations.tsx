@@ -1,42 +1,36 @@
 import fs from "node:fs";
 import path from "path";
-import React from "react";
-import { ConfigFields, DevConfig, Environment, withConfig } from "../config";
-import { logger } from "../logger";
-import { Name } from "./options";
-import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
-import type { Migration } from "./types";
-import type { Argv } from "yargs";
-import { BaseSqlExecuteArgs, executeSql, QueryResult } from "./execute";
 import { Box, render, Text } from "ink";
 import Table from "ink-table";
+import React from "react";
+import { withConfig } from "../config";
 import { confirm } from "../dialogs";
-import { ParseError } from "../parse";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { Database } from "./types";
+import { executeSql } from "./execute";
+import { Name } from "./options";
+import { d1BetaWarning, getDatabaseInfoFromConfig } from "./utils";
+import type { ConfigFields, DevConfig, Environment } from "../config";
+import type { ParseError } from "../parse";
+import type { BaseSqlExecuteArgs, QueryResult } from "./execute";
+import type { Migration } from "./types";
+import type { Argv } from "yargs";
 
-const MIGRATIONS_FOLDER_NAME = "migrations";
-const MIGRATIONS_TABLE_NAME = "d1_migrations";
-const MIGRATIONS_TABLE_CREATION = `
-		CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME}
-		(
-				id         INTEGER PRIMARY KEY AUTOINCREMENT,
-				name       TEXT UNIQUE,
-				applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-		);
-`;
-
-function getMigrationsPath(projectPath: string): string {
-	const dir = `${projectPath}/${MIGRATIONS_FOLDER_NAME}`;
+function getMigrationsPath(
+	projectPath: string,
+	migrationsFolderPath: string
+): string {
+	const dir = `${projectPath}/${migrationsFolderPath}`;
 
 	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir);
+		fs.mkdirSync(dir, { recursive: true });
 	}
 
 	return dir;
 }
 
 async function getUnappliedMigrations(
+	migrationsTableName: string,
 	migrationsPath: string,
 	local: undefined | boolean,
 	config: ConfigFields<DevConfig> & Environment,
@@ -44,7 +38,13 @@ async function getUnappliedMigrations(
 	persistTo: undefined | string
 ): Promise<Array<string>> {
 	const appliedMigrations = (
-		await listAppliedMigrations(local, config, name, persistTo)
+		await listAppliedMigrations(
+			migrationsTableName,
+			local,
+			config,
+			name,
+			persistTo
+		)
 	).map((migration) => {
 		return migration.name;
 	});
@@ -67,21 +67,35 @@ export function ListOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
 
 export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 	async ({ config, name, local, persistTo }): Promise<void> => {
-		const accountId = await requireAuth({});
+		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		// This is to make sure we are inside a valid project
-		await getDatabaseByNameOrBinding(config, accountId, name);
+		const database = await getDatabaseInfoFromConfig(config, name);
+		if (!database) {
+			throw new Error(
+				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+			);
+		}
 
 		if (!config.configPath) {
 			return;
 		}
 
-		const migrationsPath = getMigrationsPath(path.dirname(config.configPath));
-		await initMigrationsTable(local, config, name, persistTo);
+		const migrationsPath = getMigrationsPath(
+			path.dirname(config.configPath),
+			database.migrationsFolderPath
+		);
+		await initMigrationsTable(
+			database.migrationsTableName,
+			local,
+			config,
+			name,
+			persistTo
+		);
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
+				database.migrationsTableName,
 				migrationsPath,
 				local,
 				config,
@@ -114,21 +128,35 @@ export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
 
 export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 	async ({ config, name, local, persistTo }): Promise<void> => {
-		const accountId = await requireAuth({});
+		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		// This is to make sure we are inside a valid project
-		await getDatabaseByNameOrBinding(config, accountId, name);
+		const database = await getDatabaseInfoFromConfig(config, name);
+		if (!database) {
+			throw new Error(
+				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+			);
+		}
 
 		if (!config.configPath) {
 			return;
 		}
 
-		const migrationsPath = getMigrationsPath(path.dirname(config.configPath));
-		await initMigrationsTable(local, config, name, persistTo);
+		const migrationsPath = getMigrationsPath(
+			path.dirname(config.configPath),
+			database.migrationsFolderPath
+		);
+		await initMigrationsTable(
+			database.migrationsTableName,
+			local,
+			config,
+			name,
+			persistTo
+		);
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
+				database.migrationsTableName,
 				migrationsPath,
 				local,
 				config,
@@ -179,7 +207,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 				"utf8"
 			);
 			query += `
-								INSERT INTO ${MIGRATIONS_TABLE_NAME} (name)
+								INSERT INTO ${database.migrationsTableName} (name)
 								values ('${migration.Name}');
 						`;
 
@@ -252,13 +280,14 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 );
 
 export const listAppliedMigrations = async (
+	migrationsTableName: string,
 	local: undefined | boolean,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
 	persistTo: undefined | string
 ): Promise<Migration[]> => {
 	const Query = `SELECT *
-									 FROM ${MIGRATIONS_TABLE_NAME}
+									 FROM ${migrationsTableName}
 									 ORDER BY id`;
 
 	const response: QueryResult[] | null = await executeSql(
@@ -277,6 +306,7 @@ export const listAppliedMigrations = async (
 };
 
 const initMigrationsTable = async (
+	migrationsTableName: string,
 	local: undefined | boolean,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
@@ -289,14 +319,25 @@ const initMigrationsTable = async (
 		undefined,
 		persistTo,
 		undefined,
-		MIGRATIONS_TABLE_CREATION
+		`
+						CREATE TABLE IF NOT EXISTS ${migrationsTableName}
+						(
+								id         INTEGER PRIMARY KEY AUTOINCREMENT,
+								name       TEXT UNIQUE,
+								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+						);
+				`
 	);
 };
 
-type MigrationsCreateArgs = { config?: string; name: string };
+type MigrationsCreateArgs = { config?: string; name: string; message: string };
 
 export function CreateOptions(yargs: Argv): Argv<MigrationsCreateArgs> {
-	return Name(yargs);
+	return Name(yargs).positional("message", {
+		describe: "The Migration message",
+		type: "string",
+		demandOption: true,
+	});
 }
 
 function getMigrationNames(migrationsPath: string): Array<string> {
@@ -335,20 +376,27 @@ function pad(num: number, size: number): string {
 }
 
 export const CreateHandler = withConfig<MigrationsCreateArgs>(
-	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
+	async ({ config, name, message }): Promise<void> => {
+		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		// This is to make sure we are inside a valid project
-		await getDatabaseByNameOrBinding(config, accountId, name);
+		const database = await getDatabaseInfoFromConfig(config, name);
+		if (!database) {
+			throw new Error(
+				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+			);
+		}
 
 		if (!config.configPath) {
 			return;
 		}
 
-		const migrationsPath = getMigrationsPath(path.dirname(config.configPath));
+		const migrationsPath = getMigrationsPath(
+			path.dirname(config.configPath),
+			database.migrationsFolderPath
+		);
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
-		const migrationName = name.replace(" ", "_");
+		const migrationName = message.replace(" ", "_");
 
 		const newMigrationName = `${nextMigrationNumber}_${migrationName}.sql`;
 

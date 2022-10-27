@@ -127,6 +127,8 @@ export interface CfD1Database {
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
+	migrations_table_name?: string;
+	migrations_folder_path?: string;
 }
 
 interface CfService {

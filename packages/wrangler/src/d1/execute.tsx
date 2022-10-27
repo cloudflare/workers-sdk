@@ -7,7 +7,7 @@ import Table from "ink-table";
 import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
-import { ConfigFields, DevConfig, Environment, withConfig } from "../config";
+import { withConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm, logDim } from "../dialogs";
 import { logger } from "../logger";
@@ -19,7 +19,7 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "./utils";
-import type { Config } from "../config";
+import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type { Database } from "./types";
 import type splitSqlQuery from "@databases/split-sql-query";
 import type { SQL, SQLQuery } from "@databases/sql";

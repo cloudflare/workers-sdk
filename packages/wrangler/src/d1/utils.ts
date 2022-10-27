@@ -12,6 +12,9 @@ export function getDatabaseInfoFromConfig(config: Config, name: string) {
 				uuid: d1Database.database_id,
 				binding: d1Database.binding,
 				name: d1Database.database_name,
+				migrationsTableName:
+					d1Database.migrations_table_name || "d1_migrations",
+				migrationsFolderPath: d1Database.migrations_folder_path || "migrations",
 			};
 		}
 	}
