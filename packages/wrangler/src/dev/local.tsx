@@ -500,16 +500,10 @@ export function setupMiniflareOptions({
 	const defaultRules = DEFAULT_MODULE_RULES.slice();
 	if (enablePagesAssetsServiceBinding) {
 		//pages always uses ESM syntax
-		defaultRules.push(
-			{
-				globs: ["**/*.js"],
-				type: "ESModule",
-			},
-			{
-				globs: ["**/*.mjs"],
-				type: "ESModule",
-			}
-		);
+		defaultRules.push({
+			globs: ["**/*.js", "**/*.mjs"],
+			type: "ESModule",
+		});
 	}
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
