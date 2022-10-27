@@ -56,14 +56,14 @@ describe("deployments", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"
 		Version ID: Galaxy-Class
-		Version Number: 1701-E
-		Author Name: Jean-Luc Picard
-		Latest Deploy: true
+		Version number: 1701-E
+		Author name: Jean-Luc Picard
+		Latest deploy: true
 
 		Version ID: Intrepid-Class
-		Version Number: NCC-74656
-		Author Name: Kathryn Janeway
-		Latest Deploy: false
+		Version number: NCC-74656
+		Author name: Kathryn Janeway
+		Latest deploy: false
 		"
 	`);
 	});
@@ -73,14 +73,14 @@ describe("deployments", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"
 		Version ID: Galaxy-Class
-		Version Number: 1701-E
-		Author Name: Jean-Luc Picard
-		Latest Deploy: true
+		Version number: 1701-E
+		Author name: Jean-Luc Picard
+		Latest deploy: true
 
 		Version ID: Intrepid-Class
-		Version Number: NCC-74656
-		Author Name: Kathryn Janeway
-		Latest Deploy: false
+		Version number: NCC-74656
+		Author name: Kathryn Janeway
+		Latest deploy: false
 		"
 	`);
 	});

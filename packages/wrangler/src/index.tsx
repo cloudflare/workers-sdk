@@ -513,7 +513,8 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.command(
 		"deployments",
-		"🚢 Logs the 10 most recent deployments with version tag, sequence, name and the current 'active' version",
+		"🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author name', and 'Latest deploy'",
+
 		(yargs) => {
 			yargs.option("name", {
 				describe: "The name of your worker",
@@ -542,9 +543,9 @@ export function createCLIParser(argv: string[]) {
 
 			const versionMessages = deployments.versions.map(
 				(versions, index) =>
-					`\nVersion ID: ${versions.version_id}\nVersion Number: ${
+					`\nVersion ID: ${versions.version_id}\nVersion number: ${
 						versions.version_number
-					}\nAuthor Name: ${versions.metadata.author_name}\nLatest Deploy: ${
+					}\nAuthor name: ${versions.metadata.author_name}\nLatest deploy: ${
 						index === 0
 					}\n`
 			);
