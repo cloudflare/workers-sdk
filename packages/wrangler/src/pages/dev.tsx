@@ -379,6 +379,10 @@ export const Handler = async ({
 					plugins: [
 						esbuildAliasExternalPlugin({
 							__ENTRY_POINT__: entrypointFile,
+							"./pages-dev-util": resolve(
+								getBasePath(),
+								"templates/pages-dev-util.ts"
+							),
 						}),
 					],
 					outfile,

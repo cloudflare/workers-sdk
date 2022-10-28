@@ -1,5 +1,5 @@
 {
 	"version": 1,
-	"include": ["/greeting/*"],
-	"exclude": ["/date"]
+	"include": ["/", "/greeting/*", "/greeting*", "/date"],
+	"exclude": ["/bye*", "/date"]
 }

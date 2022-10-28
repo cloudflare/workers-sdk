@@ -54,7 +54,9 @@ describe("Pages Functions with custom _routes.json", () => {
 	});
 
 	it("should render static pages", async () => {
-		const response = await waitUntilReady("http://localhost:8776/");
+		const response = await waitUntilReady(
+			"http://localhost:8776/undefined-route"
+		);
 		const text = await response.text();
 		expect(text).toContain(
 			"Bienvenue sur notre projet &#10024; pages-functions-with-routes-app!"
@@ -62,18 +64,43 @@ describe("Pages Functions with custom _routes.json", () => {
 	});
 
 	it("should correctly apply the routing rules provided in the custom _routes.json file", async () => {
-		let response = await waitUntilReady("http://localhost:8776/greeting/hello");
+		// matches / include rule
+		let response = await waitUntilReady("http://localhost:8776");
 		let text = await response.text();
-		expect(text).toEqual("Bonjour le monde!");
+		expect(text).toEqual("ROOT");
 
-		response = await waitUntilReady("http://localhost:8776/greeting/goodbye");
+		// matches /greeting/* include rule
+		response = await waitUntilReady("http://localhost:8776/greeting");
 		text = await response.text();
-		expect(text).toEqual("A plus tard alligator 👋");
+		expect(text).toEqual("[/functions/greeting/index]: Bonjour alligator!");
 
+		// matches /greeting/* include rule
+		response = await waitUntilReady("http://localhost:8776/greeting/hello");
+		text = await response.text();
+		expect(text).toEqual("[/functions/greeting/hello]: Bonjour le monde!");
+
+		// matches /greeting/* include rule
+		response = await waitUntilReady("http://localhost:8776/greeting/bye");
+		text = await response.text();
+		expect(text).toEqual("[/functions/greeting/bye]: A plus tard alligator 👋");
+
+		// matches both include|exclude /date rules, but exclude has priority
 		response = await waitUntilReady("http://localhost:8776/date");
 		text = await response.text();
 		expect(text).toContain(
 			"Bienvenue sur notre projet &#10024; pages-functions-with-routes-app!"
 		);
+
+		// matches /bye* exclude rule
+		response = await waitUntilReady("http://localhost:8776/bye");
+		text = await response.text();
+		expect(text).toContain(
+			"Bienvenue sur notre projet &#10024; pages-functions-with-routes-app!"
+		);
+
+		// matches /greeting* include rule
+		response = await waitUntilReady("http://localhost:8776/greetings");
+		text = await response.text();
+		expect(text).toEqual("[/functions/greetings]: Bonjour à tous!");
 	});
 });
