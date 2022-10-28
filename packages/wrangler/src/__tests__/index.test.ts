@@ -49,7 +49,7 @@ describe("wrangler", () => {
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
-			  wrangler types               📝  Generate types from bindings & module rules in config
+			  wrangler types               📝 Generate types from bindings & module rules in config
 			  wrangler deployments         🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author name', and 'Latest deploy'
 
 			Flags:
@@ -93,7 +93,7 @@ describe("wrangler", () => {
 			  wrangler login               🔓 Login to Cloudflare
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
-			  wrangler types               📝  Generate types from bindings & module rules in config
+			  wrangler types               📝 Generate types from bindings & module rules in config
 			  wrangler deployments         🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author name', and 'Latest deploy'
 
 			Flags:
