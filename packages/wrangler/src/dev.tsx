@@ -824,6 +824,7 @@ async function getBindings(
 			...getVarsForDev(configParam),
 			...args.vars,
 		},
+		script_metadata_binding: configParam.script_metadata_binding,
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		data_blobs: configParam.data_blobs,
