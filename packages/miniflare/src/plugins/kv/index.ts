@@ -88,4 +88,5 @@ export const KV_PLUGIN: Plugin<
 };
 
 export * from "./gateway";
+export { maybeGetSitesManifestModule } from "./sites";
 export { KV_PLUGIN_NAME };

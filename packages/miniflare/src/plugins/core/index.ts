@@ -209,6 +209,7 @@ export const CORE_PLUGIN: Plugin<
 		workerIndex,
 		sharedOptions,
 		durableObjectClassNames,
+		additionalModules,
 	}) {
 		// Define core/shared services.
 		// Services get de-duped by name, so only the first worker's
@@ -232,6 +233,11 @@ export const CORE_PLUGIN: Plugin<
 		// Define regular user worker if script is set
 		const workerScript = getWorkerScript(options);
 		if (workerScript !== undefined) {
+			// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
+			if ("modules" in workerScript) {
+				workerScript.modules.push(...additionalModules);
+			}
+
 			const name = getUserServiceName(options.name);
 			const classNames = durableObjectClassNames.get(name) ?? [];
 			const compatibilityDate = validateCompatibilityDate(
