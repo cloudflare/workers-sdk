@@ -486,6 +486,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					: []
 			),
 			vars: { ...config.vars, ...props.vars },
+			script_metadata_binding: config.script_metadata_binding,
 			wasm_modules: config.wasm_modules,
 			text_blobs: {
 				...config.text_blobs,
