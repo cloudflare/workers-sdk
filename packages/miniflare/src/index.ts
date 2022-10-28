@@ -23,6 +23,7 @@ import {
 	Plugins,
 	SERVICE_ENTRY,
 	SOCKET_ENTRY,
+	maybeGetSitesManifestModule,
 	normaliseDurableObject,
 } from "./plugins";
 import { HEADER_CUSTOM_SERVICE, getUserServiceName } from "./plugins/core";
@@ -33,6 +34,7 @@ import {
 	Service,
 	Socket,
 	Worker_Binding,
+	Worker_Module,
 	getSupportedRuntime,
 	serializeConfig,
 } from "./runtime";
@@ -403,12 +405,20 @@ export class Miniflare {
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
+
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
+			const additionalModules: Worker_Module[] = [];
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginBindings = await plugin.getBindings(workerOpts[key]);
 				if (pluginBindings !== undefined) {
 					workerBindings.push(...pluginBindings);
+
+					if (key === "kv") {
+						// Add "__STATIC_CONTENT_MANIFEST" module if sites enabled
+						const module = maybeGetSitesManifestModule(pluginBindings);
+						if (module !== undefined) additionalModules.push(module);
+					}
 				}
 			}
 
@@ -421,6 +431,7 @@ export class Miniflare {
 					workerBindings,
 					workerIndex: i,
 					durableObjectClassNames,
+					additionalModules,
 				});
 				if (pluginServices !== undefined) {
 					for (const service of pluginServices) {

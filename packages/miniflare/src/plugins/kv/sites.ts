@@ -1,6 +1,6 @@
 import assert from "assert";
 import { pathToFileURL } from "url";
-import { Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import {
 	MatcherRegExps,
 	deserialiseRegExps,
@@ -169,6 +169,17 @@ export async function getSitesBindings(
 			json: __STATIC_CONTENT_MANIFEST,
 		},
 	];
+}
+
+export function maybeGetSitesManifestModule(
+	bindings: Worker_Binding[]
+): Worker_Module | undefined {
+	for (const binding of bindings) {
+		if (binding.name === BINDING_JSON_SITE_MANIFEST) {
+			assert("json" in binding && binding.json !== undefined);
+			return { name: BINDING_JSON_SITE_MANIFEST, text: binding.json };
+		}
+	}
 }
 
 export function getSitesService(options: SitesOptions): Service {

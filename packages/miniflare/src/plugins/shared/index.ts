@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { Awaitable, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
@@ -16,6 +16,7 @@ export interface PluginServicesOptions<
 	workerBindings: Worker_Binding[];
 	workerIndex: number;
 	durableObjectClassNames: DurableObjectClassNames;
+	additionalModules: Worker_Module[];
 }
 
 export interface PluginBase<
