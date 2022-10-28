@@ -264,7 +264,7 @@ export function createCLIParser(argv: string[]) {
 	// delete
 	wrangler.command(
 		"delete [script]",
-		"🗑 Delete your Worker from Cloudflare.",
+		"🗑  Delete your Worker from Cloudflare.",
 		deleteOptions,
 		deleteHandler
 	);
@@ -472,7 +472,7 @@ export function createCLIParser(argv: string[]) {
 	// type generation
 	wrangler.command(
 		"types",
-		"📝  Generate types from bindings & module rules in config",
+		"📝 Generate types from bindings & module rules in config",
 		() => {},
 		async () => {
 			await printWranglerBanner();

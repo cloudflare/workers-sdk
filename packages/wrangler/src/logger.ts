@@ -2,7 +2,7 @@ import { format } from "node:util";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables";
 
-const LOGGER_LEVELS = {
+export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
 	warn: 1,
@@ -11,7 +11,7 @@ const LOGGER_LEVELS = {
 	debug: 4,
 } as const;
 
-type LoggerLevel = keyof typeof LOGGER_LEVELS;
+export type LoggerLevel = keyof typeof LOGGER_LEVELS;
 
 /** A map from LOGGER_LEVEL to the error `kind` needed by `formatMessagesSync()`. */
 const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
