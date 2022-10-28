@@ -257,13 +257,15 @@ export async function bundleWorker(
 		);
 	}
 
-	const outFilepath = isOutfile
-		? path.isAbsolute(destination)
-			? destination
-			: entry.directory.endsWith("functions")
-			? path.join(entry.directory, "..", destination)
-			: path.join(entry.directory, destination)
-		: undefined;
+	let outFilepath: string | undefined = undefined;
+	if (path.isAbsolute(destination)) {
+		outFilepath = destination;
+	} else if (entry.directory.endsWith("functions")) {
+		outFilepath = path.join(entry.directory, "..", destination);
+	} else {
+		outFilepath = path.join(entry.directory, destination);
+	}
+
 	const result = await esbuild.build({
 		entryPoints: [inputEntry.file],
 		bundle: true,

@@ -387,7 +387,7 @@ export const Handler = async ({
 							__ENTRY_POINT__: entrypointFile,
 							"./pages-dev-util": resolve(
 								getBasePath(),
-								"templates/pages-dev-util.ts"
+								"templates/pages-dev-util.js"
 							),
 						}),
 					],
@@ -478,7 +478,7 @@ export const Handler = async ({
 			compatibilityDate,
 			compatibilityFlags,
 			nodeCompat,
-			bundle: false,
+			bundle: false, // pages pre-bundles it's worker so unstable_dev doesn't need to do it again
 			vars: Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))
