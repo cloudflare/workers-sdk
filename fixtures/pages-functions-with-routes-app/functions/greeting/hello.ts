@@ -1,3 +1,3 @@
 export async function onRequest() {
-	return new Response("Bonjour le monde!");
+	return new Response("[/functions/greeting/hello]: Bonjour le monde!");
 }

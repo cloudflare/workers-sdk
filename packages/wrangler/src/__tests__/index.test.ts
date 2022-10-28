@@ -34,7 +34,7 @@ describe("wrangler", () => {
 			  wrangler init [name]         📥 Create a wrangler.toml configuration file
 			  wrangler dev [script]        👂 Start a local server for developing your worker
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.
-			  wrangler delete [script]     🗑 Delete your Worker from Cloudflare.
+			  wrangler delete [script]     🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]       🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret              🤫 Generate a secret that can be referenced in a Worker
 			  wrangler secret:bulk <json>  🗄️  Bulk upload secrets for a Worker
@@ -78,7 +78,7 @@ describe("wrangler", () => {
 			  wrangler init [name]         📥 Create a wrangler.toml configuration file
 			  wrangler dev [script]        👂 Start a local server for developing your worker
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.
-			  wrangler delete [script]     🗑 Delete your Worker from Cloudflare.
+			  wrangler delete [script]     🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]       🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret              🤫 Generate a secret that can be referenced in a Worker
 			  wrangler secret:bulk <json>  🗄️  Bulk upload secrets for a Worker
