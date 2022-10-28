@@ -13,7 +13,7 @@ import { confirm, logDim } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { Name } from "./options";
+import * as options from "./options";
 import {
 	d1BetaWarning,
 	getDatabaseByNameOrBinding,
@@ -38,7 +38,7 @@ type MiniflareNpxImportTypes = [
 
 export type BaseSqlExecuteArgs = {
 	config?: string;
-	name: string;
+	database: string;
 	local?: boolean;
 	"persist-to"?: string;
 };
@@ -58,7 +58,8 @@ export type QueryResult = {
 const QUERY_LIMIT = 1_000_000; // 1MB
 
 export function Options(yargs: Argv): Argv<ExecuteArgs> {
-	return Name(yargs)
+	return options
+		.Database(yargs)
 		.option("local", {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
@@ -123,7 +124,14 @@ export async function executeSql(
 }
 
 export const Handler = withConfig<ExecuteArgs>(
-	async ({ config, name, file, command, local, persistTo }): Promise<void> => {
+	async ({
+		config,
+		database,
+		file,
+		command,
+		local,
+		persistTo,
+	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
 			return console.error(`Error: can't provide both --command and --file.`);
@@ -132,7 +140,7 @@ export const Handler = withConfig<ExecuteArgs>(
 		const response: QueryResult[] | null = await executeSql(
 			local,
 			config,
-			name,
+			database,
 			isInteractive,
 			persistTo,
 			file,

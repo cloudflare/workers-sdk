@@ -66,7 +66,7 @@ export const d1 = (yargs: Argv) => {
 			//   }
 			// )
 			.command(
-				"execute <name>",
+				"execute <database>",
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
@@ -74,19 +74,19 @@ export const d1 = (yargs: Argv) => {
 			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
 				yargs2
 					.command(
-						"list <name>",
+						"list <database>",
 						"List your D1 migrations",
 						Migrations.ListOptions,
 						Migrations.ListHandler
 					)
 					.command(
-						"create <name> <message>",
+						"create <database> <message>",
 						"Create a new Migration",
 						Migrations.CreateOptions,
 						Migrations.CreateHandler
 					)
 					.command(
-						"apply <name>",
+						"apply <database>",
 						"Apply D1 Migrations",
 						Migrations.ApplyOptions,
 						Migrations.ApplyHandler

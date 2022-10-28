@@ -7,8 +7,9 @@ import { withConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { createBackup } from "./backups";
 import { executeSql } from "./execute";
-import { Name } from "./options";
+import { Database } from "./options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "./utils";
 import type { ConfigFields, DevConfig, Environment } from "../config";
 import type { ParseError } from "../parse";
@@ -62,18 +63,18 @@ async function getUnappliedMigrations(
 }
 
 export function ListOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
-	return Name(yargs);
+	return Database(yargs);
 }
 
 export const ListHandler = withConfig<BaseSqlExecuteArgs>(
-	async ({ config, name, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo }): Promise<void> => {
 		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		const database = await getDatabaseInfoFromConfig(config, name);
-		if (!database) {
+		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		if (!databaseInfo) {
 			throw new Error(
-				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}
 
@@ -83,23 +84,23 @@ export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 
 		const migrationsPath = getMigrationsPath(
 			path.dirname(config.configPath),
-			database.migrationsFolderPath
+			databaseInfo.migrationsFolderPath
 		);
 		await initMigrationsTable(
-			database.migrationsTableName,
+			databaseInfo.migrationsTableName,
 			local,
 			config,
-			name,
+			database,
 			persistTo
 		);
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
-				database.migrationsTableName,
+				databaseInfo.migrationsTableName,
 				migrationsPath,
 				local,
 				config,
-				name,
+				database,
 				persistTo
 			)
 		).map((migration) => {
@@ -123,18 +124,18 @@ export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 );
 
 export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
-	return Name(yargs);
+	return Database(yargs);
 }
 
 export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
-	async ({ config, name, local, persistTo }): Promise<void> => {
-		await requireAuth({});
+	async ({ config, database, local, persistTo }): Promise<void> => {
+		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		const database = await getDatabaseInfoFromConfig(config, name);
-		if (!database) {
+		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		if (!databaseInfo) {
 			throw new Error(
-				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}
 
@@ -144,23 +145,23 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 
 		const migrationsPath = getMigrationsPath(
 			path.dirname(config.configPath),
-			database.migrationsFolderPath
+			databaseInfo.migrationsFolderPath
 		);
 		await initMigrationsTable(
-			database.migrationsTableName,
+			databaseInfo.migrationsTableName,
 			local,
 			config,
-			name,
+			database,
 			persistTo
 		);
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
-				database.migrationsTableName,
+				databaseInfo.migrationsTableName,
 				migrationsPath,
 				local,
 				config,
-				name,
+				database,
 				persistTo
 			)
 		)
@@ -201,13 +202,16 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 			if (!ok) return;
 		}
 
+		render(<Text>🕒 Creating backup...</Text>);
+		await createBackup(accountId, databaseInfo.uuid);
+
 		for (const migration of unappliedMigrations) {
 			let query = fs.readFileSync(
 				`${migrationsPath}/${migration.Name}`,
 				"utf8"
 			);
 			query += `
-								INSERT INTO ${database.migrationsTableName} (name)
+								INSERT INTO ${databaseInfo.migrationsTableName} (name)
 								values ('${migration.Name}');
 						`;
 
@@ -217,7 +221,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 				const response = await executeSql(
 					local,
 					config,
-					name,
+					database,
 					undefined,
 					persistTo,
 					undefined,
@@ -330,16 +334,6 @@ const initMigrationsTable = async (
 	);
 };
 
-type MigrationsCreateArgs = { config?: string; name: string; message: string };
-
-export function CreateOptions(yargs: Argv): Argv<MigrationsCreateArgs> {
-	return Name(yargs).positional("message", {
-		describe: "The Migration message",
-		type: "string",
-		demandOption: true,
-	});
-}
-
 function getMigrationNames(migrationsPath: string): Array<string> {
 	const migrations = [];
 
@@ -375,15 +369,29 @@ function pad(num: number, size: number): string {
 	return newNum;
 }
 
+type MigrationsCreateArgs = {
+	config?: string;
+	database: string;
+	message: string;
+};
+
+export function CreateOptions(yargs: Argv): Argv<MigrationsCreateArgs> {
+	return Database(yargs).positional("message", {
+		describe: "The Migration message",
+		type: "string",
+		demandOption: true,
+	});
+}
+
 export const CreateHandler = withConfig<MigrationsCreateArgs>(
-	async ({ config, name, message }): Promise<void> => {
+	async ({ config, database, message }): Promise<void> => {
 		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		const database = await getDatabaseInfoFromConfig(config, name);
-		if (!database) {
+		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		if (!databaseInfo) {
 			throw new Error(
-				`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}
 
@@ -393,7 +401,7 @@ export const CreateHandler = withConfig<MigrationsCreateArgs>(
 
 		const migrationsPath = getMigrationsPath(
 			path.dirname(config.configPath),
-			database.migrationsFolderPath
+			databaseInfo.migrationsFolderPath
 		);
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
 		const migrationName = message.replace(" ", "_");
