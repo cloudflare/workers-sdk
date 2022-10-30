@@ -77,7 +77,7 @@ async function createKVNamespaceIfNotAlreadyExisting(
 	// check if it already exists
 	// TODO: this is super inefficient, should be made better
 	const namespaces = await listKVNamespaces(accountId);
-	const found = namespaces.find((x) => x.title === title);
+	const found = namespaces.find((ns) => ns.title === title);
 	if (found) {
 		return { created: false, id: found.id };
 	}
