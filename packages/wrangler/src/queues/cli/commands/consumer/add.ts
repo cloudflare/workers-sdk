@@ -8,11 +8,11 @@ interface Args {
 	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
-	["environment"]: string | undefined;
-	["batch-size"]: number | undefined;
-	["batch-timeout"]: number | undefined;
-	["message-retries"]: number | undefined;
-	["dead-letter-queue"]: string | undefined;
+	["environment"]?: string;
+	["batch-size"]?: number;
+	["batch-timeout"]?: number;
+	["message-retries"]?: number;
+	["dead-letter-queue"]?: string;
 }
 
 export function options(yargs: Argv): Argv<Args> {

@@ -7,7 +7,7 @@ interface Args {
 	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
-	["environment"]: string | undefined;
+	["environment"]?: string;
 }
 
 export function options(yargs: Argv): Argv<Args> {
