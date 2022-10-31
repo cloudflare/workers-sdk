@@ -47,7 +47,8 @@ type WorkerMetadataBinding =
 			type: "logfwdr";
 			name: string;
 			destination: string;
-	  };
+	  }
+	| { type: "metadata_binding"; name: string };
 
 export interface WorkerMetadata {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
@@ -81,6 +82,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	let { modules } = worker;
 
 	const metadataBindings: WorkerMetadata["bindings"] = [];
+
+	if (bindings.metadata_binding) {
+		metadataBindings.push({
+			name: bindings.metadata_binding,
+			type: "metadata_binding",
+		});
+	}
 
 	Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
 		if (typeof value === "string") {

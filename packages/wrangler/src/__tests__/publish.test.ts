@@ -5756,6 +5756,33 @@ addEventListener('fetch', event => {});`
 		        `);
 			});
 		});
+		describe.only("[metadata_binding]", () => {
+			it("should pass metadata binding to backend", async () => {
+				writeWranglerToml({
+					metadata_binding: "nasm_A19750603000",
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ name: "nasm_A19750603000", type: "metadata_binding" },
+					],
+				});
+
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Metadata Binding:
+			  - metadata_binding: nasm_A19750603000
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
 	});
 
 	describe("upload rules", () => {
