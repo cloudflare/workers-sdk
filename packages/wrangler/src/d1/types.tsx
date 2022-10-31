@@ -1,6 +1,8 @@
 export type Database = {
 	uuid: string;
 	name: string;
+	binding: string;
+	internal_env?: string;
 };
 
 export type Backup = {

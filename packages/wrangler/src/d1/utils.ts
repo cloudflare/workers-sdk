@@ -2,7 +2,10 @@ import { listDatabases } from "./list";
 import type { Config } from "../config";
 import type { Database } from "./types";
 
-export function getDatabaseInfoFromConfig(config: Config, name: string) {
+export function getDatabaseInfoFromConfig(
+	config: Config,
+	name: string
+): Database | null {
 	for (const d1Database of config.d1_databases) {
 		if (
 			d1Database.database_id &&
@@ -15,6 +18,7 @@ export function getDatabaseInfoFromConfig(config: Config, name: string) {
 				migrationsTableName:
 					d1Database.migrations_table_name || "d1_migrations",
 				migrationsFolderPath: d1Database.migrations_folder_path || "migrations",
+				internal_env: d1Database.database_internal_env,
 			};
 		}
 	}

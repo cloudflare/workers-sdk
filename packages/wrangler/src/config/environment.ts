@@ -365,6 +365,8 @@ interface EnvironmentNonInheritable {
 		migrations_table_name?: string;
 		/** The path for the migrations files of this D1 database (defaults to migrations). */
 		migrations_folder_path?: string;
+		/** Internal use only. */
+		database_internal_env?: string;
 	}[];
 
 	/**
