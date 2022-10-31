@@ -5756,16 +5756,17 @@ addEventListener('fetch', event => {});`
 		        `);
 			});
 		});
-		describe.only("[metadata_binding]", () => {
+
+		describe("[worker_metadata]", () => {
 			it("should pass metadata binding to backend", async () => {
 				writeWranglerToml({
-					metadata_binding: "nasm_A19750603000",
+					worker_metadata: "nasm_A19750603000",
 				});
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedBindings: [
-						{ name: "nasm_A19750603000", type: "metadata_binding" },
+						{ name: "nasm_A19750603000", type: "worker_metadata" },
 					],
 				});
 
@@ -5774,7 +5775,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Metadata Binding:
-			  - metadata_binding: nasm_A19750603000
+			  - metadata: nasm_A19750603000
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev"

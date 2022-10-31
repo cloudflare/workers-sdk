@@ -97,8 +97,8 @@ export function normalizeAndValidateConfig(
 	validateOptionalProperty(
 		diagnostics,
 		"",
-		"metadata_binding",
-		rawConfig.metadata_binding,
+		"worker_metadata",
+		rawConfig.worker_metadata,
 		"string"
 	);
 
@@ -196,7 +196,7 @@ export function normalizeAndValidateConfig(
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
-		metadata_binding: rawConfig.metadata_binding,
+		worker_metadata: rawConfig.worker_metadata,
 		legacy_env: isLegacyEnv,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
