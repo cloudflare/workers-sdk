@@ -124,7 +124,7 @@ export const Handler = withConfig<ExecuteArgs>(
 					{(result) => {
 						// batch results
 						if (!Array.isArray(result)) {
-							const { results, duration, query } = result;
+							const { results, query } = result;
 
 							if (Array.isArray(results) && results.length > 0) {
 								const shortQuery = shorten(query, 48);
