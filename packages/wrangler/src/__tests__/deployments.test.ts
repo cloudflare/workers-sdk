@@ -57,12 +57,14 @@ describe("deployments", () => {
 		"
 		Version ID: Galaxy-Class
 		Version number: 1701-E
-		Author name: Jean-Luc Picard
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author email: Jean-Luc-Picard@federation.org
 		Latest deploy: true
 
 		Version ID: Intrepid-Class
 		Version number: NCC-74656
-		Author name: Kathryn Janeway
+		Created on: 2021-02-02T00:00:00.000000Z
+		Author email: Kathryn-Janeway@federation.org
 		Latest deploy: false
 		"
 	`);
@@ -74,12 +76,14 @@ describe("deployments", () => {
 		"
 		Version ID: Galaxy-Class
 		Version number: 1701-E
-		Author name: Jean-Luc Picard
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author email: Jean-Luc-Picard@federation.org
 		Latest deploy: true
 
 		Version ID: Intrepid-Class
 		Version number: NCC-74656
-		Author name: Kathryn Janeway
+		Created on: 2021-02-02T00:00:00.000000Z
+		Author email: Kathryn-Janeway@federation.org
 		Latest deploy: false
 		"
 	`);

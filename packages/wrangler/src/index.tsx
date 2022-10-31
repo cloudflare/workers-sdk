@@ -513,7 +513,7 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.command(
 		"deployments",
-		"🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author name', and 'Latest deploy'",
+		"🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', and 'Latest deploy'",
 
 		(yargs) => {
 			yargs.option("name", {
@@ -545,9 +545,9 @@ export function createCLIParser(argv: string[]) {
 				(versions, index) =>
 					`\nVersion ID: ${versions.version_id}\nVersion number: ${
 						versions.version_number
-					}\nAuthor name: ${versions.metadata.author_name}\nLatest deploy: ${
-						index === 0
-					}\n`
+					}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
+						versions.metadata.author_email
+					}\nLatest deploy: ${index === 0}\n`
 			);
 			logger.log(...versionMessages);
 		}

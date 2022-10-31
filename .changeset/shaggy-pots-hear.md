@@ -9,7 +9,7 @@ The information will include:
 
 - Version ID
 - Version_number
-- Author name
+- Author email
 - Latest Deploy
 
 resolves #2089
