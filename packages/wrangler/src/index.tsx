@@ -5,6 +5,7 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -37,11 +38,20 @@ import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	listScopes,
+	login,
+	logout,
+	requireAuth,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
 
+import type { DeploymentListRes } from "./__tests__/helpers/msw/handlers/deployments";
 import type { Config } from "./config";
+import type { ServiceMetadataRes } from "./init";
 import type { PartialConfigToDTS } from "./type-generation";
+import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -498,6 +508,48 @@ export function createCLIParser(argv: string[]) {
 			};
 
 			await generateTypes(configBindings, config);
+		}
+	);
+
+	wrangler.command(
+		"deployments",
+		"🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', and 'Latest deploy'",
+
+		(yargs) => {
+			yargs.option("name", {
+				describe: "The name of your worker",
+				type: "string",
+			});
+		},
+		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
+			await printWranglerBanner();
+			const config = readConfig(
+				deploymentsYargs.config as ConfigPath,
+				deploymentsYargs
+			);
+			const accountId = await requireAuth(config);
+			const scriptName = getScriptName(
+				{ name: deploymentsYargs.name, env: undefined },
+				config
+			);
+			const scriptMetadata = await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${scriptName}`
+			);
+
+			const scriptTag = scriptMetadata.default_environment.script.tag;
+			const deployments = await fetchResult<DeploymentListRes>(
+				`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
+			);
+
+			const versionMessages = deployments.versions.map(
+				(versions, index) =>
+					`\nVersion ID: ${versions.version_id}\nVersion number: ${
+						versions.version_number
+					}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
+						versions.metadata.author_email
+					}\nLatest deploy: ${index === 0}\n`
+			);
+			logger.log(...versionMessages);
 		}
 	);
 
