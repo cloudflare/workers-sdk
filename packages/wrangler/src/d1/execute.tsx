@@ -235,6 +235,9 @@ async function executeRemotely(
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
+						...(db.internal_env
+							? { "x-d1-internal-env": db.internal_env }
+							: {}),
 				},
 				body: JSON.stringify({ sql }),
 			}
