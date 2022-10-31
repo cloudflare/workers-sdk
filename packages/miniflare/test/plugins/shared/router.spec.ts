@@ -9,8 +9,6 @@ import {
 import test from "ava";
 import { Request, Response } from "undici";
 
-// TODO: update to AVA 4
-
 class TestGateway {
 	constructor() {}
 }

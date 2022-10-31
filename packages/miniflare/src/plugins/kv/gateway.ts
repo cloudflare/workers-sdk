@@ -64,7 +64,7 @@ export interface KVGatewayListOptions {
 }
 export interface KVGatewayListResult<Meta = unknown> {
 	keys: StoredKeyMeta<Meta>[];
-	cursor: string;
+	cursor?: string;
 	list_complete: boolean;
 }
 
@@ -81,10 +81,14 @@ export class KVGateway {
 		validateKey(key);
 		// Validate cacheTtl, but ignore it as there's only one "edge location":
 		// the user's computer
-		if (options?.cacheTtl !== undefined) {
+		const cacheTtl = options?.cacheTtl;
+		if (
+			cacheTtl !== undefined &&
+			(isNaN(cacheTtl) || cacheTtl < MIN_CACHE_TTL)
+		) {
 			throw new KVError(
 				400,
-				`Invalid ${PARAM_CACHE_TTL} of ${options.cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
+				`Invalid ${PARAM_CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
 			);
 		}
 		return this.storage.get(key);
@@ -184,7 +188,7 @@ export class KVGateway {
 		const res = await this.storage.list({ limit, prefix, cursor });
 		return {
 			keys: res.keys,
-			cursor: res.cursor,
+			cursor: res.cursor === "" ? undefined : res.cursor,
 			list_complete: res.cursor === "",
 		};
 	}
