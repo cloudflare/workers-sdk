@@ -13,6 +13,7 @@ import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
 import type { Argv } from "yargs";
+import * as path from 'path';
 
 type BackupListArgs = { config?: string; name: string };
 
@@ -189,15 +190,15 @@ export const DownloadHandler = withConfig<BackupDownloadArgs>(
 			accountId,
 			name
 		);
-		const filename = output || `./${name}.${backupId.slice(0, 8)}.sqlite3`;
+		const filename = output || path.join(process.env.INIT_CWD as string,`${name}.${backupId.slice(0, 8)}.sqlite3`);
 
-		console.log(`Downloading backup ${backupId} of ${name} to: ${filename}`);
+		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
 		const response = await getBackupResponse(accountId, db.uuid, backupId);
-		console.log(`Got file. Saving...`);
+		logger.log(`🌀 Saving to ${filename}`);
 		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
 		const buffer = await response.arrayBuffer();
 		await fs.writeFile(filename, new Buffer(buffer));
-		console.log(`Done! Wrote ${filename} (${formatBytes(buffer.byteLength)})`);
+		logger.log(`🌀 Done!`);
 	}
 );
 
