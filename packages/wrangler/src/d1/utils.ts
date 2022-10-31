@@ -2,7 +2,10 @@ import { listDatabases } from "./list";
 import type { Config } from "../config";
 import type { Database } from "./types";
 
-export function getDatabaseInfoFromConfig(config: Config, name: string) {
+export function getDatabaseInfoFromConfig(
+	config: Config,
+	name: string
+): Database | null {
 	for (const d1Database of config.d1_databases) {
 		if (
 			d1Database.database_id &&
@@ -12,6 +15,7 @@ export function getDatabaseInfoFromConfig(config: Config, name: string) {
 				uuid: d1Database.database_id,
 				binding: d1Database.binding,
 				name: d1Database.database_name,
+				internal_env: d1Database.database_internal_env,
 			};
 		}
 	}

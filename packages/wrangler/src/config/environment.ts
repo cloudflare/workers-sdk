@@ -361,6 +361,8 @@ interface EnvironmentNonInheritable {
 		database_id: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
+		/** Internal use only. */
+		database_internal_env?: string;
 	}[];
 
 	/**
