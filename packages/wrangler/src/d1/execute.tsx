@@ -249,7 +249,9 @@ function logResult(r: QueryResult | QueryResult[]) {
 	logger.log(
 		`🚣 Executed ${Array.isArray(r) ? r.length : "1"} command(s) in ${
 			Array.isArray(r)
-				? r.map((d: QueryResult) => d.duration).reduce((a: number, b: number) => a + b, 0)
+				? r
+						.map((d: QueryResult) => d.duration)
+						.reduce((a: number, b: number) => a + b, 0)
 				: r.duration
 		}ms`
 	);

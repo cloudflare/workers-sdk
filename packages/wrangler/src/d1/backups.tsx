@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import * as path from 'path';
+import * as path from "path";
 import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
@@ -190,7 +190,12 @@ export const DownloadHandler = withConfig<BackupDownloadArgs>(
 			accountId,
 			name
 		);
-		const filename = output || path.join(process.env.INIT_CWD as string,`${name}.${backupId.slice(0, 8)}.sqlite3`);
+		const filename =
+			output ||
+			path.join(
+				process.env.INIT_CWD as string,
+				`${name}.${backupId.slice(0, 8)}.sqlite3`
+			);
 
 		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
 		const response = await getBackupResponse(accountId, db.uuid, backupId);
