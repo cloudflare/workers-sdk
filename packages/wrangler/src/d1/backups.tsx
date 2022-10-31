@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import * as path from 'path';
 import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
@@ -13,7 +14,6 @@ import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
 import type { Argv } from "yargs";
-import * as path from 'path';
 
 type BackupListArgs = { config?: string; name: string };
 

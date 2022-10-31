@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import chalk from "chalk";
 import { render, Static, Text } from "ink";
 import Table from "ink-table";
 import { npxImport } from "npx-import";
@@ -230,7 +229,7 @@ async function executeRemotely(
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		let result = await fetchResult<QueryResult[]>(
+		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
 			{
 				method: "POST",
@@ -246,11 +245,11 @@ async function executeRemotely(
 	return results;
 }
 
-function logResult(r: any) {
+function logResult(r: QueryResult | QueryResult[]) {
 	logger.log(
 		`🚣 Executed ${Array.isArray(r) ? r.length : "1"} command(s) in ${
 			Array.isArray(r)
-				? r.map((d: any) => d.duration).reduce((a: any, b: any) => a + b, 0)
+				? r.map((d: QueryResult) => d.duration).reduce((a: number, b: number) => a + b, 0)
 				: r.duration
 		}ms`
 	);
@@ -272,7 +271,7 @@ function batchSplit(splitter: typeof splitSqlQuery, sql: SQLQuery) {
 	const queries = splitSql(splitter, sql);
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
-	let nbatches = Math.floor(queries.length / QUERY_LIMIT);
+	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
 	for (let i = 0; i <= nbatches; i++) {
 		batches.push(
 			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
