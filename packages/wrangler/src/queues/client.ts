@@ -2,7 +2,7 @@ import { fetchResult } from "../cfetch";
 import { type Config } from "../config";
 import { requireAuth } from "../user";
 
-export async function CreateQueue(
+export async function createQueue(
 	config: Config,
 	body: CreateQueueBody
 ): Promise<QueueResponse> {
@@ -23,7 +23,7 @@ export interface QueueResponse {
 	modified_on: string;
 }
 
-export async function DeleteQueue(
+export async function deleteQueue(
 	config: Config,
 	queueName: string
 ): Promise<void> {
@@ -37,11 +37,11 @@ export async function DeleteQueue(
 }
 
 // TODO(soon) show detailed queue response
-export async function ListQueues(
+export async function listQueues(
 	config: Config,
 	page?: number
 ): Promise<QueueResponse[]> {
-	page = page || 1;
+	page = page ?? 1;
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		`/accounts/${accountId}/workers/queues`,
@@ -50,7 +50,7 @@ export async function ListQueues(
 	);
 }
 
-export async function GetQueue(
+export async function getQueue(
 	config: Config,
 	queueName: string
 ): Promise<QueueResponse> {
@@ -61,7 +61,7 @@ export async function GetQueue(
 	);
 }
 
-export async function PostConsumer(
+export async function postConsumer(
 	config: Config,
 	queueName: string,
 	body: PostConsumerBody
@@ -100,7 +100,7 @@ export interface ConsumerResponse extends PostConsumerBody {
 	dead_letter_queue?: string;
 }
 
-export async function DeleteConsumer(
+export async function deleteConsumer(
 	config: Config,
 	queueName: string,
 	scriptName: string,
@@ -116,7 +116,7 @@ export async function DeleteConsumer(
 	});
 }
 
-export async function PutConsumer(
+export async function putConsumer(
 	config: Config,
 	queueName: string,
 	scriptName: string,

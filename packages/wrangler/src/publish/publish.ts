@@ -14,7 +14,7 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
-import { GetQueue, PutConsumer, type PutConsumerBody } from "../queues/client";
+import { getQueue, putConsumer, type PutConsumerBody } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
@@ -929,7 +929,7 @@ async function ensureQueuesExist(config: Config) {
 	const queueNames = producers.concat(consumers);
 	for (const queue of queueNames) {
 		try {
-			await GetQueue(config, queue);
+			await getQueue(config, queue);
 		} catch (err) {
 			const x = err as FetchError;
 			if (x.code === 100123) {
@@ -962,7 +962,7 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 		}
 		const scriptName = config.name;
 		const envName = undefined; // TODO: script environment for wrangler publish?
-		return PutConsumer(config, consumer.queue, scriptName, envName, body).then(
+		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
 			() => [`Consumer for ${consumer.queue}`]
 		);
 	});

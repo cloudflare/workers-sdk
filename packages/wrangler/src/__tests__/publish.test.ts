@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as esbuild from "esbuild";
-import { type PutConsumerBody } from "../queues/client";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
@@ -31,6 +30,7 @@ import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
+import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
 
@@ -6579,7 +6579,7 @@ addEventListener('fetch', event => {});`
 					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
 				},
 			});
-			fs.writeFileSync("index.js", `export default {};`);
+			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -6618,7 +6618,7 @@ addEventListener('fetch', event => {});`
 					],
 				},
 			});
-			fs.writeFileSync("index.js", `export default {};`);
+			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockGetQueue("queue1");
@@ -6655,7 +6655,7 @@ addEventListener('fetch', event => {});`
 					],
 				},
 			});
-			fs.writeFileSync("index.js", `export default {};`);
+			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockGetQueueMissing("queue1");
@@ -6674,7 +6674,7 @@ addEventListener('fetch', event => {});`
 					consumers: [],
 				},
 			});
-			fs.writeFileSync("index.js", `export default {};`);
+			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockGetQueueMissing("queue1");

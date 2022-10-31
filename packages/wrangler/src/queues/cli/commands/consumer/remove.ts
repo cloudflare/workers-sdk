@@ -1,15 +1,16 @@
 import { type Argv } from "yargs";
+import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
-import * as Client from "../../../client";
-import * as Config from "../../config";
+import { deleteConsumer } from "../../../client";
 
-interface Args extends Config.Args {
+interface Args {
+	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
 	["environment"]: string | undefined;
 }
 
-export function Options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv): Argv<Args> {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -29,11 +30,11 @@ export function Options(yargs: Argv): Argv<Args> {
 		});
 }
 
-export async function Handler(args: Args) {
-	const config = Config.read(args);
+export async function handler(args: Args) {
+	const config = readConfig(args.config, args);
 
 	logger.log(`Removing consumer from queue ${args["queue-name"]}.`);
-	await Client.DeleteConsumer(
+	await deleteConsumer(
 		config,
 		args["queue-name"],
 		args["script-name"],

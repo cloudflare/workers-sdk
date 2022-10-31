@@ -1,25 +1,25 @@
 import { type BuilderCallback } from "yargs";
 import { consumers } from "./consumer";
 
-import * as Create from "./create";
-import * as Delete from "./delete";
-import * as List from "./list";
+import { options as createOptions, handler as createHandler } from "./create";
+import { options as deleteOptions, handler as deleteHandler } from "./delete";
+import { options as listOptions, handler as listHandler } from "./list";
 
 export const queues: BuilderCallback<unknown, unknown> = (yargs) => {
-	yargs.command("list", "List Queues", List.Options, List.Handler);
+	yargs.command("list", "List Queues", listOptions, listHandler);
 
 	yargs.command(
 		"create <name>",
 		"Create a Queue",
-		Create.Options,
-		Create.Handler
+		createOptions,
+		createHandler
 	);
 
 	yargs.command(
 		"delete <name>",
 		"Delete a Queue",
-		Delete.Options,
-		Delete.Handler
+		deleteOptions,
+		deleteHandler
 	);
 
 	yargs.command(

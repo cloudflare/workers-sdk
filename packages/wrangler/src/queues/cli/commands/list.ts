@@ -1,13 +1,14 @@
 import { type Argv } from "yargs";
+import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
-import * as Client from "../../client";
-import * as Config from "../config";
+import { listQueues } from "../../client";
 
-interface Args extends Config.Args {
-	page: number | undefined;
+interface Args {
+	config?: string;
+	page?: number;
 }
 
-export function Options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv): Argv<Args> {
 	return yargs.options({
 		page: {
 			type: "number",
@@ -16,9 +17,9 @@ export function Options(yargs: Argv): Argv<Args> {
 	});
 }
 
-export async function Handler(args: Args) {
-	const config = Config.read(args);
+export async function handler(args: Args) {
+	const config = readConfig(args.config, args);
 
-	const queues = await Client.ListQueues(config, args.page);
+	const queues = await listQueues(config, args.page);
 	logger.log(JSON.stringify(queues));
 }

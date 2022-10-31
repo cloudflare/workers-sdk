@@ -1,9 +1,11 @@
 import { type Argv } from "yargs";
+import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
-import * as Client from "../../../client";
-import * as Config from "../../config";
+import { postConsumer } from "../../../client";
+import type { PostConsumerBody } from "../../../client";
 
-interface Args extends Config.Args {
+interface Args {
+	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
 	["environment"]: string | undefined;
@@ -13,7 +15,7 @@ interface Args extends Config.Args {
 	["dead-letter-queue"]: string | undefined;
 }
 
-export function Options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv): Argv<Args> {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -50,10 +52,10 @@ export function Options(yargs: Argv): Argv<Args> {
 		});
 }
 
-export async function Handler(args: Args) {
-	const config = Config.read(args);
+export async function handler(args: Args) {
+	const config = readConfig(args.config, args);
 
-	const body: Client.PostConsumerBody = {
+	const body: PostConsumerBody = {
 		script_name: args["script-name"],
 		// TODO(soon) is this still the correct usage of the environment?
 		environment_name: args.environment || "", // API expects empty string as default
@@ -68,6 +70,6 @@ export async function Handler(args: Args) {
 	};
 
 	logger.log(`Adding consumer to queue ${args["queue-name"]}.`);
-	await Client.PostConsumer(config, args["queue-name"], body);
+	await postConsumer(config, args["queue-name"], body);
 	logger.log(`Added consumer to queue ${args["queue-name"]}.`);
 }

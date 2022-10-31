@@ -353,13 +353,9 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// queues
-	wrangler.command(
-		"queues",
-		"🆀 Configure Workers Queues",
-		async (queuesYargs) => {
-			await queues(queuesYargs.command(subHelp));
-		}
-	);
+	wrangler.command("queues", "🆀 Configure Workers Queues", (queuesYargs) => {
+		return queues(queuesYargs.command(subHelp));
+	});
 
 	// r2
 	wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {

@@ -1,13 +1,14 @@
 import { type Argv } from "yargs";
+import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
-import * as Client from "../../client";
-import * as Config from "../config";
+import { deleteQueue } from "../../client";
 
-interface Args extends Config.Args {
+interface Args {
+	config?: string;
 	name: string;
 }
 
-export function Options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv): Argv<Args> {
 	// TODO(soon) --force option
 	return yargs.positional("name", {
 		type: "string",
@@ -16,10 +17,10 @@ export function Options(yargs: Argv): Argv<Args> {
 	});
 }
 
-export async function Handler(args: Args) {
-	const config = Config.read(args);
+export async function handler(args: Args) {
+	const config = readConfig(args.config, args);
 
 	logger.log(`Deleting queue ${args.name}.`);
-	await Client.DeleteQueue(config, args.name);
+	await deleteQueue(config, args.name);
 	logger.log(`Deleted queue ${args.name}.`);
 }
