@@ -8,8 +8,9 @@ Added support for the deployments command, which allows you to list the last ten
 The information will include:
 
 - Version ID
-- Version_number
+- Version number
 - Author email
-- Latest Deploy
+- Latest deploy
+- Created on
 
 resolves #2089
