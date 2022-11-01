@@ -286,7 +286,7 @@ export const upload = async (
 			}
 		};
 
-		await queue.add(() =>
+		queue.add(() =>
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
@@ -369,13 +369,20 @@ export const upload = async (
 };
 
 // Decode and check that the current JWT has not expired
-function isJwtExpired(token: string): boolean {
-	const decodedJwt = JSON.parse(
-		Buffer.from(token.split(".")[1], "base64").toString()
-	);
-	const dateNow = new Date().getTime() / 1000;
+function isJwtExpired(token: string): boolean | undefined {
+	try {
+		const decodedJwt = JSON.parse(
+			Buffer.from(token.split(".")[1], "base64").toString()
+		);
 
-	return decodedJwt.exp < dateNow;
+		const dateNow = new Date().getTime() / 1000;
+
+		return decodedJwt.exp <= dateNow;
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`Invalid token: ${e.message}`);
+		}
+	}
 }
 
 function formatTime(duration: number) {
