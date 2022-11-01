@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "./https-options";
 import { logger } from "./logger";
+import { getAccessToken } from "./user/access";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type { HttpTerminator } from "http-terminator";
 import type {
@@ -20,7 +21,6 @@ import type {
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import type { Server as HttpsServer } from "node:https";
 import type { Duplex, Writable } from "node:stream";
-import { getAccessToken } from "./user/access";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
