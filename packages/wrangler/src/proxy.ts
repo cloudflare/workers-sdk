@@ -20,6 +20,7 @@ import type {
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import type { Server as HttpsServer } from "node:https";
 import type { Duplex, Writable } from "node:stream";
+import { getAccessToken } from "./user/access";
 
 /**
  * `usePreviewServer` is a React hook that creates a local development
@@ -42,6 +43,27 @@ function addCfPreviewTokenHeader(
 	headers["cf-workers-preview-token"] = previewTokenValue;
 }
 
+export async function addCfAccessToken(
+	headers: IncomingHttpHeaders,
+	domain: string,
+	accessTokenRef: { current: string | undefined | null }
+) {
+	if (accessTokenRef.current === null) {
+		return;
+	}
+	if (typeof accessTokenRef.current === "string") {
+		headers[
+			"cookie"
+		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+		return;
+	}
+	const token = await getAccessToken(domain);
+	accessTokenRef.current = token;
+	if (token)
+		headers[
+			"cookie"
+		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+}
 /**
  * Rewrite references in request headers
  * from the preview host to the local host.
@@ -120,6 +142,7 @@ export async function startPreviewServer({
 		// We have a token. Let's proxy requests to the preview end point.
 		const streamBufferRef = { current: [] };
 		const requestResponseBufferRef = { current: [] };
+		const accessTokenRef = { current: undefined };
 		const cleanupListeners = configureProxyServer({
 			proxy,
 			previewToken,
@@ -129,6 +152,7 @@ export async function startPreviewServer({
 			assetDirectory,
 			localProtocol,
 			port,
+			accessTokenRef,
 		});
 
 		await waitForPortToBeAvailable(port, {
@@ -215,6 +239,7 @@ export function usePreviewServer({
 	const requestResponseBufferRef = useRef<
 		{ request: IncomingMessage; response: ServerResponse }[]
 	>([]);
+	const accessTokenRef = useRef<string | undefined | null>(undefined);
 
 	/**
 	 * The session doesn't last forever, and will eventually drop
@@ -237,6 +262,7 @@ export function usePreviewServer({
 			assetDirectory,
 			localProtocol,
 			port,
+			accessTokenRef,
 		});
 		return () => {
 			cleanupListeners?.forEach((cleanup) => cleanup());
@@ -307,6 +333,7 @@ function configureProxyServer({
 	port,
 	localProtocol,
 	assetDirectory,
+	accessTokenRef,
 }: {
 	proxy: PreviewProxy | undefined;
 	previewToken: CfPreviewToken | undefined;
@@ -324,6 +351,7 @@ function configureProxyServer({
 	port: number;
 	localProtocol: "https" | "http";
 	assetDirectory: string | undefined;
+	accessTokenRef: { current: string | null | undefined };
 }) {
 	if (proxy === undefined) {
 		return;
@@ -376,7 +404,8 @@ function configureProxyServer({
 		previewToken,
 		remote,
 		port,
-		localProtocol
+		localProtocol,
+		accessTokenRef
 	);
 	proxy.server.on("stream", handleStream);
 	cleanupListeners.push(() => proxy.server.off("stream", handleStream));
@@ -389,7 +418,7 @@ function configureProxyServer({
 	streamBufferRef.current = [];
 
 	/** HTTP/1 -> HTTP/2  */
-	const handleRequest: RequestListener = (
+	const handleRequest: RequestListener = async (
 		message: IncomingMessage,
 		response: ServerResponse
 	) => {
@@ -397,6 +426,7 @@ function configureProxyServer({
 		if (httpVersionMajor >= 2) {
 			return; // Already handled by the "stream" event.
 		}
+		await addCfAccessToken(headers, previewToken.host, accessTokenRef);
 		addCfPreviewTokenHeader(headers, previewToken.value);
 		headers[":method"] = method;
 		headers[":path"] = url;
@@ -419,7 +449,6 @@ function configureProxyServer({
 
 		request.on("response", (responseHeaders) => {
 			const status = responseHeaders[":status"] ?? 500;
-
 			// log all requests to terminal
 			logger.log(new Date().toLocaleTimeString(), method, url, status);
 
@@ -461,12 +490,13 @@ function configureProxyServer({
 	requestResponseBufferRef.current = [];
 
 	/** HTTP/1 -> WebSocket (over HTTP/1)  */
-	const handleUpgrade = (
+	const handleUpgrade = async (
 		originalMessage: IncomingMessage,
 		originalSocket: Duplex,
 		originalHead: Buffer
 	) => {
 		const { headers, method, url } = originalMessage;
+		await addCfAccessToken(headers, previewToken.host, accessTokenRef);
 		addCfPreviewTokenHeader(headers, previewToken.value);
 		headers["host"] = previewToken.host;
 
@@ -562,12 +592,14 @@ function createStreamHandler(
 	previewToken: CfPreviewToken,
 	remote: ClientHttp2Session,
 	localPort: number,
-	localProtocol: "https" | "http"
+	localProtocol: "https" | "http",
+	accessTokenRef: { current: string | undefined | null }
 ) {
-	return function handleStream(
+	return async function handleStream(
 		stream: ServerHttp2Stream,
 		headers: IncomingHttpHeaders
 	) {
+		await addCfAccessToken(headers, previewToken.host, accessTokenRef);
 		addCfPreviewTokenHeader(headers, previewToken.value);
 		headers[":authority"] = previewToken.host;
 		const request = stream.pipe(remote.request(headers));

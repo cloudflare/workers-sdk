@@ -4,7 +4,9 @@ import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { logger } from "./logger";
 import { parseJSON } from "./parse";
+import { getAccessToken } from "./user/access";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
+import type { HeadersInit } from "undici";
 
 /**
  * A Preview Session on the edge
@@ -251,13 +253,18 @@ export async function createWorkerPreview(
 		session,
 		abortSignal
 	);
+	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
+
+	const headers: HeadersInit = { "cf-workers-preview-token": token.value };
+	if (accessToken) {
+		headers.cookie = `CF_Authorization=${accessToken}`;
+	}
+
 	// fire and forget the prewarm call
 	fetch(token.prewarmUrl.href, {
 		method: "POST",
 		signal: abortSignal,
-		headers: {
-			"cf-workers-preview-token": token.value,
-		},
+		headers,
 	}).then(
 		(response) => {
 			if (!response.ok) {
