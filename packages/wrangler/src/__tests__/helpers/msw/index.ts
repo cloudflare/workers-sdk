@@ -4,6 +4,7 @@ import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
 import { mswSuccessOauthHandlers } from "./handlers/oauth";
 import { mswSuccessR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
+import { default as mswZoneHandlers } from "./handlers/zones";
 import { mswSuccessUserHandlers } from "./handlers/user";
 export const msw = setupServer();
 
@@ -13,5 +14,5 @@ export {
 	mswSuccessOauthHandlers,
 	mswSuccessNamespacesHandlers,
 	mswSucessScriptHandlers,
-	mswSuccessDeployments,
+	mswZoneHandlers,
 };
