@@ -177,7 +177,7 @@ export async function syncAssets(
 
 			// Check if adding this asset to the bucket would
 			// push it over the 98 MiB limit KV bulk API limit
-			if (uploadBucketSize + assetSize > 98 * 1000 * 1000) {
+			if (uploadBucketSize + assetSize > 80 * 1000 * 1000) {
 				// If so, move the current bucket into the batch,
 				// and reset the counter/bucket
 				uploadBuckets.push(uploadBucket);
