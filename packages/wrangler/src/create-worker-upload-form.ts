@@ -61,9 +61,6 @@ export interface WorkerMetadata {
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
-}
-
-export interface WorkerTrace {
 	logpush?: boolean;
 }
 
@@ -273,15 +270,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
-	};
-
-	formData.set("metadata", JSON.stringify(metadata));
-
-	const trace: WorkerTrace = {
 		...(logpush && { logpush }),
 	};
 
-	formData.set("trace", JSON.stringify(trace));
+	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {
 		throw new TypeError(
