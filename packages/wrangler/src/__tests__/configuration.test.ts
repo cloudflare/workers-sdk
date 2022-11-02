@@ -75,6 +75,7 @@ describe("normalizeAndValidateConfig()", () => {
 			node_compat: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			logpush: undefined,
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -924,6 +925,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
+				logpush: true,
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -998,6 +1000,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: "INVALID",
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
+				logpush: "INVALID",
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1065,7 +1068,8 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\"."
+			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+			  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 
@@ -2332,6 +2336,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
+				logpush: true,
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2376,6 +2381,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: false,
 				node_compat: false,
 				first_party_worker: false,
+				logpush: false,
 			};
 			const rawConfig: RawConfig = {
 				name: "mock-name",
@@ -2399,6 +2405,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
+				logpush: true,
 				env: {
 					ENV1: rawEnv,
 				},
@@ -2661,6 +2668,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: "INVALID",
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
+				logpush: "INVALID",
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2697,7 +2705,8 @@ describe("normalizeAndValidateConfig()", () => {
 			    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\"."
+			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 

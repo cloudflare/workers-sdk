@@ -206,6 +206,7 @@ export interface CfWorkerInit {
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
+	logpush: boolean | undefined;
 }
 
 export interface CfWorkerContext {

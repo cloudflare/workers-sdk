@@ -126,6 +126,7 @@ export const secret: BuilderCallback<unknown, unknown> = (
 								compatibility_flags: undefined,
 								usage_model: undefined,
 								keepVars: false, // this doesn't matter since it's a new script anyway
+								logpush: false,
 							}),
 						}
 					);

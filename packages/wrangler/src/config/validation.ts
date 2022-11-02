@@ -1171,6 +1171,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		logpush: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"logpush",
+			isBoolean,
+			undefined
+		),
 	};
 
 	return environment;

@@ -63,6 +63,10 @@ export interface WorkerMetadata {
 	keep_bindings?: WorkerMetadataBinding["type"][];
 }
 
+export interface WorkerTrace {
+	logpush?: boolean;
+}
+
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
  */
@@ -76,6 +80,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
+		logpush,
 	} = worker;
 
 	let { modules } = worker;
@@ -271,6 +276,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));
+
+	const trace: WorkerTrace = {
+		...(logpush && { logpush }),
+	};
+
+	formData.set("trace", JSON.stringify(trace));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {
 		throw new TypeError(
