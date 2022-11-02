@@ -109,7 +109,7 @@ export const secret: BuilderCallback<unknown, unknown> = (
 								bindings: {
 									kv_namespaces: [],
 									vars: {},
-									worker_metadata: undefined,
+									metadata_binding: undefined,
 									durable_objects: { bindings: [] },
 									r2_buckets: [],
 									d1_databases: [],

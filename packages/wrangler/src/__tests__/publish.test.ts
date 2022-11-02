@@ -5757,16 +5757,16 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		describe("[worker_metadata]", () => {
+		describe("[metadata_binding]", () => {
 			it("should pass metadata binding to backend", async () => {
 				writeWranglerToml({
-					worker_metadata: "nasm_A19750603000",
+					metadata_binding: "nasm_A19750603000",
 				});
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedBindings: [
-						{ name: "nasm_A19750603000", type: "worker_metadata" },
+						{ name: "nasm_A19750603000", type: "metadata_binding" },
 					],
 				});
 

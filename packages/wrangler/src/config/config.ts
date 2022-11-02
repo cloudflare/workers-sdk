@@ -30,7 +30,7 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
 
-	worker_metadata: string | undefined;
+	metadata_binding: string | undefined;
 
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from wrangler 1).

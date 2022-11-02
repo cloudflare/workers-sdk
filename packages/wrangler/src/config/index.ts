@@ -93,7 +93,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		text_blobs,
 		unsafe,
 		vars,
-		worker_metadata,
+		metadata_binding,
 		wasm_modules,
 		dispatch_namespaces,
 	} = bindings;
@@ -237,10 +237,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (worker_metadata !== undefined && worker_metadata.length > 0) {
+	if (metadata_binding !== undefined && metadata_binding.length > 0) {
 		output.push({
 			type: "Metadata Binding",
-			entries: [{ key: "metadata", value: worker_metadata }],
+			entries: [{ key: "metadata", value: metadata_binding }],
 		});
 	}
 
