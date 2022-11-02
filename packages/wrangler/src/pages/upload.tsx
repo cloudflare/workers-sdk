@@ -317,7 +317,7 @@ export const upload = async (
 				(error) => {
 					return Promise.reject(
 						new FatalError(
-							"Failed to upload files. Please try again.",
+							`Failed to upload files. Please try again. Error: ${JSON.stringify(error)})`,
 							error.code || 1
 						)
 					);
