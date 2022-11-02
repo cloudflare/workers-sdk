@@ -1,5 +1,33 @@
 # wrangler
 
+## 2.1.15
+
+### Patch Changes
+
+- [#2103](https://github.com/cloudflare/wrangler2/pull/2103) [`f1fd62a1`](https://github.com/cloudflare/wrangler2/commit/f1fd62a11642de45eb87ebacb044fe8fcf2beea2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Don't upload `functions/` directory as part of `wrangler pages publish`
+
+  If the root directory of a project was the same as the build output directory, we were previously uploading the `functions/` directory as static assets. This PR now ensures that the `functions/` files are only used to create Pages Functions and are no longer uploaded as static assets.
+
+  Additionally, we also now _do_ upload `_worker.js`, `_headers`, `_redirects` and `_routes.json` if they aren't immediate children of the build output directory. Previously, we'd ignore all files with this name regardless of location. For example, if you have a `public/blog/how-to-use-pages/_headers` file (where `public` is your build output directory), we will now upload the `_headers` file as a static asset.
+
+* [#2111](https://github.com/cloudflare/wrangler2/pull/2111) [`ab52f771`](https://github.com/cloudflare/wrangler2/commit/ab52f7717ffd5411886d1e30aee98f821237ddad) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add a `passThroughOnException()` handler in Pages Functions
+
+  This `passThroughOnException()` handler is not as good as the built-in for Workers. We're just adding it now as a stop-gap until we can do the behind-the-scenes plumbing required to make the built-in function work properly.
+
+  We wrap your Pages Functions code in a `try/catch` and on failure, if you call `passThroughOnException()` we defer to the static assets of your project.
+
+  For example:
+
+  ```ts
+  export const onRequest = ({ passThroughOnException }) => {
+  	passThroughOnException();
+
+  	x; // Would ordinarily throw an error, but instead, static assets are served.
+  };
+  ```
+
+- [#2117](https://github.com/cloudflare/wrangler2/pull/2117) [`aa08ff7c`](https://github.com/cloudflare/wrangler2/commit/aa08ff7cc76913f010cf0a98e7e0e97b5641d2c8) Thanks [@nprogers](https://github.com/nprogers)! - Added error logging for pages upload
+
 ## 2.1.14
 
 ### Patch Changes
