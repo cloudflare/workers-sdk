@@ -805,8 +805,7 @@ async function getWorkerConfig(
 					{
 						configObj.vars = {
 							...(configObj.vars ?? {}),
-							name: binding.name,
-							text: binding.text,
+							[binding.name]: binding.text,
 						};
 					}
 					break;
