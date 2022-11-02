@@ -537,11 +537,11 @@ export function createCLIParser(argv: string[]) {
 			);
 
 			const scriptTag = scriptMetadata.default_environment.script.tag;
-			const deployments = await fetchResult<DeploymentListRes>(
-				`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
+			const { deployments } = await fetchResult<DeploymentListRes>(
+				`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
 			);
 
-			const versionMessages = deployments.versions.map(
+			const versionMessages = deployments.map(
 				(versions, index) =>
 					`\nVersion ID: ${versions.version_id}\nVersion number: ${
 						versions.version_number

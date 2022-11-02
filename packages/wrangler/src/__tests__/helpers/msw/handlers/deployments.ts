@@ -1,7 +1,7 @@
 import { rest } from "msw";
 
 export type DeploymentListRes = {
-	versions: {
+	deployments: {
 		version_id: string;
 		version_number: string;
 		metadata: {
@@ -24,7 +24,7 @@ export type DeploymentListRes = {
 
 export const mswSuccessDeployments = [
 	rest.get(
-		"*/accounts/:accountId/workers/versions/by-script/:scriptTag",
+		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 		(_, response, context) =>
 			response.once(
 				context.status(200),
@@ -33,7 +33,7 @@ export const mswSuccessDeployments = [
 					errors: [],
 					messages: [],
 					result: {
-						versions: [
+						deployments: [
 							{
 								version_id: "Galaxy-Class",
 								version_number: "1701-E",
