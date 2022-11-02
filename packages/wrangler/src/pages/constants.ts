@@ -1,5 +1,7 @@
 import { version as wranglerVersion } from "../../package.json";
 
+export const MAX_ASSET_COUNT = 20_000;
+export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 export const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
 export const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
 export const MAX_BUCKET_FILE_COUNT = 5000;

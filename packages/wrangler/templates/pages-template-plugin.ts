@@ -19,6 +19,7 @@ type EventContext<Env, P extends string, Data> = {
 	request: Request;
 	functionPath: string;
 	waitUntil: (promise: Promise<unknown>) => void;
+	passThroughOnException: () => void;
 	next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
 	env: Env & { ASSETS: { fetch: typeof fetch } };
 	params: Params<P>;
@@ -29,6 +30,7 @@ type EventPluginContext<Env, P extends string, Data, PluginArgs> = {
 	request: Request;
 	functionPath: string;
 	waitUntil: (promise: Promise<unknown>) => void;
+	passThroughOnException: () => void;
 	next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
 	env: Env & { ASSETS: { fetch: typeof fetch } };
 	params: Params<P>;
@@ -146,6 +148,8 @@ export default function (pluginArgs) {
 					pluginArgs,
 					env,
 					waitUntil: workerContext.waitUntil.bind(workerContext),
+					passThroughOnException:
+						workerContext.passThroughOnException.bind(workerContext),
 				};
 
 				const response = await handler(context);

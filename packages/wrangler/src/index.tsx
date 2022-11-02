@@ -513,8 +513,8 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.command(
 		"deployments",
-		"🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', and 'Latest deploy'",
-
+		false,
+		// "🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', 'Created on' and 'Latest deploy'",
 		(yargs) => {
 			yargs.option("name", {
 				describe: "The name of your worker",

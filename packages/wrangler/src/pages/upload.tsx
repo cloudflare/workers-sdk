@@ -3,13 +3,17 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import { getType } from "mime";
+import { Minimatch } from "minimatch";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
@@ -96,10 +100,11 @@ export const upload = async (
 		"_redirects",
 		"_headers",
 		"_routes.json",
-		".DS_Store",
-		"node_modules",
-		".git",
-	];
+		"functions",
+		"**/.DS_Store",
+		"**/node_modules",
+		"**/.git",
+	].map((pattern) => new Minimatch(pattern));
 
 	const directory = resolve(args.directory);
 
@@ -121,10 +126,13 @@ export const upload = async (
 		await Promise.all(
 			files.map(async (file) => {
 				const filepath = join(dir, file);
+				const relativeFilepath = relative(startingDir, filepath);
 				const filestat = await stat(filepath);
 
-				if (IGNORE_LIST.includes(file)) {
-					return;
+				for (const minimatch of IGNORE_LIST) {
+					if (minimatch.match(relativeFilepath)) {
+						return;
+					}
 				}
 
 				if (filestat.isSymbolicLink()) {
@@ -134,12 +142,12 @@ export const upload = async (
 				if (filestat.isDirectory()) {
 					fileMap = await walk(filepath, fileMap, startingDir);
 				} else {
-					const name = relative(startingDir, filepath).split(sep).join("/");
+					const name = relativeFilepath.split(sep).join("/");
 
-					if (filestat.size > 25 * 1024 * 1024) {
+					if (filestat.size > MAX_ASSET_SIZE) {
 						throw new FatalError(
 							`Error: Pages only supports files up to ${prettyBytes(
-								25 * 1024 * 1024
+								MAX_ASSET_SIZE
 							)} in size\n${name} is ${prettyBytes(filestat.size)} in size`,
 							1
 						);
@@ -161,9 +169,9 @@ export const upload = async (
 
 	const fileMap = await walk(directory);
 
-	if (fileMap.size > 20000) {
+	if (fileMap.size > MAX_ASSET_COUNT) {
 		throw new FatalError(
-			`Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
+			`Error: Pages only supports up to ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment. Ensure you have specified your build output directory correctly.`,
 			1
 		);
 	}
@@ -309,7 +317,9 @@ export const upload = async (
 				(error) => {
 					return Promise.reject(
 						new FatalError(
-							"Failed to upload files. Please try again.",
+							`Failed to upload files. Please try again. Error: ${JSON.stringify(
+								error
+							)})`,
 							error.code || 1
 						)
 					);
@@ -390,7 +400,7 @@ function Progress({ done, total }: { done: number; total: number }) {
 	return (
 		<>
 			<Text>
-				<Spinner type="earth" />
+				{isInteractive() ? <Spinner type="earth" /> : null}
 				{` Uploading... (${done}/${total})\n`}
 			</Text>
 		</>
