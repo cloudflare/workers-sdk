@@ -1,4 +1,5 @@
 import { setupServer } from "msw/node";
+import { default as mswAccessHandlers } from "./handlers/access";
 import { mswSuccessDeployments } from "./handlers/deployments";
 import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
 import { mswSuccessOauthHandlers } from "./handlers/oauth";
@@ -14,4 +15,5 @@ export {
 	mswSuccessNamespacesHandlers,
 	mswSucessScriptHandlers,
 	mswSuccessDeployments,
+	mswAccessHandlers,
 };

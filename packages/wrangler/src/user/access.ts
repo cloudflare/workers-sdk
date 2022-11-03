@@ -6,7 +6,7 @@ const cache: Record<string, string> = {};
 
 const usesAccessCache = new Map();
 
-async function domainUsesAccess(domain: string): Promise<boolean> {
+export async function domainUsesAccess(domain: string): Promise<boolean> {
 	logger.debug("Checking if domain has Access enabled:", domain);
 
 	if (usesAccessCache.has(domain)) {

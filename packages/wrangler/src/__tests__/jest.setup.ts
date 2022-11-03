@@ -39,6 +39,13 @@ jest.mock("get-port", () => {
 	};
 });
 
+jest.mock("child_process", () => {
+	return {
+		__esModule: true,
+		spawnSync: jest.fn().mockImplementation(async () => ({ error: true })),
+	};
+});
+
 jest.mock("ws", () => {
 	return {
 		__esModule: true,
