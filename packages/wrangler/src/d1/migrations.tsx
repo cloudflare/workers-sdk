@@ -8,6 +8,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { createBackup } from "./backups";
+import { DEFAULT_MIGRATION_PATH } from "./constants";
 import { executeSql } from "./execute";
 import { Database } from "./options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "./utils";
@@ -17,17 +18,28 @@ import type { BaseSqlExecuteArgs, QueryResult } from "./execute";
 import type { Migration } from "./types";
 import type { Argv } from "yargs";
 
-function getMigrationsPath(
+async function getMigrationsPath(
 	projectPath: string,
-	migrationsFolderPath: string
-): string {
-	const dir = `${projectPath}/${migrationsFolderPath}`;
+	migrationsFolderPath: string,
+	createIfMissing: boolean
+): Promise<string> {
+	const dir = path.resolve(projectPath, migrationsFolderPath);
+	if (fs.existsSync(dir)) return dir;
 
-	if (!fs.existsSync(dir)) {
+	const warning = `No migrations folder found.${
+		migrationsFolderPath === DEFAULT_MIGRATION_PATH
+			? " Set `migrations_dir` in wrangler.toml to choose a different path."
+			: ""
+	}`;
+
+	if (createIfMissing && (await confirm(`${warning}\nOk to create ${dir}?`))) {
 		fs.mkdirSync(dir, { recursive: true });
+		return dir;
+	} else {
+		logger.warn(warning);
 	}
 
-	return dir;
+	throw new Error(`No migrations present at ${dir}.`);
 }
 
 async function getUnappliedMigrations(
@@ -81,13 +93,15 @@ export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 		if (!config.configPath) {
 			return;
 		}
+		const { migrationsTableName, migrationsFolderPath } = databaseInfo;
 
-		const migrationsPath = getMigrationsPath(
+		const migrationsPath = await getMigrationsPath(
 			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath
+			migrationsFolderPath,
+			false
 		);
 		await initMigrationsTable(
-			databaseInfo.migrationsTableName,
+			migrationsTableName,
 			local,
 			config,
 			database,
@@ -96,7 +110,7 @@ export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
-				databaseInfo.migrationsTableName,
+				migrationsTableName,
 				migrationsPath,
 				local,
 				config,
@@ -143,9 +157,10 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 			return;
 		}
 
-		const migrationsPath = getMigrationsPath(
+		const migrationsPath = await getMigrationsPath(
 			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath
+			databaseInfo.migrationsFolderPath,
+			false
 		);
 		await initMigrationsTable(
 			databaseInfo.migrationsTableName,
@@ -399,9 +414,10 @@ export const CreateHandler = withConfig<MigrationsCreateArgs>(
 			return;
 		}
 
-		const migrationsPath = getMigrationsPath(
+		const migrationsPath = await getMigrationsPath(
 			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath
+			databaseInfo.migrationsFolderPath,
+			true
 		);
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
 		const migrationName = message.replace(" ", "_");
