@@ -42,7 +42,11 @@ jest.mock("get-port", () => {
 jest.mock("child_process", () => {
 	return {
 		__esModule: true,
-		spawnSync: jest.fn().mockImplementation(async () => ({ error: true })),
+		...jest.requireActual("child_process"),
+		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+			if (binary === "cloudflared") return { error: true };
+			return jest.requireActual("child_process").spawnSync(binary, ...args);
+		}),
 	};
 });
 
