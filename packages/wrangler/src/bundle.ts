@@ -15,6 +15,7 @@ import type { CfModule } from "./worker";
 
 type BundleResult = {
 	modules: CfModule[];
+	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
@@ -332,7 +333,8 @@ export async function bundleWorker(
 			listEntryPoints(entryPointOutputs)
 	);
 
-	const entryPointExports = entryPointOutputs[0][1].exports;
+	const { exports: entryPointExports, inputs: dependencies } =
+		entryPointOutputs[0][1];
 	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
 	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
@@ -341,6 +343,7 @@ export async function bundleWorker(
 
 	return {
 		modules: moduleCollector.modules,
+		dependencies,
 		resolvedEntryPointPath: path.resolve(
 			entry.directory,
 			entryPointOutputs[0][0]

@@ -5,7 +5,10 @@ import { URLSearchParams } from "node:url";
 import chalk from "chalk";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
-import { printBundleSize } from "../bundle-reporter";
+import {
+	printBundleSize,
+	printOffendingDependencies,
+} from "../bundle-reporter";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
@@ -84,6 +87,33 @@ export type CustomDomainChangeset = {
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const scriptStartupErrorRegex = /startup/i;
+
+function errIsScriptSizeOrStartupErr(err: unknown) {
+	if (!err) return false;
+
+	// 10027 = workers.api.error.script_too_large
+	if ((err as { code: number }).code === 10027) {
+		return true;
+	}
+
+	// 10021 = validation error
+	// no explicit error code for more granular errors than "invalid script"
+	// but the error will contain a string error message directly from the
+	// validator.
+	// the error always SHOULD look like "Script startup exceeded CPU limit."
+	// (or the less likely "Script startup exceeded memory limits.")
+	if (
+		(err as { code: number }).code === 10021 &&
+		err instanceof ParseError &&
+		scriptStartupErrorRegex.test(err.notes[0]?.text)
+	) {
+		return true;
+	}
+
+	return false;
 }
 
 function renderRoute(route: Route): string {
@@ -410,12 +440,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const {
 			modules,
+			dependencies,
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
 			? // we can skip the whole bundling step and mock a bundle here
 			  {
 					modules: [],
+					dependencies: {},
 					resolvedEntryPointPath: props.entry.file,
 					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
 					stop: undefined,
@@ -568,36 +600,43 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
-			const result = await fetchResult<{
-				available_on_subdomain: boolean;
-				id: string | null;
-				etag: string | null;
-				pipeline_hash: string | null;
-			}>(
-				workerUrl,
-				{
-					method: "PUT",
-					body: createWorkerUploadForm(worker),
-					headers: await getMetricsUsageHeaders(config.send_metrics),
-				},
-				new URLSearchParams({
-					include_subdomain_availability: "true",
-					// pass excludeScript so the whole body of the
-					// script doesn't get included in the response
-					excludeScript: "true",
-				})
-			);
+			try {
+				const result = await fetchResult<{
+					available_on_subdomain: boolean;
+					id: string | null;
+					etag: string | null;
+					pipeline_hash: string | null;
+				}>(
+					workerUrl,
+					{
+						method: "PUT",
+						body: createWorkerUploadForm(worker),
+						headers: await getMetricsUsageHeaders(config.send_metrics),
+					},
+					new URLSearchParams({
+						include_subdomain_availability: "true",
+						// pass excludeScript so the whole body of the
+						// script doesn't get included in the response
+						excludeScript: "true",
+					})
+				);
 
-			available_on_subdomain = result.available_on_subdomain;
+				available_on_subdomain = result.available_on_subdomain;
 
-			if (config.first_party_worker) {
-				// Print some useful information returned after publishing
-				// Not all fields will be populated for every worker
-				// These fields are likely to be scraped by tools, so do not rename
-				if (result.id) logger.log("Worker ID: ", result.id);
-				if (result.etag) logger.log("Worker ETag: ", result.etag);
-				if (result.pipeline_hash)
-					logger.log("Worker PipelineHash: ", result.pipeline_hash);
+				if (config.first_party_worker) {
+					// Print some useful information returned after publishing
+					// Not all fields will be populated for every worker
+					// These fields are likely to be scraped by tools, so do not rename
+					if (result.id) logger.log("Worker ID: ", result.id);
+					if (result.etag) logger.log("Worker ETag: ", result.etag);
+					if (result.pipeline_hash)
+						logger.log("Worker PipelineHash: ", result.pipeline_hash);
+				}
+			} catch (err) {
+				if (errIsScriptSizeOrStartupErr(err)) {
+					printOffendingDependencies(dependencies);
+				}
+				throw err;
 			}
 		}
 	} finally {

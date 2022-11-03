@@ -1,7 +1,13 @@
+import { Buffer } from "node:buffer";
+import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as esbuild from "esbuild";
+import {
+	printBundleSize,
+	printOffendingDependencies,
+} from "../bundle-reporter";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import {
@@ -6417,6 +6423,178 @@ addEventListener('fetch', event => {});`
 			          "warn": "",
 			        }
 		      `);
+		});
+
+		test("should check biggest dependencies when upload fails with script size error", async () => {
+			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
+
+			fs.writeFileSync(
+				"index.js",
+				`import { thing } from "./dependency";
+
+        export default {
+          async fetch() {
+            return new Response('response plus ' + thing);
+          }
+        }`
+			);
+			setMockRawResponse(
+				"/accounts/:accountId/workers/scripts/:scriptName",
+				"PUT",
+				() => {
+					return createFetchResult({}, false, [
+						{ code: 10027, message: "workers.api.error.script_too_large" },
+					]);
+				}
+			);
+			writeWranglerToml({
+				main: "index.js",
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+			);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+
+			  workers.api.error.script_too_large [code: 10027]
+
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+
+			",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+
+			  - index.js - xx KiB
+			  - dependency.js - xx KiB
+			  If these are unnecessary, consider removing them
+
+			",
+			}
+		`);
+		});
+
+		test("should check biggest dependencies when upload fails with script startup error", async () => {
+			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
+
+			fs.writeFileSync(
+				"index.js",
+				`import { thing } from "./dependency";
+
+        export default {
+          async fetch() {
+            return new Response('response plus ' + thing);
+          }
+        }`
+			);
+			setMockRawResponse(
+				"/accounts/:accountId/workers/scripts/:scriptName",
+				"PUT",
+				() => {
+					return createFetchResult({}, false, [
+						{
+							code: 10021,
+							message: "Error: Script startup exceeded CPU time limit.",
+						},
+					]);
+				}
+			);
+			writeWranglerToml({
+				main: "index.js",
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+			);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+
+			  Error: Script startup exceeded CPU time limit. [code: 10021]
+
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+
+			",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+
+			  - index.js - xx KiB
+			  - dependency.js - xx KiB
+			  If these are unnecessary, consider removing them
+
+			",
+			}
+		`);
+		});
+
+		describe("unit tests", () => {
+			// keeping these as unit tests to try and keep them snappy, as they often deal with
+			// big files that would take a while to deal with in a full wrangler test
+
+			test("should print the bundle size and warn about large scripts when > 1MiB", async () => {
+				const bigModule = Buffer.alloc(10_000_000);
+				randomFillSync(bigModule);
+				await printBundleSize({ name: "index.js", content: "" }, [
+					{ name: "index.js", content: bigModule, type: "buffer" },
+				]);
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
+
+			",
+			}
+		`);
+			});
+
+			test("should print the top biggest dependencies in the bundle when upload fails", () => {
+				const deps = {
+					"node_modules/a-mod/module.js": { bytesInOutput: 450 },
+					"node_modules/b-mod/module.js": { bytesInOutput: 10 },
+					"node_modules/c-mod/module.js": { bytesInOutput: 200 },
+					"node_modules/d-mod/module.js": { bytesInOutput: 2111200 }, // 1
+					"node_modules/e-mod/module.js": { bytesInOutput: 8209 }, // 3
+					"node_modules/f-mod/module.js": { bytesInOutput: 770 },
+					"node_modules/g-mod/module.js": { bytesInOutput: 78902 }, // 2
+					"node_modules/h-mod/module.js": { bytesInOutput: 899 },
+					"node_modules/i-mod/module.js": { bytesInOutput: 2001 }, // 4
+					"node_modules/j-mod/module.js": { bytesInOutput: 900 }, // 5
+					"node_modules/k-mod/module.js": { bytesInOutput: 79 },
+				};
+
+				printOffendingDependencies(deps);
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 5 largest dependencies included in your script:[0m
+
+			  - node_modules/d-mod/module.js - xx KiB
+			  - node_modules/g-mod/module.js - xx KiB
+			  - node_modules/e-mod/module.js - xx KiB
+			  - node_modules/i-mod/module.js - xx KiB
+			  - node_modules/j-mod/module.js - xx KiB
+			  If these are unnecessary, consider removing them
+
+			",
+			}
+		`);
+			});
 		});
 	});
 
