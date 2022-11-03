@@ -6,7 +6,7 @@ import chalk from "chalk";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
 import { printBundleSize } from "../bundle-reporter";
-import { type FetchError, fetchListResult, fetchResult } from "../cfetch";
+import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
 import { confirm, fromDashMessagePrompt } from "../dialogs";
@@ -14,11 +14,12 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
-import { getQueue, putConsumer, type PutConsumerBody } from "../queues/client";
+import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
+import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	Route,
@@ -27,6 +28,7 @@ import type {
 	CustomDomainRoute,
 } from "../config/environment";
 import type { Entry } from "../entry";
+import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -497,8 +499,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
-			queues: config.queues.producers?.map((x) => {
-				return { binding: x.binding, queue_name: x.queue };
+			queues: config.queues.producers?.map((producer) => {
+				return { binding: producer.binding, queue_name: producer.queue };
 			}),
 			r2_buckets: config.r2_buckets,
 			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
@@ -923,16 +925,20 @@ function isAuthenticationError(e: unknown): e is ParseError {
 }
 
 async function ensureQueuesExist(config: Config) {
-	const producers = (config.queues.producers || []).map((x) => x.queue);
-	const consumers = (config.queues.consumers || []).map((x) => x.queue);
+	const producers = (config.queues.producers || []).map(
+		(producer) => producer.queue
+	);
+	const consumers = (config.queues.consumers || []).map(
+		(consumer) => consumer.queue
+	);
 
 	const queueNames = producers.concat(consumers);
 	for (const queue of queueNames) {
 		try {
 			await getQueue(config, queue);
 		} catch (err) {
-			const x = err as FetchError;
-			if (x.code === 100123) {
+			const queueErr = err as FetchError;
+			if (queueErr.code === 100123) {
 				// queue_not_found
 				throw new Error(
 					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
