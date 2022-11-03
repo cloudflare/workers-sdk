@@ -3,14 +3,31 @@ import getPort from "get-port";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+	mswZoneHandlers,
+} from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 describe("wrangler dev", () => {
+	beforeEach(() => {
+		msw.use(
+			...mswZoneHandlers,
+			...mswSuccessOauthHandlers,
+			...mswSuccessUserHandlers
+		);
+	});
+
 	runInTempDir();
+	mockAccountId();
+	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
 		(Dev as jest.Mock).mockClear();
@@ -317,6 +334,87 @@ describe("wrangler dev", () => {
 					zone: "a-zone-id",
 				})
 			);
+		});
+
+		it("should find the host from the given pattern, not zone_name", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "https://subdomain.exists.com/*",
+						zone_name: "does-not-exist.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should fail for non-existing zones", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "https://subdomain.does-not-exist.com/*",
+						zone_name: "exists.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects.toEqual(
+				new Error("Could not find zone for subdomain.does-not-exist.com")
+			);
+		});
+
+		it("should fail for non-existing zones, when falling back from */*", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_name: "does-not-exist.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects.toEqual(
+				new Error("Could not find zone for does-not-exist.com")
+			);
+		});
+
+		it("should fallback to zone_name when given the pattern */*", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_name: "exists.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+		it("fails when given the pattern */* and no zone_name", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_id: "exists-com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			const err = new TypeError() as unknown as { code: string; input: string };
+			err.code = "ERR_INVALID_URL";
+			err.input = "http:///";
+
+			await expect(runWrangler("dev")).rejects.toEqual(err);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {

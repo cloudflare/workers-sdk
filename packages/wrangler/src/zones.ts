@@ -9,12 +9,38 @@ export interface Zone {
 	host: string;
 }
 
+/**
+ * Get the hostname on which to run a Worker.
+ *
+ * The most accurate place is usually
+ * `route.pattern`, as that includes any subdomains. For example:
+ * ```js
+ * {
+ * 	pattern: foo.example.com
+ * 	zone_name: example.com
+ * }
+ * ```
+ * However, in the case of patterns that _can't_ be parsed as a hostname
+ * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
+ * (and in the absence of that throw an error).
+ * @param route
+ */
 export function getHostFromRoute(route: Route): string | undefined {
-	return typeof route === "string"
-		? getHostFromUrl(route)
-		: typeof route === "object"
-		? getHostFromUrl(route.pattern)
-		: undefined;
+	if (typeof route === "string") {
+		return getHostFromUrl(route);
+	} else if (typeof route === "object") {
+		try {
+			return getHostFromUrl(route.pattern);
+		} catch (e) {
+			if (
+				(e as { code: string }).code === "ERR_INVALID_URL" &&
+				"zone_name" in route
+			) {
+				return getHostFromUrl(route.zone_name);
+			}
+			throw e;
+		}
+	}
 }
 
 /**
