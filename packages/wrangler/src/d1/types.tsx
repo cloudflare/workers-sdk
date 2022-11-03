@@ -3,6 +3,8 @@ export type Database = {
 	name: string;
 	binding: string;
 	internal_env?: string;
+	migrationsTableName: string;
+	migrationsFolderPath: string;
 };
 
 export type Backup = {

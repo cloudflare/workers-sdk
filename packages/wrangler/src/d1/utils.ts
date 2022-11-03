@@ -1,3 +1,4 @@
+import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
 import type { Config } from "../config";
 import type { Database } from "./types";
@@ -16,8 +17,9 @@ export function getDatabaseInfoFromConfig(
 				binding: d1Database.binding,
 				name: d1Database.database_name,
 				migrationsTableName:
-					d1Database.migrations_table_name || "d1_migrations",
-				migrationsFolderPath: d1Database.migrations_folder_path || "migrations",
+					d1Database.migrations_table || DEFAULT_MIGRATION_TABLE,
+				migrationsFolderPath:
+					d1Database.migrations_dir || DEFAULT_MIGRATION_PATH,
 				internal_env: d1Database.database_internal_env,
 			};
 		}
