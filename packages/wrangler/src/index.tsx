@@ -5,6 +5,7 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -36,11 +37,22 @@ import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
+import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	listScopes,
+	login,
+	logout,
+	requireAuth,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
 
+import type { DeploymentListRes } from "./__tests__/helpers/msw/handlers/deployments";
 import type { Config } from "./config";
+import type { ServiceMetadataRes } from "./init";
+import type { PartialConfigToDTS } from "./type-generation";
+import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -263,7 +275,7 @@ export function createCLIParser(argv: string[]) {
 	// delete
 	wrangler.command(
 		"delete [script]",
-		"🗑 Delete your Worker from Cloudflare.",
+		"🗑  Delete your Worker from Cloudflare.",
 		deleteOptions,
 		deleteHandler
 	);
@@ -470,6 +482,80 @@ export function createCLIParser(argv: string[]) {
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
 			});
+		}
+	);
+
+	// type generation
+	wrangler.command(
+		"types",
+		"📝 Generate types from bindings & module rules in config",
+		() => {},
+		async () => {
+			await printWranglerBanner();
+			const config = readConfig(undefined, {});
+
+			const configBindings: PartialConfigToDTS = {
+				kv_namespaces: config.kv_namespaces ?? [],
+				vars: { ...config.vars },
+				wasm_modules: config.wasm_modules,
+				text_blobs: {
+					...config.text_blobs,
+				},
+				data_blobs: config.data_blobs,
+				durable_objects: config.durable_objects,
+				r2_buckets: config.r2_buckets,
+				// @ts-expect-error - We don't want the type generated to inlcude the Beta prefix
+				d1_databases: config.d1_databases,
+				services: config.services,
+				dispatch_namespaces: config.dispatch_namespaces,
+				logfwdr: config.logfwdr,
+				unsafe: config.unsafe?.bindings,
+				rules: config.rules,
+			};
+
+			await generateTypes(configBindings, config);
+		}
+	);
+
+	wrangler.command(
+		"deployments",
+		false,
+		// "🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', 'Created on' and 'Latest deploy'",
+		(yargs) => {
+			yargs.option("name", {
+				describe: "The name of your worker",
+				type: "string",
+			});
+		},
+		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
+			await printWranglerBanner();
+			const config = readConfig(
+				deploymentsYargs.config as ConfigPath,
+				deploymentsYargs
+			);
+			const accountId = await requireAuth(config);
+			const scriptName = getScriptName(
+				{ name: deploymentsYargs.name, env: undefined },
+				config
+			);
+			const scriptMetadata = await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${scriptName}`
+			);
+
+			const scriptTag = scriptMetadata.default_environment.script.tag;
+			const deployments = await fetchResult<DeploymentListRes>(
+				`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
+			);
+
+			const versionMessages = deployments.versions.map(
+				(versions, index) =>
+					`\nVersion ID: ${versions.version_id}\nVersion number: ${
+						versions.version_number
+					}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
+						versions.metadata.author_email
+					}\nLatest deploy: ${index === 0}\n`
+			);
+			logger.log(...versionMessages);
 		}
 	);
 

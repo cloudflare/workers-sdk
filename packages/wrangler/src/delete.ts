@@ -1,9 +1,11 @@
+import assert from "assert";
 import path from "path";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { confirm } from "./dialogs";
 import { CI } from "./is-ci";
 import isInteractive from "./is-interactive";
+import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
@@ -60,10 +62,17 @@ export async function deleteHandler(args: ArgumentsCamelCase<DeleteArgs>) {
 
 	const scriptName = getScriptName(args, config);
 
+	assert(
+		scriptName,
+		"A worker name must be defined, either via --name, or in wrangler.toml"
+	);
+
 	if (args.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
+
+	assert(accountId, "Missing accountId");
 
 	let confirmed = true;
 	if (isInteractive() || !CI.isCI()) {
@@ -79,8 +88,24 @@ export async function deleteHandler(args: ArgumentsCamelCase<DeleteArgs>) {
 			new URLSearchParams({ force: "true" })
 		);
 
+		await deleteSiteNamespaceIfExisting(scriptName, accountId);
+
 		logger.log("Successfully deleted", scriptName);
 	}
+}
 
-	// TODO: maybe delete sites/assets kv namespace as well?
+async function deleteSiteNamespaceIfExisting(
+	scriptName: string,
+	accountId: string
+): Promise<void> {
+	const title = `__${scriptName}-workers_sites_assets`;
+	const previewTitle = `__${scriptName}-workers_sites_assets_preview`;
+	const allNamespaces = await listKVNamespaces(accountId);
+	const namespacesToDelete = allNamespaces.filter(
+		(ns) => ns.title === title || ns.title === previewTitle
+	);
+	for (const ns of namespacesToDelete) {
+		await deleteKVNamespace(accountId, ns.id);
+		logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
+	}
 }

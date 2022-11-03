@@ -1,5 +1,106 @@
 # wrangler
 
+## 2.1.15
+
+### Patch Changes
+
+- [#2103](https://github.com/cloudflare/wrangler2/pull/2103) [`f1fd62a1`](https://github.com/cloudflare/wrangler2/commit/f1fd62a11642de45eb87ebacb044fe8fcf2beea2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Don't upload `functions/` directory as part of `wrangler pages publish`
+
+  If the root directory of a project was the same as the build output directory, we were previously uploading the `functions/` directory as static assets. This PR now ensures that the `functions/` files are only used to create Pages Functions and are no longer uploaded as static assets.
+
+  Additionally, we also now _do_ upload `_worker.js`, `_headers`, `_redirects` and `_routes.json` if they aren't immediate children of the build output directory. Previously, we'd ignore all files with this name regardless of location. For example, if you have a `public/blog/how-to-use-pages/_headers` file (where `public` is your build output directory), we will now upload the `_headers` file as a static asset.
+
+* [#2111](https://github.com/cloudflare/wrangler2/pull/2111) [`ab52f771`](https://github.com/cloudflare/wrangler2/commit/ab52f7717ffd5411886d1e30aee98f821237ddad) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add a `passThroughOnException()` handler in Pages Functions
+
+  This `passThroughOnException()` handler is not as good as the built-in for Workers. We're just adding it now as a stop-gap until we can do the behind-the-scenes plumbing required to make the built-in function work properly.
+
+  We wrap your Pages Functions code in a `try/catch` and on failure, if you call `passThroughOnException()` we defer to the static assets of your project.
+
+  For example:
+
+  ```ts
+  export const onRequest = ({ passThroughOnException }) => {
+  	passThroughOnException();
+
+  	x; // Would ordinarily throw an error, but instead, static assets are served.
+  };
+  ```
+
+- [#2117](https://github.com/cloudflare/wrangler2/pull/2117) [`aa08ff7c`](https://github.com/cloudflare/wrangler2/commit/aa08ff7cc76913f010cf0a98e7e0e97b5641d2c8) Thanks [@nprogers](https://github.com/nprogers)! - Added error logging for pages upload
+
+## 2.1.14
+
+### Patch Changes
+
+- [#2074](https://github.com/cloudflare/wrangler2/pull/2074) [`b08ab1e5`](https://github.com/cloudflare/wrangler2/commit/b08ab1e507a740f6f120b66a5435f4bd0a9cd42c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - The type command aggregates bindings and [custom module rules](https://developers.cloudflare.com/workers/wrangler/configuration/#bundling) from config, then generates a DTS file for both service workers' `declare global { ... }` or module workers' `interface Env { ... }`
+
+  Custom module rules generate `declare module`s based on the module type (`Text`, `Data` or `CompiledWasm`).
+  Module Example Outputs:
+
+  **CompiledWasm**
+
+  ```ts
+  declare module "**/*.wasm" {
+  	const value: WebAssembly.Module;
+  	export default value;
+  }
+  ```
+
+  **Data**
+
+  ```ts
+  declare module "**/*.webp" {
+  	const value: ArrayBuffer;
+  	export default value;
+  }
+  ```
+
+  **Text**
+
+  ```ts
+  declare module "**/*.text" {
+  	const value: string;
+  	export default value;
+  }
+  ```
+
+  resolves #2034
+  resolves #2033
+
+* [#2065](https://github.com/cloudflare/wrangler2/pull/2065) [`14c44588`](https://github.com/cloudflare/wrangler2/commit/14c44588c9d22e9c9f2ad2740df57809d0cbcfbc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix(pages): `wrangler pages dev` matches routing rules in `_routes.json` too loosely
+
+  Currently, the logic by which we transform routing rules in `_routes.json` to
+  regular expressions, so we can perform `pathname` matching & routing when we
+  run `wrangler pages dev`, is too permissive, and leads to serving incorrect
+  assets for certain url paths.
+
+  For example, a routing rule such as `/foo` will incorrectly match pathname
+  `/bar/foo`. Similarly, pathname `/foo` will be incorrectly matched by the
+  `/` routing rule.
+  This commit fixes our routing rule to pathname matching logic and brings
+  `wrangler pages dev` on par with routing in deployed Pages projects.
+
+- [#2098](https://github.com/cloudflare/wrangler2/pull/2098) [`2a81caee`](https://github.com/cloudflare/wrangler2/commit/2a81caeeb785d0aa6ee242297c87ba62dfba48e7) Thanks [@threepointone](https://github.com/threepointone)! - feat: delete site/assets namespace when a worker is deleted
+
+  This patch deletes any site/asset kv namespaces associated with a worker when `wrangler delete` is used. It finds the namespace associated with a worker by using the names it would have otherwise used, and deletes it. It also does the same for the preview namespace that's used with `wrangler dev`.
+
+* [#2091](https://github.com/cloudflare/wrangler2/pull/2091) [`9491d86f`](https://github.com/cloudflare/wrangler2/commit/9491d86fef30759033a4435514560cba72c2c046) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Wrangler deployments command
+  Added support for the deployments command, which allows you to list the last ten deployments for a given script.
+
+  The information will include:
+
+  - Version ID
+  - Version number
+  - Author email
+  - Latest deploy
+  - Created on
+
+  resolves #2089
+
+- [#2068](https://github.com/cloudflare/wrangler2/pull/2068) [`2c1fd9d2`](https://github.com/cloudflare/wrangler2/commit/2c1fd9d2772f9b2109e3c3aa7dec759138823c8d) Thanks [@mrbbot](https://github.com/mrbbot)! - Fixed issue where information and warning messages from Miniflare were being
+  discarded when using `wrangler dev --local`. Logs from Miniflare will now be
+  coloured too, if the terminal supports this.
+
 ## 2.1.13
 
 ### Patch Changes

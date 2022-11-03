@@ -1,3 +1,3 @@
 export async function onRequest() {
-	return new Response(new Date().toISOString());
+	return new Response(`[/functions/date]: ${new Date().toISOString()}`);
 }

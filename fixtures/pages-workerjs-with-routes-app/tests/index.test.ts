@@ -64,19 +64,41 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 	});
 
 	it("runs our _worker.js", async () => {
+		// matches /greeting/* include rule
 		let response = await waitUntilReady("http://127.0.0.1:8751/greeting/hello");
 		let text = await response.text();
-		expect(text).toEqual("Bonjour le monde!");
+		expect(text).toEqual("[/greeting/hello]: Bonjour le monde!");
 
-		response = await waitUntilReady("http://127.0.0.1:8751/greeting/goodbye");
+		// matches /greeting/* include rule
+		response = await waitUntilReady("http://127.0.0.1:8751/greeting/bye");
 		text = await response.text();
-		expect(text).toEqual("A plus tard alligator 👋");
+		expect(text).toEqual("[/greeting/bye]: A plus tard alligator 👋");
 
+		// matches /date include rule
 		response = await waitUntilReady("http://127.0.0.1:8751/date");
 		text = await response.text();
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 
+		// matches both /party* include and /party exclude rules, but exclude
+		// has priority
 		response = await waitUntilReady("http://127.0.0.1:8751/party");
+		text = await response.text();
+		expect(text).toContain(
+			"Bienvenue sur notre projet &#10024; pages-workerjs-with-routes-app!"
+		);
+
+		// matches /party* include rule
+		response = await waitUntilReady("http://127.0.0.1:8751/party-disco");
+		text = await response.text();
+		expect(text).toEqual("[/party-disco]: Tout le monde à la discothèque 🪩");
+
+		// matches /greeting/* include rule
+		response = await waitUntilReady("http://127.0.0.1:8751/greeting");
+		text = await response.text();
+		expect(text).toEqual("[/greeting]: Bonjour à tous!");
+
+		// matches no rule
+		response = await waitUntilReady("http://127.0.0.1:8751/greetings");
 		text = await response.text();
 		expect(text).toContain(
 			"Bienvenue sur notre projet &#10024; pages-workerjs-with-routes-app!"
