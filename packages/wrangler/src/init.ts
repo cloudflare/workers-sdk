@@ -417,7 +417,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			);
 			instructions.push(
 				`\nTo start developing your Worker, run \`${
-					isNamedWorker ? `cd ${args.name} && ` : ""
+					isNamedWorker ? `cd ${args.name || fromDashScriptName} && ` : ""
 				}npm start\``
 			);
 			if (isAddingTestScripts) {

@@ -2379,6 +2379,8 @@ describe("init", () => {
 				"init isolinear-optical-chip --from-dash memory-crystal"
 			);
 
+			expect(std.out).toContain("cd isolinear-optical-chip");
+
 			checkFiles({
 				items: {
 					"isolinear-optical-chip/src/index.js": false,
@@ -2513,6 +2515,7 @@ describe("init", () => {
 			data = 1_337
 			"
 		`);
+			expect(std.out).toContain("cd isolinear-optical-chip");
 
 			checkFiles({
 				items: {
