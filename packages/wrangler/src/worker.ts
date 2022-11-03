@@ -133,6 +133,8 @@ export interface CfD1Database {
 	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
+	migrations_table_name?: string;
+	migrations_folder_path?: string;
 }
 
 interface CfService {

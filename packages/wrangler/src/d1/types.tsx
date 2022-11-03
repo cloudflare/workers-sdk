@@ -14,3 +14,9 @@ export type Backup = {
 	file_size: number;
 	size?: string;
 };
+
+export type Migration = {
+	id: string;
+	name: string;
+	applied_at: string;
+};
