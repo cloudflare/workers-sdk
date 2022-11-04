@@ -944,6 +944,7 @@ async function ensureQueuesExist(config: Config) {
 					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
 				);
 			}
+			throw err;
 		}
 	}
 }
