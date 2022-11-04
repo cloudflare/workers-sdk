@@ -262,7 +262,7 @@ async function runEsbuild({
 				services,
 				firstPartyWorkerDevFacade,
 				targetConsumer: "dev", // We are starting a dev server
-				local: false,
+				local: true,
 				testScheduled,
 				experimentalLocalStubCache,
 		  });
