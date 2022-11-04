@@ -537,14 +537,14 @@ export function createCLIParser(argv: string[]) {
 			);
 
 			const scriptTag = scriptMetadata.default_environment.script.tag;
-			const { deployments } = await fetchResult<DeploymentListRes>(
-				`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
+			const { items: deployments } = await fetchResult<DeploymentListRes>(
+				`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
 			);
 
 			const versionMessages = deployments.map(
 				(versions, index) =>
-					`\nVersion ID: ${versions.version_id}\nVersion number: ${
-						versions.version_number
+					`\nVersion ID: ${versions.id}\nVersion number: ${
+						versions.number
 					}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
 						versions.metadata.author_email
 					}\nLatest deploy: ${index === 0}\n`
