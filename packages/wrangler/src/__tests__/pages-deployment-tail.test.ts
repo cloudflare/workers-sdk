@@ -127,7 +127,7 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --sampling-rate 0.25"
 			);
-			expect(api.requests.creation[0].body).toEqual(`[{"sampling_rate":0.25}]`);
+			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"sampling_rate":0.25}]}`);
 		});
 
 		it("sends single status filters", async () => {
@@ -136,7 +136,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error"
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"outcome":["exception","exceededCpu","exceededMemory","unknown"]}]`
+				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown"]}]}`
 			);
 		});
 
@@ -146,7 +146,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error --status canceled"
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"outcome":["exception","exceededCpu","exceededMemory","unknown","canceled"]}]`
+				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown","canceled"]}]}`
 			);
 		});
 
@@ -155,7 +155,7 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST"
 			);
-			expect(api.requests.creation[0].body).toEqual(`[{"method":["POST"]}]`);
+			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"method":["POST"]}]}`);
 		});
 
 		it("sends multiple HTTP method filters", async () => {
@@ -164,7 +164,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST --method GET"
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"method":["POST","GET"]}]`
+				`{"filters":[{"method":["POST","GET"]}]}`
 			);
 		});
 
@@ -174,7 +174,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER"
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"header":{"key":"X-CUSTOM-HEADER"}}]`
+				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER"}}]}`
 			);
 		});
 
@@ -184,7 +184,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER:some-value"
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"header":{"key":"X-CUSTOM-HEADER","query":"some-value"}}]`
+				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER","query":"some-value"}}]}`
 			);
 		});
 
@@ -196,7 +196,7 @@ describe("pages deployment tail", () => {
 				`pages deployment tail mock-deployment-id --project-name mock-project --ip ${fakeIp}`
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"client_ip":["${fakeIp}"]}]`
+				`{"filters":[{"client_ip":["${fakeIp}"]}]}`
 			);
 		});
 
@@ -208,7 +208,7 @@ describe("pages deployment tail", () => {
 				`pages deployment tail mock-deployment-id --project-name mock-project --ip ${fakeIp} --ip self`
 			);
 			expect(api.requests.creation[0].body).toEqual(
-				`[{"client_ip":["${fakeIp}","self"]}]`
+				`{"filters":[{"client_ip":["${fakeIp}","self"]}]}`
 			);
 		});
 
@@ -219,7 +219,7 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				`pages deployment tail mock-deployment-id --project-name mock-project --search ${search}`
 			);
-			expect(api.requests.creation[0].body).toEqual(`[{"query":"${search}"}]`);
+			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"query":"${search}"}]}`);
 		});
 
 		it("sends everything but the kitchen sink", async () => {
@@ -240,7 +240,7 @@ describe("pages deployment tail", () => {
 				`--search ${query} ` +
 				`--debug`;
 
-			const expectedWebsocketMessage = `[{"sampling_rate":0.69},{"outcome":["ok","exception","exceededCpu","exceededMemory","unknown"]},{"method":["GET","POST","PUT"]},{"header":{"key":"X-HELLO","query":"world"}},{"client_ip":["192.0.2.1","self"]},{"query":"onlyTheseMessagesPlease"}]`;
+			const expectedWebsocketMessage = `{"filters":[{"sampling_rate":0.69},{"outcome":["ok","exception","exceededCpu","exceededMemory","unknown"]},{"method":["GET","POST","PUT"]},{"header":{"key":"X-HELLO","query":"world"}},{"client_ip":["192.0.2.1","self"]},{"query":"onlyTheseMessagesPlease"}]}`;
 
 			await runWrangler(
 				`pages deployment tail mock-deployment-id --project-name mock-project ${cliFilters}`
