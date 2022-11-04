@@ -19,12 +19,14 @@ export interface Env {
 	// MY_BUCKET: R2Bucket;
 }
 
+async function handleFetch(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext
+): Promise<Response> {
+	return new Response("Hello World!");
+};
+
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext
-	): Promise<Response> {
-		return new Response("Hello World!");
-	},
+	fetch: handleFetch,
 };

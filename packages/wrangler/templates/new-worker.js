@@ -8,8 +8,10 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+async function handleFetch(request, env, ctx) {
+	return new Response("Hello World!");
+};
+
 export default {
-	async fetch(request, env, ctx) {
-		return new Response("Hello World!");
-	},
+	fetch: handleFetch,
 };
