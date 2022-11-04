@@ -14,10 +14,12 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
+import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
+import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	Route,
@@ -26,6 +28,7 @@ import type {
 	CustomDomainRoute,
 } from "../config/environment";
 import type { Entry } from "../entry";
+import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -496,6 +499,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			queues: config.queues.producers?.map((producer) => {
+				return { binding: producer.binding, queue_name: producer.queue };
+			}),
 			r2_buckets: config.r2_buckets,
 			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
@@ -556,6 +562,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
+
+		await ensureQueuesExist(config);
 
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
@@ -746,6 +754,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	if (config.queues.consumers && config.queues.consumers.length) {
+		deployments.push(...updateQueueConsumers(config));
+	}
+
 	const targets = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
@@ -910,4 +922,55 @@ async function publishRoutesFallback(
 
 function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+}
+
+async function ensureQueuesExist(config: Config) {
+	const producers = (config.queues.producers || []).map(
+		(producer) => producer.queue
+	);
+	const consumers = (config.queues.consumers || []).map(
+		(consumer) => consumer.queue
+	);
+
+	const queueNames = producers.concat(consumers);
+	for (const queue of queueNames) {
+		try {
+			await getQueue(config, queue);
+		} catch (err) {
+			const queueErr = err as FetchError;
+			if (queueErr.code === 100123) {
+				// queue_not_found
+				throw new Error(
+					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
+				);
+			}
+			throw err;
+		}
+	}
+}
+
+function updateQueueConsumers(config: Config): Promise<string[]>[] {
+	const consumers = config.queues.consumers || [];
+	return consumers.map((consumer) => {
+		const body: PutConsumerBody = {
+			dead_letter_queue: consumer.dead_letter_queue,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms: consumer.max_batch_timeout
+					? 1000 * consumer.max_batch_timeout
+					: undefined,
+			},
+		};
+
+		if (config.name === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new Error("Script name is required to update queue consumers");
+		}
+		const scriptName = config.name;
+		const envName = undefined; // TODO: script environment for wrangler publish?
+		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
+			() => [`Consumer for ${consumer.queue}`]
+		);
+	});
 }

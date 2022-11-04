@@ -30,6 +30,7 @@ import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
+import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
 import type { FormData, File } from "undici";
 
@@ -6571,6 +6572,121 @@ addEventListener('fetch', event => {});`
 		);
 	});
 
+	describe("queues", () => {
+		it("should upload producer bindings", async () => {
+			writeWranglerToml({
+				queues: {
+					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "queue",
+						name: "QUEUE_ONE",
+						queue_name: "queue1",
+					},
+				],
+			});
+			mockGetQueue("queue1");
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+      "Total Upload: xx KiB / gzip: xx KiB
+      Your worker has access to the following bindings:
+      - Queues:
+        - QUEUE_ONE: queue1
+      Uploaded test-name (TIMINGS)
+      Published test-name (TIMINGS)
+        https://test-name.test-sub-domain.workers.dev"
+      `);
+		});
+
+		it("should update queue consumers on publish", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: "queue1",
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueue("queue1");
+			mockPutQueueConsumer("queue1", "test-name", {
+				dead_letter_queue: "myDLQ",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 3000,
+				},
+			});
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			        "Total Upload: xx KiB / gzip: xx KiB
+			        Uploaded test-name (TIMINGS)
+			        Published test-name (TIMINGS)
+			          https://test-name.test-sub-domain.workers.dev
+			          Consumer for queue1"
+		      `);
+		});
+
+		it("consumer should error when a queue doesn't exist", async () => {
+			writeWranglerToml({
+				queues: {
+					producers: [],
+					consumers: [
+						{
+							queue: "queue1",
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueueMissing("queue1");
+
+			await expect(
+				runWrangler("publish index.js")
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
+			);
+		});
+
+		it("producer should error when a queue doesn't exist", async () => {
+			writeWranglerToml({
+				queues: {
+					producers: [{ queue: "queue1", binding: "QUEUE_ONE" }],
+					consumers: [],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueueMissing("queue1");
+
+			await expect(
+				runWrangler("publish index.js")
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
+			);
+		});
+	});
+
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			process.env = {
@@ -7116,4 +7232,49 @@ function mockServiceScriptData(options: {
 			}
 		);
 	}
+}
+
+function mockGetQueue(expectedQueueName: string) {
+	const requests = { count: 0 };
+	setMockResponse(
+		`/accounts/:accountId/workers/queues/${expectedQueueName}`,
+		"GET",
+		([_url, accountId]) => {
+			expect(accountId).toEqual("some-account-id");
+			requests.count += 1;
+			return { queue: expectedQueueName };
+		}
+	);
+	return requests;
+}
+
+function mockGetQueueMissing(expectedQueueName: string) {
+	const requests = { count: 0 };
+	setMockResponse(
+		`/accounts/:accountId/workers/queues/${expectedQueueName}`,
+		"GET",
+		([_url, _accountId]) => {
+			throw { code: 100123 };
+		}
+	);
+	return requests;
+}
+
+function mockPutQueueConsumer(
+	expectedQueueName: string,
+	expectedConsumerName: string,
+	expectedBody: PutConsumerBody
+) {
+	const requests = { count: 0 };
+	setMockResponse(
+		`/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedConsumerName}`,
+		"PUT",
+		([_url, accountId], { body }) => {
+			expect(accountId).toEqual("some-account-id");
+			expect(JSON.parse(body as string)).toEqual(expectedBody);
+			requests.count += 1;
+			return { queue: expectedQueueName };
+		}
+	);
+	return requests;
 }

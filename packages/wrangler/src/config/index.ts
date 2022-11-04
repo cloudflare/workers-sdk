@@ -86,6 +86,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		queues,
 		d1_databases,
 		r2_buckets,
 		logfwdr,
@@ -136,6 +137,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: id,
+				};
+			}),
+		});
+	}
+
+	if (queues !== undefined && queues.length > 0) {
+		output.push({
+			type: "Queues",
+			entries: queues.map(({ binding, queue_name }) => {
+				return {
+					key: binding,
+					value: queue_name,
 				};
 			}),
 		});

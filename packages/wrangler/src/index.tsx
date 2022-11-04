@@ -33,6 +33,7 @@ import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
+import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
@@ -361,6 +362,11 @@ export function createCLIParser(argv: string[]) {
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
 		return pages(pagesYargs.command(subHelp));
+	});
+
+	// queues
+	wrangler.command("queues", "🆀 Configure Workers Queues", (queuesYargs) => {
+		return queues(queuesYargs.command(subHelp));
 	});
 
 	// r2
