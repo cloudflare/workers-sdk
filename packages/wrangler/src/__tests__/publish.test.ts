@@ -6270,14 +6270,16 @@ addEventListener('fetch', event => {});`
       export default {}
       `
 			);
-			let err: Error | undefined;
+			let err: esbuild.BuildFailure | undefined;
 			try {
 				await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
 			} catch (e) {
-				err = e as Error;
+				err = e as esbuild.BuildFailure;
 			}
-			expect(err?.message).toMatch(
-				`Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
+			expect(
+				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
+			).toMatch(
+				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node compatibility\./
 			);
 		});
 

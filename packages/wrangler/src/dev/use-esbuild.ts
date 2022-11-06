@@ -2,8 +2,8 @@ import assert from "node:assert";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
-import { bundleWorker } from "../bundle";
-import { logger } from "../logger";
+import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
+import { logBuildFailure, logger } from "../logger";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
@@ -83,8 +83,11 @@ export function useEsbuild({
 
 		const watchMode: WatchMode = {
 			async onRebuild(error) {
-				if (error) logger.error("Watch build failed:", error);
-				else {
+				if (error !== null) {
+					if (!nodeCompat) rewriteNodeCompatBuildFailure(error);
+					logBuildFailure(error);
+					logger.error("Watch build failed:", error.message);
+				} else {
 					updateBundle();
 				}
 			},
