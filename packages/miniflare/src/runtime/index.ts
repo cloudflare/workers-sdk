@@ -3,6 +3,7 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
@@ -11,6 +12,7 @@ import { Awaitable, MiniflareCoreError } from "../shared";
 
 export abstract class Runtime {
 	constructor(
+		protected readonly entryHost: string,
 		protected readonly entryPort: number,
 		protected readonly loopbackPort: number
 	) {}
@@ -21,12 +23,11 @@ export abstract class Runtime {
 }
 
 export interface RuntimeConstructor {
-	new (entryPort: number, loopbackPort: number): Runtime;
+	new (entryHost: string, entryPort: number, loopbackPort: number): Runtime;
 
 	isSupported(): boolean;
 	supportSuggestion: string;
 	description: string;
-	distribution: string;
 }
 
 const COMMON_RUNTIME_ARGS = [
@@ -64,7 +65,7 @@ function pipeOutput(runtime: childProcess.ChildProcessWithoutNullStreams) {
 		console.log(trimTrailingNewline(data));
 	});
 	runtime.stderr.on("data", (data) => {
-		console.error(trimTrailingNewline(data));
+		console.error(red(trimTrailingNewline(data)));
 	});
 	// runtime.stdout.pipe(process.stdout);
 	// runtime.stderr.pipe(process.stderr);
@@ -76,7 +77,6 @@ class NativeRuntime extends Runtime {
 	}
 	static supportSuggestion = "Run using a Linux or macOS based system";
 	static description = "natively ⚡️";
-	static distribution = `${process.platform}-${process.arch}`;
 
 	readonly #command: string;
 	readonly #args: string[];
@@ -84,8 +84,8 @@ class NativeRuntime extends Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
-	constructor(entryPort: number, loopbackPort: number) {
-		super(entryPort, loopbackPort);
+	constructor(entryHost: string, entryPort: number, loopbackPort: number) {
+		super(entryHost, entryPort, loopbackPort);
 		const [command, ...args] = this.getCommand();
 		this.#command = command;
 		this.#args = args;
@@ -95,7 +95,7 @@ class NativeRuntime extends Runtime {
 		return [
 			workerdPath,
 			...COMMON_RUNTIME_ARGS,
-			`--socket-addr=${SOCKET_ENTRY}=127.0.0.1:${this.entryPort}`,
+			`--socket-addr=${SOCKET_ENTRY}=${this.entryHost}:${this.entryPort}`,
 			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.loopbackPort}`,
 			// TODO: consider adding support for unix sockets?
 			// `--socket-fd=${SOCKET_ENTRY}=${this.entryPort}`,
@@ -141,7 +141,6 @@ class WSLRuntime extends NativeRuntime {
 		"Install the Windows Subsystem for Linux (https://aka.ms/wsl), " +
 		"then run as you are at the moment";
 	static description = "using WSL ✨";
-	static distribution = `linux-${process.arch}`;
 
 	getCommand(): string[] {
 		const command = super.getCommand();
@@ -160,7 +159,6 @@ class DockerRuntime extends Runtime {
 		"Install Docker Desktop (https://www.docker.com/products/docker-desktop/), " +
 		"then run as you are at the moment";
 	static description = "using Docker 🐳";
-	static distribution = `linux-${process.arch}`;
 
 	#configPath = path.join(
 		os.tmpdir(),
@@ -193,7 +191,7 @@ class DockerRuntime extends Runtime {
 				`--volume=${RESTART_PATH}:/restart.sh`,
 				`--volume=${workerdPath}:/runtime`,
 				`--volume=${this.#configPath}:/miniflare-config.bin`,
-				`--publish=127.0.0.1:${this.entryPort}:8787`,
+				`--publish=${this.entryHost}:${this.entryPort}:8787`,
 				"debian:bullseye-slim",
 				"/restart.sh",
 				"/runtime",
