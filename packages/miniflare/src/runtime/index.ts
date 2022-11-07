@@ -10,38 +10,48 @@ import workerdPath, {
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { Awaitable, MiniflareCoreError } from "../shared";
 
+export interface RuntimeOptions {
+	entryHost: string;
+	entryPort: number;
+	loopbackPort: number;
+	inspectorPort?: number;
+	verbose?: boolean;
+}
+
 export abstract class Runtime {
-	constructor(
-		protected readonly entryHost: string,
-		protected readonly entryPort: number,
-		protected readonly loopbackPort: number
-	) {}
+	constructor(protected readonly opts: RuntimeOptions) {}
 
 	abstract updateConfig(configBuffer: Buffer): Awaitable<void>;
 	abstract get exitPromise(): Promise<void> | undefined;
 	abstract dispose(): Awaitable<void>;
+
+	protected getCommonArgs(): string[] {
+		const args: string[] = [
+			"serve",
+			// Required to use binary capnp config
+			"--binary",
+			// Required to use compatibility flags without a default-on date,
+			// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
+			"--experimental",
+		];
+		if (this.opts.inspectorPort !== undefined) {
+			// Required to enable the V8 inspector
+			args.push(`--inspector-addr=127.0.0.1:${this.opts.inspectorPort}`);
+		}
+		if (this.opts.verbose) {
+			args.push("--verbose");
+		}
+		return args;
+	}
 }
 
 export interface RuntimeConstructor {
-	new (entryHost: string, entryPort: number, loopbackPort: number): Runtime;
+	new (opts: RuntimeOptions): Runtime;
 
 	isSupported(): boolean;
 	supportSuggestion: string;
 	description: string;
 }
-
-const COMMON_RUNTIME_ARGS = [
-	"serve",
-	// Required to use binary capnp config
-	"--binary",
-	// Required to display `console.log()` output
-	"--verbose",
-	// Required to use compatibility flags without a default-on date,
-	// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
-	"--experimental",
-];
-// `__dirname` relative to bundled output `dist/src/index.js`
-const RESTART_PATH = path.resolve(__dirname, "..", "..", "lib", "restart.sh");
 
 function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	return new Promise((resolve) => {
@@ -84,8 +94,8 @@ class NativeRuntime extends Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
-	constructor(entryHost: string, entryPort: number, loopbackPort: number) {
-		super(entryHost, entryPort, loopbackPort);
+	constructor(opts: RuntimeOptions) {
+		super(opts);
 		const [command, ...args] = this.getCommand();
 		this.#command = command;
 		this.#args = args;
@@ -94,9 +104,9 @@ class NativeRuntime extends Runtime {
 	getCommand(): string[] {
 		return [
 			workerdPath,
-			...COMMON_RUNTIME_ARGS,
-			`--socket-addr=${SOCKET_ENTRY}=${this.entryHost}:${this.entryPort}`,
-			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.loopbackPort}`,
+			...this.getCommonArgs(),
+			`--socket-addr=${SOCKET_ENTRY}=${this.opts.entryHost}:${this.opts.entryPort}`,
+			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.opts.loopbackPort}`,
 			// TODO: consider adding support for unix sockets?
 			// `--socket-fd=${SOCKET_ENTRY}=${this.entryPort}`,
 			// `--external-addr=${SERVICE_LOOPBACK}=${this.loopbackPort}`,
@@ -150,6 +160,9 @@ class WSLRuntime extends NativeRuntime {
 	}
 }
 
+// `__dirname` relative to bundled output `dist/src/index.js`
+const RESTART_PATH = path.resolve(__dirname, "..", "..", "lib", "restart.sh");
+
 class DockerRuntime extends Runtime {
 	static isSupported() {
 		const result = childProcess.spawnSync("docker", ["--version"]); // TODO: check daemon running too?
@@ -191,13 +204,13 @@ class DockerRuntime extends Runtime {
 				`--volume=${RESTART_PATH}:/restart.sh`,
 				`--volume=${workerdPath}:/runtime`,
 				`--volume=${this.#configPath}:/miniflare-config.bin`,
-				`--publish=${this.entryHost}:${this.entryPort}:8787`,
+				`--publish=${this.opts.entryHost}:${this.opts.entryPort}:8787`,
 				"debian:bullseye-slim",
 				"/restart.sh",
 				"/runtime",
-				...COMMON_RUNTIME_ARGS,
+				...this.getCommonArgs(),
 				`--socket-addr=${SOCKET_ENTRY}=*:8787`,
-				`--external-addr=${SERVICE_LOOPBACK}=host.docker.internal:${this.loopbackPort}`,
+				`--external-addr=${SERVICE_LOOPBACK}=host.docker.internal:${this.opts.loopbackPort}`,
 				"/miniflare-config.bin",
 			],
 			{
