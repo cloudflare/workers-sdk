@@ -31,7 +31,7 @@ export async function printBundleSize(
 
 	logger.log(`Total Upload: ${bundleReport}`);
 
-	if (gzipSize > ONE_MIB_BYTES) {
+	if (gzipSize > ONE_MIB_BYTES && !process.env.NO_SCRIPT_SIZE_WARNING) {
 		logger.warn(
 			"We recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time"
 		);

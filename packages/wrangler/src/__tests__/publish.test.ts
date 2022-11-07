@@ -6561,6 +6561,28 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
+			test("should not warn about bundle sizes when NO_SCRIPT_SIZE_WARNING is set", async () => {
+				const previousValue = process.env.NO_SCRIPT_SIZE_WARNING;
+				process.env.NO_SCRIPT_SIZE_WARNING = "true";
+
+				const bigModule = Buffer.alloc(10_000_000);
+				randomFillSync(bigModule);
+				await printBundleSize({ name: "index.js", content: "" }, [
+					{ name: "index.js", content: bigModule, type: "buffer" },
+				]);
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB",
+			  "warn": "",
+			}
+		`);
+
+				process.env.NO_SCRIPT_SIZE_WARNING = previousValue;
+			});
+
 			test("should print the top biggest dependencies in the bundle when upload fails", () => {
 				const deps = {
 					"node_modules/a-mod/module.js": { bytesInOutput: 450 },
