@@ -208,7 +208,8 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 		const isInteractive = process.stdout.isTTY;
 		if (isInteractive) {
 			const ok = await confirm(
-				`About to apply ${unappliedMigrations.length} migration(s), continue?`,
+				`About to apply ${unappliedMigrations.length} migration(s)\n` +
+				'Your database may not be available to serve requests during the migration, continue?',
 				<Box flexDirection="column">
 					<Text>Migrations to be applied:</Text>
 					<Table data={unappliedMigrations} columns={["Name"]}></Table>
@@ -420,7 +421,7 @@ export const CreateHandler = withConfig<MigrationsCreateArgs>(
 			true
 		);
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
-		const migrationName = message.replace(" ", "_");
+		const migrationName = message.replaceAll(" ", "_");
 
 		const newMigrationName = `${nextMigrationNumber}_${migrationName}.sql`;
 
