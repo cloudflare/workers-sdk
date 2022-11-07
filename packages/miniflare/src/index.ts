@@ -39,9 +39,9 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
-	DeferredPromise,
 	HttpError,
 	MiniflareCoreError,
+	Mutex,
 	OptionalZodTypeOf,
 	UnionToIntersection,
 	ValueOf,
@@ -153,11 +153,30 @@ export class Miniflare {
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
 
-	readonly #disposeController: AbortController;
-	readonly #initPromise: Promise<void>;
-	#loopbackServer?: StoppableServer;
+	// Mutual exclusion lock for runtime operations (i.e. initialisation and
+	// updating config). This essentially puts initialisation and future updates
+	// in a queue, ensuring they're performed in calling order.
+	readonly #runtimeMutex: Mutex;
 
-	#updatePromise?: Promise<void>;
+	// Additionally, store `Promise`s for the call to `#init()` and the last call
+	// to `setOptions()`. We need the `#init()` `Promise`, so we can propagate
+	// initialisation errors in `ready`. We would have no way of catching these
+	// otherwise.
+	//
+	// We store the last `setOptions()` `Promise` as well, so we can avoid
+	// disposing or resolving `ready` until all pending `setOptions()` have
+	// completed. Note we only need to store the latest one, as the mutex queue
+	// will ensure all previous calls complete before starting the latest.
+	//
+	// We could just wait on the mutex when disposing/resolving `ready`, but we
+	// use the presence of waiters on the mutex to avoid logging ready/updated
+	// messages to the console if there are future updates.
+	readonly #initPromise: Promise<void>;
+	#lastUpdatePromise?: Promise<void>;
+
+	// Aborted when dispose() is called
+	readonly #disposeController: AbortController;
+	#loopbackServer?: StoppableServer;
 
 	constructor(opts: MiniflareOptions) {
 		// Initialise plugin gateway factories and routers
@@ -181,7 +200,8 @@ export class Miniflare {
 		);
 
 		this.#disposeController = new AbortController();
-		this.#initPromise = this.#init();
+		this.#runtimeMutex = new Mutex();
+		this.#initPromise = this.#runtimeMutex.runWith(() => this.#init());
 	}
 
 	#initPlugins() {
@@ -197,18 +217,9 @@ export class Miniflare {
 		}
 	}
 
-	async dispatchFetch(
-		input: RequestInfo,
-		init?: RequestInit
-	): Promise<Response> {
-		await this.ready;
-		const forward = new Request(input, init);
-		const url = new URL(forward.url);
-		url.host = this.#runtimeEntryURL!.host;
-		return fetch(url, forward as RequestInit);
-	}
-
 	async #init() {
+		// This function must be run with `#runtimeMutex` held
+
 		// Start loopback server (how the runtime accesses with Miniflare's storage)
 		this.#loopbackServer = await this.#startLoopbackServer(0, "127.0.0.1");
 		const address = this.#loopbackServer.address();
@@ -230,7 +241,8 @@ export class Miniflare {
 		await this.#runtime.updateConfig(configBuffer);
 
 		// Wait for runtime to start
-		if (await this.#waitForRuntime()) {
+		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
+			// Only log if there aren't pending updates
 			console.log(bold(green(`Ready on ${this.#runtimeEntryURL} 🎉`)));
 		}
 	}
@@ -380,7 +392,6 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(): Promise<Config> {
-		// Copy options in case `setOptions` called whilst assembling config
 		const optionsVersion = this.#optionsVersion;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
@@ -446,10 +457,15 @@ export class Miniflare {
 	}
 
 	get ready(): Promise<URL> {
-		// Cannot use async/await with getters.
-		// Safety: `#runtimeEntryURL` is assigned in `#init()`. `#initPromise`
-		// doesn't resolve until `#init()` returns.
-		return this.#initPromise.then(() => this.#runtimeEntryURL!);
+		// If `#init()` threw, we'd like to propagate the error here, so `await` it.
+		// Note we can't use `async`/`await` with getters. We'd also like to wait
+		// for `setOptions` calls to complete before resolving.
+		//
+		// Safety of `!`: `#runtimeEntryURL` is assigned in `#init()`.
+		// `#initPromise` doesn't resolve until `#init()` returns.
+		return this.#initPromise
+			.then(() => this.#lastUpdatePromise)
+			.then(() => this.#runtimeEntryURL!);
 	}
 
 	#checkDisposed() {
@@ -461,49 +477,61 @@ export class Miniflare {
 		}
 	}
 
-	async setOptions(opts: MiniflareOptions) {
-		this.#checkDisposed();
-
-		const updatePromise = new DeferredPromise<void>();
-		this.#updatePromise = updatePromise;
-
-		// Wait for initial initialisation before changing options
-		await this.#initPromise;
+	async #setOptions(opts: MiniflareOptions) {
+		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
 		// TODO: merge with previous config
 		const [sharedOpts, workerOpts] = validateOptions(opts);
-		// Increment version, so we know when runtime has processed updates
-		this.#optionsVersion++;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 
-		// Assemble and serialize config
-		const currentOptionsVersion = this.#optionsVersion;
+		// Increment version, so we know when the runtime has processed updates
+		this.#optionsVersion++;
+		// Assemble and serialize config using new version
 		const config = await this.#assembleConfig();
-		// If `setOptions` called again, discard our now outdated config
-		if (currentOptionsVersion !== this.#optionsVersion) return;
 		const configBuffer = serializeConfig(config);
 
 		// Send to runtime and wait for updates to process
 		assert(this.#runtime !== undefined);
 		await this.#runtime.updateConfig(configBuffer);
 
-		if (await this.#waitForRuntime()) {
+		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
+			// Only log if this was the last pending update
 			console.log(
 				bold(green(`Updated and ready on ${this.#runtimeEntryURL} 🎉`))
 			);
 		}
-		updatePromise.resolve();
+	}
+
+	setOptions(opts: MiniflareOptions): Promise<void> {
+		this.#checkDisposed();
+		// Wait for initial initialisation and other setOptions to complete before
+		// changing options
+		const promise = this.#runtimeMutex.runWith(() => this.#setOptions(opts));
+		this.#lastUpdatePromise = promise;
+		return promise;
+	}
+
+	async dispatchFetch(
+		input: RequestInfo,
+		init?: RequestInit
+	): Promise<Response> {
+		this.#checkDisposed();
+		await this.ready;
+		const forward = new Request(input, init);
+		const url = new URL(forward.url);
+		url.host = this.#runtimeEntryURL!.host;
+		return fetch(url, forward as RequestInit);
 	}
 
 	async dispose() {
 		this.#disposeController.abort();
 		try {
 			await this.#initPromise;
-			await this.#updatePromise;
+			await this.#lastUpdatePromise;
 		} finally {
-			// Cleanup as much as possible even if #init() threw
+			// Cleanup as much as possible even if `#init()` threw
 			this.#removeRuntimeExitHook?.();
 			this.#runtime?.dispose();
 			await this.#stopLoopbackServer();
