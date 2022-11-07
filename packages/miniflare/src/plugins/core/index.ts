@@ -49,12 +49,17 @@ export const CoreOptionsSchema = z.object({
 	wasmBindings: z.record(z.string()).optional(),
 	textBlobBindings: z.record(z.string()).optional(),
 	dataBlobBindings: z.record(z.string()).optional(),
+	// TODO: add support for workerd network/external/disk services here
 	serviceBindings: z.record(z.union([z.string(), ServiceFetch])).optional(),
 });
 
 export const CoreSharedOptionsSchema = z.object({
 	host: z.string().optional(),
 	port: z.number().optional(),
+
+	inspectorPort: z.number().optional(),
+	verbose: z.boolean().optional(),
+
 	// TODO: add back validation of cf object
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 });
