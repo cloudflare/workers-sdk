@@ -364,7 +364,7 @@ describe("metrics", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Usage metrics tracking has changed since you last granted permission.
-			Your choice has been saved in the following file: home/.wrangler/config/metrics.json.
+			Your choice has been saved in the following file: test-xdg-config/config/metrics.json.
 
 			  You can override the user level setting for a project in \`wrangler.toml\`:
 

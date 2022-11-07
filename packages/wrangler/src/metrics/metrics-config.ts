@@ -6,6 +6,7 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
 import { getEnvironmentVariableFactory } from "../environment-variables";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path"
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
@@ -167,7 +168,7 @@ export function readMetricsConfig(): MetricsConfigFile {
  * Get the path to the metrics config file.
  */
 function getMetricsConfigPath(): string {
-	return path.resolve(os.homedir(), ".wrangler/config/metrics.json");
+	return path.join(getGlobalWranglerConfigPath(), "config/metrics.json");
 }
 
 /**
