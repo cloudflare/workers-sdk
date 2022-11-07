@@ -209,7 +209,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 		if (isInteractive) {
 			const ok = await confirm(
 				`About to apply ${unappliedMigrations.length} migration(s)\n` +
-				'Your database may not be available to serve requests during the migration, continue?',
+					"Your database may not be available to serve requests during the migration, continue?",
 				<Box flexDirection="column">
 					<Text>Migrations to be applied:</Text>
 					<Table data={unappliedMigrations} columns={["Name"]}></Table>
