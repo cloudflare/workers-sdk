@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseTOML, readFileSync } from "../parse";
@@ -303,4 +305,30 @@ export function withConfig<T extends { config?: string }>(
 		const { config: configPath, ...rest } = t;
 		return handler({ ...rest, config: readConfig(configPath, rest) });
 	};
+}
+
+export interface DotEnv {
+	path: string;
+	parsed: dotenv.DotenvParseOutput;
+}
+
+function tryLoadDotEnv(path: string): DotEnv | undefined {
+	try {
+		const parsed = dotenv.parse(fs.readFileSync(path));
+		return { path, parsed };
+	} catch (e) {
+		logger.debug(`Failed to load .env file "${path}":`, e);
+	}
+}
+
+/**
+ * Loads a dotenv file from <path>, preferring to read <path>.<environment> if
+ * <environment> is defined and that file exists.
+ */
+export function loadDotEnv(path: string, env?: string): DotEnv | undefined {
+	if (env === undefined) {
+		return tryLoadDotEnv(path);
+	} else {
+		return tryLoadDotEnv(`${path}.${env}`) ?? tryLoadDotEnv(path);
+	}
 }

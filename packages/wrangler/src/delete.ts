@@ -11,17 +11,14 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from "./index";
 import type { ConfigPath } from "./index";
-import type { YargsOptionsToInterface } from "./yargs-types";
-import type { Argv, ArgumentsCamelCase } from "yargs";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "./yargs-types";
+import type { Argv } from "yargs";
 
-export function deleteOptions(yargs: Argv) {
+export function deleteOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
-		.option("env", {
-			type: "string",
-			requiresArg: true,
-			describe: "Perform on a specific environment",
-			alias: "e",
-		})
 		.positional("script", {
 			describe: "The path to an entry point for your worker",
 			type: "string",
@@ -45,7 +42,7 @@ export function deleteOptions(yargs: Argv) {
 
 type DeleteArgs = YargsOptionsToInterface<typeof deleteOptions>;
 
-export async function deleteHandler(args: ArgumentsCamelCase<DeleteArgs>) {
+export async function deleteHandler(args: DeleteArgs) {
 	await printWranglerBanner();
 
 	const configPath =

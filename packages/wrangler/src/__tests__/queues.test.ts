@@ -20,21 +20,22 @@ describe("wrangler", () => {
 			await runWrangler("queues --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues
+			"wrangler queues
 
-				🆀 Configure Workers Queues
+			🆀 Configure Workers Queues
 
-				Commands:
-				  wrangler queues list           List Queues
-				  wrangler queues create <name>  Create a Queue
-				  wrangler queues delete <name>  Delete a Queue
-				  wrangler queues consumer       Configure Queue Consumers
+			Commands:
+			  wrangler queues list           List Queues
+			  wrangler queues create <name>  Create a Queue
+			  wrangler queues delete <name>  Delete a Queue
+			  wrangler queues consumer       Configure Queue Consumers
 
-				Flags:
-				  -c, --config   Path to .toml configuration file  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
-			`);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		describe("list", () => {
@@ -57,18 +58,19 @@ describe("wrangler", () => {
 				await runWrangler("queues list --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler queues list
+			"wrangler queues list
 
-					List Queues
+			List Queues
 
-					Flags:
-					  -c, --config   Path to .toml configuration file  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
-					Options:
-					      --page  Page number for pagination  [number]"
-				`);
+			Options:
+			      --page  Page number for pagination  [number]"
+		`);
 			});
 
 			it("should list queues on page 1 with no --page", async () => {
@@ -131,18 +133,19 @@ describe("wrangler", () => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler queues create <name>
+			"wrangler queues create <name>
 
-					Create a Queue
+			Create a Queue
 
-					Positionals:
-					  name  The name of the queue  [string] [required]
+			Positionals:
+			  name  The name of the queue  [string] [required]
 
-					Flags:
-					  -c, --config   Path to .toml configuration file  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
-				`);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 			});
 
 			it("should create a queue", async () => {
@@ -174,18 +177,19 @@ describe("wrangler", () => {
 				await runWrangler("queues delete --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler queues delete <name>
+			"wrangler queues delete <name>
 
-					Delete a Queue
+			Delete a Queue
 
-					Positionals:
-					  name  The name of the queue  [string] [required]
+			Positionals:
+			  name  The name of the queue  [string] [required]
 
-					Flags:
-					  -c, --config   Path to .toml configuration file  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
-				`);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 			});
 
 			it("should delete a queue", async () => {
@@ -205,19 +209,20 @@ describe("wrangler", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"wrangler queues consumer
+			"wrangler queues consumer
 
-					Configure Queue Consumers
+			Configure Queue Consumers
 
-					Commands:
-					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Consumer
-					  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
+			Commands:
+			  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Consumer
+			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
 
-					Flags:
-					  -c, --config   Path to .toml configuration file  [string]
-					  -h, --help     Show help  [boolean]
-					  -v, --version  Show version number  [boolean]"
-				`);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 			});
 
 			describe("add", () => {
@@ -242,26 +247,26 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"wrangler queues consumer add <queue-name> <script-name>
+				"wrangler queues consumer add <queue-name> <script-name>
 
-						Add a Queue Consumer
+				Add a Queue Consumer
 
-						Positionals:
-						  queue-name   Name of the queue to configure  [string] [required]
-						  script-name  Name of the consumer script  [string] [required]
+				Positionals:
+				  queue-name   Name of the queue to configure  [string] [required]
+				  script-name  Name of the consumer script  [string] [required]
 
-						Flags:
-						  -c, --config   Path to .toml configuration file  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
+				Flags:
+				  -c, --config   Path to .toml configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
 
-						Options:
-						      --environment        Environment of the consumer script  [string]
-						      --batch-size         Maximum number of messages per batch  [number]
-						      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
-						      --message-retries    Maximum number of retries for each message  [number]
-						      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]"
-					`);
+				Options:
+				      --batch-size         Maximum number of messages per batch  [number]
+				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
+				      --message-retries    Maximum number of retries for each message  [number]
+				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]"
+			`);
 				});
 
 				it("should add a consumer using defaults", async () => {
@@ -297,7 +302,7 @@ describe("wrangler", () => {
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --environment myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --dead-letter-queue myDLQ"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --dead-letter-queue myDLQ"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
@@ -325,25 +330,23 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-						"wrangler queues consumer remove <queue-name> <script-name>
+				"wrangler queues consumer remove <queue-name> <script-name>
 
-						Remove a Queue Consumer
+				Remove a Queue Consumer
 
-						Positionals:
-						  queue-name   Name of the queue to configure  [string] [required]
-						  script-name  Name of the consumer script  [string] [required]
+				Positionals:
+				  queue-name   Name of the queue to configure  [string] [required]
+				  script-name  Name of the consumer script  [string] [required]
 
-						Flags:
-						  -c, --config   Path to .toml configuration file  [string]
-						  -h, --help     Show help  [boolean]
-						  -v, --version  Show version number  [boolean]
-
-						Options:
-						      --environment  Environment of the consumer script  [string]"
-					`);
+				Flags:
+				  -c, --config   Path to .toml configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
 				});
 
-				it("should delete a consumer with no --environment", async () => {
+				it("should delete a consumer with no --env", async () => {
 					mockDeleteRequest("testQueue", "testScript");
 					await runWrangler("queues consumer remove testQueue testScript");
 					expect(std.out).toMatchInlineSnapshot(`
@@ -352,10 +355,10 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should delete a consumer with --environment", async () => {
+				it("should delete a consumer with --env", async () => {
 					mockDeleteRequest("testQueue", "testScript", "myEnv");
 					await runWrangler(
-						"queues consumer remove testQueue testScript --environment myEnv"
+						"queues consumer remove testQueue testScript --env myEnv"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing consumer from queue testQueue.

@@ -2,15 +2,15 @@ import { type Argv } from "yargs";
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
 import { deleteConsumer } from "../../../client";
+import type { CommonYargsOptions } from "../../../../yargs-types";
 
-interface Args {
+type Args = CommonYargsOptions & {
 	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
-	["environment"]?: string;
-}
+};
 
-export function options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -21,12 +21,6 @@ export function options(yargs: Argv): Argv<Args> {
 			type: "string",
 			demandOption: true,
 			description: "Name of the consumer script",
-		})
-		.options({
-			environment: {
-				type: "string",
-				describe: "Environment of the consumer script",
-			},
 		});
 }
 
@@ -38,7 +32,7 @@ export async function handler(args: Args) {
 		config,
 		args["queue-name"],
 		args["script-name"],
-		args["environment"]
+		args.env
 	);
 	logger.log(`Removed consumer from queue ${args["queue-name"]}.`);
 }

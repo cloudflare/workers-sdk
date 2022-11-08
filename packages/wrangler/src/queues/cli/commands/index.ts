@@ -1,11 +1,12 @@
 import { type BuilderCallback } from "yargs";
+import { type CommonYargsOptions } from "../../../yargs-types";
 import { consumers } from "./consumer";
 
 import { options as createOptions, handler as createHandler } from "./create";
 import { options as deleteOptions, handler as deleteHandler } from "./delete";
 import { options as listOptions, handler as listHandler } from "./list";
 
-export const queues: BuilderCallback<unknown, unknown> = (yargs) => {
+export const queues: BuilderCallback<CommonYargsOptions, unknown> = (yargs) => {
 	yargs.command("list", "List Queues", listOptions, listHandler);
 
 	yargs.command(
