@@ -2,20 +2,20 @@ import { type Argv } from "yargs";
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
 import { postConsumer } from "../../../client";
+import type { CommonYargsOptions } from "../../../../yargs-types";
 import type { PostConsumerBody } from "../../../client";
 
-interface Args {
+type Args = CommonYargsOptions & {
 	config?: string;
 	["queue-name"]: string;
 	["script-name"]: string;
-	["environment"]?: string;
 	["batch-size"]?: number;
 	["batch-timeout"]?: number;
 	["message-retries"]?: number;
 	["dead-letter-queue"]?: string;
-}
+};
 
-export function options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -28,10 +28,6 @@ export function options(yargs: Argv): Argv<Args> {
 			description: "Name of the consumer script",
 		})
 		.options({
-			environment: {
-				type: "string",
-				describe: "Environment of the consumer script",
-			},
 			"batch-size": {
 				type: "number",
 				describe: "Maximum number of messages per batch",
@@ -58,7 +54,7 @@ export async function handler(args: Args) {
 	const body: PostConsumerBody = {
 		script_name: args["script-name"],
 		// TODO(soon) is this still the correct usage of the environment?
-		environment_name: args.environment || "", // API expects empty string as default
+		environment_name: args.env || "", // API expects empty string as default
 		settings: {
 			batch_size: args["batch-size"],
 			max_retries: args["message-retries"],

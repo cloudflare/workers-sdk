@@ -262,7 +262,6 @@ describe("wrangler", () => {
 				  -v, --version  Show version number  [boolean]
 
 				Options:
-				      --environment        Environment of the consumer script  [string]
 				      --batch-size         Maximum number of messages per batch  [number]
 				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
 				      --message-retries    Maximum number of retries for each message  [number]
@@ -303,7 +302,7 @@ describe("wrangler", () => {
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --environment myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --dead-letter-queue myDLQ"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --dead-letter-queue myDLQ"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
@@ -343,14 +342,11 @@ describe("wrangler", () => {
 				  -c, --config   Path to .toml configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
-
-				Options:
-				      --environment  Environment of the consumer script  [string]"
+				  -v, --version  Show version number  [boolean]"
 			`);
 				});
 
-				it("should delete a consumer with no --environment", async () => {
+				it("should delete a consumer with no --env", async () => {
 					mockDeleteRequest("testQueue", "testScript");
 					await runWrangler("queues consumer remove testQueue testScript");
 					expect(std.out).toMatchInlineSnapshot(`
@@ -359,10 +355,10 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should delete a consumer with --environment", async () => {
+				it("should delete a consumer with --env", async () => {
 					mockDeleteRequest("testQueue", "testScript", "myEnv");
 					await runWrangler(
-						"queues consumer remove testQueue testScript --environment myEnv"
+						"queues consumer remove testQueue testScript --env myEnv"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing consumer from queue testQueue.
