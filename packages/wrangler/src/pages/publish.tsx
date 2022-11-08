@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { cwd } from "node:process";
@@ -22,11 +22,10 @@ import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
 import type {
-	Deployment,
 	PagesConfigCache,
-	Project,
 	YargsOptionsToInterface,
 } from "./types";
+import type { Project, Deployment } from '@cloudflare/types';
 import type { Argv } from "yargs";
 
 type PublishArgs = YargsOptionsToInterface<typeof Options>;
@@ -274,6 +273,10 @@ export const Handler = async ({
 		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
 	} catch {}
 
+	// Grab the bindings from the API, we need these for shims and other such hacky inserts
+	const project = await fetchResult<Project>(`/accounts/${accountId}/pages/projects/${projectName}`);
+	const isProduction = project.production_branch === branch;
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -285,6 +288,9 @@ export const Handler = async ({
 		? join(tmpdir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
+	console.log('-- test --');
+	console.log(Object.keys(project.deployment_configs[isProduction ? 'production' : 'preview'].d1_databases ?? {}));
+
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		try {
@@ -295,9 +301,13 @@ export const Handler = async ({
 				buildOutputDirectory: dirname(outfile),
 				routesOutputPath,
 				local: false,
+				d1Databases: Object.keys(project.deployment_configs[isProduction ? 'production' : 'preview'].d1_databases ?? {}),
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");
+
+			// tmp
+			writeFileSync('built_function.js', builtFunctions);
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
 				logger.warn(
