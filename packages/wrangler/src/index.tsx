@@ -6,10 +6,10 @@ import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
-import { fetchResult } from "./cfetch";
 import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
+import { deployments } from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -49,9 +49,7 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import type { DeploymentListRes } from "./__tests__/helpers/msw/handlers/deployments";
 import type { Config } from "./config";
-import type { ServiceMetadataRes } from "./init";
 import type { PartialConfigToDTS } from "./type-generation";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
@@ -573,24 +571,8 @@ export function createCLIParser(argv: string[]) {
 				{ name: deploymentsYargs.name, env: undefined },
 				config
 			);
-			const scriptMetadata = await fetchResult<ServiceMetadataRes>(
-				`/accounts/${accountId}/workers/services/${scriptName}`
-			);
 
-			const scriptTag = scriptMetadata.default_environment.script.tag;
-			const { items: deployments } = await fetchResult<DeploymentListRes>(
-				`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
-			);
-
-			const versionMessages = deployments.map(
-				(versions, index) =>
-					`\nVersion ID: ${versions.id}\nVersion number: ${
-						versions.number
-					}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
-						versions.metadata.author_email
-					}\nLatest deploy: ${index === 0}\n`
-			);
-			logger.log(...versionMessages);
+			await deployments(accountId, scriptName);
 		}
 	);
 
