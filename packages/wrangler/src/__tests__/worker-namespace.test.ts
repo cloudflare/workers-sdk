@@ -36,6 +36,7 @@ describe("dispatch-namespace", () => {
 
 		Flags:
 		  -c, --config   Path to .toml configuration file  [string]
+		  -e, --env      Environment to use for operations and .env files  [string]
 		  -h, --help     Show help  [boolean]
 		  -v, --version  Show version number  [boolean]",
 		  "warn": "",
@@ -87,6 +88,7 @@ describe("dispatch-namespace", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -135,6 +137,7 @@ describe("dispatch-namespace", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -183,19 +186,20 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        wrangler dispatch-namespace get <name>
+			"
+			wrangler dispatch-namespace get <name>
 
-			        Get information about a dispatch namespace
+			Get information about a dispatch namespace
 
-			        Positionals:
-			          name  Name of the dispatch namespace  [string] [required]
+			Positionals:
+			  name  Name of the dispatch namespace  [string] [required]
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		it("should attempt to get info for the given namespace", async () => {
@@ -302,6 +306,7 @@ describe("dispatch-namespace", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);

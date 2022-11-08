@@ -60,23 +60,24 @@ describe("pages", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		      "wrangler pages
+		"wrangler pages
 
-		      ⚡️ Configure Cloudflare Pages
+		⚡️ Configure Cloudflare Pages
 
-		      Commands:
-		        wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
-		        wrangler pages project                         ⚡️ Interact with your Pages projects
-		        wrangler pages deployment                      🚀 Interact with the deployments of a project
-		        wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
+		Commands:
+		  wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
+		  wrangler pages project                         ⚡️ Interact with your Pages projects
+		  wrangler pages deployment                      🚀 Interact with the deployments of a project
+		  wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
-		      Flags:
-		        -c, --config   Path to .toml configuration file  [string]
-		        -h, --help     Show help  [boolean]
-		        -v, --version  Show version number  [boolean]
+		Flags:
+		  -c, --config   Path to .toml configuration file  [string]
+		  -e, --env      Environment to use for operations and .env files  [string]
+		  -h, --help     Show help  [boolean]
+		  -v, --version  Show version number  [boolean]
 
-		      🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
-	    `);
+		🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+	`);
 	});
 
 	describe("beta message for subcommands", () => {
@@ -315,26 +316,27 @@ describe("pages", () => {
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler pages publish [directory]
+			"wrangler pages publish [directory]
 
-			        🆙 Publish a directory of static assets as a Pages deployment
+			🆙 Publish a directory of static assets as a Pages deployment
 
-			        Positionals:
-			          directory  The directory of static files to upload  [string]
+			Positionals:
+			  directory  The directory of static files to upload  [string]
 
-			        Flags:
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]
+			Flags:
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
-			        Options:
-			              --project-name    The name of the project you want to deploy to  [string]
-			              --branch          The name of the branch you want to deploy to  [string]
-			              --commit-hash     The SHA to attach to this deployment  [string]
-			              --commit-message  The commit message to attach to this deployment  [string]
-			              --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
+			Options:
+			      --project-name    The name of the project you want to deploy to  [string]
+			      --branch          The name of the branch you want to deploy to  [string]
+			      --commit-hash     The SHA to attach to this deployment  [string]
+			      --commit-message  The commit message to attach to this deployment  [string]
+			      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 
-			        🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
-		      `);
+			🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+		`);
 		});
 
 		it("should upload a directory of files", async () => {

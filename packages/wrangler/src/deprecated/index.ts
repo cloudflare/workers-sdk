@@ -10,7 +10,10 @@ import {
 import { initHandler } from "../init";
 import { logger } from "../logger";
 import { formatMessage } from "../parse";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "../yargs-types";
 import type { Argv, ArgumentsCamelCase, BuilderCallback } from "yargs";
 
 // https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
@@ -21,7 +24,7 @@ interface GenerateArgs {
 	site?: boolean;
 }
 
-export function generateOptions(yargs: Argv) {
+export function generateOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("name", {
 			describe: "Name of the Workers project",
@@ -298,11 +301,8 @@ function parseTemplatePath(templatePath: string): {
 	return { remote, subdirectory };
 }
 
-export function buildOptions(yargs: Argv) {
-	return yargs.option("env", {
-		describe: "Perform on a specific environment",
-		type: "string",
-	});
+export function buildOptions(yargs: Argv<CommonYargsOptions>) {
+	return yargs;
 }
 type BuildArgs = YargsOptionsToInterface<typeof buildOptions>;
 export async function buildHandler(buildArgs: BuildArgs) {
@@ -340,7 +340,7 @@ export const configHandler = () => {
 	);
 };
 
-export function previewOptions(yargs: Argv) {
+export function previewOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("method", {
 			type: "string",
@@ -349,11 +349,6 @@ export function previewOptions(yargs: Argv) {
 		.positional("body", {
 			type: "string",
 			describe: "Body string to post to your preview worker request.",
-		})
-		.option("env", {
-			type: "string",
-			requiresArg: true,
-			describe: "Perform on a specific environment",
 		})
 		.option("watch", {
 			default: true,
@@ -376,11 +371,6 @@ export const route: BuilderCallback<unknown, unknown> = (routeYargs: Argv) => {
 			"List the routes associated with a zone",
 			(yargs) => {
 				return yargs
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-					})
 					.option("zone", {
 						type: "string",
 						requiresArg: true,
@@ -416,11 +406,6 @@ export const route: BuilderCallback<unknown, unknown> = (routeYargs: Argv) => {
 						type: "string",
 						requiresArg: true,
 						describe: "zone id",
-					})
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
 					});
 			},
 			() => {
@@ -442,7 +427,7 @@ export const routeHandler = () => {
 	throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
 };
 
-export const subdomainOptions = (yargs: Argv) => {
+export const subdomainOptions = (yargs: Argv<CommonYargsOptions>) => {
 	return yargs.positional("name", { type: "string" });
 };
 

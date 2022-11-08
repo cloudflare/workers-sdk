@@ -4,9 +4,10 @@ import * as Delete from "./delete";
 import * as Execute from "./execute";
 import * as List from "./list";
 import { d1BetaWarning } from "./utils";
+import type { CommonYargsOptions } from "../yargs-types";
 import type { Argv } from "yargs";
 
-export const d1 = (yargs: Argv) => {
+export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 	return (
 		yargs
 			.command("list", "List D1 databases", List.Options, List.Handler)

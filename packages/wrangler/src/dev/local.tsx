@@ -30,6 +30,7 @@ import type {
 	CfKvNamespace,
 	CfR2Bucket,
 	CfVars,
+	CfQueue,
 	CfD1Database,
 } from "../worker";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -57,6 +58,7 @@ export interface LocalProps {
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
+	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
@@ -94,6 +96,7 @@ function useLocalWorker({
 	liveReload,
 	ip,
 	crons,
+	queueConsumers,
 	localProtocol,
 	localUpstream,
 	inspect,
@@ -184,6 +187,8 @@ function useLocalWorker({
 				usageModel,
 				kv_namespaces: bindings?.kv_namespaces,
 				r2_buckets: bindings?.r2_buckets,
+				queueBindings: bindings?.queues,
+				queueConsumers: queueConsumers,
 				d1_databases: bindings?.d1_databases,
 				internalDurableObjects,
 				externalDurableObjects,
@@ -329,6 +334,8 @@ function useLocalWorker({
 		port,
 		inspectorPort,
 		ip,
+		queueConsumers,
+		bindings.queues,
 		bindings.durable_objects,
 		bindings.kv_namespaces,
 		bindings.r2_buckets,
@@ -452,6 +459,8 @@ interface SetupMiniflareOptionsProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	kv_namespaces: CfKvNamespace[] | undefined;
+	queueBindings: CfQueue[] | undefined;
+	queueConsumers: Config["queues"]["consumers"];
 	r2_buckets: CfR2Bucket[] | undefined;
 	d1_databases: CfD1Database[] | undefined;
 	internalDurableObjects: CfDurableObject[];
@@ -482,6 +491,8 @@ export function setupMiniflareOptions({
 	compatibilityFlags,
 	usageModel,
 	kv_namespaces,
+	queueBindings,
+	queueConsumers,
 	r2_buckets,
 	d1_databases,
 	internalDurableObjects,
@@ -529,6 +540,21 @@ export function setupMiniflareOptions({
 		compatibilityFlags,
 		usageModel,
 		kvNamespaces: kv_namespaces?.map((kv) => kv.binding),
+		queueBindings: queueBindings?.map((queue) => {
+			return { name: queue.binding, queueName: queue.queue_name };
+		}),
+		queueConsumers: queueConsumers?.map((consumer) => {
+			const waitMs = consumer.max_batch_timeout
+				? 1000 * consumer.max_batch_timeout
+				: undefined;
+			return {
+				queueName: consumer.queue,
+				maxBatchSize: consumer.max_batch_size,
+				maxWaitMs: waitMs,
+				maxRetries: consumer.max_retries,
+				deadLetterQueue: consumer.dead_letter_queue,
+			};
+		}),
 		r2Buckets: r2_buckets?.map((r2) => r2.binding),
 		durableObjects: Object.fromEntries(
 			internalDurableObjects.map((binding) => [

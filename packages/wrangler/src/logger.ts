@@ -1,6 +1,7 @@
 import { format } from "node:util";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables";
+import type { BuildFailure } from "esbuild";
 
 export const LOGGER_LEVELS = {
 	none: -1,
@@ -78,3 +79,14 @@ class Logger {
  * to filter out logging messages.
  */
 export const logger = new Logger();
+
+/**
+ * Logs all errors/warnings associated with an esbuild BuildFailure in the same
+ * style esbuild would.
+ */
+export function logBuildFailure(failure: BuildFailure) {
+	let logs = formatMessagesSync(failure.errors, { kind: "error", color: true });
+	for (const log of logs) console.error(log);
+	logs = formatMessagesSync(failure.warnings, { kind: "warning", color: true });
+	for (const log of logs) console.warn(log);
+}

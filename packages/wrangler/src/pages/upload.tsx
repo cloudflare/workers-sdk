@@ -297,7 +297,7 @@ export const upload = async (
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 					);
 
-					if ((e as { code: number }).code === 8000013) {
+					if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
 					}
@@ -358,7 +358,7 @@ export const upload = async (
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
-			if ((e as { code: number }).code === 8000013) {
+			if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 				// Looks like the JWT expired, fetch another one
 				jwt = await fetchJwt();
 			}
@@ -391,6 +391,23 @@ export const upload = async (
 		])
 	);
 };
+
+// Decode and check that the current JWT has not expired
+function isJwtExpired(token: string): boolean | undefined {
+	try {
+		const decodedJwt = JSON.parse(
+			Buffer.from(token.split(".")[1], "base64").toString()
+		);
+
+		const dateNow = new Date().getTime() / 1000;
+
+		return decodedJwt.exp <= dateNow;
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`Invalid token: ${e.message}`);
+		}
+	}
+}
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;

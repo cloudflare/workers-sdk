@@ -21,12 +21,15 @@ import {
 } from "./createTail";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { ConfigPath } from "../index";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "../yargs-types";
 import type { TailCLIFilters } from "./createTail";
 import type { RawData } from "ws";
 import type { Argv } from "yargs";
 
-export function tailOptions(yargs: Argv) {
+export function tailOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("worker", {
 			describe: "Name or route of the worker to tail",
@@ -68,12 +71,6 @@ export function tailOptions(yargs: Argv) {
 			describe:
 				'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
 			array: true,
-		})
-		.option("env", {
-			type: "string",
-			requiresArg: true,
-			describe: "Perform on a specific environment",
-			alias: "e",
 		})
 		.option("debug", {
 			type: "boolean",

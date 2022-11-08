@@ -3,14 +3,31 @@ import getPort from "get-port";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+	mswZoneHandlers,
+} from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 describe("wrangler dev", () => {
+	beforeEach(() => {
+		msw.use(
+			...mswZoneHandlers,
+			...mswSuccessOauthHandlers,
+			...mswSuccessUserHandlers
+		);
+	});
+
 	runInTempDir();
+	mockAccountId();
+	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
 		(Dev as jest.Mock).mockClear();
@@ -319,6 +336,87 @@ describe("wrangler dev", () => {
 			);
 		});
 
+		it("should find the host from the given pattern, not zone_name", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "https://subdomain.exists.com/*",
+						zone_name: "does-not-exist.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should fail for non-existing zones", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "https://subdomain.does-not-exist.com/*",
+						zone_name: "exists.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects.toEqual(
+				new Error("Could not find zone for subdomain.does-not-exist.com")
+			);
+		});
+
+		it("should fail for non-existing zones, when falling back from */*", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_name: "does-not-exist.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects.toEqual(
+				new Error("Could not find zone for does-not-exist.com")
+			);
+		});
+
+		it("should fallback to zone_name when given the pattern */*", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_name: "exists.com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+		it("fails when given the pattern */* and no zone_name", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{
+						pattern: "*/*",
+						zone_id: "exists-com",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			const err = new TypeError() as unknown as { code: string; input: string };
+			err.code = "ERR_INVALID_URL";
+			err.input = "http:///";
+
+			await expect(runWrangler("dev")).rejects.toEqual(err);
+		});
+
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
 			writeWranglerToml({
 				main: "index.js",
@@ -565,6 +663,40 @@ describe("wrangler dev", () => {
 			        "
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		describe(".env", () => {
+			beforeEach(() => {
+				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
+				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
+				fs.writeFileSync("index.js", `export default {};`);
+				writeWranglerToml({
+					main: "index.js",
+					env: { custom: {} },
+					build: {
+						// Ideally, we'd just log the var here and match it in `std.out`,
+						// but stdout from custom builds is piped directly to
+						// `process.stdout` which we don't capture.
+						command: `node -e "require('fs').writeFileSync('var.txt', process.env.CUSTOM_BUILD_VAR)"`,
+					},
+				});
+
+				// We won't overwrite existing process.env keys with .env values (to
+				// allow .env overrides to specified on then shell), so make sure this
+				// key definitely doesn't exist.
+				delete process.env.CUSTOM_BUILD_VAR;
+			});
+
+			it("should load environment variables from `.env`", async () => {
+				await runWrangler("dev");
+				const output = fs.readFileSync("var.txt", "utf8");
+				expect(output).toMatch("default");
+			});
+			it("should prefer to load environment variables from `.env.<environment>` if `--env <environment>` is set", async () => {
+				await runWrangler("dev --env custom");
+				const output = fs.readFileSync("var.txt", "utf8");
+				expect(output).toMatch("custom");
+			});
 		});
 	});
 
@@ -970,6 +1102,27 @@ describe("wrangler dev", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should prefer `.dev.vars.<environment>` if `--env <environment> set`", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
+			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
+
+			writeWranglerToml({ main: "index.js", env: { custom: {} } });
+			await runWrangler("dev --env custom");
+			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+				.calls[0][0].bindings.vars;
+
+			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
+			expect(std.out).toMatchInlineSnapshot(`
+			        "Using vars defined in .dev.vars.custom
+			        Your worker has access to the following bindings:
+			        - Vars:
+			          - CUSTOM_VAR: \\"(hidden)\\""
+		      `);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("serve static assets", () => {
@@ -996,13 +1149,13 @@ describe("wrangler dev", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
 
 			Options:
 			      --name                                       Name of the worker  [string]
 			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
-			  -e, --env                                        Perform on a specific environment  [string]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
@@ -1259,24 +1412,23 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
-			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Your worker has access to the following bindings:
-			        - Services:
-			          - WorkerA: A
-			          - WorkerB: B - staging",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			expect(std.out).toMatchInlineSnapshot(`
+			"Your worker has access to the following bindings:
+			- Services:
+			  - WorkerA: A
+			  - WorkerB: B - staging"
+		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"services\\" fields are experimental and may change or break at any time.
+			    - \\"services\\" fields are experimental and may change or break at any time.
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
-			        ",
-			        }
-		      `);
+			"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 

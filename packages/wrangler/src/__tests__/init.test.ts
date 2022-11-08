@@ -2087,8 +2087,8 @@ describe("init", () => {
 			},
 			{
 				type: "plain_text",
-				name: "ANOTHER",
-				text: "thing",
+				name: "ANOTHER-NAME",
+				text: "thing-TEXT",
 			},
 			{
 				type: "durable_object_namespace",
@@ -2218,8 +2218,7 @@ describe("init", () => {
 			},
 			usage_model: "bundled",
 			vars: {
-				name: "ANOTHER",
-				text: "thing",
+				"ANOTHER-NAME": "thing-TEXT",
 			},
 			env: {
 				test: {},
@@ -2380,6 +2379,8 @@ describe("init", () => {
 				"init isolinear-optical-chip --from-dash memory-crystal"
 			);
 
+			expect(std.out).toContain("cd isolinear-optical-chip");
+
 			checkFiles({
 				items: {
 					"isolinear-optical-chip/src/index.js": false,
@@ -2432,6 +2433,89 @@ describe("init", () => {
 			);
 
 			await runWrangler("init  --from-dash isolinear-optical-chip");
+
+			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
+				.toMatchInlineSnapshot(`
+			"name = \\"isolinear-optical-chip\\"
+			main = \\"src/index.ts\\"
+			compatibility_date = \\"1987-9-27\\"
+			route = \\"delta.quadrant\\"
+			usage_model = \\"bundled\\"
+
+			[[migrations]]
+			tag = \\"some-migration-tag\\"
+			new_classes = [ \\"Durability\\" ]
+
+			[triggers]
+			crons = [ \\"0 0 0 * * *\\" ]
+
+			[env]
+			test = { }
+			staging = { }
+
+			[vars]
+			ANOTHER-NAME = \\"thing-TEXT\\"
+
+			[[durable_objects.bindings]]
+			name = \\"DURABLE_TEST\\"
+			class_name = \\"Durability\\"
+			script_name = \\"another-durable-object-worker\\"
+			environment = \\"production\\"
+
+			[[kv_namespaces]]
+			id = \\"some-namespace-id\\"
+			binding = \\"kv_testing\\"
+
+			[[r2_buckets]]
+			binding = \\"test-bucket\\"
+			bucket_name = \\"test-bucket\\"
+
+			[[services]]
+			binding = \\"website\\"
+			service = \\"website\\"
+			environment = \\"production\\"
+
+			[[dispatch_namespaces]]
+			binding = \\"name-namespace-mock\\"
+			namespace = \\"namespace-mock\\"
+
+			[logfwdr]
+			schema = \\"\\"
+
+			  [[logfwdr.bindings]]
+			  name = \\"httplogs\\"
+			  destination = \\"httplogs\\"
+
+			  [[logfwdr.bindings]]
+			  name = \\"trace\\"
+			  destination = \\"trace\\"
+
+			[wasm_modules]
+			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
+			WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
+
+			[text_blobs]
+			TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
+			TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
+
+			[data_blobs]
+			DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
+			DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
+
+			[[unsafe.bindings]]
+			type = \\"some unsafe thing\\"
+			name = \\"UNSAFE_BINDING_ONE\\"
+
+			[unsafe.bindings.data.some]
+			unsafe = \\"thing\\"
+
+			[[unsafe.bindings]]
+			type = \\"another unsafe thing\\"
+			name = \\"UNSAFE_BINDING_TWO\\"
+			data = 1_337
+			"
+		`);
+			expect(std.out).toContain("cd isolinear-optical-chip");
 
 			checkFiles({
 				items: {

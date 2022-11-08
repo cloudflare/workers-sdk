@@ -5,7 +5,10 @@ import { URLSearchParams } from "node:url";
 import chalk from "chalk";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../bundle";
-import { printBundleSize } from "../bundle-reporter";
+import {
+	printBundleSize,
+	printOffendingDependencies,
+} from "../bundle-reporter";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
@@ -14,10 +17,12 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
+import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
+import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	Route,
@@ -26,6 +31,7 @@ import type {
 	CustomDomainRoute,
 } from "../config/environment";
 import type { Entry } from "../entry";
+import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -81,6 +87,33 @@ export type CustomDomainChangeset = {
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const scriptStartupErrorRegex = /startup/i;
+
+function errIsScriptSizeOrStartupErr(err: unknown) {
+	if (!err) return false;
+
+	// 10027 = workers.api.error.script_too_large
+	if ((err as { code: number }).code === 10027) {
+		return true;
+	}
+
+	// 10021 = validation error
+	// no explicit error code for more granular errors than "invalid script"
+	// but the error will contain a string error message directly from the
+	// validator.
+	// the error always SHOULD look like "Script startup exceeded CPU limit."
+	// (or the less likely "Script startup exceeded memory limits.")
+	if (
+		(err as { code: number }).code === 10021 &&
+		err instanceof ParseError &&
+		scriptStartupErrorRegex.test(err.notes[0]?.text)
+	) {
+		return true;
+	}
+
+	return false;
 }
 
 function renderRoute(route: Route): string {
@@ -407,12 +440,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const {
 			modules,
+			dependencies,
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
 			? // we can skip the whole bundling step and mock a bundle here
 			  {
 					modules: [],
+					dependencies: {},
 					resolvedEntryPointPath: props.entry.file,
 					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
 					stop: undefined,
@@ -496,6 +531,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			queues: config.queues.producers?.map((producer) => {
+				return { binding: producer.binding, queue_name: producer.queue };
+			}),
 			r2_buckets: config.r2_buckets,
 			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
@@ -557,39 +595,48 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
+		await ensureQueuesExist(config);
+
 		if (!props.dryRun) {
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
-			const result = await fetchResult<{
-				available_on_subdomain: boolean;
-				id: string | null;
-				etag: string | null;
-				pipeline_hash: string | null;
-			}>(
-				workerUrl,
-				{
-					method: "PUT",
-					body: createWorkerUploadForm(worker),
-					headers: await getMetricsUsageHeaders(config.send_metrics),
-				},
-				new URLSearchParams({
-					include_subdomain_availability: "true",
-					// pass excludeScript so the whole body of the
-					// script doesn't get included in the response
-					excludeScript: "true",
-				})
-			);
+			try {
+				const result = await fetchResult<{
+					available_on_subdomain: boolean;
+					id: string | null;
+					etag: string | null;
+					pipeline_hash: string | null;
+				}>(
+					workerUrl,
+					{
+						method: "PUT",
+						body: createWorkerUploadForm(worker),
+						headers: await getMetricsUsageHeaders(config.send_metrics),
+					},
+					new URLSearchParams({
+						include_subdomain_availability: "true",
+						// pass excludeScript so the whole body of the
+						// script doesn't get included in the response
+						excludeScript: "true",
+					})
+				);
 
-			available_on_subdomain = result.available_on_subdomain;
+				available_on_subdomain = result.available_on_subdomain;
 
-			if (config.first_party_worker) {
-				// Print some useful information returned after publishing
-				// Not all fields will be populated for every worker
-				// These fields are likely to be scraped by tools, so do not rename
-				if (result.id) logger.log("Worker ID: ", result.id);
-				if (result.etag) logger.log("Worker ETag: ", result.etag);
-				if (result.pipeline_hash)
-					logger.log("Worker PipelineHash: ", result.pipeline_hash);
+				if (config.first_party_worker) {
+					// Print some useful information returned after publishing
+					// Not all fields will be populated for every worker
+					// These fields are likely to be scraped by tools, so do not rename
+					if (result.id) logger.log("Worker ID: ", result.id);
+					if (result.etag) logger.log("Worker ETag: ", result.etag);
+					if (result.pipeline_hash)
+						logger.log("Worker PipelineHash: ", result.pipeline_hash);
+				}
+			} catch (err) {
+				if (errIsScriptSizeOrStartupErr(err)) {
+					printOffendingDependencies(dependencies);
+				}
+				throw err;
 			}
 		}
 	} finally {
@@ -744,6 +791,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				},
 			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
 		);
+	}
+
+	if (config.queues.consumers && config.queues.consumers.length) {
+		deployments.push(...updateQueueConsumers(config));
 	}
 
 	const targets = await Promise.all(deployments);
@@ -910,4 +961,55 @@ async function publishRoutesFallback(
 
 function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+}
+
+async function ensureQueuesExist(config: Config) {
+	const producers = (config.queues.producers || []).map(
+		(producer) => producer.queue
+	);
+	const consumers = (config.queues.consumers || []).map(
+		(consumer) => consumer.queue
+	);
+
+	const queueNames = producers.concat(consumers);
+	for (const queue of queueNames) {
+		try {
+			await getQueue(config, queue);
+		} catch (err) {
+			const queueErr = err as FetchError;
+			if (queueErr.code === 100123) {
+				// queue_not_found
+				throw new Error(
+					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
+				);
+			}
+			throw err;
+		}
+	}
+}
+
+function updateQueueConsumers(config: Config): Promise<string[]>[] {
+	const consumers = config.queues.consumers || [];
+	return consumers.map((consumer) => {
+		const body: PutConsumerBody = {
+			dead_letter_queue: consumer.dead_letter_queue,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms: consumer.max_batch_timeout
+					? 1000 * consumer.max_batch_timeout
+					: undefined,
+			},
+		};
+
+		if (config.name === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new Error("Script name is required to update queue consumers");
+		}
+		const scriptName = config.name;
+		const envName = undefined; // TODO: script environment for wrangler publish?
+		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
+			() => [`Consumer for ${consumer.queue}`]
+		);
+	});
 }

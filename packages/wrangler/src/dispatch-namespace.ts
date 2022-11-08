@@ -5,6 +5,7 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { printWranglerBanner } from ".";
 import type { ConfigPath } from ".";
+import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, CommandModule } from "yargs";
 
 type Namespace = {
@@ -105,9 +106,9 @@ async function renameWorkerNamespace(
 }
 
 export function workerNamespaceCommands(
-	workerNamespaceYargs: Argv,
-	subHelp: CommandModule
-): Argv {
+	workerNamespaceYargs: Argv<CommonYargsOptions>,
+	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
+) {
 	return workerNamespaceYargs
 		.command(subHelp)
 		.command("list", "List all dispatch namespaces", {}, async (args) => {

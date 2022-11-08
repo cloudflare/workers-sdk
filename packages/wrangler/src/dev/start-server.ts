@@ -114,6 +114,7 @@ export async function startDevServer(
 				localPersistencePath: props.localPersistencePath,
 				liveReload: props.liveReload,
 				crons: props.crons,
+				queueConsumers: props.queueConsumers,
 				localProtocol: props.localProtocol,
 				localUpstream: props.localUpstream,
 				logPrefix: props.logPrefix,
@@ -225,10 +226,12 @@ async function runEsbuild({
 		resolvedEntryPointPath,
 		bundleType,
 		modules,
+		dependencies,
 		sourceMapPath,
 	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
 		? {
 				modules: [],
+				dependencies: {},
 				resolvedEntryPointPath: entry.file,
 				bundleType: entry.format === "modules" ? "esm" : "commonjs",
 				stop: undefined,
@@ -264,6 +267,7 @@ async function runEsbuild({
 		path: resolvedEntryPointPath,
 		type: bundleType,
 		modules,
+		dependencies,
 		sourceMapPath,
 	};
 }
@@ -285,6 +289,7 @@ export async function startLocalServer({
 	liveReload,
 	ip,
 	crons,
+	queueConsumers,
 	localProtocol,
 	localUpstream,
 	inspect,
@@ -364,6 +369,8 @@ export async function startLocalServer({
 			compatibilityFlags,
 			usageModel,
 			kv_namespaces: bindings?.kv_namespaces,
+			queueBindings: bindings?.queues,
+			queueConsumers,
 			r2_buckets: bindings?.r2_buckets,
 			d1_databases: bindings?.d1_databases,
 			internalDurableObjects,

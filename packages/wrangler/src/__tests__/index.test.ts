@@ -42,6 +42,7 @@ describe("wrangler", () => {
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
+			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
 			  wrangler d1                  🗄  Interact with a D1 database
@@ -53,6 +54,7 @@ describe("wrangler", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -85,6 +87,7 @@ describe("wrangler", () => {
 			  wrangler kv:key              🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk             💪 Interact with multiple Workers KV key-value pairs at once
 			  wrangler pages               ⚡️ Configure Cloudflare Pages
+			  wrangler queues              🆀 Configure Workers Queues
 			  wrangler r2                  📦 Interact with an R2 store
 			  wrangler dispatch-namespace  📦 Interact with a dispatch namespace
 			  wrangler d1                  🗄  Interact with a D1 database
@@ -96,6 +99,7 @@ describe("wrangler", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -142,6 +146,7 @@ describe("wrangler", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -151,60 +156,63 @@ describe("wrangler", () => {
 			await runWrangler("kv:namespace");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:namespace
+			"wrangler kv:namespace
 
-			        🗂️  Interact with your Workers KV Namespaces
+			🗂️  Interact with your Workers KV Namespaces
 
-			        Commands:
-			          wrangler kv:namespace create <namespace>  Create a new namespace
-			          wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
-			          wrangler kv:namespace delete              Deletes a given namespace.
+			Commands:
+			  wrangler kv:namespace create <namespace>  Create a new namespace
+			  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
+			  wrangler kv:namespace delete              Deletes a given namespace.
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
 			await runWrangler("kv:key");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:key
+			"wrangler kv:key
 
-			        🔑 Individually manage Workers KV key-value pairs
+			🔑 Individually manage Workers KV key-value pairs
 
-			        Commands:
-			          wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-			          wrangler kv:key list               Outputs a list of all keys in a given namespace.
-			          wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-			          wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+			Commands:
+			  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+			  wrangler kv:key list               Outputs a list of all keys in a given namespace.
+			  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+			  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
 			await runWrangler("kv:bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:bulk
+			"wrangler kv:bulk
 
-			        💪 Interact with multiple Workers KV key-value pairs at once
+			💪 Interact with multiple Workers KV key-value pairs at once
 
-			        Commands:
-			          wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-			          wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
+			Commands:
+			  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+			  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'r2' should display a list of available subcommands", async () => {
@@ -221,6 +229,7 @@ describe("wrangler", () => {
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);

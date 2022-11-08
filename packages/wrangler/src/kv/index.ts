@@ -26,12 +26,11 @@ import {
 	unexpectedKVKeyValueProps,
 } from "./helpers";
 import type { ConfigPath } from "../index";
+import type { CommonYargsOptions } from "../yargs-types";
 import type { KeyValue } from "./helpers";
-import type { BuilderCallback, Argv } from "yargs";
+import type { Argv } from "yargs";
 
-export const kvNamespace: BuilderCallback<unknown, unknown> = (
-	kvYargs: Argv
-) => {
+export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 	return kvYargs
 		.command(
 			"create <namespace>",
@@ -42,12 +41,6 @@ export const kvNamespace: BuilderCallback<unknown, unknown> = (
 						describe: "The name of the new namespace",
 						type: "string",
 						demandOption: true,
-					})
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
 					})
 					.option("preview", {
 						type: "boolean",
@@ -133,12 +126,6 @@ export const kvNamespace: BuilderCallback<unknown, unknown> = (
 						describe: "The id of the namespace to delete",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
@@ -187,7 +174,7 @@ export const kvNamespace: BuilderCallback<unknown, unknown> = (
 		);
 };
 
-export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
+export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 	return kvYargs
 		.command(
 			"put <key> [value]",
@@ -214,12 +201,6 @@ export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to write to",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
@@ -302,12 +283,6 @@ export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to list",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						// In the case of listing keys we will default to non-preview mode
@@ -359,12 +334,6 @@ export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to get from",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
@@ -422,12 +391,6 @@ export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to delete from",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
@@ -450,7 +413,7 @@ export const kvKey: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 		);
 };
 
-export const kvBulk: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
+export const kvBulk = (kvYargs: Argv<CommonYargsOptions>) => {
 	return kvYargs
 		.command(
 			"put <filename>",
@@ -473,12 +436,6 @@ export const kvBulk: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to insert values into",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
@@ -572,12 +529,6 @@ export const kvBulk: BuilderCallback<unknown, unknown> = (kvYargs: Argv) => {
 						describe: "The id of the namespace to delete from",
 					})
 					.check(demandOneOfOption("binding", "namespace-id"))
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe: "Perform on a specific environment",
-						alias: "e",
-					})
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",

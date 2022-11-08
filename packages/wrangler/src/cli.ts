@@ -1,4 +1,3 @@
-import "dotenv/config"; // Grab locally specified env params from a `.env` file.
 import process from "process";
 import { hideBin } from "yargs/helpers";
 import { unstable_dev } from "./api";
