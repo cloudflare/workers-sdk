@@ -258,7 +258,7 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	 logpush: boolean | undefined;
+	logpush: boolean | undefined;
 }
 
 /**

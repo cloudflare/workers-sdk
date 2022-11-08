@@ -176,7 +176,8 @@ export function publishOptions(yargs: Argv) {
 			})
 			.option("logpush", {
 				type: "boolean",
-				describe: "Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
+				describe:
+					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
 	);
 }
@@ -267,6 +268,6 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
-		logpush: args.logpush
+		logpush: args.logpush,
 	});
 }

@@ -270,7 +270,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
-		...(logpush && { logpush }),
+		...(logpush !== undefined && { logpush }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));
