@@ -21,11 +21,12 @@ describe("d1", () => {
 		🗄  Interact with a D1 database
 
 		Commands:
-		  wrangler d1 list            List D1 databases
-		  wrangler d1 create <name>   Create D1 database
-		  wrangler d1 delete <name>   Delete D1 database
-		  wrangler d1 backup          Interact with D1 Backups
-		  wrangler d1 execute <name>  Executed command or SQL file
+		  wrangler d1 list                List D1 databases
+		  wrangler d1 create <name>       Create D1 database
+		  wrangler d1 delete <name>       Delete D1 database
+		  wrangler d1 backup              Interact with D1 Backups
+		  wrangler d1 execute <database>  Executed command or SQL file
+		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
 		  -c, --config   Path to .toml configuration file  [string]
@@ -53,11 +54,12 @@ describe("d1", () => {
 		🗄  Interact with a D1 database
 
 		Commands:
-		  wrangler d1 list            List D1 databases
-		  wrangler d1 create <name>   Create D1 database
-		  wrangler d1 delete <name>   Delete D1 database
-		  wrangler d1 backup          Interact with D1 Backups
-		  wrangler d1 execute <name>  Executed command or SQL file
+		  wrangler d1 list                List D1 databases
+		  wrangler d1 create <name>       Create D1 database
+		  wrangler d1 delete <name>       Delete D1 database
+		  wrangler d1 backup              Interact with D1 Backups
+		  wrangler d1 execute <database>  Executed command or SQL file
+		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
 		  -c, --config   Path to .toml configuration file  [string]
