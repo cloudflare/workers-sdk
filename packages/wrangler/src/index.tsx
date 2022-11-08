@@ -49,8 +49,8 @@ import {
 } from "./user";
 import { whoami } from "./whoami";
 
-import type { DeploymentListRes } from "./__tests__/helpers/msw/handlers/deployments";
 import type { Config } from "./config";
+import type { DeploymentListRes } from "./deployments";
 import type { ServiceMetadataRes } from "./init";
 import type { PartialConfigToDTS } from "./type-generation";
 import type { CommonYargsOptions } from "./yargs-types";
