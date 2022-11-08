@@ -8,7 +8,7 @@ import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { CfModule } from "../worker";
-import type { WatchMode } from "esbuild";
+import type { WatchMode, Metafile } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
@@ -16,6 +16,7 @@ export type EsbuildBundle = {
 	entry: Entry;
 	type: "esm" | "commonjs";
 	modules: CfModule[];
+	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
 };
 
@@ -100,11 +101,13 @@ export function useEsbuild({
 				resolvedEntryPointPath,
 				bundleType,
 				modules,
+				dependencies,
 				stop,
 				sourceMapPath,
 			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
 				? {
 						modules: [],
+						dependencies: {},
 						resolvedEntryPointPath: entry.file,
 						bundleType: entry.format === "modules" ? "esm" : "commonjs",
 						stop: undefined,
@@ -158,6 +161,7 @@ export function useEsbuild({
 				path: resolvedEntryPointPath,
 				type: bundleType,
 				modules,
+				dependencies,
 				sourceMapPath,
 			});
 		}

@@ -226,10 +226,12 @@ async function runEsbuild({
 		resolvedEntryPointPath,
 		bundleType,
 		modules,
+		dependencies,
 		sourceMapPath,
 	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
 		? {
 				modules: [],
+				dependencies: {},
 				resolvedEntryPointPath: entry.file,
 				bundleType: entry.format === "modules" ? "esm" : "commonjs",
 				stop: undefined,
@@ -265,6 +267,7 @@ async function runEsbuild({
 		path: resolvedEntryPointPath,
 		type: bundleType,
 		modules,
+		dependencies,
 		sourceMapPath,
 	};
 }
