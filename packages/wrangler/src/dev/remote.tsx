@@ -104,6 +104,7 @@ export function Remote(props: RemoteProps) {
 		port: props.inspectorPort,
 		logToTerminal: true,
 		sourceMapPath: props.sourceMapPath,
+		host: previewToken?.host,
 	});
 
 	const errorHandler = useErrorHandler();
@@ -569,6 +570,7 @@ async function createRemoteWorkerInit(props: {
 		compatibility_flags: props.compatibilityFlags,
 		usage_model: props.usageModel,
 		keepVars: true,
+		logpush: false,
 	};
 
 	return init;

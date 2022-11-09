@@ -232,4 +232,51 @@ describe("Pages Functions", () => {
 			expect(response.headers.get("A-Header")).toEqual("New-Value");
 		});
 	});
+
+	describe("passThroughOnException", () => {
+		it("works on a single handler", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/passThroughOnExceptionOpen"
+			);
+
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toContain("Hello, world!");
+		});
+
+		it("defaults closed", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/passThroughOnExceptionClosed"
+			);
+
+			expect(response.status).toEqual(500);
+			expect(await response.text()).not.toContain("Hello, world!");
+		});
+
+		it("works for nested handlers", async () => {
+			const response = await waitUntilReady(
+				"http://localhost:8789/passThroughOnException/nested"
+			);
+
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toContain("Hello, world!");
+		});
+
+		it("allows errors to still be manually caught in middleware", async () => {
+			let response = await waitUntilReady(
+				"http://localhost:8789/passThroughOnExceptionWithCapture/nested"
+			);
+
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toContain("Hello, world!");
+
+			response = await waitUntilReady(
+				"http://localhost:8789/passThroughOnExceptionWithCapture/nested?catch"
+			);
+
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toMatchInlineSnapshot(
+				`"Manually caught error: ReferenceError: x is not defined"`
+			);
+		});
+	});
 });

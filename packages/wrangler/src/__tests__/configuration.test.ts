@@ -49,6 +49,10 @@ describe("normalizeAndValidateConfig()", () => {
 			main: undefined,
 			migrations: [],
 			name: undefined,
+			queues: {
+				consumers: [],
+				producers: [],
+			},
 			r2_buckets: [],
 			services: [],
 			route: undefined,
@@ -76,6 +80,7 @@ describe("normalizeAndValidateConfig()", () => {
 			node_compat: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			logpush: undefined,
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -925,6 +930,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
+				logpush: true,
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -999,6 +1005,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: "INVALID",
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
+				logpush: "INVALID",
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1066,7 +1073,8 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\"."
+			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+			  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 
@@ -1696,6 +1704,110 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
 			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		`);
+			});
+		});
+
+		describe("[queues]", () => {
+			it("should error if queues is not an object", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ queues: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ queues: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"queues\\" should be an object but got []."
+		              `);
+			});
+
+			it("should error if queues producer bindings are not valid", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							invalidField: "madeupValue",
+							producers: [
+								{},
+								{ binding: "QUEUE_BINDING_1" },
+								{ binding: 2333, queue: 2444 },
+								{ binding: "QUEUE_BINDING_3", queue: "" },
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({
+						queues: { producers: expect.anything },
+					})
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in queues field: \\"invalidField\\""
+				`);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"queues.producers[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"queues.producers[0]\\" bindings should have a string \\"queue\\" field but got {}.
+					  - \\"queues.producers[1]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":\\"QUEUE_BINDING_1\\"}.
+					  - \\"queues.producers[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"queue\\":2444}.
+					  - \\"queues.producers[2]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":2333,\\"queue\\":2444}.
+					  - \\"queues.producers[3]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":\\"QUEUE_BINDING_3\\",\\"queue\\":\\"\\"}."
+				`);
+			});
+
+			it("should error if queues consumers are not valid", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							invalidField: "madeupValue",
+							consumers: [
+								{},
+								{ queue: 22 },
+								{ queue: "myQueue", invalidField: "madeupValue" },
+								{
+									queue: "myQueue",
+									max_batch_size: "3",
+									max_batch_timeout: null,
+									max_retries: "hello",
+									dead_letter_queue: 5,
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({
+						queues: { producers: expect.anything },
+					})
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in queues field: \\"invalidField\\"
+					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
+				`);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"queues.consumers[0]\\" should have a string \\"queue\\" field but got {}.
+					  - \\"queues.consumers[1]\\" should have a string \\"queue\\" field but got {\\"queue\\":22}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}.
+					  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5}."
+				`);
 			});
 		});
 
@@ -2333,6 +2445,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
+				logpush: true,
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2378,6 +2491,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: false,
 				first_party_worker: false,
 				metadata_binding: "METADATA_ENV",
+				logpush: false,
 			};
 			const rawConfig: RawConfig = {
 				name: "mock-name",
@@ -2402,6 +2516,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: true,
 				first_party_worker: true,
 				metadata_binding: "METADATA_RAW",
+				logpush: true,
 				env: {
 					ENV1: rawEnv,
 				},
@@ -2669,6 +2784,7 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: "INVALID",
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
+				logpush: "INVALID",
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -2705,7 +2821,8 @@ describe("normalizeAndValidateConfig()", () => {
 			    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\"."
+			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 

@@ -130,6 +130,7 @@ export type DevProps = {
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
 	crons: Config["triggers"]["crons"];
+	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
 	assetsConfig: Config["assets"];
@@ -289,6 +290,16 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocalStubCache: props.local && props.experimentalLocal,
 	});
 
+	// TODO(queues) support remote wrangler dev
+	if (
+		!props.local &&
+		(props.bindings.queues?.length || props.queueConsumers?.length)
+	) {
+		logger.warn(
+			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+		);
+	}
+
 	return props.local ? (
 		<Local
 			name={props.name}
@@ -307,6 +318,7 @@ function DevSession(props: DevSessionProps) {
 			localPersistencePath={props.localPersistencePath}
 			liveReload={props.liveReload}
 			crons={props.crons}
+			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
 			logPrefix={props.logPrefix}

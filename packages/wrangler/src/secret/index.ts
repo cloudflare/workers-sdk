@@ -14,12 +14,13 @@ import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
 import type { ConfigPath } from "../index";
-import type { YargsOptionsToInterface } from "../yargs-types";
-import type { Argv, BuilderCallback } from "yargs";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "../yargs-types";
+import type { Argv } from "yargs";
 
-export const secret: BuilderCallback<unknown, unknown> = (
-	secretYargs: Argv
-) => {
+export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 	return secretYargs
 		.option("legacy-env", {
 			type: "boolean",
@@ -39,13 +40,6 @@ export const secret: BuilderCallback<unknown, unknown> = (
 						describe: "Name of the Worker",
 						type: "string",
 						requiresArg: true,
-					})
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe:
-							"Binds the secret to the Worker of the specific environment",
-						alias: "e",
 					});
 			},
 			async (args) => {
@@ -111,6 +105,7 @@ export const secret: BuilderCallback<unknown, unknown> = (
 									vars: {},
 									metadata_binding: undefined,
 									durable_objects: { bindings: [] },
+									queues: [],
 									r2_buckets: [],
 									d1_databases: [],
 									services: [],
@@ -127,6 +122,7 @@ export const secret: BuilderCallback<unknown, unknown> = (
 								compatibility_flags: undefined,
 								usage_model: undefined,
 								keepVars: false, // this doesn't matter since it's a new script anyway
+								logpush: false,
 							}),
 						}
 					);
@@ -173,13 +169,6 @@ export const secret: BuilderCallback<unknown, unknown> = (
 						describe: "Name of the Worker",
 						type: "string",
 						requiresArg: true,
-					})
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe:
-							"Binds the secret to the Worker of the specific environment",
-						alias: "e",
 					});
 			},
 			async (args) => {
@@ -226,19 +215,11 @@ export const secret: BuilderCallback<unknown, unknown> = (
 			"list",
 			"List all secrets for a Worker",
 			(yargs) => {
-				return yargs
-					.option("name", {
-						describe: "Name of the Worker",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("env", {
-						type: "string",
-						requiresArg: true,
-						describe:
-							"Binds the secret to the Worker of the specific environment.",
-						alias: "e",
-					});
+				return yargs.option("name", {
+					describe: "Name of the Worker",
+					type: "string",
+					requiresArg: true,
+				});
 			},
 			async (args) => {
 				const config = readConfig(args.config as ConfigPath, args);
@@ -265,7 +246,7 @@ export const secret: BuilderCallback<unknown, unknown> = (
 		);
 };
 
-export const secretBulkOptions = (yargs: Argv) => {
+export const secretBulkOptions = (yargs: Argv<CommonYargsOptions>) => {
 	return yargs
 		.positional("json", {
 			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
@@ -276,12 +257,6 @@ export const secretBulkOptions = (yargs: Argv) => {
 			describe: "Name of the Worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("env", {
-			type: "string",
-			requiresArg: true,
-			describe: "Binds the secret to the Worker of the specific environment.",
-			alias: "e",
 		});
 };
 

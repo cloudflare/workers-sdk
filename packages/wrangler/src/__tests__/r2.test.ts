@@ -26,21 +26,22 @@ describe("r2", () => {
 			          "
 		        `);
 			expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          wrangler r2 bucket
+			"
+			wrangler r2 bucket
 
-			          Manage R2 buckets
+			Manage R2 buckets
 
-			          Commands:
-			            wrangler r2 bucket create <name>  Create a new R2 bucket
-			            wrangler r2 bucket list           List R2 buckets
-			            wrangler r2 bucket delete <name>  Delete an R2 bucket
+			Commands:
+			  wrangler r2 bucket create <name>  Create a new R2 bucket
+			  wrangler r2 bucket list           List R2 buckets
+			  wrangler r2 bucket delete <name>  Delete an R2 bucket
 
-			          Flags:
-			            -c, --config   Path to .toml configuration file  [string]
-			            -h, --help     Show help  [boolean]
-			            -v, --version  Show version number  [boolean]"
-		        `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 		});
 
 		describe("list", () => {
@@ -95,19 +96,20 @@ describe("r2", () => {
 					`"Not enough non-option arguments: got 0, need at least 1"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				            "
-				            wrangler r2 bucket create <name>
+			"
+			wrangler r2 bucket create <name>
 
-				            Create a new R2 bucket
+			Create a new R2 bucket
 
-				            Positionals:
-				              name  The name of the new bucket  [string] [required]
+			Positionals:
+			  name  The name of the new bucket  [string] [required]
 
-				            Flags:
-				              -c, --config   Path to .toml configuration file  [string]
-				              -h, --help     Show help  [boolean]
-				              -v, --version  Show version number  [boolean]"
-			          `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -122,19 +124,20 @@ describe("r2", () => {
 					`"Unknown arguments: def, ghi"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				            "
-				            wrangler r2 bucket create <name>
+			"
+			wrangler r2 bucket create <name>
 
-				            Create a new R2 bucket
+			Create a new R2 bucket
 
-				            Positionals:
-				              name  The name of the new bucket  [string] [required]
+			Positionals:
+			  name  The name of the new bucket  [string] [required]
 
-				            Flags:
-				              -c, --config   Path to .toml configuration file  [string]
-				              -h, --help     Show help  [boolean]
-				              -v, --version  Show version number  [boolean]"
-			          `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -178,19 +181,20 @@ describe("r2", () => {
 					`"Not enough non-option arguments: got 0, need at least 1"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				            "
-				            wrangler r2 bucket delete <name>
+			"
+			wrangler r2 bucket delete <name>
 
-				            Delete an R2 bucket
+			Delete an R2 bucket
 
-				            Positionals:
-				              name  The name of the bucket to delete  [string] [required]
+			Positionals:
+			  name  The name of the bucket to delete  [string] [required]
 
-				            Flags:
-				              -c, --config   Path to .toml configuration file  [string]
-				              -h, --help     Show help  [boolean]
-				              -v, --version  Show version number  [boolean]"
-			          `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -205,19 +209,20 @@ describe("r2", () => {
 					`"Unknown arguments: def, ghi"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				            "
-				            wrangler r2 bucket delete <name>
+			"
+			wrangler r2 bucket delete <name>
 
-				            Delete an R2 bucket
+			Delete an R2 bucket
 
-				            Positionals:
-				              name  The name of the bucket to delete  [string] [required]
+			Positionals:
+			  name  The name of the bucket to delete  [string] [required]
 
-				            Flags:
-				              -c, --config   Path to .toml configuration file  [string]
-				              -h, --help     Show help  [boolean]
-				              -v, --version  Show version number  [boolean]"
-			          `);
+			Flags:
+			  -c, --config   Path to .toml configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 

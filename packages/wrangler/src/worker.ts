@@ -113,6 +113,11 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
+export interface CfQueue {
+	binding: string;
+	queue_name: string;
+}
+
 export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
@@ -195,6 +200,7 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
 		services: CfService[] | undefined;
@@ -207,6 +213,7 @@ export interface CfWorkerInit {
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
+	logpush: boolean | undefined;
 }
 
 export interface CfWorkerContext {

@@ -39,6 +39,7 @@ type WorkerMetadataBinding =
 			script_name?: string;
 			environment?: string;
 	  }
+	| { type: "queue"; name: string; queue_name: string }
 	| { type: "r2_bucket"; name: string; bucket_name: string }
 	| { type: "d1"; name: string; id: string }
 	| { type: "service"; name: string; service: string; environment?: string }
@@ -62,6 +63,7 @@ export interface WorkerMetadata {
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
+	logpush?: boolean;
 }
 
 /**
@@ -77,6 +79,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
+		logpush,
 	} = worker;
 
 	let { modules } = worker;
@@ -117,6 +120,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			});
 		}
 	);
+
+	bindings.queues?.forEach(({ binding, queue_name }) => {
+		metadataBindings.push({
+			type: "queue",
+			name: binding,
+			queue_name,
+		});
+	});
 
 	bindings.r2_buckets?.forEach(({ binding, bucket_name }) => {
 		metadataBindings.push({
@@ -276,6 +287,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
+		...(logpush !== undefined && { logpush }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));

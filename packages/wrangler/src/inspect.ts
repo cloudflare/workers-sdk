@@ -11,6 +11,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
 import { logger } from "./logger";
 import { waitForPortToBeAvailable } from "./proxy";
+import { getAccessToken } from "./user/access";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
@@ -58,6 +59,8 @@ interface InspectorProps {
 	 * Sourcemap path, so that stacktraces can be interpretted
 	 */
 	sourceMapPath?: string | undefined;
+
+	host?: string;
 }
 
 export default function useInspector(props: InspectorProps) {
@@ -204,14 +207,31 @@ export default function useInspector(props: InspectorProps) {
 	/** A simple incrementing id to attach to messages we send to devtools */
 	const messageCounterRef = useRef(1);
 
+	const cfAccessRef = useRef<string>();
+
+	useEffect(() => {
+		const run = async () => {
+			if (props.host && !cfAccessRef.current) {
+				const token = await getAccessToken(props.host);
+				cfAccessRef.current = token;
+			}
+		};
+		if (props.host) void run();
+	}, [props.host]);
+
 	// This effect tracks the connection to the remote websocket
 	// (stored in, no surprises here, `remoteWebSocket`)
 	useEffect(() => {
 		if (!props.inspectorUrl) {
 			return;
 		}
+
 		// The actual websocket instance
-		const ws = new WebSocket(props.inspectorUrl);
+		const ws = new WebSocket(props.inspectorUrl, {
+			headers: {
+				cookie: `CF_Authorization=${cfAccessRef.current}`,
+			},
+		});
 		setRemoteWebSocket(ws);
 
 		/**

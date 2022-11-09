@@ -16,15 +16,16 @@ import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
-import type { RawConfig } from "./config";
 
+import type { RawConfig } from "./config";
 import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
 import type { PackageManager } from "./package-manager";
+import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
-export async function initOptions(yargs: Argv) {
+export async function initOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("name", {
 			describe: "The name of your worker",
@@ -417,7 +418,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			);
 			instructions.push(
 				`\nTo start developing your Worker, run \`${
-					isNamedWorker ? `cd ${args.name} && ` : ""
+					isNamedWorker ? `cd ${args.name || fromDashScriptName} && ` : ""
 				}npm start\``
 			);
 			if (isAddingTestScripts) {
@@ -805,8 +806,7 @@ async function getWorkerConfig(
 					{
 						configObj.vars = {
 							...(configObj.vars ?? {}),
-							name: binding.name,
-							text: binding.text,
+							[binding.name]: binding.text,
 						};
 					}
 					break;

@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import chalk from "chalk";
 import { render, Static, Text } from "ink";
 import Table from "ink-table";
 import { npxImport } from "npx-import";
@@ -52,7 +51,7 @@ type QueryResult = {
 	query?: string;
 };
 // Max number of bytes to send in a single /execute call
-const QUERY_LIMIT = 1_000_000; // 1MB
+const QUERY_LIMIT = 10_000;
 
 export function Options(yargs: Argv): Argv<ExecuteArgs> {
 	return Name(yargs)
@@ -119,28 +118,23 @@ export const Handler = withConfig<ExecuteArgs>(
 		if (!response) return;
 
 		if (isInteractive) {
+			// Render table if single result
 			render(
 				<Static items={response}>
 					{(result) => {
-						const { results, duration, query } = result;
+						// batch results
+						if (!Array.isArray(result)) {
+							const { results, query } = result;
 
-						if (Array.isArray(results) && results.length > 0) {
-							const shortQuery = shorten(query, 48);
-							return (
-								<>
-									{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-									<Table data={results}></Table>
-								</>
-							);
-						} else {
-							const shortQuery = shorten(query, 24);
-							return (
-								<Text>
-									Executed{" "}
-									{shortQuery ? <Text dimColor>{shortQuery}</Text> : "command"}{" "}
-									in {duration}ms.
-								</Text>
-							);
+							if (Array.isArray(results) && results.length > 0) {
+								const shortQuery = shorten(query, 48);
+								return (
+									<>
+										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+										<Table data={results}></Table>
+									</>
+								);
+							}
 						}
 					}}
 				</Static>
@@ -187,7 +181,7 @@ async function executeLocally(
 		await mkdir(dbDir, { recursive: true });
 	}
 
-	console.log(`Loading DB at ${readableRelative(dbPath)}`);
+	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
 	const db = await createSQLiteDB(dbPath);
 
 	const results: QueryResult[] = [];
@@ -206,17 +200,14 @@ async function executeRemotely(
 	batches: string[]
 ) {
 	if (batches.length > 1) {
-		const warning =
-			chalk.red(`WARNING! `) +
-			`Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
+		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
 		if (isInteractive) {
 			const ok = await confirm(
-				`${warning}\nNOTE: each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n${chalk.green(
-					`Make sure you have a recent backup.`
-				)}\nOk to proceed?`
+				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
 			);
 			if (!ok) return null;
+			logger.log(`🌀 Let's go`);
 		} else {
 			console.error(warning);
 		}
@@ -230,7 +221,7 @@ async function executeRemotely(
 	);
 
 	if (isInteractive) {
-		console.log(`Executing on ${name} (${db.uuid}):`);
+		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 	} else {
 		// Pipe to error so we don't break jq
 		console.error(`Executing on ${name} (${db.uuid}):`);
@@ -238,24 +229,37 @@ async function executeRemotely(
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		results.push(
-			...(await fetchResult<QueryResult[]>(
-				`/accounts/${accountId}/d1/database/${db.uuid}/query`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ sql }),
-				}
-			))
+		const result = await fetchResult<QueryResult[]>(
+			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ sql }),
+			}
 		);
+		result.map(logResult);
+		results.push(...result);
 	}
 	return results;
 }
 
+function logResult(r: QueryResult | QueryResult[]) {
+	logger.log(
+		`🚣 Executed ${Array.isArray(r) ? r.length : "1"} command(s) in ${
+			Array.isArray(r)
+				? r
+						.map((d: QueryResult) => d.duration)
+						.reduce((a: number, b: number) => a + b, 0)
+				: r.duration
+		}ms`
+	);
+}
+
 function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 	// We have no interpolations, so convert everything to text
+	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	return splitter(sql).map(
 		(q) =>
 			q.format({
@@ -267,16 +271,17 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 
 function batchSplit(splitter: typeof splitSqlQuery, sql: SQLQuery) {
 	const queries = splitSql(splitter, sql);
-
+	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
-	for (const query of queries) {
-		const last = batches.at(-1);
-		if (!last || last.length + query.length > QUERY_LIMIT) {
-			batches.push(query);
-		} else {
-			batches.splice(-1, 1, [last, query].join("; "));
-		}
+	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
+	for (let i = 0; i <= nbatches; i++) {
+		batches.push(
+			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
+		);
 	}
+	logger.log(
+		`🌀 We are sending ${batches.length} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+	);
 	return batches;
 }
 

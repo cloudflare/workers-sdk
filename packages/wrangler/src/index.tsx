@@ -5,9 +5,11 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { readConfig } from "./config";
+import { isBuildFailure } from "./bundle";
+import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
+import { deployments } from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -26,22 +28,31 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
-import { logger } from "./logger";
+import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
+import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	listScopes,
+	login,
+	logout,
+	requireAuth,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
 import type { PartialConfigToDTS } from "./type-generation";
+import type { CommonYargsOptions } from "./yargs-types";
+import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
 
 export type ConfigPath = string | undefined;
@@ -164,7 +175,9 @@ export function demandOneOfOption(...options: string[]) {
 export class CommandLineArgsError extends Error {}
 
 export function createCLIParser(argv: string[]) {
-	const wrangler = makeCLI(argv)
+	// Type check result against CommonYargsOptions to make sure we've included
+	// all common options
+	const wrangler: Yargs.Argv<CommonYargsOptions> = makeCLI(argv)
 		.strict()
 		// We handle errors ourselves in a try-catch around `yargs.parse`.
 		// If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
@@ -179,10 +192,41 @@ export function createCLIParser(argv: string[]) {
 			throw error;
 		})
 		.scriptName("wrangler")
-		.wrap(null);
+		.wrap(null)
+		// Define global options here, so they get included in the `Argv` type of
+		// the `wrangler` variable
+		.version(false)
+		.option("v", {
+			describe: "Show version number",
+			alias: "version",
+			type: "boolean",
+		})
+		.option("config", {
+			alias: "c",
+			describe: "Path to .toml configuration file",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("env", {
+			alias: "e",
+			describe: "Environment to use for operations and .env files",
+			type: "string",
+			requiresArg: true,
+		})
+		.check((args) => {
+			// Grab locally specified env params from `.env` file
+			const loaded = loadDotEnv(".env", args.env);
+			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
+				if (!(key in process.env)) process.env[key] = value;
+			}
+			return true;
+		});
+
+	wrangler.group(["config", "env", "help", "version"], "Flags:");
+	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: Yargs.CommandModule = {
+	const subHelp: Yargs.CommandModule<CommonYargsOptions, CommonYargsOptions> = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -353,6 +397,11 @@ export function createCLIParser(argv: string[]) {
 		return pages(pagesYargs.command(subHelp));
 	});
 
+	// queues
+	wrangler.command("queues", "🆀 Configure Workers Queues", (queuesYargs) => {
+		return queues(queuesYargs.command(subHelp));
+	});
+
 	// r2
 	wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
 		return r2(r2Yargs.command(subHelp));
@@ -501,6 +550,32 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	wrangler.command(
+		"deployments",
+		false,
+		// "🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', 'Created on' and 'Latest deploy'",
+		(yargs) => {
+			yargs.option("name", {
+				describe: "The name of your worker",
+				type: "string",
+			});
+		},
+		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
+			await printWranglerBanner();
+			const config = readConfig(
+				deploymentsYargs.config as ConfigPath,
+				deploymentsYargs
+			);
+			const accountId = await requireAuth(config);
+			const scriptName = getScriptName(
+				{ name: deploymentsYargs.name, env: undefined },
+				config
+			);
+
+			await deployments(accountId, scriptName);
+		}
+	);
+
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
@@ -517,22 +592,6 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 	);
-
-	wrangler.option("v", {
-		describe: "Show version number",
-		alias: "version",
-		type: "boolean",
-	});
-
-	wrangler.option("config", {
-		alias: "c",
-		describe: "Path to .toml configuration file",
-		type: "string",
-		requiresArg: true,
-	});
-
-	wrangler.group(["config", "help", "version"], "Flags:");
-	wrangler.help().alias("h", "help");
 
 	wrangler.exitProcess(false);
 
@@ -582,6 +641,9 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
+		} else if (isBuildFailure(e)) {
+			logBuildFailure(e);
+			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
 			logger.log(

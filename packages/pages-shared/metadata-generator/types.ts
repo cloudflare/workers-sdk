@@ -84,6 +84,7 @@ export type Metadata = {
 		token: string;
 	};
 	deploymentId?: string;
+	failOpen?: boolean;
 };
 
 export type Logger = (message: string) => void;
