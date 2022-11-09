@@ -106,20 +106,19 @@ export async function executeSql(
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 
+	const queries = splitSql(splitter, sql);
+	if (file && sql) {
+		if (queries[0].startsWith("SQLite format 3")) {
+			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
+			throw new Error(
+				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+			);
+		}
+	}
+
 	return local
-		? await executeLocally(
-				config,
-				name,
-				isInteractive,
-				splitSql(splitter, sql),
-				persistTo
-		  )
-		: await executeRemotely(
-				config,
-				name,
-				isInteractive,
-				batchSplit(splitter, sql)
-		  );
+		? await executeLocally(config, name, isInteractive, queries, persistTo)
+		: await executeRemotely(config, name, isInteractive, batchSplit(queries));
 }
 
 export const Handler = withConfig<ExecuteArgs>(
@@ -304,8 +303,7 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 	);
 }
 
-function batchSplit(splitter: typeof splitSqlQuery, sql: SQLQuery) {
-	const queries = splitSql(splitter, sql);
+function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
 	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
