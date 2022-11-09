@@ -103,29 +103,20 @@ export async function executeSql(
 		: null;
 
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
-	if (file && sql) {
-		console.log("sql.toString(): ", sql.toString());
-		if ("SQLite format 3" === String(sql).slice(0, 16)) {
-			console.log("it's an sqlite file?");
-		}
-	}
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 
+	const queries = splitSql(splitter, sql);
+	if (file && sql) {
+		console.log("queries[0]: ", queries[0]);
+		if (queries[0].includes("SQLite format 3")) {
+			console.log("it's an sqlite file?");
+		}
+	}
+
 	return local
-		? await executeLocally(
-				config,
-				name,
-				isInteractive,
-				splitSql(splitter, sql),
-				persistTo
-		  )
-		: await executeRemotely(
-				config,
-				name,
-				isInteractive,
-				batchSplit(splitter, sql)
-		  );
+		? await executeLocally(config, name, isInteractive, queries, persistTo)
+		: await executeRemotely(config, name, isInteractive, batchSplit(queries));
 }
 
 export const Handler = withConfig<ExecuteArgs>(
@@ -310,8 +301,7 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 	);
 }
 
-function batchSplit(splitter: typeof splitSqlQuery, sql: SQLQuery) {
-	const queries = splitSql(splitter, sql);
+function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
 	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
