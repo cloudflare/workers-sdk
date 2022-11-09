@@ -570,6 +570,7 @@ async function createRemoteWorkerInit(props: {
 		compatibility_flags: props.compatibilityFlags,
 		usage_model: props.usageModel,
 		keepVars: true,
+		logpush: false,
 	};
 
 	return init;

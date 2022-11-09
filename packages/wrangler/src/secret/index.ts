@@ -121,6 +121,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 								compatibility_flags: undefined,
 								usage_model: undefined,
 								keepVars: false, // this doesn't matter since it's a new script anyway
+								logpush: false,
 							}),
 						}
 					);

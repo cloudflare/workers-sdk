@@ -247,6 +247,18 @@ interface EnvironmentInheritable {
 			destination: string;
 		}[];
 	};
+
+	/**
+	 * Send Trace Events from this worker to Workers Logpush.
+	 *
+	 * This will not configure a corresponding Logpush job automatically.
+	 *
+	 * For more information about Workers Logpush, see:
+	 * https://blog.cloudflare.com/logpush-for-workers/
+	 *
+	 * @inheritable
+	 */
+	logpush: boolean | undefined;
 }
 
 /**
