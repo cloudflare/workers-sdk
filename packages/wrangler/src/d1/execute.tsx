@@ -103,6 +103,12 @@ export async function executeSql(
 		: null;
 
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (file && sql) {
+		console.log("sql: ", sql);
+		if ("SQLite format 3" === String(sql).slice(0, 16)) {
+			console.log("it's an sqlite file?");
+		}
+	}
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 
