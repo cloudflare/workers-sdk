@@ -23,17 +23,26 @@ export async function Handler({
 	name,
 }: ArgumentsCamelCase<CreateArgs>): Promise<void> {
 	const accountId = await requireAuth({});
+
 	logger.log(d1BetaWarning);
 
-	const db: Database = await fetchResult(`/accounts/${accountId}/d1/database`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			name,
-		}),
-	});
+	let db: Database;
+	try {
+		db = await fetchResult(`/accounts/${accountId}/d1/database`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				name,
+			}),
+		});
+	} catch (e) {
+		if ((e as { code: number }).code === 7502) {
+			throw new Error("A database with that name already exists");
+		}
+		throw e;
+	}
 
 	render(
 		<Box flexDirection="column">
