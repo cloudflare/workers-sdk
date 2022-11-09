@@ -109,7 +109,9 @@ export async function executeSql(
 	const queries = splitSql(splitter, sql);
 	if (file && sql) {
 		if (queries[0].includes("SQLite format 3")) {
-			throw new Error("File is an SQLite database, not an SQL text file");
+			throw new Error(
+				"Error: The `execute` command can only process SQL text files. The file you provided appears to be a SQLite database file."
+			);
 		}
 	}
 
