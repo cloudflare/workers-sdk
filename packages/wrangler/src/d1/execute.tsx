@@ -104,7 +104,7 @@ export async function executeSql(
 
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (file && sql) {
-		console.log("sql: ", sql);
+		console.log("sql.toString(): ", sql.toString());
 		if ("SQLite format 3" === String(sql).slice(0, 16)) {
 			console.log("it's an sqlite file?");
 		}
