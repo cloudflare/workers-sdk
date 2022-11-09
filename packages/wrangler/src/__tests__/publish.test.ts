@@ -5904,7 +5904,8 @@ addEventListener('fetch', event => {});`
 			  - metadata: nasm_A19750603000
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev"
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version: 2"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
