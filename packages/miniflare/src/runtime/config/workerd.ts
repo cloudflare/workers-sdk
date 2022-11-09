@@ -53,6 +53,7 @@ export type Worker = (
 	compatibilityFlags?: string[];
 	bindings?: Worker_Binding[];
 	globalOutbound?: ServiceDesignator;
+	cacheApiOutbound?: ServiceDesignator;
 	durableObjectNamespaces?: Worker_DurableObjectNamespace[];
 	durableObjectUniqueKeyModifier?: string;
 	durableObjectStorage?: Worker_DurableObjectStorage;

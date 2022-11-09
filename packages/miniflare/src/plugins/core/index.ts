@@ -261,6 +261,7 @@ export const CORE_PLUGIN: Plugin<
 						uniqueKey: className,
 					})),
 					durableObjectStorage: { inMemory: kVoid },
+					cacheApiOutbound: { name: "cache" },
 				},
 			});
 			serviceEntryBindings.push({

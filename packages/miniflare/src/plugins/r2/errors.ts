@@ -1,4 +1,5 @@
 import { Response } from "undici";
+import { HttpError } from "../../shared";
 import { CfHeader } from "../shared/constants";
 import { R2Object } from "./r2Object";
 

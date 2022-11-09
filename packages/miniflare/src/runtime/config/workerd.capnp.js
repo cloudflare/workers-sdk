@@ -1549,7 +1549,7 @@ Worker_DurableObjectStorage.IN_MEMORY =
 Worker_DurableObjectStorage._capnp = {
 	displayName: "durableObjectStorage",
 	id: "cc72b3faa57827d4",
-	size: new capnp_ts_1.ObjectSize(8, 7),
+	size: new capnp_ts_1.ObjectSize(8, 8),
 };
 var Worker_Which;
 (function (Worker_Which) {
@@ -1686,6 +1686,24 @@ class Worker extends capnp_ts_1.Struct {
 	setGlobalOutbound(value) {
 		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(4, this));
 	}
+	adoptCacheApiOutbound(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(7, this));
+	}
+	disownCacheApiOutbound() {
+		return capnp_ts_1.Struct.disown(this.getCacheApiOutbound());
+	}
+	getCacheApiOutbound() {
+		return capnp_ts_1.Struct.getStruct(7, ServiceDesignator, this);
+	}
+	hasCacheApiOutbound() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(7, this));
+	}
+	initCacheApiOutbound() {
+		return capnp_ts_1.Struct.initStructAt(7, ServiceDesignator, this);
+	}
+	setCacheApiOutbound(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(7, this));
+	}
 	adoptDurableObjectNamespaces(value) {
 		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(5, this));
 	}
@@ -1738,7 +1756,7 @@ Worker.DurableObjectNamespace = Worker_DurableObjectNamespace;
 Worker._capnp = {
 	displayName: "Worker",
 	id: "acfa77e88fd97d1c",
-	size: new capnp_ts_1.ObjectSize(8, 7),
+	size: new capnp_ts_1.ObjectSize(8, 8),
 	defaultGlobalOutbound: capnp.readRawPointer(
 		new Uint8Array([
 			0x10, 0x05, 0x40, 0x02, 0x11, 0x05, 0x4a, 0x00, 0x00, 0xff, 0x69, 0x6e,

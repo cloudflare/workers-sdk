@@ -41,6 +41,7 @@
 		"exit-hook": "^2.2.1",
 		"get-port": "^5.1.1",
 		"glob-to-regexp": "^0.4.1",
+		"http-cache-semantics": "^4.1.0",
 		"kleur": "^4.1.5",
 		"stoppable": "^1.1.0",
 		"undici": "^5.10.0",
@@ -51,6 +52,7 @@
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
-		"@types/stoppable": "^1.1.1"
+		"@types/stoppable": "^1.1.1",
+		"@types/http-cache-semantics": "^4.0.1"
 	}
 }
