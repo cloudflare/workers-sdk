@@ -594,6 +594,12 @@ export declare class Worker extends __S {
 	hasGlobalOutbound(): boolean;
 	initGlobalOutbound(): ServiceDesignator;
 	setGlobalOutbound(value: ServiceDesignator): void;
+	adoptCacheApiOutbound(value: capnp.Orphan<ServiceDesignator>): void;
+	disownCacheApiOutbound(): capnp.Orphan<ServiceDesignator>;
+	getCacheApiOutbound(): ServiceDesignator;
+	hasCacheApiOutbound(): boolean;
+	initCacheApiOutbound(): ServiceDesignator;
+	setCacheApiOutbound(value: ServiceDesignator): void;
 	adoptDurableObjectNamespaces(
 		value: capnp.Orphan<capnp.List<Worker_DurableObjectNamespace>>
 	): void;

@@ -67,4 +67,5 @@ export const HEAD = createRouteDecorator("HEAD");
 export const POST = createRouteDecorator("POST");
 export const PUT = createRouteDecorator("PUT");
 export const DELETE = createRouteDecorator("DELETE");
+export const PURGE = createRouteDecorator("PURGE");
 export const PATCH = createRouteDecorator("PATCH");

@@ -40,4 +40,6 @@ export enum CfHeader {
 	Request = "cf-r2-request",
 	MetadataSize = "cf-r2-metadata-size",
 	Blob = "cf-blob",
+	CacheNamespace = "cf-cache-namespace",
+	CacheStatus = "cf-cache-status",
 }
