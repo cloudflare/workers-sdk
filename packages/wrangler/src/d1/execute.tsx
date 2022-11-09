@@ -108,9 +108,8 @@ export async function executeSql(
 
 	const queries = splitSql(splitter, sql);
 	if (file && sql) {
-		console.log("queries[0]: ", queries[0]);
 		if (queries[0].includes("SQLite format 3")) {
-			console.log("it's an sqlite file?");
+			throw new Error("File is an SQLite database, not an SQL text file");
 		}
 	}
 
