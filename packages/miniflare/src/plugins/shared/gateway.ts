@@ -7,7 +7,12 @@ import {
 	defaultClock,
 	sanitisePath,
 } from "../../shared";
-import { FileStorage, MemoryStorage, Storage } from "../../storage";
+import {
+	FileStorage,
+	MemoryStorage,
+	Storage,
+	SqliteStorage,
+} from "../../storage";
 
 // TODO: explain why persist passed as header, want options set to be atomic,
 //  if set gateway before script update, may be using new persist before new script
@@ -57,6 +62,8 @@ export class GatewayFactory<Gateway> {
 				const unsanitise =
 					url.searchParams.get(PARAM_FILE_UNSANITISE) === "true";
 				return new FileStorage(root, !unsanitise);
+			} else if (url.protocol === "sqlite:") {
+				return new SqliteStorage(url.pathname, sanitisedNamespace);
 			}
 			// TODO: support Redis/SQLite storages?
 			throw new MiniflareCoreError(
