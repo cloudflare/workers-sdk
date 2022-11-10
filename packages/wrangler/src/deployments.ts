@@ -47,7 +47,6 @@ export async function deployments(
 	const versionMessages = deploys.map(
 		(versions) =>
 			`\nDeployment ID: ${versions.id}
-Deployment number: ${versions.number}
 Created on: ${versions.metadata.created_on}
 Author: ${versions.metadata.author_email}
 Source: ${sourceStr(versions.metadata.source)}\n`

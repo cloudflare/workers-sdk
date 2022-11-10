@@ -58,13 +58,11 @@ describe("deployments", () => {
 
 
 		Deployment ID: Intrepid-Class
-		Deployment number: NCC-74656
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
 		Source: Wrangler
 
 		Deployment ID: Galaxy-Class
-		Deployment number: 1701-E
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: Wrangler
@@ -79,13 +77,11 @@ describe("deployments", () => {
 
 
 		Deployment ID: Intrepid-Class
-		Deployment number: NCC-74656
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
 		Source: Wrangler
 
 		Deployment ID: Galaxy-Class
-		Deployment number: 1701-E
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: Wrangler

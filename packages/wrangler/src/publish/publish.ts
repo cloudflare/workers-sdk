@@ -824,7 +824,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
 		);
 
-		logger.log("Current Deployment:", deploymentsList.latest.number);
+		logger.log("Current Deployment ID:", deploymentsList.latest.id);
 	} catch (e) {
 		if ((e as { code: number }).code === 10023) {
 			// TODO: remove this try/catch once versions is completely rolled out
