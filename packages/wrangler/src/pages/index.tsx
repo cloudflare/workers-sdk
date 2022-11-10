@@ -83,8 +83,9 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 							Publish.Handler
 						)
 						.command(
-							"tail [deployment-id]",
-							"Tail requests and logs on a deployment",
+							"tail [deployment]",
+							"Start a tailing session for a project's deployment and " +
+								" livestream logs from your Functions",
 							DeploymentTails.Options,
 							DeploymentTails.Handler
 						)

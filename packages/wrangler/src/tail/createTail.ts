@@ -69,6 +69,16 @@ interface CreatePagesTailOptions {
 	debug?: boolean;
 }
 
+/**
+ * Create and connect to a Pages Function Tail.
+ *
+ * Under the hood, this function
+ * - Registers a new Tail with the API
+ * - Connects to the tail worker
+ * - Sends any filters over the connection
+ *
+ * @returns a websocket connection, an expiration, and a function to call to delete the tail
+ */
 export async function createPagesTail({
 	accountId,
 	projectName,
@@ -80,7 +90,7 @@ export async function createPagesTail({
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails`,
 		{
 			method: "POST",
-			body: JSON.stringify(filters.filters),
+			body: JSON.stringify(filters),
 		}
 	);
 

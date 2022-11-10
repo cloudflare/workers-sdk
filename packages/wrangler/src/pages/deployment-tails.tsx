@@ -16,6 +16,7 @@ import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
+import { isUrl } from "./utils";
 import type { ConfigPath } from "..";
 import type { YargsOptionsToInterface } from "../yargs-types";
 import type { Deployment, PagesConfigCache } from "./types";
@@ -36,11 +37,11 @@ const isStatusChoiceList = (
 export function Options(yargs: Argv) {
 	return (
 		yargs
-			.positional("deployment-id", {
+			.positional("deployment", {
 				type: "string",
 				description:
-					"Deployment to tail. Specify by environment if " +
-					"deployment ID is unknown.",
+					"(Optional) ID or URL of the deployment to tail. " +
+					"Specify by environment if deployment ID is unknown.",
 			})
 			.options({
 				"project-name": {
@@ -108,7 +109,7 @@ export function Options(yargs: Argv) {
 }
 
 export async function Handler({
-	deploymentId,
+	deployment,
 	projectName,
 	environment,
 	header,
@@ -137,34 +138,54 @@ export async function Handler({
 		PAGES_CONFIG_CACHE_FILENAME
 	);
 	const accountId = await requireAuth(pagesConfig);
+	let deploymentId = deployment;
 
 	projectName = projectName || pagesConfig.project_name;
 
-	if (!deploymentId && !projectName && isInteractive) {
+	// When not specifying a deployment, we need a project name to use the latest
+	// Or when specifying by deployment URL
+	if ((!deployment || isUrl(deployment)) && !projectName && isInteractive) {
 		projectName = await promptSelectProject({ accountId });
 	}
 
-	if (!deploymentId && !projectName) {
-		throw new FatalError("Must specify a project name or deployment ID.", 1);
+	if (!deployment && !projectName) {
+		throw new FatalError("Must specify a project name or deployment.", 1);
 	}
 
-	if (!deploymentId) {
-		logger.log(
-			"No deploymentId specified. Using latest deployment for ",
-			environment,
-			"environment."
+	const deployments: Array<Deployment> = await fetchResult(
+		`/accounts/${accountId}/pages/projects/${projectName}/deployments`
+	);
+
+	const envDeployments = deployments.filter(
+		(d) => d.environment === environment
+	);
+
+	if (envDeployments.length === 0) {
+		throw new FatalError("No deployments for environment: " + environment, 1);
+	}
+
+	// Deployment is URL
+	if (deployment?.startsWith("https://")) {
+		const { hostname: deploymentHostname } = new URL(deployment);
+		const targetDeployment = envDeployments.find(
+			(d) => new URL(d.url).hostname === deploymentHostname
 		);
 
-		const deployments: Array<Deployment> = await fetchResult(
-			`/accounts/${accountId}/pages/projects/${projectName}/deployments`
-		);
+		if (!targetDeployment) {
+			throw new FatalError(
+				"Could not find deployment match url: " + deployment,
+				1
+			);
+		}
 
-		const envDeployments = deployments.filter(
-			(d) => d.environment === environment
-		);
-
-		if (envDeployments.length === 0) {
-			throw new FatalError("No deployments for environment: " + environment, 1);
+		deploymentId = targetDeployment.id;
+	} else {
+		if (format === "pretty") {
+			logger.log(
+				"No deployment specified. Using latest deployment for ",
+				environment,
+				"environment."
+			);
 		}
 
 		const latestDeployment = envDeployments
@@ -177,8 +198,6 @@ export async function Handler({
 	if (!deploymentId || !projectName) {
 		throw new FatalError("An unknown error occurred.", 1);
 	}
-
-	logger.log("Running tail on deploymentId:", deploymentId);
 
 	const filters = translateCLICommandToFilterMessage({
 		header,
@@ -193,19 +212,13 @@ export async function Handler({
 		sendMetrics: config.send_metrics,
 	});
 
-	const { tail, expiration, deleteTail } = await createPagesTail({
+	const { tail, deleteTail } = await createPagesTail({
 		accountId,
 		projectName,
 		deploymentId,
 		filters,
 		debug,
 	});
-
-	if (args.format === "pretty") {
-		logger.log(
-			`Successfully created tail for deployment ${deploymentId}, expires at ${expiration.toLocaleString()}`
-		);
-	}
 
 	const onCloseTail = (() => {
 		let didTerminate = false;
@@ -253,7 +266,7 @@ export async function Handler({
 		}
 	}
 
-	if (args.format === "pretty") {
+	if (format === "pretty") {
 		logger.log(`Connected to deployment ${deploymentId}, waiting for logs...`);
 	}
 }

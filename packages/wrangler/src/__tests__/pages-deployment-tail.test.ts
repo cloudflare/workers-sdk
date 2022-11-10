@@ -54,6 +54,26 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
+		it("creates and then delete tails by deployment URL", async () => {
+			const api = mockTailAPIs();
+			expect(api.requests.creation.length).toStrictEqual(0);
+
+			await runWrangler(
+				"pages deployment tail https://foo.mock-project.pages.dev --project-name mock-project"
+			);
+
+			await expect(api.ws.connected).resolves.toBeTruthy();
+			expect(api.requests.creation.length).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(0);
+
+			api.ws.close();
+			expect(api.requests.deletion.count).toStrictEqual(1);
+		});
+
+		it("errors when passing in a deployment without a project", async () => {
+			await expect(runWrangler("pages deployment tail foo")).rejects.toThrow();
+		});
+
 		it("creates and then delete tails by project name", async () => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
@@ -617,7 +637,7 @@ function mockCreateTailRequest(): RequestInit[] {
 	setMockResponse(
 		`/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
 		"POST",
-		([_url, accountId, projectName, deploymentId], req) => {
+		([_url, _accountId, _projectName, _deploymentId], req) => {
 			requests.push(req);
 			return {
 				id: "tail-id",
