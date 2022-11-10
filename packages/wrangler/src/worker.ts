@@ -194,7 +194,6 @@ export interface CfWorkerInit {
 	 */
 	bindings: {
 		vars: CfVars | undefined;
-		metadata_binding: string | undefined;
 		kv_namespaces: CfKvNamespace[] | undefined;
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;

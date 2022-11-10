@@ -103,7 +103,6 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 								bindings: {
 									kv_namespaces: [],
 									vars: {},
-									metadata_binding: undefined,
 									durable_objects: { bindings: [] },
 									queues: [],
 									r2_buckets: [],

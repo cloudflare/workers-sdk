@@ -107,7 +107,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 		});
 	});
@@ -144,7 +144,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -166,7 +166,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
@@ -207,7 +207,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -232,7 +232,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -335,7 +335,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -355,7 +355,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -375,7 +375,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -395,7 +395,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -466,7 +466,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -493,7 +493,7 @@ describe("publish", () => {
 			Uploaded test-name (some-env) (TIMINGS)
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -540,7 +540,7 @@ describe("publish", () => {
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment: 2"
+		Current Deployment ID: undefined"
 	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -575,7 +575,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - The \\"route\\" field in your configuration is an empty string and will be ignored.
@@ -626,7 +626,7 @@ describe("publish", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -688,7 +688,7 @@ describe("publish", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -791,7 +791,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  example.com/some-route/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 		});
 
@@ -1072,7 +1072,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1090,7 +1090,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1108,7 +1108,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1128,7 +1128,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1146,7 +1146,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1183,7 +1183,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1234,7 +1234,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1254,7 +1254,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1286,7 +1286,7 @@ export default{
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1304,7 +1304,7 @@ export default{
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1399,7 +1399,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1482,7 +1482,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -1535,7 +1535,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
@@ -1625,7 +1625,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
@@ -1674,7 +1674,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1715,7 +1715,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -1900,7 +1900,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -1947,7 +1947,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2004,7 +2004,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2062,7 +2062,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2114,7 +2114,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2164,7 +2164,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (some-env) (TIMINGS)
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2215,7 +2215,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2259,7 +2259,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2300,7 +2300,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2341,7 +2341,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2383,7 +2383,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2425,7 +2425,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2467,7 +2467,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2509,7 +2509,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2553,7 +2553,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2601,7 +2601,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2751,7 +2751,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -2851,7 +2851,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2906,7 +2906,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2948,7 +2948,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -2991,7 +2991,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -3014,7 +3014,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3035,7 +3035,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3055,7 +3055,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3074,7 +3074,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			No publish targets for test-name (TIMINGS)
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3095,7 +3095,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			No publish targets for test-name (TIMINGS)
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3120,7 +3120,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
 			No publish targets for test-name (dev) (TIMINGS)
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3146,7 +3146,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
 			No publish targets for test-name (dev) (TIMINGS)
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3173,7 +3173,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3201,7 +3201,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3230,7 +3230,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3262,7 +3262,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3296,7 +3296,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3357,7 +3357,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3376,7 +3376,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3419,7 +3419,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  http://example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3454,7 +3454,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3488,7 +3488,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3516,7 +3516,7 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  http://example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3552,7 +3552,7 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3588,7 +3588,7 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3623,7 +3623,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3658,7 +3658,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3810,7 +3810,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3836,7 +3836,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3943,7 +3943,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3983,7 +3983,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (testEnv) (TIMINGS)
 			Published test-name (testEnv) (TIMINGS)
 			  https://testEnv.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4011,7 +4011,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -4062,7 +4062,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4107,7 +4107,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4159,7 +4159,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -4204,7 +4204,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -4251,7 +4251,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4315,7 +4315,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (xyz) (TIMINGS)
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4382,7 +4382,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4452,7 +4452,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (xyz) (TIMINGS)
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4671,7 +4671,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5052,7 +5052,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5123,7 +5123,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5157,7 +5157,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5195,7 +5195,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5270,7 +5270,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5308,7 +5308,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5383,7 +5383,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5427,7 +5427,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5451,7 +5451,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -5480,7 +5480,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5533,7 +5533,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5580,7 +5580,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5621,7 +5621,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5667,7 +5667,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5731,7 +5731,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5774,7 +5774,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5821,7 +5821,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5865,7 +5865,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5880,33 +5880,6 @@ addEventListener('fetch', event => {});`
 
 			          "
 		        `);
-			});
-		});
-
-		describe("[metadata_binding]", () => {
-			it("should pass metadata binding to backend", async () => {
-				writeWranglerToml({
-					metadata_binding: "nasm_A19750603000",
-				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [{ name: "nasm_A19750603000", type: "metadata" }],
-				});
-
-				await runWrangler("publish index.js");
-				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Metadata Binding:
-			  - metadata: nasm_A19750603000
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 	});
@@ -5939,7 +5912,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5969,7 +5942,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6003,7 +5976,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6053,7 +6026,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6151,7 +6124,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6182,7 +6155,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6212,7 +6185,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6244,7 +6217,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6274,7 +6247,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6316,7 +6289,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -6347,7 +6320,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -6371,7 +6344,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -6516,7 +6489,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2",
+			Current Deployment ID: undefined",
 			  "warn": "",
 			}
 		`);
@@ -6912,7 +6885,7 @@ addEventListener('fetch', event => {});`
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment: 2",
+		Current Deployment ID: undefined",
 		  "warn": "",
 		}
 	`);
@@ -6975,7 +6948,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 		});
 
@@ -7012,7 +6985,7 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 		});
 
@@ -7084,7 +7057,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -7109,7 +7082,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment: 2"
+			Current Deployment ID: undefined"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
