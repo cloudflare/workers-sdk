@@ -5903,7 +5903,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Version: 2"
+			Current Deployment: 2"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
