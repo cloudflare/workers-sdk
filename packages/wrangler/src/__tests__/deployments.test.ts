@@ -54,38 +54,42 @@ describe("deployments", () => {
 	it("should log deployments", async () => {
 		await runWrangler("deployments");
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		Version ID: Galaxy-Class
-		Version number: 1701-E
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author email: Jean-Luc-Picard@federation.org
-		Latest deploy: true
+		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-		Version ID: Intrepid-Class
-		Version number: NCC-74656
+
+		Deployment ID: Intrepid-Class
+		Deployment number: NCC-74656
 		Created on: 2021-02-02T00:00:00.000000Z
-		Author email: Kathryn-Janeway@federation.org
-		Latest deploy: false
-		"
+		Author: Kathryn-Janeway@federation.org
+		Source: Wrangler
+
+		Deployment ID: Galaxy-Class
+		Deployment number: 1701-E
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author: Jean-Luc-Picard@federation.org
+		Source: Wrangler
+		🟩Active"
 	`);
 	});
 
 	it("should log deployments for script with passed in name option", async () => {
 		await runWrangler("deployments --name somethingElse");
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		Version ID: Galaxy-Class
-		Version number: 1701-E
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author email: Jean-Luc-Picard@federation.org
-		Latest deploy: true
+		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-		Version ID: Intrepid-Class
-		Version number: NCC-74656
+
+		Deployment ID: Intrepid-Class
+		Deployment number: NCC-74656
 		Created on: 2021-02-02T00:00:00.000000Z
-		Author email: Kathryn-Janeway@federation.org
-		Latest deploy: false
-		"
+		Author: Kathryn-Janeway@federation.org
+		Source: Wrangler
+
+		Deployment ID: Galaxy-Class
+		Deployment number: 1701-E
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author: Jean-Luc-Picard@federation.org
+		Source: Wrangler
+		🟩Active"
 	`);
 	});
 });

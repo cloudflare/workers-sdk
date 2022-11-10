@@ -45,12 +45,30 @@ export async function deployments(
 	);
 
 	const versionMessages = deploys.map(
-		(versions, index) =>
-			`\nVersion ID: ${versions.id}\nVersion number: ${
-				versions.number
-			}\nCreated on: ${versions.metadata.created_on}\nAuthor email: ${
-				versions.metadata.author_email
-			}\nLatest deploy: ${index === 0}\n`
+		(versions) =>
+			`\nDeployment ID: ${versions.id}
+Deployment number: ${versions.number}
+Created on: ${versions.metadata.created_on}
+Author: ${versions.metadata.author_email}
+Source: ${sourceStr(versions.metadata.source)}\n`
 	);
-	logger.log(...versionMessages);
+
+	versionMessages[0] += "🟩Active";
+	logger.log(...versionMessages.reverse());
+}
+
+// TODO Include emoji/icon for each source
+function sourceStr(source: string): string {
+	switch (source) {
+		case "api":
+			return "API";
+		case "dash":
+			return "Dashboard";
+		case "wrangler":
+			return "Wrangler";
+		case "terraform":
+			return "Terraform";
+		default:
+			return "Other";
+	}
 }
