@@ -92,6 +92,7 @@ export function Options(yargs: Argv) {
 				describe:
 					"Bindings used in Functions (used to register beta product shims)",
 				deprecated: true,
+				hidden: true,
 			},
 		})
 		.epilogue(pagesBetaWarning);
