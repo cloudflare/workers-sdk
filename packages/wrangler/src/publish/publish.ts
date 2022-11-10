@@ -820,11 +820,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No publish targets for", workerName, formatTime(deployMs));
 	}
 
-	const deploymentsList = await fetchResult<DeploymentListRes>(
-		`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
-	);
+	try {
+		const deploymentsList = await fetchResult<DeploymentListRes>(
+			`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
+		);
 
-	logger.log("Current Version:", deploymentsList.latest.number);
+		logger.log("Current Deployment:", deploymentsList.latest.number);
+	} catch (e) {
+		if ((e as { code: number }).code === 10023) {
+			// TODO: remove this try/catch once versions is completely rolled out
+		}
+		throw e;
+	}
 }
 
 function formatTime(duration: number) {
