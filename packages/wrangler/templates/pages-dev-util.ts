@@ -9,7 +9,10 @@
  * /foo*   ->  /foo, /foo-bar, /foo/*
  * /foo/*  ->  /foo, /foo/bar
  */
-export function isRoutingRuleMatch(pathname, routingRule) {
+export function isRoutingRuleMatch(
+	pathname: string,
+	routingRule: string
+): boolean {
 	// sanity checks
 	if (!pathname) {
 		throw new Error("Pathname is undefined.");
@@ -22,7 +25,7 @@ export function isRoutingRuleMatch(pathname, routingRule) {
 	return pathname.match(ruleRegExp) !== null;
 }
 
-function transformRoutingRuleToRegExp(rule) {
+function transformRoutingRuleToRegExp(rule: string): RegExp {
 	let transformedRule;
 
 	if (rule === "/" || rule === "/*") {

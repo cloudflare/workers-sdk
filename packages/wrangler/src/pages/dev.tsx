@@ -293,7 +293,7 @@ export const Handler = async ({
 				buildOutputDirectory: directory,
 				nodeCompat,
 				local: true,
-				d1Databases: d1s.map((x) => x.toString()),
+				d1Databases: d1s.map((binding) => binding.toString()),
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 
@@ -312,7 +312,7 @@ export const Handler = async ({
 						buildOutputDirectory: directory,
 						nodeCompat,
 						local: true,
-						d1Databases: d1s.map((x) => x.toString()),
+						d1Databases: d1s.map((binding) => binding.toString()),
 					});
 					await metrics.sendMetricsEvent("build pages functions");
 				} catch (e) {
@@ -387,7 +387,7 @@ export const Handler = async ({
 							__ENTRY_POINT__: entrypointFile,
 							"./pages-dev-util": resolve(
 								getBasePath(),
-								"templates/pages-dev-util.js"
+								"templates/pages-dev-util.ts"
 							),
 						}),
 					],
@@ -483,8 +483,8 @@ export const Handler = async ({
 					.map((binding) => binding.toString().split("="))
 					.map(([key, ...values]) => [key, values.join("=")])
 			),
-			kv: kvs.map((val) => ({
-				binding: val.toString(),
+			kv: kvs.map((binding) => ({
+				binding: binding.toString(),
 				id: "",
 			})),
 			durableObjects: durableObjects

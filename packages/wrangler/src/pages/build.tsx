@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -81,12 +81,6 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				hidden: true,
 			},
-			local: {
-				describe: "Build for local development",
-				default: false,
-				type: "boolean",
-				hidden: true,
-			},
 			bindings: {
 				type: "string",
 				describe:
@@ -110,7 +104,6 @@ export const Handler = async ({
 	plugin,
 	buildOutputDirectory,
 	nodeCompat,
-	local,
 	bindings,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
@@ -148,7 +141,7 @@ export const Handler = async ({
 			buildOutputDirectory,
 			nodeCompat,
 			routesOutputPath,
-			local,
+			local: false,
 			d1Databases,
 		});
 	} catch (e) {
@@ -194,16 +187,18 @@ export async function buildFunctions({
 		| "plugin"
 		| "buildOutputDirectory"
 		| "nodeCompat"
-		| "local"
 	>
 > & {
 	functionsDirectory: string;
 	onEnd?: () => void;
 	outfile: Required<PagesBuildArgs>["outfile"];
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
+	local: boolean;
 	d1Databases?: string[];
 }) {
-	RUNNING_BUILDERS.forEach((runningBuilder) => runningBuilder.stop?.());
+	RUNNING_BUILDERS.forEach(
+		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
+	);
 
 	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
 	const baseURL = toUrlPath("/");
@@ -237,7 +232,7 @@ export async function buildFunctions({
 		outfile: routesModule,
 	});
 
-	const absoluteFunctionsDirectory = join(process.cwd(), functionsDirectory);
+	const absoluteFunctionsDirectory = resolve(functionsDirectory);
 
 	if (plugin) {
 		RUNNING_BUILDERS.push(
@@ -249,7 +244,7 @@ export async function buildFunctions({
 				watch,
 				nodeCompat,
 				functionsDirectory: absoluteFunctionsDirectory,
-				local: local ?? false,
+				local,
 				betaD1Shims: d1Databases,
 				onEnd,
 			})
@@ -261,14 +256,14 @@ export async function buildFunctions({
 				outfile,
 				minify,
 				sourcemap,
+				fallbackService,
 				watch,
-				nodeCompat,
 				functionsDirectory: absoluteFunctionsDirectory,
-				local: local ?? false,
+				local,
 				betaD1Shims: d1Databases,
 				onEnd,
 				buildOutputDirectory,
-				fallbackService,
+				nodeCompat,
 			})
 		);
 	}

@@ -2111,29 +2111,37 @@ and that at least one include rule is provided.
 			assertLater(() => {
 				expect(requests.length).toBe(3);
 
-				expect(requests[0].headers).toMatchObject({
+				const sortedRequests = requests.sort((a, b) => {
+					return (JSON.parse(a.body as string)[0].key as string).localeCompare(
+						JSON.parse(b.body as string)[0].key as string
+					);
+				});
+
+				expect(sortedRequests[0].headers).toMatchObject({
 					Authorization: "Bearer <<funfetti-auth-jwt>>",
 				});
 
 				let body = JSON.parse(
-					requests[0].body as string
+					sortedRequests[0].body as string
 				) as UploadPayloadFile[];
 				expect(body).toMatchObject([
 					{
-						key: "95dedb64e6d4940fc2e0f11f711cc2f4",
-						value: Buffer.from("headersfile").toString("base64"),
+						key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
+						value: Buffer.from("func").toString("base64"),
 						metadata: {
-							contentType: "application/octet-stream",
+							contentType: "application/javascript",
 						},
 						base64: true,
 					},
 				]);
 
-				expect(requests[1].headers).toMatchObject({
+				expect(sortedRequests[1].headers).toMatchObject({
 					Authorization: "Bearer <<funfetti-auth-jwt>>",
 				});
 
-				body = JSON.parse(requests[1].body as string) as UploadPayloadFile[];
+				body = JSON.parse(
+					sortedRequests[1].body as string
+				) as UploadPayloadFile[];
 				expect(body).toMatchObject([
 					{
 						key: "2082190357cfd3617ccfe04f340c6247",
@@ -2145,17 +2153,19 @@ and that at least one include rule is provided.
 					},
 				]);
 
-				expect(requests[2].headers).toMatchObject({
+				expect(sortedRequests[2].headers).toMatchObject({
 					Authorization: "Bearer <<funfetti-auth-jwt>>",
 				});
 
-				body = JSON.parse(requests[2].body as string) as UploadPayloadFile[];
+				body = JSON.parse(
+					sortedRequests[2].body as string
+				) as UploadPayloadFile[];
 				expect(body).toMatchObject([
 					{
-						key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
-						value: Buffer.from("func").toString("base64"),
+						key: "95dedb64e6d4940fc2e0f11f711cc2f4",
+						value: Buffer.from("headersfile").toString("base64"),
 						metadata: {
-							contentType: "application/javascript",
+							contentType: "application/octet-stream",
 						},
 						base64: true,
 					},

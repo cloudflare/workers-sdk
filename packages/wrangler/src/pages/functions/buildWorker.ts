@@ -1,5 +1,5 @@
-import { access, cp, lstat, rm, writeFile } from "node:fs/promises";
-import path, { join, resolve } from "node:path";
+import { access, cp, lstat, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
@@ -20,7 +20,7 @@ export type Options = {
 	betaD1Shims?: string[];
 };
 
-export async function buildWorker({
+export function buildWorker({
 	routesModule,
 	outfile = "bundle.js",
 	minify = false,
@@ -34,28 +34,29 @@ export async function buildWorker({
 	local,
 	betaD1Shims,
 }: Options) {
-	const bundle = await bundleWorker(
+	return bundleWorker(
 		{
 			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 			directory: functionsDirectory,
 			format: "modules",
 		},
-		outfile,
+		resolve(outfile),
 		{
 			inject: [routesModule],
-			target: "esnext",
-			loader: {
-				".html": "text",
-				".txt": "text",
-			},
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat: nodeCompat,
+			nodeCompat,
+			loader: {
+				".txt": "text",
+				".html": "text",
+			},
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims: (betaD1Shims || []).map((b) => `${D1_BETA_PREFIX}${b}`),
+			betaD1Shims: (betaD1Shims || []).map(
+				(binding) => `${D1_BETA_PREFIX}${binding}`
+			),
 			plugins: [
 				{
 					name: "wrangler notifier and monitor",
@@ -153,21 +154,12 @@ export async function buildWorker({
 				},
 			],
 			isOutfile: true,
-			// the options bundle requires
 			serveAssetsFromWorker: false,
+			disableModuleCollection: true,
 			rules: [],
 			checkFetch: local,
-			targetConsumer: local ? "dev" : "publish", //don't merge until this is checked - it seems to be for middlewares only atm?
+			targetConsumer: local ? "dev" : "publish",
 			local,
 		}
 	);
-
-	for (const module of bundle.modules) {
-		await writeFile(
-			path.join(path.dirname(outfile), module.name),
-			module.content
-		);
-	}
-
-	return bundle;
 }

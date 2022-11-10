@@ -1,5 +1,5 @@
-import { access, lstat, writeFile } from "node:fs/promises";
-import path, { dirname, relative, resolve } from "node:path";
+import { access, lstat } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
@@ -7,7 +7,7 @@ import type { Options as WorkerOptions } from "./buildWorker";
 
 type Options = Omit<WorkerOptions, "fallbackService" | "buildOutputDirectory">;
 
-export async function buildPlugin({
+export function buildPlugin({
 	routesModule,
 	outfile = "bundle.js",
 	minify = false,
@@ -19,26 +19,23 @@ export async function buildPlugin({
 	local,
 	betaD1Shims,
 }: Options) {
-	const bundle = await bundleWorker(
+	return bundleWorker(
 		{
 			file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
 			directory: functionsDirectory,
 			format: "modules",
 		},
-		outfile,
+		resolve(outfile),
 		{
 			inject: [routesModule],
-			target: "esnext",
-			loader: {
-				".html": "text",
-				".txt": "text",
-			},
 			minify,
 			sourcemap,
 			watch,
 			nodeCompat,
 			define: {},
-			betaD1Shims: (betaD1Shims || []).map((b) => `${D1_BETA_PREFIX}${b}`),
+			betaD1Shims: (betaD1Shims || []).map(
+				(binding) => `${D1_BETA_PREFIX}${binding}`
+			),
 			plugins: [
 				{
 					name: "wrangler notifier and monitor",
@@ -89,31 +86,21 @@ export async function buildPlugin({
 									};
 								}
 
-								const assetPath = `assets:./${relative(outdir, directory)}`;
+								const path = `assets:./${relative(outdir, directory)}`;
 
-								return { path: assetPath, external: true, namespace: "assets" };
+								return { path, external: true, namespace: "assets" };
 							});
 						}
 					},
 				},
 			],
 			isOutfile: true,
-			allowOverwrite: true,
-			// the options bundle requires
 			serveAssetsFromWorker: false,
+			disableModuleCollection: true,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
 			local,
 		}
 	);
-
-	for (const module of bundle.modules) {
-		await writeFile(
-			path.join(path.dirname(outfile), module.name),
-			module.content
-		);
-	}
-
-	return bundle;
 }

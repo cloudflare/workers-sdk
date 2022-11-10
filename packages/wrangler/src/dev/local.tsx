@@ -513,14 +513,6 @@ export function setupMiniflareOptions({
 	miniflareCLIPath: string;
 	forkOptions: string[];
 } {
-	const defaultRules = DEFAULT_MODULE_RULES.slice();
-	if (enablePagesAssetsServiceBinding) {
-		//pages always uses ESM syntax
-		defaultRules.push({
-			globs: ["**/*.js", "**/*.mjs"],
-			type: "ESModule",
-		});
-	}
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
 	const options = {
 		name: workerName,
@@ -530,7 +522,7 @@ export function setupMiniflareOptions({
 		host: ip,
 		modules: format === "modules",
 		modulesRules: (rules || [])
-			.concat(defaultRules)
+			.concat(DEFAULT_MODULE_RULES)
 			.map(({ type, globs: include, fallthrough }) => ({
 				type,
 				include,

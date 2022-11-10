@@ -99,11 +99,11 @@ export async function bundleWorker(
 		testScheduled?: boolean;
 		experimentalLocalStubCache?: boolean;
 		inject?: string[];
-		target?: string;
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
-		allowOverwrite?: boolean;
 		plugins?: esbuild.Plugin[];
+		// TODO: Rip these out https://github.com/cloudflare/wrangler2/issues/2153
+		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
 	}
 ): Promise<BundleResult> {
@@ -127,11 +127,10 @@ export async function bundleWorker(
 		testScheduled,
 		experimentalLocalStubCache,
 		inject: injectOption,
-		target,
 		loader,
 		sourcemap,
-		allowOverwrite,
 		plugins,
+		disableModuleCollection,
 		isOutfile,
 	} = options;
 
@@ -141,7 +140,7 @@ export async function bundleWorker(
 	const tmpDir = await tmp.dir({ unsafeCleanup: true });
 
 	const entryDirectory = path.dirname(entry.file);
-	const moduleCollector = createModuleCollector({
+	let moduleCollector = createModuleCollector({
 		wrangler1xlegacyModuleReferences: {
 			rootDirectory: entryDirectory,
 			fileNames: new Set(
@@ -157,6 +156,15 @@ export async function bundleWorker(
 		format: entry.format,
 		rules,
 	});
+	if (disableModuleCollection) {
+		moduleCollector = {
+			modules: [],
+			plugin: {
+				name: moduleCollector.plugin.name,
+				setup: () => {},
+			},
+		};
+	}
 
 	// In dev, we want to patch `fetch()` with a special version that looks
 	// for bad usages and can warn the user about them; so we inject
@@ -275,15 +283,6 @@ export async function bundleWorker(
 		);
 	}
 
-	let outFilepath: string | undefined = undefined;
-	if (path.isAbsolute(destination)) {
-		outFilepath = destination;
-	} else if (entry.directory.endsWith("functions")) {
-		outFilepath = path.join(entry.directory, "..", destination);
-	} else {
-		outFilepath = path.join(entry.directory, destination);
-	}
-
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],
 		bundle: true,
@@ -292,13 +291,13 @@ export async function bundleWorker(
 		...(isOutfile
 			? {
 					outdir: undefined,
-					outfile: outFilepath,
+					outfile: destination,
 			  }
 			: {}),
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
-		target: target || "es2020",
+		target: "es2020",
 		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
@@ -337,7 +336,6 @@ export async function bundleWorker(
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
 		watch,
-		allowOverwrite,
 		// The default logLevel is "warning". So that we can rewrite errors before
 		// logging, we disable esbuild's default logging, and log build failures
 		// ourselves.
