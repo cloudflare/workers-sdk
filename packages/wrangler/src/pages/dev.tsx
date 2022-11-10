@@ -478,7 +478,6 @@ export const Handler = async ({
 			compatibilityDate,
 			compatibilityFlags,
 			nodeCompat,
-			bundle: false, // pages pre-bundles it's worker so unstable_dev doesn't need to do it again
 			vars: Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))
