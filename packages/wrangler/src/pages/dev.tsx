@@ -686,6 +686,7 @@ async function spawnProxyProcess({
 	return port;
 }
 
+// TODO: Kill this once we have https://github.com/cloudflare/wrangler2/issues/2153
 const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
 	setup(build) {
