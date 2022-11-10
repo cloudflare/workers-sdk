@@ -401,6 +401,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler("pages publish . --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -467,6 +478,17 @@ describe("pages", () => {
 					return {
 						url: "https://abcxyz.foo.pages.dev/",
 					};
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
 				}
 			);
 
@@ -564,6 +586,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler("pages publish . --project-name=foo");
 
 			// Assert two requests
@@ -655,6 +688,17 @@ describe("pages", () => {
 					return {
 						url: "https://abcxyz.foo.pages.dev/",
 					};
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
 				}
 			);
 
@@ -772,6 +816,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler(`pages publish public --project-name=foo`);
 
 			// We have 3 buckets, so expect 3 uploads
@@ -886,6 +941,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			chdir("public");
 			await runWrangler(`pages publish . --project-name=foo`);
 
@@ -986,6 +1052,17 @@ describe("pages", () => {
 				async () => ({
 					url: "https://abcxyz.foo.pages.dev/",
 				})
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
 			);
 
 			await runWrangler("pages publish . --project-name=foo");
@@ -1132,6 +1209,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1235,6 +1323,17 @@ describe("pages", () => {
 					return {
 						url: "https://abcxyz.foo.pages.dev/",
 					};
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
 				}
 			);
 
@@ -1389,6 +1488,17 @@ describe("pages", () => {
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1474,6 +1584,17 @@ describe("pages", () => {
 					]);
 				});
 			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
 
 			await expect(runWrangler("pages publish public --project-name=foo"))
 				.rejects
@@ -1627,6 +1748,17 @@ and that at least one include rule is provided.
 				}
 			);
 
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
+
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1711,6 +1843,17 @@ and that at least one include rule is provided.
 					]);
 				});
 			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
+				}
+			);
 
 			await expect(runWrangler("pages publish public --project-name=foo"))
 				.rejects
@@ -1826,6 +1969,17 @@ and that at least one include rule is provided.
 					return {
 						url: "https://abcxyz.foo.pages.dev/",
 					};
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/foo",
+				"GET",
+				async ([_url, accountId]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+					});
+					return { deployment_configs: { production: {}, preview: {} } };
 				}
 			);
 
