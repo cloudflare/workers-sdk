@@ -17,6 +17,7 @@ export interface PluginServicesOptions<
 	workerIndex: number;
 	durableObjectClassNames: DurableObjectClassNames;
 	additionalModules: Worker_Module[];
+	loopbackPort: number;
 }
 
 export interface PluginBase<

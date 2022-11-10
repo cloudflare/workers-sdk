@@ -46,13 +46,15 @@
 		"stoppable": "^1.1.0",
 		"undici": "^5.10.0",
 		"workerd": "^1.20220926.3",
+		"ws": "^8.11.0",
 		"zod": "^3.18.0"
 	},
 	"devDependencies": {
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
+		"@types/http-cache-semantics": "^4.0.1",
 		"@types/stoppable": "^1.1.1",
-		"@types/http-cache-semantics": "^4.0.1"
+		"@types/ws": "^8.5.3"
 	}
 }
