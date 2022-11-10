@@ -5891,9 +5891,7 @@ addEventListener('fetch', event => {});`
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
-					expectedBindings: [
-						{ name: "nasm_A19750603000", type: "metadata_binding" },
-					],
+					expectedBindings: [{ name: "nasm_A19750603000", type: "metadata" }],
 				});
 
 				await runWrangler("publish index.js");
