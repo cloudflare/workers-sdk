@@ -524,7 +524,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					: []
 			),
 			vars: { ...config.vars, ...props.vars },
-			metadata_binding: config.metadata_binding,
 			wasm_modules: config.wasm_modules,
 			text_blobs: {
 				...config.text_blobs,

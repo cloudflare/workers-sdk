@@ -69,7 +69,6 @@ describe("normalizeAndValidateConfig()", () => {
 			dispatch_namespaces: [],
 			usage_model: undefined,
 			vars: {},
-			metadata_binding: undefined,
 			define: {},
 			wasm_modules: undefined,
 			data_blobs: undefined,
@@ -2490,7 +2489,6 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: false,
 				node_compat: false,
 				first_party_worker: false,
-				metadata_binding: "METADATA_ENV",
 				logpush: false,
 			};
 			const rawConfig: RawConfig = {
@@ -2515,7 +2513,6 @@ describe("normalizeAndValidateConfig()", () => {
 				minify: true,
 				node_compat: true,
 				first_party_worker: true,
-				metadata_binding: "METADATA_RAW",
 				logpush: true,
 				env: {
 					ENV1: rawEnv,
@@ -2701,7 +2698,6 @@ describe("normalizeAndValidateConfig()", () => {
 			const kv_namespaces: RawConfig["kv_namespaces"] = [];
 			const r2_buckets: RawConfig["r2_buckets"] = [];
 			const unsafe: RawConfig["unsafe"] = { bindings: [] };
-			const metadata_binding: RawConfig["metadata_binding"] = "";
 			const rawConfig: RawConfig = {
 				define,
 				vars,
@@ -2709,7 +2705,6 @@ describe("normalizeAndValidateConfig()", () => {
 				kv_namespaces,
 				r2_buckets,
 				unsafe,
-				metadata_binding,
 				env: {
 					ENV1: {},
 				},
@@ -2739,9 +2734,6 @@ describe("normalizeAndValidateConfig()", () => {
 			    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"vars\\" is not inherited by environments.
 			      Please add \\"vars\\" to \\"env.ENV1\\".
-			    - \\"metadata_binding\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"metadata_binding\\" is not inherited by environments.
-			      Please add \\"metadata_binding\\" to \\"env.ENV1\\".
 			    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"define\\" is not inherited by environments.
 			      Please add \\"define\\" to \\"env.ENV1\\".
@@ -3977,45 +3969,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(result2.config).toEqual(expect.objectContaining(environment2));
 				expect(result2.diagnostics.hasErrors()).toBe(false);
 				expect(result2.diagnostics.hasWarnings()).toBe(false);
-			});
-		});
-		describe("[metadata_binding]", () => {
-			it("should error if metadata_binding is a number", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { metadata_binding: 999 } } } as unknown as RawConfig,
-					undefined,
-					{ env: "ENV1" }
-				);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			"
-		`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-
-			  - \\"env.ENV1\\" environment configuration
-			    - Expected \\"metadata_binding\\" to be of type string but got 999."
-		`);
-			});
-
-			it("should error if metadata_binding is null", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { metadata_binding: null } } } as unknown as RawConfig,
-					undefined,
-					{ env: "ENV1" }
-				);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			"
-		`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-
-			  - \\"env.ENV1\\" environment configuration
-			    - Expected \\"metadata_binding\\" to be of type string but got null."
-		`);
 			});
 		});
 	});

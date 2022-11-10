@@ -3,12 +3,11 @@ import { fetch } from "undici";
 
 jest.unmock("undici");
 
-//TODO Fix Tests extremely flakey
 /**
  * a huge caveat to how testing multi-worker scripts works:
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
-describe.skip("multi-worker testing", () => {
+describe("multi-worker testing", () => {
 	let childWorker;
 	let parentWorker;
 
