@@ -1043,6 +1043,16 @@ function normalizeAndValidateEnvironment(
 			validateVars(envName),
 			{}
 		),
+		metadata_binding: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"metadata_binding",
+			isString,
+			undefined
+		),
 		define: notInheritable(
 			diagnostics,
 			topLevelEnv,

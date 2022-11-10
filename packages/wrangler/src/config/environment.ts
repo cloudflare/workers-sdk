@@ -291,6 +291,14 @@ interface EnvironmentNonInheritable {
 	vars: { [key: string]: unknown };
 
 	/**
+	 * Specifies namespace binding that is bound to this Worker environment.
+	 * It allows for access at runtime to the Workers metadata.
+	 *  @default `undefined`
+	 *  @nonInheritable
+	 **/
+	metadata_binding: string | undefined;
+
+	/**
 	 * A list of durable objects that your worker should be bound to.
 	 *
 	 * For more information about Durable Objects, see the documentation at
