@@ -229,7 +229,6 @@ export async function bundleWorker(
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
 			((currentEntry: Entry) => {
-				console.log('applyD1BetaFacade', currentEntry, tmpDir.path, betaD1Shims, local);
 				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims, local);
 			}),
 

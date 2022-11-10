@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { cwd } from "node:process";
@@ -288,9 +288,6 @@ export const Handler = async ({
 		? join(tmpdir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
-	console.log('-- test --');
-	console.log(Object.keys(project.deployment_configs[isProduction ? 'production' : 'preview'].d1_databases ?? {}));
-
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		try {
@@ -305,9 +302,6 @@ export const Handler = async ({
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");
-
-			// tmp
-			writeFileSync('built_function.js', builtFunctions);
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
 				logger.warn(
