@@ -550,15 +550,20 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	//deployments
+	const deploymentsWarning =
+		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
 	wrangler.command(
 		"deployments",
 		false,
 		// "🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', 'Created on' and 'Latest deploy'",
 		(yargs) => {
-			yargs.option("name", {
-				describe: "The name of your worker",
-				type: "string",
-			});
+			yargs
+				.option("name", {
+					describe: "The name of your worker",
+					type: "string",
+				})
+				.epilogue(deploymentsWarning);
 		},
 		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
 			await printWranglerBanner();
@@ -572,6 +577,7 @@ export function createCLIParser(argv: string[]) {
 				config
 			);
 
+			logger.log(`${deploymentsWarning}\n`);
 			await deployments(accountId, scriptName);
 		}
 	);
