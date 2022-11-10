@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import { TextEncoder } from "util";
 import { bold, yellow } from "kleur/colors";
 import { Request, Response } from "undici";
 import { z } from "zod";
@@ -20,6 +21,7 @@ import {
 	convertModuleDefinition,
 } from "./modules";
 
+const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 // (request: Request) => Awaitable<Response>
@@ -62,6 +64,8 @@ export const CoreSharedOptionsSchema = z.object({
 
 	// TODO: add back validation of cf object
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
+
+	liveReload: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -86,27 +90,85 @@ const BINDING_JSON_VERSION = "MINIFLARE_VERSION";
 const BINDING_SERVICE_USER = "MINIFLARE_USER";
 const BINDING_TEXT_CUSTOM_SERVICE = "MINIFLARE_CUSTOM_SERVICE";
 const BINDING_JSON_CF_BLOB = "CF_BLOB";
+const BINDING_DATA_LIVE_RELOAD_SCRIPT = "MINIFLARE_LIVE_RELOAD_SCRIPT";
+
+const LIVE_RELOAD_SCRIPT_TEMPLATE = (
+	port: number
+) => `<script defer type="application/javascript">
+(function () {
+  // Miniflare Live Reload
+  var url = new URL("/core/reload", location.origin);
+  url.protocol = url.protocol.replace("http", "ws");
+  url.port = ${port};
+  function reload() { location.reload(); }
+  function connect(reconnected) {
+    var ws = new WebSocket(url);
+    if (reconnected) ws.onopen = reload;
+    ws.onclose = function(e) {
+      e.code === 1012 ? reload() : e.code === 1000 || e.code === 1001 || setTimeout(connect, 1000, true);
+    }
+  }
+  connect();
+})();
+</script>`;
 
 // TODO: is there a way of capturing the full stack trace somehow?
 // Using `>=` for version check to handle multiple `setOptions` calls before
 // reload complete.
-export const SCRIPT_ENTRY = `addEventListener("fetch", (event) => {
+export const SCRIPT_ENTRY = `async function handleEvent(event) {
   const request = new Request(event.request, {
     cf: ${BINDING_JSON_CF_BLOB}
   })
+
   const probe = event.request.headers.get("${HEADER_PROBE}");
   if (probe !== null) {
     const probeMin = parseInt(probe);
     const status = ${BINDING_JSON_VERSION} >= probeMin ? 204 : 412;
-    return event.respondWith(new Response(null, { status }));
+    return new Response(null, { status });
   }
 
-  if (globalThis.${BINDING_SERVICE_USER} !== undefined) {
-    event.respondWith(${BINDING_SERVICE_USER}.fetch(request).catch((err) => new Response(err.stack)));
-  } else {
-    event.respondWith(new Response("No script! 😠", { status: 404 }));
+  if (globalThis.${BINDING_SERVICE_USER} === undefined) {
+    return new Response("No entrypoint worker found", { status: 404 });
   }
-});`;
+  try {
+    const response = await ${BINDING_SERVICE_USER}.fetch(request);
+
+    const liveReloadScript = globalThis.${BINDING_DATA_LIVE_RELOAD_SCRIPT};
+    if (
+      liveReloadScript !== undefined &&
+      response.headers.get("content-type")?.toLowerCase().includes("text/html")
+    ) {
+      const headers = new Headers(response.headers);
+      const contentLength = parseInt(headers.get("content-length"));
+      if (!isNaN(contentLength)) {
+        headers.set("content-length", contentLength + liveReloadScript.byteLength);
+      }
+      
+      const { readable, writable } = new IdentityTransformStream();
+      event.waitUntil((async () => {
+        await response.body?.pipeTo(writable, { preventClose: true });
+        const writer = writable.getWriter();
+        await writer.write(liveReloadScript);
+        await writer.close();
+      })());
+
+      return new Response(readable, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+
+    return response;
+  } catch (e) {
+    // TODO: return pretty-error page here
+    return new Response(e.stack);
+  }
+}
+addEventListener("fetch", (event) => {
+  event.respondWith(handleEvent(event));
+});
+`;
 export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
   request.headers.set("${HEADER_CUSTOM_SERVICE}", ${BINDING_TEXT_CUSTOM_SERVICE});
@@ -215,6 +277,7 @@ export const CORE_PLUGIN: Plugin<
 		sharedOptions,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackPort,
 	}) {
 		// Define core/shared services.
 		// Services get de-duped by name, so only the first worker's
@@ -223,6 +286,13 @@ export const CORE_PLUGIN: Plugin<
 			{ name: BINDING_JSON_VERSION, json: optionsVersion.toString() },
 			{ name: BINDING_JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		];
+		if (sharedOptions.liveReload) {
+			const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
+			serviceEntryBindings.push({
+				name: BINDING_DATA_LIVE_RELOAD_SCRIPT,
+				data: encoder.encode(liveReloadScript),
+			});
+		}
 		const services: Service[] = [
 			{ name: SERVICE_LOOPBACK, external: { http: {} } },
 			{

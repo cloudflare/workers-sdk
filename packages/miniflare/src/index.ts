@@ -1,5 +1,7 @@
 import assert from "assert";
 import http from "http";
+import net from "net";
+import { Duplex } from "stream";
 import exitHook from "exit-hook";
 import getPort from "get-port";
 import { bold, green, grey } from "kleur/colors";
@@ -12,9 +14,9 @@ import {
 	Response,
 	fetch,
 } from "undici";
+import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { setupCf } from "./cf";
-
 import {
 	GatewayConstructor,
 	GatewayFactory,
@@ -178,6 +180,8 @@ export class Miniflare {
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
 	#loopbackServer?: StoppableServer;
+	#loopbackPort?: number;
+	readonly #liveReloadServer: WebSocketServer;
 
 	constructor(opts: MiniflareOptions) {
 		// Initialise plugin gateway factories and routers
@@ -201,6 +205,7 @@ export class Miniflare {
 		);
 
 		this.#disposeController = new AbortController();
+		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex.runWith(() => this.#init());
 	}
@@ -218,22 +223,32 @@ export class Miniflare {
 		}
 	}
 
+	#handleReload() {
+		// Reload all connected live reload clients
+		for (const ws of this.#liveReloadServer.clients) {
+			ws.close(1012, "Service Restart");
+		}
+	}
+
 	async #init() {
 		// This function must be run with `#runtimeMutex` held
 
 		// Start loopback server (how the runtime accesses with Miniflare's storage)
-		this.#loopbackServer = await this.#startLoopbackServer(0, "127.0.0.1");
+		// using the same host as the main runtime server. This means we can use the
+		// loopback server for live reload updates too.
+		const host = this.#sharedOpts.core.host ?? "127.0.0.1";
+		this.#loopbackServer = await this.#startLoopbackServer(0, host);
 		const address = this.#loopbackServer.address();
 		// Note address would be string with unix socket
 		assert(address !== null && typeof address === "object");
 		// noinspection JSObjectNullOrUndefined
-		const loopbackPort = address.port;
+		this.#loopbackPort = address.port;
 
 		// Start runtime
 		const opts: RuntimeOptions = {
-			entryHost: this.#sharedOpts.core.host ?? "127.0.0.1",
+			entryHost: host,
 			entryPort: this.#sharedOpts.core.port ?? (await getPort({ port: 8787 })),
-			loopbackPort,
+			loopbackPort: this.#loopbackPort,
 			inspectorPort: this.#sharedOpts.core.inspectorPort,
 			verbose: this.#sharedOpts.core.verbose,
 		};
@@ -248,8 +263,9 @@ export class Miniflare {
 
 		// Wait for runtime to start
 		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
-			// Only log if there aren't pending updates
+			// Only log and trigger reload if there aren't pending updates
 			console.log(bold(green(`Ready on ${this.#runtimeEntryURL} 🎉`)));
+			this.#handleReload();
 		}
 	}
 
@@ -345,12 +361,39 @@ export class Miniflare {
 		res.end();
 	};
 
+	#handleLoopbackUpgrade = (
+		req: http.IncomingMessage,
+		socket: Duplex,
+		head: Buffer
+	) => {
+		// Only interested in pathname so base URL doesn't matter
+		const { pathname } = new URL(req.url ?? "", "http://localhost");
+
+		// If this is the path for live-reload, handle the request
+		if (pathname === "/core/reload") {
+			this.#liveReloadServer.handleUpgrade(req, socket, head, (ws) => {
+				this.#liveReloadServer.emit("connection", ws, req);
+			});
+			return;
+		}
+
+		// Otherwise, return a not found HTTP response
+		const res = new http.ServerResponse(req);
+		// `socket` is guaranteed to be an instance of `net.Socket`:
+		// https://nodejs.org/api/http.html#event-upgrade_1
+		assert(socket instanceof net.Socket);
+		res.assignSocket(socket);
+		res.writeHead(404);
+		res.end();
+	};
+
 	#startLoopbackServer(
 		port: string | number,
 		hostname?: string
 	): Promise<StoppableServer> {
 		return new Promise((resolve) => {
 			const server = stoppable(http.createServer(this.#handleLoopback));
+			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(port as any, hostname, () => resolve(server));
 		});
 	}
@@ -401,6 +444,9 @@ export class Miniflare {
 		const optionsVersion = this.#optionsVersion;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
+		const loopbackPort = this.#loopbackPort;
+		// #assembleConfig is always called after the loopback server is created
+		assert(loopbackPort !== undefined);
 
 		sharedOpts.core.cf = await setupCf(sharedOpts.core.cf);
 
@@ -447,6 +493,7 @@ export class Miniflare {
 					workerIndex: i,
 					durableObjectClassNames,
 					additionalModules,
+					loopbackPort,
 				});
 				if (pluginServices !== undefined) {
 					for (const service of pluginServices) {
@@ -503,10 +550,11 @@ export class Miniflare {
 		await this.#runtime.updateConfig(configBuffer);
 
 		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
-			// Only log if this was the last pending update
+			// Only log and trigger reload if this was the last pending update
 			console.log(
 				bold(green(`Updated and ready on ${this.#runtimeEntryURL} 🎉`))
 			);
+			this.#handleReload();
 		}
 	}
 
