@@ -9,34 +9,26 @@
 		"local",
 		"cloudworker"
 	],
-	"author": "MrBBot <me@mrbbot.dev>",
-	"license": "MIT",
-	"main": "./dist/src/index.js",
-	"types": "./dist/src/index.d.ts",
-	"files": [
-		"dist/src"
-	],
-	"engines": {
-		"node": ">=16.13"
-	},
-	"publishConfig": {
-		"access": "public"
+	"homepage": "https://github.com/cloudflare/miniflare/tree/master/packages/tre#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/miniflare/issues"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/cloudflare/miniflare.git",
 		"directory": "packages/tre"
 	},
-	"bugs": {
-		"url": "https://github.com/cloudflare/miniflare/issues"
-	},
-	"homepage": "https://github.com/cloudflare/miniflare/tree/master/packages/tre#readme",
-	"volta": {
-		"extends": "../../package.json"
-	},
+	"license": "MIT",
+	"author": "MrBBot <me@mrbbot.dev>",
+	"main": "./dist/src/index.js",
+	"types": "./dist/src/index.d.ts",
+	"files": [
+		"dist/src"
+	],
 	"dependencies": {
 		"acorn": "^8.8.0",
 		"acorn-walk": "^8.2.0",
+		"better-sqlite3": "^7.6.2",
 		"capnp-ts": "^0.7.0",
 		"exit-hook": "^2.2.1",
 		"get-port": "^5.1.1",
@@ -50,11 +42,21 @@
 		"zod": "^3.18.0"
 	},
 	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.2",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/http-cache-semantics": "^4.0.1",
 		"@types/stoppable": "^1.1.1",
 		"@types/ws": "^8.5.3"
+	},
+	"engines": {
+		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
