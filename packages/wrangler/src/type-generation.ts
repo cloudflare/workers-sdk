@@ -30,7 +30,7 @@ export async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(`	${varName}: ${varValue};`);
+				envTypeStructure.push(`	${varName}: "${varValue}";`);
 			}
 			if (typeof varValue === "object" && varValue !== null) {
 				envTypeStructure.push(`	${varName}: ${JSON.stringify(varValue)};`);
