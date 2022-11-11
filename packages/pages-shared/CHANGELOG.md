@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.0.10
+
+### Patch Changes
+
+- [#2146](https://github.com/cloudflare/wrangler2/pull/2146) [`c987fceb`](https://github.com/cloudflare/wrangler2/commit/c987fcebfe8ebd61fd762371a108f28eaae4c71e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add a `failOpen` prop to the deployment metadata.
+
 ## 0.0.9
 
 ### Patch Changes

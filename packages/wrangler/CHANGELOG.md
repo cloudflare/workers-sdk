@@ -1,5 +1,55 @@
 # wrangler
 
+## 2.2.0
+
+### Minor Changes
+
+- [#2107](https://github.com/cloudflare/wrangler2/pull/2107) [`511943e9`](https://github.com/cloudflare/wrangler2/commit/511943e9226f787aa997a325d39dc2caac05a73c) Thanks [@celso](https://github.com/celso)! - fix: D1 execute and backup commands improvements
+
+  - Better and faster handling when importing big SQL files using execute --file
+  - Increased visibility during imports, sends output with each batch API call
+  - Backups are now downloaded to the directory where wrangler was initiated from
+
+* [#2130](https://github.com/cloudflare/wrangler2/pull/2130) [`68f4fa6f`](https://github.com/cloudflare/wrangler2/commit/68f4fa6ff7d537c602c3b2ba99e9ce3afdbf2242) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - feature: Add warnings around bundle sizes for large scripts
+
+  Prints a warning for scripts > 1MB compressed, encouraging smaller
+  script sizes. This warning can be silenced by setting the
+  NO_SCRIPT_SIZE_WARNING env variable
+
+  If a publish fails with either a script size error or a validator error
+  on script startup (CPU or memory), we print out the largest 5
+  dependencies in your bundle. This is accomplished by using the esbuild
+  generated metafile.
+
+- [#2064](https://github.com/cloudflare/wrangler2/pull/2064) [`49b6a484`](https://github.com/cloudflare/wrangler2/commit/49b6a484508defb88a01b7a2d48119ec82bd5d86) Thanks [@jbw1991](https://github.com/jbw1991)! - Adds support for Cloudflare Queues. Adds new CLI commands to configure Queues. Queue producers and consumers can be defined in wrangler.toml.
+
+* [#1982](https://github.com/cloudflare/wrangler2/pull/1982) [`5640fe88`](https://github.com/cloudflare/wrangler2/commit/5640fe8889da6d14cc14b56b6c0470980de7bd66) Thanks [@penalosa](https://github.com/penalosa)! - Enable support for `wrangler dev` on Workers behind Cloudflare Access, utilising `cloudflared`. If you don't have `cloudflared` installed, Wrangler will prompt you to install it. If you _do_, then the first time you start developing using `wrangler dev` your default browser will open with a Cloudflare Access prompt.
+
+### Patch Changes
+
+- [#2134](https://github.com/cloudflare/wrangler2/pull/2134) [`b164e2d6`](https://github.com/cloudflare/wrangler2/commit/b164e2d6faff3a9a18f447ff47fe98e8cee24c86) Thanks [@jspspike](https://github.com/jspspike)! - Added current version to publish output
+
+* [#2127](https://github.com/cloudflare/wrangler2/pull/2127) [`0e561e83`](https://github.com/cloudflare/wrangler2/commit/0e561e8385bc8437dece78d3b805dad43bda830c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Fix: Missing Worker name using `--from-dash`
+  Added the `--from-dash` name as a fallback when no name is provided in the `wrangler init` command.
+  Additionally added a checks to the `std.out` to ensure that the name is provided.
+
+  resolves #1853
+
+- [#2073](https://github.com/cloudflare/wrangler2/pull/2073) [`1987a79d`](https://github.com/cloudflare/wrangler2/commit/1987a79d43158ebc6eeb54b2102214060266b6d7) Thanks [@mrbbot](https://github.com/mrbbot)! - If `--env <env>` is specified, we'll now check `.env.<env>`/`.dev.vars.<env>` first.
+  If they don't exist, we'll fallback to `.env`/`.dev.vars`.
+
+* [#2072](https://github.com/cloudflare/wrangler2/pull/2072) [`06aa6121`](https://github.com/cloudflare/wrangler2/commit/06aa61214bc71077ff55fecbe1581af9b5ad68ff) Thanks [@mrbbot](https://github.com/mrbbot)! - Fixed importing installed npm packages with the same name as Node built-in
+  modules if `node_compat` is disabled.
+
+- [#2124](https://github.com/cloudflare/wrangler2/pull/2124) [`02ca556c`](https://github.com/cloudflare/wrangler2/commit/02ca556c3e84d45cb3eaa5787a4a0ed5254c3815) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Computing the name from binding response
+  Now the `vars` will be computed, example:
+  `[var.binding.name]: var.binding.text`
+
+  this will resolve the issue that was occurring with
+  generating a TOML with incorrect fields for the `vars` key/value pair.
+
+  resolves #2048
+
 ## 2.1.15
 
 ### Patch Changes
