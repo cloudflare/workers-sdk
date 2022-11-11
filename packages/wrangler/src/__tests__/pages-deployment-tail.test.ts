@@ -4,7 +4,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw, mswScriptHandlers } from "./helpers/msw";
+import { msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -16,7 +16,7 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 describe("pages deployment tail", () => {
-	beforeEach(() => msw.use(...mswScriptHandlers));
+	beforeEach(() => msw.use(...mswSucessScriptHandlers));
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
@@ -127,7 +127,9 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --sampling-rate 0.25"
 			);
-			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"sampling_rate":0.25}]}`);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"sampling_rate":0.25}]}`
+			);
 		});
 
 		it("sends single status filters", async () => {
@@ -155,7 +157,9 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST"
 			);
-			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"method":["POST"]}]}`);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"method":["POST"]}]}`
+			);
 		});
 
 		it("sends multiple HTTP method filters", async () => {
@@ -219,7 +223,9 @@ describe("pages deployment tail", () => {
 			await runWrangler(
 				`pages deployment tail mock-deployment-id --project-name mock-project --search ${search}`
 			);
-			expect(api.requests.creation[0].body).toEqual(`{"filters":[{"query":"${search}"}]}`);
+			expect(api.requests.creation[0].body).toEqual(
+				`{"filters":[{"query":"${search}"}]}`
+			);
 		});
 
 		it("sends everything but the kitchen sink", async () => {

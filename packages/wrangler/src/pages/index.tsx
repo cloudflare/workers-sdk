@@ -1,8 +1,8 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
-import * as Deployments from "./deployments";
 import * as DeploymentTails from "./deployment-tails";
+import * as Deployments from "./deployments";
 import * as Dev from "./dev";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
@@ -85,7 +85,7 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 						.command(
 							"tail [deployment]",
 							"Start a tailing session for a project's deployment and " +
-								" livestream logs from your Functions",
+								"livestream logs from your Functions",
 							DeploymentTails.Options,
 							DeploymentTails.Handler
 						)

@@ -178,7 +178,7 @@ export async function Handler({
 
 		if (format === "pretty") {
 			logger.log(
-				"No deployment specified. Using latest deployment for ",
+				"No deployment specified. Using latest deployment for",
 				environment,
 				"environment."
 			);
