@@ -997,7 +997,7 @@ async function ensureQueuesExist(config: Config) {
 			await getQueue(config, queue);
 		} catch (err) {
 			const queueErr = err as FetchError;
-			if (queueErr.code === 100123) {
+			if (queueErr.code === 11000) {
 				// queue_not_found
 				throw new Error(
 					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
