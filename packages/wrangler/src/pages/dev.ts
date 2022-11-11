@@ -56,6 +56,10 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
  */
 const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
+const SERVICE_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+);
+
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
@@ -144,6 +148,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
+			service: {
+				type: "array",
+				description: "Service to bind (--service SERVICE=worker)",
+				alia: "s",
+			},
 			"live-reload": {
 				type: "boolean",
 				default: false,
@@ -199,6 +208,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	service: services = [],
 	liveReload,
 	localProtocol,
 	persistTo,
@@ -557,6 +567,27 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
+		services: services
+		.map((serviceBinding) => {
+			const { binding, service, environment } =
+				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups ||
+				{};
+
+			if (!binding || !service) {
+				logger.warn(
+					"Could not parse Service binding:",
+					serviceBinding.toString()
+				);
+				return;
+			}
+
+			return {
+				binding,
+				service,
+				environment,
+			};
+		})
+		.filter(Boolean) as AdditionalDevProps["services"],
 		kv: kvs
 			.map((kv) => {
 				const { binding, ref } =
