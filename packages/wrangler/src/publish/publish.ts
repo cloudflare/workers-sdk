@@ -828,8 +828,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	} catch (e) {
 		if ((e as { code: number }).code === 10023) {
 			// TODO: remove this try/catch once versions is completely rolled out
+		} else {
+			throw e;
 		}
-		throw e;
 	}
 }
 
