@@ -140,16 +140,8 @@ export async function Handler({
 	const accountId = await requireAuth(pagesConfig);
 	let deploymentId = deployment;
 
-	projectName = projectName || pagesConfig.project_name;
-
-	// When not specifying a deployment, we need a project name to use the latest
-	// Or when specifying by deployment URL
-	if ((!deployment || isUrl(deployment)) && !projectName && isInteractive) {
+	if (!projectName && isInteractive) {
 		projectName = await promptSelectProject({ accountId });
-	}
-
-	if (!deployment && !projectName) {
-		throw new FatalError("Must specify a project name or deployment.", 1);
 	}
 
 	const deployments: Array<Deployment> = await fetchResult(
@@ -160,12 +152,12 @@ export async function Handler({
 		(d) => d.environment === environment
 	);
 
-	if (envDeployments.length === 0) {
-		throw new FatalError("No deployments for environment: " + environment, 1);
+	if (!deployment && !projectName) {
+		throw new FatalError("Must specify a project name or deployment.", 1);
 	}
 
 	// Deployment is URL
-	if (deployment?.startsWith("https://")) {
+	if (isUrl(deployment)) {
 		const { hostname: deploymentHostname } = new URL(deployment);
 		const targetDeployment = envDeployments.find(
 			(d) => new URL(d.url).hostname === deploymentHostname
@@ -179,7 +171,11 @@ export async function Handler({
 		}
 
 		deploymentId = targetDeployment.id;
-	} else {
+	} else if (!deployment) {
+		if (envDeployments.length === 0) {
+			throw new FatalError("No deployments for environment: " + environment, 1);
+		}
+
 		if (format === "pretty") {
 			logger.log(
 				"No deployment specified. Using latest deployment for ",
