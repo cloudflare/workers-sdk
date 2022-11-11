@@ -52,7 +52,7 @@ Author: ${versions.metadata.author_email}
 Source: ${sourceStr(versions.metadata.source)}\n`
 	);
 
-	versionMessages[0] += "🟩Active";
+	versionMessages[0] += "🟩 Active";
 	logger.log(...versionMessages.reverse());
 }
 

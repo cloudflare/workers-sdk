@@ -66,7 +66,7 @@ describe("deployments", () => {
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: Wrangler
-		🟩Active"
+		🟩 Active"
 	`);
 	});
 
@@ -85,7 +85,7 @@ describe("deployments", () => {
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: Wrangler
-		🟩Active"
+		🟩 Active"
 	`);
 	});
 });
