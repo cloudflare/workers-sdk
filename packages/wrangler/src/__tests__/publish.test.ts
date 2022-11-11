@@ -7607,7 +7607,7 @@ function mockGetQueueMissing(expectedQueueName: string) {
 		`/accounts/:accountId/workers/queues/${expectedQueueName}`,
 		"GET",
 		([_url, _accountId]) => {
-			throw { code: 100123 };
+			throw { code: 11000 };
 		}
 	);
 	return requests;
