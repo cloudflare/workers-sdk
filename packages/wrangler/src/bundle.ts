@@ -13,7 +13,7 @@ import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
-type BundleResult = {
+export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
@@ -80,24 +80,31 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
-		assets: StaticAssetsConfig;
+		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
-		jsxFactory: string | undefined;
-		jsxFragment: string | undefined;
+		jsxFactory?: string;
+		jsxFragment?: string;
 		rules: Config["rules"];
-		watch?: esbuild.WatchMode;
-		tsconfig: string | undefined;
-		minify: boolean | undefined;
-		nodeCompat: boolean | undefined;
+		watch?: esbuild.WatchMode | boolean;
+		tsconfig?: string;
+		minify?: boolean;
+		nodeCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
-		services: Config["services"] | undefined;
-		workerDefinitions: WorkerRegistry | undefined;
-		firstPartyWorkerDevFacade: boolean | undefined;
+		services?: Config["services"];
+		workerDefinitions?: WorkerRegistry;
+		firstPartyWorkerDevFacade?: boolean;
 		targetConsumer: "dev" | "publish";
 		local: boolean;
-		testScheduled?: boolean | undefined;
-		experimentalLocalStubCache: boolean | undefined;
+		testScheduled?: boolean;
+		experimentalLocalStubCache?: boolean;
+		inject?: string[];
+		loader?: Record<string, string>;
+		sourcemap?: esbuild.CommonOptions["sourcemap"];
+		plugins?: esbuild.Plugin[];
+		// TODO: Rip these out https://github.com/cloudflare/wrangler2/issues/2153
+		disableModuleCollection?: boolean;
+		isOutfile?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -119,6 +126,12 @@ export async function bundleWorker(
 		targetConsumer,
 		testScheduled,
 		experimentalLocalStubCache,
+		inject: injectOption,
+		loader,
+		sourcemap,
+		plugins,
+		disableModuleCollection,
+		isOutfile,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -127,7 +140,7 @@ export async function bundleWorker(
 	const tmpDir = await tmp.dir({ unsafeCleanup: true });
 
 	const entryDirectory = path.dirname(entry.file);
-	const moduleCollector = createModuleCollector({
+	let moduleCollector = createModuleCollector({
 		wrangler1xlegacyModuleReferences: {
 			rootDirectory: entryDirectory,
 			fileNames: new Set(
@@ -143,6 +156,15 @@ export async function bundleWorker(
 		format: entry.format,
 		rules,
 	});
+	if (disableModuleCollection) {
+		moduleCollector = {
+			modules: [],
+			plugin: {
+				name: moduleCollector.plugin.name,
+				setup: () => {},
+			},
+		};
+	}
 
 	// In dev, we want to patch `fetch()` with a special version that looks
 	// for bad usages and can warn the user about them; so we inject
@@ -253,7 +275,7 @@ export async function bundleWorker(
 
 	// At this point, inputEntry points to the entry point we want to build.
 
-	const inject: string[] = [];
+	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
 	if (experimentalLocalStubCache) {
 		inject.push(
@@ -266,11 +288,17 @@ export async function bundleWorker(
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		...(isOutfile
+			? {
+					outdir: undefined,
+					outfile: destination,
+			  }
+			: {}),
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: "es2020",
-		sourcemap: true,
+		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
@@ -291,6 +319,7 @@ export async function bundleWorker(
 			".js": "jsx",
 			".mjs": "jsx",
 			".cjs": "jsx",
+			...(loader || {}),
 		},
 		plugins: [
 			// We run the moduleCollector plugin for service workers as part of the middleware loader
@@ -301,6 +330,7 @@ export async function bundleWorker(
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
+			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),

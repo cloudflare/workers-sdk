@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -81,6 +81,13 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				hidden: true,
 			},
+			bindings: {
+				type: "string",
+				describe:
+					"Bindings used in Functions (used to register beta product shims)",
+				deprecated: true,
+				hidden: true,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -97,6 +104,7 @@ export const Handler = async ({
 	plugin,
 	buildOutputDirectory,
 	nodeCompat,
+	bindings,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
@@ -107,6 +115,16 @@ export const Handler = async ({
 		console.warn(
 			"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
+	}
+
+	let d1Databases: string[] | undefined = undefined;
+	if (bindings) {
+		try {
+			const decodedBindings = JSON.parse(bindings);
+			d1Databases = Object.keys(decodedBindings?.d1_databases || {});
+		} catch {
+			throw new FatalError("Could not parse a valid set of 'bindings'.", 1);
+		}
 	}
 
 	buildOutputDirectory ??= dirname(outfile);
@@ -123,6 +141,8 @@ export const Handler = async ({
 			buildOutputDirectory,
 			nodeCompat,
 			routesOutputPath,
+			local: false,
+			d1Databases,
 		});
 	} catch (e) {
 		if (e instanceof FunctionsNoRoutesError) {
@@ -154,6 +174,8 @@ export async function buildFunctions({
 	buildOutputDirectory,
 	routesOutputPath,
 	nodeCompat,
+	local,
+	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -171,6 +193,8 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	outfile: Required<PagesBuildArgs>["outfile"];
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
+	local: boolean;
+	d1Databases?: string[];
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -208,6 +232,8 @@ export async function buildFunctions({
 		outfile: routesModule,
 	});
 
+	const absoluteFunctionsDirectory = resolve(functionsDirectory);
+
 	if (plugin) {
 		RUNNING_BUILDERS.push(
 			await buildPlugin({
@@ -217,6 +243,9 @@ export async function buildFunctions({
 				sourcemap,
 				watch,
 				nodeCompat,
+				functionsDirectory: absoluteFunctionsDirectory,
+				local,
+				betaD1Shims: d1Databases,
 				onEnd,
 			})
 		);
@@ -229,6 +258,9 @@ export async function buildFunctions({
 				sourcemap,
 				fallbackService,
 				watch,
+				functionsDirectory: absoluteFunctionsDirectory,
+				local,
+				betaD1Shims: d1Databases,
 				onEnd,
 				buildOutputDirectory,
 				nodeCompat,

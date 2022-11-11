@@ -21,12 +21,8 @@ import { validateRoutes } from "./functions/routes-validation";
 import { listProjects } from "./projects";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
-import type {
-	Deployment,
-	PagesConfigCache,
-	Project,
-	YargsOptionsToInterface,
-} from "./types";
+import type { PagesConfigCache, YargsOptionsToInterface } from "./types";
+import type { Project, Deployment } from "@cloudflare/types";
 import type { Argv } from "yargs";
 
 type PublishArgs = YargsOptionsToInterface<typeof Options>;
@@ -274,6 +270,15 @@ export const Handler = async ({
 		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
 	} catch {}
 
+	// Grab the bindings from the API, we need these for shims and other such hacky inserts
+	const project = await fetchResult<Project>(
+		`/accounts/${accountId}/pages/projects/${projectName}`
+	);
+	let isProduction = true;
+	if (branch) {
+		isProduction = project.production_branch === branch;
+	}
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -294,6 +299,11 @@ export const Handler = async ({
 				onEnd: () => {},
 				buildOutputDirectory: dirname(outfile),
 				routesOutputPath,
+				local: false,
+				d1Databases: Object.keys(
+					project.deployment_configs[isProduction ? "production" : "preview"]
+						.d1_databases ?? {}
+				),
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");

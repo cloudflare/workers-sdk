@@ -256,6 +256,8 @@ export const Handler = async ({
 				await esbuild.build({
 					entryPoints: [scriptPath],
 					write: false,
+					// we need it to be bundled so that any imports that are used are affected by the blocker plugin
+					bundle: true,
 					plugins: [blockWorkerJsImports],
 				});
 			} catch {}
@@ -270,7 +272,7 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
+		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
 		scriptPath = outfile;
 
 		if (nodeCompat) {
@@ -290,6 +292,8 @@ export const Handler = async ({
 				onEnd,
 				buildOutputDirectory: directory,
 				nodeCompat,
+				local: true,
+				d1Databases: d1s.map((binding) => binding.toString()),
 			});
 			await metrics.sendMetricsEvent("build pages functions");
 
@@ -307,6 +311,8 @@ export const Handler = async ({
 						onEnd,
 						buildOutputDirectory: directory,
 						nodeCompat,
+						local: true,
+						d1Databases: d1s.map((binding) => binding.toString()),
 					});
 					await metrics.sendMetricsEvent("build pages functions");
 				} catch (e) {
@@ -477,8 +483,8 @@ export const Handler = async ({
 					.map((binding) => binding.toString().split("="))
 					.map(([key, ...values]) => [key, values.join("=")])
 			),
-			kv: kvs.map((val) => ({
-				binding: val.toString(),
+			kv: kvs.map((binding) => ({
+				binding: binding.toString(),
 				id: "",
 			})),
 			durableObjects: durableObjects
@@ -520,7 +526,7 @@ export const Handler = async ({
 			persist,
 			persistTo,
 			showInteractiveDevSession: undefined,
-			inspect: true,
+			inspect: undefined,
 			logPrefix: "pages",
 			logLevel: logLevel ?? "warn",
 		},
@@ -680,14 +686,23 @@ async function spawnProxyProcess({
 	return port;
 }
 
+// TODO: Kill this once we have https://github.com/cloudflare/wrangler2/issues/2153
 const blockWorkerJsImports: esbuild.Plugin = {
 	name: "block-worker-js-imports",
-	setup(build: esbuild.PluginBuild) {
-		build.onResolve({ filter: /.*/g }, (_args) => {
+	setup(build) {
+		build.onResolve({ filter: /.*/g }, (args) => {
+			// If it's the entrypoint, let it be as is
+			if (args.kind === "entry-point") {
+				return {
+					path: args.path,
+				};
+			}
+			// Otherwise, block any imports that the file is requesting
 			logger.error(
 				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`
 			);
-			return null;
+			// Miniflare will error with this briefly down the line -- there's no point in continuing.
+			process.exit(1);
 		});
 	},
 };

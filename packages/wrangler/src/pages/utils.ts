@@ -1,6 +1,6 @@
-import type { BuildResult } from "esbuild";
+import type { BundleResult } from "../bundle";
 
-export const RUNNING_BUILDERS: BuildResult[] = [];
+export const RUNNING_BUILDERS: BundleResult[] = [];
 
 export const CLEANUP_CALLBACKS: (() => void)[] = [];
 export const CLEANUP = () => {
