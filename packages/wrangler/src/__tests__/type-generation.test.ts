@@ -100,8 +100,8 @@ describe("generateTypes()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"interface Env {
 			TEST_KV_NAMESPACE: KVNamespace;
-			SOMETHING: asdasdfasdf;
-			ANOTHER: thing;
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			DURABLE_TEST1: DurableObjectNamespace;
 			DURABLE_TEST2: DurableObjectNamespace;
