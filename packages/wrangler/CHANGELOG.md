@@ -1,5 +1,17 @@
 # wrangler
 
+## 2.2.1
+
+### Patch Changes
+
+- [#2067](https://github.com/cloudflare/wrangler2/pull/2067) [`758419ed`](https://github.com/cloudflare/wrangler2/commit/758419ed05b430664f5c680b06f60b403cd00854) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: Accurately determine when using imports in \_worker.js for Advanced Mode Pages Functions
+
+* [#2159](https://github.com/cloudflare/wrangler2/pull/2159) [`c5a7557f`](https://github.com/cloudflare/wrangler2/commit/c5a7557fb9adc54aa96e86812906420afc5accb1) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: silence the 10023 error that throws when deployments isn't fully rolled out
+
+- [#2067](https://github.com/cloudflare/wrangler2/pull/2067) [`758419ed`](https://github.com/cloudflare/wrangler2/commit/758419ed05b430664f5c680b06f60b403cd00854) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: D1 support for Pages Functions
+
+* [#2067](https://github.com/cloudflare/wrangler2/pull/2067) [`758419ed`](https://github.com/cloudflare/wrangler2/commit/758419ed05b430664f5c680b06f60b403cd00854) Thanks [@Skye-31](https://github.com/Skye-31)! - chore: Refactor Pages Functions bundling
+
 ## 2.2.0
 
 ### Minor Changes
