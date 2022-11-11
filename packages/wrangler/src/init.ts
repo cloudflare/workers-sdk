@@ -862,6 +862,14 @@ async function getWorkerConfig(
 						];
 					}
 					break;
+				case "analytics_engine":
+					{
+						configObj.analytics_engine_datasets = [
+							...(configObj.analytics_engine_datasets ?? []),
+							{ binding: binding.name, dataset: binding.dataset },
+						];
+					}
+					break;
 				case "namespace":
 					{
 						configObj.dispatch_namespaces = [

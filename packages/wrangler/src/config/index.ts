@@ -93,6 +93,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		r2_buckets,
 		logfwdr,
 		services,
+		analytics_engine_datasets,
 		text_blobs,
 		unsafe,
 		vars,
@@ -206,6 +207,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value,
+				};
+			}),
+		});
+	}
+
+	if (analytics_engine_datasets !== undefined && analytics_engine_datasets.length > 0) {
+		output.push({
+			type: "Analytics Engine Datasets",
+			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
+				return {
+					key: binding,
+					value: dataset || binding,
 				};
 			}),
 		});

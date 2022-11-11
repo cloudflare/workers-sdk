@@ -540,6 +540,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			r2_buckets: config.r2_buckets,
 			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
 			services: config.services,
+			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			logfwdr: config.logfwdr,
 			unsafe: config.unsafe?.bindings,
