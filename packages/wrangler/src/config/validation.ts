@@ -1968,10 +1968,16 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
-const validateAnalyticsEngineBinding: ValidatorFn = (diagnostics, field, value) => {
+const validateAnalyticsEngineBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
-			`"analytics_engine" bindings should be objects, but got ${JSON.stringify(value)}`
+			`"analytics_engine" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
 		);
 		return false;
 	}
@@ -1985,8 +1991,10 @@ const validateAnalyticsEngineBinding: ValidatorFn = (diagnostics, field, value) 
 		);
 		isValid = false;
 	}
-	if (!isOptionalProperty(value, "dataset", "string") ||
-		(value as { dataset: string }).dataset?.length === 0) {
+	if (
+		!isOptionalProperty(value, "dataset", "string") ||
+		(value as { dataset: string }).dataset?.length === 0
+	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "dataset" field but got ${JSON.stringify(
 				value

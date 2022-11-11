@@ -923,7 +923,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					{
 						binding: "AE_BINDING_2",
-					}
+					},
 				],
 				unsafe: {
 					bindings: [
@@ -2793,7 +2793,8 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const kv_namespaces: RawConfig["kv_namespaces"] = [];
 			const r2_buckets: RawConfig["r2_buckets"] = [];
-			const analytics_engine_datasets: RawConfig["analytics_engine_datasets"] = [];
+			const analytics_engine_datasets: RawConfig["analytics_engine_datasets"] =
+				[];
 			const unsafe: RawConfig["unsafe"] = { bindings: [] };
 			const rawConfig: RawConfig = {
 				define,
@@ -3552,7 +3553,9 @@ describe("normalizeAndValidateConfig()", () => {
 		describe("[analytics_engine_datasets]", () => {
 			it("should error if analytics_engine_datasets is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { analytics_engine_datasets: {} } } } as unknown as RawConfig,
+					{
+						env: { ENV1: { analytics_engine_datasets: {} } },
+					} as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -3568,7 +3571,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error if analytics_engine_datasets is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { analytics_engine_datasets: "BAD" } } } as unknown as RawConfig,
+					{
+						env: { ENV1: { analytics_engine_datasets: "BAD" } },
+					} as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -3584,7 +3589,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error if analytics_engine_datasets is a number", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { analytics_engine_datasets: 999 } } } as unknown as RawConfig,
+					{
+						env: { ENV1: { analytics_engine_datasets: 999 } },
+					} as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -3600,7 +3607,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error if analytics_engine_datasets is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { analytics_engine_datasets: null } } } as unknown as RawConfig,
+					{
+						env: { ENV1: { analytics_engine_datasets: null } },
+					} as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);

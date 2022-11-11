@@ -5803,7 +5803,9 @@ addEventListener('fetch', event => {});`
 		describe("[analytics_engine_datasets]", () => {
 			it("should support analytics engine bindings", async () => {
 				writeWranglerToml({
-					analytics_engine_datasets: [{ binding: "FOO", dataset: "foo-dataset" }],
+					analytics_engine_datasets: [
+						{ binding: "FOO", dataset: "foo-dataset" },
+					],
 				});
 				writeWorkerSource();
 				mockSubDomainRequest();

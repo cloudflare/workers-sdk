@@ -212,7 +212,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (analytics_engine_datasets !== undefined && analytics_engine_datasets.length > 0) {
+	if (
+		analytics_engine_datasets !== undefined &&
+		analytics_engine_datasets.length > 0
+	) {
 		output.push({
 			type: "Analytics Engine Datasets",
 			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
