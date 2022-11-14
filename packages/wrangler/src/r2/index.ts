@@ -22,7 +22,7 @@ import type { ConfigPath } from "../index";
 import type { Readable } from "node:stream";
 import type { BuilderCallback } from "yargs";
 
-export const MAX_UPLOAD_SIZE = 300 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 300 * 1024 * 1024;
 
 export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 	return r2Yargs
