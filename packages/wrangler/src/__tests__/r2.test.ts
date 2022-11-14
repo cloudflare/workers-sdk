@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
 import prettyBytes from "pretty-bytes";
-import { MAX_UPLOAD_SIZE } from "../r2/helpers"
+import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw, mswSuccessR2handlers } from "./helpers/msw";

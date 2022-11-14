@@ -9,7 +9,9 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import {
-	MAX_UPLOAD_SIZE,
+	MAX_UPLOAD_SIZE
+} from "./constants";
+import {
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
 	deleteR2Bucket,
