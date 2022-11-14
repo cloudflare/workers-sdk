@@ -316,6 +316,18 @@ export const CORE_PLUGIN: Plugin<
 					bindings: serviceEntryBindings,
 				},
 			},
+			// Allow access to private/public addresses:
+			// https://github.com/cloudflare/miniflare/issues/412
+			{
+				name: "internet",
+				network: {
+					// Can't use `["public", "private"]` here because of
+					// https://github.com/cloudflare/workerd/issues/62
+					allow: ["0.0.0.0/0"],
+					deny: [],
+					tlsOptions: { trustBrowserCas: true },
+				},
+			},
 		];
 
 		// Define regular user worker if script is set
