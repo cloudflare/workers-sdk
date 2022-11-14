@@ -26,6 +26,13 @@ jobs:
             tsconfig.tsbuildinfo
           key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
       - name: Install NPM Dependencies
         run: npm ci
 
@@ -49,6 +56,13 @@ jobs:
         with:
           node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
         run: npm ci
