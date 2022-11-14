@@ -3,14 +3,12 @@ import * as stream from "node:stream";
 
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import {FatalError} from "../errors";
+import { FatalError } from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import {
-	MAX_UPLOAD_SIZE
-} from "./constants";
+import { MAX_UPLOAD_SIZE } from "./constants";
 import {
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,

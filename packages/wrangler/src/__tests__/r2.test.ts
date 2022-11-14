@@ -295,10 +295,12 @@ describe("r2", () => {
 			fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 			await expect(
 				runWrangler(
-				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Error: Wrangler only supports uploading files up to ${prettyBytes(MAX_UPLOAD_SIZE)} in size
+			"Error: Wrangler only supports uploading files up to ${prettyBytes(
+				MAX_UPLOAD_SIZE
+			)} in size
 			wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE)} in size"
 		`);
 		});
