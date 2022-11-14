@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import * as stream from "node:stream";
 
+import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
+import {FatalError} from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -19,6 +21,8 @@ import {
 import type { ConfigPath } from "../index";
 import type { Readable } from "node:stream";
 import type { BuilderCallback } from "yargs";
+
+export const MAX_UPLOAD_SIZE = 300 * 1024 * 1024;
 
 export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 	return r2Yargs
@@ -174,6 +178,15 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 								);
 							});
 							objectSize = object.byteLength;
+						}
+
+						if (objectSize > MAX_UPLOAD_SIZE) {
+							throw new FatalError(
+								`Error: Wrangler only supports uploading files up to ${prettyBytes(
+									MAX_UPLOAD_SIZE
+								)} in size\n${key} is ${prettyBytes(objectSize)} in size`,
+								1
+							);
 						}
 
 						logger.log(`Creating object "${key}" in bucket "${bucket}".`);
