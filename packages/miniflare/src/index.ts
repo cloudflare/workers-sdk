@@ -334,6 +334,7 @@ export class Miniflare {
 			method: req.method,
 			headers: req.headers as HeadersInit,
 			body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
+			duplex: "half",
 		});
 
 		let response: Response | undefined;
