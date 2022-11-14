@@ -23,6 +23,8 @@ export type MiniflareCoreErrorCode =
 	| "ERR_MODULE_DYNAMIC_SPEC" // Attempted to import/require a module without a literal spec
 	| "ERR_MODULE_RULE" // No matching module rule for file
 	| "ERR_PERSIST_UNSUPPORTED" // Unsupported storage persistence protocol
+	| "ERR_PERSIST_REMOTE_UNAUTHENTICATED" // cloudflareFetch implementation not provided
+	| "ERR_PERSIST_REMOTE_UNSUPPORTED" // Remote storage is not supported for this database
 	| "ERR_FUTURE_COMPATIBILITY_DATE"; // Compatibility date in the future
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
 

@@ -15,7 +15,7 @@ class TestGateway {
 
 class TestRouter extends Router<TestGateway> {
 	constructor() {
-		super(new GatewayFactory("test", TestGateway));
+		super(new GatewayFactory(undefined, "test", TestGateway));
 	}
 
 	@GET("/params/:foo/:bar")

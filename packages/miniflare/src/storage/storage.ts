@@ -1,7 +1,9 @@
+import { CloudflareFetch } from "../plugins";
 import {
 	Awaitable,
 	base64Decode,
 	base64Encode,
+	defaultClock,
 	lexicographicCompare,
 	nonCircularClone,
 } from "../shared";
@@ -93,11 +95,13 @@ export abstract class Storage {
 	): Awaitable<StoredMeta<Meta> | undefined>;
 	abstract get<Meta = unknown>(
 		key: string,
-		skipMetadata?: false
+		skipMetadata?: false,
+		cacheTtl?: number
 	): Awaitable<StoredValueMeta<Meta> | undefined>;
 	abstract get(
 		key: string,
-		skipMetadata: true
+		skipMetadata: true,
+		cacheTtl?: number
 	): Awaitable<StoredValue | undefined>;
 	abstract getRange<Meta = unknown>(
 		key: string,
@@ -160,6 +164,17 @@ export abstract class Storage {
 		let count = 0;
 		for (const result of await Promise.all(results)) if (result) count++;
 		return count;
+	}
+}
+
+export abstract class RemoteStorage extends Storage {
+	constructor(
+		protected readonly cache: Storage,
+		protected readonly cloudflareFetch: CloudflareFetch,
+		protected readonly namespace: string,
+		protected readonly clock = defaultClock
+	) {
+		super();
 	}
 }
 

@@ -91,7 +91,7 @@ export class KVGateway {
 				`Invalid ${PARAM_CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
 			);
 		}
-		return this.storage.get(key);
+		return this.storage.get(key, false, cacheTtl);
 	}
 
 	async put(
@@ -187,7 +187,12 @@ export class KVGateway {
 		const cursor = options.cursor;
 		const res = await this.storage.list({ limit, prefix, cursor });
 		return {
-			keys: res.keys,
+			keys: res.keys.map((key) => ({
+				...key,
+				// workerd expects metadata to be a JSON-serialised string
+				metadata:
+					key.metadata === undefined ? undefined : JSON.stringify(key.metadata),
+			})),
 			cursor: res.cursor === "" ? undefined : res.cursor,
 			list_complete: res.cursor === "",
 		};

@@ -79,7 +79,6 @@ export class SqliteStorage extends LocalStorage {
 	}
 
 	private run(query: ReturnType<typeof sql>): { changes: number } {
-		console.log(query);
 		const stmt = this.database.prepare(query.template);
 		return stmt.run(...query.parameters);
 	}

@@ -12,10 +12,12 @@ import {
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import { KVGateway } from "./gateway";
+import { KVRemoteStorage } from "./remote";
 import { KVRouter } from "./router";
 import { SitesOptions, getSitesBindings, getSitesService } from "./sites";
 
 export const KVOptionsSchema = z.object({
+	// TODO: also allow array like Miniflare 2
 	kvNamespaces: z.record(z.string()).optional(),
 
 	// Workers Sites
@@ -42,6 +44,7 @@ export const KV_PLUGIN: Plugin<
 > = {
 	gateway: KVGateway,
 	router: KVRouter,
+	remoteStorage: KVRemoteStorage,
 	options: KVOptionsSchema,
 	sharedOptions: KVSharedOptionsSchema,
 	async getBindings(options) {

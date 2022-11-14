@@ -187,13 +187,13 @@ export class Miniflare {
 		// Initialise plugin gateway factories and routers
 		this.#gatewayFactories = {} as PluginGatewayFactories;
 		this.#routers = {} as PluginRouters;
-		this.#initPlugins();
 
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#optionsVersion = 1;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+		this.#initPlugins();
 
 		// Get supported shell for executing runtime binary
 		// TODO: allow this to be configured if necessary
@@ -213,7 +213,12 @@ export class Miniflare {
 	#initPlugins() {
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			if (plugin.gateway !== undefined && plugin.router !== undefined) {
-				const gatewayFactory = new GatewayFactory<any>(key, plugin.gateway);
+				const gatewayFactory = new GatewayFactory<any>(
+					this.#sharedOpts.core.cloudflareFetch,
+					key,
+					plugin.gateway,
+					plugin.remoteStorage
+				);
 				const router = new plugin.router(gatewayFactory);
 				// @ts-expect-error this.#gatewayFactories[key] could be any plugin's
 				this.#gatewayFactories[key] = gatewayFactory;
