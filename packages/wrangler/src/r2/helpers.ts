@@ -4,6 +4,11 @@ import { fetchR2Objects } from "../cfetch/internal";
 import type { HeadersInit } from "undici";
 
 /**
+ * The maximum file size we can upload using the V4 API.
+ */
+export const MAX_UPLOAD_SIZE = 300 * 1024 * 1024;
+
+/**
  * Information about a bucket, returned from `listR2Buckets()`.
  */
 export interface R2BucketInfo {

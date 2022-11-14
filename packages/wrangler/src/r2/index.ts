@@ -9,6 +9,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import {
+	MAX_UPLOAD_SIZE,
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
 	deleteR2Bucket,
@@ -21,8 +22,6 @@ import {
 import type { ConfigPath } from "../index";
 import type { Readable } from "node:stream";
 import type { BuilderCallback } from "yargs";
-
-const MAX_UPLOAD_SIZE = 300 * 1024 * 1024;
 
 export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 	return r2Yargs

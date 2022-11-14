@@ -1,5 +1,7 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
+import prettyBytes from "pretty-bytes";
+import { MAX_UPLOAD_SIZE } from "../r2/helpers"
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw, mswSuccessR2handlers } from "./helpers/msw";
@@ -276,7 +278,7 @@ describe("r2", () => {
 		`);
 		});
 
-		it("should upload R2 object from bucket", async () => {
+		it("should upload R2 object to bucket", async () => {
 			fs.writeFileSync("wormhole-img.png", "passageway");
 			await runWrangler(
 				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
@@ -285,6 +287,19 @@ describe("r2", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete."
+		`);
+		});
+
+		it("should fail to upload R2 object to bucket if too large", async () => {
+			const TEST_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
+			fs.writeFileSync("wormhole-img.png", Buffer.alloc(TEST_FILE_SIZE));
+			await expect(
+				runWrangler(
+				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(`
+			"Error: Wrangler only supports uploading files up to ${prettyBytes(MAX_UPLOAD_SIZE)} in size
+			wormhole-img.png is ${prettyBytes(TEST_FILE_SIZE)} in size"
 		`);
 		});
 
