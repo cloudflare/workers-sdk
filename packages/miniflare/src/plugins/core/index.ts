@@ -11,8 +11,17 @@ import {
 	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import { Awaitable, JsonSchema, MiniflareCoreError } from "../../shared";
-import { BINDING_SERVICE_LOOPBACK, Plugin } from "../shared";
+import {
+	Awaitable,
+	JsonSchema,
+	MiniflareCoreError,
+	zAwaitable,
+} from "../../shared";
+import {
+	BINDING_SERVICE_LOOPBACK,
+	CloudflareFetchSchema,
+	Plugin,
+} from "../shared";
 import {
 	ModuleDefinitionSchema,
 	ModuleLocator,
@@ -25,10 +34,10 @@ const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 // (request: Request) => Awaitable<Response>
-export const ServiceFetch = z
+export const ServiceFetchSchema = z
 	.function()
 	.args(z.instanceof(Request))
-	.returns(z.instanceof(Response).or(z.promise(z.instanceof(Response))));
+	.returns(zAwaitable(z.instanceof(Response)));
 export const CoreOptionsSchema = z.object({
 	name: z.string().optional(),
 	script: z.string().optional(),
@@ -52,7 +61,9 @@ export const CoreOptionsSchema = z.object({
 	textBlobBindings: z.record(z.string()).optional(),
 	dataBlobBindings: z.record(z.string()).optional(),
 	// TODO: add support for workerd network/external/disk services here
-	serviceBindings: z.record(z.union([z.string(), ServiceFetch])).optional(),
+	serviceBindings: z
+		.record(z.union([z.string(), ServiceFetchSchema]))
+		.optional(),
 });
 
 export const CoreSharedOptionsSchema = z.object({
@@ -61,6 +72,8 @@ export const CoreSharedOptionsSchema = z.object({
 
 	inspectorPort: z.number().optional(),
 	verbose: z.boolean().optional(),
+
+	cloudflareFetch: CloudflareFetchSchema.optional(),
 
 	// TODO: add back validation of cf object
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),

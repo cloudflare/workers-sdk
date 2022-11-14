@@ -1,7 +1,9 @@
 import path from "path";
-import { fileURLToPath } from "url";
+import { URLSearchParams, fileURLToPath } from "url";
+import { RequestInit, Response } from "undici";
 import { z } from "zod";
 import {
+	Awaitable,
 	Clock,
 	MiniflareCoreError,
 	defaultClock,
@@ -10,8 +12,9 @@ import {
 import {
 	FileStorage,
 	MemoryStorage,
-	Storage,
+	RemoteStorage,
 	SqliteStorage,
+	Storage,
 } from "../../storage";
 
 // TODO: explain why persist passed as header, want options set to be atomic,
@@ -19,8 +22,27 @@ import {
 export const PersistenceSchema = z.boolean().or(z.string()).optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
 
+export const CloudflareFetchSchema =
+	// TODO(soon): figure out a way to do optional parameters with z.function()
+	z.custom<
+		(
+			resource: string,
+			searchParams?: URLSearchParams,
+			init?: RequestInit
+		) => Awaitable<Response>
+	>();
+export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
+
 export interface GatewayConstructor<Gateway> {
 	new (storage: Storage, clock: Clock): Gateway;
+}
+
+export interface RemoteStorageConstructor {
+	new (
+		cache: Storage,
+		cloudflareFetch: CloudflareFetch,
+		namespace: string
+	): RemoteStorage;
 }
 
 const DEFAULT_PERSIST_ROOT = ".mf";
@@ -38,17 +60,23 @@ export class GatewayFactory<Gateway> {
 	readonly #gateways = new Map<string, [Persistence, Gateway]>();
 
 	constructor(
+		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
-		private readonly gatewayClass: GatewayConstructor<Gateway>
+		private readonly gatewayClass: GatewayConstructor<Gateway>,
+		private readonly remoteStorageClass?: RemoteStorageConstructor
 	) {}
 
-	#storage(namespace: string, persist: Persistence): Storage {
+	#getMemoryStorage(namespace: string) {
+		let storage = this.#memoryStorages.get(namespace);
+		if (storage !== undefined) return storage;
+		this.#memoryStorages.set(namespace, (storage = new MemoryStorage()));
+		return storage;
+	}
+
+	getStorage(namespace: string, persist: Persistence): Storage {
 		// If persistence is disabled, use memory storage
 		if (persist === undefined || persist === false) {
-			let storage = this.#memoryStorages.get(namespace);
-			if (storage !== undefined) return storage;
-			this.#memoryStorages.set(namespace, (storage = new MemoryStorage()));
-			return storage;
+			return this.#getMemoryStorage(namespace);
 		}
 
 		// Sanitise namespace to make it file-system safe
@@ -57,6 +85,9 @@ export class GatewayFactory<Gateway> {
 		// Try parse `persist` as a URL
 		const url = maybeParseURL(persist);
 		if (url !== undefined) {
+			if (url.protocol === "memory:") {
+				return this.#getMemoryStorage(namespace);
+			}
 			if (url.protocol === "file:") {
 				const root = path.join(fileURLToPath(url), sanitisedNamespace);
 				const unsanitise =
@@ -66,6 +97,24 @@ export class GatewayFactory<Gateway> {
 				return new SqliteStorage(url.pathname, sanitisedNamespace);
 			}
 			// TODO: support Redis/SQLite storages?
+			if (url.protocol === "remote:") {
+				const { cloudflareFetch, remoteStorageClass } = this;
+				if (cloudflareFetch === undefined) {
+					throw new MiniflareCoreError(
+						"ERR_PERSIST_REMOTE_UNAUTHENTICATED",
+						"Authenticated Cloudflare API `cloudflareFetch` option not provided but required for remote storage"
+					);
+				}
+				if (remoteStorageClass === undefined) {
+					throw new MiniflareCoreError(
+						"ERR_PERSIST_REMOTE_UNSUPPORTED",
+						`The "${this.pluginName}" plugin does not support remote storage`
+					);
+				}
+				const cachePersist = url.searchParams.get("cache") ?? undefined;
+				const cache = this.getStorage(namespace, cachePersist);
+				return new remoteStorageClass(cache, cloudflareFetch, namespace);
+			}
 			throw new MiniflareCoreError(
 				"ERR_PERSIST_UNSUPPORTED",
 				`Unsupported "${url.protocol}" persistence protocol for storage: ${url.href}`
@@ -84,7 +133,7 @@ export class GatewayFactory<Gateway> {
 		const cached = this.#gateways.get(namespace);
 		if (cached !== undefined && cached[0] === persist) return cached[1];
 
-		const storage = this.#storage(namespace, persist);
+		const storage = this.getStorage(namespace, persist);
 		const gateway = new this.gatewayClass(storage, defaultClock);
 		this.#gateways.set(namespace, [persist, gateway]);
 		return gateway;

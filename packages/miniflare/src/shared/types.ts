@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export type Awaitable<T> = T | Promise<T>;
 
+export function zAwaitable<T extends z.ZodTypeAny>(
+	type: T
+): z.ZodUnion<[T, z.ZodPromise<T>]> {
+	return type.or(z.promise(type));
+}
+
 // { a: A, b: B, ... } => A | B | ...
 export type ValueOf<T> = T[keyof T];
 

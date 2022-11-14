@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { Awaitable, OptionalZodTypeOf } from "../../shared";
-import { GatewayConstructor } from "./gateway";
+import { GatewayConstructor, RemoteStorageConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
 export type DurableObjectClassNames = Map<string, string[]>;
@@ -40,10 +40,11 @@ export type Plugin<
 		? { sharedOptions?: undefined }
 		: { sharedOptions: SharedOptions }) &
 	(Gateway extends undefined
-		? { gateway?: undefined; router?: undefined }
+		? { gateway?: undefined; router?: undefined; remoteStorage?: undefined }
 		: {
 				gateway: GatewayConstructor<Gateway>;
 				router: RouterConstructor<Gateway>;
+				remoteStorage?: RemoteStorageConstructor;
 		  });
 
 export * from "./constants";
