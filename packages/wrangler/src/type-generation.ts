@@ -124,15 +124,16 @@ export async function generateTypes(
 	writeDTSFile({
 		envTypeStructure,
 		modulesTypeStructure,
-		formatType: entry.format,
 		queuesGlobal,
+		formatType: entry.format,
 	});
 }
+
 function writeDTSFile({
 	envTypeStructure,
 	modulesTypeStructure,
-	formatType,
 	queuesGlobal,
+	formatType,
 }: {
 	envTypeStructure: string[];
 	modulesTypeStructure: string[];

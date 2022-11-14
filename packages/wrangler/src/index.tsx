@@ -542,6 +542,7 @@ export function createCLIParser(argv: string[]) {
 				logfwdr: config.logfwdr,
 				unsafe: { bindings: config.unsafe?.bindings },
 				rules: config.rules,
+				queues: config.queues,
 			};
 
 			await generateTypes(configBindings, config);
