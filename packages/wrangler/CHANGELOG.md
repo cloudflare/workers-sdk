@@ -1,5 +1,16 @@
 # wrangler
 
+## 2.2.2
+
+### Patch Changes
+
+- [#2172](https://github.com/cloudflare/wrangler2/pull/2172) [`47a142af`](https://github.com/cloudflare/wrangler2/commit/47a142af42dd7f587d40d4436731af09514c1c71) Thanks [@KianNH](https://github.com/KianNH)! - Validate object size for wrangler r2 put
+
+* [#2161](https://github.com/cloudflare/wrangler2/pull/2161) [`dff756f3`](https://github.com/cloudflare/wrangler2/commit/dff756f3250240ec18a1d8564ac2cf0572b8d82e) Thanks [@jbw1991](https://github.com/jbw1991)! - Check for the correct API error code when attempting to detect missing Queues.
+
+- [#2165](https://github.com/cloudflare/wrangler2/pull/2165) [`a26f74ba`](https://github.com/cloudflare/wrangler2/commit/a26f74ba4269b42ed9a3cc119b7fc6e40697f639) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Fix Var string type:
+  The type was not being coerced to a string, so TypeScript considered it a unresolved type.
+
 ## 2.2.1
 
 ### Patch Changes
