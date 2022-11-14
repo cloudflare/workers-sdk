@@ -7,7 +7,7 @@ import type { Config } from "../config";
 
 // CFWorkerInit type and Environment Config type are not longer the same for `bindings`
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const bindingsConfigMock: Config = {
+const bindingsConfigMock: Partial<Config> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
@@ -70,11 +70,9 @@ const bindingsConfigMock: Config = {
 		SOME_TEXT_BLOB2: "SOME_TEXT_BLOB2.txt",
 	},
 	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
-	unsafe: [
-		{
-			bindings: [{ name: "testing_unsafe", type: "plain_text" }],
-		},
-	],
+	unsafe: {
+		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
+	},
 	rules: [
 		{
 			type: "Text",
@@ -104,7 +102,7 @@ describe("generateTypes()", () => {
 				main: "./index.ts",
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				...(bindingsConfigMock as any),
-				unsafe: bindingsConfigMock.unsafe?.at(0) ?? {},
+				unsafe: bindingsConfigMock.unsafe ?? {},
 			}),
 			"utf-8"
 		);
@@ -210,7 +208,8 @@ describe("generateTypes()", () => {
 				name: "test-name",
 				main: "./index.ts",
 				vars: bindingsConfigMock.vars,
-			}),
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			} as any),
 			"utf-8"
 		);
 		await runWrangler("types");
@@ -228,6 +227,7 @@ describe("generateTypes()", () => {
 			}),
 			"utf-8"
 		);
+
 		await runWrangler("types");
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 		expect(std.out).toMatchInlineSnapshot(`""`);
@@ -246,7 +246,8 @@ describe("generateTypes()", () => {
 				name: "test-name",
 				main: "./index.ts",
 				vars: bindingsConfigMock.vars,
-			}),
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			} as any),
 			"utf-8"
 		);
 
@@ -268,8 +269,9 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				unsafe: bindingsConfigMock.unsafe?.at(0) ?? {},
-			}),
+				unsafe: bindingsConfigMock.unsafe ?? {},
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			} as any),
 			"utf-8"
 		);
 
