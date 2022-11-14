@@ -311,9 +311,9 @@ test("lists keys with metadata", listMacro, {
 	},
 	pages: [
 		[
-			{ name: "key1", metadata: { testing: 1 } },
-			{ name: "key2", metadata: { testing: 2 } },
-			{ name: "key3", metadata: { testing: 3 } },
+			{ name: "key1", metadata: '{"testing":1}' },
+			{ name: "key2", metadata: '{"testing":2}' },
+			{ name: "key3", metadata: '{"testing":3}' },
 		],
 	],
 });
@@ -340,17 +340,17 @@ test("lists keys with expiration and metadata", listMacro, {
 			{
 				name: "key1",
 				expiration: TIME_EXPIRING,
-				metadata: { testing: 1 },
+				metadata: '{"testing":1}',
 			},
 			{
 				name: "key2",
 				expiration: TIME_EXPIRING + 100,
-				metadata: { testing: 2 },
+				metadata: '{"testing":2}',
 			},
 			{
 				name: "key3",
 				expiration: TIME_EXPIRING + 200,
-				metadata: { testing: 3 },
+				metadata: '{"testing":3}',
 			},
 		],
 	],
