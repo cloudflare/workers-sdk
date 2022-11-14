@@ -42,10 +42,21 @@ export async function getGitVersioon(): Promise<string | null> {
  */
 export async function initializeGit(cwd: string) {
 	try {
-		// Try to create the repository with the HEAD branch of `main`.
-		await execa("git", ["init", "--initial-branch", "main"], {
-			cwd,
-		});
+		// Get the default init branch name
+		const { stdout: defaultBranchName } = await execa("git", [
+			"config",
+			"--get",
+			"init.defaultBranch",
+		]);
+
+		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
+		await execa(
+			"git",
+			["init", "--initial-branch", defaultBranchName.trim() ?? "main"],
+			{
+				cwd,
+			}
+		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
 		await execa("git", ["init"], {
