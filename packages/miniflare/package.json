@@ -1,6 +1,6 @@
 {
 	"name": "@miniflare/tre",
-	"version": "3.0.0-next.2",
+	"version": "3.0.0-next.3",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -37,7 +37,7 @@
 		"kleur": "^4.1.5",
 		"stoppable": "^1.1.0",
 		"undici": "^5.10.0",
-		"workerd": "^1.20220926.3",
+		"workerd": "^1.20221111.4",
 		"ws": "^8.11.0",
 		"zod": "^3.18.0"
 	},

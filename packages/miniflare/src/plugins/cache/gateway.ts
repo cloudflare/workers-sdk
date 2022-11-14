@@ -13,21 +13,7 @@ interface CacheMetadata {
 	status: number;
 }
 
-function getExpiration(
-	clock: Clock,
-	req: Request,
-	res: Response
-):
-	| {
-			storable: true;
-			expiration: number;
-			headers: HeadersInit;
-	  }
-	| {
-			storable: false;
-			expiration: number | undefined;
-			headers: HeadersInit;
-	  } {
+function getExpiration(clock: Clock, req: Request, res: Response) {
 	// Cloudflare ignores request Cache-Control
 	const reqHeaders = normaliseHeaders(req.headers);
 	delete reqHeaders["cache-control"];
