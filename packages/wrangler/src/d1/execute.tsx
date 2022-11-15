@@ -313,8 +313,8 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
-	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
-	for (let i = 0; i <= nbatches; i++) {
+	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
+	for (let i = 0; i < num_batches; i++) {
 		batches.push(
 			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
 		);
