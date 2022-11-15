@@ -4,11 +4,8 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
-import type { CfWorkerInit } from "../worker";
 
-const bindingsConfigMock: CfWorkerInit["bindings"] & {
-	rules: Config["rules"];
-} = {
+const bindingsConfigMock: Partial<Config> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
@@ -18,6 +15,22 @@ const bindingsConfigMock: CfWorkerInit["bindings"] & {
 			activeDuty: true,
 			captian: "Picard",
 		}, // We can assume the objects will be stringified
+	},
+	queues: {
+		producers: [
+			{
+				binding: "TEST_QUEUE_BINDING",
+				queue: "TEST_QUEUE",
+			},
+		],
+		consumers: [
+			{
+				queue: "my-queue",
+				max_batch_size: 10,
+				max_batch_timeout: 1,
+				max_retries: 3,
+			},
+		],
 	},
 	durable_objects: {
 		bindings: [
@@ -33,7 +46,6 @@ const bindingsConfigMock: CfWorkerInit["bindings"] & {
 	],
 	d1_databases: [
 		{
-			// @ts-expect-error This type is resolved in the function that handles creating BETA string
 			binding: "D1_TESTING_SOMETHING",
 			database_name: "D1_BINDING",
 			database_id: "1234",
@@ -56,12 +68,9 @@ const bindingsConfigMock: CfWorkerInit["bindings"] & {
 		SOME_TEXT_BLOB2: "SOME_TEXT_BLOB2.txt",
 	},
 	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
-	unsafe: [
-		{
-			// @ts-expect-error Unsafe bindings type is somewhat different in different places
-			bindings: [{ name: "testing_unsafe", type: "plain_text" }],
-		},
-	],
+	unsafe: {
+		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
+	},
 	rules: [
 		{
 			type: "Text",
@@ -89,10 +98,9 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				...(bindingsConfigMock as any),
-				unsafe: bindingsConfigMock.unsafe?.at(0) ?? {},
-			}),
+				...bindingsConfigMock,
+				unsafe: bindingsConfigMock.unsafe ?? {},
+			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
 
@@ -115,6 +123,7 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB1: string;
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
+			TEST_QUEUE_BINDING: Queue;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -139,9 +148,9 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				// @ts-expect-error This type is out of sync with the actual bindingsConfig type
 				vars: bindingsConfigMock.vars,
-			}),
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			} as any),
 			"utf-8"
 		);
 		await runWrangler("types");
@@ -159,6 +168,7 @@ describe("generateTypes()", () => {
 			}),
 			"utf-8"
 		);
+
 		await runWrangler("types");
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 		expect(std.out).toMatchInlineSnapshot(`""`);
@@ -176,9 +186,8 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				// @ts-expect-error This type is out of sync with the actual bindingsConfig type
 				vars: bindingsConfigMock.vars,
-			}),
+			} as TOML.JsonMap),
 			"utf-8"
 		);
 
@@ -200,9 +209,8 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				// @ts-expect-error This type is out of sync with the actual bindingsConfig type
-				unsafe: bindingsConfigMock.unsafe?.at(0) ?? {},
-			}),
+				unsafe: bindingsConfigMock.unsafe ?? {},
+			} as TOML.JsonMap),
 			"utf-8"
 		);
 

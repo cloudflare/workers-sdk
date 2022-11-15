@@ -50,7 +50,6 @@ import {
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
-import type { PartialConfigToDTS } from "./type-generation";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
@@ -527,7 +526,7 @@ export function createCLIParser(argv: string[]) {
 			await printWranglerBanner();
 			const config = readConfig(undefined, {});
 
-			const configBindings: PartialConfigToDTS = {
+			const configBindings: Partial<Config> = {
 				kv_namespaces: config.kv_namespaces ?? [],
 				vars: { ...config.vars },
 				wasm_modules: config.wasm_modules,
@@ -537,13 +536,13 @@ export function createCLIParser(argv: string[]) {
 				data_blobs: config.data_blobs,
 				durable_objects: config.durable_objects,
 				r2_buckets: config.r2_buckets,
-				// @ts-expect-error - We don't want the type generated to inlcude the Beta prefix
 				d1_databases: config.d1_databases,
 				services: config.services,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
-				unsafe: config.unsafe?.bindings,
+				unsafe: { bindings: config.unsafe?.bindings },
 				rules: config.rules,
+				queues: config.queues,
 			};
 
 			await generateTypes(configBindings, config);
