@@ -5,8 +5,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
 
-// CFWorkerInit type and Environment Config type are not longer the same for `bindings`
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bindingsConfigMock: Partial<Config> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
@@ -100,72 +98,15 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				...(bindingsConfigMock as any),
+				...bindingsConfigMock,
 				unsafe: bindingsConfigMock.unsafe ?? {},
-			}),
+			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		/**
-		 * A message that is sent to a consumer Worker.
-		 */
-		interface Message<Body = unknown> {
-			/**
-			 * A unique, system-generated ID for the message.
-			 */
-			readonly id: string;
-			/**
-			 * A timestamp when the message was sent.
-			 */
-			readonly timestamp: Date;
-			/**
-			 * The body of the message.
-			 */
-			readonly body: Body;
-		}
-
-		/**
-		 * A batch of messages that are sent to a consumer Worker.
-		 */
-		interface MessageBatch<Body = unknown> {
-			/**
-			 * The name of the Queue that belongs to this batch.
-			 */
-			readonly queue: string;
-			/**
-			 * An array of messages in the batch. Ordering of messages is not guaranteed.
-			 */
-			readonly messages: readonly Message<Body>[];
-			/**
-			 * Marks every message to be retried in the next batch.
-			 */
-			retryAll(): void;
-		}
-
-		interface queue<T> {
-			async(
-				batch: MessageBatch<T>,
-				env: Env,
-				context: ExecutionContext
-			): Promise<void>;
-		}
-
-		/**
-		 * A binding that allows a producer to send messages to a Queue.
-		 */
-		interface Queue<Body = any> {
-			/**
-			 * Sends a message to the Queue.
-			 * @param message The message can be any type supported by the [structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm#supported_types), as long as its size is less than 128 KB.
-			 * @returns A promise that resolves when the message is confirmed to be written to disk.
-			 */
-			send(message: Body): Promise<void>;
-		}
-		interface Env {
+		"interface Env {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
@@ -182,7 +123,7 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB1: string;
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
-		TEST_QUEUE_BINDING: Queue
+			TEST_QUEUE_BINDING: Queue;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -246,8 +187,7 @@ describe("generateTypes()", () => {
 				name: "test-name",
 				main: "./index.ts",
 				vars: bindingsConfigMock.vars,
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			} as any),
+			} as TOML.JsonMap),
 			"utf-8"
 		);
 
@@ -270,8 +210,7 @@ describe("generateTypes()", () => {
 				name: "test-name",
 				main: "./index.ts",
 				unsafe: bindingsConfigMock.unsafe ?? {},
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			} as any),
+			} as TOML.JsonMap),
 			"utf-8"
 		);
 
