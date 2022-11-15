@@ -17,9 +17,10 @@ import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
 import {
 	setupBindings,
-	setupExperimentalLocal,
+	getMiniflare3Constructor,
 	setupMiniflareOptions,
 	setupNodeOptions,
+	transformLocalOptions,
 } from "./local";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
@@ -31,7 +32,6 @@ import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
-import type { MiniflareOptions } from "miniflare";
 
 import type { ChildProcess } from "node:child_process";
 
@@ -357,7 +357,7 @@ export async function startLocalServer({
 			bundle,
 		});
 
-		const { forkOptions, miniflareCLIPath } = setupMiniflareOptions({
+		const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 			workerName,
 			port,
 			scriptPath,
@@ -390,9 +390,9 @@ export async function startLocalServer({
 		});
 
 		if (experimentalLocal) {
-			// TODO: refactor setupMiniflareOptions so we don't need to parse here
-			const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
-			const mf = await setupExperimentalLocal(mf2Options, format, bundle);
+			const mf3Options = await transformLocalOptions(options, format, bundle);
+			const Miniflare = await getMiniflare3Constructor();
+			const mf = new Miniflare(mf3Options);
 			const runtimeURL = await mf.ready;
 			experimentalLocalRef = mf;
 			removeSignalExitListener = onExit((_code, _signal) => {

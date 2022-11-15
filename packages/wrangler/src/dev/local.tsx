@@ -4,6 +4,7 @@ import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
+import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
@@ -109,6 +110,7 @@ function useLocalWorker({
 	const local = useRef<ChildProcess>();
 	const experimentalLocalRef = useRef<Miniflare3Type>();
 	const removeSignalExitListener = useRef<() => void>();
+	const removeExperimentalLocalSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 
 	useEffect(() => {
@@ -174,7 +176,7 @@ function useLocalWorker({
 				bundle,
 			});
 
-			const { forkOptions, miniflareCLIPath } = setupMiniflareOptions({
+			const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 				workerName,
 				port,
 				scriptPath,
@@ -207,16 +209,27 @@ function useLocalWorker({
 			});
 
 			if (experimentalLocal) {
-				// TODO: refactor setupMiniflareOptions so we don't need to parse here
-				const mf2Options: MiniflareOptions = JSON.parse(forkOptions[0]);
-				const mf = await setupExperimentalLocal(mf2Options, format, bundle);
-				await mf.ready;
-				experimentalLocalRef.current = mf;
-				removeSignalExitListener.current = onExit(() => {
-					logger.log("⎔ Shutting down experimental local server.");
-					mf.dispose();
-					experimentalLocalRef.current = undefined;
-				});
+				const mf3Options = await transformLocalOptions(options, format, bundle);
+				const current = experimentalLocalRef.current;
+				if (current === undefined) {
+					// If we don't have an active Miniflare instance, create a new one
+					const Miniflare = await getMiniflare3Constructor();
+					if (abortController.signal.aborted) return;
+					const mf = new Miniflare(mf3Options);
+					experimentalLocalRef.current = mf;
+					removeExperimentalLocalSignalExitListener.current = onExit(() => {
+						logger.log("⎔ Shutting down experimental local server.");
+						mf.dispose();
+						experimentalLocalRef.current = undefined;
+					});
+					await mf.ready;
+				} else {
+					// Otherwise, reuse the existing instance with its loopback server
+					// and just update the options
+					if (abortController.signal.aborted) return;
+					logger.log("⎔ Reloading experimental local server.");
+					await current.setOptions(mf3Options);
+				}
 				return;
 			}
 
@@ -317,13 +330,6 @@ function useLocalWorker({
 				local.current?.kill();
 				local.current = undefined;
 			}
-			if (experimentalLocalRef.current) {
-				logger.log("⎔ Shutting down experimental local server.");
-				// Initialisation errors are also thrown asynchronously by dispose().
-				// The catch() above should've caught them though.
-				experimentalLocalRef.current?.dispose().catch(() => {});
-				experimentalLocalRef.current = undefined;
-			}
 			removeSignalExitListener.current?.();
 			removeSignalExitListener.current = undefined;
 		};
@@ -362,6 +368,26 @@ function useLocalWorker({
 		enablePagesAssetsServiceBinding,
 		experimentalLocal,
 	]);
+
+	// Rather than disposing the Miniflare instance on every reload, only dispose
+	// it if local mode is disabled and the `Local` component is unmounted. This
+	// allows us to use the more efficient `Miniflare#setOptions` on reload which
+	// retains internal state (e.g. the Miniflare loopback server).
+	useEffect(
+		() => () => {
+			if (experimentalLocalRef.current) {
+				logger.log("⎔ Shutting down experimental local server.");
+				// Initialisation errors are also thrown asynchronously by dispose().
+				// The catch() above should've caught them though.
+				experimentalLocalRef.current?.dispose().catch(() => {});
+				experimentalLocalRef.current = undefined;
+			}
+			removeExperimentalLocalSignalExitListener.current?.();
+			removeExperimentalLocalSignalExitListener.current = undefined;
+		},
+		[]
+	);
+
 	return { inspectorUrl };
 }
 
@@ -512,9 +538,10 @@ export function setupMiniflareOptions({
 }: SetupMiniflareOptionsProps): {
 	miniflareCLIPath: string;
 	forkOptions: string[];
+	options: MiniflareOptions;
 } {
 	// It's now getting _really_ messy now with Pages ASSETS binding outside and the external Durable Objects inside.
-	const options = {
+	const options: MiniflareOptions = {
 		name: workerName,
 		port,
 		scriptPath,
@@ -633,7 +660,7 @@ export function setupMiniflareOptions({
 	if (enablePagesAssetsServiceBinding) {
 		forkOptions.push(JSON.stringify(enablePagesAssetsServiceBinding));
 	}
-	return { miniflareCLIPath, forkOptions };
+	return { miniflareCLIPath, forkOptions, options };
 }
 
 export function setupNodeOptions({
@@ -656,19 +683,15 @@ export function setupNodeOptions({
 	return nodeOptions;
 }
 
-// Caching of the `npx-import`ed `@miniflare/tre` package
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let Miniflare: typeof import("@miniflare/tre").Miniflare;
-
 function arrayToObject(values: string[] = []): Record<string, string> {
 	return Object.fromEntries(values.map((value) => [value, value]));
 }
 
-export async function setupExperimentalLocal(
+export async function transformLocalOptions(
 	mf2Options: MiniflareOptions,
 	format: CfScriptFormat,
 	bundle: EsbuildBundle
-): Promise<Miniflare3Type> {
+): Promise<Miniflare3Options> {
 	const options: Miniflare3Options = {
 		...mf2Options,
 		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
@@ -676,6 +699,8 @@ export async function setupExperimentalLocal(
 		// TODO: use defined KV preview ID if any
 		kvNamespaces: arrayToObject(mf2Options.kvNamespaces),
 		r2Buckets: arrayToObject(mf2Options.r2Buckets),
+		inspectorPort: await getPort({ port: 9229 }),
+		verbose: true,
 	};
 
 	if (format === "modules") {
@@ -704,14 +729,18 @@ export async function setupExperimentalLocal(
 		];
 	}
 
-	logger.log("⎔ Starting an experimental local server...");
+	return options;
+}
 
+// Caching of the `npx-import`ed `@miniflare/tre` package
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Miniflare: typeof import("@miniflare/tre").Miniflare;
+export async function getMiniflare3Constructor(): Promise<typeof Miniflare> {
 	if (Miniflare === undefined) {
 		({ Miniflare } = await npxImport<
 			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 			typeof import("@miniflare/tre")
-		>("@miniflare/tre@next"));
+		>("@miniflare/tre@3.0.0-next.5"));
 	}
-
-	return new Miniflare(options);
+	return Miniflare;
 }
