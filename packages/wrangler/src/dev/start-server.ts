@@ -124,6 +124,8 @@ export async function startDevServer(
 				usageModel: props.usageModel,
 				workerDefinitions,
 				experimentalLocal: props.experimentalLocal,
+				accountId: props.accountId,
+				experimentalLocalRemoteKv: props.experimentalLocalRemoteKv,
 			});
 
 			return {
@@ -297,6 +299,8 @@ export async function startLocalServer({
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
+	accountId,
+	experimentalLocalRemoteKv,
 }: LocalProps) {
 	let local: ChildProcess | undefined;
 	let experimentalLocalRef: Miniflare3Type | undefined;
@@ -390,7 +394,15 @@ export async function startLocalServer({
 		});
 
 		if (experimentalLocal) {
-			const mf3Options = await transformLocalOptions(options, format, bundle);
+			const mf3Options = await transformLocalOptions({
+				miniflare2Options: options,
+				format,
+				bundle,
+				kvNamespaces: bindings?.kv_namespaces,
+				r2Buckets: bindings?.r2_buckets,
+				authenticatedAccountId: accountId,
+				kvRemote: experimentalLocalRemoteKv,
+			});
 			const Miniflare = await getMiniflare3Constructor();
 			const mf = new Miniflare(mf3Options);
 			const runtimeURL = await mf.ready;

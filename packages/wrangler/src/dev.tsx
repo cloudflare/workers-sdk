@@ -65,6 +65,7 @@ interface DevArgs {
 	tsconfig?: string;
 	local?: boolean;
 	"experimental-local"?: boolean;
+	"experimental-local-remote-kv"?: boolean;
 	minify?: boolean;
 	var?: string[];
 	define?: string[];
@@ -237,11 +238,25 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 				type: "boolean",
 				default: false,
 			})
+			.option("experimental-local-remote-kv", {
+				describe:
+					"Read/write KV data from/to real namespaces on the Cloudflare network",
+				type: "boolean",
+				default: false,
+			})
 			.check((argv) => {
 				if (argv.local && argv["experimental-local"]) {
 					throw new Error(
 						"--local and --experimental-local are mutually exclusive. " +
-							"Please select one or the other."
+							"Please enable one or the other."
+					);
+				}
+				if (
+					argv["experimental-local-remote-kv"] &&
+					!argv["experimental-local"]
+				) {
+					throw new Error(
+						"--experimental-local-remote-kv requires --experimental-local to be enabled."
 					);
 				}
 				return true;
@@ -461,6 +476,7 @@ export async function startDev(args: StartDevOptions) {
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args["test-scheduled"]}
 					experimentalLocal={args.experimentalLocal}
+					experimentalLocalRemoteKv={args.experimentalLocalRemoteKv}
 				/>
 			);
 		}
@@ -582,6 +598,7 @@ export async function startApiDev(args: StartDevOptions) {
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
 			experimentalLocal: args.experimentalLocal,
+			experimentalLocalRemoteKv: args.experimentalLocalRemoteKv,
 		});
 	}
 

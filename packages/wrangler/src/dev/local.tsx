@@ -8,6 +8,7 @@ import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
+import { performApiFetch } from "../cfetch/internal";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
@@ -17,6 +18,7 @@ import {
 } from "../module-collection";
 import { getBasePath } from "../paths";
 import { waitForPortToBeAvailable } from "../proxy";
+import { requireAuth } from "../user";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
@@ -38,9 +40,11 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	Miniflare as Miniflare3Type,
 	MiniflareOptions as Miniflare3Options,
+	CloudflareFetch,
 } from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
+import type { RequestInit } from "undici";
 
 export interface LocalProps {
 	name: string | undefined;
@@ -67,7 +71,9 @@ export interface LocalProps {
 	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
-	experimentalLocal?: boolean;
+	experimentalLocal: boolean | undefined;
+	accountId: string | undefined; // Account ID? In local mode??? :exploding_head:
+	experimentalLocalRemoteKv: boolean | undefined;
 }
 
 export function Local(props: LocalProps) {
@@ -105,6 +111,8 @@ function useLocalWorker({
 	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
+	accountId,
+	experimentalLocalRemoteKv,
 }: LocalProps) {
 	// TODO: pass vars via command line
 	const local = useRef<ChildProcess>();
@@ -209,7 +217,16 @@ function useLocalWorker({
 			});
 
 			if (experimentalLocal) {
-				const mf3Options = await transformLocalOptions(options, format, bundle);
+				const mf3Options = await transformLocalOptions({
+					miniflare2Options: options,
+					format,
+					bundle,
+					kvNamespaces: bindings?.kv_namespaces,
+					r2Buckets: bindings?.r2_buckets,
+					authenticatedAccountId: accountId,
+					kvRemote: experimentalLocalRemoteKv,
+				});
+
 				const current = experimentalLocalRef.current;
 				if (current === undefined) {
 					// If we don't have an active Miniflare instance, create a new one
@@ -367,6 +384,8 @@ function useLocalWorker({
 		onReady,
 		enablePagesAssetsServiceBinding,
 		experimentalLocal,
+		accountId,
+		experimentalLocalRemoteKv,
 	]);
 
 	// Rather than disposing the Miniflare instance on every reload, only dispose
@@ -683,24 +702,63 @@ export function setupNodeOptions({
 	return nodeOptions;
 }
 
-function arrayToObject(values: string[] = []): Record<string, string> {
-	return Object.fromEntries(values.map((value) => [value, value]));
+export interface SetupMiniflare3Options {
+	// Regular Miniflare 2 options to transform
+	miniflare2Options: MiniflareOptions;
+	// Miniflare 3 requires all modules to be manually specified
+	format: CfScriptFormat;
+	bundle: EsbuildBundle;
+
+	// Miniflare 3 accepts namespace/bucket names in addition to binding names.
+	// This means multiple workers persisting to the same location can have
+	// different binding names for the same namespace/bucket. Therefore, we need
+	// the full KV/R2 arrays. This is also required for remote KV storage, as
+	// we need actual namespace IDs to connect to.
+	kvNamespaces: CfKvNamespace[] | undefined;
+	r2Buckets: CfR2Bucket[] | undefined;
+
+	// Account ID to use for authenticated Cloudflare fetch. If true, prompt
+	// user for ID if multiple available.
+	authenticatedAccountId: string | true | undefined;
+	// Whether to read/write from/to real KV namespaces
+	kvRemote: boolean | undefined;
 }
 
-export async function transformLocalOptions(
-	mf2Options: MiniflareOptions,
-	format: CfScriptFormat,
-	bundle: EsbuildBundle
-): Promise<Miniflare3Options> {
+export async function transformLocalOptions({
+	miniflare2Options,
+	format,
+	bundle,
+	kvNamespaces,
+	r2Buckets,
+	authenticatedAccountId,
+	kvRemote,
+}: SetupMiniflare3Options): Promise<Miniflare3Options> {
+	// Build authenticated Cloudflare API fetch function if required
+	let cloudflareFetch: CloudflareFetch | undefined;
+	if (kvRemote && authenticatedAccountId !== undefined) {
+		const preferredAccountId =
+			authenticatedAccountId === true ? undefined : authenticatedAccountId;
+		const accountId = await requireAuth({ account_id: preferredAccountId });
+		cloudflareFetch = (resource, searchParams, init) => {
+			resource = `/accounts/${accountId}/${resource}`;
+			// Miniflare and Wrangler's `undici` versions may be slightly different,
+			// but their `RequestInit` types *should* be compatible
+			return performApiFetch(resource, init as RequestInit, searchParams);
+		};
+	}
+
 	const options: Miniflare3Options = {
-		...mf2Options,
+		...miniflare2Options,
 		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
-		// For now, just use the same value as we did in Miniflare 2.
-		// TODO: use defined KV preview ID if any
-		kvNamespaces: arrayToObject(mf2Options.kvNamespaces),
-		r2Buckets: arrayToObject(mf2Options.r2Buckets),
+		kvNamespaces: Object.fromEntries(
+			kvNamespaces?.map(({ binding, id }) => [binding, id]) ?? []
+		),
+		r2Buckets: Object.fromEntries(
+			r2Buckets?.map(({ binding, bucket_name }) => [binding, bucket_name]) ?? []
+		),
 		inspectorPort: await getPort({ port: 9229 }),
 		verbose: true,
+		cloudflareFetch,
 	};
 
 	if (format === "modules") {
@@ -729,6 +787,21 @@ export async function transformLocalOptions(
 		];
 	}
 
+	if (kvRemote) {
+		// `kvPersist` is always assigned a truthy value in `setupMiniflareOptions`
+		assert(options.kvPersist);
+		const kvRemoteCache =
+			options.kvPersist === true
+				? // If storing in temporary directory, find this path from the bundle
+				  // output path
+				  path.join(path.dirname(bundle.path), ".mf", "kv-remote")
+				: // Otherwise, `kvPersist` looks like `.../kv`, so rewrite it to
+				  // `kv-remote` since the expected metadata format for remote storage
+				  // is different to local
+				  path.join(path.dirname(options.kvPersist), "kv-remote");
+		options.kvPersist = `remote:?cache=${encodeURIComponent(kvRemoteCache)}`;
+	}
+
 	return options;
 }
 
@@ -740,7 +813,7 @@ export async function getMiniflare3Constructor(): Promise<typeof Miniflare> {
 		({ Miniflare } = await npxImport<
 			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 			typeof import("@miniflare/tre")
-		>("@miniflare/tre@3.0.0-next.5"));
+		>("@miniflare/tre@3.0.0-next.6"));
 	}
 	return Miniflare;
 }

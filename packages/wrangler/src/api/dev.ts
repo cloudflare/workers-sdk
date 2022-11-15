@@ -56,6 +56,8 @@ interface DevOptions {
 	$0?: string; //yargs wants this
 	testScheduled?: boolean;
 	experimentalLocal?: boolean;
+	accountId?: string;
+	experimentalLocalRemoteKv?: boolean;
 }
 
 interface DevApiOptions {

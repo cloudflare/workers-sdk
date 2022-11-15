@@ -155,6 +155,7 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	experimentalLocal: boolean | undefined;
+	experimentalLocalRemoteKv: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -326,6 +327,8 @@ function DevSession(props: DevSessionProps) {
 			onReady={props.onReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			experimentalLocal={props.experimentalLocal}
+			accountId={props.accountId}
+			experimentalLocalRemoteKv={props.experimentalLocalRemoteKv}
 		/>
 	) : (
 		<Remote
