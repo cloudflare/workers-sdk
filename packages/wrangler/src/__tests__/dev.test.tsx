@@ -15,6 +15,7 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { rest } from "msw";
 
 describe("wrangler dev", () => {
 	beforeEach(() => {
@@ -830,6 +831,31 @@ describe("wrangler dev", () => {
 	});
 
 	describe("inspector port", () => {
+		it("should connect WebSocket server with --experimental-local", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default {
+					async fetch(request, env, ctx ){
+						console.log('Hello World LOGGING');
+					},
+			};`
+			);
+			await runWrangler("dev --experimental-local");
+
+			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9229);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
+		});
+
 		it("should use 9229 as the default port", async () => {
 			writeWranglerToml({
 				main: "index.js",
