@@ -127,14 +127,14 @@ export const D1_BETA_PREFIX = `__D1_BETA__` as const;
 export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
 
 export interface CfD1Database {
-	// For now, all D1 bindings are beta
+	// For now, all D1 bindings are alpha
 	binding: D1PrefixedBinding;
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
-	migrations_table_name?: string;
-	migrations_folder_path?: string;
+	migrations_table?: string;
+	migrations_dir?: string;
 }
 
 interface CfService {
