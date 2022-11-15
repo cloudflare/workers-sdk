@@ -264,7 +264,7 @@ async function executeRemotely(
 	if (shouldPrompt) {
 		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 
-		// Don't output if isInteractive is undefined
+		// Don't output if shouldPrompt is undefined
 	} else if (shouldPrompt !== undefined) {
 		// Pipe to error so we don't break jq
 		console.error(`Executing on ${name} (${db.uuid}):`);
