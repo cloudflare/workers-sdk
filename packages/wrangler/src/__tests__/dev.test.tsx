@@ -15,7 +15,6 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import { rest } from "msw";
 
 describe("wrangler dev", () => {
 	beforeEach(() => {
