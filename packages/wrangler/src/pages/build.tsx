@@ -17,8 +17,8 @@ import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { pagesBetaWarning, RUNNING_BUILDERS } from "./utils";
+import type { YargsOptionsToInterface } from "../yargs-types";
 import type { Config } from "./functions/routes";
-import type { YargsOptionsToInterface } from "./types";
 import type { Argv } from "yargs";
 
 type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;

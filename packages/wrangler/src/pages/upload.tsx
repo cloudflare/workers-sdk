@@ -22,7 +22,8 @@ import {
 } from "./constants";
 import { hashFile } from "./hash";
 import { pagesBetaWarning } from "./utils";
-import type { UploadPayloadFile, YargsOptionsToInterface } from "./types";
+import type { YargsOptionsToInterface } from "../yargs-types";
+import type { UploadPayloadFile } from "./types";
 import type { Argv } from "yargs";
 
 type UploadArgs = YargsOptionsToInterface<typeof Options>;

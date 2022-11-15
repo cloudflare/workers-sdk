@@ -7,6 +7,8 @@ export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 import type { Request } from "undici";
 
+const TRACE_VERSION = "trace-v1";
+
 /**
  * When creating a Tail, the response from the API contains
  * - an ID used for identifying the tail
@@ -59,6 +61,68 @@ function makeDeleteTailUrl(
 		: `/accounts/${accountId}/workers/scripts/${workerName}/tails/${tailId}`;
 }
 
+interface CreatePagesTailOptions {
+	accountId: string;
+	projectName: string;
+	deploymentId: string;
+	filters: TailFilterMessage;
+	debug?: boolean;
+}
+
+/**
+ * Create and connect to a Pages Function Tail.
+ *
+ * Under the hood, this function
+ * - Registers a new Tail with the API
+ * - Connects to the tail worker
+ * - Sends any filters over the connection
+ *
+ * @returns a websocket connection, an expiration, and a function to call to delete the tail
+ */
+export async function createPagesTail({
+	accountId,
+	projectName,
+	deploymentId,
+	filters,
+	debug = false,
+}: CreatePagesTailOptions) {
+	const tailRecord = await fetchResult<TailCreationApiResponse>(
+		`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails`,
+		{
+			method: "POST",
+			body: JSON.stringify(filters),
+		}
+	);
+
+	const deleteTail = async () =>
+		fetchResult(
+			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails/${tailRecord.id}`,
+			{ method: "DELETE" }
+		);
+
+	const tail = new WebSocket(tailRecord.url, TRACE_VERSION, {
+		headers: {
+			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
+			"User-Agent": `wrangler-js/${packageVersion}`,
+		},
+	});
+
+	// send filters when we open up
+	tail.on("open", () => {
+		tail.send(
+			JSON.stringify({ debug: debug }),
+			{ binary: false, compress: false, mask: false, fin: true },
+			(err) => {
+				if (err) {
+					throw err;
+				}
+			}
+		);
+	});
+
+	return { tail, deleteTail, expiration: tailRecord.expires_at };
+}
+
 /**
  * Create and connect to a tail.
  *
@@ -102,9 +166,9 @@ export async function createTail(
 	}
 
 	// connect to the tail
-	const tail = new WebSocket(websocketUrl, "trace-v1", {
+	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
-			"Sec-WebSocket-Protocol": "trace-v1", // needs to be `trace-v1` to be accepted
+			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
 	});

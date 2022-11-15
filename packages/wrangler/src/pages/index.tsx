@@ -1,6 +1,7 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
+import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
 import * as Functions from "./functions";
@@ -80,6 +81,13 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 							"🆙 Publish a directory of static assets as a Pages deployment",
 							Publish.Options,
 							Publish.Handler
+						)
+						.command(
+							"tail [deployment]",
+							"Start a tailing session for a project's deployment and " +
+								"livestream logs from your Functions",
+							DeploymentTails.Options,
+							DeploymentTails.Handler
 						)
 						.epilogue(pagesBetaWarning)
 			)
