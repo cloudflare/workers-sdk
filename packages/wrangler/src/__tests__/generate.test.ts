@@ -55,7 +55,7 @@ describe("generate", () => {
 				`);
 		});
 
-		it("auto-increments the worker directory name", async () => {
+		it.skip("auto-increments the worker directory name", async () => {
 			fs.mkdirSync("my-worker");
 
 			expect(fs.existsSync("my-worker-1")).toBe(false);
@@ -104,7 +104,7 @@ describe("generate", () => {
 	});
 
 	describe("cloning", () => {
-		it("clones a cloudflare template with sparse checkouts", async () => {
+		it.skip("clones a cloudflare template with sparse checkouts", async () => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
@@ -143,7 +143,7 @@ describe("generate", () => {
 			});
 		});
 
-		it("clones a user/repo/path/to/subdirectory template", async () => {
+		it.skip("clones a user/repo/path/to/subdirectory template", async () => {
 			await expect(
 				runWrangler("generate my-worker cloudflare/templates/worker-typescript")
 			).resolves.toBeUndefined();
