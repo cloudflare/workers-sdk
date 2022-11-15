@@ -170,5 +170,9 @@ var shim_default = {
 	async scheduled(controller, env, ctx) {
 		return worker.scheduled(controller, getMaskedEnv(env), ctx);
 	},
+
+	async queue(controller, env, ctx) {
+		return worker.queue(controller, getMaskedEnv(env), ctx);
+	},
 };
 export { shim_default as default };
