@@ -50,7 +50,9 @@ type ExecuteArgs = BaseSqlExecuteArgs & {
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
 	success: boolean;
-	duration: number;
+	meta?: {
+		duration?: number;
+	};
 	query?: string;
 };
 // Max number of bytes to send in a single /execute call
@@ -288,12 +290,14 @@ async function executeRemotely(
 
 function logResult(r: QueryResult | QueryResult[]) {
 	logger.log(
-		`🚣 Executed ${Array.isArray(r) ? r.length : "1"} command(s) in ${
+		`🚣 Executed ${
+			Array.isArray(r) ? `${r.length} commands` : "1 command"
+		} in ${
 			Array.isArray(r)
 				? r
-						.map((d: QueryResult) => d.duration)
+						.map((d: QueryResult) => d.meta?.duration || 0)
 						.reduce((a: number, b: number) => a + b, 0)
-				: r.duration
+				: r.meta?.duration
 		}ms`
 	);
 }
