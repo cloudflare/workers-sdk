@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Wrangler D1 now supports the beta release of migrations.
+Wrangler D1 now supports the alpha release of migrations.
