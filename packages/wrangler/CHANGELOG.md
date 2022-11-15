@@ -1,5 +1,17 @@
 # wrangler
 
+## 2.3.0
+
+### Minor Changes
+
+- [#2077](https://github.com/cloudflare/wrangler2/pull/2077) [`c9b564dc`](https://github.com/cloudflare/wrangler2/commit/c9b564dc23b298dc5efc08510fbf5b9d03992dc0) Thanks [@jrf0110](https://github.com/jrf0110)! - Adds tailing for Pages Functions
+
+### Patch Changes
+
+- [#2178](https://github.com/cloudflare/wrangler2/pull/2178) [`d165b741`](https://github.com/cloudflare/wrangler2/commit/d165b74191e396489b0d7052bc09d911a1b73bfe) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - [feat] Queues generated type:
+  Added the ability to generate manual types for Queues from
+  Wrangler configuration.
+
 ## 2.2.3
 
 ### Patch Changes
