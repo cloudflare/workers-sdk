@@ -4,7 +4,6 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -15,8 +14,17 @@ import type {
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
+
 describe("pages deployment tail", () => {
-	beforeEach(() => msw.use(...mswSucessScriptHandlers));
+	beforeAll(() => {
+		// Force the CLI to be "non-interactive" in test env
+		process.env.CF_PAGES = "1";
+	});
+
+	afterAll(() => {
+		delete process.env.CF_PAGES;
+	});
+
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
@@ -35,7 +43,13 @@ describe("pages deployment tail", () => {
 	 */
 	describe("API interaction", () => {
 		it("should throw an error if deployment isn't provided", async () => {
-			await expect(runWrangler("pages deployment tail")).rejects.toThrow();
+			const api = mockTailAPIs();
+			await expect(
+				runWrangler("pages deployment tail")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Must specify a deployment in non-interactive mode."`
+			);
+			expect(api.requests.deployments.count).toStrictEqual(0);
 		});
 
 		it("creates and then delete tails by deployment ID", async () => {
@@ -54,12 +68,12 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("creates and then delete tails by deployment URL", async () => {
+		it("creates and then deletes tails by deployment URL", async () => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler(
-				"pages deployment tail https://foo.mock-project.pages.dev --project-name mock-project"
+				"pages deployment tail https://87bbc8fe.mock.pages.dev --project-name mock-project"
 			);
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
@@ -71,14 +85,20 @@ describe("pages deployment tail", () => {
 		});
 
 		it("errors when passing in a deployment without a project", async () => {
-			await expect(runWrangler("pages deployment tail foo")).rejects.toThrow();
+			await expect(
+				runWrangler("pages deployment tail foo")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Must specify a project name in non-interactive mode."`
+			);
 		});
 
 		it("creates and then delete tails by project name", async () => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
-			await runWrangler("pages deployment tail --project-name mock-project");
+			await runWrangler(
+				"pages deployment tail mock-deployment --project-name mock-project"
+			);
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
@@ -96,7 +116,9 @@ describe("pages deployment tail", () => {
 				runWrangler(
 					"pages deployment tail mock-deployment-id --project-name mock-project"
 				)
-			).rejects.toThrow();
+			).rejects.toThrow(
+				"Connection to deployment mock-deployment-id closed unexpectedly."
+			);
 		});
 
 		it("activates debug mode when the cli arg is passed in", async () => {
@@ -322,9 +344,9 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Running tail on deploymentId: mock-deployment-id
-			        GET https://example.org/ - Ok @ [mock event timestamp]"
-		      `);
+					"Connected to deployment mock-deployment-id, waiting for logs...
+					GET https://example.org/ - Ok @ [mock event timestamp]"
+			`);
 		});
 
 		it("logs scheduled messages in pretty format", async () => {
@@ -349,9 +371,9 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Running tail on deploymentId: mock-deployment-id
-			        \\"* * * * *\\" @ [mock timestamp string] - Ok"
-		      `);
+					"Connected to deployment mock-deployment-id, waiting for logs...
+					\\"* * * * *\\" @ [mock timestamp string] - Ok"
+			`);
 		});
 
 		it("logs alarm messages in pretty format", async () => {
@@ -376,9 +398,9 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Running tail on deploymentId: mock-deployment-id
-			        Alarm @ [mock scheduled time] - Ok"
-		      `);
+					"Connected to deployment mock-deployment-id, waiting for logs...
+					Alarm @ [mock scheduled time] - Ok"
+			`);
 		});
 
 		it("should not crash when the tail message has a void event", async () => {
@@ -402,7 +424,7 @@ describe("pages deployment tail", () => {
 						"[mock timestamp string]"
 					)
 			).toMatchInlineSnapshot(`
-			"Running tail on deploymentId: mock-deployment-id
+			"Connected to deployment mock-deployment-id, waiting for logs...
 			Unknown Event - Ok @ [mock timestamp string]"
 		`);
 		});
@@ -430,7 +452,7 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Running tail on deploymentId: mock-deployment-id
+			        "Connected to deployment mock-deployment-id, waiting for logs...
 			        GET https://example.org/ - Ok @ [mock event timestamp]"
 		      `);
 		});
@@ -489,20 +511,20 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Running tail on deploymentId: mock-deployment-id
-			        GET https://example.org/ - Ok @ [mock event timestamp]
-			          (log) some string
-			          (log) { complex: 'object' }
-			          (error) 1234"
-		      `);
+						"Connected to deployment mock-deployment-id, waiting for logs...
+						GET https://example.org/ - Ok @ [mock event timestamp]
+						  (log) some string
+						  (log) { complex: 'object' }
+						  (error) 1234"
+				`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
 
 
-			        [31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
+					[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
 
-			        "
-		      `);
+					"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});

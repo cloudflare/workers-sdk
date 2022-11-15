@@ -5,6 +5,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { FatalError } from "../errors";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
@@ -132,7 +133,6 @@ export async function Handler({
 		await printWranglerBanner();
 	}
 
-	const isInteractive = process.stdin.isTTY;
 	const config = readConfig(args.config as ConfigPath, args);
 	const pagesConfig = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
@@ -140,8 +140,28 @@ export async function Handler({
 	const accountId = await requireAuth(pagesConfig);
 	let deploymentId = deployment;
 
-	if (!projectName && isInteractive) {
+	if (!isInteractive()) {
+		if (!deploymentId) {
+			throw new FatalError(
+				"Must specify a deployment in non-interactive mode.",
+				1
+			);
+		}
+
+		if (!projectName) {
+			throw new FatalError(
+				"Must specify a project name in non-interactive mode.",
+				1
+			);
+		}
+	}
+
+	if (!projectName && isInteractive()) {
 		projectName = await promptSelectProject({ accountId });
+	}
+
+	if (!deployment && !projectName) {
+		throw new FatalError("Must specify a project name or deployment.", 1);
 	}
 
 	const deployments: Array<Deployment> = await fetchResult(
@@ -151,10 +171,6 @@ export async function Handler({
 	const envDeployments = deployments.filter(
 		(d) => d.environment === environment
 	);
-
-	if (!deployment && !projectName) {
-		throw new FatalError("Must specify a project name or deployment.", 1);
-	}
 
 	// Deployment is URL
 	if (isUrl(deployment)) {
