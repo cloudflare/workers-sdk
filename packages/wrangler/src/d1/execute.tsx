@@ -59,6 +59,11 @@ const QUERY_LIMIT = 10_000;
 export function Options(yargs: Argv): Argv<ExecuteArgs> {
 	return options
 		.Database(yargs)
+		.option("yes", {
+			describe: 'Answer "yes" to any prompts',
+			type: "boolean",
+			alias: "y",
+		})
 		.option("local", {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
@@ -89,7 +94,7 @@ export async function executeSql(
 	local: undefined | boolean,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	isInteractive: boolean | undefined,
+	shouldPrompt: boolean | undefined,
 	persistTo: undefined | string,
 	file?: string,
 	command?: string
@@ -117,8 +122,8 @@ export async function executeSql(
 	}
 
 	return local
-		? await executeLocally(config, name, isInteractive, queries, persistTo)
-		: await executeRemotely(config, name, isInteractive, batchSplit(queries));
+		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
+		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
 }
 
 export const Handler = withConfig<ExecuteArgs>(
@@ -129,6 +134,7 @@ export const Handler = withConfig<ExecuteArgs>(
 		command,
 		local,
 		persistTo,
+		yes,
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
@@ -139,7 +145,7 @@ export const Handler = withConfig<ExecuteArgs>(
 			local,
 			config,
 			database,
-			isInteractive,
+			isInteractive && !yes,
 			persistTo,
 			file,
 			command
@@ -179,7 +185,7 @@ export const Handler = withConfig<ExecuteArgs>(
 async function executeLocally(
 	config: Config,
 	name: string,
-	isInteractive: boolean | undefined,
+	shouldPrompt: boolean | undefined,
 	queries: string[],
 	persistTo: string | undefined
 ) {
@@ -204,7 +210,7 @@ async function executeLocally(
 			logDim
 		);
 
-	if (!existsSync(dbDir) && isInteractive) {
+	if (!existsSync(dbDir) && shouldPrompt) {
 		const ok = await confirm(
 			`About to create ${readableRelative(dbPath)}, ok?`
 		);
@@ -227,13 +233,14 @@ async function executeLocally(
 async function executeRemotely(
 	config: Config,
 	name: string,
-	isInteractive: boolean | undefined,
+	shouldPrompt: boolean | undefined,
 	batches: string[]
 ) {
-	if (batches.length > 1) {
+	const multiple_batches = batches.length > 1;
+	if (multiple_batches) {
 		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
-		if (isInteractive) {
+		if (shouldPrompt) {
 			const ok = await confirm(
 				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
 			);
@@ -251,11 +258,11 @@ async function executeRemotely(
 		name
 	);
 
-	if (isInteractive) {
+	if (shouldPrompt) {
 		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 
 		// Don't output if isInteractive is undefined
-	} else if (isInteractive !== undefined) {
+	} else if (shouldPrompt !== undefined) {
 		// Pipe to error so we don't break jq
 		console.error(`Executing on ${name} (${db.uuid}):`);
 	}
