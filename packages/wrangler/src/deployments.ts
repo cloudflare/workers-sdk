@@ -1,3 +1,4 @@
+import { URLSearchParams } from "url";
 import { fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import type { ServiceMetadataRes } from "./init";
@@ -40,9 +41,12 @@ export async function deployments(
 	);
 
 	const scriptTag = scriptMetadata.default_environment.script.tag;
-	const { items: deploys } = await fetchResult<DeploymentListRes>(
-		`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
-	);
+    const params = new URLSearchParams({"order": "asc"});
+    const { items: deploys } = await fetchResult<DeploymentListRes>(
+		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`, 
+        undefined,
+        params
+    );
 
 	const versionMessages = deploys.map(
 		(versions) =>
@@ -53,7 +57,7 @@ Source: ${sourceStr(versions.metadata.source)}\n`
 	);
 
 	versionMessages[0] += "🟩 Active";
-	logger.log(...versionMessages.reverse());
+	logger.log(...versionMessages);
 }
 
 // TODO Include emoji/icon for each source

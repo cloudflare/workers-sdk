@@ -65,7 +65,7 @@ describe("publish", () => {
 			})
 		);
 		setMockResponse(
-			"/accounts/:accountId/workers/versions/by-script/:scriptTag",
+			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 			() => ({
 				latest: { number: "2" },
 			})
@@ -4363,7 +4363,7 @@ addEventListener('fetch', event => {});`
 					},
 				});
 				setMockResponse(
-					"/accounts/:accountId/workers/versions/by-script/:scriptTag",
+					"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 					() => ({
 						latest: { number: "2" },
 					})
@@ -6861,7 +6861,7 @@ addEventListener('fetch', event => {});`
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
 		setMockResponse(
-			"/accounts/:accountId/workers/versions/by-script/:scriptTag",
+			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 			() => ({
 				latest: { number: "2" },
 			})
@@ -6907,7 +6907,7 @@ addEventListener('fetch', event => {});`
 			}
 		);
 		setMockResponse(
-			"/accounts/:accountId/workers/versions/by-script/:scriptTag",
+			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 			() => ({
 				latest: { number: "2" },
 			})
