@@ -41,12 +41,12 @@ export async function deployments(
 	);
 
 	const scriptTag = scriptMetadata.default_environment.script.tag;
-    const params = new URLSearchParams({"order": "asc"});
-    const { items: deploys } = await fetchResult<DeploymentListRes>(
-		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`, 
-        undefined,
-        params
-    );
+	const params = new URLSearchParams({ order: "asc" });
+	const { items: deploys } = await fetchResult<DeploymentListRes>(
+		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
+		undefined,
+		params
+	);
 
 	const versionMessages = deploys.map(
 		(versions) =>
@@ -56,7 +56,7 @@ Author: ${versions.metadata.author_email}
 Source: ${sourceStr(versions.metadata.source)}\n`
 	);
 
-	versionMessages[0] += "🟩 Active";
+	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
 }
 

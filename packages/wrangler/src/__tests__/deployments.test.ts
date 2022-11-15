@@ -57,14 +57,14 @@ describe("deployments", () => {
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
 
-		Deployment ID: Intrepid-Class
-		Created on: 2021-02-02T00:00:00.000000Z
-		Author: Kathryn-Janeway@federation.org
-		Source: Wrangler
-
 		Deployment ID: Galaxy-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
+		Source: Wrangler
+
+		Deployment ID: Intrepid-Class
+		Created on: 2021-02-02T00:00:00.000000Z
+		Author: Kathryn-Janeway@federation.org
 		Source: Wrangler
 		🟩 Active"
 	`);
@@ -76,14 +76,14 @@ describe("deployments", () => {
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
 
-		Deployment ID: Intrepid-Class
-		Created on: 2021-02-02T00:00:00.000000Z
-		Author: Kathryn-Janeway@federation.org
-		Source: Wrangler
-
 		Deployment ID: Galaxy-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
+		Source: Wrangler
+
+		Deployment ID: Intrepid-Class
+		Created on: 2021-02-02T00:00:00.000000Z
+		Author: Kathryn-Janeway@federation.org
 		Source: Wrangler
 		🟩 Active"
 	`);
