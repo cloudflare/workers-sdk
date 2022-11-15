@@ -15,6 +15,7 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { rest } from "msw";
 
 describe("wrangler dev", () => {
 	beforeEach(() => {
@@ -830,7 +831,15 @@ describe("wrangler dev", () => {
 	});
 
 	describe("inspector port", () => {
-		it("should connect WebSocket server with --experimental-local", async () => {
+		it.only("should connect WebSocket server with --experimental-local", async () => {
+			msw.use(
+				rest.all("*:9229/json", (request, response, context) => {
+					console.dir({
+						request,
+						response,
+					});
+				})
+			);
 			writeWranglerToml({
 				main: "./index.js",
 			});
