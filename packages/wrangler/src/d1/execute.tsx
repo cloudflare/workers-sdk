@@ -40,6 +40,7 @@ export type BaseSqlExecuteArgs = {
 	database: string;
 	local?: boolean;
 	"persist-to"?: string;
+	yes?: boolean;
 };
 
 type ExecuteArgs = BaseSqlExecuteArgs & {
