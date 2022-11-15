@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.2.3
+
+### Patch Changes
+
+- [#2182](https://github.com/cloudflare/wrangler2/pull/2182) [`7d8d53a7`](https://github.com/cloudflare/wrangler2/commit/7d8d53a7272059633e0928f8b2e039fc2390acb9) Thanks [@geelen](https://github.com/geelen)! - Wrangler D1 now supports the alpha release of migrations.
+
+* [#2138](https://github.com/cloudflare/wrangler2/pull/2138) [`2be9d642`](https://github.com/cloudflare/wrangler2/commit/2be9d64257ea5e4a957906bf6992fc97dc46e1f2) Thanks [@mrbbot](https://github.com/mrbbot)! - Reduce script reload times when using `wrangler dev --experimental-local`
+
 ## 2.2.2
 
 ### Patch Changes
