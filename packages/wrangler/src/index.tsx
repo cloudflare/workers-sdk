@@ -398,7 +398,7 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// queues
-	wrangler.command("queues", "🆀 Configure Workers Queues", (queuesYargs) => {
+	wrangler.command("queues", "🇶 Configure Workers Queues", (queuesYargs) => {
 		return queues(queuesYargs.command(subHelp));
 	});
 
