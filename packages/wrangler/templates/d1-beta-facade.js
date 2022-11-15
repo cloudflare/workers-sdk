@@ -18,10 +18,16 @@ var D1Database = class {
 			},
 		});
 		if (response.status !== 200) {
-			const err = await response.json();
-			throw new Error("D1_DUMP_ERROR", {
-				cause: new Error(err.error),
-			});
+			try {
+				const err = await response.json();
+				throw new Error("D1_DUMP_ERROR", {
+					cause: new Error(err.error),
+				});
+			} catch (e) {
+				throw new Error("D1_DUMP_ERROR", {
+					cause: new Error("Status " + response.status),
+				});
+			}
 		}
 		return await response.arrayBuffer();
 	}
@@ -35,7 +41,7 @@ var D1Database = class {
 	}
 	async exec(query) {
 		const lines = query.trim().split("\n");
-		const _exec = await this._send("/query", lines, []);
+		const _exec = await this._send("/query", lines, [], false);
 		const exec = Array.isArray(_exec) ? _exec : [_exec];
 		const error = exec
 			.map((r) => {
@@ -45,19 +51,24 @@ var D1Database = class {
 		if (error !== -1) {
 			throw new Error("D1_EXEC_ERROR", {
 				cause: new Error(
-					`Error in line ${error + 1}: ${lines[error]}: ${exec[error].error}`
+					"Error in line " +
+						(error + 1) +
+						": " +
+						lines[error] +
+						": " +
+						exec[error].error
 				),
 			});
 		} else {
 			return {
 				count: exec.length,
 				duration: exec.reduce((p, c) => {
-					return p + c.duration;
+					return p + c.meta.duration;
 				}, 0),
 			};
 		}
 	}
-	async _send(endpoint, query, params) {
+	async _send(endpoint, query, params, dothrow = true) {
 		const body = JSON.stringify(
 			typeof query == "object"
 				? query.map((s, index) => {
@@ -75,12 +86,21 @@ var D1Database = class {
 			},
 			body,
 		});
-		if (response.status !== 200) {
-			const err = await response.json();
-			throw new Error("D1_ERROR", { cause: new Error(err.error) });
+		try {
+			const answer = await response.json();
+			if (answer.error && dothrow) {
+				const err = answer;
+				throw new Error("D1_ERROR", { cause: new Error(err.error) });
+			} else {
+				return Array.isArray(answer)
+					? answer.map((r) => mapD1Result(r))
+					: mapD1Result(answer);
+			}
+		} catch (e) {
+			throw new Error("D1_ERROR", {
+				cause: new Error(e.cause || "Something went wrong"),
+			});
 		}
-		const answer = await response.json();
-		return Array.isArray(answer) ? answer : answer;
 	}
 };
 var D1PreparedStatement = class {
@@ -97,19 +117,15 @@ var D1PreparedStatement = class {
 			await this.database._send("/query", this.statement, this.params)
 		);
 		const results = info.results;
-		if (results.length < 1) {
-			throw new Error("D1_NORESULTS", { cause: new Error("No results") });
-		}
-		const result = results[0];
 		if (colName !== void 0) {
-			if (result[colName] === void 0) {
+			if (results.length > 0 && results[0][colName] === void 0) {
 				throw new Error("D1_COLUMN_NOTFOUND", {
-					cause: new Error(`Column not found`),
+					cause: new Error("Column not found"),
 				});
 			}
-			return result[colName];
+			return results.length < 1 ? null : results[0][colName];
 		} else {
-			return result;
+			return results.length < 1 ? null : results[0];
 		}
 	}
 	async run() {
@@ -139,6 +155,15 @@ var D1PreparedStatement = class {
 function firstIfArray(results) {
 	return Array.isArray(results) ? results[0] : results;
 }
+function mapD1Result(result) {
+	let map = {
+		results: result.results || [],
+		success: result.success === void 0 ? true : result.success,
+		meta: result.meta || {},
+	};
+	result.error && (map.error = result.error);
+	return map;
+}
 
 // src/shim.ts
 var D1_IMPORTS = __D1_IMPORTS__;
@@ -163,12 +188,9 @@ function getMaskedEnv(env) {
 	return newEnvObj;
 }
 var shim_default = {
+	...worker,
 	async fetch(request, env, ctx) {
 		return worker.fetch(request, getMaskedEnv(env), ctx);
-	},
-
-	async scheduled(controller, env, ctx) {
-		return worker.scheduled(controller, getMaskedEnv(env), ctx);
 	},
 };
 export { shim_default as default };

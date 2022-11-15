@@ -3,6 +3,7 @@ import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
 import * as List from "./list";
+import * as Migrations from "./migrations";
 import { d1BetaWarning } from "./utils";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Argv } from "yargs";
@@ -66,10 +67,32 @@ export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 			//   }
 			// )
 			.command(
-				"execute <name>",
+				"execute <database>",
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
+				yargs2
+					.command(
+						"list <database>",
+						"List your D1 migrations",
+						Migrations.ListOptions,
+						Migrations.ListHandler
+					)
+					.command(
+						"create <database> <message>",
+						"Create a new Migration",
+						Migrations.CreateOptions,
+						Migrations.CreateHandler
+					)
+					.command(
+						"apply <database>",
+						"Apply D1 Migrations",
+						Migrations.ApplyOptions,
+						Migrations.ApplyHandler
+					)
+					.epilogue(d1BetaWarning)
 			)
 			.epilogue(d1BetaWarning)
 	);

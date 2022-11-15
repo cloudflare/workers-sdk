@@ -12,13 +12,13 @@ import { confirm, logDim } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { Name } from "./options";
+import * as options from "./options";
 import {
 	d1BetaWarning,
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "./utils";
-import type { Config } from "../config";
+import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type { Database } from "./types";
 import type splitSqlQuery from "@databases/split-sql-query";
 import type { SQL, SQLQuery } from "@databases/sql";
@@ -35,26 +35,38 @@ type MiniflareNpxImportTypes = [
 	}
 ];
 
-type ExecuteArgs = {
+export type BaseSqlExecuteArgs = {
 	config?: string;
-	name: string;
-	file?: string;
-	command?: string;
+	database: string;
 	local?: boolean;
 	"persist-to"?: string;
+	yes?: boolean;
 };
 
-type QueryResult = {
+type ExecuteArgs = BaseSqlExecuteArgs & {
+	file?: string;
+	command?: string;
+};
+
+export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
 	success: boolean;
-	duration: number;
+	meta?: {
+		duration?: number;
+	};
 	query?: string;
 };
 // Max number of bytes to send in a single /execute call
 const QUERY_LIMIT = 10_000;
 
 export function Options(yargs: Argv): Argv<ExecuteArgs> {
-	return Name(yargs)
+	return options
+		.Database(yargs)
+		.option("yes", {
+			describe: 'Answer "yes" to any prompts',
+			type: "boolean",
+			alias: "y",
+		})
 		.option("local", {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
@@ -81,38 +93,66 @@ function shorten(query: string | undefined, length: number) {
 		: query;
 }
 
+export async function executeSql(
+	local: undefined | boolean,
+	config: ConfigFields<DevConfig> & Environment,
+	name: string,
+	shouldPrompt: boolean | undefined,
+	persistTo: undefined | string,
+	file?: string,
+	command?: string
+) {
+	const { parser, splitter } = await loadSqlUtils();
+
+	const sql = file
+		? parser.file(file)
+		: command
+		? parser.__dangerous__rawValue(command)
+		: null;
+
+	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (persistTo && !local)
+		throw new Error(`Error: can't use --persist-to without --local`);
+
+	const queries = splitSql(splitter, sql);
+	if (file && sql) {
+		if (queries[0].startsWith("SQLite format 3")) {
+			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
+			throw new Error(
+				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+			);
+		}
+	}
+
+	return local
+		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
+		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
+}
+
 export const Handler = withConfig<ExecuteArgs>(
-	async ({ config, name, file, command, local, persistTo }): Promise<void> => {
+	async ({
+		config,
+		database,
+		file,
+		command,
+		local,
+		persistTo,
+		yes,
+	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
 			return console.error(`Error: can't provide both --command and --file.`);
-		const { parser, splitter } = await loadSqlUtils();
-
-		const sql = file
-			? parser.file(file)
-			: command
-			? parser.__dangerous__rawValue(command)
-			: null;
-
-		if (!sql) throw new Error(`Error: must provide --command or --file.`);
-		if (persistTo && !local)
-			throw new Error(`Error: can't use --persist-to without --local`);
 
 		const isInteractive = process.stdout.isTTY;
-		const response: QueryResult[] | null = local
-			? await executeLocally(
-					config,
-					name,
-					isInteractive,
-					splitSql(splitter, sql),
-					persistTo
-			  )
-			: await executeRemotely(
-					config,
-					name,
-					isInteractive,
-					batchSplit(splitter, sql)
-			  );
+		const response: QueryResult[] | null = await executeSql(
+			local,
+			config,
+			database,
+			isInteractive && !yes,
+			persistTo,
+			file,
+			command
+		);
 
 		// Early exit if prompt rejected
 		if (!response) return;
@@ -148,7 +188,7 @@ export const Handler = withConfig<ExecuteArgs>(
 async function executeLocally(
 	config: Config,
 	name: string,
-	isInteractive: boolean,
+	shouldPrompt: boolean | undefined,
 	queries: string[],
 	persistTo: string | undefined
 ) {
@@ -173,7 +213,7 @@ async function executeLocally(
 			logDim
 		);
 
-	if (!existsSync(dbDir) && isInteractive) {
+	if (!existsSync(dbDir) && shouldPrompt) {
 		const ok = await confirm(
 			`About to create ${readableRelative(dbPath)}, ok?`
 		);
@@ -196,13 +236,14 @@ async function executeLocally(
 async function executeRemotely(
 	config: Config,
 	name: string,
-	isInteractive: boolean,
+	shouldPrompt: boolean | undefined,
 	batches: string[]
 ) {
-	if (batches.length > 1) {
+	const multiple_batches = batches.length > 1;
+	if (multiple_batches) {
 		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
-		if (isInteractive) {
+		if (shouldPrompt) {
 			const ok = await confirm(
 				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
 			);
@@ -220,9 +261,11 @@ async function executeRemotely(
 		name
 	);
 
-	if (isInteractive) {
+	if (shouldPrompt) {
 		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
-	} else {
+
+		// Don't output if shouldPrompt is undefined
+	} else if (shouldPrompt !== undefined) {
 		// Pipe to error so we don't break jq
 		console.error(`Executing on ${name} (${db.uuid}):`);
 	}
@@ -235,6 +278,7 @@ async function executeRemotely(
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
+					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
 				},
 				body: JSON.stringify({ sql }),
 			}
@@ -247,12 +291,14 @@ async function executeRemotely(
 
 function logResult(r: QueryResult | QueryResult[]) {
 	logger.log(
-		`🚣 Executed ${Array.isArray(r) ? r.length : "1"} command(s) in ${
+		`🚣 Executed ${
+			Array.isArray(r) ? `${r.length} commands` : "1 command"
+		} in ${
 			Array.isArray(r)
 				? r
-						.map((d: QueryResult) => d.duration)
+						.map((d: QueryResult) => d.meta?.duration || 0)
 						.reduce((a: number, b: number) => a + b, 0)
-				: r.duration
+				: r.meta?.duration
 		}ms`
 	);
 }
@@ -269,12 +315,11 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 	);
 }
 
-function batchSplit(splitter: typeof splitSqlQuery, sql: SQLQuery) {
-	const queries = splitSql(splitter, sql);
+function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const batches: string[] = [];
-	const nbatches = Math.floor(queries.length / QUERY_LIMIT);
-	for (let i = 0; i <= nbatches; i++) {
+	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
+	for (let i = 0; i < num_batches; i++) {
 		batches.push(
 			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
 		);

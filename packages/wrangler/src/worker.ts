@@ -126,12 +126,16 @@ export interface CfR2Bucket {
 export const D1_BETA_PREFIX = `__D1_BETA__` as const;
 export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
 
+// TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
-	// For now, all D1 bindings are beta
+	// For now, all D1 bindings are alpha
 	binding: D1PrefixedBinding;
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
+	database_internal_env?: string;
+	migrations_table?: string;
+	migrations_dir?: string;
 }
 
 interface CfService {

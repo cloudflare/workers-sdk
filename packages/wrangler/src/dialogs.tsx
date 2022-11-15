@@ -32,16 +32,22 @@ function Confirm(props: ConfirmProps) {
 	);
 }
 
-export function confirm(text: string): Promise<boolean> {
+export function confirm(
+	text: string,
+	beforeConfirm?: JSX.Element
+): Promise<boolean> {
 	return new Promise((resolve) => {
 		const { unmount } = render(
-			<Confirm
-				text={text}
-				onConfirm={(answer: boolean) => {
-					unmount();
-					resolve(answer);
-				}}
-			/>
+			<Box flexDirection="column">
+				{beforeConfirm}
+				<Confirm
+					text={text}
+					onConfirm={(answer: boolean) => {
+						unmount();
+						resolve(answer);
+					}}
+				/>
+			</Box>
 		);
 	});
 }

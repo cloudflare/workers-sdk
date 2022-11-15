@@ -41,7 +41,7 @@ type WorkerMetadataBinding =
 	  }
 	| { type: "queue"; name: string; queue_name: string }
 	| { type: "r2_bucket"; name: string; bucket_name: string }
-	| { type: "d1"; name: string; id: string }
+	| { type: "d1"; name: string; id: string; internalEnv?: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "namespace"; name: string; namespace: string }
 	| {
@@ -129,13 +129,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.d1_databases?.forEach(({ binding, database_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "d1",
-			id: database_id,
-		});
-	});
+	bindings.d1_databases?.forEach(
+		({ binding, database_id, database_internal_env }) => {
+			metadataBindings.push({
+				name: binding,
+				type: "d1",
+				id: database_id,
+				internalEnv: database_internal_env,
+			});
+		}
+	);
 
 	bindings.services?.forEach(({ binding, service, environment }) => {
 		metadataBindings.push({

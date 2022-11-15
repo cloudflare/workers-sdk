@@ -16,6 +16,6 @@ describe("Pages Functions", () => {
 			}
 		);
 
-		expect(readFileSync(file, "utf-8")).toContain("D1_NORESULTS");
+		expect(readFileSync(file, "utf-8")).toContain("D1_ERROR");
 	});
 });
