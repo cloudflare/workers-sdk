@@ -63,7 +63,7 @@ var D1Database = class {
 			return {
 				count: exec.length,
 				duration: exec.reduce((p, c) => {
-					return p + c.duration;
+					return p + c.meta.duration;
 				}, 0),
 			};
 		}
@@ -92,7 +92,9 @@ var D1Database = class {
 				const err = answer;
 				throw new Error("D1_ERROR", { cause: new Error(err.error) });
 			} else {
-				return Array.isArray(answer) ? answer : answer;
+				return Array.isArray(answer)
+					? answer.map((r) => mapD1Result(r))
+					: mapD1Result(answer);
 			}
 		} catch (e) {
 			throw new Error("D1_ERROR", {
@@ -152,6 +154,15 @@ var D1PreparedStatement = class {
 };
 function firstIfArray(results) {
 	return Array.isArray(results) ? results[0] : results;
+}
+function mapD1Result(result) {
+	let map = {
+		results: result.results || [],
+		success: result.success === void 0 ? true : result.success,
+		meta: result.meta || {},
+	};
+	result.error && (map.error = result.error);
+	return map;
 }
 
 // src/shim.ts
