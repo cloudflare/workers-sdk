@@ -4,7 +4,7 @@ import type { DeploymentListRes } from "../../../../deployments";
 
 export const mswSuccessDeployments = [
 	rest.get(
-		"*/accounts/:accountId/workers/versions/by-script/:scriptTag",
+		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 		(_, response, context) =>
 			response.once(
 				context.status(200),

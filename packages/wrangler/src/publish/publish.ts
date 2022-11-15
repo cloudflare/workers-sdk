@@ -821,13 +821,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	try {
 		const deploymentsList = await fetchResult<DeploymentListRes>(
-			`/accounts/${accountId}/workers/versions/by-script/${scriptTag}`
+			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
 		);
 
 		logger.log("Current Deployment ID:", deploymentsList.latest.id);
 	} catch (e) {
 		if ((e as { code: number }).code === 10023) {
-			// TODO: remove this try/catch once versions is completely rolled out
+			// TODO: remove this try/catch once deployments is completely rolled out
 		} else {
 			throw e;
 		}
