@@ -9,7 +9,7 @@ on:
 jobs:
   comment:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Write comment to the PR
     steps:
       - name: "Put PR and workflow ID on the environment"

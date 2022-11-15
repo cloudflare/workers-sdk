@@ -8,7 +8,7 @@ jobs:
   codecov:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: CodeCov Main Branch Updater
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout Repo
