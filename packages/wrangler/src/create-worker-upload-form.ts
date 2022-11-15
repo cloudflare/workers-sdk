@@ -131,7 +131,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env }) => {
-			console.log({ binding, database_id, database_internal_env });
 			metadataBindings.push({
 				name: binding,
 				type: "d1",
