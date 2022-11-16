@@ -264,7 +264,7 @@ function useLocalWorker({
 				try {
 					// fetch the inspector JSON response from the DevTools Inspector protocol
 					const inspectorJSONArr = (await (
-						await fetch(`http://localhost:${inspectorPort}/json`)
+						await fetch(`http://127.0.0.1:${inspectorPort}/json`)
 					).json()) as InspectorJSON;
 
 					const foundInspectorURL = inspectorJSONArr?.find((inspectorJSON) =>
