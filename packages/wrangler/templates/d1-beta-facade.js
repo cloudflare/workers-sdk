@@ -199,7 +199,7 @@ var shim_default = {
 		return worker.scheduled(controller, getMaskedEnv(env), ctx);
 	},
 	async trace(traces, env, ctx) {
-		return worker.queue(traces, getMaskedEnv(env), ctx);
+		return worker.trace(traces, getMaskedEnv(env), ctx);
 	},
 };
 export { shim_default as default };
