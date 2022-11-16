@@ -1209,27 +1209,23 @@ describe("pages", () => {
 						});
 
 						// Make sure the routing config is valid json
-						expect(() =>
-							JSON.parse(generatedFilepathRoutingConfig)
-						).not.toThrowError();
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
 						// The actual shape doesn't matter that much since this
-						// is only used for display in Dash, but this snapshot
-						// is a good way to track unintentional changes.
-						expect(generatedFilepathRoutingConfig).toMatchInlineSnapshot(`
-				"{
-				  \\"routes\\": [
-				    {
-				      \\"routePath\\": \\"/hello\\",
-				      \\"mountPath\\": \\"/\\",
-				      \\"method\\": \\"\\",
-				      \\"module\\": [
-				        \\"hello.js:onRequest\\"
-				      ]
-				    }
-				  ],
-				  \\"baseURL\\": \\"/\\"
-				}"
-			`);
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
+						});
 					});
 
 					return {
