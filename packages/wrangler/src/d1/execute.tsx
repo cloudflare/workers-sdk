@@ -142,7 +142,7 @@ export const Handler = withConfig<ExecuteArgs>(
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
-			return console.error(`Error: can't provide both --command and --file.`);
+			return logger.error(`Error: can't provide both --command and --file.`);
 
 		const isInteractive = process.stdout.isTTY;
 		const response: QueryResult[] | null = await executeSql(
@@ -181,7 +181,7 @@ export const Handler = withConfig<ExecuteArgs>(
 				</Static>
 			);
 		} else {
-			console.log(JSON.stringify(response, null, 2));
+			logger.log(JSON.stringify(response, null, 2));
 		}
 	}
 );
@@ -251,7 +251,7 @@ async function executeRemotely(
 			if (!ok) return null;
 			logger.log(`🌀 Let's go`);
 		} else {
-			console.error(warning);
+			logger.error(warning);
 		}
 	}
 
@@ -268,13 +268,13 @@ async function executeRemotely(
 		// Don't output if shouldPrompt is undefined
 	} else if (shouldPrompt !== undefined) {
 		// Pipe to error so we don't break jq
-		console.error(`Executing on ${name} (${db.uuid}):`);
+		logger.error(`Executing on ${name} (${db.uuid}):`);
 	}
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
 		if (multiple_batches)
-			console.log(
+			logger.log(
 				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
 			);
 
