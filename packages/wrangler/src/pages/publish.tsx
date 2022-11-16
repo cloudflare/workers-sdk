@@ -275,11 +275,20 @@ export const Handler = async ({
 		? join(tmpdir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
+	// Routing configuration displayed in the Functions tab of a deployment in Dash
+	let filepathRoutingConfig: string | undefined;
+
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
+		const outputConfigPath = join(
+			tmpdir(),
+			`functions-filepath-routing-config-${Math.random()}.json`
+		);
+
 		try {
 			await buildFunctions({
 				outfile,
+				outputConfigPath,
 				functionsDirectory,
 				onEnd: () => {},
 				buildOutputDirectory: dirname(outfile),
@@ -292,6 +301,7 @@ export const Handler = async ({
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");
+			filepathRoutingConfig = readFileSync(outputConfigPath, "utf-8");
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
 				logger.warn(
@@ -333,6 +343,16 @@ export const Handler = async ({
 	if (_redirects) {
 		formData.append("_redirects", new File([_redirects], "_redirects"));
 		logger.log(`✨ Uploading _redirects`);
+	}
+
+	if (filepathRoutingConfig) {
+		formData.append(
+			"functions-filepath-routing-config.json",
+			new File(
+				[filepathRoutingConfig],
+				"functions-filepath-routing-config.json"
+			)
+		);
 	}
 
 	/**

@@ -1165,16 +1165,21 @@ describe("pages", () => {
 						const body = init.body as FormData;
 						const manifest = JSON.parse(body.get("manifest") as string);
 
-						// for Functions projects, we auto-generate a `_worker.js` and `_routes.json`
+						// for Functions projects, we auto-generate a `_worker.js`,
+						// `functions-filepath-routing-config.json`, and `_routes.json`
 						// file, based on the contents of `/functions`
 						const generatedWorkerJS = body.get("_worker.js") as Blob;
 						const generatedRoutesJSON = await (
 							body.get("_routes.json") as Blob
 						).text();
+						const generatedFilepathRoutingConfig = await (
+							body.get("functions-filepath-routing-config.json") as Blob
+						).text();
 
 						// make sure this is all we uploaded
 						expect([...body.keys()]).toEqual([
 							"manifest",
+							"functions-filepath-routing-config.json",
 							"_worker.js",
 							"_routes.json",
 						]);
@@ -1202,6 +1207,29 @@ describe("pages", () => {
 							include: ["/hello"],
 							exclude: [],
 						});
+
+						// Make sure the routing config is valid json
+						expect(() =>
+							JSON.parse(generatedFilepathRoutingConfig)
+						).not.toThrowError();
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but this snapshot
+						// is a good way to track unintentional changes.
+						expect(generatedFilepathRoutingConfig).toMatchInlineSnapshot(`
+				"{
+				  \\"routes\\": [
+				    {
+				      \\"routePath\\": \\"/hello\\",
+				      \\"mountPath\\": \\"/\\",
+				      \\"method\\": \\"\\",
+				      \\"module\\": [
+				        \\"hello.js:onRequest\\"
+				      ]
+				    }
+				  ],
+				  \\"baseURL\\": \\"/\\"
+				}"
+			`);
 					});
 
 					return {
