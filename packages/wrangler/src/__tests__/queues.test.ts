@@ -177,17 +177,19 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
-				expect(std.out).toMatchInlineSnapshot(`"Creating queue testQueue.
-You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
+				expect(std.out).toMatchInlineSnapshot(`
+			"Creating queue testQueue.
+			You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
 
-[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues) failed.[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues) failed.[0m
 
-  workers.api.error.unauthorized [code: 10023]
+			  workers.api.error.unauthorized [code: 10023]
 
-  If you think this is a bug, please open an issue at:
-  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
 
-"`);
+			"
+		`);
 			});
 		});
 
@@ -356,18 +358,19 @@ You do not have Queues enabled on your account. Go to https://dash.staging.cloud
 					await expect(
 						runWrangler(`queues consumer add ${queueName} testScript`)
 					).rejects.toThrowError();
-					expect(std.out)
-						.toMatchInlineSnapshot(`"Adding consumer to queue testQueue.
-You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
+					expect(std.out).toMatchInlineSnapshot(`
+				"Adding consumer to queue testQueue.
+				You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
 
-[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues/testQueue/consumers) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues/testQueue/consumers) failed.[0m
 
-  workers.api.error.unauthorized [code: 10023]
+				  workers.api.error.unauthorized [code: 10023]
 
-  If you think this is a bug, please open an issue at:
-  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
 
-"`);
+				"
+			`);
 				});
 			});
 
