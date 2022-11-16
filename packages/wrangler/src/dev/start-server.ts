@@ -408,6 +408,7 @@ export async function startLocalServer({
 				r2Buckets: bindings?.r2_buckets,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
+				inspectorPort,
 			});
 			const Miniflare = await getMiniflare3Constructor();
 			const mf = new Miniflare(mf3Options);

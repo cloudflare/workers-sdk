@@ -4,7 +4,6 @@ import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
-import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
@@ -76,12 +75,24 @@ export interface LocalProps {
 	experimentalLocalRemoteKv: boolean | undefined;
 }
 
+type InspectorJSON = {
+	id: string;
+	title: string;
+	type: "node";
+	description: string;
+	webSocketDebuggerUrl: string;
+	devtoolsFrontendUrl: string;
+	devtoolsFrontendUrlCompat: string;
+	faviconUrl: string;
+	url: string;
+}[];
+
 export function Local(props: LocalProps) {
 	const { inspectorUrl } = useLocalWorker(props);
 	useInspector({
 		inspectorUrl,
 		port: props.inspectorPort,
-		logToTerminal: false,
+		logToTerminal: props.experimentalLocal ?? false,
 	});
 	return null;
 }
@@ -225,9 +236,11 @@ function useLocalWorker({
 					r2Buckets: bindings?.r2_buckets,
 					authenticatedAccountId: accountId,
 					kvRemote: experimentalLocalRemoteKv,
+					inspectorPort,
 				});
 
 				const current = experimentalLocalRef.current;
+
 				if (current === undefined) {
 					// If we don't have an active Miniflare instance, create a new one
 					const Miniflare = await getMiniflare3Constructor();
@@ -247,6 +260,34 @@ function useLocalWorker({
 					logger.log("⎔ Reloading experimental local server.");
 					await current.setOptions(mf3Options);
 				}
+
+				try {
+					// fetch the inspector JSON response from the DevTools Inspector protocol
+					const inspectorJSONArr = (await (
+						await fetch(`http://127.0.0.1:${inspectorPort}/json`)
+					).json()) as InspectorJSON;
+
+					const foundInspectorURL = inspectorJSONArr?.find((inspectorJSON) =>
+						inspectorJSON.id.startsWith("core:user")
+					)?.webSocketDebuggerUrl;
+					if (foundInspectorURL === undefined) {
+						setInspectorUrl(undefined);
+					} else {
+						const url = new URL(foundInspectorURL);
+						// Force inspector URL to be different on each reload so `useEffect`
+						// in `useInspector` is re-run to connect to newly restarted
+						// `workerd` server when updating options. Can't use a query param
+						// here as that seems to cause an infinite connection loop, can't
+						// use a hash as those are forbidden by `ws`, so username it is.
+						url.username = `${Date.now()}-${Math.floor(
+							Math.random() * Number.MAX_SAFE_INTEGER
+						)}`;
+						setInspectorUrl(url.toString());
+					}
+				} catch (error: unknown) {
+					logger.error("Error attempting to retrieve Debugger URL:", error);
+				}
+
 				return;
 			}
 
@@ -722,6 +763,7 @@ export interface SetupMiniflare3Options {
 	authenticatedAccountId: string | true | undefined;
 	// Whether to read/write from/to real KV namespaces
 	kvRemote: boolean | undefined;
+	inspectorPort: number;
 }
 
 export async function transformLocalOptions({
@@ -732,6 +774,7 @@ export async function transformLocalOptions({
 	r2Buckets,
 	authenticatedAccountId,
 	kvRemote,
+	inspectorPort,
 }: SetupMiniflare3Options): Promise<Miniflare3Options> {
 	// Build authenticated Cloudflare API fetch function if required
 	let cloudflareFetch: CloudflareFetch | undefined;
@@ -756,7 +799,7 @@ export async function transformLocalOptions({
 		r2Buckets: Object.fromEntries(
 			r2Buckets?.map(({ binding, bucket_name }) => [binding, bucket_name]) ?? []
 		),
-		inspectorPort: await getPort({ port: 9229 }),
+		inspectorPort,
 		verbose: true,
 		cloudflareFetch,
 	};
