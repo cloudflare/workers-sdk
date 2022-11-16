@@ -831,15 +831,7 @@ describe("wrangler dev", () => {
 	});
 
 	describe("inspector port", () => {
-		it.only("should connect WebSocket server with --experimental-local", async () => {
-			msw.use(
-				rest.all("*:9229/json", (request, response, context) => {
-					console.dir({
-						request,
-						response,
-					});
-				})
-			);
+		it("should connect WebSocket server with --experimental-local", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
