@@ -9,12 +9,13 @@ import {
 	Plugin,
 	SCRIPT_PLUGIN_NAMESPACE_PERSIST,
 	encodePersist,
+	namespaceEntries,
 } from "../shared";
 import { R2Gateway } from "./gateway";
 import { R2Router } from "./router";
 
 export const R2OptionsSchema = z.object({
-	r2Buckets: z.record(z.string()).optional(),
+	r2Buckets: z.union([z.record(z.string()), z.string().array()]).optional(),
 });
 export const R2SharedOptionsSchema = z.object({
 	r2Persist: PersistenceSchema,
@@ -31,14 +32,11 @@ export const R2_PLUGIN: Plugin<
 	options: R2OptionsSchema,
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
-		const bindings = Object.entries(
-			options.r2Buckets ?? []
-		).map<Worker_Binding>(([name, id]) => ({
+		const buckets = namespaceEntries(options.r2Buckets);
+		return buckets.map<Worker_Binding>(([name, id]) => ({
 			name,
 			r2Bucket: { name: `${R2_PLUGIN_NAME}:${id}` },
 		}));
-
-		return bindings;
 	},
 	getServices({ options, sharedOptions }) {
 		const persistBinding = encodePersist(sharedOptions.r2Persist);
@@ -46,23 +44,20 @@ export const R2_PLUGIN: Plugin<
 			name: BINDING_SERVICE_LOOPBACK,
 			service: { name: SERVICE_LOOPBACK },
 		};
-		const services = Object.entries(options.r2Buckets ?? []).map<Service>(
-			([_, id]) => ({
-				name: `${R2_PLUGIN_NAME}:${id}`,
-				worker: {
-					serviceWorkerScript: SCRIPT_PLUGIN_NAMESPACE_PERSIST,
-					bindings: [
-						...persistBinding,
-						{ name: BINDING_TEXT_PLUGIN, text: R2_PLUGIN_NAME },
-						{ name: BINDING_TEXT_NAMESPACE, text: id },
-						loopbackBinding,
-					],
-					compatibilityDate: "2022-09-01",
-				},
-			})
-		);
-
-		return services;
+		const buckets = namespaceEntries(options.r2Buckets);
+		return buckets.map<Service>(([_, id]) => ({
+			name: `${R2_PLUGIN_NAME}:${id}`,
+			worker: {
+				serviceWorkerScript: SCRIPT_PLUGIN_NAMESPACE_PERSIST,
+				bindings: [
+					...persistBinding,
+					{ name: BINDING_TEXT_PLUGIN, text: R2_PLUGIN_NAME },
+					{ name: BINDING_TEXT_NAMESPACE, text: id },
+					loopbackBinding,
+				],
+				compatibilityDate: "2022-09-01",
+			},
+		}));
 	},
 };
 
