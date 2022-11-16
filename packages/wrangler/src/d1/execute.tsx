@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import chalk from "chalk";
 import { render, Static, Text } from "ink";
 import Table from "ink-table";
 import { npxImport } from "npx-import";
@@ -141,7 +142,7 @@ export const Handler = withConfig<ExecuteArgs>(
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
-			return console.error(`Error: can't provide both --command and --file.`);
+			return logger.error(`Error: can't provide both --command and --file.`);
 
 		const isInteractive = process.stdout.isTTY;
 		const response: QueryResult[] | null = await executeSql(
@@ -180,7 +181,7 @@ export const Handler = withConfig<ExecuteArgs>(
 				</Static>
 			);
 		} else {
-			console.log(JSON.stringify(response, null, 2));
+			logger.log(JSON.stringify(response, null, 2));
 		}
 	}
 );
@@ -250,7 +251,7 @@ async function executeRemotely(
 			if (!ok) return null;
 			logger.log(`🌀 Let's go`);
 		} else {
-			console.error(warning);
+			logger.error(warning);
 		}
 	}
 
@@ -267,11 +268,16 @@ async function executeRemotely(
 		// Don't output if shouldPrompt is undefined
 	} else if (shouldPrompt !== undefined) {
 		// Pipe to error so we don't break jq
-		console.error(`Executing on ${name} (${db.uuid}):`);
+		logger.error(`Executing on ${name} (${db.uuid}):`);
 	}
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
+		if (multiple_batches)
+			logger.log(
+				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
+			);
+
 		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
 			{
@@ -317,16 +323,18 @@ function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
 
 function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const batches: string[] = [];
 	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
+	const batches: string[] = [];
 	for (let i = 0; i < num_batches; i++) {
 		batches.push(
 			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
 		);
 	}
-	logger.log(
-		`🌀 We are sending ${batches.length} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
-	);
+	if (num_batches > 1) {
+		logger.log(
+			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+		);
+	}
 	return batches;
 }
 
