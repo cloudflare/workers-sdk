@@ -7,9 +7,13 @@ describe("worker", () => {
 	};
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/nodeBuiltinPackage.ts", {
-			disableExperimentalWarning: true,
-		});
+		worker = await unstable_dev(
+			"src/nodeBuiltinPackage.ts",
+			{ port: 0 },
+			{
+				disableExperimentalWarning: true,
+			}
+		);
 	});
 
 	afterAll(async () => {

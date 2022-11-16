@@ -11,6 +11,7 @@ describe("worker", () => {
 		worker = await unstable_dev(
 			"src/sw.ts",
 			{
+				port: 0,
 				config: "src/wrangler.sw.toml",
 			},
 			{ disableExperimentalWarning: true }

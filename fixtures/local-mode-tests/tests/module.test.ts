@@ -13,6 +13,7 @@ describe("worker", () => {
 			{
 				config: "src/wrangler.module.toml",
 				vars: { VAR4: "https://google.com" },
+				port: 0,
 			},
 			{ disableExperimentalWarning: true }
 		);

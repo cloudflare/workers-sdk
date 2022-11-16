@@ -17,8 +17,7 @@ describe("worker in local mode", () => {
 		worker = await unstable_dev(
 			"src/basicModule.ts",
 			{
-				ip: "127.0.0.1",
-				port: 1337,
+				port: 0,
 				local: true,
 			},
 			{ disableExperimentalWarning: true }
@@ -63,8 +62,7 @@ describe.skip("worker in remote mode", () => {
 		worker = await unstable_dev(
 			"src/basicModule.ts",
 			{
-				ip: "127.0.0.1",
-				port: 1337,
+				port: 0,
 				local: false,
 			},
 			{ disableExperimentalWarning: true }
