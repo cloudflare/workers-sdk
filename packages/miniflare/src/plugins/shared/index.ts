@@ -47,6 +47,18 @@ export type Plugin<
 				remoteStorage?: RemoteStorageConstructor;
 		  });
 
+export function namespaceEntries(
+	namespaces?: Record<string, string> | string[]
+): [bindingName: string, id: string][] {
+	if (Array.isArray(namespaces)) {
+		return namespaces.map(([bindingName]) => [bindingName, bindingName]);
+	} else if (namespaces !== undefined) {
+		return Object.entries(namespaces);
+	} else {
+		return [];
+	}
+}
+
 export * from "./constants";
 export * from "./gateway";
 export * from "./router";

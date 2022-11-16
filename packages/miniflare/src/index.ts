@@ -585,7 +585,7 @@ export class Miniflare {
 		return fetch(url, forward as RequestInit);
 	}
 
-	async dispose() {
+	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		try {
 			await this.#initPromise;
