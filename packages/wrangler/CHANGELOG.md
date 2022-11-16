@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.3.1
+
+### Patch Changes
+
+- [#2194](https://github.com/cloudflare/wrangler2/pull/2194) [`3dccedf1`](https://github.com/cloudflare/wrangler2/commit/3dccedf1d1f346c7a686c5c83783c0488cb72f87) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to use d1 in scheduled and queue workers
+
 ## 2.3.0
 
 ### Minor Changes
