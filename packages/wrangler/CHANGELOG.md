@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.3.2
+
+### Patch Changes
+
+- [#2197](https://github.com/cloudflare/wrangler2/pull/2197) [`a3533024`](https://github.com/cloudflare/wrangler2/commit/a3533024ee63c7c7b1092b661ea40b789874cf9f) Thanks [@geelen](https://github.com/geelen)! - fix: truncate lines longer than 70 chars when executing d1 sql
+
 ## 2.3.1
 
 ### Patch Changes
