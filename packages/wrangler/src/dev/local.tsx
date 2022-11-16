@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { fork } from "node:child_process";
-import dns from "node:dns";
 import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -264,7 +263,6 @@ function useLocalWorker({
 
 				try {
 					// fetch the inspector JSON response from the DevTools Inspector protocol
-					dns.setDefaultResultOrder("ipv4first");
 					const inspectorJSONArr = (await (
 						await fetch(`http://localhost:${inspectorPort}/json`)
 					).json()) as InspectorJSON;
@@ -272,10 +270,22 @@ function useLocalWorker({
 					const foundInspectorURL = inspectorJSONArr?.find((inspectorJSON) =>
 						inspectorJSON.id.startsWith("core:user")
 					)?.webSocketDebuggerUrl;
-					setInspectorUrl(foundInspectorURL);
+					if (foundInspectorURL === undefined) {
+						setInspectorUrl(undefined);
+					} else {
+						const url = new URL(foundInspectorURL);
+						// Force inspector URL to be different on each reload so `useEffect`
+						// in `useInspector` is re-run to connect to newly restarted
+						// `workerd` server when updating options. Can't use a query param
+						// here as that seems to cause an infinite connection loop, can't
+						// use a hash as those are forbidden by `ws`, so username it is.
+						url.username = `${Date.now()}-${Math.floor(
+							Math.random() * Number.MAX_SAFE_INTEGER
+						)}`;
+						setInspectorUrl(url.toString());
+					}
 				} catch (error: unknown) {
-					if (error instanceof Error)
-						console.log("Error attempting to retrieve Debugger URL:", error);
+					logger.error("Error attempting to retrieve Debugger URL:", error);
 				}
 
 				return;
