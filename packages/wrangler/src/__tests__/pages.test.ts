@@ -1480,10 +1480,14 @@ describe("pages", () => {
 						const customRoutesJSON = await (
 							body.get("_routes.json") as Blob
 						).text();
+						const generatedFilepathRoutingConfig = await (
+							body.get("functions-filepath-routing-config.json") as Blob
+						).text();
 
 						// make sure this is all we uploaded
 						expect([...body.keys()]).toEqual([
 							"manifest",
+							"functions-filepath-routing-config.json",
 							"_worker.js",
 							"_routes.json",
 						]);
@@ -1504,6 +1508,32 @@ describe("pages", () => {
 							description: "Custom _routes.json file",
 							include: ["/hello"],
 							exclude: [],
+						});
+
+						// Make sure the routing config is valid json
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						console.log(generatedFilepathRoutingConfig);
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/goodbye",
+									mountPath: "/",
+									method: "",
+									module: ["goodbye.ts:onRequest"],
+								},
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
 						});
 					});
 
