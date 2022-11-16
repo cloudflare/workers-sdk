@@ -1178,6 +1178,7 @@ describe("wrangler dev", () => {
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
 			  -l, --local                                      Run on my machine  [boolean] [default: false]
 			      --experimental-local                         Run on my machine using the Cloudflare Workers runtime  [boolean] [default: false]
+			      --experimental-local-remote-kv               Read/write KV data from/to real namespaces on the Cloudflare network  [boolean] [default: false]
 			      --minify                                     Minify the script  [boolean]
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
