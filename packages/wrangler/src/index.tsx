@@ -554,8 +554,7 @@ export function createCLIParser(argv: string[]) {
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
 	wrangler.command(
 		"deployments",
-		false,
-		// "🚢 Logs the 10 most recent deployments with 'Version ID', 'Version number','Author email', 'Created on' and 'Latest deploy'",
+		"🚢 Displays the 10 most recent deployments for a worker",
 		(yargs) => {
 			yargs
 				.option("name", {
