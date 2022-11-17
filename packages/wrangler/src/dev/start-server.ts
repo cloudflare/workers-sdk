@@ -20,7 +20,7 @@ import {
 	getMiniflare3Constructor,
 	setupMiniflareOptions,
 	setupNodeOptions,
-	transformLocalOptions,
+	transformMf2OptionsToMf3Options,
 } from "./local";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
@@ -396,7 +396,7 @@ export async function startLocalServer({
 		});
 
 		if (experimentalLocal) {
-			const mf3Options = await transformLocalOptions({
+			const mf3Options = await transformMf2OptionsToMf3Options({
 				miniflare2Options: options,
 				format,
 				bundle,

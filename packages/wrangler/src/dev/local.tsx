@@ -228,7 +228,7 @@ function useLocalWorker({
 			});
 
 			if (experimentalLocal) {
-				const mf3Options = await transformLocalOptions({
+				const mf3Options = await transformMf2OptionsToMf3Options({
 					miniflare2Options: options,
 					format,
 					bundle,
@@ -766,7 +766,7 @@ export interface SetupMiniflare3Options {
 	inspectorPort: number;
 }
 
-export async function transformLocalOptions({
+export async function transformMf2OptionsToMf3Options({
 	miniflare2Options,
 	format,
 	bundle,
