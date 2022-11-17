@@ -97,7 +97,6 @@ export async function bundleWorker(
 		targetConsumer: "dev" | "publish";
 		local: boolean;
 		testScheduled?: boolean;
-		experimentalLocalStubCache?: boolean;
 		inject?: string[];
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
@@ -125,7 +124,6 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade,
 		targetConsumer,
 		testScheduled,
-		experimentalLocalStubCache,
 		inject: injectOption,
 		loader,
 		sourcemap,
@@ -277,11 +275,6 @@ export async function bundleWorker(
 
 	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
-	if (experimentalLocalStubCache) {
-		inject.push(
-			path.resolve(getBasePath(), "templates/experimental-local-cache-stubs.js")
-		);
-	}
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],

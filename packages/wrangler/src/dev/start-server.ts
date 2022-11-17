@@ -98,7 +98,6 @@ export async function startDevServer(
 			services: props.bindings.services,
 			firstPartyWorkerDevFacade: props.firstPartyWorker,
 			testScheduled: props.testScheduled,
-			experimentalLocalStubCache: props.experimentalLocal,
 		});
 
 		if (props.local) {
@@ -206,7 +205,6 @@ async function runEsbuild({
 	services,
 	firstPartyWorkerDevFacade,
 	testScheduled,
-	experimentalLocalStubCache,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -225,7 +223,6 @@ async function runEsbuild({
 	workerDefinitions: WorkerRegistry;
 	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
-	experimentalLocalStubCache: boolean | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -266,7 +263,6 @@ async function runEsbuild({
 				targetConsumer: "dev", // We are starting a dev server
 				local: true,
 				testScheduled,
-				experimentalLocalStubCache,
 		  });
 
 	return {
