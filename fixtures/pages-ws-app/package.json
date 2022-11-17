@@ -5,9 +5,9 @@
 	"sideEffects": false,
 	"main": "server/index.js",
 	"scripts": {
-		"server": "node dist/index.js",
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
 		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- npm run server",
+		"server": "node dist/index.js",
 		"test": "npm run build && npx jest --forceExit",
 		"test:ci": "npm run build && npx jest --forceExit"
 	},
