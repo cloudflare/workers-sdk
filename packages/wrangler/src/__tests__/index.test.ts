@@ -51,6 +51,7 @@ describe("wrangler", () => {
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
 			  wrangler types               📝 Generate types from bindings & module rules in config
+			  wrangler deployments         🚢 Displays the 10 most recent deployments for a worker 
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -96,6 +97,7 @@ describe("wrangler", () => {
 			  wrangler logout              🚪 Logout from Cloudflare
 			  wrangler whoami              🕵️  Retrieve your user info and test your auth config
 			  wrangler types               📝 Generate types from bindings & module rules in config
+			  wrangler deployments         🚢 Displays the 10 most recent deployments for a worker 
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
