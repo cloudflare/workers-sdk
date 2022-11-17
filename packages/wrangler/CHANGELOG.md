@@ -1,5 +1,23 @@
 # wrangler
 
+## 2.4.0
+
+### Minor Changes
+
+- [#2193](https://github.com/cloudflare/wrangler2/pull/2193) [`0047ad30`](https://github.com/cloudflare/wrangler2/commit/0047ad304fd28f7c7f012549bfbc05d3477c7ef9) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Local Mode Console Support
+  Added support for detailed `console.log` capability when using `--experimental-local`
+
+  resolves #2122
+
+### Patch Changes
+
+- [#2192](https://github.com/cloudflare/wrangler2/pull/2192) [`add4278a`](https://github.com/cloudflare/wrangler2/commit/add4278a2e576e4e13691a4108613c642de3005d) Thanks [@mrbbot](https://github.com/mrbbot)! - Add a `--experimental-local-remote-kv` flag to enable reading/writing from/to real KV namespaces.
+  Note this flag requires `--experimental-local` to be enabled.
+
+* [#2204](https://github.com/cloudflare/wrangler2/pull/2204) [`c725ce01`](https://github.com/cloudflare/wrangler2/commit/c725ce011f5e57147dc8a2c714926edd7e2a4bfb) Thanks [@jahands](https://github.com/jahands)! - fix: Upload filepath-routing configuration in wrangler pages publish
+
+  Publishing Pages projects containing a functions directory incorrectly did not upload the filepath-routing config so that the user can view it in Dash. This fixes that, making the generated routes viewable under `Routing configuration` in the `Functions` tab of a deployment.
+
 ## 2.3.2
 
 ### Patch Changes
