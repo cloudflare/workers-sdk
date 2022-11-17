@@ -1,3 +1,4 @@
+import { Log } from "../../shared";
 import { RangeStoredValueMeta, Storage } from "../../storage";
 import { InvalidRange, NoSuchKey } from "./errors";
 import {
@@ -90,7 +91,10 @@ const MAX_LIST_KEYS = 1_000;
 const validate = new Validator();
 
 export class R2Gateway {
-	constructor(private readonly storage: Storage) {}
+	constructor(
+		private readonly log: Log,
+		private readonly storage: Storage
+	) {}
 
 	async head(key: string): Promise<R2Object> {
 		validate.key(key);

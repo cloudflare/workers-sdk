@@ -2,6 +2,7 @@ import assert from "assert";
 import {
 	GET,
 	GatewayFactory,
+	NoOpLog,
 	POST,
 	RouteHandler,
 	Router,
@@ -15,7 +16,8 @@ class TestGateway {
 
 class TestRouter extends Router<TestGateway> {
 	constructor() {
-		super(new GatewayFactory(undefined, "test", TestGateway));
+		const log = new NoOpLog();
+		super(log, new GatewayFactory(log, undefined, "test", TestGateway));
 	}
 
 	@GET("/params/:foo/:bar")

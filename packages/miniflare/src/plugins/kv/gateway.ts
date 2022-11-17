@@ -1,4 +1,4 @@
-import { Clock, HttpError, millisToSeconds } from "../../shared";
+import { Clock, HttpError, Log, millisToSeconds } from "../../shared";
 import { Storage, StoredKeyMeta, StoredValueMeta } from "../../storage";
 import {
 	MAX_KEY_SIZE,
@@ -70,6 +70,7 @@ export interface KVGatewayListResult<Meta = unknown> {
 
 export class KVGateway {
 	constructor(
+		private readonly log: Log,
 		private readonly storage: Storage,
 		private readonly clock: Clock
 	) {}

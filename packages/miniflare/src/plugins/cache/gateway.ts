@@ -3,7 +3,7 @@ import http from "http";
 import { AddressInfo } from "net";
 import CachePolicy from "http-cache-semantics";
 import { Headers, HeadersInit, Request, Response, fetch } from "undici";
-import { Clock, millisToSeconds } from "../../shared";
+import { Clock, Log, millisToSeconds } from "../../shared";
 import { Storage } from "../../storage";
 import { CacheMiss, PurgeFailure, StorageFailure } from "./errors";
 import { _getRangeResponse } from "./range";
@@ -204,6 +204,7 @@ class HttpParser {
 
 export class CacheGateway {
 	constructor(
+		private readonly log: Log,
 		private readonly storage: Storage,
 		private readonly clock: Clock
 	) {}

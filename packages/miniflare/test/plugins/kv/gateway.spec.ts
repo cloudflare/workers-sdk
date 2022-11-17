@@ -3,6 +3,7 @@ import {
 	KVGateway,
 	KVGatewayListOptions,
 	MemoryStorage,
+	NoOpLog,
 	Storage,
 	StoredKeyMeta,
 	StoredValueMeta,
@@ -26,7 +27,7 @@ const test = anyTest as TestFn<Context>;
 
 test.beforeEach((t) => {
 	const storage = new MemoryStorage(undefined, testClock);
-	const gateway = new KVGateway(storage, testClock);
+	const gateway = new KVGateway(new NoOpLog(), storage, testClock);
 	t.context = { storage, gateway };
 });
 

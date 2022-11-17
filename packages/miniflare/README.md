@@ -132,6 +132,58 @@ Represents where data should be persisted, if anywhere.
 - Otherwise, if this is just a regular `string`, data will be stored on the
   file-system, using the value as the directory path.
 
+### `enum LogLevel`
+
+`NONE, ERROR, WARN, INFO, DEBUG, VERBOSE`
+
+Controls which messages Miniflare logs. All messages at or below the selected
+level will be logged.
+
+### `interface LogOptions`
+
+- `prefix?: string`
+
+  String to add before the level prefix when logging messages. Defaults to `mf`.
+
+- `suffix?: string`
+
+  String to add after the level prefix when logging messages.
+
+### `class Log`
+
+- `constructor(level?: LogLevel, opts?: LogOptions)`
+
+  Creates a new logger that logs all messages at or below the specified level to
+  the `console`.
+
+- `error(message: Error)`
+
+  Logs a message at the `ERROR` level. If the constructed log `level` is less
+  than `ERROR`, `throw`s the `message` instead.
+
+- `warn(message: string)`
+
+  Logs a message at the `WARN` level.
+
+- `info(message: string)`
+
+  Logs a message at the `INFO` level.
+
+- `debug(message: string)`
+
+  Logs a message at the `DEBUG` level.
+
+- `verbose(message: string)`
+
+  Logs a message at the `VERBOSE` level.
+
+### `class NoOpLog extends Log`
+
+- `constructor()`
+
+  Creates a new logger that logs nothing to the `console`, and always `throw`s
+  `message`s logged at the `ERROR` level.
+
 ### `interface WorkerOptions`
 
 Options for an individual Worker/"nanoservice". All bindings are accessible on
@@ -336,6 +388,11 @@ Options shared between all Workers/"nanoservices".
 
   Enable `workerd`'s `--verbose` flag for verbose logging. This can be used to
   see simplified `console.log`s.
+
+- `log?: Log`
+
+  Logger implementation for Miniflare's errors, warnings and informative
+  messages.
 
 - `cf?: boolean | string | Record<string, any>`
 

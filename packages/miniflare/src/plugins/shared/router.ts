@@ -1,5 +1,5 @@
 import { Request, Response } from "undici";
-import { Awaitable } from "../../shared";
+import { Awaitable, Log } from "../../shared";
 import { GatewayFactory } from "./gateway";
 
 export type RouteHandler<Params = unknown> = (
@@ -12,7 +12,10 @@ export abstract class Router<Gateway> {
 	// Routes added by @METHOD decorators
 	routes?: Map<string, (readonly [RegExp, string | symbol])[]>;
 
-	constructor(protected readonly gatewayFactory: GatewayFactory<Gateway>) {
+	constructor(
+		protected readonly log: Log,
+		protected readonly gatewayFactory: GatewayFactory<Gateway>
+	) {
 		// Make sure this.routes isn't undefined and has the prototype's value
 		this.routes = new.target.prototype.routes;
 	}
@@ -34,7 +37,7 @@ export abstract class Router<Gateway> {
 }
 
 export interface RouterConstructor<Gateway> {
-	new (gatewayFactory: GatewayFactory<Gateway>): Router<Gateway>;
+	new (log: Log, gatewayFactory: GatewayFactory<Gateway>): Router<Gateway>;
 }
 
 function pathToRegexp(path: string): RegExp {
