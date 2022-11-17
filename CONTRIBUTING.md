@@ -53,6 +53,9 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 
 ### Install dependencies
 
+**Warning**
+When developing on Wrangler there there is currently a libc++ dependency that needs to be installed on your machine. This can be done by running `sudo apt-get install libc++-dev` on Linux.
+
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
 This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/wrangler2/tree/main/packages) directory.
