@@ -288,7 +288,6 @@ function DevSession(props: DevSessionProps) {
 		// Enable the bundling to know whether we are using dev or publish
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
-		experimentalLocalStubCache: props.local && props.experimentalLocal,
 	});
 
 	// TODO(queues) support remote wrangler dev
