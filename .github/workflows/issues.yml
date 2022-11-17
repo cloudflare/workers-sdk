@@ -13,11 +13,11 @@ jobs:
       - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/1
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: bug, enhancement
           label-operator: OR
       - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/2
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: pages
