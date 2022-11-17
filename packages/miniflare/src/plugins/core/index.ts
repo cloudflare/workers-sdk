@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import fs from "fs/promises";
 import { TextEncoder } from "util";
-import { bold, yellow } from "kleur/colors";
+import { bold } from "kleur/colors";
 import { Request, Response } from "undici";
 import { z } from "zod";
 import {
@@ -14,6 +14,7 @@ import {
 import {
 	Awaitable,
 	JsonSchema,
+	Log,
 	MiniflareCoreError,
 	zAwaitable,
 } from "../../shared";
@@ -73,6 +74,7 @@ export const CoreSharedOptionsSchema = z.object({
 	inspectorPort: z.number().optional(),
 	verbose: z.boolean().optional(),
 
+	log: z.instanceof(Log).optional(),
 	cloudflareFetch: CloudflareFetchSchema.optional(),
 
 	// TODO: add back validation of cf object
@@ -197,7 +199,7 @@ const CURRENT_COMPATIBILITY_DATE = [
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
-function validateCompatibilityDate(compatibilityDate: string) {
+function validateCompatibilityDate(log: Log, compatibilityDate: string) {
 	if (numericCompare(compatibilityDate, CURRENT_COMPATIBILITY_DATE) > 0) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
@@ -210,18 +212,16 @@ function validateCompatibilityDate(compatibilityDate: string) {
 		// If this compatibility date is greater than the maximum supported
 		// compatibility date of the runtime, but not in the future, warn,
 		// and use the maximum supported date instead
-		console.warn(
-			yellow(
-				[
-					"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
-					bold(`"${supportedCompatibilityDate}"`),
-					",\nbut you've requested ",
-					bold(`"${compatibilityDate}"`),
-					". Falling back to ",
-					bold(`"${supportedCompatibilityDate}"`),
-					"...",
-				].join("")
-			)
+		log.warn(
+			[
+				"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
+				bold(`"${supportedCompatibilityDate}"`),
+				",\nbut you've requested ",
+				bold(`"${compatibilityDate}"`),
+				". Falling back to ",
+				bold(`"${supportedCompatibilityDate}"`),
+				"...",
+			].join("")
 		);
 		return supportedCompatibilityDate;
 	}
@@ -291,6 +291,7 @@ export const CORE_PLUGIN: Plugin<
 		durableObjectClassNames,
 		additionalModules,
 		loopbackPort,
+		log,
 	}) {
 		// Define core/shared services.
 		// Services get de-duped by name, so only the first worker's
@@ -341,6 +342,7 @@ export const CORE_PLUGIN: Plugin<
 			const name = getUserServiceName(options.name);
 			const classNames = durableObjectClassNames.get(name) ?? [];
 			const compatibilityDate = validateCompatibilityDate(
+				log,
 				options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 			);
 

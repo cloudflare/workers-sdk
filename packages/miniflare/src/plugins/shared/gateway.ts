@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
 	Awaitable,
 	Clock,
+	Log,
 	MiniflareCoreError,
 	defaultClock,
 	sanitisePath,
@@ -34,7 +35,7 @@ export const CloudflareFetchSchema =
 export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
 
 export interface GatewayConstructor<Gateway> {
-	new (storage: Storage, clock: Clock): Gateway;
+	new (log: Log, storage: Storage, clock: Clock): Gateway;
 }
 
 export interface RemoteStorageConstructor {
@@ -60,6 +61,7 @@ export class GatewayFactory<Gateway> {
 	readonly #gateways = new Map<string, [Persistence, Gateway]>();
 
 	constructor(
+		private readonly log: Log,
 		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
 		private readonly gatewayClass: GatewayConstructor<Gateway>,
@@ -134,7 +136,7 @@ export class GatewayFactory<Gateway> {
 		if (cached !== undefined && cached[0] === persist) return cached[1];
 
 		const storage = this.getStorage(namespace, persist);
-		const gateway = new this.gatewayClass(storage, defaultClock);
+		const gateway = new this.gatewayClass(this.log, storage, defaultClock);
 		this.#gateways.set(namespace, [persist, gateway]);
 		return gateway;
 	}

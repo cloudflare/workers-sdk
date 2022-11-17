@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
-import { Awaitable, OptionalZodTypeOf } from "../../shared";
+import { Awaitable, Log, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor, RemoteStorageConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
@@ -10,6 +10,7 @@ export interface PluginServicesOptions<
 	Options extends z.ZodType,
 	SharedOptions extends z.ZodType | undefined,
 > {
+	log: Log;
 	options: z.infer<Options>;
 	optionsVersion: number;
 	sharedOptions: OptionalZodTypeOf<SharedOptions>;

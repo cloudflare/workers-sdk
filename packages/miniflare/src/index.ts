@@ -4,7 +4,6 @@ import net from "net";
 import { Duplex } from "stream";
 import exitHook from "exit-hook";
 import getPort from "get-port";
-import { bold, green, grey } from "kleur/colors";
 import stoppable from "stoppable";
 import {
 	HeadersInit,
@@ -43,8 +42,10 @@ import {
 } from "./runtime";
 import {
 	HttpError,
+	Log,
 	MiniflareCoreError,
 	Mutex,
+	NoOpLog,
 	OptionalZodTypeOf,
 	UnionToIntersection,
 	ValueOf,
@@ -150,6 +151,7 @@ export class Miniflare {
 	#optionsVersion: number;
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
+	#log: Log;
 
 	readonly #runtimeConstructor: RuntimeConstructor;
 	#runtime?: Runtime;
@@ -193,16 +195,14 @@ export class Miniflare {
 		this.#optionsVersion = 1;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#initPlugins();
 
 		// Get supported shell for executing runtime binary
 		// TODO: allow this to be configured if necessary
 		this.#runtimeConstructor = getSupportedRuntime();
-		// TODO: use logger
 		const desc = this.#runtimeConstructor.description;
-		console.log(
-			grey(`Running the 🦄 Cloudflare Workers Runtime 🦄 ${desc}...`)
-		);
+		this.#log.debug(`Running workerd ${desc}...`);
 
 		this.#disposeController = new AbortController();
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
@@ -214,12 +214,13 @@ export class Miniflare {
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			if (plugin.gateway !== undefined && plugin.router !== undefined) {
 				const gatewayFactory = new GatewayFactory<any>(
+					this.#log,
 					this.#sharedOpts.core.cloudflareFetch,
 					key,
 					plugin.gateway,
 					plugin.remoteStorage
 				);
-				const router = new plugin.router(gatewayFactory);
+				const router = new plugin.router(this.#log, gatewayFactory);
 				// @ts-expect-error this.#gatewayFactories[key] could be any plugin's
 				this.#gatewayFactories[key] = gatewayFactory;
 				// @ts-expect-error this.#routers[key] could be any plugin's
@@ -269,7 +270,7 @@ export class Miniflare {
 		// Wait for runtime to start
 		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if there aren't pending updates
-			console.log(bold(green(`Ready on ${this.#runtimeEntryURL} 🎉`)));
+			this.#log.info(`Ready on ${this.#runtimeEntryURL}`);
 			this.#handleReload();
 		}
 	}
@@ -454,7 +455,7 @@ export class Miniflare {
 		// #assembleConfig is always called after the loopback server is created
 		assert(loopbackPort !== undefined);
 
-		sharedOpts.core.cf = await setupCf(sharedOpts.core.cf);
+		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
 		const services: Service[] = [];
 		const sockets: Socket[] = [
@@ -492,6 +493,7 @@ export class Miniflare {
 			// Collect all services required by this worker
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginServices = await plugin.getServices({
+					log: this.#log,
 					options: workerOpts[key],
 					optionsVersion,
 					sharedOptions: sharedOpts[key],
@@ -544,6 +546,7 @@ export class Miniflare {
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+		this.#log = this.#sharedOpts.core.log ?? this.#log;
 
 		// Increment version, so we know when the runtime has processed updates
 		this.#optionsVersion++;
@@ -557,9 +560,7 @@ export class Miniflare {
 
 		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if this was the last pending update
-			console.log(
-				bold(green(`Updated and ready on ${this.#runtimeEntryURL} 🎉`))
-			);
+			this.#log.info(`Updated and ready on ${this.#runtimeEntryURL}`);
 			this.#handleReload();
 		}
 	}

@@ -1,10 +1,10 @@
 import assert from "assert";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import path from "path";
-import { bold, dim, grey, red } from "kleur/colors";
+import { dim } from "kleur/colors";
 import { fetch } from "undici";
 import { Plugins } from "./plugins";
-import { OptionalZodTypeOf } from "./shared";
+import { Log, OptionalZodTypeOf } from "./shared";
 
 const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
@@ -48,6 +48,7 @@ export const CF_DAYS = 30;
 type CoreOptions = OptionalZodTypeOf<Plugins["core"]["sharedOptions"]>;
 
 export async function setupCf(
+	log: Log,
 	cf: CoreOptions["cf"]
 ): Promise<Record<string, any>> {
 	if (!(cf ?? process.env.NODE_ENV !== "test")) {
@@ -80,14 +81,12 @@ export async function setupCf(
 		// Write cf so we can reuse it later
 		await mkdir(path.dirname(cfPath), { recursive: true });
 		await writeFile(cfPath, cfText, "utf8");
-		console.log(grey("Updated `Request.cf` object cache!"));
+		log.debug("Updated `Request.cf` object cache!");
 		return storedCf;
 	} catch (e: any) {
-		console.log(
-			bold(
-				red(`Unable to fetch the \`Request.cf\` object! Falling back to a default placeholder...
-${dim(e.cause ? e.cause.stack : e.stack)}`)
-			)
+		log.warn(
+			"Unable to fetch the `Request.cf` object! Falling back to a default placeholder...\n" +
+				dim(e.cause ? e.cause.stack : e.stack)
 		);
 		return fallbackCf;
 	}
