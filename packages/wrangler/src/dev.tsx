@@ -921,7 +921,7 @@ function getBindings(
 		],
 		dispatch_namespaces: configParam.dispatch_namespaces,
 		mtls_certificates: configParam.mtls_certificates,
-		services: configParam.services,
+		services: [...(configParam.services || []), ...(args.services || [])],
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,

@@ -1,0 +1,5 @@
+name = "b"
+
+services = [
+  { binding = "SERVICE", service = "a" }
+]

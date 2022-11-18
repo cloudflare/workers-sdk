@@ -1,0 +1,29 @@
+{
+	"name": "external-durable-objects-app",
+	"private": true,
+	"description": "A test for external durable objects",
+	"scripts": {
+		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\" \"cd d && npx wrangler pages dev public --port 8403 --service SERVICE=a\"",
+		"test": "npx jest --forceExit",
+		"test:ci": "npx jest --forceExit"
+	},
+	"jest": {
+		"restoreMocks": true,
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testTimeout": 30000,
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+		]
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.14.1"
+	}
+}

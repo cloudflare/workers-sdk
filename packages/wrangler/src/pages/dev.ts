@@ -581,9 +581,15 @@ export const Handler = async ({
 				return;
 			}
 
+			// Envs get appended to the end of the name
+			let serviceName = service;
+			if (environment) {
+				serviceName = `${service}-${environment}`;
+			}
+
 			return {
 				binding,
-				service,
+				service: serviceName,
 				environment,
 			};
 		})
