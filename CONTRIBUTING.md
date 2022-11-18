@@ -54,7 +54,11 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 ### Install dependencies
 
 **Warning**
-When developing on Wrangler there there is currently a `libc++1` dependency that needs to be installed on your machine.
+When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+- On Linux:
+  - libc++ (e.g. the package `libc++1` on Debian Bullseye)
+- On macOS:
+  - The XCode command line tools, which can be installed with xcode-select --install
 
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
