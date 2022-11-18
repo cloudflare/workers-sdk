@@ -1,4 +1,5 @@
 import path from "node:path";
+import chalk from "chalk";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
@@ -377,6 +378,16 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
+
+		if (args.local && process.platform !== "win32") {
+			logger.info(
+				chalk.magenta(
+					`Want to try out the next version of local mode using the open-source Workers runtime?\nSwitch out --local for ${chalk.bold(
+						"--experimental-local"
+					)} and let us know what you think at https://discord.gg/cloudflaredev !`
+				)
+			);
+		}
 
 		const configPath =
 			(args.config as ConfigPath) ||
