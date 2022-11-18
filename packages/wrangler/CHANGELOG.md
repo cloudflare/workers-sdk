@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.4.2
+
+### Patch Changes
+
+- [#2232](https://github.com/cloudflare/wrangler2/pull/2232) [`5241925a`](https://github.com/cloudflare/wrangler2/commit/5241925aba4dd8566b0fa2ce69ea665a56581397) Thanks [@mrbbot](https://github.com/mrbbot)! - Fix `wrangler types` generation for service-worker type Workers`
+
 ## 2.4.1
 
 ### Patch Changes
