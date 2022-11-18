@@ -5,6 +5,7 @@ import CachePolicy from "http-cache-semantics";
 import { Headers, HeadersInit, Request, Response, fetch } from "undici";
 import { Clock, Log, millisToSeconds } from "../../shared";
 import { Storage } from "../../storage";
+import { isSitesRequest } from "../kv";
 import { CacheMiss, PurgeFailure, StorageFailure } from "./errors";
 import { _getRangeResponse } from "./range";
 
@@ -210,8 +211,11 @@ export class CacheGateway {
 	) {}
 
 	async match(request: Request): Promise<Response> {
+		// Never cache Workers Sites requests, so we always return on-disk files
+		if (isSitesRequest(request)) throw new CacheMiss();
+
 		const cached = await this.storage.get<CacheMetadata>(request.url);
-		if (!cached || !cached?.metadata) throw new CacheMiss();
+		if (cached?.metadata === undefined) throw new CacheMiss();
 
 		const response = new CacheResponse(
 			cached.metadata,
@@ -228,6 +232,9 @@ export class CacheGateway {
 	}
 
 	async put(request: Request, value: ArrayBuffer): Promise<Response> {
+		// Never cache Workers Sites requests, so we always return on-disk files
+		if (isSitesRequest(request)) return new Response(null, { status: 204 });
+
 		const response = await HttpParser.get().parse(new Uint8Array(value));
 
 		const { storable, expiration, headers } = getExpiration(
