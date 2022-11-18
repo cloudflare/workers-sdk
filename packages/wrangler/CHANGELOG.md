@@ -1,5 +1,17 @@
 # wrangler
 
+## 2.4.1
+
+### Patch Changes
+
+- [#2229](https://github.com/cloudflare/wrangler2/pull/2229) [`8eb53b1a`](https://github.com/cloudflare/wrangler2/commit/8eb53b1a225ba947a6da4303e4cabc4660974288) Thanks [@mrbbot](https://github.com/mrbbot)! - Unhide `--live-reload` option for local mode development
+
+* [#2209](https://github.com/cloudflare/wrangler2/pull/2209) [`d0f237d9`](https://github.com/cloudflare/wrangler2/commit/d0f237d9965f782ae8415fe9ff02e83e6e86b9af) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - This change makes the metrics directory XDG compliant
+
+  resolves #2075
+
+- [#2213](https://github.com/cloudflare/wrangler2/pull/2213) [`afdb7e49`](https://github.com/cloudflare/wrangler2/commit/afdb7e49828b5854742750dcc13bb2866f790492) Thanks [@mrbbot](https://github.com/mrbbot)! - Enable the Cache API when using `--experimental-local`
+
 ## 2.4.0
 
 ### Minor Changes
