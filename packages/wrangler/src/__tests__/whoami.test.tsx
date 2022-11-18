@@ -45,7 +45,7 @@ describe("getUserInfo()", () => {
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
 		msw.use(
-			rest.get("*", (_, res, ctx) => {
+			rest.get("*/user", (_, res, ctx) => {
 				return res.once(
 					ctx.status(200),
 					ctx.json({

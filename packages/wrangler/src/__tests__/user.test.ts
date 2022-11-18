@@ -85,19 +85,18 @@ describe("User", () => {
 				oauth_token: "some-oauth-tok",
 				refresh_token: "some-refresh-tok",
 			});
-			// const outcome = mockRevokeAuthorization();
+			let counter = 0;
+			msw.use(
+				rest.post("*/oauth2/token/revoke", (request, response, context) => {
+					counter++;
+					// Make sure that we made the request to logout.
+					expect(counter).toBe(1);
+					response.once(context.status(200), context.text(""));
+				})
+			);
 
 			await runWrangler("logout");
-
-			// expect(outcome.actual.url).toEqual(
-			// 	"https://dash.cloudflare.com/oauth2/revoke"
-			// );
-			// expect(outcome.actual.method).toEqual("POST");
-
 			expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
-
-			// Make sure that we made the request to logout.
-			// expect(fetchMock).toHaveBeenCalledTimes(1);
 
 			// Make sure that logout removed the config file containing the auth tokens.
 			const config = path.join(
@@ -108,16 +107,13 @@ describe("User", () => {
 		});
 	});
 
-	// TODO: Improve OAuth mocking to handle `/token` endpoints from different calls
 	it("should handle errors for failed token refresh", async () => {
 		setIsTTY(false);
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		// mockExchangeRefreshTokenForAccessToken({
-		// 	respondWith: "badResponse",
-		// });
+		// TODO: Use MSW to handle `/token` endpoints from different calls
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
 		await expect(
@@ -129,16 +125,10 @@ describe("User", () => {
 
 	it("should confirm no error message when refresh is successful", async () => {
 		setIsTTY(false);
-		// mockOAuthServerCallback();
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		// mockGrantAuthorization({ respondWith: "success" });
-
-		// mockExchangeRefreshTokenForAccessToken({
-		// 	respondWith: "refreshSuccess",
-		// });
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
 		await expect(requireAuth({} as Config)).rejects.toThrowError();

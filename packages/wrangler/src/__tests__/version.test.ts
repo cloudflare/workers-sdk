@@ -10,7 +10,7 @@ describe("version", () => {
 	// We cannot test output of version banner,
 	// as it is disabled in jest environments
 
-	// it.only("should output version banner", async () => {
+	// it("should output version banner", async () => {
 	// 	await runWrangler("-v");
 	// 	expect(std.out).toMatchInlineSnapshot(`
 	// 	" ⛅️ wrangler 2.0.22
