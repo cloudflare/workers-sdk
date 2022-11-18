@@ -53,6 +53,14 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 
 ### Install dependencies
 
+**Warning**
+When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+
+- On Linux:
+  - libc++ (e.g. the package `libc++1` on Debian Bullseye)
+- On macOS:
+  - The XCode command line tools, which can be installed with xcode-select --install
+
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
 This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/wrangler2/tree/main/packages) directory.
