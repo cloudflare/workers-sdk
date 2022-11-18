@@ -2,7 +2,6 @@ import { readFileSync } from "fs";
 import fs from "fs/promises";
 import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
-import { Request, Response } from "undici";
 import { z } from "zod";
 import {
 	Service,
@@ -11,13 +10,7 @@ import {
 	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import {
-	Awaitable,
-	JsonSchema,
-	Log,
-	MiniflareCoreError,
-	zAwaitable,
-} from "../../shared";
+import { Awaitable, JsonSchema, Log, MiniflareCoreError } from "../../shared";
 import { getCacheServiceName } from "../cache";
 import {
 	BINDING_SERVICE_LOOPBACK,
@@ -31,15 +24,11 @@ import {
 	STRING_SCRIPT_PATH,
 	convertModuleDefinition,
 } from "./modules";
+import { ServiceDesignatorSchema } from "./services";
 
 const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
-// (request: Request) => Awaitable<Response>
-export const ServiceFetchSchema = z
-	.function()
-	.args(z.instanceof(Request))
-	.returns(zAwaitable(z.instanceof(Response)));
 export const CoreOptionsSchema = z.object({
 	name: z.string().optional(),
 	script: z.string().optional(),
@@ -62,10 +51,7 @@ export const CoreOptionsSchema = z.object({
 	wasmBindings: z.record(z.string()).optional(),
 	textBlobBindings: z.record(z.string()).optional(),
 	dataBlobBindings: z.record(z.string()).optional(),
-	// TODO: add support for workerd network/external/disk services here
-	serviceBindings: z
-		.record(z.union([z.string(), ServiceFetchSchema]))
-		.optional(),
+	serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 });
 
 export const CoreSharedOptionsSchema = z.object({
@@ -92,11 +78,19 @@ export const SERVICE_LOOPBACK = `${CORE_PLUGIN_NAME}:loopback`;
 export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
+// Service prefix for `workerd`'s builtin services (network, external, disk)
+const SERVICE_BUILTIN_PREFIX = `${CORE_PLUGIN_NAME}:builtin`;
 // Service prefix for custom fetch functions defined in `serviceBindings` option
 const SERVICE_CUSTOM_PREFIX = `${CORE_PLUGIN_NAME}:custom`;
 
-export function getUserServiceName(name = "") {
-	return `${SERVICE_USER_PREFIX}:${name}`;
+export function getUserServiceName(workerName = "") {
+	return `${SERVICE_USER_PREFIX}:${workerName}`;
+}
+function getBuiltinServiceName(workerIndex: number, bindingName: string) {
+	return `${SERVICE_BUILTIN_PREFIX}:${workerIndex}:${bindingName}`;
+}
+function getCustomServiceName(workerIndex: number, bindingName: string) {
+	return `${SERVICE_CUSTOM_PREFIX}:${workerIndex}:${bindingName}`;
 }
 
 export const HEADER_PROBE = "MF-Probe";
@@ -235,7 +229,7 @@ export const CORE_PLUGIN: Plugin<
 > = {
 	options: CoreOptionsSchema,
 	sharedOptions: CoreSharedOptionsSchema,
-	getBindings(options) {
+	getBindings(options, workerIndex) {
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
 		if (options.bindings !== undefined) {
@@ -269,15 +263,23 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.serviceBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.serviceBindings).map(([name, service]) => ({
-					name,
-					service: {
-						name:
-							typeof service === "function"
-								? `${SERVICE_CUSTOM_PREFIX}:${name}` // Custom `fetch` function
-								: `${SERVICE_USER_PREFIX}:${service}`, // Regular user worker
-					},
-				}))
+				...Object.entries(options.serviceBindings).map(([name, service]) => {
+					let serviceName: string;
+					if (typeof service === "function") {
+						// Custom `fetch` function
+						serviceName = getCustomServiceName(workerIndex, name);
+					} else if (typeof service === "object") {
+						// Builtin workerd service: network, external, disk
+						serviceName = getBuiltinServiceName(workerIndex, name);
+					} else {
+						// Regular user worker
+						serviceName = getUserServiceName(service);
+					}
+					return {
+						name: name,
+						service: { name: serviceName },
+					};
+				})
 			);
 		}
 
@@ -372,8 +374,9 @@ export const CORE_PLUGIN: Plugin<
 		if (options.serviceBindings !== undefined) {
 			for (const [name, service] of Object.entries(options.serviceBindings)) {
 				if (typeof service === "function") {
+					// Custom `fetch` function
 					services.push({
-						name: `${SERVICE_CUSTOM_PREFIX}:${name}`,
+						name: getCustomServiceName(workerIndex, name),
 						worker: {
 							serviceWorkerScript: SCRIPT_CUSTOM_SERVICE,
 							compatibilityDate: "2022-09-01",
@@ -388,6 +391,12 @@ export const CORE_PLUGIN: Plugin<
 								},
 							],
 						},
+					});
+				} else if (typeof service === "object") {
+					// Builtin workerd service: network, external, disk
+					services.push({
+						name: getBuiltinServiceName(workerIndex, name),
+						...service,
 					});
 				}
 			}
@@ -430,3 +439,5 @@ function getWorkerScript(
 		return { serviceWorkerScript: code };
 	}
 }
+
+export * from "./services";
