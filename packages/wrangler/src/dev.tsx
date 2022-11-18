@@ -288,10 +288,19 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 				requiresArg: true,
 			})
 			.option("live-reload", {
-				// TODO: Add back in once we have remote `--live-reload`
-				hidden: true,
-				// describe: "Auto reload HTML pages when change is detected",
+				describe:
+					"Auto reload HTML pages when change is detected in local mode",
 				type: "boolean",
+			})
+			.check((argv) => {
+				const local = argv["local"] || argv["experimental-local"];
+				if (argv["live-reload"] && !local) {
+					throw new Error(
+						"--live-reload is only supported in local mode. " +
+							"Please enable either --local or --experimental-local."
+					);
+				}
+				return true;
 			})
 			.option("inspect", {
 				describe: "Enable dev tools",

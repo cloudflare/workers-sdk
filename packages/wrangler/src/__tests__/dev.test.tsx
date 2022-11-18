@@ -1208,6 +1208,7 @@ describe("wrangler dev", () => {
 			      --node-compat                                Enable node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
 			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
+			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
 			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
 			  "warn": "",
