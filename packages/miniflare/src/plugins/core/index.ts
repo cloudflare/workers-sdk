@@ -18,6 +18,7 @@ import {
 	MiniflareCoreError,
 	zAwaitable,
 } from "../../shared";
+import { getCacheServiceName } from "../cache";
 import {
 	BINDING_SERVICE_LOOPBACK,
 	CloudflareFetchSchema,
@@ -358,7 +359,7 @@ export const CORE_PLUGIN: Plugin<
 						uniqueKey: className,
 					})),
 					durableObjectStorage: { inMemory: kVoid },
-					cacheApiOutbound: { name: "cache" },
+					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				},
 			});
 			serviceEntryBindings.push({

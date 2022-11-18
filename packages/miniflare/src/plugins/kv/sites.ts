@@ -1,5 +1,6 @@
 import assert from "assert";
 import { pathToFileURL } from "url";
+import { Request } from "undici";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import {
 	MatcherRegExps,
@@ -42,19 +43,22 @@ function testSiteRegExps(regExps: SiteMatcherRegExps, key: string): boolean {
 // Magic prefix: if a URLs pathname starts with this, it shouldn't be cached.
 // This ensures edge caching of Workers Sites files is disabled, and the latest
 // local version is always served.
-export const SITES_NO_CACHE_PREFIX = "$__MINIFLARE_SITES__$/";
+const SITES_NO_CACHE_PREFIX = "$__MINIFLARE_SITES__$/";
+
 function encodeSitesKey(key: string): string {
 	// `encodeURIComponent()` ensures `ETag`s used by `@cloudflare/kv-asset-handler`
 	// are always byte strings.
-	// TODO: this was required by `undici`, but depending on our new cache
-	//  implementation, we may not need it anymore. Once we've implemented cache,
-	//  try remove this extra URI encoding step.
 	return SITES_NO_CACHE_PREFIX + encodeURIComponent(key);
 }
 function decodeSitesKey(key: string): string {
 	return key.startsWith(SITES_NO_CACHE_PREFIX)
 		? decodeURIComponent(key.substring(SITES_NO_CACHE_PREFIX.length))
 		: key;
+}
+
+export function isSitesRequest(request: Request) {
+	const url = new URL(request.url);
+	return url.pathname.startsWith(`/${SITES_NO_CACHE_PREFIX}`);
 }
 
 const SERVICE_NAMESPACE_SITE = `${KV_PLUGIN_NAME}:site`;
