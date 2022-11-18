@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import fetchMock from "jest-fetch-mock";
+import { rest } from "msw";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import {
@@ -13,6 +13,11 @@ import {
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+} from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
@@ -22,34 +27,36 @@ describe("User", () => {
 	let isCISpy: jest.SpyInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
-	const {
-		mockOAuthServerCallback,
-		mockGrantAccessToken,
-		mockGrantAuthorization,
-		mockRevokeAuthorization,
-		mockExchangeRefreshTokenForAccessToken,
-	} = mockOAuthFlow();
-
+	const { mockOAuthServerCallback, mockGrantAuthorization } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {
 		it("should login a user when `wrangler login` is run", async () => {
 			mockOAuthServerCallback();
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
 			mockGrantAuthorization({ respondWith: "success" });
+			let counter = 0;
+			msw.use(
+				rest.post("*/oauth2/token", (request, response, context) => {
+					counter++;
+					expect(counter).toBe(1);
 
+					return response.once(
+						context.status(200),
+						context.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						})
+					);
+				})
+			);
 			await runWrangler("login");
-
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
-			expect(accessTokenRequest.actual.method).toEqual(
-				accessTokenRequest.expected.method
-			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
@@ -78,19 +85,19 @@ describe("User", () => {
 				oauth_token: "some-oauth-tok",
 				refresh_token: "some-refresh-tok",
 			});
-			const outcome = mockRevokeAuthorization();
+			// const outcome = mockRevokeAuthorization();
 
 			await runWrangler("logout");
 
-			expect(outcome.actual.url).toEqual(
-				"https://dash.cloudflare.com/oauth2/revoke"
-			);
-			expect(outcome.actual.method).toEqual("POST");
+			// expect(outcome.actual.url).toEqual(
+			// 	"https://dash.cloudflare.com/oauth2/revoke"
+			// );
+			// expect(outcome.actual.method).toEqual("POST");
 
 			expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
 
 			// Make sure that we made the request to logout.
-			expect(fetchMock).toHaveBeenCalledTimes(1);
+			// expect(fetchMock).toHaveBeenCalledTimes(1);
 
 			// Make sure that logout removed the config file containing the auth tokens.
 			const config = path.join(
@@ -108,9 +115,9 @@ describe("User", () => {
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		mockExchangeRefreshTokenForAccessToken({
-			respondWith: "badResponse",
-		});
+		// mockExchangeRefreshTokenForAccessToken({
+		// 	respondWith: "badResponse",
+		// });
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
 		await expect(
@@ -122,16 +129,16 @@ describe("User", () => {
 
 	it("should confirm no error message when refresh is successful", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
+		// mockOAuthServerCallback();
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		mockGrantAuthorization({ respondWith: "success" });
+		// mockGrantAuthorization({ respondWith: "success" });
 
-		mockExchangeRefreshTokenForAccessToken({
-			respondWith: "refreshSuccess",
-		});
+		// mockExchangeRefreshTokenForAccessToken({
+		// 	respondWith: "refreshSuccess",
+		// });
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
 		await expect(requireAuth({} as Config)).rejects.toThrowError();
