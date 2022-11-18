@@ -17,7 +17,8 @@ import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
 import {
 	setupBindings,
-	getMiniflare3Constructor,
+	getMiniflare3,
+	buildMiniflare3Logger,
 	setupMiniflareOptions,
 	setupNodeOptions,
 	transformMf2OptionsToMf3Options,
@@ -396,17 +397,19 @@ export async function startLocalServer({
 		});
 
 		if (experimentalLocal) {
+			const log = await buildMiniflare3Logger(logPrefix);
 			const mf3Options = await transformMf2OptionsToMf3Options({
 				miniflare2Options: options,
 				format,
 				bundle,
+				log,
 				kvNamespaces: bindings?.kv_namespaces,
 				r2Buckets: bindings?.r2_buckets,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
 				inspectorPort,
 			});
-			const Miniflare = await getMiniflare3Constructor();
+			const { Miniflare } = await getMiniflare3();
 			const mf = new Miniflare(mf3Options);
 			const runtimeURL = await mf.ready;
 			experimentalLocalRef = mf;

@@ -20,6 +20,7 @@ import { waitForPortToBeAvailable } from "../proxy";
 import { requireAuth } from "../user";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
+import type { LoggerLevel } from "../logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
 import type { AssetPaths } from "../sites";
 import type {
@@ -39,6 +40,7 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	Miniflare as Miniflare3Type,
 	MiniflareOptions as Miniflare3Options,
+	Log as Miniflare3LogType,
 	CloudflareFetch,
 } from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
@@ -228,10 +230,12 @@ function useLocalWorker({
 			});
 
 			if (experimentalLocal) {
+				const log = await buildMiniflare3Logger(logPrefix);
 				const mf3Options = await transformMf2OptionsToMf3Options({
 					miniflare2Options: options,
 					format,
 					bundle,
+					log,
 					kvNamespaces: bindings?.kv_namespaces,
 					r2Buckets: bindings?.r2_buckets,
 					authenticatedAccountId: accountId,
@@ -243,7 +247,7 @@ function useLocalWorker({
 
 				if (current === undefined) {
 					// If we don't have an active Miniflare instance, create a new one
-					const Miniflare = await getMiniflare3Constructor();
+					const { Miniflare } = await getMiniflare3();
 					if (abortController.signal.aborted) return;
 					const mf = new Miniflare(mf3Options);
 					experimentalLocalRef.current = mf;
@@ -750,6 +754,9 @@ export interface SetupMiniflare3Options {
 	format: CfScriptFormat;
 	bundle: EsbuildBundle;
 
+	// Miniflare's logger
+	log: Miniflare3LogType;
+
 	// Miniflare 3 accepts namespace/bucket names in addition to binding names.
 	// This means multiple workers persisting to the same location can have
 	// different binding names for the same namespace/bucket. Therefore, we need
@@ -763,13 +770,30 @@ export interface SetupMiniflare3Options {
 	authenticatedAccountId: string | true | undefined;
 	// Whether to read/write from/to real KV namespaces
 	kvRemote: boolean | undefined;
+
+	// Port to start DevTools inspector server on
 	inspectorPort: number;
+}
+
+export async function buildMiniflare3Logger(
+	logPrefix?: string
+): Promise<Miniflare3LogType> {
+	const { Log, NoOpLog, LogLevel } = await getMiniflare3();
+
+	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
+	if (level === "LOG") level = "INFO";
+	const logLevel = LogLevel[level];
+
+	return logLevel === LogLevel.NONE
+		? new NoOpLog()
+		: new Log(logLevel, { prefix: logPrefix });
 }
 
 export async function transformMf2OptionsToMf3Options({
 	miniflare2Options,
 	format,
 	bundle,
+	log,
 	kvNamespaces,
 	r2Buckets,
 	authenticatedAccountId,
@@ -802,6 +826,7 @@ export async function transformMf2OptionsToMf3Options({
 		inspectorPort,
 		verbose: true,
 		cloudflareFetch,
+		log,
 	};
 
 	if (format === "modules") {
@@ -850,13 +875,10 @@ export async function transformMf2OptionsToMf3Options({
 
 // Caching of the `npx-import`ed `@miniflare/tre` package
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let Miniflare: typeof import("@miniflare/tre").Miniflare;
-export async function getMiniflare3Constructor(): Promise<typeof Miniflare> {
-	if (Miniflare === undefined) {
-		({ Miniflare } = await npxImport<
-			// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-			typeof import("@miniflare/tre")
-		>("@miniflare/tre@3.0.0-next.6"));
-	}
-	return Miniflare;
+let miniflare3Module: typeof import("@miniflare/tre");
+export async function getMiniflare3(): Promise<
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	typeof import("@miniflare/tre")
+> {
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.7"));
 }
