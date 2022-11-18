@@ -27,7 +27,12 @@ import {
 	maybeGetSitesManifestModule,
 	normaliseDurableObject,
 } from "./plugins";
-import { HEADER_CUSTOM_SERVICE, getUserServiceName } from "./plugins/core";
+import {
+	HEADER_CUSTOM_SERVICE,
+	SourceOptions,
+	getUserServiceName,
+	handlePrettyErrorRequest,
+} from "./plugins/core";
 import {
 	Config,
 	Runtime,
@@ -345,6 +350,11 @@ export class Miniflare {
 				request,
 				customService
 			);
+		} else if (url.pathname === "/core/error") {
+			const workerSrcOpts = this.#workerOpts.map<SourceOptions>(
+				({ core }) => core
+			);
+			response = await handlePrettyErrorRequest(workerSrcOpts, request);
 		} else {
 			// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
 			response = await this.#handleLoopbackPlugins(request, url);

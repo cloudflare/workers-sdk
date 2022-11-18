@@ -26,7 +26,16 @@ const SUGGEST_NODE =
 	"\n- Find an alternative package that doesn't require Node.js built-ins";
 
 // Module identifier used if script came from `script` option
-export const STRING_SCRIPT_PATH = "<script>";
+export function buildStringScriptPath(workerIndex: number) {
+	return `<script:${workerIndex}>`;
+}
+const stringScriptRegexp = /^<script:(\d+)>$/;
+export function maybeGetStringScriptPathIndex(
+	scriptPath: string
+): number | undefined {
+	const match = stringScriptRegexp.exec(scriptPath);
+	return match === null ? undefined : parseInt(match[1]);
+}
 
 export const ModuleRuleTypeSchema = z.union([
 	z.literal("ESModule"),
@@ -167,7 +176,7 @@ export class ModuleLocator {
 		referencingPath: string,
 		specExpression: estree.Expression | estree.SpreadElement
 	) {
-		if (referencingPath === STRING_SCRIPT_PATH) {
+		if (maybeGetStringScriptPathIndex(referencingPath) !== undefined) {
 			const prefix = getResolveErrorPrefix(referencingPath);
 			throw new MiniflareCoreError(
 				"ERR_MODULE_STRING_SCRIPT",
@@ -253,15 +262,18 @@ ${dim(modulesConfig)}`;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-function contentsToString(contents: string | Uint8Array): string {
+export function contentsToString(contents: string | Uint8Array): string {
 	return typeof contents === "string" ? contents : decoder.decode(contents);
 }
 function contentsToArray(contents: string | Uint8Array): Uint8Array {
 	return typeof contents === "string" ? encoder.encode(contents) : contents;
 }
-export function convertModuleDefinition(def: ModuleDefinition): Worker_Module {
+export function convertModuleDefinition(
+	modulesRoot: string,
+	def: ModuleDefinition
+): Worker_Module {
 	// The runtime requires module identifiers to be relative paths
-	const name = path.relative("", def.path);
+	const name = path.relative(modulesRoot, def.path);
 	const contents = def.contents ?? readFileSync(def.path);
 	switch (def.type) {
 		case "ESModule":
