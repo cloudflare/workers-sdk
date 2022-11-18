@@ -478,7 +478,7 @@ export class Miniflare {
 			const workerBindings: Worker_Binding[] = [];
 			const additionalModules: Worker_Module[] = [];
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
-				const pluginBindings = await plugin.getBindings(workerOpts[key]);
+				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
 				if (pluginBindings !== undefined) {
 					workerBindings.push(...pluginBindings);
 

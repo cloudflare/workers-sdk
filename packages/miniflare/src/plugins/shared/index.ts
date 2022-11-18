@@ -26,7 +26,10 @@ export interface PluginBase<
 	SharedOptions extends z.ZodType | undefined,
 > {
 	options: Options;
-	getBindings(options: z.infer<Options>): Awaitable<Worker_Binding[] | void>;
+	getBindings(
+		options: z.infer<Options>,
+		workerIndex: number
+	): Awaitable<Worker_Binding[] | void>;
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | void>;

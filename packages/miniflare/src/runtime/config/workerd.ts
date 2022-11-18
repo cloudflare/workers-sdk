@@ -132,9 +132,10 @@ export type Worker_DurableObjectNamespace = { className?: string } & (
 	| { ephemeralLocal?: Void }
 );
 
-export type ExternalServer =
+export type ExternalServer = { address?: string } & (
 	| { http: HttpOptions }
-	| { https: ExternalServer_Https };
+	| { https: ExternalServer_Https }
+);
 
 export interface ExternalServer_Https {
 	options?: HttpOptions;
