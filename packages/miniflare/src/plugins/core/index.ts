@@ -21,9 +21,10 @@ import {
 	ModuleDefinitionSchema,
 	ModuleLocator,
 	ModuleRuleSchema,
-	STRING_SCRIPT_PATH,
+	buildStringScriptPath,
 	convertModuleDefinition,
 } from "./modules";
+import { HEADER_ERROR_STACK } from "./prettyerror";
 import { ServiceDesignatorSchema } from "./services";
 
 const encoder = new TextEncoder();
@@ -42,6 +43,7 @@ export const CoreOptionsSchema = z.object({
 			z.array(ModuleDefinitionSchema),
 		])
 		.optional(),
+	modulesRoot: z.string().optional(),
 	modulesRules: z.array(ModuleRuleSchema).optional(),
 
 	compatibilityDate: z.string().optional(),
@@ -122,7 +124,6 @@ const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 })();
 </script>`;
 
-// TODO: is there a way of capturing the full stack trace somehow?
 // Using `>=` for version check to handle multiple `setOptions` calls before
 // reload complete.
 export const SCRIPT_ENTRY = `async function handleEvent(event) {
@@ -141,12 +142,32 @@ export const SCRIPT_ENTRY = `async function handleEvent(event) {
     return new Response("No entrypoint worker found", { status: 404 });
   }
   try {
-    const response = await ${BINDING_SERVICE_USER}.fetch(request);
+    let response = await ${BINDING_SERVICE_USER}.fetch(request);
+    
+    if (
+      response.status === 500 &&
+      response.headers.get("${HEADER_ERROR_STACK}") !== null
+    ) {
+      const accept = request.headers.get("Accept")?.toLowerCase() ?? "";
+      const userAgent = request.headers.get("User-Agent")?.toLowerCase() ?? "";
+      const acceptsPrettyError =
+        !userAgent.includes("curl/") &&
+        (accept.includes("text/html") ||
+          accept.includes("*/*") ||
+          accept.includes("text/*"));
+      if (acceptsPrettyError) {
+        response = await ${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/error", {
+          method: "POST",
+          headers: request.headers,
+          body: response.body,
+        });
+      }
+    }
 
     const liveReloadScript = globalThis.${BINDING_DATA_LIVE_RELOAD_SCRIPT};
     if (
       liveReloadScript !== undefined &&
-      response.headers.get("content-type")?.toLowerCase().includes("text/html")
+      response.headers.get("Content-Type")?.toLowerCase().includes("text/html")
     ) {
       const headers = new Headers(response.headers);
       const contentLength = parseInt(headers.get("content-length"));
@@ -286,6 +307,7 @@ export const CORE_PLUGIN: Plugin<
 		return Promise.all(bindings);
 	},
 	async getServices({
+		log,
 		options,
 		optionsVersion,
 		workerBindings,
@@ -294,12 +316,17 @@ export const CORE_PLUGIN: Plugin<
 		durableObjectClassNames,
 		additionalModules,
 		loopbackPort,
-		log,
 	}) {
 		// Define core/shared services.
+		const loopbackBinding: Worker_Binding = {
+			name: BINDING_SERVICE_LOOPBACK,
+			service: { name: SERVICE_LOOPBACK },
+		};
+
 		// Services get de-duped by name, so only the first worker's
 		// SERVICE_LOOPBACK and SERVICE_ENTRY will be used
 		const serviceEntryBindings: Worker_Binding[] = [
+			loopbackBinding, // For converting stack-traces to pretty-error pages
 			{ name: BINDING_JSON_VERSION, json: optionsVersion.toString() },
 			{ name: BINDING_JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		];
@@ -335,7 +362,7 @@ export const CORE_PLUGIN: Plugin<
 		];
 
 		// Define regular user worker if script is set
-		const workerScript = getWorkerScript(options);
+		const workerScript = getWorkerScript(options, workerIndex);
 		if (workerScript !== undefined) {
 			// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 			if ("modules" in workerScript) {
@@ -385,10 +412,7 @@ export const CORE_PLUGIN: Plugin<
 									name: BINDING_TEXT_CUSTOM_SERVICE,
 									text: `${workerIndex}/${name}`,
 								},
-								{
-									name: BINDING_SERVICE_LOOPBACK,
-									service: { name: SERVICE_LOOPBACK },
-								},
+								loopbackBinding,
 							],
 						},
 					});
@@ -407,11 +431,17 @@ export const CORE_PLUGIN: Plugin<
 };
 
 function getWorkerScript(
-	options: z.infer<typeof CoreOptionsSchema>
+	options: z.infer<typeof CoreOptionsSchema>,
+	workerIndex: number
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } | undefined {
 	if (Array.isArray(options.modules)) {
 		// If `modules` is a manually defined modules array, use that
-		return { modules: options.modules.map(convertModuleDefinition) };
+		const modulesRoot = options.modulesRoot ?? "";
+		return {
+			modules: options.modules.map((module) =>
+				convertModuleDefinition(modulesRoot, module)
+			),
+		};
 	}
 
 	// Otherwise get code, preferring string `script` over `scriptPath`
@@ -431,7 +461,10 @@ function getWorkerScript(
 		const locator = new ModuleLocator(options.modulesRules);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
 		// against `scriptPath`.
-		locator.visitEntrypoint(code, options.scriptPath ?? STRING_SCRIPT_PATH);
+		locator.visitEntrypoint(
+			code,
+			options.scriptPath ?? buildStringScriptPath(workerIndex)
+		);
 		return { modules: locator.modules };
 	} else {
 		// ...otherwise, `modules` will either be `false` or `undefined`, so treat
@@ -440,4 +473,5 @@ function getWorkerScript(
 	}
 }
 
+export * from "./prettyerror";
 export * from "./services";
