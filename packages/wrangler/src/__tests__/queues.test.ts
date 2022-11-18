@@ -179,7 +179,7 @@ describe("wrangler", () => {
 				).rejects.toThrowError();
 				expect(std.out).toMatchInlineSnapshot(`
 			"Creating queue testQueue.
-			You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
+			Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues) failed.[0m
 
@@ -360,7 +360,7 @@ describe("wrangler", () => {
 					).rejects.toThrowError();
 					expect(std.out).toMatchInlineSnapshot(`
 				"Adding consumer to queue testQueue.
-				You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/some-account-id/workers/queues to enable.
+				Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues/testQueue/consumers) failed.[0m
 

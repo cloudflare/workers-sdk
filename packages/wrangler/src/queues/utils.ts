@@ -10,7 +10,7 @@ export const HandleUnauthorizedError = async (_msg: string, err: Error) => {
 		const accountId = await getAccountId();
 		if (accountId) {
 			return logger.log(
-				`You do not have Queues enabled on your account. Go to https://dash.staging.cloudflare.com/${accountId}/workers/queues to enable.`
+				`Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/${accountId}/workers/queues to enable it.`
 			);
 		}
 	}
