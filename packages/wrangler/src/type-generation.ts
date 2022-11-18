@@ -15,7 +15,7 @@ export async function generateTypes(
 
 	if (configToDTS.kv_namespaces) {
 		for (const kvNamespace of configToDTS.kv_namespaces) {
-			envTypeStructure.push(`	${kvNamespace.binding}: KVNamespace;`);
+			envTypeStructure.push(`${kvNamespace.binding}: KVNamespace;`);
 		}
 	}
 
@@ -27,70 +27,70 @@ export async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(`	${varName}: "${varValue}";`);
+				envTypeStructure.push(`${varName}: "${varValue}";`);
 			}
 			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(`	${varName}: ${JSON.stringify(varValue)};`);
+				envTypeStructure.push(`${varName}: ${JSON.stringify(varValue)};`);
 			}
 		}
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			envTypeStructure.push(`	${durableObject.name}: DurableObjectNamespace;`);
+			envTypeStructure.push(`${durableObject.name}: DurableObjectNamespace;`);
 		}
 	}
 
 	if (configToDTS.r2_buckets) {
 		for (const R2Bucket of configToDTS.r2_buckets) {
-			envTypeStructure.push(`	${R2Bucket.binding}: R2Bucket;`);
+			envTypeStructure.push(`${R2Bucket.binding}: R2Bucket;`);
 		}
 	}
 
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
-			envTypeStructure.push(`	${d1.binding}: D1Database;`);
+			envTypeStructure.push(`${d1.binding}: D1Database;`);
 		}
 	}
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push(`	${service.binding}: Fetcher;`);
+			envTypeStructure.push(`${service.binding}: Fetcher;`);
 		}
 	}
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`	${namespace.binding}: any;`);
+			envTypeStructure.push(`${namespace.binding}: any;`);
 		}
 	}
 
 	if (configToDTS.logfwdr?.schema) {
-		envTypeStructure.push(`	LOGFWDR_SCHEMA: any;`);
+		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
 	}
 
 	if (configToDTS.data_blobs) {
 		for (const dataBlobs in configToDTS.data_blobs) {
-			envTypeStructure.push(`	${dataBlobs}: ArrayBuffer;`);
+			envTypeStructure.push(`${dataBlobs}: ArrayBuffer;`);
 		}
 	}
 
 	if (configToDTS.text_blobs) {
 		for (const textBlobs in configToDTS.text_blobs) {
-			envTypeStructure.push(`	${textBlobs}: string;`);
+			envTypeStructure.push(`${textBlobs}: string;`);
 		}
 	}
 
 	if (configToDTS.unsafe) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
-			envTypeStructure.push(`	${unsafe.name}: any;`);
+			envTypeStructure.push(`${unsafe.name}: any;`);
 		}
 	}
 
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push(`	${queue.binding}: Queue;`);
+				envTypeStructure.push(`${queue.binding}: Queue;`);
 			}
 		}
 	}
@@ -154,13 +154,13 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
-		combinedTypeStrings += `interface Env {\n${envTypeStructure.join(
-			"\n"
-		)} \n}\n${modulesTypeStructure.join("\n")}`;
+		combinedTypeStrings += `interface Env {\n${envTypeStructure
+			.map((value) => `\t${value}`)
+			.join("\n")} \n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
-		combinedTypeStrings += `declare global {\n${envTypeStructure.join(
-			"\n"
-		)} \n}\n${modulesTypeStructure.join("\n")}`;
+		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
+			.map((value) => `\tconst ${value}`)
+			.join("\n")} \n}\n${modulesTypeStructure.join("\n")}`;
 	}
 
 	if (envTypeStructure.length || modulesTypeStructure.length) {

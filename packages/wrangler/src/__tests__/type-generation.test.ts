@@ -216,8 +216,9 @@ describe("generateTypes()", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"declare global {
-			testing_unsafe: any;
+		"export {};
+		declare global {
+			const testing_unsafe: any;
 		}
 		"
 	`);
