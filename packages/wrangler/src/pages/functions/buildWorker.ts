@@ -160,6 +160,7 @@ export function buildWorker({
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
 			local,
+			experimentalLocal: false,
 		}
 	);
 }

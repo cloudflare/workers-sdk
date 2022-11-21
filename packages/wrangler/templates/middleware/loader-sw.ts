@@ -22,7 +22,9 @@ if ((globalThis as any).MINIFLARE) {
 	__FACADE_EVENT_TARGET__ = new EventTarget();
 }
 
-function __facade_isSpecialEvent__(type: string) {
+function __facade_isSpecialEvent__(
+	type: string
+): type is "fetch" | "scheduled" {
 	return type === "fetch" || type === "scheduled";
 }
 const __facade__originalAddEventListener__ = globalThis.addEventListener;
@@ -31,23 +33,31 @@ const __facade__originalDispatchEvent__ = globalThis.dispatchEvent;
 
 globalThis.addEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
-		__FACADE_EVENT_TARGET__.addEventListener(type, listener as any, options);
+		__FACADE_EVENT_TARGET__.addEventListener(
+			type,
+			listener as EventListenerOrEventListenerObject,
+			options
+		);
 	} else {
-		__facade__originalAddEventListener__(type as any, listener, options);
+		__facade__originalAddEventListener__(type, listener, options);
 	}
 };
 globalThis.removeEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
-		__FACADE_EVENT_TARGET__.removeEventListener(type, listener as any, options);
+		__FACADE_EVENT_TARGET__.removeEventListener(
+			type,
+			listener as EventListenerOrEventListenerObject,
+			options
+		);
 	} else {
-		__facade__originalRemoveEventListener__(type as any, listener, options);
+		__facade__originalRemoveEventListener__(type, listener, options);
 	}
 };
 globalThis.dispatchEvent = function (event) {
 	if (__facade_isSpecialEvent__(event.type)) {
 		return __FACADE_EVENT_TARGET__.dispatchEvent(event);
 	} else {
-		return __facade__originalDispatchEvent__(event as any);
+		return __facade__originalDispatchEvent__(event);
 	}
 };
 

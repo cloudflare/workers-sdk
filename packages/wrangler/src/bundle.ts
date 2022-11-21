@@ -110,6 +110,7 @@ export async function bundleWorker(
 		targetConsumer: "dev" | "publish";
 		local: boolean;
 		testScheduled?: boolean;
+		experimentalLocal?: boolean;
 		inject?: string[];
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
@@ -137,6 +138,7 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade,
 		targetConsumer,
 		testScheduled,
+		experimentalLocal,
 		inject: injectOption,
 		loader,
 		sourcemap,
@@ -210,8 +212,29 @@ export async function bundleWorker(
 			path: "templates/middleware/middleware-scheduled.ts",
 		});
 	}
+	if (experimentalLocal) {
+		// In Miniflare 3, we bind the user's worker as a service binding in a
+		// special entry worker that handles things like injecting `Request.cf`,
+		// live-reload, and the pretty-error page.
+		//
+		// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
+		// native APIs don't have `stack`s. This means Miniflare can't extract the
+		// `stack` trace from dispatching to the user worker service binding by
+		// `try/catch`.
+		//
+		// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
+		// truthy on responses, the body will be interpreted as a JSON-error of the
+		// form `{ message?: string, name?: string, stack?: string }`.
+		//
+		// This middleware wraps the user's worker in a `try/catch`, and rewrites
+		// errors in this format so a pretty-error page can be shown.
+		middlewareToLoad.push({
+			path: "templates/middleware/middleware-miniflare3-json-error.ts",
+			dev: true,
+		});
+	}
 
-	type MiddlewareFn = (arg0: Entry) => Promise<EntryWithInject>;
+	type MiddlewareFn = (currentEntry: Entry) => Promise<EntryWithInject>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
 		// serve static assets
 		serveAssetsFromWorker &&

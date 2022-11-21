@@ -100,6 +100,7 @@ export async function startDevServer(
 			firstPartyWorkerDevFacade: props.firstPartyWorker,
 			testScheduled: props.testScheduled,
 			local: props.local,
+			experimentalLocal: props.experimentalLocal,
 		});
 
 		if (props.local) {
@@ -208,6 +209,7 @@ async function runEsbuild({
 	firstPartyWorkerDevFacade,
 	testScheduled,
 	local,
+	experimentalLocal,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -227,6 +229,7 @@ async function runEsbuild({
 	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 	local: boolean;
+	experimentalLocal: boolean | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -265,8 +268,9 @@ async function runEsbuild({
 				services,
 				firstPartyWorkerDevFacade,
 				targetConsumer: "dev", // We are starting a dev server
-				local,
 				testScheduled,
+				local,
+				experimentalLocal,
 		  });
 
 	return {

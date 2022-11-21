@@ -101,6 +101,7 @@ export function buildPlugin({
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
 			local,
+			experimentalLocal: false,
 		}
 	);
 }
