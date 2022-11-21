@@ -27,6 +27,7 @@ describe("User", () => {
 	let isCISpy: jest.SpyInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
+	// TODO: Implement these two mocks with MSW
 	const { mockOAuthServerCallback, mockGrantAuthorization } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
@@ -41,7 +42,7 @@ describe("User", () => {
 			mockGrantAuthorization({ respondWith: "success" });
 			let counter = 0;
 			msw.use(
-				rest.post("*/oauth2/token", (request, response, context) => {
+				rest.post("*/oauth2/token", (_, response, context) => {
 					counter++;
 					expect(counter).toBe(1);
 
@@ -87,7 +88,7 @@ describe("User", () => {
 			});
 			let counter = 0;
 			msw.use(
-				rest.post("*/oauth2/token/revoke", (request, response, context) => {
+				rest.post("*/oauth2/token/revoke", (_, response, context) => {
 					counter++;
 					// Make sure that we made the request to logout.
 					expect(counter).toBe(1);
