@@ -1,8 +1,15 @@
-import { Awaitable, Dispatcher, Middleware, __facade_invoke__ } from "./common";
-export { __facade_register__, __facade_registerInternal__ } from "./common";
+import {
+	Awaitable,
+	Dispatcher,
+	Middleware,
+	__facade_invoke__,
+	__facade_register__,
+	__facade_registerInternal__,
+} from "./common";
+export { __facade_register__, __facade_registerInternal__ };
 
-// Miniflare's `EventTarget` follows the spec and doesn't allow exceptions to
-// be caught by `dispatchEvent`. Instead it has a custom`ThrowingEventTarget`
+// Miniflare 2's `EventTarget` follows the spec and doesn't allow exceptions to
+// be caught by `dispatchEvent`. Instead it has a custom `ThrowingEventTarget`
 // class that rethrows errors from event listeners in `dispatchEvent`.
 // We'd like errors to be propagated to the top-level `addEventListener`, so
 // we'd like to use `ThrowingEventTarget`. Unfortunately, `ThrowingEventTarget`
@@ -15,44 +22,41 @@ if ((globalThis as any).MINIFLARE) {
 	__FACADE_EVENT_TARGET__ = new EventTarget();
 }
 
-declare global {
-	var __facade_addEventListener__: (
-		type: string,
-		listener: EventListenerOrEventListenerObject,
-		options?: EventTargetAddEventListenerOptions | boolean
-	) => void;
-	var __facade_removeEventListener__: (
-		type: string,
-		listener: EventListenerOrEventListenerObject,
-		options?: EventTargetEventListenerOptions | boolean
-	) => void;
-	var __facade_dispatchEvent__: (event: Event) => void;
-}
-
 function __facade_isSpecialEvent__(type: string) {
 	return type === "fetch" || type === "scheduled";
 }
-globalThis.__facade_addEventListener__ = function (type, listener, options) {
+const __facade__originalAddEventListener__ = globalThis.addEventListener;
+const __facade__originalRemoveEventListener__ = globalThis.removeEventListener;
+const __facade__originalDispatchEvent__ = globalThis.dispatchEvent;
+
+globalThis.addEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
-		__FACADE_EVENT_TARGET__.addEventListener(type, listener, options);
+		__FACADE_EVENT_TARGET__.addEventListener(type, listener as any, options);
 	} else {
-		globalThis.addEventListener(type as any, listener, options);
+		__facade__originalAddEventListener__(type as any, listener, options);
 	}
 };
-globalThis.__facade_removeEventListener__ = function (type, listener, options) {
+globalThis.removeEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
-		__FACADE_EVENT_TARGET__.removeEventListener(type, listener, options);
+		__FACADE_EVENT_TARGET__.removeEventListener(type, listener as any, options);
 	} else {
-		globalThis.removeEventListener(type as any, listener, options);
+		__facade__originalRemoveEventListener__(type as any, listener, options);
 	}
 };
-globalThis.__facade_dispatchEvent__ = function (event) {
+globalThis.dispatchEvent = function (event) {
 	if (__facade_isSpecialEvent__(event.type)) {
-		__FACADE_EVENT_TARGET__.dispatchEvent(event);
+		return __FACADE_EVENT_TARGET__.dispatchEvent(event);
 	} else {
-		globalThis.dispatchEvent(event as any);
+		return __facade__originalDispatchEvent__(event as any);
 	}
 };
+
+declare global {
+	var addMiddleware: typeof __facade_register__;
+	var addMiddlewareInternal: typeof __facade_registerInternal__;
+}
+globalThis.addMiddleware = __facade_register__;
+globalThis.addMiddlewareInternal = __facade_registerInternal__;
 
 const __facade_waitUntil__ = Symbol("__facade_waitUntil__");
 const __facade_response__ = Symbol("__facade_response__");
@@ -154,7 +158,7 @@ class __Facade_ScheduledEvent__ extends __Facade_ExtendableEvent__ {
 	}
 }
 
-globalThis.addEventListener("fetch", (event) => {
+__facade__originalAddEventListener__("fetch", (event) => {
 	const ctx: ExecutionContext = {
 		waitUntil: event.waitUntil.bind(event),
 		passThroughOnException: event.passThroughOnException.bind(event),
@@ -201,7 +205,7 @@ globalThis.addEventListener("fetch", (event) => {
 	);
 });
 
-globalThis.addEventListener("scheduled", (event) => {
+__facade__originalAddEventListener__("scheduled", (event) => {
 	const facadeEvent = new __Facade_ScheduledEvent__("scheduled", {
 		scheduledTime: event.scheduledTime,
 		cron: event.cron,
