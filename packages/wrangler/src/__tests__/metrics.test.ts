@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import fetchMock from "jest-fetch-mock";
+import { rest } from "msw";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
@@ -16,6 +17,7 @@ import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw, waitForRequest } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
@@ -56,13 +58,33 @@ describe("metrics", () => {
 
 		describe("identify()", () => {
 			it("should send a request to the default URL", async () => {
+				msw.use(
+					rest.post("*/identify", (_request, response, context) => {
+						return response.once(context.status(200), context.text(""));
+					})
+				);
+
+				const pendingRequest = waitForRequest(
+					"POST",
+					"https://sparrow.cloudflare.com/api/v1/identify"
+				);
+
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				fetchMock.mockResponse("");
 				await dispatcher.identify({ a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(1);
-				const [url, { body, headers }] = fetchMock.mock.calls[0];
-				expect(url).toEqual("https://sparrow.cloudflare.com/api/v1/identify");
-				expect(JSON.parse(body)).toEqual(
+				const request = await pendingRequest;
+				expect(request.url.toString()).toEqual(
+					"https://sparrow.cloudflare.com/api/v1/identify"
+				);
+
+				const headersObject = request.headers.all();
+				expect(headersObject).toEqual(
+					expect.objectContaining({
+						"sparrow-source-key": "MOCK_KEY",
+					})
+				);
+
+				const body = await request.json();
+				expect(body).toEqual(
 					expect.objectContaining({
 						event: "identify",
 						properties: {
@@ -74,11 +96,7 @@ describe("metrics", () => {
 						},
 					})
 				);
-				expect(headers).toEqual(
-					expect.objectContaining({
-						"Sparrow-Source-Key": "MOCK_KEY",
-					})
-				);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
 				);
