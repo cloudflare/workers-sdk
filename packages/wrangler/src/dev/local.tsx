@@ -839,17 +839,19 @@ export async function transformMf2OptionsToMf3Options({
 		const root = path.dirname(bundle.path);
 
 		assert.strictEqual(bundle.type, "esm");
+		// Required for source mapped paths to resolve correctly
+		options.modulesRoot = root;
 		options.modules = [
 			// Entrypoint
 			{
 				type: "ESModule",
-				path: path.relative(root, bundle.path),
+				path: bundle.path,
 				contents: await readFile(bundle.path, "utf-8"),
 			},
 			// Misc (WebAssembly, etc, ...)
 			...bundle.modules.map((module) => ({
 				type: ModuleTypeToRuleType[module.type ?? "esm"],
-				path: module.name,
+				path: path.resolve(root, module.name),
 				contents: module.content,
 			})),
 		];
