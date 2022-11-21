@@ -3,59 +3,69 @@ import { join } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
-import {
-	Response as MiniflareResponse,
-	Request as MiniflareRequest,
-} from "@miniflare/core";
-import { upgradingFetch as miniflareFetch } from "@miniflare/web-sockets";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { hashFile } from "../pages/hash";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
-	fetch,
-	Request,
-} from "@cloudflare/pages-shared/environment-polyfills/types";
-import type {
 	ParsedRedirects,
 	ParsedHeaders,
 } from "@cloudflare/pages-shared/metadata-generator/types";
-import type { RequestInfo, RequestInit, FetcherFetch } from "@miniflare/core";
-import type { Log } from "miniflare";
+import type {
+	RequestInfo as TreRequestInfo,
+	RequestInit as TreRequestInit,
+} from "@miniflare/tre";
+
+interface Logger {
+	log: (message: string) => void;
+	warn: (message: string) => void;
+	error: (error: Error) => void;
+}
 
 export interface Options {
-	log: Log;
+	log: Logger;
 	proxyPort?: number;
 	directory?: string;
+	tre: boolean;
 }
 
 export default async function generateASSETSBinding(options: Options) {
 	const assetsFetch =
 		options.directory !== undefined
-			? await generateAssetsFetch(options.directory, options.log)
+			? await generateAssetsFetch(options.directory, options.log, options.tre)
 			: invalidAssetsFetch;
 
-	return async function (miniflareRequest: MiniflareRequest) {
+	const miniflare = options.tre
+		? await import("@miniflare/tre")
+		: await import("@miniflare/core");
+
+	const Request = miniflare.Request;
+	const Response = miniflare.Response;
+	// WebSockets won't work with `--experimental-local` until we expose something like `upgradingFetch` from `@miniflare/tre`.
+	const fetch = (
+		options.tre
+			? miniflare.fetch
+			: (await import("@miniflare/web-sockets")).upgradingFetch
+	) as (request: Request) => Promise<Response>;
+
+	return async function (miniflareRequest: Request) {
 		if (options.proxyPort) {
 			try {
 				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
-				const proxyRequest = new MiniflareRequest(url, miniflareRequest);
+				const proxyRequest = new Request(url, miniflareRequest);
 				if (proxyRequest.headers.get("Upgrade") === "websocket") {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
 					proxyRequest.headers.delete("Sec-WebSocket-Key");
 				}
-				return await miniflareFetch(proxyRequest);
+				return await fetch(proxyRequest as Request);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
 				// TODO: Pretty error page
-				return new MiniflareResponse(
-					`[wrangler] Could not proxy request: ${thrown}`,
-					{
-						status: 502,
-					}
-				);
+				return new Response(`[wrangler] Could not proxy request: ${thrown}`, {
+					status: 502,
+				});
 			}
 		} else {
 			try {
@@ -64,21 +74,33 @@ export default async function generateASSETSBinding(options: Options) {
 				options.log.error(new Error(`Could not serve static asset: ${thrown}`));
 
 				// TODO: Pretty error page
-				return new MiniflareResponse(
+				return new Response(
 					`[wrangler] Could not serve static asset: ${thrown}`,
 					{ status: 502 }
 				);
 			}
 		}
-	} as FetcherFetch;
+	};
 }
 
 async function generateAssetsFetch(
 	directory: string,
-	log: Log
+	log: Logger,
+	tre: boolean
 ): Promise<typeof fetch> {
 	// Defer importing miniflare until we really need it
-	await import("@cloudflare/pages-shared/environment-polyfills/miniflare");
+	if (tre) {
+		await import(
+			"@cloudflare/pages-shared/environment-polyfills/miniflare-tre"
+		);
+	} else {
+		await import("@cloudflare/pages-shared/environment-polyfills/miniflare");
+	}
+
+	const miniflare = tre
+		? await import("@miniflare/tre")
+		: await import("@miniflare/core");
+	const Request = miniflare.Request;
 
 	const { generateHandler, parseQualityWeightedList } = await import(
 		"@cloudflare/pages-shared/asset-server/handler"
@@ -207,10 +229,10 @@ async function generateAssetsFetch(
 		});
 	};
 
-	return async (input: RequestInfo, init?: RequestInit) => {
-		const request = new MiniflareRequest(input, init);
+	return (async (input: TreRequestInfo, init?: TreRequestInit) => {
+		const request = new Request(input, init);
 		return await generateResponse(request as unknown as Request);
-	};
+	}) as typeof fetch;
 }
 
 const invalidAssetsFetch: typeof fetch = () => {

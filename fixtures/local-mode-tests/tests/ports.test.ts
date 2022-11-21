@@ -62,7 +62,9 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await Promise.all(workers.map(async (worker) => await worker?.stop()));
+		await Promise.all(
+			workers?.map(async (worker) => await worker?.stop()) || []
+		);
 	});
 
 	it.concurrent("should invoke the worker and exit", async () => {

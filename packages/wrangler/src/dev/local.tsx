@@ -11,6 +11,7 @@ import { performApiFetch } from "../cfetch/internal";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
+import generateASSETSBinding from "../miniflare-cli/assets";
 import {
 	DEFAULT_MODULE_RULES,
 	ModuleTypeToRuleType,
@@ -236,6 +237,7 @@ function useLocalWorker({
 					format,
 					bundle,
 					log,
+					enablePagesAssetsServiceBinding,
 					kvNamespaces: bindings?.kv_namespaces,
 					r2Buckets: bindings?.r2_buckets,
 					authenticatedAccountId: accountId,
@@ -761,6 +763,8 @@ export interface SetupMiniflare3Options {
 	// Miniflare's logger
 	log: Miniflare3LogType;
 
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+
 	// Miniflare 3 accepts namespace/bucket names in addition to binding names.
 	// This means multiple workers persisting to the same location can have
 	// different binding names for the same namespace/bucket. Therefore, we need
@@ -798,6 +802,7 @@ export async function transformMf2OptionsToMf3Options({
 	format,
 	bundle,
 	log,
+	enablePagesAssetsServiceBinding,
 	kvNamespaces,
 	r2Buckets,
 	authenticatedAccountId,
@@ -832,6 +837,19 @@ export async function transformMf2OptionsToMf3Options({
 		cloudflareFetch,
 		log,
 	};
+
+	if (enablePagesAssetsServiceBinding !== undefined) {
+		options.serviceBindings = {
+			...options.serviceBindings,
+			ASSETS: (await generateASSETSBinding({
+				log,
+				...enablePagesAssetsServiceBinding,
+				tre: true,
+				// We can get rid of this `any` easily once we do experimental-local/tre by default
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			})) as any,
+		};
+	}
 
 	if (format === "modules") {
 		// Manually specify all modules from the bundle. If we didn't do this,
