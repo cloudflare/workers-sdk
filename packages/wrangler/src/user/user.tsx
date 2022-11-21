@@ -902,7 +902,9 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 	}
 }
 
-export async function login(props?: LoginProps): Promise<boolean> {
+export async function login(
+	props: LoginProps = { browser: true }
+): Promise<boolean> {
 	logger.log("Attempting to login via OAuth...");
 	const urlToOpen = await getAuthURL(props?.scopes);
 	let server: http.Server;
