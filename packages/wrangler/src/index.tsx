@@ -445,6 +445,11 @@ export function createCLIParser(argv: string[]) {
 				.option("scopes-list", {
 					describe: "List all the available OAuth scopes with descriptions",
 				})
+				.option("browser", {
+					default: true,
+					type: "boolean",
+					describe: "Automatically open the OAuth link in a browser",
+				})
 				.option("scopes", {
 					describe: "Pick the set of applicable OAuth scopes when logging in",
 					array: true,
@@ -471,10 +476,10 @@ export function createCLIParser(argv: string[]) {
 						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
 					);
 				}
-				await login({ scopes: args.scopes });
+				await login({ scopes: args.scopes, browser: args.browser });
 				return;
 			}
-			await login();
+			await login({ browser: args.browser });
 			const config = readConfig(args.config as ConfigPath, args);
 			await metrics.sendMetricsEvent("login user", {
 				sendMetrics: config.send_metrics,
