@@ -42,10 +42,13 @@ export const mockOAuthFlow = () => {
 	 * at the OAuth URL, it will automatically trigger the callback URL on the mock HttpServer that
 	 * we have created as part of the call to `mockOAuthFlow()`.
 	 */
-	const mockOAuthServerCallback = () => {
+	const mockOAuthServerCallback = (
+		respondWith?: "timeout" | "success" | "failure" | GrantResponseOptions
+	) => {
 		(
 			openInBrowser as jest.MockedFunction<typeof openInBrowser>
 		).mockImplementation(async (url: string) => {
+			if (respondWith) mockGrantAuthorization({ respondWith });
 			// We don't support the grant response timing out.
 			if (oauthGrantResponse === "timeout") {
 				throw "unimplemented";
@@ -68,6 +71,7 @@ export const mockOAuthFlow = () => {
 		});
 	};
 
+	//TODO: this can just handled in `mockOAuthServerCallback`
 	const mockGrantAuthorization = ({
 		respondWith,
 	}: {
