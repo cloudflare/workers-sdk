@@ -875,6 +875,7 @@ export function readAuthConfigFile(): UserAuthConfig {
 
 type LoginProps = {
 	scopes?: Scope[];
+	browser: boolean;
 };
 
 export async function loginOrRefreshIfRequired(): Promise<boolean> {
@@ -901,7 +902,9 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 	}
 }
 
-export async function login(props?: LoginProps): Promise<boolean> {
+export async function login(
+	props: LoginProps = { browser: true }
+): Promise<boolean> {
 	logger.log("Attempting to login via OAuth...");
 	const urlToOpen = await getAuthURL(props?.scopes);
 	let server: http.Server;
@@ -914,7 +917,7 @@ export async function login(props?: LoginProps): Promise<boolean> {
 			server.close();
 			clearTimeout(loginTimeoutHandle);
 			resolve(false);
-		}, 60000); // wait for 60 seconds for the user to authorize
+		}, 120000); // wait for 120 seconds for the user to authorize
 	});
 
 	const loginPromise = new Promise<boolean>((resolve, reject) => {
@@ -986,9 +989,12 @@ export async function login(props?: LoginProps): Promise<boolean> {
 
 		server.listen(8976);
 	});
-
-	logger.log(`Opening a link in your default browser: ${urlToOpen}`);
-	await openInBrowser(urlToOpen);
+	if (props?.browser) {
+		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
+		await openInBrowser(urlToOpen);
+	} else {
+		logger.log(`Visit this link to authenticate: ${urlToOpen}`);
+	}
 
 	return Promise.race([timerPromise, loginPromise]);
 }

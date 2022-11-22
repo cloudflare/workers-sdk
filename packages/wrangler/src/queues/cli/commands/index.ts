@@ -1,5 +1,6 @@
 import { type BuilderCallback } from "yargs";
 import { type CommonYargsOptions } from "../../../yargs-types";
+import { HandleUnauthorizedError } from "../../utils";
 import { consumers } from "./consumer";
 
 import { options as createOptions, handler as createHandler } from "./create";
@@ -30,4 +31,6 @@ export const queues: BuilderCallback<CommonYargsOptions, unknown> = (yargs) => {
 			await consumers(consumersYargs);
 		}
 	);
+
+	yargs.fail(HandleUnauthorizedError);
 };

@@ -1,5 +1,27 @@
 # wrangler
 
+## 2.4.4
+
+### Patch Changes
+
+- [#2265](https://github.com/cloudflare/wrangler2/pull/2265) [`42d88e3f`](https://github.com/cloudflare/wrangler2/commit/42d88e3f8dda5b40d17bd684cfc5475ab1505a18) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fix D1 bindings in `wrangler pages dev`
+
+## 2.4.3
+
+### Patch Changes
+
+- [#2249](https://github.com/cloudflare/wrangler2/pull/2249) [`e41c7e41`](https://github.com/cloudflare/wrangler2/commit/e41c7e41c3ee36d852daad859cd8cbb31641f95f) Thanks [@mrbbot](https://github.com/mrbbot)! - Enable pretty source-mapped error pages when using `--experimental-local`
+
+* [#2208](https://github.com/cloudflare/wrangler2/pull/2208) [`5bd04296`](https://github.com/cloudflare/wrangler2/commit/5bd04296ea15a72fbd8c3ac395d129d0dcfb9179) Thanks [@OilyLime](https://github.com/OilyLime)! - Add link to Queues tab in dashboard when unauthorized to use Queues
+
+- [#2248](https://github.com/cloudflare/wrangler2/pull/2248) [`effc2215`](https://github.com/cloudflare/wrangler2/commit/effc2215dd3b4a5be539d22795a59b02ca5164ff) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: remove d1 local hardcoding
+
+  Prior to this change wrangler would only ever use local mode when testing d1.
+
+  After this change d1 tests can access both local and remote Workers.
+
+* [#2254](https://github.com/cloudflare/wrangler2/pull/2254) [`9e296a4d`](https://github.com/cloudflare/wrangler2/commit/9e296a4d0e71e7453e4b6722e7e12042040590ab) Thanks [@penalosa](https://github.com/penalosa)! - Add an option to customise whether `wrangler login` opens a browser automatically. Use `wrangler login --no-browser` to prevent a browser being open—the link will be printed to the console so it can be manually opened.
+
 ## 2.4.2
 
 ### Patch Changes
