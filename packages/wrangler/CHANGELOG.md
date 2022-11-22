@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.4.4
+
+### Patch Changes
+
+- [#2265](https://github.com/cloudflare/wrangler2/pull/2265) [`42d88e3f`](https://github.com/cloudflare/wrangler2/commit/42d88e3f8dda5b40d17bd684cfc5475ab1505a18) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fix D1 bindings in `wrangler pages dev`
+
 ## 2.4.3
 
 ### Patch Changes
