@@ -14,7 +14,7 @@ echo "export default { fetch() { return new Response('hello world') } }" > index
 # try it out
 npx wrangler dev index.js
 # and then publish it
-npx wrangler publish index.js --name my-worker
+npx wrangler publish index.js --name my-worker --latest
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
