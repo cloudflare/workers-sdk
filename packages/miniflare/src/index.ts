@@ -6,25 +6,11 @@ import exitHook from "exit-hook";
 import getPort from "get-port";
 import stoppable from "stoppable";
 import {
-	BodyInit,
-	File,
-	FormData,
-	Headers,
 	HeadersInit,
-	ReferrerPolicy,
 	Request,
-	RequestCache,
-	RequestCredentials,
-	RequestDestination,
-	RequestDuplex,
 	RequestInfo,
 	RequestInit,
-	RequestMode,
-	RequestRedirect,
 	Response,
-	ResponseInit,
-	ResponseRedirectStatus,
-	ResponseType,
 	fetch,
 } from "undici";
 import { WebSocketServer } from "ws";
@@ -628,14 +614,11 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./storage";
-export {
+export { File, FormData, Headers, Request, Response, fetch } from "undici";
+export type {
 	BodyInit,
-	File,
-	FormData,
-	Headers,
 	HeadersInit,
 	ReferrerPolicy,
-	Request,
 	RequestCache,
 	RequestCredentials,
 	RequestDestination,
@@ -644,9 +627,7 @@ export {
 	RequestInit,
 	RequestMode,
 	RequestRedirect,
-	Response,
 	ResponseInit,
 	ResponseRedirectStatus,
 	ResponseType,
-	fetch,
-};
+} from "undici";
