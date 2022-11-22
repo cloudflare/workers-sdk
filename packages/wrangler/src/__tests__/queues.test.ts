@@ -1,24 +1,16 @@
-import { type QueueResponse, type PostConsumerBody } from "../queues/client";
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-	unsetAllMocks,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { QueueResponse, PostConsumerBody } from "../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	describe("queues", () => {
 		it("should show the correct help text", async () => {
@@ -46,15 +38,24 @@ describe("wrangler", () => {
 		describe("list", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
 				const requests = { count: 0 };
-				setMockResponse(
-					"/accounts/:accountId/workers/queues",
-					([_url, accountId], init, params) => {
-						requests.count++;
-						expect(params.get("page")).toEqual((page || 1).toString());
-						expect(accountId).toEqual("some-account-id");
-						expect(init).toEqual({});
-						return queues;
-					}
+				msw.use(
+					rest.get(
+						"*/accounts/:accountId/workers/queues?*",
+						async (request, response, context) => {
+							requests.count += 1;
+							const query = request.url.searchParams;
+							expect(Number(query.get("page"))).toEqual(page);
+							expect(await request.text()).toEqual("");
+							return response.once(
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: queues,
+								})
+							);
+						}
+					)
 				);
 				return requests;
 			}
@@ -121,15 +122,30 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedQueueName: string) {
 				const requests = { count: 0 };
-				setMockResponse(
-					"/accounts/:accountId/workers/queues",
-					"POST",
-					([_url, accountId], { body }) => {
-						expect(accountId).toEqual("some-account-id");
-						const queueName = JSON.parse(body as string).queue_name;
-						expect(queueName).toEqual(expectedQueueName);
-						requests.count += 1;
-					}
+
+				msw.use(
+					rest.post(
+						"*/accounts/:accountId/workers/queues",
+						async (request, response, context) => {
+							requests.count += 1;
+							const body = (await request.json()) as {
+								queue_name: string;
+							};
+							expect(body.queue_name).toEqual(expectedQueueName);
+							return response.once(
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										queue_name: expectedQueueName,
+										created_on: "01-01-2001",
+										modified_on: "01-01-2001",
+									},
+								})
+							);
+						}
+					)
 				);
 				return requests;
 			}
@@ -165,15 +181,25 @@ describe("wrangler", () => {
 
 			it("should show link to dash when not enabled", async () => {
 				const queueName = "testQueue";
-				setMockRawResponse(
-					"/accounts/:accountId/workers/queues",
-					([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-						return createFetchResult(null, false, [
-							{ message: "workers.api.error.unauthorized", code: 10023 },
-						]);
-					}
+				msw.use(
+					rest.post(
+						"*/accounts/:accountId/workers/queues",
+						async (request, response, context) => {
+							expect(request.params.accountId).toEqual("some-account-id");
+							return response.once(
+								context.status(403),
+								context.json({
+									success: false,
+									errors: [
+										{ message: "workers.api.error.unauthorized", code: 10023 },
+									],
+									messages: [],
+								})
+							);
+						}
+					)
 				);
+
 				await expect(
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
@@ -196,13 +222,23 @@ describe("wrangler", () => {
 		describe("delete", () => {
 			function mockDeleteRequest(expectedQueueName: string) {
 				const requests = { count: 0 };
-				setMockResponse(
-					`/accounts/:accountId/workers/queues/${expectedQueueName}`,
-					"DELETE",
-					([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-						requests.count += 1;
-					}
+				msw.use(
+					rest.delete(
+						"*/accounts/:accountId/workers/queues/:queueName",
+						async (request, response, context) => {
+							requests.count += 1;
+							expect(request.params.queueName).toEqual(expectedQueueName);
+							expect(request.params.accountId).toEqual("some-account-id");
+							return response.once(
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								})
+							);
+						}
+					)
 				);
 				return requests;
 			}
@@ -265,14 +301,24 @@ describe("wrangler", () => {
 					expectedBody: PostConsumerBody
 				) {
 					const requests = { count: 0 };
-					setMockResponse(
-						`/accounts/:accountId/workers/queues/${expectedQueueName}/consumers`,
-						"POST",
-						([_url, accountId], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(JSON.parse(body as string)).toEqual(expectedBody);
-							requests.count += 1;
-						}
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/workers/queues/:queueName/consumers",
+							async (request, response, context) => {
+								requests.count += 1;
+								expect(request.params.queueName).toEqual(expectedQueueName);
+								expect(request.params.accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual(expectedBody);
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -346,15 +392,30 @@ describe("wrangler", () => {
 
 				it("should show link to dash when not enabled", async () => {
 					const queueName = "testQueue";
-					setMockRawResponse(
-						`/accounts/:accountId/workers/queues/${queueName}/consumers`,
-						([_url, accountId]) => {
-							expect(accountId).toEqual("some-account-id");
-							return createFetchResult(null, false, [
-								{ message: "workers.api.error.unauthorized", code: 10023 },
-							]);
-						}
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/workers/queues/:queueName/consumers",
+							async (request, response, context) => {
+								expect(request.params.queueName).toEqual(queueName);
+								expect(request.params.accountId).toEqual("some-account-id");
+								return response.once(
+									context.status(403),
+									context.json({
+										success: false,
+										errors: [
+											{
+												code: 10023,
+												message: "workers.api.error.unauthorized",
+											},
+										],
+										messages: [],
+										result: {},
+									})
+								);
+							}
+						)
 					);
+
 					await expect(
 						runWrangler(`queues consumer add ${queueName} testScript`)
 					).rejects.toThrowError();
@@ -380,13 +441,32 @@ describe("wrangler", () => {
 					expectedScriptName: string,
 					expectedEnvName?: string
 				) {
-					let resource = `/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedScriptName}`;
+					const requests = { count: 0 };
+					let resource = `accounts/:accountId/workers/queues/:expectedQueueName/consumers/:expectedScriptName`;
 					if (expectedEnvName !== undefined) {
-						resource += `/environments/${expectedEnvName}`;
+						resource += `/environments/:expectedEnvName`;
 					}
-					setMockResponse(resource, "DELETE", ([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-					});
+					msw.use(
+						rest.delete(`*/${resource}`, async (request, response, context) => {
+							requests.count++;
+							expect(request.params.accountId).toBe("some-account-id");
+							expect(request.params.expectedQueueName).toBe(expectedQueueName);
+							expect(request.params.expectedScriptName).toBe(
+								expectedScriptName
+							);
+							return response.once(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								})
+							);
+						})
+					);
+
+					return requests;
 				}
 
 				it("should show the correct help text", async () => {
@@ -410,8 +490,10 @@ describe("wrangler", () => {
 				});
 
 				it("should delete a consumer with no --env", async () => {
-					mockDeleteRequest("testQueue", "testScript");
+					const requests = mockDeleteRequest("testQueue", "testScript");
 					await runWrangler("queues consumer remove testQueue testScript");
+
+					expect(requests.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing consumer from queue testQueue.
 						Removed consumer from queue testQueue."
@@ -419,10 +501,16 @@ describe("wrangler", () => {
 				});
 
 				it("should delete a consumer with --env", async () => {
-					mockDeleteRequest("testQueue", "testScript", "myEnv");
+					const requests = mockDeleteRequest(
+						"testQueue",
+						"testScript",
+						"myEnv"
+					);
 					await runWrangler(
 						"queues consumer remove testQueue testScript --env myEnv"
 					);
+
+					expect(requests.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing consumer from queue testQueue.
 						Removed consumer from queue testQueue."
