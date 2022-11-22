@@ -16,7 +16,17 @@ import type { BaseSqlExecuteArgs } from "../execute";
 import type { Argv } from "yargs";
 
 export function ListOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
-	return Database(yargs);
+	return Database(yargs)
+		.option("local", {
+			describe:
+				"Execute commands/files against a local DB for use with wrangler dev",
+			type: "boolean",
+		})
+		.option("persist-to", {
+			describe: "Specify directory to use for local persistence (for --local)",
+			type: "string",
+			requiresArg: true,
+		});
 }
 
 export const ListHandler = withConfig<BaseSqlExecuteArgs>(
