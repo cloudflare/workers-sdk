@@ -24,7 +24,7 @@ export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
 	return Database(yargs)
 		.option("local", {
 			describe:
-				"Execute commands/files against a local DB for use with wrangler dev",
+				"Execute commands/files against a local DB for use with wrangler dev --local",
 			type: "boolean",
 		})
 		.option("persist-to", {
