@@ -265,7 +265,13 @@ export class Miniflare {
 		};
 		this.#runtime = new this.#runtimeConstructor(opts);
 		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
-		this.#runtimeEntryURL = new URL(`http://127.0.0.1:${opts.entryPort}`);
+
+		const accessibleHost =
+			this.#runtime.accessibleHostOverride ??
+			(host === "*" || host === "0.0.0.0" ? "127.0.0.1" : host);
+		this.#runtimeEntryURL = new URL(
+			`http://${accessibleHost}:${opts.entryPort}`
+		);
 
 		const config = await this.#assembleConfig();
 		assert(config !== undefined);
@@ -604,7 +610,7 @@ export class Miniflare {
 		} finally {
 			// Cleanup as much as possible even if `#init()` threw
 			this.#removeRuntimeExitHook?.();
-			this.#runtime?.dispose();
+			await this.#runtime?.dispose();
 			await this.#stopLoopbackServer();
 		}
 	}

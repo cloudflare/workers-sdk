@@ -3,6 +3,8 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import rl from "readline";
+import { pathToFileURL } from "url";
 import { red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
@@ -20,6 +22,8 @@ export interface RuntimeOptions {
 
 export abstract class Runtime {
 	constructor(protected readonly opts: RuntimeOptions) {}
+
+	accessibleHostOverride?: string;
 
 	abstract updateConfig(configBuffer: Buffer): Awaitable<void>;
 	abstract get exitPromise(): Promise<void> | undefined;
@@ -59,11 +63,6 @@ function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	});
 }
 
-function trimTrailingNewline(buffer: Buffer) {
-	let string = buffer.toString();
-	if (string.endsWith("\n")) string = string.substring(0, string.length - 1);
-	return string;
-}
 function pipeOutput(runtime: childProcess.ChildProcessWithoutNullStreams) {
 	// TODO: may want to proxy these and prettify ✨
 	// We can't just pipe() to `process.stdout/stderr` here, as Ink (used by
@@ -71,12 +70,10 @@ function pipeOutput(runtime: childProcess.ChildProcessWithoutNullStreams) {
 	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
 	// Writing directly to `process.stdout/stderr` would result in graphical
 	// glitches.
-	runtime.stdout.on("data", (data) => {
-		console.log(trimTrailingNewline(data));
-	});
-	runtime.stderr.on("data", (data) => {
-		console.error(red(trimTrailingNewline(data)));
-	});
+	const stdout = rl.createInterface(runtime.stdout);
+	const stderr = rl.createInterface(runtime.stderr);
+	stdout.on("line", (data) => console.log(data));
+	stderr.on("line", (data) => console.error(red(data)));
 	// runtime.stdout.pipe(process.stdout);
 	// runtime.stderr.pipe(process.stderr);
 }
@@ -143,25 +140,115 @@ class NativeRuntime extends Runtime {
 	}
 }
 
-class WSLRuntime extends NativeRuntime {
+// `__dirname` relative to bundled output `dist/src/index.js`
+const LIB_PATH = path.resolve(__dirname, "..", "..", "lib");
+const WSL_RESTART_PATH = path.join(LIB_PATH, "wsl-restart.sh");
+const WSL_EXE_PATH = "C:\\Windows\\System32\\wsl.exe";
+
+class WSLRuntime extends Runtime {
 	static isSupported() {
-		return process.platform === "win32"; // TODO: && parse output from `wsl --list --verbose`, may need to check distro?;
+		if (process.platform !== "win32") return false;
+		// Make sure we have a WSL distribution installed.
+		const stdout = childProcess.execSync(`${WSL_EXE_PATH} --list --verbose`, {
+			encoding: "utf16le",
+		});
+		// Example successful result:
+		// ```
+		//   NAME            STATE           VERSION
+		// * Ubuntu-22.04    Running         2
+		// ```
+		return (
+			stdout.includes("NAME") &&
+			stdout.includes("STATE") &&
+			stdout.includes("*")
+		);
 	}
+
 	static supportSuggestion =
 		"Install the Windows Subsystem for Linux (https://aka.ms/wsl), " +
 		"then run as you are at the moment";
 	static description = "using WSL ✨";
 
-	getCommand(): string[] {
-		const command = super.getCommand();
-		command.unshift("wsl"); // TODO: may need to select distro?
-		// TODO: may need to convert runtime path to /mnt/c/...
-		return command;
+	private static pathToWSL(filePath: string): string {
+		// "C:\..." ---> "file:///C:/..." ---> "/C:/..."
+		const { pathname } = pathToFileURL(filePath);
+		// "/C:/..." ---> "/mnt/c/..."
+		return pathname.replace(
+			/^\/([A-Z]):\//i,
+			(_match, letter) => `/mnt/${letter.toLowerCase()}/`
+		);
+	}
+
+	#configPath = path.join(
+		os.tmpdir(),
+		`miniflare-config-${crypto.randomBytes(16).toString("hex")}.bin`
+	);
+
+	// WSL's localhost forwarding only seems to work when using `localhost` as
+	// the host.
+	// https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configuration-setting-for-wslconfig
+	accessibleHostOverride = "localhost";
+
+	#process?: childProcess.ChildProcess;
+	#processExitPromise?: Promise<void>;
+
+	#sendCommand(command: string): void {
+		this.#process?.stdin?.write(`${command}\n`);
+	}
+
+	async updateConfig(configBuffer: Buffer) {
+		// 1. Write config to file (this is much easier than trying to buffer STDIN
+		//    in the restart script)
+		fs.writeFileSync(this.#configPath, configBuffer);
+
+		// 2. If process running, send "restart" command to restart runtime with
+		//    new config (see `lib/wsl-restart.sh`)
+		if (this.#process) {
+			return this.#sendCommand("restart");
+		}
+
+		// 3. Otherwise, start new process
+		const runtimeProcess = childProcess.spawn(
+			WSL_EXE_PATH,
+			[
+				"--exec",
+				WSLRuntime.pathToWSL(WSL_RESTART_PATH),
+				WSLRuntime.pathToWSL(workerdPath),
+				...this.getCommonArgs(),
+				// `*:<port>` is the only address that seems to work with WSL's
+				// localhost forwarding. `localhost:<port>`/`127.0.0.1:<port>` don't.
+				// https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configuration-setting-for-wslconfig
+				`--socket-addr=${SOCKET_ENTRY}=*:${this.opts.entryPort}`,
+				`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.opts.loopbackPort}`,
+				WSLRuntime.pathToWSL(this.#configPath),
+			],
+			{ stdio: "pipe" }
+		);
+		this.#process = runtimeProcess;
+		this.#processExitPromise = waitForExit(runtimeProcess);
+		pipeOutput(runtimeProcess);
+	}
+
+	get exitPromise(): Promise<void> | undefined {
+		return this.#processExitPromise;
+	}
+
+	dispose(): Awaitable<void> {
+		this.#sendCommand("exit");
+		// We probably don't need to kill here, as the "exit" should be enough to
+		// terminate the restart script. Doesn't hurt though.
+		this.#process?.kill();
+		try {
+			fs.unlinkSync(this.#configPath);
+		} catch (e: any) {
+			// Ignore not found errors if we called dispose() without updateConfig()
+			if (e.code !== "ENOENT") throw e;
+		}
+		return this.#processExitPromise;
 	}
 }
 
-// `__dirname` relative to bundled output `dist/src/index.js`
-const RESTART_PATH = path.resolve(__dirname, "..", "..", "lib", "restart.sh");
+const DOCKER_RESTART_PATH = path.join(LIB_PATH, "docker-restart.sh");
 
 class DockerRuntime extends Runtime {
 	static isSupported() {
@@ -187,7 +274,7 @@ class DockerRuntime extends Runtime {
 		fs.writeFileSync(this.#configPath, configBuffer);
 
 		// 2. If process running, send SIGUSR1 to restart runtime with new config
-		//    (see `lib/restart.sh`)
+		//    (see `lib/docker-restart.sh`)
 		if (this.#process) {
 			this.#process.kill("SIGUSR1");
 			return;
@@ -201,7 +288,7 @@ class DockerRuntime extends Runtime {
 				"--platform=linux/amd64",
 				"--interactive",
 				"--rm",
-				`--volume=${RESTART_PATH}:/restart.sh`,
+				`--volume=${DOCKER_RESTART_PATH}:/restart.sh`,
 				`--volume=${workerdPath}:/runtime`,
 				`--volume=${this.#configPath}:/miniflare-config.bin`,
 				`--publish=${this.opts.entryHost}:${this.opts.entryPort}:8787`,
@@ -258,9 +345,9 @@ export function getSupportedRuntime(): RuntimeConstructor {
 	);
 	throw new MiniflareCoreError(
 		"ERR_RUNTIME_UNSUPPORTED",
-		`The 🦄 Cloudflare Workers Runtime 🦄 does not support your system (${
-			process.platform
-		} ${process.arch}). Either:\n${suggestions.join("\n")}\n`
+		`workerd does not support your system (${process.platform} ${
+			process.arch
+		}). Either:\n${suggestions.join("\n")}\n`
 	);
 }
 
