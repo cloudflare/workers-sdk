@@ -4,6 +4,7 @@ import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
+import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
@@ -110,7 +111,6 @@ function useLocalWorker({
 	workerDefinitions,
 	assetPaths,
 	initialPort,
-	inspectorPort,
 	rules,
 	localPersistencePath,
 	liveReload,
@@ -133,6 +133,11 @@ function useLocalWorker({
 	const removeSignalExitListener = useRef<() => void>();
 	const removeExperimentalLocalSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
+
+	// Our inspector proxy server will be binding to `LocalProps`'s `inspectorPort`.
+	// If we attempted to bind Node.js/workerd to the same inspector port, we'd get a port already in use error.
+	// Therefore, generate a new random port for our runtime's to bind their inspector service to.
+	const runtimeInspectorPortRef = useRef<number>();
 
 	useEffect(() => {
 		if (bindings.services && bindings.services.length > 0) {
@@ -197,6 +202,9 @@ function useLocalWorker({
 				bundle,
 			});
 
+			runtimeInspectorPortRef.current ??= await getPort();
+			const runtimeInspectorPort = runtimeInspectorPortRef.current;
+
 			const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 				workerName,
 				port: initialPort,
@@ -240,7 +248,7 @@ function useLocalWorker({
 					r2Buckets: bindings?.r2_buckets,
 					authenticatedAccountId: accountId,
 					kvRemote: experimentalLocalRemoteKv,
-					inspectorPort,
+					inspectorPort: runtimeInspectorPort,
 				});
 
 				const current = experimentalLocalRef.current;
@@ -268,7 +276,7 @@ function useLocalWorker({
 				try {
 					// fetch the inspector JSON response from the DevTools Inspector protocol
 					const inspectorJSONArr = (await (
-						await fetch(`http://127.0.0.1:${inspectorPort}/json`)
+						await fetch(`http://127.0.0.1:${runtimeInspectorPort}/json`)
 					).json()) as InspectorJSON;
 
 					const foundInspectorURL = inspectorJSONArr?.find((inspectorJSON) =>
@@ -297,8 +305,7 @@ function useLocalWorker({
 
 			const nodeOptions = setupNodeOptions({
 				inspect,
-				ip: initialIp,
-				inspectorPort,
+				inspectorPort: runtimeInspectorPort,
 			});
 			logger.log("⎔ Starting a local server...");
 
@@ -404,7 +411,6 @@ function useLocalWorker({
 		workerName,
 		format,
 		initialPort,
-		inspectorPort,
 		initialIp,
 		queueConsumers,
 		bindings.queues,
@@ -733,11 +739,9 @@ export function setupMiniflareOptions({
 
 export function setupNodeOptions({
 	inspect,
-	ip,
 	inspectorPort,
 }: {
 	inspect: boolean;
-	ip: string;
 	inspectorPort: number;
 }) {
 	const nodeOptions = [
@@ -746,7 +750,7 @@ export function setupNodeOptions({
 		// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 	];
 	if (inspect) {
-		nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
+		nodeOptions.push("--inspect=" + `127.0.0.1:${inspectorPort}`); // start Miniflare listening for a debugger to attach
 	}
 	return nodeOptions;
 }
