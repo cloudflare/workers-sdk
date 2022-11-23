@@ -214,6 +214,8 @@ async function executeLocally(
 			logDim
 		);
 	logger.log("dbPath: ", dbDir);
+	logger.log("existsSync(dbDir): ", existsSync(dbDir));
+	logger.log("shouldPrompt: ", shouldPrompt);
 	if (!existsSync(dbDir) && shouldPrompt) {
 		const ok = await confirm(
 			`About to create ${readableRelative(dbPath)}, ok?`
