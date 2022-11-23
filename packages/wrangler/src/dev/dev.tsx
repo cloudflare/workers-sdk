@@ -113,8 +113,8 @@ export type DevProps = {
 	name: string | undefined;
 	noBundle: boolean;
 	entry: Entry;
-	port: number;
-	ip: string;
+	initialPort: number;
+	initialIp: string;
 	inspectorPort: number;
 	rules: Config["rules"];
 	accountId: string | undefined;
@@ -171,25 +171,42 @@ export function DevImplementation(props: DevProps): JSX.Element {
 	);
 }
 
+// This is a nasty hack to allow `useHotkeys` and its "[b] open a browser" feature to read these values
+// without triggering a re-render loop when `onReady()` updates them.
+// The initially requested port can be different than what's actually used, if, for example, you request port 0.
+let ip: string;
+let port: number;
+
 function InteractiveDevSession(props: DevProps) {
 	const toggles = useHotkeys({
 		initial: {
 			local: props.initialMode === "local",
 			tunnel: false,
 		},
-		port: props.port,
-		ip: props.ip,
 		inspectorPort: props.inspectorPort,
 		inspect: props.inspect,
 		localProtocol: props.localProtocol,
 		forceLocal: props.forceLocal,
 	});
 
+	ip = props.initialIp;
+	port = props.initialPort;
+
 	useTunnel(toggles.tunnel);
+
+	const onReady = (newIp: string, newPort: number) => {
+		if (newIp !== props.initialIp || newPort !== props.initialPort) {
+			ip = newIp;
+			port = newPort;
+			if (props.onReady) {
+				props.onReady(newIp, newPort);
+			}
+		}
+	};
 
 	return (
 		<>
-			<DevSession {...props} local={toggles.local} />
+			<DevSession {...props} local={toggles.local} onReady={onReady} />
 			<Box borderStyle="round" paddingLeft={1} paddingRight={1}>
 				<Text bold={true}>[b]</Text>
 				<Text> open a browser, </Text>
@@ -312,8 +329,8 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
-			port={props.port}
-			ip={props.ip}
+			initialPort={props.initialPort}
+			initialIp={props.initialIp}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			localPersistencePath={props.localPersistencePath}
@@ -339,8 +356,8 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
 			isWorkersSite={props.isWorkersSite}
-			port={props.port}
-			ip={props.ip}
+			port={props.initialPort}
+			ip={props.initialIp}
 			localProtocol={props.localProtocol}
 			inspectorPort={props.inspectorPort}
 			// TODO: @threepointone #1167
@@ -503,25 +520,16 @@ type useHotkeysInitialState = {
 };
 function useHotkeys(props: {
 	initial: useHotkeysInitialState;
-	port: number;
-	ip: string;
 	inspectorPort: number;
 	inspect: boolean;
 	localProtocol: "http" | "https";
 	forceLocal: boolean | undefined;
 }) {
-	const {
-		initial,
-		port,
-		ip,
-		inspectorPort,
-		inspect,
-		localProtocol,
-		forceLocal,
-	} = props;
+	const { initial, inspectorPort, inspect, localProtocol, forceLocal } = props;
 	// UGH, we should put port in context instead
 	const [toggles, setToggles] = useState(initial);
 	const { exit } = useApp();
+
 	useInput(
 		async (
 			input,
