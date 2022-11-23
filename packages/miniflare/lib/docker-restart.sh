@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Restarts a process on receiving SIGUSR1.
 # Usage: ./restart.sh <command> <...args>
+set -eo pipefail
 
 # Start process and record its PID
 "$@" &
