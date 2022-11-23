@@ -1,89 +1,53 @@
-import { Text, render } from "ink";
-import Table from "ink-table";
-import React, { Fragment } from "react";
+import chalk from "chalk";
 import { fetchListResult, fetchResult } from "./cfetch";
-import { logger } from "./logger";
+import { line, table } from "./ui";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
 
-export async function whoami() {
-	logger.log("Getting User settings...");
+export async function whoami(): Promise<void> {
+	line("Getting User settings...");
 	const user = await getUserInfo();
-	const { unmount } = render(<WhoAmI user={user}></WhoAmI>);
-	unmount();
-}
+	if (user === undefined) {
+		return void line("You are not authenticated. Please run `wrangler login`.");
+	}
 
-export function WhoAmI({ user }: { user: UserInfo | undefined }) {
-	return user ? (
-		<>
-			<Email tokenType={user.authType} email={user.email}></Email>
-			<Accounts accounts={user.accounts}></Accounts>
-			<Permissions
-				tokenType={user.authType}
-				tokenPermissions={user.tokenPermissions}
-			/>
-		</>
-	) : (
-		<Text>You are not authenticated. Please run `wrangler login`.</Text>
+	if (user.email !== undefined) {
+		line(
+			`👋 You are logged in with an ${
+				user.authType
+			}, associated with the email ${chalk.blue(user.email)}!`
+		);
+	} else {
+		line(
+			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
+		);
+	}
+	table(
+		user.accounts.map((account) => ({
+			"Account Name": account.name,
+			"Account ID": account.id,
+		}))
 	);
-}
-
-function Email(props: { tokenType: string; email: string | undefined }) {
-	return props.email === undefined ? (
-		<Text>
-			👋 You are logged in with an {props.tokenType}. Unable to retrieve email
-			for this user. Are you missing the `User-&gt;User Details-&gt;Read`
-			permission?
-		</Text>
-	) : (
-		<Text>
-			👋 You are logged in with an {props.tokenType}, associated with the email
-			&apos;{props.email}&apos;!
-		</Text>
-	);
-}
-
-function Accounts(props: { accounts: AccountInfo[] }) {
-	const accounts = props.accounts.map((account) => ({
-		"Account Name": account.name,
-		"Account ID": account.id,
-	}));
-	return <Table data={accounts}></Table>;
-}
-
-function Permissions(props: {
-	tokenPermissions: string[] | undefined;
-	tokenType: string;
-}) {
 	const permissions =
-		props.tokenPermissions?.map((scope) => scope.split(":")) || [];
-	return props.tokenType === "OAuth Token" ? (
-		props.tokenPermissions ? (
-			<>
-				<Text>
-					🔓 Token Permissions: If scopes are missing, you may need to logout
-					and re-login.
-				</Text>
-				<Text>Scope (Access)</Text>
-				{permissions.map(([scope, access], index) => (
-					<Fragment key={`${scope}${index}`}>
-						<Text>
-							- {scope} {access && `(${access})`}
-						</Text>
-					</Fragment>
-				))}
-			</>
-		) : null
-	) : (
-		<Text>
-			🔓 To see token permissions visit
-			https://dash.cloudflare.com/profile/api-tokens
-		</Text>
+		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
+
+	if (user.authType !== "OAuth Token") {
+		return void line(
+			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens`
+		);
+	}
+	line(
+		`🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.`
 	);
+	line(`Scope (Access)`);
+	for (const [scope, access] of permissions) {
+		line(`- ${scope} ${access ? `(${access})` : ``}`);
+	}
 }
 
+type AuthType = "Global API Key" | "API Token" | "OAuth Token";
 export interface UserInfo {
 	apiToken: string;
-	authType: string;
+	authType: AuthType;
 	email: string | undefined;
 	accounts: AccountInfo[];
 	tokenPermissions: string[] | undefined;

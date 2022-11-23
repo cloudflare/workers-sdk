@@ -105,6 +105,7 @@
 		"@miniflare/durable-objects": "2.10.0",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
+		"cli-table3": "^0.6.3",
 		"esbuild": "0.14.51",
 		"miniflare": "2.10.0",
 		"nanoid": "^3.3.3",
