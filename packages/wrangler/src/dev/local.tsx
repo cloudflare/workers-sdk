@@ -164,13 +164,6 @@ function useLocalWorker({
 		async function startLocalWorker() {
 			if (!bundle || !format) return;
 
-			// port for the worker
-			await waitForPortToBeAvailable(initialPort, {
-				retryPeriod: 200,
-				timeout: 2000,
-				abortSignal: abortController.signal,
-			});
-
 			// In local mode, we want to copy all referenced modules into
 			// the output bundle directory before starting up
 			for (const module of bundle.modules) {
@@ -302,6 +295,15 @@ function useLocalWorker({
 
 				return;
 			}
+
+			// Wait for the Worker port to be available. We don't want to do this in experimental local
+			// mode, as we only `dispose()` the Miniflare 3 instance, and shutdown the server when
+			// unmounting the component, not when props change. If we did, we'd just timeout every time.
+			await waitForPortToBeAvailable(initialPort, {
+				retryPeriod: 200,
+				timeout: 2000,
+				abortSignal: abortController.signal,
+			});
 
 			const nodeOptions = setupNodeOptions({
 				inspect,
@@ -890,5 +892,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.7"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.8"));
 }
