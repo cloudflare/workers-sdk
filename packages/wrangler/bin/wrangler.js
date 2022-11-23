@@ -62,15 +62,21 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			...process.argv.slice(2),
 		],
 		{
-			stdio: "inherit",
+			stdio: ["inherit", "inherit", "inherit", "ipc"],
 			env: {
 				...process.env,
 				NODE_EXTRA_CA_CERTS: pathToCACerts,
 			},
 		}
-	).on("exit", (code) =>
-		process.exit(code === undefined || code === null ? 0 : code)
-	);
+	)
+		.on("exit", (code) =>
+			process.exit(code === undefined || code === null ? 0 : code)
+		)
+		.on("message", (message) => {
+			if (process.send) {
+				process.send(message);
+			}
+		});
 }
 
 /**
@@ -95,11 +101,17 @@ function runDelegatedWrangler() {
 		process.execPath,
 		[resolvedBinaryPath, ...process.argv.slice(2)],
 		{
-			stdio: "inherit",
+			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
-	).on("exit", (code) =>
-		process.exit(code === undefined || code === null ? 0 : code)
-	);
+	)
+		.on("exit", (code) =>
+			process.exit(code === undefined || code === null ? 0 : code)
+		)
+		.on("message", (message) => {
+			if (process.send) {
+				process.send(message);
+			}
+		});
 }
 
 /**
