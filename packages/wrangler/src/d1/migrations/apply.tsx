@@ -5,6 +5,8 @@ import Table from "ink-table";
 import React from "react";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
+import { CI } from "../../is-ci";
+import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createBackup } from "../backups";
@@ -21,7 +23,17 @@ import type { BaseSqlExecuteArgs } from "../execute";
 import type { Argv } from "yargs";
 
 export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
-	return Database(yargs);
+	return Database(yargs)
+		.option("local", {
+			describe:
+				"Execute commands/files against a local DB for use with wrangler dev --local",
+			type: "boolean",
+		})
+		.option("persist-to", {
+			describe: "Specify directory to use for local persistence (for --local)",
+			type: "string",
+			requiresArg: true,
+		});
 }
 
 export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
@@ -88,8 +100,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 			return;
 		}
 
-		const isInteractive = process.stdout.isTTY;
-		if (isInteractive) {
+		if (isInteractive() && !CI.isCI()) {
 			const ok = await confirm(
 				`About to apply ${unappliedMigrations.length} migration(s)\n` +
 					"Your database may not be available to serve requests during the migration, continue?",
@@ -121,7 +132,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 					local,
 					config,
 					database,
-					undefined,
+					isInteractive() && !CI.isCI(),
 					persistTo,
 					undefined,
 					query
