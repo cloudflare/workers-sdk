@@ -395,7 +395,13 @@ function useLocalWorker({
 		}
 
 		startLocalWorker().catch((err) => {
-			logger.error("local worker:", err);
+			if (err.code === "ERR_RUNTIME_FAILURE") {
+				// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.
+				// workerd will log its own errors, and our stack trace won't have any useful information.
+				logger.error(err.message);
+			} else {
+				logger.error("local worker:", err);
+			}
 		});
 
 		return () => {
