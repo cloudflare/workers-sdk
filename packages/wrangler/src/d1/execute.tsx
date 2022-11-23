@@ -213,7 +213,7 @@ async function executeLocally(
 			["@miniflare/d1", "@miniflare/shared"],
 			logDim
 		);
-
+	logger.log("dbPath: ", dbDir);
 	if (!existsSync(dbDir) && shouldPrompt) {
 		const ok = await confirm(
 			`About to create ${readableRelative(dbPath)}, ok?`
