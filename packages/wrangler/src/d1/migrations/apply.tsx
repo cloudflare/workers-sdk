@@ -131,7 +131,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 					local,
 					config,
 					database,
-					undefined,
+					isInteractive,
 					persistTo,
 					undefined,
 					query
