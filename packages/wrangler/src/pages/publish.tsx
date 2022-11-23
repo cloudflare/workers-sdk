@@ -151,10 +151,11 @@ export const Handler = async ({
 
 				const productionBranch = await prompt(
 					"Enter the production branch name:",
-					"text",
-					isGitDir
-						? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
-						: "production"
+					{
+						defaultValue: isGitDir
+							? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
+							: "production",
+					}
 				);
 
 				if (!productionBranch) {

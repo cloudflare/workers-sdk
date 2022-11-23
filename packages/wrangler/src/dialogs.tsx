@@ -49,16 +49,16 @@ export async function prompt(
 	return value;
 }
 
-interface SelectOption {
+interface SelectOption<Values> {
 	title: string;
 	description?: string;
-	value: string;
+	value: Values;
 }
-export async function select(
+export async function select<Values extends string>(
 	text: string,
-	choices: SelectOption[],
+	choices: SelectOption<Values>[],
 	defaultOption?: number
-): Promise<string> {
+): Promise<Values> {
 	if (isNonInteractiveOrCI()) {
 		assert(
 			defaultOption !== undefined,

@@ -683,19 +683,19 @@ async function getNewWorkerType(newWorkerFilename: string) {
 		[
 			{
 				value: "none",
-				label: "None",
+				title: "None",
 			},
 			{
 				value: "fetch",
-				label: "Fetch handler",
+				title: "Fetch handler",
 			},
 			{
 				value: "scheduled",
-				label: "Scheduled handler",
+				title: "Scheduled handler",
 			},
 		],
 		1
-	) as Promise<"none" | "fetch" | "scheduled">;
+	);
 }
 
 async function getNewWorkerTestType() {
@@ -704,15 +704,15 @@ async function getNewWorkerTestType() {
 		[
 			{
 				value: "vitest",
-				label: "Vitest",
+				title: "Vitest",
 			},
 			{
 				value: "jest",
-				label: "Jest",
+				title: "Jest",
 			},
 		],
 		1
-	) as Promise<"jest" | "vitest">;
+	);
 }
 
 function getNewWorkerTemplate(
