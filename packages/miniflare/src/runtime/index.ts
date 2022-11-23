@@ -119,7 +119,6 @@ class NativeRuntime extends Runtime {
 		// 2. Start new process
 		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
 			stdio: "pipe",
-			shell: true,
 		});
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
