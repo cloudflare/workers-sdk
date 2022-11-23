@@ -5,6 +5,7 @@ import Table from "ink-table";
 import React from "react";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
+import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -99,7 +100,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 			return;
 		}
 
-		if (isInteractive()) {
+		if (isInteractive() && !CI.isCI()) {
 			const ok = await confirm(
 				`About to apply ${unappliedMigrations.length} migration(s)\n` +
 					"Your database may not be available to serve requests during the migration, continue?",
@@ -131,7 +132,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 					local,
 					config,
 					database,
-					isInteractive(),
+					isInteractive() && !CI.isCI(),
 					persistTo,
 					undefined,
 					query

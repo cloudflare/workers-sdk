@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "path";
 import { confirm } from "../../dialogs";
+import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
@@ -80,7 +81,7 @@ const listAppliedMigrations = async (
 		local,
 		config,
 		name,
-		isInteractive(),
+		isInteractive() && !CI.isCI(),
 		persistTo,
 		undefined,
 		Query
@@ -131,7 +132,7 @@ export const initMigrationsTable = async (
 		local,
 		config,
 		name,
-		isInteractive(),
+		isInteractive() && !CI.isCI(),
 		persistTo,
 		undefined,
 		`
