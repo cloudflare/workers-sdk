@@ -31,7 +31,6 @@ describe("Pages Functions", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());

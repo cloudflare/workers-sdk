@@ -57,7 +57,6 @@ describe("Pages Functions", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "a"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());
@@ -86,7 +85,6 @@ describe("Pages Functions", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "b"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());
@@ -115,7 +113,6 @@ describe("Pages Functions", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "c"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());
@@ -145,7 +142,6 @@ describe("Pages Functions", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "d"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());

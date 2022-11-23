@@ -44,7 +44,6 @@ describe("Service Bindings", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "a"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());
@@ -74,7 +73,6 @@ describe("Service Bindings", () => {
 				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "b"),
-				env: { BROWSER: "none", ...process.env },
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());
