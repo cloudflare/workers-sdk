@@ -71,12 +71,9 @@ export async function deleteHandler(args: DeleteArgs) {
 
 	assert(accountId, "Missing accountId");
 
-	let confirmed = true;
-	if (isInteractive() || !CI.isCI()) {
-		confirmed = await confirm(
-			`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
-		);
-	}
+	const confirmed = await confirm(
+		`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
+	);
 
 	if (confirmed) {
 		await fetchResult(
