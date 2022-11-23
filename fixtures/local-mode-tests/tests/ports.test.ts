@@ -6,6 +6,10 @@ describe("worker", () => {
 		stop: () => Promise<void>;
 	};
 	let workers: Worker[];
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
@@ -52,13 +56,17 @@ describe("worker", () => {
 				{ disableExperimentalWarning: true }
 			) as Worker,
 		]);
+
+		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
 		await Promise.all(workers.map(async (worker) => await worker.stop()));
 	});
 
-	it("should invoke the worker and exit", async () => {
+	it.concurrent("should invoke the worker and exit", async () => {
+		await readyPromise;
+
 		const responses = await Promise.all(
 			workers.map(async (worker) => await worker.fetch())
 		);

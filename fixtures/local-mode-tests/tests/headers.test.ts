@@ -8,6 +8,10 @@ describe("worker", () => {
 		) => Promise<Response | undefined>;
 		stop: () => Promise<void>;
 	};
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
@@ -15,13 +19,16 @@ describe("worker", () => {
 			{},
 			{ disableExperimentalWarning: true }
 		);
+
+		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
 		await worker.stop();
 	});
 
-	it("should return Hi by default", async () => {
+	it.concurrent("should return Hi by default", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/");
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -29,7 +36,8 @@ describe("worker", () => {
 			expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
 		}
 	});
-	it("should return Bonjour when French", async () => {
+	it.concurrent("should return Bonjour when French", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -38,7 +46,8 @@ describe("worker", () => {
 		}
 	});
 
-	it("should return G'day when Australian", async () => {
+	it.concurrent("should return G'day when Australian", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "en-AU" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -47,7 +56,8 @@ describe("worker", () => {
 		}
 	});
 
-	it("should return Good day when British", async () => {
+	it.concurrent("should return Good day when British", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "en-GB" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -56,7 +66,8 @@ describe("worker", () => {
 		}
 	});
 
-	it("should return Howdy when Texan", async () => {
+	it.concurrent("should return Howdy when Texan", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "en-TX" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -65,7 +76,8 @@ describe("worker", () => {
 		}
 	});
 
-	it("should return Hello when American", async () => {
+	it.concurrent("should return Hello when American", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "en-US" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -74,7 +86,8 @@ describe("worker", () => {
 		}
 	});
 
-	it("should return Hola when Spanish", async () => {
+	it.concurrent("should return Hola when Spanish", async () => {
+		await readyPromise;
 		const resp = await worker.fetch("/", { headers: { lang: "es-ES" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {

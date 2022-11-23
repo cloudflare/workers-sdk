@@ -5,18 +5,25 @@ describe("worker", () => {
 		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
 	beforeAll(async () => {
 		worker = await unstable_dev("src/nodeBuiltinPackage.ts", {
 			disableExperimentalWarning: true,
 		});
+
+		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
 		await worker.stop();
 	});
 
-	it("returns hex string", async () => {
+	it.concurrent("returns hex string", async () => {
+		await readyPromise;
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 

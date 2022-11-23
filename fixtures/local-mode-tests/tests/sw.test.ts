@@ -5,6 +5,10 @@ describe("worker", () => {
 		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
@@ -15,13 +19,16 @@ describe("worker", () => {
 			},
 			{ disableExperimentalWarning: true }
 		);
+
+		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
 		await worker.stop();
 	});
 
-	it("renders", async () => {
+	it.concurrent("renders", async () => {
+		await readyPromise;
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 
