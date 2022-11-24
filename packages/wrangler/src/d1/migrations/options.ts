@@ -9,7 +9,7 @@ export function DatabaseWithLocal(yargs: Argv) {
 			type: "boolean",
 		})
 		.option("persist-to", {
-			describe: "Specify directory to use for local persistence (for --local)",
+			describe: "Specify directory to use for local persistence (you must use --local with this flag)",
 			type: "string",
 			requiresArg: true,
 		})
