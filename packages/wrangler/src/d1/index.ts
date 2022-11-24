@@ -26,6 +26,7 @@ export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 			)
 			.command("backup", "Interact with D1 Backups", (yargs2) =>
 				yargs2
+					.demandCommand()
 					.command(
 						"list <name>",
 						"List your D1 backups",
@@ -74,6 +75,7 @@ export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 			)
 			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
 				yargs2
+					.demandCommand()
 					.command(
 						"list <database>",
 						"List your D1 migrations",
