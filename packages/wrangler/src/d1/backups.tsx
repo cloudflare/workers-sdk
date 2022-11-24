@@ -141,9 +141,9 @@ export const RestoreHandler = withConfig<BackupRestoreArgs>(
 			name
 		);
 
-		console.log(`Restoring ${name} from backup ${backupId}....`);
+		logger.log(`Restoring ${name} from backup ${backupId}....`);
 		await restoreBackup(accountId, db.uuid, backupId);
-		console.log(`Done!`);
+		logger.log(`Done!`);
 	}
 );
 

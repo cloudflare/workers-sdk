@@ -11,29 +11,19 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createBackup } from "../backups";
 import { executeSql } from "../execute";
-import { Database } from "../options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
+import { DatabaseWithLocal } from "./options";
 import type { ParseError } from "../../parse";
 import type { BaseSqlExecuteArgs } from "../execute";
 import type { Argv } from "yargs";
 
 export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
-	return Database(yargs)
-		.option("local", {
-			describe:
-				"Execute commands/files against a local DB for use with wrangler dev --local",
-			type: "boolean",
-		})
-		.option("persist-to", {
-			describe: "Specify directory to use for local persistence (for --local)",
-			type: "string",
-			requiresArg: true,
-		});
+	return DatabaseWithLocal(yargs);
 }
 
 export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
