@@ -1,3 +1,4 @@
+import { resolve } from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -16,42 +17,42 @@ describe("worker", () => {
 
 		workers = await Promise.all([
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				"src/basicModule.ts",
+				resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,

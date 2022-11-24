@@ -5,7 +5,7 @@ import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
-describe("Pages Functions", () => {
+describe.skip("Pages Functions", () => {
 	let aWranglerProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;

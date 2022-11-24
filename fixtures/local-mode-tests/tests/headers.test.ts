@@ -1,3 +1,4 @@
+import { resolve } from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -15,7 +16,7 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
-			"src/headers.ts",
+			resolve(__dirname, "..", "src", "headers.ts"),
 			{},
 			{ disableExperimentalWarning: true }
 		);

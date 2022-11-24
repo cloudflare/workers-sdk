@@ -5,7 +5,7 @@ import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
-describe("Service Bindings", () => {
+describe.skip("Service Bindings", () => {
 	let aProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;

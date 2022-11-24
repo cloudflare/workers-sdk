@@ -1,3 +1,4 @@
+import { resolve } from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -10,12 +11,18 @@ describe("worker", () => {
 		resolveReadyPromise = resolve;
 	});
 
+	let originalNodeEnv: string | undefined;
+
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
+		originalNodeEnv = process.env.NODE_ENV;
+
+		process.env.NODE_ENV = "local-testing";
+
 		worker = await unstable_dev(
-			"src/module.ts",
+			resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: "src/wrangler.module.toml",
+				config: resolve(__dirname, "..", "src", "wrangler.module.toml"),
 				vars: { VAR4: "https://google.com" },
 			},
 			{ disableExperimentalWarning: true }
@@ -25,6 +32,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
+		process.env.NODE_ENV = originalNodeEnv;
 		await worker.stop();
 	});
 
