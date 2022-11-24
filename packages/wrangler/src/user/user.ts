@@ -205,7 +205,7 @@
    limitations under the License.
   */
 
-import assert, { AssertionError } from "node:assert";
+import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
@@ -214,20 +214,20 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { HostURL } from "@webcontainer/env";
+import chalk from "chalk";
 import { fetch } from "undici";
 import {
 	getConfigCache,
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
-import { select } from "../dialogs";
+import { NoDefaultValueProvided, select } from "../dialogs";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
-import { line, table } from "../ui";
 import { getAccountChoices } from "./choose-account";
 import { getAuthFromEnv } from "./env-vars";
 import { generateAuthUrl } from "./generate-auth-url";
@@ -235,7 +235,6 @@ import { generateRandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ApiCredentials } from "./env-vars";
 import type { ParsedUrlQuery } from "node:querystring";
-
 /**
  * An implementation of rfc6749#section-4.1 and rfc7636.
  */
@@ -1072,12 +1071,12 @@ export async function logout(): Promise<void> {
 }
 
 export function listScopes(message = "💁 Available scopes:"): void {
-	line(message);
+	logger.log(message);
 	const data = ScopeKeys.map((scope: Scope) => ({
 		Scope: scope,
 		Description: Scopes[scope],
 	}));
-	table(data);
+	logger.table(data);
 	// TODO: maybe a good idea to show usage here
 }
 
@@ -1097,13 +1096,12 @@ export async function getAccountId(): Promise<string | undefined> {
 	}
 
 	try {
-		const accountID = await select(
-			"Select an account",
-			accounts.map((account) => ({
+		const accountID = await select("Select an account", {
+			choices: accounts.map((account) => ({
 				title: account.name,
 				value: account.id,
-			}))
-		);
+			})),
+		});
 		const account = accounts.find(
 			(a) => a.id === accountID
 		) as ChooseAccountItem;
@@ -1111,14 +1109,18 @@ export async function getAccountId(): Promise<string | undefined> {
 		return accountID;
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
-		if (e instanceof AssertionError) {
+		if (e instanceof NoDefaultValueProvided) {
 			throw new Error(
-				"More than one account available but unable to select one in non-interactive mode.\n" +
-					`Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
-					`Available accounts are ("<name>" - "<id>"):\n` +
-					accounts
-						.map((account) => `  "${account.name}" - "${account.id}")`)
-						.join("\n")
+				`More than one account available but unable to select one in non-interactive mode.
+Please set the appropriate ${chalk.yellow("account_id")} in your ${chalk.yellow(
+					"wrangler.toml"
+				)} file.
+Available accounts are (${chalk.blue("<name>")}: ${chalk.yellow("<id>")}):
+${accounts
+	.map(
+		(account) => `  ${chalk.blue(account.name)}: ${chalk.yellow(account.id)}`
+	)
+	.join("\n")}`
 			);
 		}
 		throw e;

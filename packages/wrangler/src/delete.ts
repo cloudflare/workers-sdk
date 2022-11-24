@@ -3,8 +3,6 @@ import path from "path";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { confirm } from "./dialogs";
-import { CI } from "./is-ci";
-import isInteractive from "./is-interactive";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";

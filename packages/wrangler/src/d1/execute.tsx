@@ -9,7 +9,7 @@ import React from "react";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { confirm, logDim } from "../dialogs";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
@@ -211,7 +211,7 @@ async function executeLocally(
 	const [{ Statement }, { createSQLiteDB }] =
 		await npxImport<MiniflareNpxImportTypes>(
 			["@miniflare/d1", "@miniflare/shared"],
-			logDim
+			logger.log
 		);
 
 	if (!existsSync(dbDir) && shouldPrompt) {
@@ -347,6 +347,6 @@ async function loadSqlUtils() {
 		},
 	] = await npxImport<
 		[{ default: SQL }, { default: { default: typeof splitSqlQuery } }]
-	>(["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"], logDim);
+	>(["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"], logger.log);
 	return { parser, splitter };
 }

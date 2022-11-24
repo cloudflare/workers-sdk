@@ -678,9 +678,8 @@ async function installPackages(
 }
 
 async function getNewWorkerType(newWorkerFilename: string) {
-	return select(
-		`Would you like to create a Worker at ${newWorkerFilename}?`,
-		[
+	return select(`Would you like to create a Worker at ${newWorkerFilename}?`, {
+		choices: [
 			{
 				value: "none",
 				title: "None",
@@ -694,14 +693,13 @@ async function getNewWorkerType(newWorkerFilename: string) {
 				title: "Scheduled handler",
 			},
 		],
-		1
-	);
+		defaultOption: 1,
+	});
 }
 
 async function getNewWorkerTestType() {
-	return select(
-		`Which test runner would you like to use?`,
-		[
+	return select(`Which test runner would you like to use?`, {
+		choices: [
 			{
 				value: "vitest",
 				title: "Vitest",
@@ -711,8 +709,8 @@ async function getNewWorkerTestType() {
 				title: "Jest",
 			},
 		],
-		1
-	);
+		defaultOption: 1,
+	});
 }
 
 function getNewWorkerTemplate(

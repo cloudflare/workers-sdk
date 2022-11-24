@@ -10,19 +10,48 @@ function isNonInteractiveOrCI(): boolean {
 	return !isInteractive() || CI.isCI();
 }
 
+export class NoDefaultValueProvided extends Error {
+	constructor() {
+		// This is user-facing, so make the message something understandable
+		// It _should_ alsways be caught and replaced with a more descriptive error
+		// but this is fine as a fallback.
+		super("This command cannot be run in a non-interactive context");
+	}
+}
+
+interface ConfirmOptions {
+	defaultValue?: boolean;
+}
+
 export async function confirm(
 	text: string,
-	defaultValue = true
+	{ defaultValue = true }: ConfirmOptions = {}
 ): Promise<boolean> {
-	if (isNonInteractiveOrCI()) return defaultValue;
+	if (isNonInteractiveOrCI()) {
+		logger.log(`? ${text}`);
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using default value in non-interactive context:"
+			)} ${chalk.white.bold(defaultValue ? "yes" : "no")}`
+		);
+		return defaultValue;
+	}
 	const { value } = await prompts({
 		type: "confirm",
 		name: "value",
 		message: text,
 		initial: defaultValue,
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
 	});
 	return value;
 }
+
 interface PromptOptions {
 	defaultValue?: string;
 	isSecret?: boolean;
@@ -33,9 +62,12 @@ export async function prompt(
 	options: PromptOptions = {}
 ): Promise<string> {
 	if (isNonInteractiveOrCI()) {
-		assert(
-			options?.defaultValue !== undefined,
-			"A default value must be provided in non-interactive contexts"
+		assert(options?.defaultValue !== undefined, new NoDefaultValueProvided());
+		logger.log(`? ${text}`);
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using default value in non-interactive context:"
+			)} ${chalk.white.bold(options.defaultValue)}`
 		);
 		return options.defaultValue;
 	}
@@ -45,8 +77,20 @@ export async function prompt(
 		message: text,
 		initial: options?.defaultValue,
 		style: options?.isSecret ? "password" : "default",
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
 	});
 	return value;
+}
+
+interface SelectOptions<Values> {
+	choices: SelectOption<Values>[];
+	defaultOption?: number;
 }
 
 interface SelectOption<Values> {
@@ -54,43 +98,35 @@ interface SelectOption<Values> {
 	description?: string;
 	value: Values;
 }
+
 export async function select<Values extends string>(
 	text: string,
-	choices: SelectOption<Values>[],
-	defaultOption?: number
+	options: SelectOptions<Values>
 ): Promise<Values> {
 	if (isNonInteractiveOrCI()) {
-		assert(
-			defaultOption !== undefined,
-			"A default value must be provided in non-interactive contexts"
+		assert(options?.defaultOption !== undefined, new NoDefaultValueProvided());
+		logger.log(`? ${text}`);
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using default value in non-interactive context:"
+			)} ${chalk.white.bold(options.choices[options.defaultOption].title)}`
 		);
-		return choices[defaultOption].value;
+		return options.choices[options.defaultOption].value;
 	}
 
 	const { value } = await prompts({
 		type: "select",
 		name: "value",
 		message: text,
-		choices,
-		initial: defaultOption,
+		choices: options.choices,
+		initial: options.defaultOption,
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
 	});
 	return value;
-}
-
-export function logDim(msg: string) {
-	console.log(chalk.gray(msg));
-}
-
-export async function fromDashMessagePrompt(
-	deploySource: "dash" | "wrangler" | "api"
-): Promise<boolean | void> {
-	if (deploySource === "dash") {
-		logger.warn(
-			`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
-		);
-		return confirm("Would you like to continue?");
-	}
-}
-export async function tailDOLogPrompt(): Promise<boolean | void> {
-	return confirm("Would you like to continue?");
 }

@@ -1,27 +1,29 @@
 import chalk from "chalk";
 import { fetchListResult, fetchResult } from "./cfetch";
-import { line, table } from "./ui";
+import { logger } from "./logger";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
 
 export async function whoami(): Promise<void> {
-	line("Getting User settings...");
+	logger.log("Getting User settings...");
 	const user = await getUserInfo();
 	if (user === undefined) {
-		return void line("You are not authenticated. Please run `wrangler login`.");
+		return void logger.log(
+			"You are not authenticated. Please run `wrangler login`."
+		);
 	}
 
 	if (user.email !== undefined) {
-		line(
+		logger.log(
 			`👋 You are logged in with an ${
 				user.authType
 			}, associated with the email ${chalk.blue(user.email)}!`
 		);
 	} else {
-		line(
+		logger.log(
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
 		);
 	}
-	table(
+	logger.table(
 		user.accounts.map((account) => ({
 			"Account Name": account.name,
 			"Account ID": account.id,
@@ -31,16 +33,16 @@ export async function whoami(): Promise<void> {
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
 
 	if (user.authType !== "OAuth Token") {
-		return void line(
+		return void logger.log(
 			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens`
 		);
 	}
-	line(
+	logger.log(
 		`🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.`
 	);
-	line(`Scope (Access)`);
+	logger.log(`Scope (Access)`);
 	for (const [scope, access] of permissions) {
-		line(`- ${scope} ${access ? `(${access})` : ``}`);
+		logger.log(`- ${scope} ${access ? `(${access})` : ``}`);
 	}
 }
 
