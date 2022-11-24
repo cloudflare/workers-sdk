@@ -36,21 +36,21 @@ export const Handler = withConfig<CreateArgs>(
 			name
 		);
 
-		console.log(`About to delete DB '${name}' (${db.uuid}).`);
+		logger.log(`About to delete DB '${name}' (${db.uuid}).`);
 		if (!skipConfirmation) {
 			const response = await confirm(`Ok to proceed?`);
 			if (!response) {
-				console.log(`Not deleting.`);
+				logger.log(`Not deleting.`);
 				return;
 			}
 		}
 
-		console.log("Deleting...");
+		logger.log("Deleting...");
 
 		await fetchResult(`/accounts/${accountId}/d1/database/${db.uuid}`, {
 			method: "DELETE",
 		});
 
-		console.log(`Deleted '${name}' successfully.`);
+		logger.log(`Deleted '${name}' successfully.`);
 	}
 );
