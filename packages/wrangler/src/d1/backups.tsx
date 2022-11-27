@@ -199,6 +199,11 @@ export const DownloadHandler = withConfig<BackupDownloadArgs>(
 
 		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
 		const response = await getBackupResponse(accountId, db.uuid, backupId);
+		if (!response.ok) {
+			throw new Error(
+				`Failed to download backup ${backupId} from '${name}' - got ${response.status} from the API`
+			);
+		}
 		logger.log(`🌀 Saving to ${filename}`);
 		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
 		const buffer = await response.arrayBuffer();
