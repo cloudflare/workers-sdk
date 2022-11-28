@@ -3,11 +3,11 @@ import { join } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
-import { fetch as miniflareFetch } from "@miniflare/core";
 import {
 	Response as MiniflareResponse,
 	Request as MiniflareRequest,
 } from "@miniflare/core";
+import { upgradingFetch as miniflareFetch } from "@miniflare/web-sockets";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { hashFile } from "../pages/hash";
@@ -40,7 +40,12 @@ export default async function generateASSETSBinding(options: Options) {
 			try {
 				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
-				return await miniflareFetch(url, miniflareRequest);
+				const proxyRequest = new MiniflareRequest(url, miniflareRequest);
+				if (proxyRequest.headers.get("Upgrade") === "websocket") {
+					proxyRequest.headers.delete("Sec-WebSocket-Accept");
+					proxyRequest.headers.delete("Sec-WebSocket-Key");
+				}
+				return await miniflareFetch(proxyRequest);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
