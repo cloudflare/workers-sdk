@@ -1,5 +1,4 @@
 import { mkdirSync } from "node:fs";
-import fetchMock from "jest-fetch-mock";
 import { rest } from "msw";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
@@ -38,7 +37,7 @@ describe("metrics", () => {
 	});
 	afterEach(() => {
 		global.SPARROW_SOURCE_KEY = ORIGINAL_SPARROW_SOURCE_KEY;
-		fetchMock.resetMocks();
+		// fetchMock.resetMocks();
 		unsetAllMocks();
 		purgeConfigCaches();
 	});
@@ -59,8 +58,8 @@ describe("metrics", () => {
 		describe("identify()", () => {
 			it("should send a request to the default URL", async () => {
 				msw.use(
-					rest.post("*/identify", (_request, response, context) => {
-						return response.once(context.status(200), context.text(""));
+					rest.post("*/identify", (_req, resp, ctx) => {
+						return resp.once(ctx.status(200), ctx.text(""));
 					})
 				);
 
@@ -106,12 +105,19 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
+				msw.use(
+					rest.post("*/identify", (_req, resp, ctx) => {
+						console.error("identify was called when dispatcher is disabled");
+						return resp(ctx.status(200));
+					})
+				);
+
 				const dispatcher = await getMetricsDispatcher({
 					...MOCK_DISPATCHER_OPTIONS,
 					sendMetrics: false,
 				});
 				await dispatcher.identify({ a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(0);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
 				);
@@ -121,23 +127,43 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the request fails", async () => {
+				msw.use(
+					rest.post("*/identify", (_req, resp, ctx) => {
+						return resp.once(ctx.status(400));
+					})
+				);
+
+				const pendingRequest = waitForRequest(
+					"POST",
+					"https://sparrow.cloudflare.com/api/v1/identify"
+				);
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				fetchMock.mockReject(new Error("BAD REQUEST"));
 				await dispatcher.identify({ a: 1, b: 2 });
+				await pendingRequest;
+
 				expect(std.debug).toMatchInlineSnapshot(`
-			"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-			Metrics dispatcher: Failed to send request: BAD REQUEST"
-		`);
+				"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+				Metrics dispatcher: Failed to send request: BAD REQUEST"
+			`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should write a warning log if no source key has been provided", async () => {
+				msw.use(
+					rest.post("*/identify", (_request, response, context) => {
+						console.error(
+							"identify was called when when source key was not provided"
+						);
+						return response.once(context.status(200));
+					})
+				);
+
 				global.SPARROW_SOURCE_KEY = undefined;
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
 				await dispatcher.identify({ a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(0);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. { type: 'identify', name: 'identify', properties: { a: 1, b: 2 } }"`
 				);
@@ -149,13 +175,33 @@ describe("metrics", () => {
 
 		describe("sendEvent()", () => {
 			it("should send a request to the default URL", async () => {
+				msw.use(
+					rest.post("*/event", (_request, response, context) => {
+						return response(context.status(200), context.text(""));
+					})
+				);
+
+				const pendingRequest = waitForRequest(
+					"POST",
+					"https://sparrow.cloudflare.com/api/v1/event"
+				);
+
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				fetchMock.mockResponse("");
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(1);
-				const [url, { body, headers }] = fetchMock.mock.calls[0];
-				expect(url).toEqual("https://sparrow.cloudflare.com/api/v1/event");
-				expect(JSON.parse(body)).toEqual(
+				const request = await pendingRequest;
+				expect(request.url.toString()).toEqual(
+					"https://sparrow.cloudflare.com/api/v1/event"
+				);
+
+				const headersObject = request.headers.all();
+				expect(headersObject).toEqual(
+					expect.objectContaining({
+						"sparrow-source-key": "MOCK_KEY",
+					})
+				);
+
+				const body = await request.json();
+				expect(body).toEqual(
 					expect.objectContaining({
 						event: "some-event",
 						properties: {
@@ -167,11 +213,7 @@ describe("metrics", () => {
 						},
 					})
 				);
-				expect(headers).toEqual(
-					expect.objectContaining({
-						"Sparrow-Source-Key": "MOCK_KEY",
-					})
-				);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
 				);
@@ -181,12 +223,21 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
+				msw.use(
+					rest.post("*/event", (_request, response, context) => {
+						console.error(
+							"event was called when when dispatching was disabled"
+						);
+						return response.once(context.status(200));
+					})
+				);
+
 				const dispatcher = await getMetricsDispatcher({
 					...MOCK_DISPATCHER_OPTIONS,
 					sendMetrics: false,
 				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(0);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
 				);
@@ -196,9 +247,15 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the request fails", async () => {
+				msw.use(
+					rest.post("*/event", (_request, response, context) => {
+						return response.once(context.status(400));
+					})
+				);
+
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				fetchMock.mockReject(new Error("BAD REQUEST"));
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+
 				expect(std.debug).toMatchInlineSnapshot(`
 			"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
 			Metrics dispatcher: Failed to send request: BAD REQUEST"
@@ -209,10 +266,19 @@ describe("metrics", () => {
 			});
 
 			it("should write a warning log if no source key has been provided", async () => {
+				msw.use(
+					rest.post("*/event", (_request, response, context) => {
+						console.error(
+							"event was called when when no source key was provided"
+						);
+						return response.once(context.status(200));
+					})
+				);
+
 				global.SPARROW_SOURCE_KEY = undefined;
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
-				expect(fetchMock).toHaveBeenCalledTimes(0);
+
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. { type: 'event', name: 'some-event', properties: { a: 1, b: 2 } }"`
 				);
