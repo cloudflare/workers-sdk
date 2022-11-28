@@ -1,3 +1,4 @@
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -5,23 +6,38 @@ describe("worker", () => {
 		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 		stop: () => Promise<void>;
 	};
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
+
+	let originalNodeEnv: string | undefined;
 
 	beforeAll(async () => {
+		originalNodeEnv = process.env.NODE_ENV;
+
+		process.env.NODE_ENV = "local-testing";
+
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
-			"src/sw.ts",
+			path.resolve(__dirname, "..", "src", "sw.ts"),
 			{
-				config: "src/wrangler.sw.toml",
+				config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
 			},
 			{ disableExperimentalWarning: true }
 		);
+
+		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		process.env.NODE_ENV = originalNodeEnv;
+
+		await worker?.stop();
 	});
 
-	it("renders", async () => {
+	it.concurrent("renders", async () => {
+		await readyPromise;
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 

@@ -1,37 +1,34 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
-
-const isWindows = process.platform === "win32";
-
-const waitUntilReady = async (url: string): Promise<Response> => {
-	let response: Response | undefined = undefined;
-
-	while (response === undefined) {
-		await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-		try {
-			response = await fetch(url);
-		} catch {}
-	}
-
-	return response as Response;
-};
 
 describe("Pages Dev", () => {
 	let wranglerProcess: ChildProcess;
+	let ip: string;
+	let port: number;
+	let resolveReadyPromise: (value: unknown) => void;
+	const readyPromise = new Promise((resolve) => {
+		resolveReadyPromise = resolve;
+	});
 
-	beforeEach(() => {
-		wranglerProcess = spawn("npm", ["run", "dev"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
-			env: { BROWSER: "none", ...process.env },
+	beforeAll(() => {
+		wranglerProcess = fork(
+			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["pages", "dev", "public", "--node-compat", "--port=0"],
+			{
+				stdio: ["inherit", "inherit", "inherit", "ipc"],
+				cwd: path.resolve(__dirname, ".."),
+			}
+		).on("message", (message) => {
+			const parsedMessage = JSON.parse(message.toString());
+			ip = parsedMessage.ip;
+			port = parsedMessage.port;
+			resolveReadyPromise(undefined);
 		});
 	});
 
-	afterEach(async () => {
+	afterAll(async () => {
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -40,17 +37,19 @@ describe("Pages Dev", () => {
 					reject(code);
 				}
 			});
-			isWindows
-				? wranglerProcess.kill("SIGTERM")
-				: wranglerProcess.kill("SIGKILL");
+			wranglerProcess.kill("SIGTERM");
 		});
 	});
 
-	it.skip("should work with `--node-compat` when running code requiring polyfills", async () => {
-		const response = await waitUntilReady("http://localhost:12345/stripe");
+	it.concurrent(
+		"should work with `--node-compat` when running code requiring polyfills",
+		async () => {
+			await readyPromise;
+			const response = await fetch(`http://${ip}:${port}/stripe`);
 
-		await expect(response.text()).resolves.toContain(
-			`"PATH":"path/to/some-file","STRIPE_OBJECT"`
-		);
-	});
+			await expect(response.text()).resolves.toContain(
+				`"PATH":"path/to/some-file","STRIPE_OBJECT"`
+			);
+		}
+	);
 });
