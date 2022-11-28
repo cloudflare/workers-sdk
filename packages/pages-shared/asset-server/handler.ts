@@ -199,9 +199,9 @@ export async function generateHandler<
 					? `${destination.pathname}${destination.search || search}${
 							destination.hash
 					  }`
-					: `${destination.href}${destination.search ? "" : search}${
-							destination.hash
-					  }`;
+					: `${destination.origin}${destination.pathname}${
+							destination.search ? "" : search
+					  }${destination.hash}`;
 			switch (status) {
 				case 301:
 					return new MovedPermanentlyResponse(location);
