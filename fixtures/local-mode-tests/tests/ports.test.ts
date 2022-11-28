@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -17,42 +17,42 @@ describe("worker", () => {
 
 		workers = await Promise.all([
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
 			unstable_dev(
-				resolve(__dirname, "..", "src", "basicModule.ts"),
+				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
 			) as Worker,
@@ -62,7 +62,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await Promise.all(workers.map(async (worker) => await worker.stop()));
+		await Promise.all(workers.map(async (worker) => await worker?.stop()));
 	});
 
 	it.concurrent("should invoke the worker and exit", async () => {

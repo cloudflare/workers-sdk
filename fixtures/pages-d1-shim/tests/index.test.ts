@@ -12,7 +12,7 @@ describe("Pages Functions", () => {
 		execSync(
 			`npx wrangler pages functions build --outfile ${file} --bindings="{\\"d1_databases\\":{\\"FOO\\":{}}}"`,
 			{
-				cwd: path.resolve(__dirname, "../"),
+				cwd: path.resolve(__dirname, ".."),
 			}
 		);
 

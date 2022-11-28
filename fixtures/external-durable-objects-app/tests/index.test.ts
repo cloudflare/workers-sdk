@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-
-const isWindows = process.platform === "win32";
 
 describe.skip("Pages Functions", () => {
 	let aWranglerProcess: ChildProcess;
@@ -36,25 +34,10 @@ describe.skip("Pages Functions", () => {
 	});
 
 	beforeAll(() => {
-		aWranglerProcess = spawn(
-			"node",
-			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
-				"dev",
-				"index.ts",
-				"--local",
-				"--port=0",
-			],
+		aWranglerProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["dev", "index.ts", "--local", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "a"),
 			}
@@ -64,25 +47,10 @@ describe.skip("Pages Functions", () => {
 			aPort = parsedMessage.port;
 			aResolveReadyPromise(undefined);
 		});
-		bWranglerProcess = spawn(
-			"node",
-			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
-				"dev",
-				"index.ts",
-				"--local",
-				"--port=0",
-			],
+		bWranglerProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["dev", "index.ts", "--local", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "b"),
 			}
@@ -92,25 +60,10 @@ describe.skip("Pages Functions", () => {
 			bPort = parsedMessage.port;
 			bResolveReadyPromise(undefined);
 		});
-		cWranglerProcess = spawn(
-			"node",
-			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
-				"dev",
-				"index.ts",
-				"--local",
-				"--port=0",
-			],
+		cWranglerProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["dev", "index.ts", "--local", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "c"),
 			}
@@ -120,18 +73,9 @@ describe.skip("Pages Functions", () => {
 			cPort = parsedMessage.port;
 			cResolveReadyPromise(undefined);
 		});
-		dWranglerProcess = spawn(
-			"node",
+		dWranglerProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
 			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
 				"pages",
 				"dev",
 				"public",
@@ -139,7 +83,6 @@ describe.skip("Pages Functions", () => {
 				"--port=0",
 			],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "d"),
 			}

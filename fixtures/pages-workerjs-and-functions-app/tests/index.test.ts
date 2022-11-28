@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-
-const isWindows = process.platform === "win32";
 
 describe("Pages project with `_worker.js` and `/functions` directory", () => {
 	let wranglerProcess: ChildProcess;
@@ -16,17 +14,10 @@ describe("Pages project with `_worker.js` and `/functions` directory", () => {
 
 	// const std = mockConsoleMethods();
 	beforeAll(() => {
-		wranglerProcess = spawn(
-			"node",
-			[
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-				"pages",
-				"dev",
-				"public",
-				"--port=0",
-			],
+		wranglerProcess = fork(
+			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["pages", "dev", "public", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
 			}

@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-
-const isWindows = process.platform === "win32";
 
 describe.skip("Service Bindings", () => {
 	let aProcess: ChildProcess;
@@ -23,25 +21,10 @@ describe.skip("Service Bindings", () => {
 	});
 
 	beforeAll(() => {
-		aProcess = spawn(
-			"node",
-			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
-				"dev",
-				"index.ts",
-				"--local",
-				"--port=0",
-			],
+		aProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["dev", "index.ts", "--local", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "a"),
 			}
@@ -52,25 +35,10 @@ describe.skip("Service Bindings", () => {
 			aResolveReadyPromise(undefined);
 		});
 
-		bProcess = spawn(
-			"node",
-			[
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
-				"dev",
-				"index.ts",
-				"--local",
-				"--port=0",
-			],
+		bProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["dev", "index.ts", "--local", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, "..", "b"),
 			}

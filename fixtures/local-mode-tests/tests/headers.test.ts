@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -16,7 +16,7 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
-			resolve(__dirname, "..", "src", "headers.ts"),
+			path.resolve(__dirname, "..", "src", "headers.ts"),
 			{},
 			{ disableExperimentalWarning: true }
 		);
@@ -25,7 +25,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		await worker?.stop();
 	});
 
 	it.concurrent("should return Hi by default", async () => {

@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 // TODO: add test for `experimentalLocal: true` once issue with dynamic
@@ -20,7 +20,7 @@ describe("worker in local mode", () => {
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
-			resolve(__dirname, "..", "src", "basicModule.ts"),
+			path.resolve(__dirname, "..", "src", "basicModule.ts"),
 			{
 				ip: "127.0.0.1",
 				port: 1337,
@@ -73,7 +73,7 @@ describe.skip("worker in remote mode", () => {
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
-			resolve(__dirname, "..", "src", "basicModule.ts"),
+			path.resolve(__dirname, "..", "src", "basicModule.ts"),
 			{
 				ip: "127.0.0.1",
 				port: 1337,

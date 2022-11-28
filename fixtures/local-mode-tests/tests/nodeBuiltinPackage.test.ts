@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -13,7 +13,7 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
-			resolve(__dirname, "..", "src", "nodeBuiltinPackage.ts"),
+			path.resolve(__dirname, "..", "src", "nodeBuiltinPackage.ts"),
 			{
 				disableExperimentalWarning: true,
 			}
@@ -23,7 +23,7 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		await worker?.stop();
 	});
 
 	it.concurrent("returns hex string", async () => {

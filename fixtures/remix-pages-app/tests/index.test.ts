@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "child_process";
+import { fork, spawnSync } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
@@ -17,19 +17,12 @@ describe("Remix", () => {
 	beforeAll(async () => {
 		spawnSync("npm", ["run", "build"], {
 			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
+			cwd: path.resolve(__dirname, ".."),
 		});
-		wranglerProcess = spawn(
-			"node",
-			[
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-				"pages",
-				"dev",
-				"public",
-				"--port=0",
-			],
+		wranglerProcess = fork(
+			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["pages", "dev", "public", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
 			}

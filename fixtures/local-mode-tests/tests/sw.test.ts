@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import path from "path";
 import { unstable_dev } from "wrangler";
 
 describe("worker", () => {
@@ -20,9 +20,9 @@ describe("worker", () => {
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
-			resolve(__dirname, "..", "src", "sw.ts"),
+			path.resolve(__dirname, "..", "src", "sw.ts"),
 			{
-				config: resolve(__dirname, "..", "src", "wrangler.sw.toml"),
+				config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
 			},
 			{ disableExperimentalWarning: true }
 		);
@@ -33,7 +33,7 @@ describe("worker", () => {
 	afterAll(async () => {
 		process.env.NODE_ENV = originalNodeEnv;
 
-		await worker.stop();
+		await worker?.stop();
 	});
 
 	it.concurrent("renders", async () => {

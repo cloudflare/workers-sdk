@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-
-const isWindows = process.platform === "win32";
 
 describe("Pages Dev", () => {
 	let wranglerProcess: ChildProcess;
@@ -15,18 +13,10 @@ describe("Pages Dev", () => {
 	});
 
 	beforeAll(() => {
-		wranglerProcess = spawn(
-			"node",
-			[
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-				"pages",
-				"dev",
-				"public",
-				"--node-compat",
-				"--port=0",
-			],
+		wranglerProcess = fork(
+			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			["pages", "dev", "public", "--node-compat", "--port=0"],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
 			}
@@ -47,9 +37,7 @@ describe("Pages Dev", () => {
 					reject(code);
 				}
 			});
-			isWindows
-				? wranglerProcess.kill("SIGTERM")
-				: wranglerProcess.kill("SIGKILL");
+			wranglerProcess.kill("SIGTERM");
 		});
 	});
 

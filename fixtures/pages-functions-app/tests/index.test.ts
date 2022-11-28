@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-
-const isWindows = process.platform === "win32";
 
 describe("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
@@ -15,10 +13,9 @@ describe("Pages Functions", () => {
 	});
 
 	beforeAll(async () => {
-		wranglerProcess = spawn(
-			"node",
+		wranglerProcess = fork(
+			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
 			[
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
 				"pages",
 				"dev",
 				"public",
@@ -28,7 +25,6 @@ describe("Pages Functions", () => {
 				"--port=0",
 			],
 			{
-				shell: isWindows,
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
 			}
