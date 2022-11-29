@@ -1,11 +1,13 @@
 import { execSync } from "child_process";
-
-const runProcess = () => {
-	return execSync("npm run dev");
-};
+import path from "path";
 
 describe("Pages _worker.js", () => {
-	it("should throw an error when the _worker.js file imports something", () => {
-		expect(() => runProcess()).toThrowError();
-	});
+	it.concurrent(
+		"should throw an error when the _worker.js file imports something",
+		() => {
+			expect(() =>
+				execSync("npm run dev", { cwd: path.resolve(__dirname, "..") })
+			).toThrowError();
+		}
+	);
 });
