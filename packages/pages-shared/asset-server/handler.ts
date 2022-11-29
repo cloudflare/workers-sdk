@@ -99,7 +99,16 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	waitUntil: (promise: Promise<unknown>) => void;
 };
 
-export type HandlerContext<AssetEntry, ContentNegotiation, Asset> =
+export type HandlerContext<
+	AssetEntry,
+	ContentNegotiation extends { encoding: string | null } = {
+		encoding: string | null;
+	},
+	Asset extends { body: ReadableStream | null; contentType: string } = {
+		body: ReadableStream | null;
+		contentType: string;
+	}
+> =
 	| FullHandlerContext<AssetEntry, ContentNegotiation, Asset>
 	| (Omit<
 			FullHandlerContext<AssetEntry, ContentNegotiation, Asset>,
