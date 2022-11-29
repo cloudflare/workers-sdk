@@ -2820,7 +2820,8 @@ function getDefaultBranchName() {
 
 		return defaultBranchName;
 	} catch {
-		return "main";
+		// ew
+		return "master";
 	}
 }
 
